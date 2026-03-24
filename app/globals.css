@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Custom selection color */
+  ::selection {
+    background-color: rgba(232, 69, 69, 0.3);
+    color: white;
+  }
+}
+
+@layer components {
+  /* Subtle glow effect for the energy accent */
+  .energy-glow {
+    box-shadow: 0 0 20px rgba(232, 69, 69, 0.15),
+                0 0 60px rgba(232, 69, 69, 0.05);
+  }
+
+  /* Card hover lift */
+  .card-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  }
+}
