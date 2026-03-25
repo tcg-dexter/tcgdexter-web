@@ -19,10 +19,19 @@ interface EnergyProfile {
   totalSpecial: number;
 }
 
+interface MatchupEntry {
+  opponent: string;
+  result: "Favorable" | "Even" | "Unfavorable";
+  note: string;
+}
+
 interface Archetype {
   name: string;
   strategy: string;
   tier: number;
+  style: "Aggro" | "Control" | "Combo" | "Stall" | "Midrange";
+  winCondition: string;
+  matchups: MatchupEntry[];
 }
 
 interface ConsistencyMetrics {
@@ -72,6 +81,23 @@ function TierBadge({ tier }: { tier: number }) {
       className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${styles[tier] ?? styles[3]}`}
     >
       Tier {tier}
+    </span>
+  );
+}
+
+/* ─── Matchup badge ─────────────────────────────────────────── */
+
+function MatchupBadge({ result }: { result: MatchupEntry["result"] }) {
+  const styles: Record<string, string> = {
+    Favorable: "bg-green-500/20 text-green-400 border-green-500/30",
+    Even: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+    Unfavorable: "bg-red-500/20 text-red-400 border-red-500/30",
+  };
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${styles[result]}`}
+    >
+      {result}
     </span>
   );
 }
@@ -383,10 +409,21 @@ export default function AnalyzePage() {
                       {result.archetype.name}
                     </span>
                     <TierBadge tier={result.archetype.tier} />
+                    <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium bg-slate-500/20 text-slate-300 border-slate-500/30">
+                      {result.archetype.style}
+                    </span>
                   </div>
                   <p className="text-sm text-slate-400 leading-relaxed">
                     {result.archetype.strategy}
                   </p>
+                  <div className="mt-3">
+                    <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">
+                      Win Condition
+                    </p>
+                    <p className="text-sm text-slate-200 leading-relaxed">
+                      {result.archetype.winCondition}
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -504,43 +541,24 @@ export default function AnalyzePage() {
                 </div>
               </div>
 
-              {/* Full Card List */}
-              <div className="rounded-xl border border-white/[0.06] bg-navy-800/80 p-5 backdrop-blur-sm">
-                <h2 className="text-lg font-semibold mb-4">Card List</h2>
-
-                {(["pokemon", "trainer", "energy"] as const).map((section) => {
-                  const sectionCards = result.cards.filter(
-                    (c) => c.section === section
-                  );
-                  if (sectionCards.length === 0) return null;
-                  const label =
-                    section === "pokemon"
-                      ? "Pokémon"
-                      : section === "trainer"
-                        ? "Trainers"
-                        : "Energy";
-                  return (
-                    <div key={section} className="mb-4 last:mb-0">
-                      <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">
-                        {label}
-                      </p>
-                      <ul className="space-y-0.5">
-                        {sectionCards.map((c, i) => (
-                          <li
-                            key={i}
-                            className="text-sm flex justify-between py-0.5"
-                          >
-                            <span className="text-white">{c.name}</span>
-                            <span className="text-slate-400 font-mono">
-                              {c.qty}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  );
-                })}
-              </div>
+              {/* Matchup Guide */}
+              {result.archetype?.matchups && result.archetype.matchups.length > 0 && (
+                <div className="rounded-xl border border-white/[0.06] bg-navy-800/80 p-5 backdrop-blur-sm">
+                  <h2 className="text-lg font-semibold">Matchup Guide</h2>
+                  <p className="text-xs text-slate-400 mb-4">vs current top meta</p>
+                  <div className="divide-y divide-white/[0.06]">
+                    {result.archetype.matchups.map((m, i) => (
+                      <div key={i} className="py-3 first:pt-0 last:pb-0">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-white">{m.opponent}</span>
+                          <MatchupBadge result={m.result} />
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1">{m.note}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

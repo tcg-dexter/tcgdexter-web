@@ -16,10 +16,19 @@ interface EnergyProfile {
   totalSpecial: number;
 }
 
+interface MatchupEntry {
+  opponent: string;
+  result: "Favorable" | "Even" | "Unfavorable";
+  note: string;
+}
+
 interface Archetype {
   name: string;
   strategy: string;
   tier: number;
+  style: "Aggro" | "Control" | "Combo" | "Stall" | "Midrange";
+  winCondition: string;
+  matchups: MatchupEntry[];
 }
 
 interface ConsistencyMetrics {
@@ -190,6 +199,17 @@ const ARCHETYPE_RULES: ArchetypeRule[] = [
       strategy:
         "Discard-and-accelerate fire aggro. Dominated the meta for two years — fast, explosive, high damage ceiling.",
       tier: 1,
+      style: "Aggro",
+      winCondition:
+        "Accelerate Fire energy from the discard with Burning Darkness, hit for 330+ by late game.",
+      matchups: [
+        { opponent: "Dragapult ex / Dusknoir", result: "Unfavorable", note: "Phantom Dive pressure and spread counter your slow setup" },
+        { opponent: "Gardevoir ex", result: "Even", note: "Similar speed; prize trade comes down to execution" },
+        { opponent: "Miraidon ex", result: "Favorable", note: "Charizard bulk absorbs early hits; Burning Darkness OHKOs their basics" },
+        { opponent: "Raging Bolt ex", result: "Even", note: "Both hit hard; first to set up wins" },
+        { opponent: "Chien-Pao ex / Baxcalibur", result: "Unfavorable", note: "Water weakness; Hail Blade hits for weakness" },
+        { opponent: "Regidrago VSTAR", result: "Favorable", note: "Outrace their setup; single-prize pressure disrupts them" },
+      ],
     },
   },
   {
@@ -199,6 +219,17 @@ const ARCHETYPE_RULES: ArchetypeRule[] = [
       strategy:
         "Spread damage counters with Dusknoir, close out with Dragapult's high burst. Control-aggro hybrid.",
       tier: 1,
+      style: "Midrange",
+      winCondition:
+        "Distribute damage counters with Dusknoir's Ominous Boards, then finish with Phantom Dive.",
+      matchups: [
+        { opponent: "Charizard ex", result: "Favorable", note: "Spread damage bypasses their healing and punishes multi-prize reliance" },
+        { opponent: "Gardevoir ex", result: "Favorable", note: "Phantom Dive spreads into their bench; hard to recover" },
+        { opponent: "Miraidon ex", result: "Favorable", note: "Spread damage hits their wide bench efficiently" },
+        { opponent: "Raging Bolt ex", result: "Even", note: "Both are fast; depends on who draws disruption first" },
+        { opponent: "Chien-Pao ex / Baxcalibur", result: "Even", note: "Spread vs burst; roughly even prize trade" },
+        { opponent: "Regidrago VSTAR", result: "Favorable", note: "Dusknoir disrupts their setup before they can copy attacks" },
+      ],
     },
   },
   {
@@ -208,6 +239,10 @@ const ARCHETYPE_RULES: ArchetypeRule[] = [
       strategy:
         "Copy attacks from Dragon Pokémon in the discard. Extremely flexible — adapts to any matchup with the right discard setup.",
       tier: 1,
+      style: "Combo",
+      winCondition:
+        "Fill the discard with Dragon attackers, copy their attacks with Star Reading VSTAR Power.",
+      matchups: [],
     },
   },
   {
@@ -218,6 +253,17 @@ const ARCHETYPE_RULES: ArchetypeRule[] = [
       strategy:
         "Psychic energy acceleration from the discard pile. Strong draw engine with Kirlia's Refinement. Scales damage in the late game.",
       tier: 1,
+      style: "Midrange",
+      winCondition:
+        "Accelerate Psychic energy from the discard with Psychic Embrace, scale Miracle Force damage over time.",
+      matchups: [
+        { opponent: "Charizard ex", result: "Even", note: "Mirror-ish speed; Charizard weakness to water not relevant" },
+        { opponent: "Dragapult ex / Dusknoir", result: "Unfavorable", note: "Spread damage outpaces Gardevoir's scaling" },
+        { opponent: "Miraidon ex", result: "Favorable", note: "Gardevoir's HP and energy scaling outlasts their aggro" },
+        { opponent: "Raging Bolt ex", result: "Even", note: "Depends on Iono timing and disruption draws" },
+        { opponent: "Chien-Pao ex / Baxcalibur", result: "Unfavorable", note: "High-HP Psychic types get OHKOd by Hail Blade with energy stacking" },
+        { opponent: "Regidrago VSTAR", result: "Favorable", note: "Faster setup; take prizes before Regidrago goes online" },
+      ],
     },
   },
   {
@@ -228,6 +274,10 @@ const ARCHETYPE_RULES: ArchetypeRule[] = [
       strategy:
         "Summon Archeops from the discard with Lugia's VSTAR Power, then accelerate special energy to power up any attacker. Toolbox-style deck.",
       tier: 2,
+      style: "Combo",
+      winCondition:
+        "Use Summoning Star to pull two Archeops, then power up any attacker with Primal Turbo.",
+      matchups: [],
     },
   },
   {
@@ -238,6 +288,10 @@ const ARCHETYPE_RULES: ArchetypeRule[] = [
       strategy:
         "Block the active slot with Snorlax, disrupt the opponent's resources, and win by decking them out. Pure control.",
       tier: 2,
+      style: "Stall",
+      winCondition:
+        "Survive every hit with Snorlax + Rigid Band, deck the opponent out.",
+      matchups: [],
     },
   },
   {
@@ -248,6 +302,17 @@ const ARCHETYPE_RULES: ArchetypeRule[] = [
       strategy:
         "Stack Lightning energy on Raging Bolt for massive damage. Ogerpon provides energy acceleration. Simple but explosive.",
       tier: 1,
+      style: "Aggro",
+      winCondition:
+        "Stack Lightning energy with Ogerpon's Teal Dance, swing for 200+ with Raging Blast.",
+      matchups: [
+        { opponent: "Charizard ex", result: "Even", note: "First to set up wins; both are explosive" },
+        { opponent: "Dragapult ex / Dusknoir", result: "Even", note: "Raging Bolt can OHKO Dragapult; Dusknoir spread is annoying" },
+        { opponent: "Gardevoir ex", result: "Even", note: "Depends on disruption and Iono timing" },
+        { opponent: "Miraidon ex", result: "Unfavorable", note: "Slower to set up; Miraidon contests early prizes" },
+        { opponent: "Chien-Pao ex / Baxcalibur", result: "Even", note: "Both are energy-stack decks; speed determines winner" },
+        { opponent: "Regidrago VSTAR", result: "Favorable", note: "Too fast for Regidrago's combo; takes prizes before setup" },
+      ],
     },
   },
   {
@@ -257,6 +322,10 @@ const ARCHETYPE_RULES: ArchetypeRule[] = [
       strategy:
         "Flexible Colorless attacker that copies attacks. Pairs with various support Pokémon for a toolbox approach.",
       tier: 2,
+      style: "Midrange",
+      winCondition:
+        "Copy powerful attacks with Tera Shell, adapting to whatever the matchup demands.",
+      matchups: [],
     },
   },
   {
@@ -266,6 +335,17 @@ const ARCHETYPE_RULES: ArchetypeRule[] = [
       strategy:
         "Fast Lightning aggro — Miraidon fills the bench with Electric-types and accelerates energy. Aims to take quick prizes.",
       tier: 2,
+      style: "Aggro",
+      winCondition:
+        "Fill the bench with Lightning-types via Tandem Unit, overwhelm with Photon Blaster.",
+      matchups: [
+        { opponent: "Charizard ex", result: "Unfavorable", note: "Fire resistance on some attackers; Charizard OHKO potential" },
+        { opponent: "Dragapult ex / Dusknoir", result: "Unfavorable", note: "Wide bench is a liability against spread" },
+        { opponent: "Gardevoir ex", result: "Unfavorable", note: "Gardevoir scales past Miraidon's damage ceiling" },
+        { opponent: "Raging Bolt ex", result: "Favorable", note: "Faster bench setup and consistent damage output" },
+        { opponent: "Chien-Pao ex / Baxcalibur", result: "Even", note: "Both are fast aggro; coin flip matchup" },
+        { opponent: "Regidrago VSTAR", result: "Favorable", note: "Overwhelm before Regidrago copies anything threatening" },
+      ],
     },
   },
   {
@@ -275,6 +355,10 @@ const ARCHETYPE_RULES: ArchetypeRule[] = [
       strategy:
         "Water-based tempo deck that scales damage with bench size. Star Portal VSTAR Power provides mid-game energy recovery.",
       tier: 2,
+      style: "Midrange",
+      winCondition:
+        "Scale Subspace Swell damage with bench size, recover with Star Portal mid-game.",
+      matchups: [],
     },
   },
   {
@@ -285,6 +369,17 @@ const ARCHETYPE_RULES: ArchetypeRule[] = [
       strategy:
         "Baxcalibur accelerates Water energy each turn. Chien-Pao hits for huge numbers based on total energy in play.",
       tier: 2,
+      style: "Aggro",
+      winCondition:
+        "Stack Water energy with Wild Cry, hit for massive damage with Hail Blade.",
+      matchups: [
+        { opponent: "Charizard ex", result: "Favorable", note: "Water weakness; Hail Blade OHKOs Charizard" },
+        { opponent: "Dragapult ex / Dusknoir", result: "Even", note: "Chien-Pao can OHKO Dragapult; Dusknoir spread is a problem" },
+        { opponent: "Gardevoir ex", result: "Favorable", note: "High damage output pressures Gardevoir before it scales" },
+        { opponent: "Miraidon ex", result: "Even", note: "Both are aggro; coin flip matchup" },
+        { opponent: "Raging Bolt ex", result: "Even", note: "Energy-stack race; depends on draw" },
+        { opponent: "Regidrago VSTAR", result: "Favorable", note: "Too aggressive for Regidrago's slow combo setup" },
+      ],
     },
   },
   {
@@ -294,9 +389,53 @@ const ARCHETYPE_RULES: ArchetypeRule[] = [
       strategy:
         "Engine built around Comfey's Flower Selecting to fill the Lost Zone, unlocking powerful attacks and abilities from Mirage Gate and friends.",
       tier: 2,
+      style: "Combo",
+      winCondition:
+        "Mill 10 into the Lost Zone via Comfey + Colress's Experiment, unlock Mirage Gate and Cramorant.",
+      matchups: [],
     },
   },
 ];
+
+function inferStyle(cards: Card[]): Archetype["style"] {
+  const nameLower = (name: string) => name.toLowerCase();
+  const findCard = (search: string) =>
+    cards.find((c) => nameLower(c.name).includes(nameLower(search)));
+
+  // Stall signals
+  const hasRockyHelmet = findCard("Rocky Helmet");
+  const hasSnorlax = findCard("Snorlax");
+  const hasKlawf = findCard("Klawf");
+  if (hasRockyHelmet || hasSnorlax || hasKlawf) return "Stall";
+
+  // Lost Zone → Combo
+  const hasComfey = findCard("Comfey");
+  const hasMirageGate = findCard("Mirage Gate");
+  if (hasComfey || hasMirageGate) return "Combo";
+
+  // Control signals
+  const crushingHammer = findCard("Crushing Hammer");
+  const enhancedHammer = findCard("Enhanced Hammer");
+  const ionoCard = findCard("Iono");
+  const judgeCard = findCard("Judge");
+  const controlSignals =
+    (crushingHammer ? crushingHammer.qty : 0) +
+    (enhancedHammer ? enhancedHammer.qty : 0) +
+    (ionoCard && ionoCard.qty >= 3 ? ionoCard.qty : 0) +
+    (judgeCard ? judgeCard.qty : 0);
+  if (controlSignals >= 4) return "Control";
+
+  // Aggro signals: many basics + energy acceleration
+  const pokemonCards = cards.filter((c) => c.section === "pokemon");
+  const totalPokemon = pokemonCards.reduce((s, c) => s + c.qty, 0);
+  const hasEnergyAccel =
+    findCard("Earthen Vessel") ||
+    findCard("Double Turbo Energy") ||
+    findCard("Jet Energy");
+  if (totalPokemon >= 12 && hasEnergyAccel) return "Aggro";
+
+  return "Midrange";
+}
 
 function detectArchetype(cards: Card[]): Archetype | null {
   const names = cards.map((c) => c.name.toLowerCase());
@@ -318,6 +457,22 @@ function detectArchetype(cards: Card[]): Archetype | null {
   }
 
   return null;
+}
+
+function detectArchetypeWithFallback(cards: Card[]): Archetype | null {
+  const archetype = detectArchetype(cards);
+  if (archetype) return archetype;
+
+  // No known archetype — still infer a style
+  const style = inferStyle(cards);
+  return {
+    name: "Unknown",
+    strategy: "No recognized archetype detected. Analysis based on card composition.",
+    tier: 3,
+    style,
+    winCondition: "No specific win condition identified for this archetype.",
+    matchups: [],
+  };
 }
 
 /* ─── Consistency Metrics ────────────────────────────────────── */
@@ -481,7 +636,7 @@ export async function POST(req: NextRequest) {
 
     const deckSize = sections.pokemon + sections.trainer + sections.energy;
     const energyProfile = analyzeEnergy(cards);
-    const archetype = detectArchetype(cards);
+    const archetype = detectArchetypeWithFallback(cards);
     const consistency = analyzeConsistency(cards);
     const warnings = generateWarnings(cards, sections, deckSize, consistency);
 
