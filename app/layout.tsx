@@ -17,20 +17,20 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Dexter's Collection | Pokémon TCG",
+  title: "TCG Dexter | Pokémon TCG",
   description:
-    "Pokémon cards. Competitive insight. Community. Shop singles, follow the meta, and join Dexter's Collection.",
+    "Pokémon cards. Competitive insight. Community. Shop singles, follow the meta, and profile your deck.",
   openGraph: {
-    title: "Dexter's Collection | Pokémon TCG",
+    title: "TCG Dexter | Pokémon TCG",
     description: "Pokémon cards. Competitive insight. Community.",
     url: "https://tcgdexter.com",
-    siteName: "Dexter's Collection",
+    siteName: "TCG Dexter",
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Dexter's Collection | Pokémon TCG",
+    title: "TCG Dexter | Pokémon TCG",
     description: "Pokémon cards. Competitive insight. Community.",
   },
 };
