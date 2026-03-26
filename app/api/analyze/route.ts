@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
-import { hashIp } from "@/lib/player-id";
 
 /* ─── Types ──────────────────────────────────────────────────── */
 
@@ -692,39 +690,6 @@ export async function POST(req: NextRequest) {
       consistency,
       warnings,
     };
-
-    // Fire-and-forget deck logging — never blocks the response
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      req.headers.get("x-real-ip") ||
-      "unknown";
-
-    (async () => {
-      try {
-        const sql = getDb();
-        await sql`
-          INSERT INTO deck_submissions
-            (player_id, archetype, style, tier, energy_types, deck_size,
-             pokemon_count, trainer_count, energy_count, country, region, raw_deck)
-          VALUES (
-            ${hashIp(ip)},
-            ${result.archetype?.name ?? null},
-            ${result.archetype?.style ?? null},
-            ${result.archetype?.tier ?? null},
-            ${Object.keys(result.energyProfile.types)},
-            ${result.deckSize},
-            ${result.sections.pokemon},
-            ${result.sections.trainer},
-            ${result.sections.energy},
-            ${req.headers.get("x-vercel-ip-country") ?? null},
-            ${req.headers.get("x-vercel-ip-country-region") ?? null},
-            ${deckList}
-          )
-        `;
-      } catch {
-        // Silently swallow — logging failure must never break the analyzer
-      }
-    })();
 
     return NextResponse.json(result);
   } catch {
