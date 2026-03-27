@@ -69,6 +69,11 @@ interface AnalysisResult {
     abilities: PokemonAbility[];
     attacks: PokemonAttack[];
   };
+  rotation: {
+    ready: boolean;
+    rotatingCount: number;
+    rotatingCards: Array<{ name: string; qty: number }>;
+  };
   metaMatch: {
     matched: boolean;
     archetypeName: string | null;
@@ -326,6 +331,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // ── Rotation Check ─────────────────────────────────────────
+    const ROTATING_MARKS = new Set(["A", "B", "C", "D", "E", "F", "G"]);
+    const rotatingCards: Array<{ name: string; qty: number }> = [];
+    for (const card of cards) {
+      const data = CARD_DB_LOWER.get(card.name.toLowerCase())?.[0];
+      const mark = data?.regulation_mark ?? null;
+      if (mark && ROTATING_MARKS.has(mark.toUpperCase())) {
+        rotatingCards.push({ name: card.name, qty: card.qty });
+      }
+    }
+    const rotatingCount = rotatingCards.reduce((s, c) => s + c.qty, 0);
+
     const result: AnalysisResult = {
       deckSize,
       sections,
@@ -337,6 +354,11 @@ export async function POST(req: NextRequest) {
         stage2Count,
         abilities,
         attacks,
+      },
+      rotation: {
+        ready: rotatingCount === 0,
+        rotatingCount,
+        rotatingCards,
       },
       metaMatch,
       cards,

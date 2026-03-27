@@ -44,6 +44,11 @@ interface AnalysisResult {
     abilities: PokemonAbility[];
     attacks: PokemonAttack[];
   };
+  rotation: {
+    ready: boolean;
+    rotatingCount: number;
+    rotatingCards: Array<{ name: string; qty: number }>;
+  };
   metaMatch: {
     matched: boolean;
     archetypeName: string | null;
@@ -286,6 +291,35 @@ export default function DeckProfilerPage() {
           {/* Results */}
           {result && (
             <div className="flex flex-col gap-4">
+
+              {/* ── 0. Rotation Status ──────────────────────── */}
+              {result.rotation.ready ? (
+                <div className="rounded-xl border border-green-200 bg-green-50 px-5 py-3 flex items-center gap-3">
+                  <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm font-medium text-green-800">Rotation Ready — no cards rotating April 10</span>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-3">
+                  <div className="flex items-center gap-3 mb-2">
+                    <svg className="w-4 h-4 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                    </svg>
+                    <span className="text-sm font-semibold text-amber-800">
+                      {result.rotation.rotatingCount} card{result.rotation.rotatingCount !== 1 ? "s" : ""} rotating out April 10
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 pl-7">
+                    {result.rotation.rotatingCards.map((c) => (
+                      <span key={c.name} className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-100 px-2.5 py-0.5 text-xs text-amber-800">
+                        <span className="font-semibold">{c.qty}</span>
+                        <span>{c.name}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* ── 1. Overview ─────────────────────────────── */}
               <div className="rounded-xl border border-tan-200 bg-tan-100 p-5 backdrop-blur-sm">
