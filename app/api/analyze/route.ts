@@ -1,6 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
+import cardData from "@/data/cards-standard.json";
 
-const DAEMON_URL = "http://100.80.110.45:8789";
+/* ─── Card DB ────────────────────────────────────────────────── */
+
+interface CardDataEntry {
+  name: string;
+  set_id: string;
+  set_name: string;
+  number: string;
+  supertype: string;
+  subtypes: string[];
+  hp: string | null;
+  abilities: Array<{ name: string; text: string; type: string }>;
+  attacks: Array<{
+    name: string;
+    cost: string[];
+    damage: string;
+    text: string;
+    convertedEnergyCost: number;
+  }>;
+  regulation_mark: string | null;
+  retreat_cost: number | null;
+}
+
+const CARD_DB = cardData as unknown as Record<string, CardDataEntry[]>;
+const CARD_DB_LOWER = new Map(
+  Object.entries(CARD_DB).map(([k, v]) => [k.toLowerCase(), v])
+);
 
 /* ─── Types ──────────────────────────────────────────────────── */
 
@@ -47,26 +73,6 @@ interface AnalysisResult {
   };
   cards: Card[];
   warnings: string[];
-}
-
-interface DaemonCard {
-  name?: string;
-  attacks?: string | RawAttack[];
-  abilities?: string | RawAbility[];
-}
-
-interface RawAttack {
-  name: string;
-  cost?: string[];
-  damage?: string;
-  text?: string;
-  convertedEnergyCost?: number;
-}
-
-interface RawAbility {
-  name: string;
-  text?: string;
-  type?: string;
 }
 
 interface MetaArchetype {
@@ -120,19 +126,6 @@ function parseDeckList(raw: string): Card[] {
   return cards;
 }
 
-/* ─── JSON field parser ──────────────────────────────────────── */
-
-function parseJSONField<T>(value: string | T[] | null | undefined): T[] {
-  if (!value) return [];
-  if (Array.isArray(value)) return value;
-  try {
-    const parsed = JSON.parse(value as string);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
 /* ─── Archetype Detection ────────────────────────────────────── */
 
 interface ArchetypeRule {
@@ -177,30 +170,21 @@ function detectArchetypeName(cards: Card[]): string | null {
   return null;
 }
 
-/* ─── Daemon Fetches ─────────────────────────────────────────── */
+/* ─── Static Card Lookup ─────────────────────────────────────── */
 
-async function fetchCardFromDaemon(name: string): Promise<DaemonCard | null> {
-  try {
-    const url = `${DAEMON_URL}/v1/cards?q=${encodeURIComponent(name)}&limit=3`;
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const cards: DaemonCard[] = Array.isArray(data)
-      ? data
-      : (data.data ?? data.cards ?? data.results ?? []);
-    if (!cards.length) return null;
-    const exact = cards.find(
-      (c) => c.name?.toLowerCase() === name.toLowerCase()
-    );
-    return exact ?? cards[0];
-  } catch {
-    return null;
-  }
+function lookupCard(name: string): CardDataEntry | null {
+  const entries = CARD_DB_LOWER.get(name.toLowerCase());
+  return entries?.[0] ?? null;
 }
+
+/* ─── Meta Archetypes (optional, fails gracefully) ───────────── */
 
 async function fetchMetaArchetypes(): Promise<MetaArchetype[]> {
   try {
-    const res = await fetch(`${DAEMON_URL}/v1/meta/archetypes`, { cache: "no-store" });
+    const res = await fetch("http://100.80.110.45:8789/v1/meta/archetypes", {
+      cache: "no-store",
+      signal: AbortSignal.timeout(3000),
+    });
     if (!res.ok) return [];
     const data = await res.json();
     const list: MetaArchetype[] = Array.isArray(data)
@@ -267,21 +251,22 @@ export async function POST(req: NextRequest) {
     const uniquePokemonNames = Array.from(new Set(pokemonCards.map((c) => c.name)));
     const totalPokemonCards = pokemonCards.reduce((s, c) => s + c.qty, 0);
 
-    // Fetch meta archetypes + all pokemon cards in parallel
-    const [metaArchetypes, ...pokemonFetchResults] = await Promise.all([
-      fetchMetaArchetypes(),
-      ...uniquePokemonNames.map((name) => fetchCardFromDaemon(name)),
-    ]);
+    // Fetch meta archetypes gracefully (may fail if daemon unreachable)
+    let metaArchetypes: MetaArchetype[] = [];
+    try {
+      metaArchetypes = await fetchMetaArchetypes();
+    } catch {
+      // Daemon unreachable — metaMatch will fall back to { matched: false }
+    }
 
     const abilities: PokemonAbility[] = [];
     const attacks: PokemonAttack[] = [];
 
-    uniquePokemonNames.forEach((pokemonName, i) => {
-      const daemonCard = pokemonFetchResults[i];
-      if (!daemonCard) return;
+    for (const pokemonName of uniquePokemonNames) {
+      const card = lookupCard(pokemonName);
+      if (!card) continue;
 
-      const rawAbilities = parseJSONField<RawAbility>(daemonCard.abilities);
-      for (const ab of rawAbilities) {
+      for (const ab of card.abilities) {
         if (ab.name) {
           abilities.push({
             pokemonName,
@@ -291,8 +276,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      const rawAttacks = parseJSONField<RawAttack>(daemonCard.attacks);
-      for (const atk of rawAttacks) {
+      for (const atk of card.attacks) {
         if (atk.name) {
           attacks.push({
             pokemonName,
@@ -303,7 +287,7 @@ export async function POST(req: NextRequest) {
           });
         }
       }
-    });
+    }
 
     // ── Meta Match ─────────────────────────────────────────────
     const archetypeName = detectArchetypeName(cards);
@@ -313,7 +297,7 @@ export async function POST(req: NextRequest) {
       matchPct: null,
     };
 
-    if (archetypeName) {
+    if (archetypeName && metaArchetypes.length > 0) {
       const archLower = archetypeName.toLowerCase();
       const metaEntry = metaArchetypes.find((m) =>
         m.name.toLowerCase().includes(archLower) ||
