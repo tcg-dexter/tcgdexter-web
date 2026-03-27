@@ -111,8 +111,11 @@ export default function Home() {
       </main>
 
       {/* ── Footer ───────────────────────────────────────────── */}
-      <footer className="flex-shrink-0 py-8 text-center text-sm text-brown-300">
-        &copy; 2026 TCG Dexter &middot; tcgdexter.com
+      <footer className="flex-shrink-0 py-8 px-6 text-center text-sm text-brown-300">
+        <p>&copy; 2026 TCG Dexter &middot; tcgdexter.com</p>
+        <p className="mt-3 max-w-lg mx-auto text-xs text-brown-300/70 leading-relaxed">
+          TCG Dexter is an independent organization. The information presented on this website about the Pokémon Trading Card Game, including images and text, is intellectual property of The Pokémon Company, Nintendo, Game Freak, Creatures and/or Wizards of the Coast. TCG Dexter is not produced by, endorsed by, supported by, or affiliated with any of these companies.
+        </p>
       </footer>
     </div>
   );
