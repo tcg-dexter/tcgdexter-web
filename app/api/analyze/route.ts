@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const DAEMON_URL = "http://100.80.110.45:8789";
+
 /* ─── Types ──────────────────────────────────────────────────── */
 
 interface Card {
@@ -31,12 +33,45 @@ interface Archetype {
   matchups: MatchupEntry[];
 }
 
-interface ConsistencyMetrics {
-  drawSupporters: { name: string; qty: number }[];
-  searchCards: { name: string; qty: number }[];
-  totalDraw: number;
-  totalSearch: number;
-  rating: string;
+interface DaemonCard {
+  name?: string;
+  hp?: number | string;
+  retreat_cost?: number | string;
+  attacks?: string | AttackData[];
+  abilities?: string | AbilityData[];
+  regulation_mark?: string | null;
+  supertype?: string;
+  subtypes?: string[];
+}
+
+interface AttackData {
+  name: string;
+  cost: string[];
+  damage?: string;
+}
+
+interface AbilityData {
+  name: string;
+  text?: string;
+  type?: string;
+}
+
+interface RotatingCard {
+  name: string;
+  qty: number;
+  regulationMark: string | null;
+}
+
+interface AttackerMismatch {
+  cardName: string;
+  attackName: string;
+  cost: string[];
+  missingTypes: string[];
+}
+
+interface HPCurveEntry {
+  range: string;
+  count: number;
 }
 
 interface AnalysisResult {
@@ -45,8 +80,28 @@ interface AnalysisResult {
   cards: Card[];
   energyProfile: EnergyProfile;
   archetype: Archetype | null;
-  consistency: ConsistencyMetrics;
   warnings: string[];
+  // 5 new signals
+  rotatingCards: RotatingCard[];
+  rotatingCount: number;
+  rotationSafeCount: number;
+  attackerMismatches: AttackerMismatch[];
+  hpCurve: HPCurveEntry[];
+  totalRetreatCost: number;
+  switchCards: number;
+  retreatBurdenRating: "Low" | "Moderate" | "High";
+  abilityPokemon: number;
+  attackOnlyPokemon: number;
+  abilityRatio: number;
+  // Dexter Score
+  dexterScore: number;
+  scoreBreakdown: {
+    archetype: number;
+    rotation: number;
+    energy: number;
+    retreat: number;
+    deckSize: number;
+  };
 }
 
 /* ─── Parser ─────────────────────────────────────────────────── */
@@ -57,10 +112,8 @@ function parseDeckList(raw: string): Card[] {
   let currentSection: Card["section"] | null = null;
 
   for (const line of lines) {
-    // Skip blank lines
     if (!line) continue;
 
-    // Detect section headers
     const headerMatch = line.match(/^(Pok[eé]mon|Trainer|Energy)\s*:/i);
     if (headerMatch) {
       const h = headerMatch[1].toLowerCase();
@@ -70,11 +123,8 @@ function parseDeckList(raw: string): Card[] {
       continue;
     }
 
-    // Skip "Total Cards" line
     if (/^total\s+cards?\s*:/i.test(line)) continue;
 
-    // Parse card line: {qty} {name} {set} {number}
-    // Qty is the first token, set is the second-to-last, number is the last
     const cardMatch = line.match(/^(\d+)\s+(.+?)\s+[A-Z0-9-]{2,10}\s+\d+$/);
     if (cardMatch && currentSection) {
       cards.push({
@@ -85,7 +135,6 @@ function parseDeckList(raw: string): Card[] {
       continue;
     }
 
-    // Fallback: try simpler format {qty} {name} (no set/number)
     const simpleMatch = line.match(/^(\d+)\s+(.+)$/);
     if (simpleMatch && currentSection) {
       cards.push({
@@ -116,7 +165,6 @@ const BASIC_ENERGY_MAP: Record<string, string> = {
   colorless: "Colorless",
 };
 
-// PTCGL symbol codes → type name (e.g. "Basic {D} Energy" → Darkness)
 const ENERGY_SYMBOL_MAP: Record<string, string> = {
   "{R}": "Fire",
   "{W}": "Water",
@@ -154,7 +202,6 @@ function analyzeEnergy(cards: Card[]): EnergyProfile {
   let totalSpecial = 0;
 
   for (const card of energyCards) {
-    // Check if special energy
     const isSpecial = SPECIAL_ENERGY_NAMES.some((se) =>
       card.name.toLowerCase().includes(se.toLowerCase())
     );
@@ -165,7 +212,6 @@ function analyzeEnergy(cards: Card[]): EnergyProfile {
       continue;
     }
 
-    // Match basic energy — first try PTCGL symbol codes ({D}, {R}, etc.)
     const nameLower = card.name.toLowerCase();
     let matched = false;
 
@@ -179,7 +225,6 @@ function analyzeEnergy(cards: Card[]): EnergyProfile {
     }
 
     if (!matched) {
-      // Fall back to keyword matching ("Basic Fire Energy", "Darkness Energy", etc.)
       for (const [keyword, typeName] of Object.entries(BASIC_ENERGY_MAP)) {
         if (nameLower.includes(keyword)) {
           types[typeName] = (types[typeName] || 0) + card.qty;
@@ -191,13 +236,11 @@ function analyzeEnergy(cards: Card[]): EnergyProfile {
     }
 
     if (!matched) {
-      // Unknown energy — still count it
       types[card.name] = (types[card.name] || 0) + card.qty;
       totalBasic += card.qty;
     }
   }
 
-  // Find primary type
   let primaryType: string | null = null;
   let maxCount = 0;
   for (const [type, count] of Object.entries(types)) {
@@ -443,18 +486,15 @@ function inferStyle(cards: Card[]): Archetype["style"] {
   const findCard = (search: string) =>
     cards.find((c) => nameLower(c.name).includes(nameLower(search)));
 
-  // Stall signals
   const hasRockyHelmet = findCard("Rocky Helmet");
   const hasSnorlax = findCard("Snorlax");
   const hasKlawf = findCard("Klawf");
   if (hasRockyHelmet || hasSnorlax || hasKlawf) return "Stall";
 
-  // Lost Zone → Combo
   const hasComfey = findCard("Comfey");
   const hasMirageGate = findCard("Mirage Gate");
   if (hasComfey || hasMirageGate) return "Combo";
 
-  // Control signals
   const crushingHammer = findCard("Crushing Hammer");
   const enhancedHammer = findCard("Enhanced Hammer");
   const ionoCard = findCard("Iono");
@@ -466,7 +506,6 @@ function inferStyle(cards: Card[]): Archetype["style"] {
     (judgeCard ? judgeCard.qty : 0);
   if (controlSignals >= 4) return "Control";
 
-  // Aggro signals: many basics + energy acceleration
   const pokemonCards = cards.filter((c) => c.section === "pokemon");
   const totalPokemon = pokemonCards.reduce((s, c) => s + c.qty, 0);
   const hasEnergyAccel =
@@ -485,7 +524,6 @@ function detectArchetype(cards: Card[]): Archetype | null {
     return names.some((n) => n === lower || n.includes(lower));
   };
 
-  // Check rules in order (more specific first — multi-card requirements)
   const sorted = [...ARCHETYPE_RULES].sort(
     (a, b) => b.required.length - a.required.length
   );
@@ -504,7 +542,6 @@ function detectArchetypeWithFallback(cards: Card[]): Archetype | null {
   const archetype = detectArchetype(cards);
   if (archetype) return archetype;
 
-  // No known archetype — still infer a style
   const style = inferStyle(cards);
   return {
     name: "Unknown",
@@ -516,74 +553,276 @@ function detectArchetypeWithFallback(cards: Card[]): Archetype | null {
   };
 }
 
-/* ─── Consistency Metrics ────────────────────────────────────── */
+/* ─── Daemon Card Fetch ──────────────────────────────────────── */
 
-const DRAW_SUPPORTERS = [
-  "Professor's Research",
-  "Professor Turo's Scenario",
-  "Professor Sada's Vitality",
-  "Iono",
-  "Judge",
-  "N",
-  "Cynthia",
-  "Colress",
-  "Bibarel",
-  "Ciphermaniac's Codebreaking",
-];
+async function fetchCardFromDaemon(name: string): Promise<DaemonCard | null> {
+  try {
+    const url = `${DAEMON_URL}/v1/cards?q=${encodeURIComponent(name)}&limit=10`;
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const cards: DaemonCard[] = Array.isArray(data)
+      ? data
+      : (data.data ?? data.cards ?? data.results ?? []);
+    if (!cards.length) return null;
+    // Prefer exact name match
+    const exact = cards.find(
+      (c) => c.name?.toLowerCase() === name.toLowerCase()
+    );
+    return exact ?? cards[0];
+  } catch {
+    return null;
+  }
+}
 
-const SEARCH_CARDS = [
-  "Arven",
-  "Irida",
-  "Nest Ball",
-  "Ultra Ball",
-  "Level Ball",
-  "Quick Ball",
-  "Hisuian Heavy Ball",
-  "Battle VIP Pass",
-  "Pokégear 3.0",
-  "Buddy-Buddy Poffin",
-  "Earthen Vessel",
-  "Pokémon Catcher",
-  "Boss's Orders",
-  "Computer Search",
-  "Luminous Energy",
-  "Peonia",
-];
+function parseJSONField<T>(value: string | T[] | null | undefined): T[] {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  try {
+    const parsed = JSON.parse(value as string);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
-function analyzeConsistency(cards: Card[]): ConsistencyMetrics {
-  const drawSupporters: { name: string; qty: number }[] = [];
-  const searchCards: { name: string; qty: number }[] = [];
+/* ─── Rotation Check ─────────────────────────────────────────── */
+
+// Rotating = regulation_mark is G or earlier (F, E, D, C, B, A) or null/missing
+const ROTATING_MARKS = new Set(["A", "B", "C", "D", "E", "F", "G"]);
+
+function isRotating(regulationMark: string | null | undefined): boolean {
+  if (!regulationMark) return true;
+  return ROTATING_MARKS.has(regulationMark.toUpperCase());
+}
+
+function buildRotationCheck(
+  cards: Card[],
+  cardDataMap: Map<string, DaemonCard>
+): Pick<AnalysisResult, "rotatingCards" | "rotatingCount" | "rotationSafeCount"> {
+  const rotatingCards: RotatingCard[] = [];
+  let rotationSafeCount = 0;
 
   for (const card of cards) {
-    const nameLower = card.name.toLowerCase();
-
-    for (const ds of DRAW_SUPPORTERS) {
-      if (nameLower.includes(ds.toLowerCase())) {
-        drawSupporters.push({ name: card.name, qty: card.qty });
-        break;
-      }
+    const data = cardDataMap.get(card.name);
+    const mark = data?.regulation_mark ?? null;
+    if (isRotating(mark)) {
+      rotatingCards.push({ name: card.name, qty: card.qty, regulationMark: mark });
+    } else {
+      rotationSafeCount += card.qty;
     }
+  }
 
-    for (const sc of SEARCH_CARDS) {
-      if (nameLower.includes(sc.toLowerCase())) {
-        searchCards.push({ name: card.name, qty: card.qty });
-        break;
+  const rotatingCount = rotatingCards.reduce((s, c) => s + c.qty, 0);
+  return { rotatingCards, rotatingCount, rotationSafeCount };
+}
+
+/* ─── Attack Coverage ────────────────────────────────────────── */
+
+function buildAttackCoverage(
+  pokemonCards: Card[],
+  cardDataMap: Map<string, DaemonCard>,
+  energyTypes: Record<string, number>
+): { attackerMismatches: AttackerMismatch[] } {
+  const attackerMismatches: AttackerMismatch[] = [];
+
+  for (const card of pokemonCards) {
+    const data = cardDataMap.get(card.name);
+    if (!data) continue;
+
+    const attacks = parseJSONField<AttackData>(data.attacks);
+    for (const attack of attacks) {
+      const cost = attack.cost ?? [];
+      const missingTypes: string[] = [];
+
+      for (const type of cost) {
+        if (type === "Colorless") continue;
+        if (missingTypes.includes(type)) continue;
+        if (!energyTypes[type] || energyTypes[type] === 0) {
+          missingTypes.push(type);
+        }
+      }
+
+      if (missingTypes.length > 0) {
+        // Avoid duplicate card+attack combos
+        const existing = attackerMismatches.find(
+          (m) => m.cardName === card.name && m.attackName === attack.name
+        );
+        if (!existing) {
+          attackerMismatches.push({
+            cardName: card.name,
+            attackName: attack.name,
+            cost,
+            missingTypes,
+          });
+        }
       }
     }
   }
 
-  const totalDraw = drawSupporters.reduce((sum, d) => sum + d.qty, 0);
-  const totalSearch = searchCards.reduce((sum, s) => sum + s.qty, 0);
+  return { attackerMismatches };
+}
 
-  let rating: string;
-  const combined = totalDraw + totalSearch;
-  if (combined >= 16) rating = "Very High";
-  else if (combined >= 12) rating = "High";
-  else if (combined >= 8) rating = "Moderate";
-  else if (combined >= 4) rating = "Low";
-  else rating = "Very Low";
+/* ─── HP Curve ───────────────────────────────────────────────── */
 
-  return { drawSupporters, searchCards, totalDraw, totalSearch, rating };
+function buildHPCurve(
+  pokemonCards: Card[],
+  cardDataMap: Map<string, DaemonCard>
+): HPCurveEntry[] {
+  const buckets = { "0-60": 0, "61-120": 0, "121-180": 0, "181+": 0 };
+
+  for (const card of pokemonCards) {
+    const data = cardDataMap.get(card.name);
+    if (!data?.hp) continue;
+
+    const hp = typeof data.hp === "string" ? parseInt(data.hp, 10) : data.hp;
+    if (isNaN(hp)) continue;
+
+    // Count each copy as 1 individual Pokémon
+    const count = card.qty;
+    if (hp <= 60) buckets["0-60"] += count;
+    else if (hp <= 120) buckets["61-120"] += count;
+    else if (hp <= 180) buckets["121-180"] += count;
+    else buckets["181+"] += count;
+  }
+
+  return Object.entries(buckets).map(([range, count]) => ({ range, count }));
+}
+
+/* ─── Retreat Burden ─────────────────────────────────────────── */
+
+const SWITCH_CARD_KEYWORDS = [
+  "Switch",
+  "Escape Rope",
+  "Jet Energy",
+  "Switching Cart",
+  "Fog Crystal",
+];
+
+function buildRetreatBurden(
+  cards: Card[],
+  pokemonCards: Card[],
+  cardDataMap: Map<string, DaemonCard>
+): Pick<AnalysisResult, "totalRetreatCost" | "switchCards" | "retreatBurdenRating"> {
+  // Count switch-out cards in deck
+  let switchCards = 0;
+  for (const card of cards) {
+    const nameLower = card.name.toLowerCase();
+    if (SWITCH_CARD_KEYWORDS.some((k) => nameLower.includes(k.toLowerCase()))) {
+      switchCards += card.qty;
+    }
+  }
+
+  // Sum total retreat cost across all Pokémon copies
+  let totalRetreatCost = 0;
+  for (const card of pokemonCards) {
+    const data = cardDataMap.get(card.name);
+    if (!data) continue;
+    const rc =
+      typeof data.retreat_cost === "string"
+        ? parseInt(data.retreat_cost, 10)
+        : (data.retreat_cost ?? 0);
+    if (!isNaN(rc)) {
+      totalRetreatCost += rc * card.qty;
+    }
+  }
+
+  let retreatBurdenRating: "Low" | "Moderate" | "High";
+  if (switchCards >= 4 || totalRetreatCost <= 8) {
+    retreatBurdenRating = "Low";
+  } else if (switchCards <= 1 && totalRetreatCost >= 15) {
+    retreatBurdenRating = "High";
+  } else {
+    retreatBurdenRating = "Moderate";
+  }
+
+  return { totalRetreatCost, switchCards, retreatBurdenRating };
+}
+
+/* ─── Ability Density ────────────────────────────────────────── */
+
+function buildAbilityDensity(
+  pokemonCards: Card[],
+  cardDataMap: Map<string, DaemonCard>
+): Pick<AnalysisResult, "abilityPokemon" | "attackOnlyPokemon" | "abilityRatio"> {
+  let abilityPokemon = 0;
+  let attackOnlyPokemon = 0;
+
+  for (const card of pokemonCards) {
+    const data = cardDataMap.get(card.name);
+    if (!data) continue;
+
+    const abilities = parseJSONField<AbilityData>(data.abilities);
+    if (abilities.length > 0) {
+      abilityPokemon++;
+    } else {
+      attackOnlyPokemon++;
+    }
+  }
+
+  const total = abilityPokemon + attackOnlyPokemon;
+  const abilityRatio = total > 0 ? Math.round((abilityPokemon / total) * 100) / 100 : 0;
+
+  return { abilityPokemon, attackOnlyPokemon, abilityRatio };
+}
+
+/* ─── Dexter Score ───────────────────────────────────────────── */
+
+function buildDexterScore(
+  archetype: Archetype | null,
+  rotatingCount: number,
+  attackerMismatches: AttackerMismatch[],
+  retreatBurdenRating: "Low" | "Moderate" | "High",
+  deckSize: number
+): Pick<AnalysisResult, "dexterScore" | "scoreBreakdown"> {
+  // Archetype score (0-30)
+  let archetypeScore = 0;
+  if (archetype) {
+    if (archetype.name === "Unknown") archetypeScore = 0;
+    else if (archetype.tier === 1) archetypeScore = 30;
+    else if (archetype.tier === 2) archetypeScore = 20;
+    else archetypeScore = 10; // tier 3+ but known
+  }
+
+  // Rotation score (0-20)
+  let rotationScore = 0;
+  if (rotatingCount === 0) rotationScore = 20;
+  else if (rotatingCount <= 3) rotationScore = 15;
+  else if (rotatingCount <= 7) rotationScore = 8;
+  else rotationScore = 0;
+
+  // Energy score (0-20)
+  let energyScore = 0;
+  const mismatchCount = attackerMismatches.length;
+  if (mismatchCount === 0) energyScore = 20;
+  else if (mismatchCount === 1) energyScore = 12;
+  else energyScore = 4;
+
+  // Retreat score (0-15)
+  let retreatScore = 0;
+  if (retreatBurdenRating === "Low") retreatScore = 15;
+  else if (retreatBurdenRating === "Moderate") retreatScore = 8;
+  else retreatScore = 0;
+
+  // Deck size score (0-15)
+  let deckSizeScore = 0;
+  if (deckSize === 60) deckSizeScore = 15;
+  else if (deckSize >= 58 && deckSize <= 62) deckSizeScore = 8;
+  else deckSizeScore = 0;
+
+  const dexterScore =
+    archetypeScore + rotationScore + energyScore + retreatScore + deckSizeScore;
+
+  return {
+    dexterScore,
+    scoreBreakdown: {
+      archetype: archetypeScore,
+      rotation: rotationScore,
+      energy: energyScore,
+      retreat: retreatScore,
+      deckSize: deckSizeScore,
+    },
+  };
 }
 
 /* ─── Warnings ───────────────────────────────────────────────── */
@@ -591,8 +830,7 @@ function analyzeConsistency(cards: Card[]): ConsistencyMetrics {
 function generateWarnings(
   cards: Card[],
   sections: AnalysisResult["sections"],
-  deckSize: number,
-  consistency: ConsistencyMetrics
+  deckSize: number
 ): string[] {
   const warnings: string[] = [];
 
@@ -612,23 +850,9 @@ function generateWarnings(
     );
   }
 
-  if (consistency.totalDraw < 4) {
-    warnings.push(
-      "Very few draw supporters — you may struggle with consistency."
-    );
-  }
-
-  if (consistency.totalSearch < 4) {
-    warnings.push(
-      "Low search card count — consider adding more to find key pieces."
-    );
-  }
-
-  // Check for more than 4 copies of any non-basic-energy card
   const nonEnergy = cards.filter(
     (c) =>
-      c.section !== "energy" ||
-      !c.name.toLowerCase().includes("basic")
+      c.section !== "energy" || !c.name.toLowerCase().includes("basic")
   );
   for (const card of nonEnergy) {
     if (card.qty > 4) {
@@ -678,8 +902,55 @@ export async function POST(req: NextRequest) {
     const deckSize = sections.pokemon + sections.trainer + sections.energy;
     const energyProfile = analyzeEnergy(cards);
     const archetype = detectArchetypeWithFallback(cards);
-    const consistency = analyzeConsistency(cards);
-    const warnings = generateWarnings(cards, sections, deckSize, consistency);
+    const warnings = generateWarnings(cards, sections, deckSize);
+
+    // ── Fetch all unique card names from daemon in parallel ──
+    const seen = new Set<string>();
+    const uniqueNames: string[] = [];
+    for (const c of cards) {
+      if (!seen.has(c.name)) {
+        seen.add(c.name);
+        uniqueNames.push(c.name);
+      }
+    }
+    const fetchResults = await Promise.all(
+      uniqueNames.map((name) => fetchCardFromDaemon(name))
+    );
+
+    const cardDataMap = new Map<string, DaemonCard>();
+    uniqueNames.forEach((name, i) => {
+      const data = fetchResults[i];
+      if (data) cardDataMap.set(name, data);
+    });
+
+    const pokemonCards = cards.filter((c) => c.section === "pokemon");
+
+    // ── Compute 5 signals ──
+    const { rotatingCards, rotatingCount, rotationSafeCount } =
+      buildRotationCheck(cards, cardDataMap);
+
+    const { attackerMismatches } = buildAttackCoverage(
+      pokemonCards,
+      cardDataMap,
+      energyProfile.types
+    );
+
+    const hpCurve = buildHPCurve(pokemonCards, cardDataMap);
+
+    const { totalRetreatCost, switchCards, retreatBurdenRating } =
+      buildRetreatBurden(cards, pokemonCards, cardDataMap);
+
+    const { abilityPokemon, attackOnlyPokemon, abilityRatio } =
+      buildAbilityDensity(pokemonCards, cardDataMap);
+
+    // ── Dexter Score ──
+    const { dexterScore, scoreBreakdown } = buildDexterScore(
+      archetype,
+      rotatingCount,
+      attackerMismatches,
+      retreatBurdenRating,
+      deckSize
+    );
 
     const result: AnalysisResult = {
       deckSize,
@@ -687,8 +958,20 @@ export async function POST(req: NextRequest) {
       cards,
       energyProfile,
       archetype,
-      consistency,
       warnings,
+      rotatingCards,
+      rotatingCount,
+      rotationSafeCount,
+      attackerMismatches,
+      hpCurve,
+      totalRetreatCost,
+      switchCards,
+      retreatBurdenRating,
+      abilityPokemon,
+      attackOnlyPokemon,
+      abilityRatio,
+      dexterScore,
+      scoreBreakdown,
     };
 
     return NextResponse.json(result);

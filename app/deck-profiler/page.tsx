@@ -34,12 +34,22 @@ interface Archetype {
   matchups: MatchupEntry[];
 }
 
-interface ConsistencyMetrics {
-  drawSupporters: { name: string; qty: number }[];
-  searchCards: { name: string; qty: number }[];
-  totalDraw: number;
-  totalSearch: number;
-  rating: string;
+interface RotatingCard {
+  name: string;
+  qty: number;
+  regulationMark: string | null;
+}
+
+interface AttackerMismatch {
+  cardName: string;
+  attackName: string;
+  cost: string[];
+  missingTypes: string[];
+}
+
+interface HPCurveEntry {
+  range: string;
+  count: number;
 }
 
 interface AnalysisResult {
@@ -48,8 +58,26 @@ interface AnalysisResult {
   cards: Card[];
   energyProfile: EnergyProfile;
   archetype: Archetype | null;
-  consistency: ConsistencyMetrics;
   warnings: string[];
+  rotatingCards: RotatingCard[];
+  rotatingCount: number;
+  rotationSafeCount: number;
+  attackerMismatches: AttackerMismatch[];
+  hpCurve: HPCurveEntry[];
+  totalRetreatCost: number;
+  switchCards: number;
+  retreatBurdenRating: "Low" | "Moderate" | "High";
+  abilityPokemon: number;
+  attackOnlyPokemon: number;
+  abilityRatio: number;
+  dexterScore: number;
+  scoreBreakdown: {
+    archetype: number;
+    rotation: number;
+    energy: number;
+    retreat: number;
+    deckSize: number;
+  };
 }
 
 /* ─── Energy type colors ─────────────────────────────────────── */
@@ -102,23 +130,58 @@ function MatchupBadge({ result }: { result: MatchupEntry["result"] }) {
   );
 }
 
-/* ─── Consistency rating color ───────────────────────────────── */
+/* ─── Dexter Score display ───────────────────────────────────── */
 
-function ratingColor(rating: string): string {
-  switch (rating) {
-    case "Very High":
-      return "text-green-700";
-    case "High":
-      return "text-emerald-700";
-    case "Moderate":
-      return "text-amber-700";
-    case "Low":
-      return "text-orange-700";
-    case "Very Low":
-      return "text-red-700";
-    default:
-      return "text-brown-500";
-  }
+function dexterScoreColor(score: number): string {
+  if (score >= 71) return "text-green-600";
+  if (score >= 41) return "text-amber-600";
+  return "text-red-600";
+}
+
+function dexterScoreBgColor(score: number): string {
+  if (score >= 71) return "border-green-200 bg-green-50";
+  if (score >= 41) return "border-amber-200 bg-amber-50";
+  return "border-red-200 bg-red-50";
+}
+
+function dexterScoreLabel(score: number): string {
+  if (score >= 80) return "Tournament Ready";
+  if (score >= 71) return "Competitive";
+  if (score >= 55) return "Solid Build";
+  if (score >= 41) return "Needs Work";
+  if (score >= 25) return "Casual";
+  return "Not Competitive";
+}
+
+function ScoreBreakdownPill({
+  label,
+  score,
+  max,
+}: {
+  label: string;
+  score: number;
+  max: number;
+}) {
+  const pct = max > 0 ? (score / max) * 100 : 0;
+  const barColor =
+    pct >= 80 ? "bg-green-500" : pct >= 50 ? "bg-amber-500" : "bg-red-400";
+
+  return (
+    <div className="flex flex-col gap-1 min-w-0">
+      <div className="flex justify-between items-center">
+        <span className="text-xs text-brown-500 truncate">{label}</span>
+        <span className="text-xs font-semibold text-brown-900 ml-2 shrink-0">
+          {score}/{max}
+        </span>
+      </div>
+      <div className="h-1.5 rounded-full bg-tan-200 overflow-hidden">
+        <div
+          className={`h-full rounded-full ${barColor} transition-all`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
 }
 
 /* ─── Example deck list ──────────────────────────────────────── */
@@ -156,7 +219,7 @@ Energy: 12
 
 /* ─── Page Component ─────────────────────────────────────────── */
 
-export default function AnalyzePage() {
+export default function DeckProfilerPage() {
   const [deckList, setDeckList] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -229,7 +292,7 @@ export default function AnalyzePage() {
           Deck Profiler
         </h1>
         <p className="mt-3 text-sm sm:text-base text-brown-500 max-w-md mx-auto leading-relaxed">
-          Paste your TCG Live deck list below and get an instant breakdown — energy profile, archetype, meta competitiveness, and more.
+          Paste your TCG Live deck list below and get an instant breakdown — Dexter Score, rotation check, energy coverage, HP curve, and more.
         </p>
       </header>
 
@@ -305,7 +368,64 @@ export default function AnalyzePage() {
           {/* Results */}
           {result && (
             <div className="flex flex-col gap-4">
-              {/* Warnings */}
+
+              {/* ── Dexter Score ────────────────────────────── */}
+              <div
+                className={`rounded-xl border p-5 backdrop-blur-sm ${dexterScoreBgColor(result.dexterScore)}`}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-xs text-brown-500 uppercase tracking-wide mb-0.5">
+                      Competitive Rating
+                    </p>
+                    <p className="text-xs text-brown-400">Dexter Score</p>
+                  </div>
+                  <div className="text-right">
+                    <p
+                      className={`text-5xl font-black leading-none ${dexterScoreColor(result.dexterScore)}`}
+                    >
+                      {result.dexterScore}
+                    </p>
+                    <p className="text-xs text-brown-400 mt-1">out of 100</p>
+                  </div>
+                </div>
+
+                <p
+                  className={`text-sm font-semibold mb-4 ${dexterScoreColor(result.dexterScore)}`}
+                >
+                  {dexterScoreLabel(result.dexterScore)}
+                </p>
+
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  <ScoreBreakdownPill
+                    label="Archetype"
+                    score={result.scoreBreakdown.archetype}
+                    max={30}
+                  />
+                  <ScoreBreakdownPill
+                    label="Rotation"
+                    score={result.scoreBreakdown.rotation}
+                    max={20}
+                  />
+                  <ScoreBreakdownPill
+                    label="Energy"
+                    score={result.scoreBreakdown.energy}
+                    max={20}
+                  />
+                  <ScoreBreakdownPill
+                    label="Retreat"
+                    score={result.scoreBreakdown.retreat}
+                    max={15}
+                  />
+                  <ScoreBreakdownPill
+                    label="Deck Size"
+                    score={result.scoreBreakdown.deckSize}
+                    max={15}
+                  />
+                </div>
+              </div>
+
+              {/* ── Warnings ────────────────────────────────── */}
               {result.warnings.length > 0 && (
                 <div className="rounded-xl border border-amber-600/30 bg-amber-50 p-4">
                   <h3 className="text-sm font-semibold text-amber-800 mb-2 flex items-center gap-2">
@@ -334,7 +454,7 @@ export default function AnalyzePage() {
                 </div>
               )}
 
-              {/* Overview */}
+              {/* ── Overview ────────────────────────────────── */}
               <div className="rounded-xl border border-tan-200 bg-tan-100 p-5 backdrop-blur-sm">
                 <h2 className="text-lg font-semibold mb-4">Overview</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -356,7 +476,6 @@ export default function AnalyzePage() {
                   />
                 </div>
 
-                {/* Composition bar */}
                 <div className="mt-4 flex h-2.5 rounded-full overflow-hidden bg-tan-200">
                   {result.sections.pokemon > 0 && (
                     <div
@@ -399,7 +518,7 @@ export default function AnalyzePage() {
                 </div>
               </div>
 
-              {/* Archetype */}
+              {/* ── Archetype ───────────────────────────────── */}
               {result.archetype && (
                 <div className="rounded-xl border border-tan-200 bg-tan-100 p-5 backdrop-blur-sm">
                   <h2 className="text-lg font-semibold mb-3">Archetype</h2>
@@ -426,7 +545,7 @@ export default function AnalyzePage() {
                 </div>
               )}
 
-              {/* Energy Profile */}
+              {/* ── Energy Profile ───────────────────────────── */}
               <div className="rounded-xl border border-tan-200 bg-tan-100 p-5 backdrop-blur-sm">
                 <h2 className="text-lg font-semibold mb-3">Energy Profile</h2>
 
@@ -474,73 +593,188 @@ export default function AnalyzePage() {
                 )}
               </div>
 
-              {/* Consistency */}
+              {/* ── Rotation Warning ─────────────────────────── */}
+              {result.rotatingCards.length > 0 ? (
+                <div className="rounded-xl border border-amber-600/30 bg-amber-50 p-5">
+                  <h2 className="text-lg font-semibold text-amber-900 mb-1 flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                    </svg>
+                    Rotation Warning
+                  </h2>
+                  <p className="text-sm text-amber-700 mb-3">
+                    {result.rotatingCount} card{result.rotatingCount !== 1 ? "s" : ""} rotating April 10, 2026
+                  </p>
+                  <div className="space-y-1">
+                    {result.rotatingCards.map((card, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm">
+                        <span className="text-amber-900 font-medium">{card.name}</span>
+                        <div className="flex items-center gap-3">
+                          {card.regulationMark && (
+                            <span className="text-xs text-amber-600 bg-amber-100 rounded px-1.5 py-0.5 font-mono">
+                              {card.regulationMark}
+                            </span>
+                          )}
+                          <span className="text-amber-700">&times;{card.qty}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-green-200 bg-green-50 p-4">
+                  <div className="flex items-center gap-2 text-green-800">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-sm font-semibold">Rotation Ready ✓</span>
+                  </div>
+                  <p className="text-xs text-green-700 mt-1 ml-7">All cards legal after April 10, 2026</p>
+                </div>
+              )}
+
+              {/* ── Attack Coverage ──────────────────────────── */}
+              {result.attackerMismatches.length > 0 ? (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-5">
+                  <h2 className="text-lg font-semibold text-red-900 mb-1">Attack Coverage</h2>
+                  <p className="text-sm text-red-700 mb-3">
+                    {result.attackerMismatches.length} attack{result.attackerMismatches.length !== 1 ? "s" : ""} may lack required energy types
+                  </p>
+                  <div className="space-y-2">
+                    {result.attackerMismatches.map((m, i) => (
+                      <div key={i} className="rounded-lg bg-red-100 px-3 py-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <span className="text-sm font-medium text-red-900">{m.cardName}</span>
+                            <span className="text-xs text-red-600 ml-2">— {m.attackName}</span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-red-700 mt-0.5">
+                          Missing: {m.missingTypes.join(", ")}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-green-200 bg-green-50 p-4">
+                  <div className="flex items-center gap-2 text-green-800">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-sm font-semibold">Energy matches all attackers ✓</span>
+                  </div>
+                  <p className="text-xs text-green-700 mt-1 ml-7">All attack costs are covered by your energy types</p>
+                </div>
+              )}
+
+              {/* ── HP Curve ─────────────────────────────────── */}
               <div className="rounded-xl border border-tan-200 bg-tan-100 p-5 backdrop-blur-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold">Consistency</h2>
-                  <span
-                    className={`text-sm font-semibold ${ratingColor(result.consistency.rating)}`}
-                  >
-                    {result.consistency.rating}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Draw */}
-                  <div>
-                    <p className="text-xs text-brown-500 uppercase tracking-wide mb-2">
-                      Draw Supporters ({result.consistency.totalDraw})
-                    </p>
-                    {result.consistency.drawSupporters.length > 0 ? (
-                      <ul className="space-y-1">
-                        {result.consistency.drawSupporters.map((d, i) => (
-                          <li
-                            key={i}
-                            className="text-sm flex justify-between"
-                          >
-                            <span className="text-brown-900">{d.name}</span>
-                            <span className="text-brown-500">
-                              &times;{d.qty}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-brown-300">
-                        None detected
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Search */}
-                  <div>
-                    <p className="text-xs text-brown-500 uppercase tracking-wide mb-2">
-                      Search Cards ({result.consistency.totalSearch})
-                    </p>
-                    {result.consistency.searchCards.length > 0 ? (
-                      <ul className="space-y-1">
-                        {result.consistency.searchCards.map((s, i) => (
-                          <li
-                            key={i}
-                            className="text-sm flex justify-between"
-                          >
-                            <span className="text-brown-900">{s.name}</span>
-                            <span className="text-brown-500">
-                              &times;{s.qty}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-brown-300">
-                        None detected
-                      </p>
-                    )}
-                  </div>
-                </div>
+                <h2 className="text-lg font-semibold mb-4">HP Curve</h2>
+                {(() => {
+                  const maxCount = Math.max(...result.hpCurve.map((b) => b.count), 1);
+                  return (
+                    <div className="space-y-2">
+                      {result.hpCurve.map((bucket) => (
+                        <div key={bucket.range} className="flex items-center gap-3">
+                          <span className="text-xs text-brown-500 w-16 shrink-0 font-mono">
+                            {bucket.range}
+                          </span>
+                          <div className="flex-1 h-6 rounded bg-tan-200 overflow-hidden">
+                            <div
+                              className="h-full rounded bg-blue-400 transition-all"
+                              style={{
+                                width: `${bucket.count > 0 ? Math.max((bucket.count / maxCount) * 100, 4) : 0}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="text-xs font-semibold text-brown-700 w-6 text-right shrink-0">
+                            {bucket.count}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+                <p className="text-xs text-brown-400 mt-3">HP ranges for Pokémon in your deck (by unique lines)</p>
               </div>
 
-              {/* Matchup Guide */}
+              {/* ── Retreat Burden ───────────────────────────── */}
+              <div className="rounded-xl border border-tan-200 bg-tan-100 p-5 backdrop-blur-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-lg font-semibold">Retreat Burden</h2>
+                  <span
+                    className={`text-sm font-semibold px-2.5 py-0.5 rounded-full border text-xs ${
+                      result.retreatBurdenRating === "Low"
+                        ? "bg-green-100 text-green-700 border-green-200"
+                        : result.retreatBurdenRating === "Moderate"
+                        ? "bg-amber-100 text-amber-700 border-amber-200"
+                        : "bg-red-100 text-red-700 border-red-200"
+                    }`}
+                  >
+                    {result.retreatBurdenRating}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-brown-900">
+                      {result.totalRetreatCost}
+                    </p>
+                    <p className="text-xs text-brown-500 mt-0.5">Total Retreat Cost</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-brown-900">
+                      {result.switchCards}
+                    </p>
+                    <p className="text-xs text-brown-500 mt-0.5">Switch Cards</p>
+                  </div>
+                </div>
+                {result.retreatBurdenRating === "High" && (
+                  <p className="text-xs text-red-600 mt-3">
+                    ⚠️ High retreat burden — consider adding more Switch, Escape Rope, or Jet Energy.
+                  </p>
+                )}
+              </div>
+
+              {/* ── Ability Density ──────────────────────────── */}
+              <div className="rounded-xl border border-tan-200 bg-tan-100 p-5 backdrop-blur-sm">
+                <h2 className="text-lg font-semibold mb-3">Ability Density</h2>
+                <div className="grid grid-cols-2 gap-4 mb-3">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-purple-600">
+                      {result.abilityPokemon}
+                    </p>
+                    <p className="text-xs text-brown-500 mt-0.5">With Abilities</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-brown-700">
+                      {result.attackOnlyPokemon}
+                    </p>
+                    <p className="text-xs text-brown-500 mt-0.5">Attack-Only</p>
+                  </div>
+                </div>
+                {/* Ratio bar */}
+                {(result.abilityPokemon + result.attackOnlyPokemon) > 0 && (
+                  <div className="flex h-2.5 rounded-full overflow-hidden bg-tan-200 mb-2">
+                    <div
+                      className="bg-purple-400 transition-all"
+                      style={{ width: `${result.abilityRatio * 100}%` }}
+                    />
+                    <div className="bg-tan-300 flex-1" />
+                  </div>
+                )}
+                <p className="text-xs text-brown-500">
+                  {Math.round(result.abilityRatio * 100)}% of unique Pokémon lines have abilities
+                  {result.abilityRatio < 0.2 && (
+                    <span className="text-amber-600 ml-1">— may be vulnerable to ability-lock strategies</span>
+                  )}
+                  {result.abilityRatio > 0.8 && (
+                    <span className="text-purple-600 ml-1">— heavy ability reliance, watch for Canceling Cologne</span>
+                  )}
+                </p>
+              </div>
+
+              {/* ── Matchup Guide ────────────────────────────── */}
               {result.archetype?.matchups && result.archetype.matchups.length > 0 && (
                 <div className="rounded-xl border border-tan-200 bg-tan-100 p-5 backdrop-blur-sm">
                   <h2 className="text-lg font-semibold">Matchup Guide</h2>
