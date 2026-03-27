@@ -286,68 +286,41 @@ export default function DeckProfilerPage() {
 
               {/* ── 1. Overview ─────────────────────────────── */}
               <div className="rounded-xl border border-tan-200 bg-tan-100 p-5 backdrop-blur-sm">
-                <h2 className="text-lg font-semibold mb-4">Overview</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <Stat label="Total" value={result.deckSize} />
-                  <Stat
-                    label="Pokémon"
-                    value={result.sections.pokemon}
-                    sub={result.sections.pokemonRatio}
-                    color="text-blue-600"
-                  />
-                  <Stat
-                    label="Trainers"
-                    value={result.sections.trainer}
-                    sub={result.sections.trainerRatio}
-                    color="text-green-600"
-                  />
-                  <Stat
-                    label="Energy"
-                    value={result.sections.energy}
-                    sub={result.sections.energyRatio}
-                    color="text-yellow-600"
-                  />
+                <div className="flex items-baseline justify-between mb-4">
+                  <h2 className="text-lg font-semibold">Overview</h2>
+                  <span className="text-xs text-brown-400">{result.deckSize} cards</span>
                 </div>
 
-                <div className="mt-4 flex h-2.5 rounded-full overflow-hidden bg-tan-200">
+                {/* Segmented bar */}
+                <div className="flex h-1.5 rounded-full overflow-hidden bg-tan-200 mb-4">
                   {result.sections.pokemon > 0 && (
-                    <div
-                      className="bg-blue-500 transition-all"
-                      style={{
-                        width: `${(result.sections.pokemon / result.deckSize) * 100}%`,
-                      }}
-                    />
+                    <div className="bg-blue-400 transition-all" style={{ width: `${(result.sections.pokemon / result.deckSize) * 100}%` }} />
                   )}
                   {result.sections.trainer > 0 && (
-                    <div
-                      className="bg-green-500 transition-all"
-                      style={{
-                        width: `${(result.sections.trainer / result.deckSize) * 100}%`,
-                      }}
-                    />
+                    <div className="bg-stone-400 transition-all" style={{ width: `${(result.sections.trainer / result.deckSize) * 100}%` }} />
                   )}
                   {result.sections.energy > 0 && (
-                    <div
-                      className="bg-yellow-500 transition-all"
-                      style={{
-                        width: `${(result.sections.energy / result.deckSize) * 100}%`,
-                      }}
-                    />
+                    <div className="bg-yellow-400 transition-all" style={{ width: `${(result.sections.energy / result.deckSize) * 100}%` }} />
                   )}
                 </div>
-                <div className="mt-2 flex justify-between text-xs text-brown-500">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-blue-500" />
-                    Pokémon
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-green-500" />
-                    Trainers
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-yellow-500" />
-                    Energy
-                  </span>
+
+                {/* Stat row */}
+                <div className="grid grid-cols-3 divide-x divide-tan-200">
+                  <div className="pr-4">
+                    <p className="text-xs text-brown-400 uppercase tracking-wide mb-1">Pokémon</p>
+                    <p className="text-2xl font-bold text-brown-900">{result.sections.pokemon}</p>
+                    <p className="text-xs text-brown-400 mt-0.5">{result.sections.pokemonRatio}</p>
+                  </div>
+                  <div className="px-4">
+                    <p className="text-xs text-brown-400 uppercase tracking-wide mb-1">Trainers</p>
+                    <p className="text-2xl font-bold text-brown-900">{result.sections.trainer}</p>
+                    <p className="text-xs text-brown-400 mt-0.5">{result.sections.trainerRatio}</p>
+                  </div>
+                  <div className="pl-4">
+                    <p className="text-xs text-brown-400 uppercase tracking-wide mb-1">Energy</p>
+                    <p className="text-2xl font-bold text-brown-900">{result.sections.energy}</p>
+                    <p className="text-xs text-brown-400 mt-0.5">{result.sections.energyRatio}</p>
+                  </div>
                 </div>
               </div>
 
