@@ -362,41 +362,38 @@ export default function DeckProfilerPage() {
                   </span>
                 </div>
 
-                {/* Abilities table */}
+                {/* Abilities grouped by Pokémon */}
                 {result.pokemon.abilities.length > 0 && (
                   <div className="mb-5">
                     <h3 className="text-sm font-semibold text-brown-700 mb-2">Abilities</h3>
-                    <div className="border border-tan-200 rounded-xl overflow-hidden">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="bg-tan-200">
-                            <th className="text-left px-3 py-2 text-xs font-semibold text-brown-600 uppercase tracking-wide">
-                              Pokémon
-                            </th>
-                            <th className="text-left px-3 py-2 text-xs font-semibold text-brown-600 uppercase tracking-wide">
-                              Ability
-                            </th>
-                            <th className="text-left px-3 py-2 text-xs font-semibold text-brown-600 uppercase tracking-wide">
-                              Description
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-tan-100">
-                          {result.pokemon.abilities.map((ab, i) => (
-                            <tr key={i} className="bg-tan-50 hover:bg-tan-100 transition-colors">
-                              <td className="px-3 py-2.5 font-medium text-brown-900 whitespace-nowrap">
-                                {ab.pokemonName}
-                              </td>
-                              <td className="px-3 py-2.5 text-energy font-medium whitespace-nowrap">
-                                {ab.abilityName}
-                              </td>
-                              <td className="px-3 py-2.5 text-xs text-brown-500 leading-relaxed">
-                                {ab.description || "—"}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div className="flex flex-col gap-3">
+                      {(() => {
+                        const grouped = result.pokemon.abilities.reduce<Record<string, PokemonAbility[]>>(
+                          (acc, ab) => {
+                            if (!acc[ab.pokemonName]) acc[ab.pokemonName] = [];
+                            acc[ab.pokemonName].push(ab);
+                            return acc;
+                          },
+                          {}
+                        );
+                        return Object.entries(grouped).map(([pokemonName, abilities]) => (
+                          <div key={pokemonName} className="border border-tan-200 rounded-xl overflow-hidden">
+                            <div className="bg-tan-200 px-4 py-2">
+                              <span className="text-sm font-semibold text-brown-800">{pokemonName}</span>
+                            </div>
+                            <div className="divide-y divide-tan-100">
+                              {abilities.map((ab, i) => (
+                                <div key={i} className="bg-tan-50 px-4 py-3">
+                                  <span className="font-semibold text-sm text-energy">{ab.abilityName}</span>
+                                  {ab.description && (
+                                    <p className="mt-1.5 text-xs text-brown-500 leading-relaxed">{ab.description}</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ));
+                      })()}
                     </div>
                   </div>
                 )}
