@@ -58,7 +58,7 @@ export default function Home() {
         </h1>
 
         <p className="mt-4 text-lg sm:text-xl text-brown-500 max-w-md mx-auto leading-relaxed">
-          Pokémon cards. Competitive insight. Community.
+          Collect. Compete.
         </p>
       </header>
 
