@@ -390,7 +390,7 @@ export default function DeckProfilerPage() {
                               <td className="px-3 py-2.5 text-energy font-medium whitespace-nowrap">
                                 {ab.abilityName}
                               </td>
-                              <td className="px-3 py-2.5 text-brown-600 leading-relaxed">
+                              <td className="px-3 py-2.5 text-xs text-brown-500 leading-relaxed">
                                 {ab.description || "—"}
                               </td>
                             </tr>
