@@ -3,7 +3,7 @@
 const links = [
   {
     title: "Deck Profiler",
-    description: "Paste a deck list, get a full breakdown instantly",
+    description: "Learn from your deck list",
     href: "/analyze",
     badge: "Beta",
     icon: (
@@ -14,7 +14,7 @@ const links = [
   },
   {
     title: "TCG News",
-    description: "Market moves, pulls & competitive meta",
+    description: "Stay in the know",
     href: "https://tcgdexter.beehiiv.com/",
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -24,7 +24,7 @@ const links = [
   },
   {
     title: "Shop the Collection",
-    description: "Singles, slabs & sealed product on eBay",
+    description: "Fill up your binder",
     href: "https://www.ebay.com/usr/tcgdexter",
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -34,8 +34,8 @@ const links = [
     external: true,
   },
   {
-    title: "Follow on TikTok",
-    description: "Pack openings, deck techs & collection tours",
+    title: "Watch on TikTok",
+    description: "Deck techs, pack rips, and more",
     href: "https://www.tiktok.com/@tcgdexter",
     external: true,
     icon: (
@@ -53,9 +53,6 @@ export default function Home() {
     <div className="min-h-screen flex flex-col">
       {/* ── Hero ─────────────────────────────────────────────── */}
       <header className="flex-shrink-0 pt-20 pb-16 px-6 text-center">
-        {/* Decorative top accent line */}
-        <div className="mx-auto mb-10 h-1 w-12 rounded-full bg-energy" />
-
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight">
           Dexter
         </h1>
