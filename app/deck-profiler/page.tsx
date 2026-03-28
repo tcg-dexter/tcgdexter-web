@@ -160,9 +160,11 @@ export default function DeckProfilerPage() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [pokemonOpen, setPokemonOpen] = useState(true);
+  const [pokemonOpen, setPokemonOpen] = useState(false);
   const [abilitiesOpen, setAbilitiesOpen] = useState(true);
   const [attacksOpen, setAttacksOpen] = useState(true);
+  const [trainerOpen, setTrainerOpen] = useState(false);
+  const [energyOpen, setEnergyOpen] = useState(false);
 
   async function handleAnalyze() {
     if (!deckList.trim()) {
@@ -535,8 +537,16 @@ export default function DeckProfilerPage() {
 
               {/* ── 3. Trainer Breakdown ─────────────────────── */}
               <div className="rounded-xl border border-tan-200 bg-tan-100 p-5 backdrop-blur-sm">
-                <h2 className="text-lg font-semibold mb-4">Trainer Breakdown</h2>
-                <div className="flex gap-2 flex-wrap mb-4">
+                <button
+                  onClick={() => setTrainerOpen(!trainerOpen)}
+                  className="w-full flex items-center justify-between mb-4 group"
+                >
+                  <h2 className="text-lg font-semibold">Trainer Breakdown</h2>
+                  <svg className={`w-4 h-4 text-brown-400 transition-transform ${trainerOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <div className="flex gap-2 flex-wrap" style={{ marginBottom: trainerOpen ? "1rem" : 0 }}>
                   {[
                     { count: result.trainer.totalCards, label: "Total" },
                     { count: result.trainer.uniqueCards, label: "Unique" },
@@ -551,7 +561,7 @@ export default function DeckProfilerPage() {
                     </span>
                   ))}
                 </div>
-                {result.trainer.details.length > 0 && (
+                {trainerOpen && result.trainer.details.length > 0 && (
                   <div className="flex flex-col gap-3">
                     {result.trainer.details.map((t) => (
                       <div key={t.name} className="border border-tan-200 rounded-xl overflow-hidden">
@@ -569,8 +579,16 @@ export default function DeckProfilerPage() {
 
               {/* ── 4. Energy Breakdown ──────────────────────── */}
               <div className="rounded-xl border border-tan-200 bg-tan-100 p-5 backdrop-blur-sm">
-                <h2 className="text-lg font-semibold mb-4">Energy Breakdown</h2>
-                <div className="flex gap-2 flex-wrap mb-4">
+                <button
+                  onClick={() => setEnergyOpen(!energyOpen)}
+                  className="w-full flex items-center justify-between mb-4 group"
+                >
+                  <h2 className="text-lg font-semibold">Energy Breakdown</h2>
+                  <svg className={`w-4 h-4 text-brown-400 transition-transform ${energyOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <div className="flex gap-2 flex-wrap" style={{ marginBottom: energyOpen ? "1rem" : 0 }}>
                   {[
                     { count: result.energy.totalCards, label: "Total" },
                     ...Object.entries(result.energy.basicByType).map(([type, count]) => ({ count, label: `Basic ${type}` })),
@@ -582,7 +600,7 @@ export default function DeckProfilerPage() {
                     </span>
                   ))}
                 </div>
-                {result.energy.specialDetails.length > 0 && (
+                {energyOpen && result.energy.specialDetails.length > 0 && (
                   <div className="flex flex-col gap-3">
                     {result.energy.specialDetails.map((e) => (
                       <div key={e.name} className="border border-tan-200 rounded-xl overflow-hidden">
