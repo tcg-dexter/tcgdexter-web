@@ -332,8 +332,8 @@ export default function DeckProfilerPage() {
               {result.shopMatches.length > 0 && (
                 <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
                   <div className="mb-4">
-                    <h2 className="text-lg font-semibold text-brown-900">Available in Our Shop</h2>
-                    <p className="text-xs text-brown-400 mt-0.5">Cards from this deck currently listed on eBay</p>
+                    <h2 className="text-lg font-semibold text-brown-900">Available in the Shop</h2>
+                    <p className="text-xs text-brown-400 mt-0.5">Check out cards from this deck on eBay</p>
                   </div>
                   <div className="flex flex-col gap-4">
                     {result.shopMatches.map((match) => (

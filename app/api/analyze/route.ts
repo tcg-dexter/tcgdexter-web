@@ -455,13 +455,17 @@ export async function POST(req: NextRequest) {
     const rotatingCount = rotatingCards.reduce((s, c) => s + c.qty, 0);
 
     // ── Shop Matches ───────────────────────────────────────────
+    // Match by name + card number first (exact printing), fall back to name only
     const shopMatches = cards
-      .map(card => ({
-        cardName: card.name,
-        listings: SHOP_LISTINGS[card.name.toLowerCase()] ?? []
-      }))
+      .map(card => {
+        const nameLower = card.name.toLowerCase();
+        const exactKey = card.number ? `${nameLower}:${card.number}` : null;
+        const listings = (exactKey && SHOP_LISTINGS[exactKey])
+          ? SHOP_LISTINGS[exactKey]
+          : (SHOP_LISTINGS[nameLower] ?? []);
+        return { cardName: card.name, listings };
+      })
       .filter(m => m.listings.length > 0)
-      // dedupe by card name (multiple printings of same card → one entry)
       .filter((m, i, arr) => arr.findIndex(x => x.cardName === m.cardName) === i);
 
     const result: AnalysisResult = {
