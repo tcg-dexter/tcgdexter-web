@@ -386,7 +386,7 @@ export default function DeckProfilerPage() {
                   onClick={() => setPokemonOpen(!pokemonOpen)}
                   className="w-full flex items-center justify-between mb-4 group"
                 >
-                  <h2 className="text-lg font-semibold">Pokémon Breakdown</h2>
+                  <h2 className="text-lg font-semibold">Pokémon</h2>
                   <svg
                     className={`w-4 h-4 text-brown-400 transition-transform ${pokemonOpen ? "rotate-180" : ""}`}
                     fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
@@ -535,7 +535,7 @@ export default function DeckProfilerPage() {
                   onClick={() => setTrainerOpen(!trainerOpen)}
                   className="w-full flex items-center justify-between mb-4 group"
                 >
-                  <h2 className="text-lg font-semibold">Trainer Breakdown</h2>
+                  <h2 className="text-lg font-semibold">Trainers</h2>
                   <svg className={`w-4 h-4 text-brown-400 transition-transform ${trainerOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                   </svg>
@@ -573,16 +573,21 @@ export default function DeckProfilerPage() {
 
               {/* ── 4. Energy Breakdown ──────────────────────── */}
               <div className="rounded-xl border border-tan-200 bg-tan-100 p-5 backdrop-blur-sm">
-                <div className="w-full flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold">Energy Breakdown</h2>
-                  {result.energy.specialDetails.length > 0 && (
-                    <button onClick={() => setEnergyOpen(!energyOpen)}>
-                      <svg className={`w-4 h-4 text-brown-400 transition-transform ${energyOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
+                {result.energy.specialDetails.length > 0 ? (
+                  <button
+                    onClick={() => setEnergyOpen(!energyOpen)}
+                    className="w-full flex items-center justify-between mb-4 group"
+                  >
+                    <h2 className="text-lg font-semibold">Energy</h2>
+                    <svg className={`w-4 h-4 text-brown-400 transition-transform ${energyOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                ) : (
+                  <div className="w-full flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold">Energy</h2>
+                  </div>
+                )}
                 <div className="flex gap-2 flex-wrap" style={{ marginBottom: energyOpen ? "1rem" : 0 }}>
                   {[
                     { count: result.energy.totalCards, label: "Total" },
