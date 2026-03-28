@@ -19,6 +19,7 @@ interface CardDataEntry {
     text: string;
     convertedEnergyCost: number;
   }>;
+  rules: string[];
   regulation_mark: string | null;
   retreat_cost: number | null;
 }
@@ -372,7 +373,7 @@ export async function POST(req: NextRequest) {
       if (seenTrainers.has(tc.name)) continue;
       seenTrainers.add(tc.name);
       const data = CARD_DB_LOWER.get(tc.name.toLowerCase())?.[0];
-      const effect = (data?.attacks?.[0]?.text ?? "") || (data?.abilities?.[0]?.text ?? "");
+      const effect = data?.rules?.[0] ?? data?.attacks?.[0]?.text ?? data?.abilities?.[0]?.text ?? "";
       if (effect) trainerDetails.push({ name: tc.name, description: effect });
     }
 
@@ -395,7 +396,7 @@ export async function POST(req: NextRequest) {
         basicByType[typeName] = (basicByType[typeName] ?? 0) + ec.qty;
       } else {
         energySpecialCount += ec.qty;
-        const effect = data?.attacks?.[0]?.text ?? data?.abilities?.[0]?.text ?? "";
+        const effect = data?.rules?.[0] ?? data?.attacks?.[0]?.text ?? data?.abilities?.[0]?.text ?? "";
         specialEnergyDetails.push({ name: ec.name, qty: ec.qty, description: effect });
       }
     }
