@@ -35,6 +35,7 @@ const CARD_DB_LOWER = new Map(
 interface Card {
   qty: number;
   name: string;
+  number: string;  // card number from deck list (e.g. "284")
   section: "pokemon" | "trainer" | "energy";
 }
 
@@ -130,11 +131,12 @@ function parseDeckList(raw: string): Card[] {
 
     if (/^total\s+cards?\s*:/i.test(line)) continue;
 
-    const cardMatch = line.match(/^(\d+)\s+(.+?)\s+[A-Z0-9-]{2,10}\s+\d+$/);
+    const cardMatch = line.match(/^(\d+)\s+(.+?)\s+([A-Z0-9-]{2,10})\s+(\d+)$/);
     if (cardMatch && currentSection) {
       cards.push({
         qty: parseInt(cardMatch[1], 10),
         name: cardMatch[2],
+        number: cardMatch[4],
         section: currentSection,
       });
       continue;
@@ -145,6 +147,7 @@ function parseDeckList(raw: string): Card[] {
       cards.push({
         qty: parseInt(simpleMatch[1], 10),
         name: simpleMatch[2].trim(),
+        number: "",
         section: currentSection,
       });
     }
@@ -405,9 +408,18 @@ export async function POST(req: NextRequest) {
     const energyBasicCount = Object.values(basicByType).reduce((s, n) => s + n, 0);
 
     // ── Deck Price ─────────────────────────────────────────────
+    // Try to find the exact printing by number first, then fall back to any printing
     const deckPrice = cards.reduce((sum, card) => {
-      const data = CARD_DB_LOWER.get(card.name.toLowerCase())?.[0];
-      return sum + (data?.market_price ?? 0) * card.qty;
+      const printings = CARD_DB_LOWER.get(card.name.toLowerCase()) ?? [];
+      let price = 0;
+      if (card.number && printings.length > 0) {
+        // Find the printing matching this card number
+        const exact = printings.find((p) => p.number === card.number);
+        price = exact?.market_price ?? printings[0]?.market_price ?? 0;
+      } else {
+        price = printings[0]?.market_price ?? 0;
+      }
+      return sum + price * card.qty;
     }, 0);
 
     // ── Rotation Check ─────────────────────────────────────────
