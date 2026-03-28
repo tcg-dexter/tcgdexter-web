@@ -51,12 +51,14 @@ interface AnalysisResult {
     itemCount: number;
     toolCount: number;
     stadiumCount: number;
+    details: Array<{ name: string; description: string }>;
   };
   energy: {
     totalCards: number;
-    typeCount: number;
+    basicByType: Record<string, number>;
     basicCount: number;
     specialCount: number;
+    specialDetails: Array<{ name: string; qty: number; description: string }>;
   };
   rotation: {
     ready: boolean;
@@ -534,7 +536,7 @@ export default function DeckProfilerPage() {
               {/* ── 3. Trainer Breakdown ─────────────────────── */}
               <div className="rounded-xl border border-tan-200 bg-tan-100 p-5 backdrop-blur-sm">
                 <h2 className="text-lg font-semibold mb-4">Trainer Breakdown</h2>
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap mb-4">
                   {[
                     { count: result.trainer.totalCards, label: "Total" },
                     { count: result.trainer.uniqueCards, label: "Unique" },
@@ -549,16 +551,29 @@ export default function DeckProfilerPage() {
                     </span>
                   ))}
                 </div>
+                {result.trainer.details.length > 0 && (
+                  <div className="flex flex-col gap-3">
+                    {result.trainer.details.map((t) => (
+                      <div key={t.name} className="border border-tan-200 rounded-xl overflow-hidden">
+                        <div className="bg-tan-200 px-4 py-2">
+                          <span className="text-sm font-semibold text-brown-800">{t.name}</span>
+                        </div>
+                        <div className="bg-tan-50 px-4 py-3">
+                          <p className="text-xs text-brown-500 leading-relaxed">{t.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* ── 4. Energy Breakdown ──────────────────────── */}
               <div className="rounded-xl border border-tan-200 bg-tan-100 p-5 backdrop-blur-sm">
                 <h2 className="text-lg font-semibold mb-4">Energy Breakdown</h2>
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap mb-4">
                   {[
                     { count: result.energy.totalCards, label: "Total" },
-                    ...(result.energy.typeCount > 0 ? [{ count: result.energy.typeCount, label: "Type" }] : []),
-                    ...(result.energy.basicCount > 0 ? [{ count: result.energy.basicCount, label: "Basic" }] : []),
+                    ...Object.entries(result.energy.basicByType).map(([type, count]) => ({ count, label: `Basic ${type}` })),
                     ...(result.energy.specialCount > 0 ? [{ count: result.energy.specialCount, label: "Special" }] : []),
                   ].map(({ count, label }) => (
                     <span key={label} className="inline-flex items-center gap-1 rounded-full border border-tan-300 bg-tan-50 px-3 py-1 text-sm text-brown-700">
@@ -567,6 +582,23 @@ export default function DeckProfilerPage() {
                     </span>
                   ))}
                 </div>
+                {result.energy.specialDetails.length > 0 && (
+                  <div className="flex flex-col gap-3">
+                    {result.energy.specialDetails.map((e) => (
+                      <div key={e.name} className="border border-tan-200 rounded-xl overflow-hidden">
+                        <div className="bg-tan-200 px-4 py-2 flex items-center justify-between">
+                          <span className="text-sm font-semibold text-brown-800">{e.name}</span>
+                          <span className="text-xs text-brown-500">×{e.qty}</span>
+                        </div>
+                        {e.description && (
+                          <div className="bg-tan-50 px-4 py-3">
+                            <p className="text-xs text-brown-500 leading-relaxed">{e.description}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* ── 5. Meta Match ────────────────────────────── */}

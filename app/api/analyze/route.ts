@@ -76,12 +76,14 @@ interface AnalysisResult {
     itemCount: number;
     toolCount: number;
     stadiumCount: number;
+    details: Array<{ name: string; description: string }>;
   };
   energy: {
     totalCards: number;
-    typeCount: number;
+    basicByType: Record<string, number>;
     basicCount: number;
     specialCount: number;
+    specialDetails: Array<{ name: string; qty: number; description: string }>;
   };
   rotation: {
     ready: boolean;
@@ -358,25 +360,46 @@ export async function POST(req: NextRequest) {
       else if (subtypes.includes("Item")) itemCount += tc.qty;
     }
 
+    // ── Trainer Details ────────────────────────────────────────
+    const ENERGY_SYMBOL_TO_TYPE: Record<string, string> = {
+      R: "Fire", W: "Water", G: "Grass", L: "Lightning",
+      P: "Psychic", F: "Fighting", D: "Darkness", M: "Metal",
+      Y: "Fairy", N: "Dragon", C: "Colorless",
+    };
+    const trainerDetails: Array<{ name: string; description: string }> = [];
+    const seenTrainers = new Set<string>();
+    for (const tc of trainerCards) {
+      if (seenTrainers.has(tc.name)) continue;
+      seenTrainers.add(tc.name);
+      const data = CARD_DB_LOWER.get(tc.name.toLowerCase())?.[0];
+      const effect = (data?.attacks?.[0]?.text ?? "") || (data?.abilities?.[0]?.text ?? "");
+      if (effect) trainerDetails.push({ name: tc.name, description: effect });
+    }
+
     // ── Energy Breakdown ───────────────────────────────────────
     const energyCards = cards.filter((c) => c.section === "energy");
-    const energyTypes = new Set<string>();
-    let energyBasicCount = 0, energySpecialCount = 0;
+    const basicByType: Record<string, number> = {}; // e.g. { Fire: 6, Water: 4 }
+    const specialEnergyDetails: Array<{ name: string; qty: number; description: string }> = [];
+    let energySpecialCount = 0;
     for (const ec of energyCards) {
       const data = CARD_DB_LOWER.get(ec.name.toLowerCase())?.[0];
       const subtypes: string[] = data?.subtypes ?? [];
-      // Infer from name if subtype missing
       const isBasic = subtypes.includes("Basic") || ec.name.toLowerCase().includes("basic");
       if (isBasic) {
-        energyBasicCount += ec.qty;
-        // Extract type from name e.g. "Basic {D} Energy" or "Basic Fire Energy"
-        const typeMatch = ec.name.match(/\{(\w)\}/) ?? ec.name.match(/Basic (\w+) Energy/i);
-        if (typeMatch) energyTypes.add(typeMatch[1]);
+        // Extract type: "Basic {D} Energy" → D → Darkness, "Basic Fire Energy" → Fire
+        const symbolMatch = ec.name.match(/\{(\w)\}/);
+        const wordMatch = ec.name.match(/Basic (\w+) Energy/i);
+        const typeName = symbolMatch
+          ? (ENERGY_SYMBOL_TO_TYPE[symbolMatch[1]] ?? symbolMatch[1])
+          : (wordMatch ? wordMatch[1] : "Colorless");
+        basicByType[typeName] = (basicByType[typeName] ?? 0) + ec.qty;
       } else {
         energySpecialCount += ec.qty;
-        energyTypes.add(ec.name);
+        const effect = data?.attacks?.[0]?.text ?? data?.abilities?.[0]?.text ?? "";
+        specialEnergyDetails.push({ name: ec.name, qty: ec.qty, description: effect });
       }
     }
+    const energyBasicCount = Object.values(basicByType).reduce((s, n) => s + n, 0);
 
     // ── Rotation Check ─────────────────────────────────────────
     const ROTATING_MARKS = new Set(["A", "B", "C", "D", "E", "F", "G"]);
@@ -409,12 +432,14 @@ export async function POST(req: NextRequest) {
         itemCount,
         toolCount,
         stadiumCount,
+        details: trainerDetails,
       },
       energy: {
         totalCards: energyCount,
-        typeCount: energyTypes.size,
+        basicByType,
         basicCount: energyBasicCount,
         specialCount: energySpecialCount,
+        specialDetails: specialEnergyDetails,
       },
       rotation: {
         ready: rotatingCount === 0,
