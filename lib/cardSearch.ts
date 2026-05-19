@@ -1,6 +1,8 @@
 import { getAllCards, getSets, type CardIndexEntry } from "@/lib/cardsIndex";
 
 export type SortKey = "released" | "name" | "number" | "hp" | "price" | "rarity";
+export type SortDir = "asc" | "desc";
+export type OwnershipFilter = "all" | "owned" | "unowned";
 
 // Approximate ranking of pokemontcg.io rarity strings — higher = scarcer.
 // Unknown rarities get rank -1 so they sort to the end of a desc list.
@@ -45,7 +47,6 @@ function rarityRank(r: string | null): number {
   if (!r) return -1;
   return RARITY_RANK[r] ?? -1;
 }
-export type SortDir = "asc" | "desc";
 
 export interface CardSearchParams {
   q?: string;
@@ -62,6 +63,13 @@ export interface CardSearchParams {
   dir?: SortDir;
   page?: number;
   pageSize?: number;
+  /**
+   * Ownership filter. "owned" keeps only printings where `ownedKeys`
+   * contains the card; "unowned" inverts that; "all" (default) is a
+   * no-op. `ownedKeys` should hold `${setId}-${number}` keys.
+   */
+  ownership?: OwnershipFilter;
+  ownedKeys?: Set<string>;
 }
 
 export interface CardSearchResult {
@@ -164,6 +172,11 @@ function applyFilters(card: CardIndexEntry, p: CardSearchParams): boolean {
   if (p.hpMax != null && (card.hp == null || card.hp > p.hpMax)) return false;
   if (p.priceMin != null && card.marketPrice < p.priceMin) return false;
   if (p.priceMax != null && card.marketPrice > p.priceMax) return false;
+  if (p.ownership === "owned" || p.ownership === "unowned") {
+    const owned = p.ownedKeys?.has(card.id) ?? false;
+    if (p.ownership === "owned" && !owned) return false;
+    if (p.ownership === "unowned" && owned) return false;
+  }
   return true;
 }
 
