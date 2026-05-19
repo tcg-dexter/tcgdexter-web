@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { cardImageSmall } from "@/lib/cardImages";
 import type { CardIndexEntry } from "@/lib/cardsIndex";
-import type { SortKey, SortDir } from "@/lib/cardSearch";
+import type { SortKey, SortDir, OwnershipFilter } from "@/lib/cardSearch";
 import CardImage from "./CardImage";
 import CardFooterOverlay from "./CardFooterOverlay";
 import InventoryProvider from "./InventoryContext";
@@ -40,6 +40,7 @@ interface Params {
   page: number;
   pageSize: number;
   view: "grid" | "list";
+  ownership: OwnershipFilter;
 }
 
 interface Props {
@@ -66,6 +67,7 @@ function buildUrl(pathname: string, params: Params): string {
   if (params.page !== 1) sp.set("page", String(params.page));
   if (params.pageSize !== 120) sp.set("pageSize", String(params.pageSize));
   if (params.view !== "grid") sp.set("view", params.view);
+  if (params.ownership !== "all") sp.set("ownership", params.ownership);
   const qs = sp.toString();
   return qs ? `${pathname}?${qs}` : pathname;
 }
@@ -285,6 +287,12 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
         </div>
       )}
 
+      {/* Ownership scope */}
+      <OwnershipRadios
+        value={params.ownership}
+        onChange={(v) => updateParams({ ownership: v })}
+      />
+
       {/* Results */}
       {initialResult.cards.length === 0 ? (
         <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
@@ -308,6 +316,57 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
       )}
     </main>
     </InventoryProvider>
+  );
+}
+
+function OwnershipRadios({
+  value,
+  onChange,
+}: {
+  value: OwnershipFilter;
+  onChange: (v: OwnershipFilter) => void;
+}) {
+  const options: Array<{ key: OwnershipFilter; label: string }> = [
+    { key: "all", label: "All Cards" },
+    { key: "owned", label: "Owned" },
+    { key: "unowned", label: "Unowned" },
+  ];
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Ownership scope"
+      className="flex items-center gap-4 mb-4"
+    >
+      {options.map((o) => {
+        const selected = value === o.key;
+        return (
+          <label
+            key={o.key}
+            className="inline-flex items-center gap-2 cursor-pointer select-none text-xs font-medium text-text-secondary"
+          >
+            <input
+              type="radio"
+              name="ownership"
+              value={o.key}
+              checked={selected}
+              onChange={() => onChange(o.key)}
+              className="sr-only peer"
+            />
+            <span
+              aria-hidden="true"
+              className={`relative inline-flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${
+                selected
+                  ? "border-accent bg-white"
+                  : "border-black/25 bg-white peer-hover:border-black/50"
+              }`}
+            >
+              {selected && <span className="h-2 w-2 rounded-full bg-accent" />}
+            </span>
+            <span className={selected ? "text-text-primary" : ""}>{o.label}</span>
+          </label>
+        );
+      })}
+    </div>
   );
 }
 
