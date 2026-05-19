@@ -480,6 +480,7 @@ function GridTile({ card: c }: { card: CardIndexEntry }) {
           <InventoryOverlay
             setId={c.setId}
             number={c.number}
+            rarity={c.rarity}
             mode={mode}
             rounded="xl"
             onClose={() => setMode(null)}
@@ -560,6 +561,7 @@ function ListRow({ card: c, isFirst }: { card: CardIndexEntry; isFirst: boolean 
         <InventoryOverlay
           setId={c.setId}
           number={c.number}
+          rarity={c.rarity}
           mode={mode}
           rounded="2xl"
           onClose={() => setMode(null)}
