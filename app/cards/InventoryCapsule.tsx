@@ -1,6 +1,10 @@
 "use client";
 
-import { COLLECTION_VARIANTS, type CollectionVariantKey } from "@/lib/inventory";
+import {
+  COLLECTION_VARIANTS,
+  allowedAddVariants,
+  type CollectionVariantKey,
+} from "@/lib/inventory";
 import { useInventory } from "./InventoryContext";
 
 type Mode = "add" | "remove";
@@ -89,12 +93,14 @@ export function InventoryCapsule({ setId, number, onOpenMenu }: CapsuleProps) {
 export function InventoryOverlay({
   setId,
   number,
+  rarity,
   mode,
   rounded,
   onClose,
 }: {
   setId: string;
   number: string;
+  rarity: string | null;
   mode: Mode;
   rounded: "xl" | "2xl";
   onClose: () => void;
@@ -102,6 +108,7 @@ export function InventoryOverlay({
   const { collection, adjust } = useInventory();
   const key = `${setId}::${number}`;
   const variantQty = collection[key] ?? {};
+  const addable = new Set<CollectionVariantKey>(allowedAddVariants(rarity));
 
   function handleAdjust(variant: CollectionVariantKey, delta: number) {
     void adjust(setId, number, variant, delta);
@@ -128,6 +135,7 @@ export function InventoryOverlay({
         {COLLECTION_VARIANTS.map((v) => {
           const qty = variantQty[v.key] ?? 0;
           if (mode === "remove" && qty <= 0) return null;
+          if (mode === "add" && !addable.has(v.key)) return null;
           return (
             <li
               key={v.key}
