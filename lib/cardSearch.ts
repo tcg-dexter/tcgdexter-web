@@ -136,6 +136,12 @@ function matchAndScore(
         tokenScore = 15;
       } else if (card.nameLower.includes(w)) {
         tokenScore = 5;
+      } else if (card.artistTokens.some((tok) => tok === w)) {
+        tokenScore = 12;
+      } else if (card.artistTokens.some((tok) => tok.startsWith(w))) {
+        tokenScore = 8;
+      } else if (card.artistLower?.includes(w)) {
+        tokenScore = 4;
       } else {
         return null;
       }

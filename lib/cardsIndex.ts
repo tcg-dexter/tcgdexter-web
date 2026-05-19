@@ -23,6 +23,8 @@ export interface CardIndexEntry {
   marketPrice: number;
   rarity: string | null;
   artist: string | null;
+  artistLower: string | null;
+  artistTokens: string[];
 }
 
 export interface CardAttack {
@@ -70,6 +72,13 @@ function tokenizeName(name: string): string[] {
     .filter(Boolean);
 }
 
+function tokenizeArtist(name: string): string[] {
+  return name
+    .toLowerCase()
+    .split(/[\s\-’'.:,&()\/]+/)
+    .filter(Boolean);
+}
+
 function padNumber(num: string): string {
   const m = num.match(/^(\d+)(.*)$/);
   if (!m) return num;
@@ -111,6 +120,8 @@ function buildIndex(): CardIndexEntry[] {
         marketPrice: c.market_price ?? 0,
         rarity: c.rarity ?? null,
         artist: c.artist ?? null,
+        artistLower: c.artist ? c.artist.toLowerCase() : null,
+        artistTokens: c.artist ? tokenizeArtist(c.artist) : [],
       });
     }
   }

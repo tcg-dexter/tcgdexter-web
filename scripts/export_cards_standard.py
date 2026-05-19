@@ -51,7 +51,7 @@ from pathlib import Path
 
 CARDS_DB  = Path.home() / "Library/Application Support/Dexter/cards.db"
 PRICES_DB = Path.home() / "Library/Application Support/Dexter/prices.db"
-WEB_REPO  = Path.home() / "Desktop/tcgdexter-web"
+WEB_REPO  = Path(__file__).resolve().parent.parent
 OUT_FILE  = WEB_REPO / "data/cards-standard.json"
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
