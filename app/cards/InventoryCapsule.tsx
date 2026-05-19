@@ -85,24 +85,28 @@ export function InventoryCapsule({ setId, number, onOpenMenu }: CapsuleProps) {
 }
 
 /**
- * Variant picker overlay. Positioned absolutely; the nearest positioned
- * ancestor decides what it covers. Use rounded variants matching the
- * underlying target (rounded-xl for card images, rounded-2xl for list
- * row containers).
+ * Variant picker. In "card" mode it renders as a black overlay
+ * absolutely positioned over the nearest positioned ancestor — used
+ * by the grid tile to cover the card image. In "modal" mode it
+ * renders as a fixed centered dialog with backdrop — used by list
+ * rows, where there isn't enough vertical space to cover the row
+ * meaningfully.
  */
 export function InventoryOverlay({
   setId,
   number,
   rarity,
+  cardName,
   mode,
-  rounded,
+  display,
   onClose,
 }: {
   setId: string;
   number: string;
   rarity: string | null;
+  cardName?: string;
   mode: Mode;
-  rounded: "xl" | "2xl";
+  display: "card" | "modal";
   onClose: () => void;
 }) {
   const { collection, adjust } = useInventory();
@@ -114,11 +118,90 @@ export function InventoryOverlay({
     void adjust(setId, number, variant, delta);
   }
 
-  const roundedClass = rounded === "2xl" ? "rounded-2xl" : "rounded-xl";
+  const title = mode === "add" ? "Add variant" : "Remove variant";
+  const rows: Array<{ key: CollectionVariantKey; label: string; qty: number }> = [];
+  for (const v of COLLECTION_VARIANTS) {
+    const qty = variantQty[v.key] ?? 0;
+    if (mode === "remove" && qty <= 0) continue;
+    if (mode === "add" && !addable.has(v.key)) continue;
+    rows.push({ key: v.key, label: v.label, qty });
+  }
+
+  if (display === "modal") {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onClose();
+        }}
+      >
+        <div
+          className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="text-[10px] uppercase tracking-wider font-semibold text-text-muted">
+            {title}
+          </div>
+          {cardName && (
+            <h2 className="mt-0.5 text-base font-semibold text-text-primary truncate">
+              {cardName}
+            </h2>
+          )}
+          <ul className="mt-3 flex flex-col gap-1.5">
+            {rows.map((r) => (
+              <li
+                key={r.key}
+                className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-surface"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold text-text-primary leading-tight truncate">
+                    {r.label}
+                  </div>
+                  <div className="text-xs text-text-secondary leading-tight tabular-nums">
+                    {r.qty} owned
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleAdjust(r.key, mode === "add" ? 1 : -1);
+                  }}
+                  aria-label={`${mode === "add" ? "Add" : "Remove"} ${r.label}`}
+                  className="h-8 w-8 flex items-center justify-center rounded-full bg-black text-white text-sm font-semibold hover:bg-text-primary transition-colors flex-shrink-0"
+                >
+                  <span aria-hidden="true" className="leading-none">
+                    {mode === "add" ? "+" : "−"}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-4 flex justify-center">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onClose();
+              }}
+              aria-label="Close"
+              className="h-8 w-8 flex items-center justify-center rounded-full border border-black/30 text-text-secondary hover:text-text-primary hover:border-black/60 hover:bg-surface transition-colors"
+            >
+              <span aria-hidden="true" className="leading-none text-base">×</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
-      className={`absolute inset-0 z-10 flex flex-col ${roundedClass} bg-black/85 backdrop-blur-sm p-2`}
+      className="absolute inset-0 z-10 flex flex-col rounded-xl bg-black/85 backdrop-blur-sm p-2"
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -126,46 +209,41 @@ export function InventoryOverlay({
       }}
     >
       <div className="text-white text-[10px] uppercase tracking-wider font-semibold mb-1.5 px-1">
-        {mode === "add" ? "Add variant" : "Remove variant"}
+        {title}
       </div>
       <ul
         className="flex-1 overflow-y-auto flex flex-col gap-1"
         onClick={(e) => e.stopPropagation()}
       >
-        {COLLECTION_VARIANTS.map((v) => {
-          const qty = variantQty[v.key] ?? 0;
-          if (mode === "remove" && qty <= 0) return null;
-          if (mode === "add" && !addable.has(v.key)) return null;
-          return (
-            <li
-              key={v.key}
-              className="flex items-center justify-between gap-2 px-1.5 py-1 rounded-md bg-white/10"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="text-[11px] font-semibold text-white leading-tight truncate">
-                  {v.label}
-                </div>
-                <div className="text-[10px] text-white/60 leading-tight tabular-nums">
-                  {qty} owned
-                </div>
+        {rows.map((r) => (
+          <li
+            key={r.key}
+            className="flex items-center justify-between gap-2 px-1.5 py-1 rounded-md bg-white/10"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] font-semibold text-white leading-tight truncate">
+                {r.label}
               </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleAdjust(v.key, mode === "add" ? 1 : -1);
-                }}
-                aria-label={`${mode === "add" ? "Add" : "Remove"} ${v.label}`}
-                className="h-6 w-6 flex items-center justify-center rounded-full bg-white text-black text-xs font-semibold hover:bg-white/90 transition-colors flex-shrink-0"
-              >
-                <span aria-hidden="true" className="leading-none">
-                  {mode === "add" ? "+" : "−"}
-                </span>
-              </button>
-            </li>
-          );
-        })}
+              <div className="text-[10px] text-white/60 leading-tight tabular-nums">
+                {r.qty} owned
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleAdjust(r.key, mode === "add" ? 1 : -1);
+              }}
+              aria-label={`${mode === "add" ? "Add" : "Remove"} ${r.label}`}
+              className="h-6 w-6 flex items-center justify-center rounded-full bg-white text-black text-xs font-semibold hover:bg-white/90 transition-colors flex-shrink-0"
+            >
+              <span aria-hidden="true" className="leading-none">
+                {mode === "add" ? "+" : "−"}
+              </span>
+            </button>
+          </li>
+        ))}
       </ul>
       <div className="mt-1.5 flex justify-center">
         <button
