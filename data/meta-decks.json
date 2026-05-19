@@ -123,7 +123,7 @@
         "category": "trainer"
       },
       {
-        "qty": 2,
+        "qty": 3,
         "name": "Night Stretcher",
         "setCode": "ASC",
         "number": "196",
@@ -131,16 +131,16 @@
       },
       {
         "qty": 1,
-        "name": "Unfair Stamp",
-        "setCode": "TWM",
-        "number": "165",
+        "name": "Prime Catcher",
+        "setCode": "TEF",
+        "number": "157",
         "category": "trainer"
       },
       {
         "qty": 2,
-        "name": "Risky Ruins",
-        "setCode": "MEG",
-        "number": "127",
+        "name": "Area Zero Underdepths",
+        "setCode": "SCR",
+        "number": "131",
         "category": "trainer"
       },
       {
@@ -148,6 +148,13 @@
         "name": "Psychic Energy",
         "setCode": "MEE",
         "number": "5",
+        "category": "energy"
+      },
+      {
+        "qty": 3,
+        "name": "Darkness Energy",
+        "setCode": "MEE",
+        "number": "7",
         "category": "energy"
       },
       {
@@ -942,7 +949,7 @@
           },
           {
             "qty": 1,
-            "name": "Fezandipiti ex",
+            "name": "Budew",
             "setCode": "ASC",
             "number": "142",
             "category": "pokemon"
@@ -17088,7 +17095,7 @@
             "qty": 1,
             "name": "Lillie's Determination",
             "setCode": "MEG",
-            "number": "119",
+            "number": "115",
             "category": "trainer"
           },
           {
@@ -17124,13 +17131,6 @@
             "name": "Tera Orb",
             "setCode": "SSP",
             "number": "189",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Energy Switch",
-            "setCode": "MEG",
-            "number": "115",
             "category": "trainer"
           },
           {
@@ -17215,6 +17215,20 @@
             "name": "Metal Energy",
             "setCode": "MEE",
             "number": "8",
+            "category": "energy"
+          },
+          {
+            "qty": 2,
+            "name": "Lightning Energy",
+            "setCode": "MEE",
+            "number": "4",
+            "category": "energy"
+          },
+          {
+            "qty": 1,
+            "name": "Water Energy",
+            "setCode": "MEE",
+            "number": "3",
             "category": "energy"
           }
         ],
@@ -19156,6 +19170,13 @@
             "name": "Telepathic Psychic Energy",
             "setCode": "POR",
             "number": "88",
+            "category": "energy"
+          },
+          {
+            "qty": 1,
+            "name": "Psychic Energy",
+            "setCode": "MEE",
+            "number": "5",
             "category": "energy"
           },
           {
@@ -22438,9 +22459,9 @@
       },
       {
         "qty": 1,
-        "name": "Secret Box",
+        "name": "Unfair Stamp",
         "setCode": "TWM",
-        "number": "163",
+        "number": "165",
         "category": "trainer"
       },
       {
@@ -24421,6 +24442,13 @@
         "date": "9th May 2026 - Regional Los Angeles, CA",
         "cards": [
           {
+            "qty": 4,
+            "name": "Munkidori",
+            "setCode": "TWM",
+            "number": "95",
+            "category": "pokemon"
+          },
+          {
             "qty": 3,
             "name": "Froakie",
             "setCode": "TWM",
@@ -24498,10 +24526,17 @@
             "category": "pokemon"
           },
           {
-            "qty": 1,
-            "name": "Fezandipiti ex",
+            "qty": 2,
+            "name": "Dusknoir",
+            "setCode": "PRE",
+            "number": "37",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Snorunt",
             "setCode": "ASC",
-            "number": "142",
+            "number": "46",
             "category": "pokemon"
           },
           {
@@ -24519,7 +24554,21 @@
             "category": "pokemon"
           },
           {
-            "qty": 4,
+            "qty": 1,
+            "name": "Fezandipiti ex",
+            "setCode": "ASC",
+            "number": "142",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Budew",
+            "setCode": "ASC",
+            "number": "16",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
             "name": "Lillie's Determination",
             "setCode": "MEG",
             "number": "119",
@@ -24562,9 +24611,9 @@
           },
           {
             "qty": 1,
-            "name": "Wally's Compassion",
-            "setCode": "MEG",
-            "number": "132",
+            "name": "Lucian",
+            "setCode": "TWM",
+            "number": "157",
             "category": "trainer"
           },
           {
@@ -24607,6 +24656,13 @@
             "name": "Night Stretcher",
             "setCode": "ASC",
             "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Rare Candy",
+            "setCode": "MEG",
+            "number": "125",
             "category": "trainer"
           },
           {
@@ -29850,7 +29906,7 @@
             "qty": 8,
             "name": "Fighting Energy",
             "setCode": "MEE",
-            "number": "6",
+            "number": "3",
             "category": "energy"
           },
           {
@@ -30756,8 +30812,8 @@
     "hasRotatedCards": false
   },
   {
-    "id": "mega-venusaur-ex",
-    "name": "Mega Venusaur",
+    "id": "hop-s-trevenant",
+    "name": "Hop's Trevenant",
     "cards": [
       {
         "qty": 4,
@@ -30768,23 +30824,1404 @@
       },
       {
         "qty": 2,
-        "name": "Bulbasaur",
-        "setCode": "MEG",
-        "number": "1",
+        "name": "Trubbish",
+        "setCode": "PAR",
+        "number": "116",
         "category": "pokemon"
       },
       {
         "qty": 2,
-        "name": "Ivysaur",
+        "name": "Garbodor",
+        "setCode": "LTR",
+        "number": "68",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Dedenne-GX",
+        "setCode": "TEU",
+        "number": "51",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Crobat V",
+        "setCode": "DAA",
+        "number": "104",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Squawkabilly ex",
+        "setCode": "PAL",
+        "number": "169",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Tapu Lele-GX",
+        "setCode": "GRI",
+        "number": "60",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Budew",
+        "setCode": "ASC",
+        "number": "16",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Lillie's Determination",
         "setCode": "MEG",
-        "number": "2",
+        "number": "119",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Carmine",
+        "setCode": "TWM",
+        "number": "145",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Iono",
+        "setCode": "PAL",
+        "number": "185",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Roxanne",
+        "setCode": "ASR",
+        "number": "150",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Guzma",
+        "setCode": "BUS",
+        "number": "115",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Crispin",
+        "setCode": "SCR",
+        "number": "133",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Wally",
+        "setCode": "ROS",
+        "number": "94",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Karen",
+        "setCode": "XYP",
+        "number": "177",
+        "category": "trainer"
+      },
+      {
+        "qty": 4,
+        "name": "Quick Ball",
+        "setCode": "FST",
+        "number": "237",
+        "category": "trainer"
+      },
+      {
+        "qty": 4,
+        "name": "Dark Patch",
+        "setCode": "ASR",
+        "number": "139",
+        "category": "trainer"
+      },
+      {
+        "qty": 3,
+        "name": "VS Seeker",
+        "setCode": "PHF",
+        "number": "109",
+        "category": "trainer"
+      },
+      {
+        "qty": 2,
+        "name": "Battle Compressor",
+        "setCode": "PHF",
+        "number": "92",
+        "category": "trainer"
+      },
+      {
+        "qty": 2,
+        "name": "Ultra Ball",
+        "setCode": "MEG",
+        "number": "131",
+        "category": "trainer"
+      },
+      {
+        "qty": 2,
+        "name": "Battle VIP Pass",
+        "setCode": "FST",
+        "number": "225",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Boost Shake",
+        "setCode": "EVS",
+        "number": "142",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Secret Box",
+        "setCode": "TWM",
+        "number": "163",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Night Stretcher",
+        "setCode": "ASC",
+        "number": "196",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Super Rod",
+        "setCode": "PAL",
+        "number": "188",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Pok\u00e9mon Communication",
+        "setCode": "TEU",
+        "number": "152",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Hisuian Heavy Ball",
+        "setCode": "ASR",
+        "number": "146",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Field Blower",
+        "setCode": "GRI",
+        "number": "125",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Adventure Bag",
+        "setCode": "LOT",
+        "number": "167",
+        "category": "trainer"
+      },
+      {
+        "qty": 4,
+        "name": "Float Stone",
+        "setCode": "BKT",
+        "number": "137",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Muscle Band",
+        "setCode": "XY",
+        "number": "121",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Forest Seal Stone",
+        "setCode": "SIT",
+        "number": "156",
+        "category": "trainer"
+      },
+      {
+        "qty": 2,
+        "name": "Temple of Sinnoh",
+        "setCode": "ASR",
+        "number": "155",
+        "category": "trainer"
+      },
+      {
+        "qty": 5,
+        "name": "Darkness Energy",
+        "setCode": "MEE",
+        "number": "7",
+        "category": "energy"
+      },
+      {
+        "qty": 2,
+        "name": "Lightning Energy",
+        "setCode": "MEE",
+        "number": "4",
+        "category": "energy"
+      }
+    ],
+    "variants": [
+      {
+        "placing": 8,
+        "date": "10th May 2026 - CL Aichi Open League",
+        "cards": [
+          {
+            "qty": 2,
+            "name": "Mega Absol ex",
+            "setCode": "MEG",
+            "number": "86",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Trubbish",
+            "setCode": "PAR",
+            "number": "116",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Garbodor",
+            "setCode": "LTR",
+            "number": "68",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Dedenne-GX",
+            "setCode": "TEU",
+            "number": "51",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Crobat V",
+            "setCode": "DAA",
+            "number": "104",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Squawkabilly ex",
+            "setCode": "PAL",
+            "number": "169",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Tapu Lele-GX",
+            "setCode": "GRI",
+            "number": "60",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Budew",
+            "setCode": "ASC",
+            "number": "16",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Carmine",
+            "setCode": "TWM",
+            "number": "145",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Iono",
+            "setCode": "PAL",
+            "number": "185",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Roxanne",
+            "setCode": "ASR",
+            "number": "150",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Guzma",
+            "setCode": "BUS",
+            "number": "115",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Crispin",
+            "setCode": "SCR",
+            "number": "133",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Wally",
+            "setCode": "ROS",
+            "number": "94",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Karen",
+            "setCode": "XYP",
+            "number": "177",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Quick Ball",
+            "setCode": "FST",
+            "number": "237",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Dark Patch",
+            "setCode": "ASR",
+            "number": "139",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "VS Seeker",
+            "setCode": "PHF",
+            "number": "109",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Battle Compressor",
+            "setCode": "PHF",
+            "number": "92",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Ultra Ball",
+            "setCode": "MEG",
+            "number": "131",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Battle VIP Pass",
+            "setCode": "FST",
+            "number": "225",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Boost Shake",
+            "setCode": "EVS",
+            "number": "142",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Secret Box",
+            "setCode": "TWM",
+            "number": "163",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Super Rod",
+            "setCode": "PAL",
+            "number": "188",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Pok\u00e9mon Communication",
+            "setCode": "TEU",
+            "number": "152",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Hisuian Heavy Ball",
+            "setCode": "ASR",
+            "number": "146",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Field Blower",
+            "setCode": "GRI",
+            "number": "125",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Adventure Bag",
+            "setCode": "LOT",
+            "number": "167",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Float Stone",
+            "setCode": "BKT",
+            "number": "137",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Muscle Band",
+            "setCode": "XY",
+            "number": "121",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Forest Seal Stone",
+            "setCode": "SIT",
+            "number": "156",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Temple of Sinnoh",
+            "setCode": "ASR",
+            "number": "155",
+            "category": "trainer"
+          },
+          {
+            "qty": 5,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          },
+          {
+            "qty": 2,
+            "name": "Lightning Energy",
+            "setCode": "MEE",
+            "number": "4",
+            "category": "energy"
+          }
+        ],
+        "creator": "Yusuke Kobayashi"
+      },
+      {
+        "placing": 9,
+        "date": "10th May 2026 - CL Aichi Open League",
+        "cards": [
+          {
+            "qty": 4,
+            "name": "Unown",
+            "setCode": "AOR",
+            "number": "30",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Voltorb",
+            "setCode": "ROS",
+            "number": "21",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Electrode-GX",
+            "setCode": "CES",
+            "number": "48",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Toedscool",
+            "setCode": "PAR",
+            "number": "16",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Toedscruel",
+            "setCode": "PAR",
+            "number": "17",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Mega Absol ex",
+            "setCode": "MEG",
+            "number": "86",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Sableye V",
+            "setCode": "SSH",
+            "number": "120",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Gengar & Mimikyu-GX",
+            "setCode": "TEU",
+            "number": "53",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Dedenne-GX",
+            "setCode": "UNB",
+            "number": "57",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Squawkabilly ex",
+            "setCode": "PAL",
+            "number": "169",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Iono",
+            "setCode": "PAL",
+            "number": "185",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Guzma",
+            "setCode": "BUS",
+            "number": "115",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Plumeria",
+            "setCode": "BUS",
+            "number": "120",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Battle VIP Pass",
+            "setCode": "FST",
+            "number": "225",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Trainers' Mail",
+            "setCode": "ROS",
+            "number": "92",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Rescue Carrier",
+            "setCode": "EVS",
+            "number": "154",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Ultra Ball",
+            "setCode": "MEG",
+            "number": "131",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Rescue Stretcher",
+            "setCode": "GRI",
+            "number": "130",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Hisuian Heavy Ball",
+            "setCode": "ASR",
+            "number": "146",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "VS Seeker",
+            "setCode": "PHF",
+            "number": "109",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Battle Compressor",
+            "setCode": "PHF",
+            "number": "92",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Escape Rope",
+            "setCode": "BST",
+            "number": "125",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Canceling Cologne",
+            "setCode": "ASR",
+            "number": "136",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Secret Box",
+            "setCode": "TWM",
+            "number": "163",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Float Stone",
+            "setCode": "BKT",
+            "number": "137",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Muscle Band",
+            "setCode": "XY",
+            "number": "121",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Forest Seal Stone",
+            "setCode": "SIT",
+            "number": "156",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Silent Lab",
+            "setCode": "PRC",
+            "number": "140",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Path to the Peak",
+            "setCode": "CRE",
+            "number": "148",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Pok\u00e9Stop",
+            "setCode": "PGO",
+            "number": "68",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Prism Energy",
+            "setCode": "ASC",
+            "number": "216",
+            "category": "energy"
+          },
+          {
+            "qty": 2,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          },
+          {
+            "qty": 1,
+            "name": "Telepathic Psychic Energy",
+            "setCode": "POR",
+            "number": "88",
+            "category": "energy"
+          }
+        ],
+        "creator": "Shun Ito"
+      },
+      {
+        "placing": 11,
+        "date": "10th May 2026 - CL Aichi Open League",
+        "cards": [
+          {
+            "qty": 3,
+            "name": "Mega Absol ex",
+            "setCode": "MEG",
+            "number": "86",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Trubbish",
+            "setCode": "FST",
+            "number": "168",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Garbodor",
+            "setCode": "BKP",
+            "number": "57",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Oranguru V",
+            "setCode": "ASR",
+            "number": "133",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Latias ex",
+            "setCode": "SSP",
+            "number": "76",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Tapu Lele-GX",
+            "setCode": "GRI",
+            "number": "60",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Crobat V",
+            "setCode": "DAA",
+            "number": "104",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Squawkabilly ex",
+            "setCode": "PAL",
+            "number": "169",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Carmine",
+            "setCode": "TWM",
+            "number": "145",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Marnie",
+            "setCode": "SSH",
+            "number": "169",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Guzma",
+            "setCode": "BUS",
+            "number": "115",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Battle VIP Pass",
+            "setCode": "FST",
+            "number": "225",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Quick Ball",
+            "setCode": "FST",
+            "number": "237",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Professor's Letter",
+            "setCode": "BKT",
+            "number": "146",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Dark Patch",
+            "setCode": "ASR",
+            "number": "139",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Boost Shake",
+            "setCode": "EVS",
+            "number": "142",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Escape Rope",
+            "setCode": "BST",
+            "number": "125",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Super Rod",
+            "setCode": "PAL",
+            "number": "188",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "VS Seeker",
+            "setCode": "PHF",
+            "number": "109",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Secret Box",
+            "setCode": "TWM",
+            "number": "163",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Float Stone",
+            "setCode": "BKT",
+            "number": "137",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Forest Seal Stone",
+            "setCode": "SIT",
+            "number": "156",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Muscle Band",
+            "setCode": "XY",
+            "number": "121",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Shopping Center",
+            "setCode": "EVS",
+            "number": "157",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Temple of Sinnoh",
+            "setCode": "ASR",
+            "number": "155",
+            "category": "trainer"
+          },
+          {
+            "qty": 8,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          }
+        ],
+        "creator": "Wataru Yano"
+      },
+      {
+        "placing": 16,
+        "date": "10th May 2026 - CL Aichi Open League",
+        "cards": [
+          {
+            "qty": 2,
+            "name": "Mega Absol ex",
+            "setCode": "MEG",
+            "number": "86",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Trubbish",
+            "setCode": "M4",
+            "number": "54",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Garbodor",
+            "setCode": "LTR",
+            "number": "68",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Garbodor",
+            "setCode": "BKP",
+            "number": "57",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Budew",
+            "setCode": "ASC",
+            "number": "16",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Crobat V",
+            "setCode": "DAA",
+            "number": "104",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Tapu Lele-GX",
+            "setCode": "GRI",
+            "number": "60",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Dedenne-GX",
+            "setCode": "UNB",
+            "number": "57",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Squawkabilly ex",
+            "setCode": "PAL",
+            "number": "169",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie",
+            "setCode": "SSH",
+            "number": "169",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Carmine",
+            "setCode": "TWM",
+            "number": "145",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Guzma",
+            "setCode": "BUS",
+            "number": "115",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Plumeria",
+            "setCode": "BUS",
+            "number": "120",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Karen",
+            "setCode": "XYP",
+            "number": "177",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Quick Ball",
+            "setCode": "FST",
+            "number": "237",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Ultra Ball",
+            "setCode": "MEG",
+            "number": "131",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Trainers' Mail",
+            "setCode": "ROS",
+            "number": "92",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "VS Seeker",
+            "setCode": "PHF",
+            "number": "109",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Dark Patch",
+            "setCode": "ASR",
+            "number": "139",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Battle Compressor",
+            "setCode": "PHF",
+            "number": "92",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Battle VIP Pass",
+            "setCode": "FST",
+            "number": "225",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Boost Shake",
+            "setCode": "EVS",
+            "number": "142",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Secret Box",
+            "setCode": "TWM",
+            "number": "163",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Float Stone",
+            "setCode": "BKT",
+            "number": "137",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Muscle Band",
+            "setCode": "XY",
+            "number": "121",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Forest Seal Stone",
+            "setCode": "SIT",
+            "number": "156",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Temple of Sinnoh",
+            "setCode": "ASR",
+            "number": "155",
+            "category": "trainer"
+          },
+          {
+            "qty": 7,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          }
+        ],
+        "creator": "Takumi Matsumoto"
+      },
+      {
+        "placing": 104,
+        "date": "9th May 2026 - Regional Los Angeles, CA",
+        "cards": [
+          {
+            "qty": 3,
+            "name": "Munkidori",
+            "setCode": "TWM",
+            "number": "95",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Mega Kangaskhan ex",
+            "setCode": "MEG",
+            "number": "104",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Teal Mask Ogerpon ex",
+            "setCode": "TWM",
+            "number": "25",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Meowth ex",
+            "setCode": "POR",
+            "number": "62",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Mega Absol ex",
+            "setCode": "MEG",
+            "number": "86",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Pecharunt ex",
+            "setCode": "SFA",
+            "number": "39",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Chien-Pao",
+            "setCode": "SSP",
+            "number": "56",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Wellspring Mask Ogerpon ex",
+            "setCode": "TWM",
+            "number": "64",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Fezandipiti ex",
+            "setCode": "ASC",
+            "number": "142",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Latias ex",
+            "setCode": "SSP",
+            "number": "76",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Lillie's Clefairy ex",
+            "setCode": "JTG",
+            "number": "56",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Yveltal",
+            "setCode": "MEG",
+            "number": "88",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Boss's Orders",
+            "setCode": "MEG",
+            "number": "114",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Crispin",
+            "setCode": "SCR",
+            "number": "133",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Cyrano",
+            "setCode": "SSP",
+            "number": "170",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Brock's Scouting",
+            "setCode": "JTG",
+            "number": "146",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Xerosic's Machinations",
+            "setCode": "SFA",
+            "number": "64",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Judge",
+            "setCode": "POR",
+            "number": "76",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Ciphermaniac's Codebreaking",
+            "setCode": "TEF",
+            "number": "145",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Ultra Ball",
+            "setCode": "MEG",
+            "number": "131",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Energy Switch",
+            "setCode": "MEG",
+            "number": "115",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Unfair Stamp",
+            "setCode": "TWM",
+            "number": "165",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Area Zero Underdepths",
+            "setCode": "SCR",
+            "number": "131",
+            "category": "trainer"
+          },
+          {
+            "qty": 6,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          },
+          {
+            "qty": 5,
+            "name": "Grass Energy",
+            "setCode": "MEE",
+            "number": "1",
+            "category": "energy"
+          },
+          {
+            "qty": 2,
+            "name": "Psychic Energy",
+            "setCode": "MEE",
+            "number": "5",
+            "category": "energy"
+          },
+          {
+            "qty": 1,
+            "name": "Water Energy",
+            "setCode": "MEE",
+            "number": "3",
+            "category": "energy"
+          }
+        ],
+        "creator": "Joseph Mousaed"
+      }
+    ],
+    "hasRotatedCards": false
+  },
+  {
+    "id": "ethan-s-typhlosion",
+    "name": "Ethan's Typhlosion",
+    "cards": [
+      {
+        "qty": 4,
+        "name": "Ethan's Cyndaquil",
+        "setCode": "DRI",
+        "number": "32",
+        "category": "pokemon"
+      },
+      {
+        "qty": 4,
+        "name": "Ethan's Quilava",
+        "setCode": "DRI",
+        "number": "33",
+        "category": "pokemon"
+      },
+      {
+        "qty": 3,
+        "name": "Ethan's Typhlosion",
+        "setCode": "DRI",
+        "number": "34",
+        "category": "pokemon"
+      },
+      {
+        "qty": 3,
+        "name": "Dreepy",
+        "setCode": "TWM",
+        "number": "128",
+        "category": "pokemon"
+      },
+      {
+        "qty": 3,
+        "name": "Drakloak",
+        "setCode": "TWM",
+        "number": "129",
         "category": "pokemon"
       },
       {
         "qty": 2,
-        "name": "Mega Venusaur ex",
-        "setCode": "MEG",
-        "number": "3",
+        "name": "Victini",
+        "setCode": "SSP",
+        "number": "21",
         "category": "pokemon"
       },
       {
@@ -30845,6 +32282,13 @@
       },
       {
         "qty": 4,
+        "name": "Ethan's Adventure",
+        "setCode": "DRI",
+        "number": "165",
+        "category": "trainer"
+      },
+      {
+        "qty": 3,
         "name": "Lillie's Determination",
         "setCode": "MEG",
         "number": "119",
@@ -30858,10 +32302,10 @@
         "category": "trainer"
       },
       {
-        "qty": 2,
-        "name": "Dawn",
-        "setCode": "PFL",
-        "number": "87",
+        "qty": 1,
+        "name": "Harlequin",
+        "setCode": "WHT",
+        "number": "83",
         "category": "trainer"
       },
       {
@@ -30880,9 +32324,9 @@
       },
       {
         "qty": 4,
-        "name": "Bug Catching Set",
-        "setCode": "TWM",
-        "number": "143",
+        "name": "Wondrous Patch",
+        "setCode": "PFL",
+        "number": "94",
         "category": "trainer"
       },
       {
@@ -30924,14 +32368,21 @@
         "qty": 3,
         "name": "Forest of Vitality",
         "setCode": "MEG",
-        "number": "117",
+        "number": "125",
         "category": "trainer"
       },
       {
         "qty": 10,
         "name": "Grass Energy",
         "setCode": "MEE",
-        "number": "1",
+        "number": "5",
+        "category": "energy"
+      },
+      {
+        "qty": 4,
+        "name": "Telepathic Psychic Energy",
+        "setCode": "POR",
+        "number": "88",
         "category": "energy"
       }
     ],
@@ -30941,66 +32392,31 @@
         "date": "9th May 2026 - Regional Los Angeles, CA",
         "cards": [
           {
-            "qty": 4,
-            "name": "Teal Mask Ogerpon ex",
+            "qty": 3,
+            "name": "Munkidori",
             "setCode": "TWM",
-            "number": "25",
+            "number": "95",
             "category": "pokemon"
           },
           {
             "qty": 2,
-            "name": "Bulbasaur",
+            "name": "Solrock",
             "setCode": "MEG",
-            "number": "1",
+            "number": "75",
             "category": "pokemon"
           },
           {
             "qty": 2,
-            "name": "Ivysaur",
+            "name": "Lunatone",
             "setCode": "MEG",
-            "number": "2",
+            "number": "74",
             "category": "pokemon"
           },
           {
             "qty": 2,
-            "name": "Mega Venusaur ex",
-            "setCode": "MEG",
-            "number": "3",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Chikorita",
-            "setCode": "MEG",
-            "number": "8",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Bayleef",
-            "setCode": "MEG",
-            "number": "9",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Meganium",
-            "setCode": "MEG",
-            "number": "10",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Mega Meganium ex",
-            "setCode": "ASC",
-            "number": "10",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Meowth ex",
-            "setCode": "POR",
-            "number": "62",
+            "name": "Bloodmoon Ursaluna",
+            "setCode": "PRE",
+            "number": "54",
             "category": "pokemon"
           },
           {
@@ -31012,17 +32428,950 @@
           },
           {
             "qty": 1,
-            "name": "Genesect",
-            "setCode": "PFL",
-            "number": "8",
+            "name": "Koraidon ex",
+            "setCode": "ASC",
+            "number": "121",
             "category": "pokemon"
           },
           {
             "qty": 1,
-            "name": "Regigigas",
-            "setCode": "PRE",
-            "number": "86",
+            "name": "Bloodmoon Ursaluna ex",
+            "setCode": "TWM",
+            "number": "141",
             "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Iron Bundle",
+            "setCode": "PAR",
+            "number": "56",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Arven",
+            "setCode": "OBF",
+            "number": "186",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Crispin",
+            "setCode": "SCR",
+            "number": "133",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Iono",
+            "setCode": "PAL",
+            "number": "185",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Boss's Orders",
+            "setCode": "MEG",
+            "number": "114",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Fighting Gong",
+            "setCode": "MEG",
+            "number": "116",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Nest Ball",
+            "setCode": "SVI",
+            "number": "181",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Earthen Vessel",
+            "setCode": "PAR",
+            "number": "163",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Energy Retrieval",
+            "setCode": "SVI",
+            "number": "171",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Pok\u00e9gear 3.0",
+            "setCode": "SVI",
+            "number": "186",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Switch",
+            "setCode": "MEG",
+            "number": "130",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Secret Box",
+            "setCode": "TWM",
+            "number": "163",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Counter Gain",
+            "setCode": "SSP",
+            "number": "169",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Air Balloon",
+            "setCode": "ASC",
+            "number": "181",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Technical Machine: Turbo Energize",
+            "setCode": "PAR",
+            "number": "179",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Vengeful Punch",
+            "setCode": "OBF",
+            "number": "197",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Calamitous Snowy Mountain",
+            "setCode": "PAL",
+            "number": "174",
+            "category": "trainer"
+          },
+          {
+            "qty": 8,
+            "name": "Fighting Energy",
+            "setCode": "MEE",
+            "number": "6",
+            "category": "energy"
+          },
+          {
+            "qty": 4,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          }
+        ],
+        "creator": "Jesus Noriega"
+      },
+      {
+        "placing": 166,
+        "date": "4th April 2026 - Regional Quer\u00e9taro",
+        "cards": [
+          {
+            "qty": 3,
+            "name": "Munkidori",
+            "setCode": "TWM",
+            "number": "95",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Solrock",
+            "setCode": "MEG",
+            "number": "75",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Lunatone",
+            "setCode": "MEG",
+            "number": "74",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Bloodmoon Ursaluna",
+            "setCode": "PRE",
+            "number": "54",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Ting-Lu",
+            "setCode": "TWM",
+            "number": "110",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Bloodmoon Ursaluna ex",
+            "setCode": "TWM",
+            "number": "141",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Hop's Cramorant",
+            "setCode": "JTG",
+            "number": "138",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Fezandipiti ex",
+            "setCode": "ASC",
+            "number": "142",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Arven",
+            "setCode": "OBF",
+            "number": "186",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Boss's Orders",
+            "setCode": "MEG",
+            "number": "114",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Crispin",
+            "setCode": "SCR",
+            "number": "133",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Lana's Aid",
+            "setCode": "TWM",
+            "number": "155",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Penny",
+            "setCode": "SVI",
+            "number": "183",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Ciphermaniac's Codebreaking",
+            "setCode": "TEF",
+            "number": "145",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Fighting Gong",
+            "setCode": "MEG",
+            "number": "116",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Nest Ball",
+            "setCode": "SVI",
+            "number": "181",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Energy Switch",
+            "setCode": "MEG",
+            "number": "115",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Superior Energy Retrieval",
+            "setCode": "PAL",
+            "number": "189",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Energy Retrieval",
+            "setCode": "SVI",
+            "number": "171",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Earthen Vessel",
+            "setCode": "PAR",
+            "number": "163",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Super Rod",
+            "setCode": "PAL",
+            "number": "188",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Switch",
+            "setCode": "MEG",
+            "number": "130",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Secret Box",
+            "setCode": "TWM",
+            "number": "163",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Exp. Share",
+            "setCode": "SVI",
+            "number": "174",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Air Balloon",
+            "setCode": "ASC",
+            "number": "181",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Counter Gain",
+            "setCode": "SSP",
+            "number": "169",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Technical Machine: Turbo Energize",
+            "setCode": "PAR",
+            "number": "179",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Calamitous Snowy Mountain",
+            "setCode": "PAL",
+            "number": "174",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Artazon",
+            "setCode": "PAL",
+            "number": "171",
+            "category": "trainer"
+          },
+          {
+            "qty": 7,
+            "name": "Fighting Energy",
+            "setCode": "MEE",
+            "number": "6",
+            "category": "energy"
+          },
+          {
+            "qty": 3,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          }
+        ],
+        "creator": "Diego Osvaldo Solorio Lara"
+      },
+      {
+        "placing": 167,
+        "date": "4th April 2026 - Regional Orlando, FL",
+        "cards": [
+          {
+            "qty": 3,
+            "name": "Munkidori",
+            "setCode": "TWM",
+            "number": "95",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Solrock",
+            "setCode": "MEG",
+            "number": "75",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Lunatone",
+            "setCode": "MEG",
+            "number": "74",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Bloodmoon Ursaluna",
+            "setCode": "PRE",
+            "number": "54",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Bloodmoon Ursaluna ex",
+            "setCode": "TWM",
+            "number": "141",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Latias ex",
+            "setCode": "SSP",
+            "number": "76",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Fezandipiti ex",
+            "setCode": "ASC",
+            "number": "142",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Ting-Lu",
+            "setCode": "TWM",
+            "number": "110",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Budew",
+            "setCode": "ASC",
+            "number": "16",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Boss's Orders",
+            "setCode": "MEG",
+            "number": "114",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Arven",
+            "setCode": "OBF",
+            "number": "186",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Ciphermaniac's Codebreaking",
+            "setCode": "TEF",
+            "number": "145",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Lana's Aid",
+            "setCode": "TWM",
+            "number": "155",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Crispin",
+            "setCode": "SCR",
+            "number": "133",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Penny",
+            "setCode": "SVI",
+            "number": "183",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Fighting Gong",
+            "setCode": "MEG",
+            "number": "116",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Nest Ball",
+            "setCode": "SVI",
+            "number": "181",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Energy Switch",
+            "setCode": "MEG",
+            "number": "115",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Superior Energy Retrieval",
+            "setCode": "PAL",
+            "number": "189",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Earthen Vessel",
+            "setCode": "PAR",
+            "number": "163",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Energy Retrieval",
+            "setCode": "SVI",
+            "number": "171",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Switch",
+            "setCode": "MEG",
+            "number": "130",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Counter Catcher",
+            "setCode": "PAR",
+            "number": "160",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Secret Box",
+            "setCode": "TWM",
+            "number": "163",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Air Balloon",
+            "setCode": "ASC",
+            "number": "181",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Counter Gain",
+            "setCode": "SSP",
+            "number": "169",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Vitality Band",
+            "setCode": "SVI",
+            "number": "197",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Calamitous Snowy Mountain",
+            "setCode": "PAL",
+            "number": "174",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Artazon",
+            "setCode": "PAL",
+            "number": "171",
+            "category": "trainer"
+          },
+          {
+            "qty": 7,
+            "name": "Fighting Energy",
+            "setCode": "MEE",
+            "number": "6",
+            "category": "energy"
+          },
+          {
+            "qty": 3,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          }
+        ],
+        "creator": "Yehoshua Tate"
+      }
+    ],
+    "hasRotatedCards": false
+  },
+  {
+    "id": "steven-s-metagross-ex",
+    "name": "Steven's Metagross",
+    "cards": [
+      {
+        "qty": 3,
+        "name": "Steven's Beldum",
+        "setCode": "DRI",
+        "number": "143",
+        "category": "pokemon"
+      },
+      {
+        "qty": 2,
+        "name": "Steven's Metang",
+        "setCode": "DRI",
+        "number": "144",
+        "category": "pokemon"
+      },
+      {
+        "qty": 3,
+        "name": "Steven's Metagross ex",
+        "setCode": "DRI",
+        "number": "145",
+        "category": "pokemon"
+      },
+      {
+        "qty": 2,
+        "name": "Piplup",
+        "setCode": "PFL",
+        "number": "27",
+        "category": "pokemon"
+      },
+      {
+        "qty": 2,
+        "name": "Empoleon ex",
+        "setCode": "PFL",
+        "number": "70",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Budew",
+        "setCode": "ASC",
+        "number": "16",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Dialga",
+        "setCode": "MEG",
+        "number": "95",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Meowth ex",
+        "setCode": "POR",
+        "number": "62",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Lillie's Clefairy ex",
+        "setCode": "JTG",
+        "number": "56",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Latias ex",
+        "setCode": "SSP",
+        "number": "76",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Mega Mawile ex",
+        "setCode": "MEG",
+        "number": "94",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Mega Skarmory ex",
+        "setCode": "POR",
+        "number": "55",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Genesect ex",
+        "setCode": "BLK",
+        "number": "67",
+        "category": "pokemon"
+      },
+      {
+        "qty": 4,
+        "name": "Team Rocket's Petrel",
+        "setCode": "DRI",
+        "number": "176",
+        "category": "trainer"
+      },
+      {
+        "qty": 4,
+        "name": "Lillie's Determination",
+        "setCode": "MEG",
+        "number": "119",
+        "category": "trainer"
+      },
+      {
+        "qty": 2,
+        "name": "Boss's Orders",
+        "setCode": "MEG",
+        "number": "114",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Brock's Scouting",
+        "setCode": "JTG",
+        "number": "146",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Judge",
+        "setCode": "POR",
+        "number": "76",
+        "category": "trainer"
+      },
+      {
+        "qty": 4,
+        "name": "Rare Candy",
+        "setCode": "MEG",
+        "number": "125",
+        "category": "trainer"
+      },
+      {
+        "qty": 4,
+        "name": "Ultra Ball",
+        "setCode": "MEG",
+        "number": "131",
+        "category": "trainer"
+      },
+      {
+        "qty": 3,
+        "name": "Team Rocket's Transceiver",
+        "setCode": "DRI",
+        "number": "178",
+        "category": "trainer"
+      },
+      {
+        "qty": 2,
+        "name": "Night Stretcher",
+        "setCode": "ASC",
+        "number": "196",
+        "category": "trainer"
+      },
+      {
+        "qty": 2,
+        "name": "Jumbo Ice Cream",
+        "setCode": "PFL",
+        "number": "91",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Precious Trolley",
+        "setCode": "SSP",
+        "number": "185",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Energy Recycler",
+        "setCode": "DRI",
+        "number": "164",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Buddy-Buddy Poffin",
+        "setCode": "TEF",
+        "number": "144",
+        "category": "trainer"
+      },
+      {
+        "qty": 6,
+        "name": "Metal Energy",
+        "setCode": "MEE",
+        "number": "8",
+        "category": "energy"
+      },
+      {
+        "qty": 4,
+        "name": "Psychic Energy",
+        "setCode": "MEE",
+        "number": "5",
+        "category": "energy"
+      }
+    ],
+    "variants": [
+      {
+        "placing": 135,
+        "date": "16th May 2026 - Regional Campinas",
+        "cards": [
+          {
+            "qty": 3,
+            "name": "Steven's Beldum",
+            "setCode": "DRI",
+            "number": "143",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Steven's Metang",
+            "setCode": "DRI",
+            "number": "144",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Steven's Metagross ex",
+            "setCode": "DRI",
+            "number": "145",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Piplup",
+            "setCode": "PFL",
+            "number": "27",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Empoleon ex",
+            "setCode": "PFL",
+            "number": "70",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Budew",
+            "setCode": "ASC",
+            "number": "16",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Dialga",
+            "setCode": "MEG",
+            "number": "95",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Meowth ex",
+            "setCode": "POR",
+            "number": "62",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Lillie's Clefairy ex",
+            "setCode": "JTG",
+            "number": "56",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Latias ex",
+            "setCode": "SSP",
+            "number": "76",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Mega Mawile ex",
+            "setCode": "MEG",
+            "number": "94",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Mega Skarmory ex",
+            "setCode": "POR",
+            "number": "55",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Genesect ex",
+            "setCode": "BLK",
+            "number": "67",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Team Rocket's Petrel",
+            "setCode": "DRI",
+            "number": "176",
+            "category": "trainer"
           },
           {
             "qty": 4,
@@ -31039,38 +33388,248 @@
             "category": "trainer"
           },
           {
-            "qty": 2,
-            "name": "Dawn",
-            "setCode": "PFL",
-            "number": "87",
+            "qty": 1,
+            "name": "Brock's Scouting",
+            "setCode": "JTG",
+            "number": "146",
             "category": "trainer"
           },
           {
             "qty": 1,
-            "name": "Colress's Tenacity",
-            "setCode": "SFA",
-            "number": "57",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Xerosic's Machinations",
-            "setCode": "SFA",
-            "number": "64",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Bug Catching Set",
-            "setCode": "TWM",
-            "number": "143",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Pok\u00e9 Pad",
+            "name": "Judge",
             "setCode": "POR",
-            "number": "81",
+            "number": "76",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Rare Candy",
+            "setCode": "MEG",
+            "number": "125",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Ultra Ball",
+            "setCode": "MEG",
+            "number": "131",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Team Rocket's Transceiver",
+            "setCode": "DRI",
+            "number": "178",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Jumbo Ice Cream",
+            "setCode": "PFL",
+            "number": "91",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Precious Trolley",
+            "setCode": "SSP",
+            "number": "185",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Energy Recycler",
+            "setCode": "DRI",
+            "number": "164",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Buddy-Buddy Poffin",
+            "setCode": "TEF",
+            "number": "144",
+            "category": "trainer"
+          },
+          {
+            "qty": 6,
+            "name": "Metal Energy",
+            "setCode": "MEE",
+            "number": "8",
+            "category": "energy"
+          },
+          {
+            "qty": 4,
+            "name": "Psychic Energy",
+            "setCode": "MEE",
+            "number": "5",
+            "category": "energy"
+          }
+        ],
+        "creator": "Sebastian Cabrera Quilape"
+      },
+      {
+        "placing": 206,
+        "date": "16th May 2026 - Regional Campinas",
+        "cards": [
+          {
+            "qty": 3,
+            "name": "Steven's Beldum",
+            "setCode": "DRI",
+            "number": "143",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Steven's Metang",
+            "setCode": "DRI",
+            "number": "144",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Steven's Metagross ex",
+            "setCode": "DRI",
+            "number": "145",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Piplup",
+            "setCode": "PFL",
+            "number": "27",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Empoleon ex",
+            "setCode": "PFL",
+            "number": "70",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Genesect ex",
+            "setCode": "BLK",
+            "number": "67",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Frillish",
+            "setCode": "WHT",
+            "number": "44",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Jellicent ex",
+            "setCode": "WHT",
+            "number": "45",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Latias ex",
+            "setCode": "SSP",
+            "number": "76",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Team Rocket's Mimikyu",
+            "setCode": "DRI",
+            "number": "87",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Mega Skarmory ex",
+            "setCode": "POR",
+            "number": "55",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Budew",
+            "setCode": "ASC",
+            "number": "16",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Meowth ex",
+            "setCode": "POR",
+            "number": "62",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Mega Mawile ex",
+            "setCode": "MEG",
+            "number": "94",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Dialga",
+            "setCode": "MEG",
+            "number": "95",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Lillie's Clefairy ex",
+            "setCode": "JTG",
+            "number": "56",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Team Rocket's Petrel",
+            "setCode": "DRI",
+            "number": "176",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Boss's Orders",
+            "setCode": "MEG",
+            "number": "114",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Judge",
+            "setCode": "POR",
+            "number": "76",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Team Rocket's Transceiver",
+            "setCode": "DRI",
+            "number": "178",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Rare Candy",
+            "setCode": "MEG",
+            "number": "125",
             "category": "trainer"
           },
           {
@@ -31089,30 +33648,739 @@
           },
           {
             "qty": 1,
-            "name": "Energy Retrieval",
-            "setCode": "SVI",
-            "number": "171",
+            "name": "Buddy-Buddy Poffin",
+            "setCode": "TEF",
+            "number": "144",
             "category": "trainer"
           },
           {
             "qty": 1,
-            "name": "Max Rod",
-            "setCode": "PRE",
-            "number": "116",
+            "name": "Precious Trolley",
+            "setCode": "SSP",
+            "number": "185",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Energy Recycler",
+            "setCode": "DRI",
+            "number": "164",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Battle Cage",
+            "setCode": "PFL",
+            "number": "85",
+            "category": "trainer"
+          },
+          {
+            "qty": 6,
+            "name": "Metal Energy",
+            "setCode": "MEE",
+            "number": "8",
+            "category": "energy"
+          },
+          {
+            "qty": 5,
+            "name": "Psychic Energy",
+            "setCode": "MEE",
+            "number": "5",
+            "category": "energy"
+          }
+        ],
+        "creator": "Henry Sena"
+      },
+      {
+        "placing": 306,
+        "date": "9th May 2026 - Regional Los Angeles, CA",
+        "cards": [
+          {
+            "qty": 3,
+            "name": "Steven's Beldum",
+            "setCode": "DRI",
+            "number": "143",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Steven's Metang",
+            "setCode": "DRI",
+            "number": "144",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Steven's Metagross ex",
+            "setCode": "DRI",
+            "number": "145",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Piplup",
+            "setCode": "PFL",
+            "number": "27",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Empoleon ex",
+            "setCode": "PFL",
+            "number": "70",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Fezandipiti ex",
+            "setCode": "ASC",
+            "number": "142",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Mega Mawile ex",
+            "setCode": "MEG",
+            "number": "94",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Mega Skarmory ex",
+            "setCode": "POR",
+            "number": "55",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Dialga",
+            "setCode": "MEG",
+            "number": "95",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Meowth ex",
+            "setCode": "POR",
+            "number": "62",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Genesect ex",
+            "setCode": "BLK",
+            "number": "67",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Budew",
+            "setCode": "ASC",
+            "number": "16",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Lillie's Clefairy ex",
+            "setCode": "JTG",
+            "number": "56",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Latias ex",
+            "setCode": "SSP",
+            "number": "76",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Team Rocket's Petrel",
+            "setCode": "DRI",
+            "number": "176",
             "category": "trainer"
           },
           {
             "qty": 3,
-            "name": "Forest of Vitality",
+            "name": "Boss's Orders",
             "setCode": "MEG",
-            "number": "117",
+            "number": "114",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Judge",
+            "setCode": "POR",
+            "number": "76",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Rare Candy",
+            "setCode": "MEG",
+            "number": "125",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Jumbo Ice Cream",
+            "setCode": "PFL",
+            "number": "91",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Team Rocket's Transceiver",
+            "setCode": "DRI",
+            "number": "178",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Ultra Ball",
+            "setCode": "MEG",
+            "number": "131",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Energy Recycler",
+            "setCode": "DRI",
+            "number": "164",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Precious Trolley",
+            "setCode": "SSP",
+            "number": "185",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Buddy-Buddy Poffin",
+            "setCode": "TEF",
+            "number": "144",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Switch",
+            "setCode": "MEG",
+            "number": "130",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Battle Cage",
+            "setCode": "PFL",
+            "number": "85",
+            "category": "trainer"
+          },
+          {
+            "qty": 6,
+            "name": "Metal Energy",
+            "setCode": "MEE",
+            "number": "8",
+            "category": "energy"
+          },
+          {
+            "qty": 4,
+            "name": "Psychic Energy",
+            "setCode": "MEE",
+            "number": "5",
+            "category": "energy"
+          }
+        ],
+        "creator": "Karlson Koenig"
+      }
+    ],
+    "hasRotatedCards": false
+  },
+  {
+    "id": "archaludon-ex",
+    "name": "Archaludon",
+    "cards": [
+      {
+        "qty": 4,
+        "name": "Duraludon",
+        "setCode": "SCR",
+        "number": "106",
+        "category": "pokemon"
+      },
+      {
+        "qty": 3,
+        "name": "Archaludon ex",
+        "setCode": "SSP",
+        "number": "130",
+        "category": "pokemon"
+      },
+      {
+        "qty": 3,
+        "name": "Dunsparce",
+        "setCode": "JTG",
+        "number": "120",
+        "category": "pokemon"
+      },
+      {
+        "qty": 2,
+        "name": "Dudunsparce",
+        "setCode": "TEF",
+        "number": "129",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Dudunsparce ex",
+        "setCode": "JTG",
+        "number": "121",
+        "category": "pokemon"
+      },
+      {
+        "qty": 2,
+        "name": "Fan Rotom",
+        "setCode": "SCR",
+        "number": "118",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Mega Mawile ex",
+        "setCode": "MEG",
+        "number": "94",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Fezandipiti ex",
+        "setCode": "ASC",
+        "number": "142",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Meowth ex",
+        "setCode": "POR",
+        "number": "62",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Relicanth",
+        "setCode": "TEF",
+        "number": "84",
+        "category": "pokemon"
+      },
+      {
+        "qty": 4,
+        "name": "Lillie's Determination",
+        "setCode": "MEG",
+        "number": "119",
+        "category": "trainer"
+      },
+      {
+        "qty": 4,
+        "name": "Boss's Orders",
+        "setCode": "MEG",
+        "number": "114",
+        "category": "trainer"
+      },
+      {
+        "qty": 2,
+        "name": "Carmine",
+        "setCode": "TWM",
+        "number": "145",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Xerosic's Machinations",
+        "setCode": "SFA",
+        "number": "64",
+        "category": "trainer"
+      },
+      {
+        "qty": 4,
+        "name": "Pok\u00e9 Pad",
+        "setCode": "POR",
+        "number": "81",
+        "category": "trainer"
+      },
+      {
+        "qty": 4,
+        "name": "Ultra Ball",
+        "setCode": "MEG",
+        "number": "131",
+        "category": "trainer"
+      },
+      {
+        "qty": 4,
+        "name": "Jumbo Ice Cream",
+        "setCode": "PFL",
+        "number": "91",
+        "category": "trainer"
+      },
+      {
+        "qty": 3,
+        "name": "Night Stretcher",
+        "setCode": "ASC",
+        "number": "196",
+        "category": "trainer"
+      },
+      {
+        "qty": 2,
+        "name": "Pok\u00e9gear 3.0",
+        "setCode": "SVI",
+        "number": "186",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Hero's Cape",
+        "setCode": "TEF",
+        "number": "152",
+        "category": "trainer"
+      },
+      {
+        "qty": 2,
+        "name": "Full Metal Lab",
+        "setCode": "TEF",
+        "number": "148",
+        "category": "trainer"
+      },
+      {
+        "qty": 10,
+        "name": "Metal Energy",
+        "setCode": "MEE",
+        "number": "8",
+        "category": "energy"
+      }
+    ],
+    "variants": [
+      {
+        "placing": 315,
+        "date": "16th May 2026 - Regional Utrecht",
+        "cards": [
+          {
+            "qty": 4,
+            "name": "Duraludon",
+            "setCode": "SCR",
+            "number": "106",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Archaludon ex",
+            "setCode": "SSP",
+            "number": "130",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Dunsparce",
+            "setCode": "JTG",
+            "number": "120",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Dudunsparce",
+            "setCode": "TEF",
+            "number": "129",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Dudunsparce ex",
+            "setCode": "JTG",
+            "number": "121",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Fan Rotom",
+            "setCode": "SCR",
+            "number": "118",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Mega Mawile ex",
+            "setCode": "MEG",
+            "number": "94",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Fezandipiti ex",
+            "setCode": "ASC",
+            "number": "142",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Meowth ex",
+            "setCode": "POR",
+            "number": "62",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Relicanth",
+            "setCode": "TEF",
+            "number": "84",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Boss's Orders",
+            "setCode": "MEG",
+            "number": "114",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Carmine",
+            "setCode": "TWM",
+            "number": "145",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Xerosic's Machinations",
+            "setCode": "SFA",
+            "number": "64",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Pok\u00e9 Pad",
+            "setCode": "POR",
+            "number": "81",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Ultra Ball",
+            "setCode": "MEG",
+            "number": "131",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Jumbo Ice Cream",
+            "setCode": "PFL",
+            "number": "91",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Pok\u00e9gear 3.0",
+            "setCode": "SVI",
+            "number": "186",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Hero's Cape",
+            "setCode": "TEF",
+            "number": "152",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Full Metal Lab",
+            "setCode": "TEF",
+            "number": "148",
             "category": "trainer"
           },
           {
             "qty": 10,
-            "name": "Grass Energy",
+            "name": "Metal Energy",
             "setCode": "MEE",
-            "number": "1",
+            "number": "8",
+            "category": "energy"
+          }
+        ],
+        "creator": "Enzo Louvet"
+      },
+      {
+        "placing": 323,
+        "date": "16th May 2026 - Regional Utrecht",
+        "cards": [
+          {
+            "qty": 4,
+            "name": "Duraludon",
+            "setCode": "SCR",
+            "number": "106",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Archaludon ex",
+            "setCode": "SSP",
+            "number": "130",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Dunsparce",
+            "setCode": "JTG",
+            "number": "120",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Dudunsparce",
+            "setCode": "TEF",
+            "number": "129",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Dudunsparce ex",
+            "setCode": "JTG",
+            "number": "121",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Mega Mawile ex",
+            "setCode": "MEG",
+            "number": "94",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Relicanth",
+            "setCode": "TEF",
+            "number": "84",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Fan Rotom",
+            "setCode": "SCR",
+            "number": "118",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Meowth ex",
+            "setCode": "POR",
+            "number": "62",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Psyduck",
+            "setCode": "ASC",
+            "number": "39",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Boss's Orders",
+            "setCode": "MEG",
+            "number": "114",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Explorer's Guidance",
+            "setCode": "TEF",
+            "number": "147",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Judge",
+            "setCode": "POR",
+            "number": "76",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Team Rocket's Petrel",
+            "setCode": "DRI",
+            "number": "176",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Ultra Ball",
+            "setCode": "MEG",
+            "number": "131",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Pok\u00e9 Pad",
+            "setCode": "POR",
+            "number": "81",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Scoop Up Cyclone",
+            "setCode": "TWM",
+            "number": "162",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Battle Cage",
+            "setCode": "PFL",
+            "number": "85",
+            "category": "trainer"
+          },
+          {
+            "qty": 10,
+            "name": "Metal Energy",
+            "setCode": "MEE",
+            "number": "8",
             "category": "energy"
           }
         ],
@@ -31194,9 +34462,9 @@
           },
           {
             "qty": 1,
-            "name": "Fezandipiti ex",
-            "setCode": "ASC",
-            "number": "142",
+            "name": "Galvantula",
+            "setCode": "SFA",
+            "number": "2",
             "category": "pokemon"
           },
           {
@@ -31571,6 +34839,181 @@
             "category": "trainer"
           },
           {
+            "qty": 4,
+            "name": "Crispin",
+            "setCode": "SCR",
+            "number": "133",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Boss's Orders",
+            "setCode": "MEG",
+            "number": "114",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Jumbo Ice Cream",
+            "setCode": "PFL",
+            "number": "91",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Pok\u00e9gear 3.0",
+            "setCode": "SVI",
+            "number": "186",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Switch",
+            "setCode": "MEG",
+            "number": "130",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Ultra Ball",
+            "setCode": "MEG",
+            "number": "131",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Pok\u00e9 Pad",
+            "setCode": "POR",
+            "number": "81",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Energy Search",
+            "setCode": "POR",
+            "number": "72",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Precious Trolley",
+            "setCode": "SSP",
+            "number": "185",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Team Rocket's Factory",
+            "setCode": "DRI",
+            "number": "173",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          },
+          {
+            "qty": 4,
+            "name": "Psychic Energy",
+            "setCode": "MEE",
+            "number": "5",
+            "category": "energy"
+          },
+          {
+            "qty": 2,
+            "name": "Fighting Energy",
+            "setCode": "MEE",
+            "number": "6",
+            "category": "energy"
+          }
+        ],
+        "creator": "Mehdi Hafi"
+      },
+      {
+        "placing": 34,
+        "date": "4th April 2026 - Regional Quer\u00e9taro",
+        "cards": [
+          {
+            "qty": 3,
+            "name": "Munkidori",
+            "setCode": "TWM",
+            "number": "95",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Bouffalant",
+            "setCode": "SCR",
+            "number": "119",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Bouffalant",
+            "setCode": "OBF",
+            "number": "174",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Dwebble",
+            "setCode": "DRI",
+            "number": "11",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Crustle",
+            "setCode": "DRI",
+            "number": "12",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Mega Kangaskhan ex",
+            "setCode": "MEG",
+            "number": "104",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Psyduck",
+            "setCode": "ASC",
+            "number": "39",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Iron Leaves ex",
+            "setCode": "TEF",
+            "number": "25",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Arven",
+            "setCode": "OBF",
+            "number": "186",
+            "category": "trainer"
+          },
+          {
             "qty": 3,
             "name": "Boss's Orders",
             "setCode": "MEG",
@@ -31579,9 +35022,9 @@
           },
           {
             "qty": 1,
-            "name": "Xerosic's Machinations",
-            "setCode": "SFA",
-            "number": "64",
+            "name": "Penny",
+            "setCode": "SVI",
+            "number": "183",
             "category": "trainer"
           },
           {
