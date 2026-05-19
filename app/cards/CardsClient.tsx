@@ -482,7 +482,7 @@ function GridTile({ card: c }: { card: CardIndexEntry }) {
             number={c.number}
             rarity={c.rarity}
             mode={mode}
-            rounded="xl"
+            display="card"
             onClose={() => setMode(null)}
           />
         )}
@@ -562,8 +562,9 @@ function ListRow({ card: c, isFirst }: { card: CardIndexEntry; isFirst: boolean 
           setId={c.setId}
           number={c.number}
           rarity={c.rarity}
+          cardName={c.name}
           mode={mode}
-          rounded="2xl"
+          display="modal"
           onClose={() => setMode(null)}
         />
       )}
