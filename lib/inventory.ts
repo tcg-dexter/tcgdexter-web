@@ -2,7 +2,7 @@ export const COLLECTION_VARIANTS = [
   { key: "normal", label: "Normal" },
   { key: "holo", label: "Holo" },
   { key: "reverse_holo", label: "Reverse Holo" },
-  { key: "prize_pack", label: "Play! Pokemon Prize Pack" },
+  { key: "prize_pack", label: "Play! Pokémon Stamp" },
 ] as const;
 
 export type CollectionVariantKey = (typeof COLLECTION_VARIANTS)[number]["key"];

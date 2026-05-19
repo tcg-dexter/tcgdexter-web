@@ -118,20 +118,8 @@ export function InventoryOverlay({
         onClose();
       }}
     >
-      <div className="flex items-center justify-between text-white text-[10px] uppercase tracking-wider font-semibold mb-1.5 px-1">
-        <span>{mode === "add" ? "Add variant" : "Remove variant"}</span>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onClose();
-          }}
-          aria-label="Close"
-          className="h-5 w-5 flex items-center justify-center rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors"
-        >
-          <span aria-hidden="true" className="leading-none">×</span>
-        </button>
+      <div className="text-white text-[10px] uppercase tracking-wider font-semibold mb-1.5 px-1">
+        {mode === "add" ? "Add variant" : "Remove variant"}
       </div>
       <ul
         className="flex-1 overflow-y-auto flex flex-col gap-1"
@@ -171,6 +159,20 @@ export function InventoryOverlay({
           );
         })}
       </ul>
+      <div className="mt-1.5 flex justify-center">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onClose();
+          }}
+          aria-label="Close"
+          className="h-7 w-7 flex items-center justify-center rounded-full border border-white/60 text-white/80 hover:text-white hover:border-white hover:bg-white/10 transition-colors"
+        >
+          <span aria-hidden="true" className="leading-none text-sm">×</span>
+        </button>
+      </div>
     </div>
   );
 }
