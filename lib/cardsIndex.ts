@@ -12,6 +12,7 @@ import { setReleaseDate } from "@/lib/setReleaseDates";
  * / PFL.
  */
 const SET_PTCGO_CODE_OVERRIDES: Record<string, string> = {
+  me1: "MEG",
   me2: "PFL",
   me2pt5: "ASC",
   me3: "POR",
