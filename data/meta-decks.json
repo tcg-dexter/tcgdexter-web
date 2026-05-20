@@ -25761,37 +25761,9 @@
         "creator": "Takumi Matsumoto"
       },
       {
-        "placing": 104,
-        "date": "9th May 2026 - Regional Los Angeles, CA",
+        "placing": 22,
+        "date": "10th May 2026 - CL Aichi Open League",
         "cards": [
-          {
-            "qty": 3,
-            "name": "Munkidori",
-            "setCode": "TWM",
-            "number": "95",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Mega Kangaskhan ex",
-            "setCode": "MEG",
-            "number": "104",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Teal Mask Ogerpon ex",
-            "setCode": "TWM",
-            "number": "25",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Meowth ex",
-            "setCode": "POR",
-            "number": "62",
-            "category": "pokemon"
-          },
           {
             "qty": 2,
             "name": "Mega Absol ex",
@@ -25800,122 +25772,150 @@
             "category": "pokemon"
           },
           {
-            "qty": 1,
-            "name": "Pecharunt ex",
-            "setCode": "SFA",
-            "number": "39",
+            "qty": 2,
+            "name": "Vikavolt V",
+            "setCode": "DAA",
+            "number": "60",
             "category": "pokemon"
           },
           {
             "qty": 1,
-            "name": "Chien-Pao",
-            "setCode": "SSP",
-            "number": "56",
+            "name": "Trubbish",
+            "setCode": "FST",
+            "number": "168",
             "category": "pokemon"
           },
           {
             "qty": 1,
-            "name": "Wellspring Mask Ogerpon ex",
-            "setCode": "TWM",
-            "number": "64",
+            "name": "Trubbish",
+            "setCode": "NVI",
+            "number": "48",
             "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Fezandipiti ex",
-            "setCode": "ASC",
-            "number": "142",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Latias ex",
-            "setCode": "SSP",
-            "number": "76",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Lillie's Clefairy ex",
-            "setCode": "JTG",
-            "number": "56",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Yveltal",
-            "setCode": "MEG",
-            "number": "88",
-            "category": "pokemon"
-          },
-          {
-            "qty": 4,
-            "name": "Boss's Orders",
-            "setCode": "MEG",
-            "number": "114",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Crispin",
-            "setCode": "SCR",
-            "number": "133",
-            "category": "trainer"
           },
           {
             "qty": 2,
-            "name": "Cyrano",
-            "setCode": "SSP",
-            "number": "170",
-            "category": "trainer"
+            "name": "Garbodor",
+            "setCode": "BKP",
+            "number": "57",
+            "category": "pokemon"
           },
           {
             "qty": 1,
-            "name": "Brock's Scouting",
-            "setCode": "JTG",
-            "number": "146",
-            "category": "trainer"
+            "name": "Crobat V",
+            "setCode": "DAA",
+            "number": "104",
+            "category": "pokemon"
           },
           {
             "qty": 1,
-            "name": "Xerosic's Machinations",
-            "setCode": "SFA",
-            "number": "64",
-            "category": "trainer"
+            "name": "Squawkabilly ex",
+            "setCode": "PAL",
+            "number": "169",
+            "category": "pokemon"
           },
           {
             "qty": 1,
-            "name": "Judge",
-            "setCode": "POR",
-            "number": "76",
-            "category": "trainer"
+            "name": "Tapu Lele-GX",
+            "setCode": "GRI",
+            "number": "60",
+            "category": "pokemon"
           },
           {
             "qty": 1,
-            "name": "Ciphermaniac's Codebreaking",
-            "setCode": "TEF",
-            "number": "145",
-            "category": "trainer"
+            "name": "Dedenne-GX",
+            "setCode": "UNB",
+            "number": "57",
+            "category": "pokemon"
           },
           {
             "qty": 1,
+            "name": "Budew",
+            "setCode": "TEU",
+            "number": "51",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
             "name": "Lillie's Determination",
             "setCode": "MEG",
             "number": "119",
             "category": "trainer"
           },
           {
-            "qty": 4,
-            "name": "Ultra Ball",
-            "setCode": "MEG",
-            "number": "131",
+            "qty": 1,
+            "name": "Marnie",
+            "setCode": "SSH",
+            "number": "169",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Iono",
+            "setCode": "PAL",
+            "number": "185",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Roxanne",
+            "setCode": "ASR",
+            "number": "150",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Guzma",
+            "setCode": "BUS",
+            "number": "115",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Wally",
+            "setCode": "ROS",
+            "number": "94",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Karen",
+            "setCode": "XYP",
+            "number": "177",
             "category": "trainer"
           },
           {
             "qty": 4,
-            "name": "Energy Switch",
-            "setCode": "MEG",
-            "number": "115",
+            "name": "Quick Ball",
+            "setCode": "FST",
+            "number": "237",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "VS Seeker",
+            "setCode": "PHF",
+            "number": "109",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Dark Patch",
+            "setCode": "ASR",
+            "number": "139",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Battle Compressor",
+            "setCode": "PHF",
+            "number": "92",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Battle VIP Pass",
+            "setCode": "FST",
+            "number": "225",
             "category": "trainer"
           },
           {
@@ -25927,48 +25927,90 @@
           },
           {
             "qty": 1,
-            "name": "Unfair Stamp",
+            "name": "Secret Box",
             "setCode": "TWM",
-            "number": "165",
+            "number": "163",
             "category": "trainer"
           },
           {
-            "qty": 3,
-            "name": "Area Zero Underdepths",
-            "setCode": "SCR",
+            "qty": 1,
+            "name": "Ultra Ball",
+            "setCode": "MEG",
             "number": "131",
             "category": "trainer"
           },
           {
-            "qty": 6,
+            "qty": 1,
+            "name": "Pok\u00e9mon Communication",
+            "setCode": "TEU",
+            "number": "152",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Enhanced Hammer",
+            "setCode": "TWM",
+            "number": "148",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Field Blower",
+            "setCode": "GRI",
+            "number": "125",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Adventure Bag",
+            "setCode": "LOT",
+            "number": "167",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Float Stone",
+            "setCode": "BKT",
+            "number": "137",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Forest Seal Stone",
+            "setCode": "SIT",
+            "number": "156",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Muscle Band",
+            "setCode": "XY",
+            "number": "121",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Temple of Sinnoh",
+            "setCode": "ASR",
+            "number": "155",
+            "category": "trainer"
+          },
+          {
+            "qty": 5,
             "name": "Darkness Energy",
             "setCode": "MEE",
             "number": "7",
             "category": "energy"
           },
           {
-            "qty": 5,
-            "name": "Grass Energy",
+            "qty": 3,
+            "name": "Lightning Energy",
             "setCode": "MEE",
-            "number": "1",
-            "category": "energy"
-          },
-          {
-            "qty": 2,
-            "name": "Psychic Energy",
-            "setCode": "MEE",
-            "number": "5",
-            "category": "energy"
-          },
-          {
-            "qty": 1,
-            "name": "Water Energy",
-            "setCode": "MEE",
-            "number": "3",
+            "number": "4",
             "category": "energy"
           }
         ],
-        "creator": "Joseph Mousaed"
+        "creator": "Haruya Mori"
       }
     ],
     "hasRotatedCards": false
