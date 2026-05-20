@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { isValidVariant, type CollectionEntry } from "@/lib/inventory";
+import {
+  isValidVariant,
+  type CollectionEntry,
+  type CollectionVariantKey,
+} from "@/lib/inventory";
 
 /**
  * GET /api/collection
@@ -20,21 +24,34 @@ export async function GET() {
     return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   }
 
-  const { data, error } = await supabase
-    .from("user_card_collection")
-    .select("set_id, number, variant, quantity")
-    .eq("user_id", user.id)
-    .gt("quantity", 0);
-
-  if (error) {
-    console.error("[collection] select failed:", error);
-    return NextResponse.json({ error: "Failed to load collection." }, { status: 500 });
+  // PostgREST caps rows per response at db.maxRows (default 1000). Collections
+  // bigger than that — e.g. after a bulk import — would silently truncate, so
+  // page through with explicit ranges until we exhaust.
+  const PAGE = 1000;
+  const all: Array<{ set_id: string; number: string; variant: string; quantity: number }> = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from("user_card_collection")
+      .select("set_id, number, variant, quantity")
+      .eq("user_id", user.id)
+      .gt("quantity", 0)
+      .range(from, from + PAGE - 1);
+    if (error) {
+      console.error("[collection] select failed:", error);
+      return NextResponse.json({ error: "Failed to load collection." }, { status: 500 });
+    }
+    if (!data?.length) break;
+    all.push(...data);
+    if (data.length < PAGE) break;
   }
 
-  const items: CollectionEntry[] = (data ?? []).map((r) => ({
+  // CollectionEntry.variant is typed as the canonical key set but the table
+  // also stores exotic variants from bulk imports. The UI filters those out
+  // for per-variant rendering; here we just pass the raw string through.
+  const items: CollectionEntry[] = all.map((r) => ({
     setId: r.set_id,
     number: r.number,
-    variant: r.variant,
+    variant: r.variant as CollectionVariantKey,
     quantity: r.quantity,
   }));
 

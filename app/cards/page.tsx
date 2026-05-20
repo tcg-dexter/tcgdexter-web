@@ -55,13 +55,22 @@ export default async function CardsPage({
     } = await supabase.auth.getUser();
     ownedKeys = new Set<string>();
     if (user) {
-      const { data } = await supabase
-        .from("user_card_collection")
-        .select("set_id, number")
-        .eq("user_id", user.id)
-        .gt("quantity", 0);
-      for (const row of data ?? []) {
-        ownedKeys.add(`${row.set_id}-${row.number}`);
+      // Paginate — PostgREST caps a single response at db.maxRows (default
+      // 1000). Without this, large collections silently truncate and the
+      // ownership filter drops cards above the cap.
+      const PAGE = 1000;
+      for (let from = 0; ; from += PAGE) {
+        const { data } = await supabase
+          .from("user_card_collection")
+          .select("set_id, number")
+          .eq("user_id", user.id)
+          .gt("quantity", 0)
+          .range(from, from + PAGE - 1);
+        if (!data?.length) break;
+        for (const row of data) {
+          ownedKeys.add(`${row.set_id}-${row.number}`);
+        }
+        if (data.length < PAGE) break;
       }
     }
   }
