@@ -1,6 +1,22 @@
 import cardData from "@/data/cards-standard.json";
 import { setReleaseDate } from "@/lib/setReleaseDates";
 
+/**
+ * PTCGO / set abbreviation overrides for sets where the source data is
+ * missing the `ptcgo_code` field. Used as a fallback when the raw card
+ * row doesn't carry one — covers display in the catalog footer, set
+ * facets, and code-based search (`POR 247`, etc).
+ *
+ * The Mega Evolution era entries were never populated upstream; left
+ * unmapped they'd surface as ME3 / ME2PT5 / ME2 instead of POR / ASC
+ * / PFL.
+ */
+const SET_PTCGO_CODE_OVERRIDES: Record<string, string> = {
+  me2: "PFL",
+  me2pt5: "ASC",
+  me3: "POR",
+};
+
 export interface CardIndexEntry {
   id: string;
   name: string;
@@ -107,7 +123,7 @@ function buildIndex(): CardIndexEntry[] {
         setName: c.set_name,
         setReleaseDate: c.release_date ?? setReleaseDate(c.set_id),
         setSize: setSizes.get(c.set_id) ?? 0,
-        ptcgoCode: c.ptcgo_code ?? null,
+        ptcgoCode: c.ptcgo_code ?? SET_PTCGO_CODE_OVERRIDES[c.set_id] ?? null,
         number: c.number,
         numberPadded: padNumber(c.number),
         numberNumeric: numericMatch ? Number(numericMatch[1]) : null,
