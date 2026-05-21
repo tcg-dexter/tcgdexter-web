@@ -41,11 +41,40 @@ Usage:
 
 import argparse
 import json
+import re
 import sqlite3
 import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
+
+# Variant preference order for headline market_price. When prices.db has
+# multiple variant rows for the same printing (e.g. Jungle/Fossil holos
+# tracked as both firstEditionHolofoil and unlimitedHolofoil), we pick
+# the variant earliest in this list. The intent is to default to the
+# Unlimited print run rather than 1st Edition — 1st Edition is a niche
+# collector variant that prices 2–13× higher and overstates a typical
+# user's collection value when applied as the default.
+VARIANT_PREFERENCE = (
+    "normal",
+    "unlimited",
+    "holofoil",
+    "unlimitedHolofoil",
+    "1stedition",
+    "firstEditionHolofoil",
+    "reverseHolofoil",
+)
+_PREF_RANK = {v: i for i, v in enumerate(VARIANT_PREFERENCE)}
+
+
+def _normalize_name(name: str) -> str:
+    # Strip trailing " (NN)" where NN is digits — TCGplayer's disambiguator
+    # for cards sharing a name in the same set (e.g. "Articuno (2)" vs
+    # "Articuno (17)" in Fossil). cards.db uses plain "Articuno" and
+    # disambiguates by number, so we drop the suffix to match. Other
+    # parentheticals like "(Full Art)" or "(Secret)" denote distinct
+    # printings and are preserved.
+    return re.sub(r"\s*\(\d+\)\s*$", "", name).strip()
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
 
@@ -58,22 +87,38 @@ OUT_FILE  = WEB_REPO / "data/cards-standard.json"
 
 
 def load_prices(db_path: Path) -> dict[tuple[str, str, str], float]:
-    """Load market prices from prices.db. Returns {(name, number, set_name): price}."""
+    """Load market prices from prices.db. Returns {(name, number, set_name): price}.
+
+    When prices.db has multiple variant rows for the same printing, the
+    variant earliest in VARIANT_PREFERENCE wins. Names are normalized to
+    strip TCGplayer's "(N)" disambiguator so prices.db's "Articuno (2)"
+    matches cards.db's "Articuno" keyed by number.
+    """
     if not db_path.exists():
         print(f"WARNING: prices.db not found at {db_path} — prices will be 0")
         return {}
 
     con = sqlite3.connect(str(db_path))
     rows = con.execute(
-        "SELECT name, number, set_name, market_price FROM card_prices WHERE variant = 'normal'"
+        "SELECT name, number, set_name, variant, market_price FROM card_prices"
     ).fetchall()
     con.close()
 
-    prices: dict[tuple[str, str, str], float] = {}
-    for name, number, set_name, price in rows:
+    # Group every variant we know about per (name, number, set_name).
+    grouped: dict[tuple[str, str, str], dict[str, float]] = defaultdict(dict)
+    for name, number, set_name, variant, price in rows:
         # Normalize number: "063/165" → "63" (strip leading zeros and slash suffix)
         num_clean = number.split("/")[0].lstrip("0") or "0"
-        prices[(name.strip(), num_clean, set_name.strip())] = price
+        key = (_normalize_name(name), num_clean, set_name.strip())
+        grouped[key][variant] = price
+
+    # Collapse each group to a single price by picking the most preferred
+    # variant present. Unknown variants sort last so they're only used as a
+    # final fallback rather than overriding a known preference.
+    prices: dict[tuple[str, str, str], float] = {}
+    for key, variants in grouped.items():
+        best = min(variants, key=lambda v: _PREF_RANK.get(v, len(VARIANT_PREFERENCE)))
+        prices[key] = variants[best]
     return prices
 
 
@@ -171,7 +216,61 @@ def load_cards(db_path: Path, prices: dict) -> dict[str, list[dict]]:
 
         cards_by_name[name].append(card_entry)
 
+    _apply_catalog_stubs(cards_by_name)
     return dict(cards_by_name)
+
+
+# Minimal records for printings present in user collections but not yet
+# synced into cards.db. The upstream pipeline (sync_new_sets.py) is the
+# proper place for these — these stubs are a transient gap-filler so
+# /my-collection imports resolve. Each entry is the smallest shape the
+# web app reads: name/set/number/rarity/supertype, everything else null
+# or empty. Remove individual stubs once cards.db carries them.
+CATALOG_STUBS: list[dict] = [
+    # Mega Evolution Black Star Promos (set_id "mep")
+    {"name": "Psyduck",                 "set_id": "mep",      "set_name": "Mega Evolution Black Star Promos", "ptcgo_code": "PR-ME", "number": "7",   "supertype": "Pokémon", "subtypes": ["Basic"],   "rarity": "Promo"},
+    {"name": "Alakazam",                "set_id": "mep",      "set_name": "Mega Evolution Black Star Promos", "ptcgo_code": "PR-ME", "number": "9",   "supertype": "Pokémon", "subtypes": ["Stage 2"], "rarity": "Promo"},
+    {"name": "Sneasel",                 "set_id": "mep",      "set_name": "Mega Evolution Black Star Promos", "ptcgo_code": "PR-ME", "number": "20",  "supertype": "Pokémon", "subtypes": ["Basic"],   "rarity": "Promo"},
+    {"name": "Haunter",                 "set_id": "mep",      "set_name": "Mega Evolution Black Star Promos", "ptcgo_code": "PR-ME", "number": "27",  "supertype": "Pokémon", "subtypes": ["Stage 1"], "rarity": "Promo"},
+    {"name": "N's Zekrom",              "set_id": "mep",      "set_name": "Mega Evolution Black Star Promos", "ptcgo_code": "PR-ME", "number": "31",  "supertype": "Pokémon", "subtypes": ["Basic"],   "rarity": "Promo"},
+    {"name": "Bulbasaur",               "set_id": "mep",      "set_name": "Mega Evolution Black Star Promos", "ptcgo_code": "PR-ME", "number": "37",  "supertype": "Pokémon", "subtypes": ["Basic"],   "rarity": "Promo"},
+    {"name": "Charmander",              "set_id": "mep",      "set_name": "Mega Evolution Black Star Promos", "ptcgo_code": "PR-ME", "number": "38",  "supertype": "Pokémon", "subtypes": ["Basic"],   "rarity": "Promo"},
+    {"name": "Squirtle",                "set_id": "mep",      "set_name": "Mega Evolution Black Star Promos", "ptcgo_code": "PR-ME", "number": "39",  "supertype": "Pokémon", "subtypes": ["Basic"],   "rarity": "Promo"},
+    # Scarlet & Violet Black Star Promos (svp) gaps
+    {"name": "Espeon ex",               "set_id": "svp",      "set_name": "Scarlet & Violet Black Star Promos", "ptcgo_code": "PR-SV", "number": "175", "supertype": "Pokémon", "subtypes": [], "rarity": "Promo"},
+    {"name": "Team Rocket's Mewtwo ex", "set_id": "svp",      "set_name": "Scarlet & Violet Black Star Promos", "ptcgo_code": "PR-SV", "number": "205", "supertype": "Pokémon", "subtypes": [], "rarity": "Promo"},
+    {"name": "Victini",                 "set_id": "svp",      "set_name": "Scarlet & Violet Black Star Promos", "ptcgo_code": "PR-SV", "number": "208", "supertype": "Pokémon", "subtypes": [], "rarity": "Promo"},
+    # Black Bolt (zsv10pt5) gap
+    {"name": "Antique Cover Fossil",    "set_id": "zsv10pt5", "set_name": "Black Bolt", "ptcgo_code": "BLK", "number": "80", "supertype": "Trainer", "subtypes": ["Item"], "rarity": "Common"},
+]
+
+
+def _apply_catalog_stubs(cards_by_name: dict[str, list[dict]]) -> None:
+    """Append CATALOG_STUBS entries to cards_by_name, skipping any printing
+    that's already present (so a sync that finally pulls the real card in
+    silently displaces the stub on the next run)."""
+    for s in CATALOG_STUBS:
+        bucket = cards_by_name.setdefault(s["name"], [])
+        if any(c.get("set_id") == s["set_id"] and c.get("number") == s["number"] for c in bucket):
+            continue
+        bucket.append({
+            "name": s["name"],
+            "set_id": s["set_id"],
+            "set_name": s["set_name"],
+            "ptcgo_code": s["ptcgo_code"],
+            "number": s["number"],
+            "supertype": s["supertype"],
+            "subtypes": s.get("subtypes", []),
+            "types": [],
+            "rarity": s["rarity"],
+            "hp": None,
+            "abilities": [],
+            "attacks": [],
+            "rules": [],
+            "regulation_mark": None,
+            "retreat_cost": None,
+            "market_price": 0,
+        })
 
 
 def git_push(repo: Path) -> bool:
