@@ -13,6 +13,7 @@ interface CardEntry {
   ptcgo_code?: string;
   number: string;
   subtypes: string[];
+  types?: string[];
 }
 
 const CARD_DB = cardData as unknown as Record<string, CardEntry[]>;
@@ -70,6 +71,21 @@ export function cardImageUrlFor(
  * count. Returns null when the list is empty or no set_id can be resolved.
  */
 export function primaryCardImageUrl(cards: AnalysisCard[]): string | null {
+  const best = primaryPokemonCard(cards);
+  if (!best?.set_id) return null;
+  return `https://images.pokemontcg.io/${best.set_id}/${best.card.number}.png`;
+}
+
+interface PrimaryPokemonCard {
+  card: AnalysisCard;
+  set_id: string | null;
+  types: string[];
+}
+
+/** Same selection logic as primaryCardImageUrl, but exposes the resolved
+ *  entry so callers can also derive the card's types (used for the deck
+ *  collection avatar's background color). */
+export function primaryPokemonCard(cards: AnalysisCard[]): PrimaryPokemonCard | null {
   const pokemon = cards.filter((c) => c.section === "pokemon");
   if (!pokemon.length) return null;
 
@@ -78,14 +94,69 @@ export function primaryCardImageUrl(cards: AnalysisCard[]): string | null {
     return {
       card,
       set_id: match?.set_id ?? null,
+      types: match?.types ?? [],
       rank: match ? stageRank(match.subtypes) : 0,
     };
   });
 
-  // Highest stage first; break ties by copy count
   annotated.sort((a, b) => b.rank - a.rank || b.card.qty - a.card.qty);
-
   const best = annotated[0];
-  if (!best?.set_id) return null;
-  return `https://images.pokemontcg.io/${best.set_id}/${best.card.number}.png`;
+  if (!best) return null;
+  return { card: best.card, set_id: best.set_id, types: best.types };
+}
+
+/** Resolve types for a specific card (used when the cover is an explicit
+ *  user override; the avatar should follow the cover, not the auto-pick). */
+export function cardTypesFor(
+  card: Pick<AnalysisCard, "name" | "number" | "setCode">,
+): string[] {
+  return resolveEntry(card)?.types ?? [];
+}
+
+export interface DeckAvatarInfo {
+  /** The card name used to derive the sprite slug. */
+  name: string;
+  /** Energy types of the resolved card (drives the avatar's background). */
+  types: string[];
+}
+
+/** Pick the Pokémon card that should drive the deck's avatar. When the
+ *  user has explicitly set a cover image to a Pokémon card, the avatar
+ *  follows that card; otherwise it falls back to the auto-picked primary. */
+export function deckAvatarInfo(
+  cards: AnalysisCard[],
+  coverUrl: string | null,
+): DeckAvatarInfo | null {
+  if (coverUrl) {
+    for (const card of cards) {
+      if (card.section !== "pokemon") continue;
+      if (cardImageUrlFor(card) === coverUrl) {
+        return { name: card.name, types: cardTypesFor(card) };
+      }
+    }
+  }
+  const primary = primaryPokemonCard(cards);
+  if (!primary) return null;
+  return { name: primary.card.name, types: primary.types };
+}
+
+/** Build a Limitless sprite slug from a Pokémon card name. Strips common
+ *  rarity/form suffixes (ex, V, VSTAR, VMAX, GX, Mega…) and joins the
+ *  remaining tokens with hyphens — mirrors the slugs the Limitless scraper
+ *  emits for meta archetypes (e.g. "Raging Bolt ex" → "raging-bolt"). */
+const SUFFIX_TOKENS = new Set([
+  "ex", "v", "vmax", "vstar", "gx", "mega", "tag", "team",
+]);
+export function pokemonSlug(name: string): string {
+  const cleaned = name
+    .toLowerCase()
+    .replace(/['’.]/g, "")
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((t) => !SUFFIX_TOKENS.has(t));
+  // Drop a leading "trainer's pokemon" qualifier (e.g. "N's Zoroark" → "zoroark";
+  // we already stripped the apostrophe so "ns" sits as a 2-char prefix token).
+  while (cleaned[0] && cleaned[0].length <= 2) cleaned.shift();
+  return cleaned.join("-");
 }

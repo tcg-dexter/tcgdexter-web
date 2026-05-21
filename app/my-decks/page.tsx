@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { UserDeckCardProps } from "@/app/components/DeckPostCard";
-import { primaryCardImageUrl } from "@/lib/primaryCardImage";
+import { primaryCardImageUrl, deckAvatarInfo, pokemonSlug } from "@/lib/primaryCardImage";
+import { typeColor } from "@/lib/metaPrimaryCard";
 import { deckResult } from "@/lib/shared-matches";
 import type { SharedMatchCore } from "@/lib/shared-matches";
 import MyDecksClient from "./MyDecksClient";
@@ -94,22 +95,32 @@ export default async function MyDecksPage() {
     deckWL.set(deckId, prev);
   }
 
-  const deckCards: UserDeckCardProps[] = decks.map((deck) => ({
-    id: deck.id,
-    name: deck.name,
-    href: `/u/${profile.username}/${deck.id}`,
-    username: profile.username,
-    displayName: profile.display_name,
-    price: deck.analysis?.deckPrice ?? null,
-    counts: deck.analysis?.sections ?? null,
-    wl: deckWL.get(deck.id) ?? null,
-    likeCount: deck.like_count,
-    isPrivate: !deck.is_public,
-    imageUrl:
-      deck.cover_image_url ?? primaryCardImageUrl(deck.analysis?.cards ?? []),
-    ownerUserId: user.id,
-    createdAt: deck.created_at,
-  }));
+  const deckCards: UserDeckCardProps[] = decks.map((deck) => {
+    const cards = deck.analysis?.cards ?? [];
+    const avatar = deckAvatarInfo(cards, deck.cover_image_url);
+    const slug = avatar ? pokemonSlug(avatar.name) : "";
+    return {
+      id: deck.id,
+      name: deck.name,
+      href: `/u/${profile.username}/${deck.id}`,
+      username: profile.username,
+      displayName: profile.display_name,
+      price: deck.analysis?.deckPrice ?? null,
+      counts: deck.analysis?.sections ?? null,
+      wl: deckWL.get(deck.id) ?? null,
+      likeCount: deck.like_count,
+      isPrivate: !deck.is_public,
+      imageUrl: deck.cover_image_url ?? primaryCardImageUrl(cards),
+      ownerUserId: user.id,
+      createdAt: deck.created_at,
+      iconUrl: slug
+        ? `https://r2.limitlesstcg.net/pokemon/gen9/${slug}.png`
+        : null,
+      iconBg: avatar ? typeColor(avatar.types) : null,
+      cards,
+      coverImageUrl: deck.cover_image_url,
+    };
+  });
 
   return <MyDecksClient decks={deckCards} />;
 }

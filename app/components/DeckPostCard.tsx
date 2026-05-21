@@ -1,5 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import DeckCardFooter from "./DeckCardFooter";
+import EditDeckDialog from "./EditDeckDialog";
+import { primaryCardImageUrl } from "@/lib/primaryCardImage";
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
@@ -190,40 +195,142 @@ export interface UserDeckCardProps {
   /** Owner's auth user_id. When this matches the viewer, the card's Save
    *  button reflects ownership rather than offering a clone toggle. */
   ownerUserId?: string;
+  /** Limitless sprite URL for the deck's "face" Pokémon — derived from the
+   *  cover card. Falls back to the auto-picked primary when no cover is set. */
+  iconUrl?: string | null;
+  /** Energy-type color used for the avatar circle background. */
+  iconBg?: string | null;
+  /** Full analysis.cards list. Required when the viewer is the owner so the
+   *  edit modal can populate the cover-image picker. */
+  cards?: Array<{
+    qty: number;
+    name: string;
+    number: string;
+    setCode: string;
+    section: "pokemon" | "trainer" | "energy";
+  }>;
+  /** Persisted cover override (null when auto-picked). */
+  coverImageUrl?: string | null;
 }
 
 export function UserDeckCard({
   id,
-  name,
+  name: initialName,
   href,
-  imageUrl,
+  imageUrl: initialImageUrl,
   username,
   displayName,
-  price,
   counts,
   wl,
   likeCount = 0,
   ownerUserId,
+  iconUrl,
+  iconBg,
+  cards,
+  coverImageUrl: initialCoverImageUrl,
 }: UserDeckCardProps) {
   const initials = (displayName ?? username).charAt(0).toUpperCase();
   const bg = avatarBg(username);
 
+  const [name, setName] = useState(initialName);
+  const [imageUrl, setImageUrl] = useState(initialImageUrl ?? null);
+  const [coverImageUrl, setCoverImageUrl] = useState(initialCoverImageUrl ?? null);
+  const [editOpen, setEditOpen] = useState(false);
+
+  async function handleEditSave({
+    name: nextName,
+    coverUrl,
+  }: {
+    name: string;
+    coverUrl: string | null;
+  }) {
+    const payload: { name?: string; cover_image_url?: string | null } = {};
+    if (nextName !== name) payload.name = nextName;
+    if (coverUrl !== coverImageUrl) payload.cover_image_url = coverUrl;
+    if (Object.keys(payload).length === 0) return;
+
+    const prevName = name;
+    const prevImage = imageUrl;
+    const prevCover = coverImageUrl;
+    if ("name" in payload) setName(nextName);
+    if ("cover_image_url" in payload) {
+      setCoverImageUrl(coverUrl);
+      setImageUrl(
+        coverUrl ?? primaryCardImageUrl(cards ?? []) ?? null,
+      );
+    }
+
+    try {
+      const res = await fetch(`/api/saved-decks/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        setName(prevName);
+        setImageUrl(prevImage);
+        setCoverImageUrl(prevCover);
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data?.error ?? "Failed to save changes.");
+      }
+    } catch (e) {
+      setName(prevName);
+      setImageUrl(prevImage);
+      setCoverImageUrl(prevCover);
+      throw e;
+    }
+  }
+
+  const canEdit = !!ownerUserId && !!cards;
+
   return (
     <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-      <Link href={href} className="block">
-        {/* Header — deck name */}
-        <div className="flex items-center gap-2 px-3.5 pt-3">
-          <p className="flex-1 min-w-0 text-[17px] font-semibold text-text-primary truncate">
-            {name}
-          </p>
-          {price != null && price > 0 && (
-            <span className="ml-2 shrink-0 text-[17px] font-bold text-text-primary">
-              ${Math.round(price)}
-            </span>
-          )}
-        </div>
+      {/* Header — avatar + deck name + ellipsis (sits outside the <Link>
+          so the ellipsis can open the edit modal without nav). */}
+      <div className="flex items-center gap-2 px-3.5 pt-3">
+        {iconUrl ? (
+          <Link href={href} aria-label={`Open ${name}`} className="shrink-0">
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
+              style={{ background: iconBg ?? "#B0A89E" }}
+              aria-hidden
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={iconUrl}
+                alt=""
+                className="w-[22px] h-[22px] object-contain"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.visibility = "hidden";
+                }}
+              />
+            </div>
+          </Link>
+        ) : null}
+        <Link
+          href={href}
+          className="flex-1 min-w-0 text-[17px] font-semibold text-text-primary truncate hover:underline underline-offset-2"
+        >
+          {name}
+        </Link>
+        {canEdit && (
+          <button
+            type="button"
+            onClick={() => setEditOpen(true)}
+            aria-label="Edit deck"
+            className="shrink-0 -mr-1 inline-flex items-center justify-center w-7 h-7 rounded-full text-text-muted hover:bg-black/5 hover:text-text-primary transition"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+              <circle cx="5" cy="12" r="1.6" />
+              <circle cx="12" cy="12" r="1.6" />
+              <circle cx="19" cy="12" r="1.6" />
+            </svg>
+          </button>
+        )}
+      </div>
 
-        {/* Body */}
+      {/* Body */}
+      <Link href={href} className="block">
         <div className="flex gap-3.5 p-3.5 pt-3">
           <CardArt url={imageUrl} name={name} />
           <div className="flex-1 min-w-0 flex flex-col">
@@ -253,6 +360,18 @@ export function UserDeckCard({
         saveHref={href}
         deckName={name}
       />
+
+      {canEdit && (
+        <EditDeckDialog
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          initialName={name}
+          cards={cards ?? []}
+          currentCoverUrl={coverImageUrl}
+          defaultCoverUrl={primaryCardImageUrl(cards ?? [])}
+          onSave={handleEditSave}
+        />
+      )}
     </div>
   );
 }
