@@ -284,7 +284,7 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
           <Link
             href="/"
             aria-label="TCG Dexter — home"
-            className="inline-flex pb-3"
+            className="inline-flex pt-4 pb-3"
             onClick={closeMenu}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -338,8 +338,6 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
                 </a>
               </li>
             ))}
-
-            <li role="separator" className="my-4" />
 
             {/* Auth item — anchored at the bottom of the link list, above
                 the search bar. */}
