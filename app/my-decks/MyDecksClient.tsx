@@ -11,6 +11,7 @@ interface Props {
 }
 
 type SortKey =
+  | "date"
   | "name"
   | "wins"
   | "likes"
@@ -21,6 +22,8 @@ type SortDir = "asc" | "desc";
 
 function sortValue(deck: UserDeckCardProps, key: SortKey): number | string {
   switch (key) {
+    case "date":
+      return deck.createdAt ? new Date(deck.createdAt).getTime() : 0;
     case "name":
       return deck.name.toLowerCase();
     case "wins":
@@ -38,8 +41,8 @@ function sortValue(deck: UserDeckCardProps, key: SortKey): number | string {
 
 export default function MyDecksClient({ decks }: Props) {
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<SortKey>("name");
-  const [dir, setDir] = useState<SortDir>("asc");
+  const [sort, setSort] = useState<SortKey>("date");
+  const [dir, setDir] = useState<SortDir>("desc");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -93,6 +96,8 @@ export default function MyDecksClient({ decks }: Props) {
               setDir(d);
             }}
           >
+            <option value="date:desc">Date Added (Descending)</option>
+            <option value="date:asc">Date Added (Ascending)</option>
             <option value="name:asc">Deck Name (A–Z)</option>
             <option value="name:desc">Deck Name (Z–A)</option>
             <option value="wins:desc">Wins (Descending)</option>

@@ -185,6 +185,8 @@ export interface UserDeckCardProps {
   wl?: WinLoss | null;
   likeCount?: number;
   isPrivate?: boolean;
+  /** ISO timestamp from saved_decks.created_at. Used by client-side sort. */
+  createdAt?: string | null;
   /** Owner's auth user_id. When this matches the viewer, the card's Save
    *  button reflects ownership rather than offering a clone toggle. */
   ownerUserId?: string;

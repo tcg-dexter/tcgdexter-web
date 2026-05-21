@@ -17,6 +17,7 @@ interface DeckRow {
     cards?: Array<{ qty: number; name: string; number: string; setCode: string; section: "pokemon" | "trainer" | "energy" }>;
   } | null;
   updated_at: string;
+  created_at: string;
   like_count: number;
   is_public: boolean;
   cover_image_url: string | null;
@@ -48,7 +49,7 @@ export default async function MyDecksPage() {
 
   const { data: decksRaw } = await supabase
     .from("saved_decks")
-    .select("id, name, analysis, updated_at, like_count, is_public, cover_image_url")
+    .select("id, name, analysis, updated_at, created_at, like_count, is_public, cover_image_url")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
   const decks = (decksRaw ?? []) as DeckRow[];
@@ -107,6 +108,7 @@ export default async function MyDecksPage() {
     imageUrl:
       deck.cover_image_url ?? primaryCardImageUrl(deck.analysis?.cards ?? []),
     ownerUserId: user.id,
+    createdAt: deck.created_at,
   }));
 
   return <MyDecksClient decks={deckCards} />;
