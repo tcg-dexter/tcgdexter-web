@@ -3,20 +3,63 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import SectionHeader from "@/app/components/ui/SectionHeader";
+import PillSelect from "@/app/components/ui/PillSelect";
 import { UserDeckCard, type UserDeckCardProps } from "@/app/components/DeckPostCard";
 
 interface Props {
   decks: UserDeckCardProps[];
 }
 
+type SortKey =
+  | "name"
+  | "record"
+  | "likes"
+  | "pokemon"
+  | "trainer"
+  | "energy";
+type SortDir = "asc" | "desc";
+
+function winPct(wl: UserDeckCardProps["wl"]): number {
+  if (!wl) return 0;
+  const games = wl.w + wl.l + wl.d;
+  if (games === 0) return 0;
+  return (wl.w + wl.d * 0.5) / games;
+}
+
+function sortValue(deck: UserDeckCardProps, key: SortKey): number | string {
+  switch (key) {
+    case "name":
+      return deck.name.toLowerCase();
+    case "record":
+      return winPct(deck.wl);
+    case "likes":
+      return deck.likeCount ?? 0;
+    case "pokemon":
+      return deck.counts?.pokemon ?? 0;
+    case "trainer":
+      return deck.counts?.trainer ?? 0;
+    case "energy":
+      return deck.counts?.energy ?? 0;
+  }
+}
+
 export default function MyDecksClient({ decks }: Props) {
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<SortKey>("name");
+  const [dir, setDir] = useState<SortDir>("asc");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return decks;
-    return decks.filter((d) => d.name.toLowerCase().includes(q));
-  }, [decks, query]);
+    const base = q ? decks.filter((d) => d.name.toLowerCase().includes(q)) : decks;
+    const sorted = [...base].sort((a, b) => {
+      const av = sortValue(a, sort);
+      const bv = sortValue(b, sort);
+      if (av < bv) return dir === "asc" ? -1 : 1;
+      if (av > bv) return dir === "asc" ? 1 : -1;
+      return 0;
+    });
+    return sorted;
+  }, [decks, query, sort, dir]);
 
   return (
     <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
@@ -49,6 +92,27 @@ export default function MyDecksClient({ decks }: Props) {
           />
         </div>
         <div className="flex items-center gap-2">
+          <PillSelect
+            value={`${sort}:${dir}`}
+            onChange={(e) => {
+              const [s, d] = e.target.value.split(":") as [SortKey, SortDir];
+              setSort(s);
+              setDir(d);
+            }}
+          >
+            <option value="name:asc">Deck Name (A–Z)</option>
+            <option value="name:desc">Deck Name (Z–A)</option>
+            <option value="record:desc">Match Record (Descending)</option>
+            <option value="record:asc">Match Record (Ascending)</option>
+            <option value="likes:desc">Likes (Descending)</option>
+            <option value="likes:asc">Likes (Ascending)</option>
+            <option value="pokemon:desc">Pokémon Card Count (Descending)</option>
+            <option value="pokemon:asc">Pokémon Card Count (Ascending)</option>
+            <option value="trainer:desc">Trainer Card Count (Descending)</option>
+            <option value="trainer:asc">Trainer Card Count (Ascending)</option>
+            <option value="energy:desc">Energy Card Count (Descending)</option>
+            <option value="energy:asc">Energy Card Count (Ascending)</option>
+          </PillSelect>
           <Link
             href="/"
             className="text-xs font-semibold h-[38px] inline-flex items-center px-3 rounded-full border border-transparent bg-gradient-brand bg-origin-border text-white shadow-brand hover:shadow-brand-lg transition"
