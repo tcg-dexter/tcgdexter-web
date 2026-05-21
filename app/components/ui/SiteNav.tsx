@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import MobileNavMenu from "./MobileNavMenu";
 import SiteSidebar from "./SiteSidebar";
@@ -47,7 +48,17 @@ export default async function SiteNav() {
         data-site-toolbar
         className="xl:hidden sticky top-0 z-30 backdrop-blur-xl bg-bg/70"
       >
-        <div className="mx-auto max-w-6xl px-6 h-14 flex items-center">
+        <div className="mx-auto max-w-6xl px-6 h-14 flex items-center justify-between gap-4">
+          <Link href="/" aria-label="TCG Dexter — home" className="inline-flex">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo-wordmark.png"
+              alt="TCG Dexter"
+              width={1920}
+              height={453}
+              className="h-8 w-auto"
+            />
+          </Link>
           <MobileNavMenu
             isAuthed={!!user}
             displayName={displayName}

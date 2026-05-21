@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import UnifiedSearch from "@/app/leaderboard/UnifiedSearch";
 import {
+  StackIcon,
   TrophyIcon,
   ChartBarIcon,
   BookOpenIcon,
@@ -268,7 +269,22 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
           the data-nav-menu-visible attribute below that hides the real
           toolbar, so only one toolbar is ever rendered at a time. */}
       <div className="flex-shrink-0 backdrop-blur-xl bg-bg/70">
-        <div className="mx-auto max-w-6xl px-6 h-14 flex items-center">
+        <div className="mx-auto max-w-6xl px-6 h-14 flex items-center justify-between gap-4">
+          <Link
+            href="/"
+            aria-label="TCG Dexter — home"
+            className="inline-flex"
+            onClick={closeMenu}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo-wordmark.png"
+              alt="TCG Dexter"
+              width={1920}
+              height={453}
+              className="h-8 w-auto"
+            />
+          </Link>
           {/* Hamburger — tapping it closes the menu */}
           <button
             onClick={closeMenu}
@@ -339,6 +355,15 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
                 </a>
               </li>
             ))}
+
+            <li role="separator" className="my-4" />
+
+            <li>
+              <Link href="/" className={linkClass} onClick={closeMenu}>
+                <StackIcon />
+                <span>Dexter</span>
+              </Link>
+            </li>
           </ul>
         </nav>
 
