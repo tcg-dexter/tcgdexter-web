@@ -198,7 +198,7 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
           </PillSelect>
           <button
             onClick={() => setShowFilters((s) => !s)}
-            className={`text-xs font-semibold h-[30px] px-3 rounded-full transition ${
+            className={`text-xs font-semibold h-[38px] px-3 rounded-full transition ${
               activeFilterCount > 0
                 ? "border border-transparent bg-gradient-brand bg-origin-border text-white shadow-brand hover:shadow-brand-lg"
                 : "border border-black/10 bg-white hover:bg-surface"
@@ -206,10 +206,10 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
           >
             Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
           </button>
-          <div className="inline-flex rounded-full border border-black/10 bg-white overflow-hidden">
+          <div className="inline-flex h-[38px] rounded-full border border-black/10 bg-white overflow-hidden">
             <button
               onClick={() => updateParams({ view: "grid" })}
-              className={`text-xs font-semibold px-3 py-1.5 transition-colors ${
+              className={`text-xs font-semibold px-3 transition-colors ${
                 params.view === "grid" ? "bg-black text-white" : "hover:bg-surface"
               }`}
               aria-label="Grid view"
@@ -218,7 +218,7 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
             </button>
             <button
               onClick={() => updateParams({ view: "list" })}
-              className={`text-xs font-semibold px-3 py-1.5 transition-colors ${
+              className={`text-xs font-semibold px-3 transition-colors ${
                 params.view === "list" ? "bg-black text-white" : "hover:bg-surface"
               }`}
               aria-label="List view"
@@ -702,7 +702,7 @@ function PillSelect({
       <select
         value={value}
         onChange={onChange}
-        className="appearance-none text-xs font-semibold h-[30px] pl-3 pr-7 rounded-full border border-black/10 bg-white"
+        className="appearance-none text-xs font-semibold h-[38px] pl-3 pr-7 rounded-full border border-black/10 bg-white"
       >
         {children}
       </select>
