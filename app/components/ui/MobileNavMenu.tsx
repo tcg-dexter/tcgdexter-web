@@ -6,7 +6,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import UnifiedSearch from "@/app/leaderboard/UnifiedSearch";
 import {
-  StackIcon,
   TrophyIcon,
   ChartBarIcon,
   BookOpenIcon,
@@ -217,8 +216,7 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
   // surfaces tell the same visual story.
   const INTERNAL_LINKS = [
     { href: "/cards", label: "Card Catalog", Icon: CardsIcon },
-    { href: "/", label: "Deck Profiler", Icon: StackIcon },
-    { href: "/my-decks", label: "My Decks", Icon: BookmarkIcon },
+    { href: "/my-decks", label: "Deck Collection", Icon: BookmarkIcon },
     { href: "/meta-decks", label: "Top 30 Meta Decks", Icon: ChartBarIcon },
     // { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
     { href: "/learn", label: "Learn to Play", Icon: BookOpenIcon },
