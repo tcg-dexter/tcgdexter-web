@@ -308,7 +308,8 @@ export default function HomeClient({
             </div>
           </section>
 
-          {/* Top Trainers */}
+          {/* Top Trainers — hidden from UI; keep block for future re-enable */}
+          {false && (
           <section className="mx-auto max-w-2xl px-6 py-6">
             <div className="mb-6">
               <div className="text-xs uppercase tracking-widest text-accent mb-3 flex items-center gap-2">
@@ -349,6 +350,7 @@ export default function HomeClient({
               </div>
             )}
           </section>
+          )}
 
           {/* Secondary CTA */}
           <section className="mx-auto max-w-4xl px-6 py-24 text-center">

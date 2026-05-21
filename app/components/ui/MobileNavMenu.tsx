@@ -220,7 +220,7 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
     { href: "/", label: "Deck Profiler", Icon: StackIcon },
     { href: "/my-decks", label: "My Decks", Icon: BookmarkIcon },
     { href: "/meta-decks", label: "Top 30 Meta Decks", Icon: ChartBarIcon },
-    { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
+    // { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
     { href: "/learn", label: "Learn to Play", Icon: BookOpenIcon },
   ];
 
