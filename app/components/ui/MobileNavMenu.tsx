@@ -280,22 +280,25 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
             </button>
           </div>
           {/* Logo sits below the hamburger, only visible while the panel
-              is open. */}
-          <Link
-            href="/"
-            aria-label="TCG Dexter — home"
-            className="inline-flex pt-4 pb-3"
-            onClick={closeMenu}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo-wordmark.png"
-              alt="TCG Dexter"
-              width={1920}
-              height={453}
-              className="h-8 w-auto"
-            />
-          </Link>
+              is open. Forced to `bg-bg` so the home page's brand gradient
+              doesn't bleed through the header's translucent `bg-bg/70`. */}
+          <div className="-mx-6 px-6 bg-bg">
+            <Link
+              href="/"
+              aria-label="TCG Dexter — home"
+              className="inline-flex pt-4 pb-3"
+              onClick={closeMenu}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo-wordmark.png"
+                alt="TCG Dexter"
+                width={1920}
+                height={453}
+                className="h-8 w-auto"
+              />
+            </Link>
+          </div>
         </div>
       </div>
 
