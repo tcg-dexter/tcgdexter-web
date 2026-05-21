@@ -41,40 +41,11 @@ Usage:
 
 import argparse
 import json
-import re
 import sqlite3
 import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
-
-# Variant preference order for headline market_price. When prices.db has
-# multiple variant rows for the same printing (e.g. Jungle/Fossil holos
-# tracked as both firstEditionHolofoil and unlimitedHolofoil), we pick
-# the variant earliest in this list. The intent is to default to the
-# Unlimited print run rather than 1st Edition — 1st Edition is a niche
-# collector variant that prices 2–13× higher and overstates a typical
-# user's collection value when applied as the default.
-VARIANT_PREFERENCE = (
-    "normal",
-    "unlimited",
-    "holofoil",
-    "unlimitedHolofoil",
-    "1stedition",
-    "firstEditionHolofoil",
-    "reverseHolofoil",
-)
-_PREF_RANK = {v: i for i, v in enumerate(VARIANT_PREFERENCE)}
-
-
-def _normalize_name(name: str) -> str:
-    # Strip trailing " (NN)" where NN is digits — TCGplayer's disambiguator
-    # for cards sharing a name in the same set (e.g. "Articuno (2)" vs
-    # "Articuno (17)" in Fossil). cards.db uses plain "Articuno" and
-    # disambiguates by number, so we drop the suffix to match. Other
-    # parentheticals like "(Full Art)" or "(Secret)" denote distinct
-    # printings and are preserved.
-    return re.sub(r"\s*\(\d+\)\s*$", "", name).strip()
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
 
@@ -87,38 +58,22 @@ OUT_FILE  = WEB_REPO / "data/cards-standard.json"
 
 
 def load_prices(db_path: Path) -> dict[tuple[str, str, str], float]:
-    """Load market prices from prices.db. Returns {(name, number, set_name): price}.
-
-    When prices.db has multiple variant rows for the same printing, the
-    variant earliest in VARIANT_PREFERENCE wins. Names are normalized to
-    strip TCGplayer's "(N)" disambiguator so prices.db's "Articuno (2)"
-    matches cards.db's "Articuno" keyed by number.
-    """
+    """Load market prices from prices.db. Returns {(name, number, set_name): price}."""
     if not db_path.exists():
         print(f"WARNING: prices.db not found at {db_path} — prices will be 0")
         return {}
 
     con = sqlite3.connect(str(db_path))
     rows = con.execute(
-        "SELECT name, number, set_name, variant, market_price FROM card_prices"
+        "SELECT name, number, set_name, market_price FROM card_prices WHERE variant = 'normal'"
     ).fetchall()
     con.close()
 
-    # Group every variant we know about per (name, number, set_name).
-    grouped: dict[tuple[str, str, str], dict[str, float]] = defaultdict(dict)
-    for name, number, set_name, variant, price in rows:
+    prices: dict[tuple[str, str, str], float] = {}
+    for name, number, set_name, price in rows:
         # Normalize number: "063/165" → "63" (strip leading zeros and slash suffix)
         num_clean = number.split("/")[0].lstrip("0") or "0"
-        key = (_normalize_name(name), num_clean, set_name.strip())
-        grouped[key][variant] = price
-
-    # Collapse each group to a single price by picking the most preferred
-    # variant present. Unknown variants sort last so they're only used as a
-    # final fallback rather than overriding a known preference.
-    prices: dict[tuple[str, str, str], float] = {}
-    for key, variants in grouped.items():
-        best = min(variants, key=lambda v: _PREF_RANK.get(v, len(VARIANT_PREFERENCE)))
-        prices[key] = variants[best]
+        prices[(name.strip(), num_clean, set_name.strip())] = price
     return prices
 
 
