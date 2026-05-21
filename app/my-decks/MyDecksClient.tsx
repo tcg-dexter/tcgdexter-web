@@ -12,26 +12,19 @@ interface Props {
 
 type SortKey =
   | "name"
-  | "record"
+  | "wins"
   | "likes"
   | "pokemon"
   | "trainer"
   | "energy";
 type SortDir = "asc" | "desc";
 
-function winPct(wl: UserDeckCardProps["wl"]): number {
-  if (!wl) return 0;
-  const games = wl.w + wl.l + wl.d;
-  if (games === 0) return 0;
-  return (wl.w + wl.d * 0.5) / games;
-}
-
 function sortValue(deck: UserDeckCardProps, key: SortKey): number | string {
   switch (key) {
     case "name":
       return deck.name.toLowerCase();
-    case "record":
-      return winPct(deck.wl);
+    case "wins":
+      return deck.wl?.w ?? 0;
     case "likes":
       return deck.likeCount ?? 0;
     case "pokemon":
@@ -102,8 +95,8 @@ export default function MyDecksClient({ decks }: Props) {
           >
             <option value="name:asc">Deck Name (A–Z)</option>
             <option value="name:desc">Deck Name (Z–A)</option>
-            <option value="record:desc">Match Record (Descending)</option>
-            <option value="record:asc">Match Record (Ascending)</option>
+            <option value="wins:desc">Wins (Descending)</option>
+            <option value="wins:asc">Wins (Ascending)</option>
             <option value="likes:desc">Likes (Descending)</option>
             <option value="likes:asc">Likes (Ascending)</option>
             <option value="pokemon:desc">Pokémon Card Count (Descending)</option>
