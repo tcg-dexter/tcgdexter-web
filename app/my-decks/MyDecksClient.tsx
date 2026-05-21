@@ -51,7 +51,7 @@ export default function MyDecksClient({ decks }: Props) {
         <div className="flex items-center gap-2">
           <Link
             href="/"
-            className="text-xs font-semibold h-[30px] inline-flex items-center px-3 rounded-full bg-black text-white border border-transparent hover:bg-neutral-800 transition-colors"
+            className="text-xs font-semibold h-[38px] inline-flex items-center px-3 rounded-full border border-transparent bg-gradient-brand bg-origin-border text-white shadow-brand hover:shadow-brand-lg transition"
           >
             + New Deck
           </Link>
