@@ -36,7 +36,7 @@ export default function SiteSidebarRight() {
   return (
     <aside
       aria-label="External links"
-      className="hidden xl:flex fixed inset-y-0 right-0 z-30 w-[230px] flex-col bg-bg border-l border-[var(--border)] pt-12"
+      className="hidden xl:flex fixed inset-y-0 right-0 z-30 w-[230px] flex-col bg-bg border-l border-[var(--border)] pt-8"
     >
       {/* Header — same h-20 footprint as the logo block on the left rail.
           `pl-3 pr-6` mirrors the logo's `pl-6 pr-3` so the input's trailing

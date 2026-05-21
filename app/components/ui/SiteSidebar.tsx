@@ -79,7 +79,7 @@ export default function SiteSidebar({
   return (
     <aside
       aria-label="Primary navigation"
-      className="hidden xl:flex fixed inset-y-0 left-0 z-30 w-[230px] flex-col bg-bg border-r border-[var(--border)] pt-12"
+      className="hidden xl:flex fixed inset-y-0 left-0 z-30 w-[230px] flex-col bg-bg border-r border-[var(--border)] pt-8"
     >
       {/* Brand mark — wordmark logo spanning the same inner width as the
           right rail's search bar (rail width minus pl-3 + pr-6 = 194px). */}
