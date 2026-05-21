@@ -83,7 +83,7 @@ export default function SiteSidebar({
     >
       {/* Brand mark — wordmark logo spanning the same inner width as the
           right rail's search bar (rail width minus pl-3 + pr-6 = 194px). */}
-      <div className="flex-shrink-0 h-20 pl-3 pr-6 flex items-center">
+      <div className="flex-shrink-0 h-20 pl-5 pr-6 flex items-center">
         <Link href="/" aria-label="TCG Dexter — home" className="block w-full">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
