@@ -29,7 +29,7 @@ export default function CardFooterOverlay({
   const num = padNumber(number);
   const numberLabel = setSize > 0 ? `${num}/${setSize}` : num;
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[15%] min-h-[36px] flex items-end justify-between gap-2 px-2 pb-[2px] bg-gradient-to-b from-transparent to-black text-white text-[12.5px] font-semibold leading-none tabular-nums overflow-hidden">
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[15%] min-h-[36px] flex items-end justify-between gap-2 px-2 pb-[5px] bg-gradient-to-b from-transparent to-black text-white text-[12.5px] font-semibold leading-none tabular-nums overflow-hidden">
       <span className="flex items-center gap-1 min-w-0">
         <span className="truncate rounded-md border border-white/70 px-1.5 py-0.5">{code}</span>
         <span className="truncate">{numberLabel}</span>
