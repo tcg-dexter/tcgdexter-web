@@ -6,7 +6,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import UnifiedSearch from "@/app/leaderboard/UnifiedSearch";
 import {
-  StackIcon,
   TrophyIcon,
   ChartBarIcon,
   BookOpenIcon,
@@ -309,27 +308,6 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
       >
         <nav className="mx-auto max-w-6xl w-full px-6 pt-4 pb-6">
           <ul className="flex flex-col gap-1">
-            {/* Auth item — top of nav */}
-            <li>
-              {isAuthed ? (
-                <Link
-                  href={username ? `/u/${username}` : "/settings"}
-                  className={linkClass}
-                  onClick={closeMenu}
-                >
-                  <UserIcon />
-                  <span>{displayName ?? "Profile"}</span>
-                </Link>
-              ) : (
-                <Link href="/sign-in" className={linkClass} onClick={closeMenu}>
-                  <UserIcon />
-                  <span>Sign in</span>
-                </Link>
-              )}
-            </li>
-
-            <li role="separator" className="my-4" />
-
             {INTERNAL_LINKS.map(({ href, label, Icon }) => (
               <li key={href}>
                 <Link href={href} className={linkClass} onClick={closeMenu}>
@@ -358,11 +336,24 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
 
             <li role="separator" className="my-4" />
 
+            {/* Auth item — anchored at the bottom of the link list, above
+                the search bar. */}
             <li>
-              <Link href="/" className={linkClass} onClick={closeMenu}>
-                <StackIcon />
-                <span>Dexter</span>
-              </Link>
+              {isAuthed ? (
+                <Link
+                  href={username ? `/u/${username}` : "/settings"}
+                  className={linkClass}
+                  onClick={closeMenu}
+                >
+                  <UserIcon />
+                  <span>{displayName ?? "Profile"}</span>
+                </Link>
+              ) : (
+                <Link href="/sign-in" className={linkClass} onClick={closeMenu}>
+                  <UserIcon />
+                  <span>Sign in</span>
+                </Link>
+              )}
             </li>
           </ul>
         </nav>
