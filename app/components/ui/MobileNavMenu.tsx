@@ -370,7 +370,7 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
             `mt-auto`. `dropdownPosition="above"` flips the results dropdown
             so it opens upward over the link list instead of off-screen
             past the panel's bottom edge. */}
-        <div className="mt-auto mx-auto max-w-6xl w-full px-6 pb-8 pt-4">
+        <div className="mt-auto mx-auto max-w-6xl w-full px-6 pb-8 pt-2">
           <UnifiedSearch dropdownPosition="above" />
         </div>
       </div>
