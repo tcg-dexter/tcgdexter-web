@@ -268,11 +268,23 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
           the data-nav-menu-visible attribute below that hides the real
           toolbar, so only one toolbar is ever rendered at a time. */}
       <div className="flex-shrink-0 backdrop-blur-xl bg-bg/70">
-        <div className="mx-auto max-w-6xl px-6 h-14 flex items-center justify-between gap-4">
+        <div className="mx-auto max-w-6xl px-6">
+          {/* Hamburger stays pinned in the same spot as the closed toolbar so
+              tapping doesn't shift between open and closed states. */}
+          <div className="h-14 flex items-center">
+            <button
+              onClick={closeMenu}
+              aria-label="Close navigation menu"
+            >
+              <HamburgerIcon />
+            </button>
+          </div>
+          {/* Logo sits below the hamburger, only visible while the panel
+              is open. */}
           <Link
             href="/"
             aria-label="TCG Dexter — home"
-            className="inline-flex"
+            className="inline-flex pb-3"
             onClick={closeMenu}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -284,13 +296,6 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
               className="h-8 w-auto"
             />
           </Link>
-          {/* Hamburger — tapping it closes the menu */}
-          <button
-            onClick={closeMenu}
-            aria-label="Close navigation menu"
-          >
-            <HamburgerIcon />
-          </button>
         </div>
       </div>
 
