@@ -155,7 +155,11 @@ export default function MetaProfileHeader({
                 src={url}
                 alt=""
                 aria-hidden="true"
-                className="block w-full h-auto"
+                // Absolute-positioned so the img's natural height doesn't
+                // count toward the container's intrinsic size — otherwise
+                // aspect-ratio is ignored and the container grows to fit
+                // the full-card-height image, defeating the crop.
+                className="absolute inset-x-0 top-0 block w-full h-auto"
               />
             </div>
           );
