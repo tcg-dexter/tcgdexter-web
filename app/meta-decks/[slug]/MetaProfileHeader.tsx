@@ -38,7 +38,7 @@ import type { ReactNode } from "react";
 
 const BANNER_ASPECT_WH = 3;     // 3:1
 const CARDS_TOP_PCT = 25;       // % of banner height; the *outer* cards' top
-const CARDS_SPAN_PCT = 100;     // % of inner container width — full span
+const CARDS_SPAN_PCT = 80;      // % of inner container width — fan total span
 const CARD_WIDTH_PCT = 32;      // % of inner container width — per card
 
 // Fan-like-a-playing-hand tuning. The center card sits CENTER_RAISE_PCT
