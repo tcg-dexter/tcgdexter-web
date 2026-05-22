@@ -223,8 +223,10 @@ export default function MetaProfileHeader({
           />
         </div>
 
-        {/* Tournament record */}
-        <div className="mt-3 flex items-center gap-2 flex-wrap">
+        {/* Tournament record — wrapped in a card sibling to the stat grid
+            above so all bio chrome reads as the same tile system. Pill
+            and text styling itself is unchanged. */}
+        <div className="mt-3 rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm px-4 py-3 flex items-center gap-2 flex-wrap">
           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-brand text-white">
             {wins}W
           </span>
