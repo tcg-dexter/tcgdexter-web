@@ -210,8 +210,10 @@ export default function MetaProfileHeader({
           </h1>
         </div>
 
-        {/* Stats — one card per metric. 2x2 on narrow screens, 1x4 from
-            `sm:` up so each value gets its own surface. */}
+        {/* Stats — one card per metric. The Tournament Record fields
+            (Wins / Losses / Ties / Entries) sit as peer tiles in the
+            same grid so the whole bio reads as a single stat board.
+            2x2 columns on narrow screens, 1x4 from `sm:` up. */}
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard label="Meta Share" value={representationPct} valueClass="text-accent" />
           <StatCard label="Top Cut" value={String(topCutEntries)} valueClass="text-amber-500" />
@@ -221,26 +223,16 @@ export default function MetaProfileHeader({
             value={winRate}
             valueClass={winRateHighlight ? "text-amber-500" : "text-text-secondary"}
           />
-        </div>
-
-        {/* Tournament record — wrapped in a card sibling to the stat grid
-            above so all bio chrome reads as the same tile system. Pill
-            and text styling itself is unchanged. */}
-        <div className="mt-3 rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm px-4 py-3 flex items-center gap-2 flex-wrap">
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-brand text-white">
-            {wins}W
-          </span>
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-black text-white">
-            {losses}L
-          </span>
+          <StatCard label="Wins" value={wins.toLocaleString()} valueClass="text-emerald-600" />
+          <StatCard label="Losses" value={losses.toLocaleString()} valueClass="text-text-secondary" />
           {ties > 0 && (
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-white text-text-primary shadow-[inset_0_0_0_1px_black]">
-              {ties}T
-            </span>
+            <StatCard label="Ties" value={ties.toLocaleString()} valueClass="text-text-secondary" />
           )}
-          <span className="text-xs text-text-muted ml-1">
-            {totalEntries.toLocaleString()} entries across recent Standard tournaments
-          </span>
+          <StatCard
+            label="Entries"
+            value={totalEntries.toLocaleString()}
+            valueClass="text-text-primary"
+          />
         </div>
       </div>
 
