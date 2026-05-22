@@ -159,15 +159,23 @@ export default async function MetaDeckDetailPage({
     ? new Date(arch.last_updated).toISOString()
     : new Date().toISOString();
 
-  // Build per-variant cards for the top-5 grid.
+  // Build per-variant cards for the top-5 grid. Placing (e.g. "2nd") is
+  // folded into the contextLabel so the header right slot is free for the
+  // copy-list action.
   const variantList = deckData?.variants ?? [];
   const variantCards = variantList.slice(0, 5).map((v, i) => {
     const variantPrimary = metaPrimaryCard(v.cards, iconList);
+    const placing = placingLabel(v.placing);
+    const date = (v.date ?? "").trim();
+    const contextLabel =
+      placing && date
+        ? `${placing} · ${date}`
+        : placing ?? (date || null);
     return {
       id: `${arch.id}-v${i}`,
-      placing: placingLabel(v.placing),
-      contextLabel: v.date ?? null,
+      contextLabel,
       creator: (v.creator ?? "").trim() || "Trainer",
+      deckList: buildDeckList(v.cards),
       cardImageUrl: variantPrimary?.imageUrl ?? null,
       counts: countsFor(v.cards),
     };
@@ -213,9 +221,9 @@ export default async function MetaDeckDetailPage({
                 id={v.id}
                 archetypeName={arch.name}
                 annotation={arch.annotation}
-                placing={v.placing}
                 contextLabel={v.contextLabel}
                 creator={v.creator}
+                deckList={v.deckList}
                 cardImageUrl={v.cardImageUrl}
                 iconUrl={iconUrl}
                 iconBg={iconBg}

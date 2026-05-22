@@ -1,4 +1,5 @@
 import Link from "next/link";
+import CopyDeckListButton from "@/app/components/CopyDeckListButton";
 
 interface CardCounts {
   pokemon: number;
@@ -13,12 +14,15 @@ interface Props {
   archetypeName: string;
   /** Annotation appended after the name (e.g. "ex"). Optional. */
   annotation?: string;
-  /** Placing label (e.g. "1st", "8th"). Surfaced as a pill in the header. */
-  placing?: string | null;
-  /** Tournament + date label as scraped from limitlesstcg.com. */
+  /** Tournament + date label as scraped from limitlesstcg.com. Placing
+   *  (e.g. "2nd") is folded into this string by the caller so the header
+   *  right slot is free for the copy-list action. */
   contextLabel?: string | null;
   /** Player name. Shown beneath the card art with an initials avatar. */
   creator: string;
+  /** Full deck list text — handed to CopyDeckListButton for the
+   *  clipboard write. Same format the carousel below the bio uses. */
+  deckList: string;
   /** Primary card image for THIS variant's deck list (pokemontcg.io). */
   cardImageUrl: string | null;
   /** Limitless sprite for the archetype (shared across variants). */
@@ -108,9 +112,9 @@ function TypeCounts({ counts }: { counts: CardCounts }) {
 export default function MetaVariantCard({
   archetypeName,
   annotation,
-  placing,
   contextLabel,
   creator,
+  deckList,
   cardImageUrl,
   iconUrl,
   iconBg,
@@ -169,11 +173,9 @@ export default function MetaVariantCard({
         <p className="flex-1 min-w-0 text-[17px] font-semibold text-text-primary truncate">
           {headerName}
         </p>
-        {placing && (
-          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-700 ring-1 ring-amber-500/20">
-            {placing}
-          </span>
-        )}
+        <div className="shrink-0 -mr-2">
+          <CopyDeckListButton deckList={deckList} iconOnly />
+        </div>
       </div>
 
       {/* Body — primary card art + player handle + counts + tournament.
