@@ -6,6 +6,15 @@ export type OwnershipFilter = "all" | "owned" | "unowned";
 
 // Approximate ranking of pokemontcg.io rarity strings — higher = scarcer.
 // Unknown rarities get rank -1 so they sort to the end of a desc list.
+//
+// Modern (SV / ME era) hierarchy at the top:
+//   Mega Hyper Rare > Hyper Rare > Special Illustration Rare
+//   > Illustration Rare > Ultra / Double Rare > ...
+//
+// Legacy "Rare Secret" and "Rare Rainbow" sit just below modern Hyper
+// Rare — they were the top of their respective eras but the modern
+// gold-treatment Hyper Rare is now the strictly-highest set rarity, so
+// it (and the still-newer Mega Hyper Rare) outrank both.
 const RARITY_RANK: Record<string, number> = {
   "Common": 1,
   "Uncommon": 2,
@@ -35,12 +44,19 @@ const RARITY_RANK: Record<string, number> = {
   "Amazing Rare": 9,
   "Radiant Rare": 9,
   "Trainer Gallery Rare Holo": 9,
+  "Black White Rare": 10,
   "Illustration Rare": 10,
+  "Shiny Ultra Rare": 11,
   "Special Illustration Rare": 11,
-  "Hyper Rare": 12,
+  "Rare Holo Star": 11,
   "Rare Secret": 12,
   "Rare Rainbow": 12,
-  "Rare Holo Star": 11,
+  "Hyper Rare": 13,
+  "Mega Hyper Rare": 14,
+  // Draft-named variant of Mega Hyper Rare that ships on some me2pt5
+  // cards before the final rarity string is finalized; treat as the
+  // same tier so the sort stays stable.
+  "MEGA_ATTACK_RARE": 14,
 };
 
 function rarityRank(r: string | null): number {
