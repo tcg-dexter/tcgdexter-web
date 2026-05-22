@@ -14,6 +14,7 @@ const SET_PTCGO_CODE_OVERRIDES: Record<string, string> = {
   me2: "PFL",
   me2pt5: "ASC",
   me3: "POR",
+  me4: "CRI",
   svp: "SVP",
   mep: "MEP",
 };
