@@ -5,62 +5,36 @@ import type { ReactNode } from "react";
  *
  * Layout:
  *   ┌─────────────────────────────────────────┐
- *   │  Banner — card art frame, cropped 3:1   │
+ *   │  Banner — solid avatar-bg color with    │
+ *   │  the preview card peeking from the      │
+ *   │  right; card extends below banner edge  │
  *   │ ┌────┐                                  │
  *   │ │Avt │ overlapping bottom-left          │
  *   └─┴────┴──────────────────────────────────┘
  *      name + annotation
- *      stats (4 inline)
- *      tournament record pills
+ *      stats grid
  *
- * Banner cropping
- * ─────────────
- * Pokémon TCG card images are full-card scans (the whole card silhouette,
- * including name + text box). We want only the *art frame*. Empirically
- * the art on modern V/ex/Mega cards lives at roughly
+ * Banner card placement
+ * ─────────────────────
+ * The full preview-card image sits in the right portion of the banner
+ * with padding above. The card is sized larger than the banner so it
+ * extends past the bottom edge (clipped by overflow-hidden); only the
+ * upper ~33-40 % of the card is visible. The banner background is the
+ * avatar's energy-type color, so the strip of empty space above and to
+ * the left of the card reads as a coherent backdrop.
  *
- *   x: 6%–94%    (88% wide)
- *   y: 12%–56%   (44% tall, center at 34%)
- *
- * Card aspect ratio 245 × 342 ≈ 0.716 (W/H). To make the art width fill a
- * 3:1 banner, we scale the image to 1/0.88 = 113.6% of banner width, then
- * shift it −6.8% left and −90% top (~ −30% of banner width, which pulls
- * the art's vertical center to the banner's vertical center). Both offsets
- * are expressed as percentages of the banner so the crop survives any
- * container width.
- *
- * The actual art-frame coords vary slightly per card layout (regular vs
- * V vs Mega vs trainer), so the values below are a conservative average —
- * tune if a specific archetype looks off.
+ * Tuning the four constants below changes how the card sits:
+ *  - CARD_TOP_PCT     — vertical inset (padding above the card)
+ *  - CARD_RIGHT_PCT   — horizontal inset from the banner's right edge
+ *  - CARD_WIDTH_PCT   — display width of the card as % of banner width
+ *                       (drives visible height via card aspect ratio)
+ *  - BANNER_ASPECT_WH — banner aspect ratio (width / height)
  */
 
-const CARD_ART_INSET_X = 0.06;          // 6% inset on each side
-const CARD_ART_INSET_TOP = 0.12;        // 12% from top
-const CARD_ART_INSET_BOTTOM = 1 - 0.56; // bottom of frame at 56% from top
-const CARD_ART_WIDTH_FRAC = 1 - 2 * CARD_ART_INSET_X; // 0.88
-const CARD_ART_HEIGHT_FRAC =
-  1 - CARD_ART_INSET_TOP - CARD_ART_INSET_BOTTOM; // 0.44
-const CARD_ART_CENTER_Y_FRAC =
-  CARD_ART_INSET_TOP + CARD_ART_HEIGHT_FRAC / 2; // 0.34
-const CARD_ASPECT_HW = 342 / 245; // height/width
-
-const BANNER_ASPECT_WH = 3; // 3:1
-
-// Scale to make art width = banner width
-const IMG_SCALE = 1 / CARD_ART_WIDTH_FRAC; // 1.1364
-// Horizontal offset: shift image left so art left edge sits at banner left
-const IMG_LEFT_PCT = -CARD_ART_INSET_X * IMG_SCALE * 100; // ≈ -6.82%
-// Vertical offset (as % of banner HEIGHT, since `top` is %-of-container-height):
-//   image_top_px = banner_center_px - art_center_in_image_px
-//   art_center_in_image_px = CARD_ART_CENTER_Y_FRAC × image_height_displayed
-//   image_height_displayed = IMG_SCALE × banner_width × CARD_ASPECT_HW
-//   banner_center_px = banner_height / 2 = banner_width / (2 × BANNER_ASPECT_WH)
-// → image_top_px / banner_height = ...
-const IMG_TOP_PCT =
-  ((1 / (2 * BANNER_ASPECT_WH)) -
-    CARD_ART_CENTER_Y_FRAC * IMG_SCALE * CARD_ASPECT_HW) *
-  BANNER_ASPECT_WH *
-  100; // ≈ -91%
+const BANNER_ASPECT_WH = 3;     // 3:1
+const CARD_TOP_PCT = 16;        // % of banner height — empty strip above
+const CARD_RIGHT_PCT = 6;       // % of banner width  — inset from right edge
+const CARD_WIDTH_PCT = 55;      // % of banner width  — card display width
 
 interface Props {
   /** Archetype display name, e.g. "Dragapult". */
@@ -123,9 +97,10 @@ export default function MetaProfileHeader({
 
   return (
     <header className="flex-shrink-0">
-      {/* Banner — clipped card art. Sits flush at the top of the page;
-          the back button (preBanner) overlays the top-left so the banner
-          owns the full vertical space the old preBanner row used to take. */}
+      {/* Banner — solid avatar-bg color with the preview card peeking
+          from the right. Sits flush at the top of the page; the back
+          button (preBanner) overlays the top-left so the banner owns
+          the full vertical space the old preBanner row used to take. */}
       <div
         className="relative w-full overflow-hidden"
         style={{ aspectRatio: `${BANNER_ASPECT_WH} / 1`, background: fallbackBg }}
@@ -138,22 +113,13 @@ export default function MetaProfileHeader({
             aria-hidden="true"
             className="absolute pointer-events-none select-none"
             style={{
-              width: `${IMG_SCALE * 100}%`,
-              left: `${IMG_LEFT_PCT}%`,
-              top: `${IMG_TOP_PCT}%`,
+              top: `${CARD_TOP_PCT}%`,
+              right: `${CARD_RIGHT_PCT}%`,
+              width: `${CARD_WIDTH_PCT}%`,
+              height: "auto",
             }}
           />
         )}
-        {/* Subtle bottom gradient so the avatar reads cleanly when card art
-            is bright. */}
-        <div
-          aria-hidden
-          className="absolute inset-x-0 bottom-0 h-1/3 pointer-events-none"
-          style={{
-            background:
-              "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 100%)",
-          }}
-        />
 
         {/* Back button overlay — top-left, clears the iOS safe-area inset
             so it doesn't crash into a notch / dynamic island. Caller is
