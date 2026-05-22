@@ -4,46 +4,42 @@ import type { ReactNode } from "react";
  * Twitter-profile-style header for a meta deck page.
  *
  * Layout:
- *   ┌─────────────────────────────────────────┐
- *   │ Banner — solid avatar-bg color with the │
- *   │ 7 most common cards across the top-5    │
- *   │ deck lists fanned across the middle,    │
- *   │ each slightly overlapping the next      │
- *   │ ┌────┐                                  │
- *   │ │Avt │ overlapping bottom-left          │
- *   └─┴────┴──────────────────────────────────┘
+ *   ┌──────────────────────────────────────────┐
+ *   │ Banner — solid avatar-bg color with the  │
+ *   │ 7 most common cards across the top-5     │
+ *   │ deck lists fanned across the row at the  │
+ *   │ same top inset / card size as the prior  │
+ *   │ single-card peek                         │
+ *   │ ┌────┐                                   │
+ *   │ │Avt │ overlapping bottom-left           │
+ *   └─┴────┴───────────────────────────────────┘
  *      name + annotation
  *      stats grid
  *
  * Banner card placement
  * ─────────────────────
- * The 7 cards sit centered horizontally with even spacing — each card's
- * left edge is offset by `STEP` (computed from total span / count) from
- * the previous card's left, so adjacent cards visually overlap by
- * (CARD_WIDTH_PCT − STEP) of the banner width. Cards are sized large
- * enough that they extend past the banner's bottom edge; overflow-hidden
- * clips them, so only the top portion of each card is visible.
+ * Each card sits at CARDS_TOP_PCT from the top of the banner and renders
+ * at full height; cards that extend past the bottom of the banner are
+ * clipped by the banner's overflow-hidden. The row of cards is centered
+ * horizontally within the same max-w-6xl container the variant grid
+ * below uses, so the fan visually spans the full width of the deck-list
+ * preview row.
  *
- * Tuning these constants changes how the cards sit:
- *  - CARDS_TOP_PCT       — vertical inset (padding above the cards)
- *  - CARDS_SPAN_PCT      — total horizontal span the row occupies
- *  - CARD_WIDTH_PCT      — display width of each card as % of banner
- *                          width (drives visible height via card aspect)
- *  - BANNER_ASPECT_WH    — banner aspect ratio (width / height)
+ * Per-card left offset is derived from `(SPAN - CARD_WIDTH) / (count-1)`
+ * so the row always spans the full container regardless of how many
+ * cards we actually have (1..7).
+ *
+ * Tuning constants:
+ *  - CARDS_TOP_PCT     — % of banner height; vertical inset to first card
+ *  - CARDS_SPAN_PCT    — % of inner container width; total fan span
+ *  - CARD_WIDTH_PCT    — % of inner container width; per-card display width
+ *  - BANNER_ASPECT_WH  — banner aspect ratio (width / height)
  */
 
 const BANNER_ASPECT_WH = 3;     // 3:1
-const CARDS_TOP_PCT = 32;       // % of banner height — empty strip above
-const CARDS_SPAN_PCT = 80;      // % of banner width  — total horizontal span
-const CARD_WIDTH_PCT = 15;      // % of banner width  — per-card display width
-
-// Each card is cropped to its top slice — just enough to show the card
-// header + the bulk of the art frame; the bottom of the card (attacks,
-// text box, weakness row) is hidden. Card aspect is 245:342, so a 40 %
-// vertical slice gives a crop aspect of 245 / (0.4 × 342) ≈ 1.79.
-const CARD_VISIBLE_FRACTION = 0.4;
-const CARD_ASPECT_WH = 245 / 342;
-const CARD_CROP_ASPECT_WH = CARD_ASPECT_WH / CARD_VISIBLE_FRACTION;
+const CARDS_TOP_PCT = 15;       // matches the prior single-card top inset
+const CARDS_SPAN_PCT = 100;     // % of inner container width — full span
+const CARD_WIDTH_PCT = 32;      // % of inner container width — per card
 
 interface Props {
   /** Archetype display name, e.g. "Dragapult". */
@@ -130,40 +126,36 @@ export default function MetaProfileHeader({
         className="relative w-full overflow-hidden"
         style={{ aspectRatio: `${BANNER_ASPECT_WH} / 1`, background: fallbackBg }}
       >
-        {bannerCards.map((url, i) => {
-          const left =
-            cardCount === 1 ? singleCardLeft : cardsLeftStart + i * cardsStep;
-          // Each card image lives inside an overflow-hidden frame whose
-          // aspect ratio matches the top slice we want to show, so only
-          // the top CARD_VISIBLE_FRACTION of the card is visible. Shadow
-          // sits on the frame (not the img) since overflow-hidden would
-          // clip a shadow on the inner element.
-          return (
-            <div
-              key={`${i}-${url}`}
-              className="absolute overflow-hidden shadow-md pointer-events-none select-none"
-              style={{
-                top: `${CARDS_TOP_PCT}%`,
-                left: `${left}%`,
-                width: `${CARD_WIDTH_PCT}%`,
-                aspectRatio: `${CARD_CROP_ASPECT_WH} / 1`,
-                zIndex: i,
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={url}
-                alt=""
-                aria-hidden="true"
-                // Absolute-positioned so the img's natural height doesn't
-                // count toward the container's intrinsic size — otherwise
-                // aspect-ratio is ignored and the container grows to fit
-                // the full-card-height image, defeating the crop.
-                className="absolute inset-x-0 top-0 block w-full h-auto"
-              />
-            </div>
-          );
-        })}
+        {/* Cards layer — constrained to the same max-w-6xl ± px-6 the
+            variant grid below uses, so the fan spans the full width of
+            the deck-list preview row regardless of viewport. */}
+        <div className="absolute inset-0 mx-auto max-w-6xl">
+          <div className="relative h-full mx-6">
+            {bannerCards.map((url, i) => {
+              const left =
+                cardCount === 1
+                  ? singleCardLeft
+                  : cardsLeftStart + i * cardsStep;
+              return (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={`${i}-${url}`}
+                  src={url}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute pointer-events-none select-none drop-shadow-md"
+                  style={{
+                    top: `${CARDS_TOP_PCT}%`,
+                    left: `${left}%`,
+                    width: `${CARD_WIDTH_PCT}%`,
+                    height: "auto",
+                    zIndex: i,
+                  }}
+                />
+              );
+            })}
+          </div>
+        </div>
 
         {/* Back button overlay — top-left, clears the iOS safe-area inset
             so it doesn't crash into a notch / dynamic island. Caller is
