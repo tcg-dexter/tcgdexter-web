@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  StackIcon,
   TrophyIcon,
   ChartBarIcon,
   BookOpenIcon,
@@ -54,10 +53,9 @@ export default function SiteSidebar({
   // visitors to /sign-in, so the nav row doubles as a sign-in funnel.
   const INTERNAL_LINKS = [
     { href: "/cards", label: "Card Catalog", Icon: CardsIcon },
-    { href: "/", label: "Deck Profiler", Icon: StackIcon },
-    { href: "/my-decks", label: "My Decks", Icon: BookmarkIcon },
+    { href: "/my-decks", label: "Deck Collection", Icon: BookmarkIcon },
     { href: "/meta-decks", label: "Top 30 Meta Decks", Icon: ChartBarIcon },
-    { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
+    // { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
     { href: "/learn", label: "Learn to Play", Icon: BookOpenIcon },
   ];
 
@@ -81,22 +79,19 @@ export default function SiteSidebar({
   return (
     <aside
       aria-label="Primary navigation"
-      className="hidden xl:flex fixed inset-y-0 left-0 z-30 w-[230px] flex-col bg-bg border-r border-[var(--border)]"
+      className="hidden xl:flex fixed inset-y-0 left-0 z-30 w-[230px] flex-col bg-bg border-r border-[var(--border)] pt-8"
     >
-      {/* Brand mark — square source clipped into a circle via
-          `rounded-full`. `pl-6` puts the logo's left edge at 24px from
-          the rail border, the same X that the nav rows' icon column sits
-          at (nav's px-3 + row's px-3 = 24px). Rendered at 48px. */}
-      <div className="flex-shrink-0 h-20 pl-6 pr-3 flex items-center">
-        <Link href="/" aria-label="TCG Dexter — home" className="inline-flex">
+      {/* Brand mark — wordmark logo spanning the same inner width as the
+          right rail's search bar (rail width minus pl-3 + pr-6 = 194px). */}
+      <div className="flex-shrink-0 h-20 pl-5 pr-6 flex items-center">
+        <Link href="/" aria-label="TCG Dexter — home" className="block w-full">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/logo-circle.png"
+            src="/logo-wordmark.png"
             alt="TCG Dexter"
-            width={48}
-            height={48}
-            className="rounded-full"
-            style={{ width: "48px", height: "48px" }}
+            width={1920}
+            height={453}
+            className="w-full h-auto"
           />
         </Link>
       </div>

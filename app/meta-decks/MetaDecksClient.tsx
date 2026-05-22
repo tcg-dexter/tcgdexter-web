@@ -1,52 +1,51 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import SectionHeader from "@/app/components/ui/SectionHeader";
 import PillSelect from "@/app/components/ui/PillSelect";
-import { UserDeckCard, type UserDeckCardProps } from "@/app/components/DeckPostCard";
+import { MetaDeckCard, type MetaDeckCardProps } from "@/app/components/DeckPostCard";
+
+export interface MetaDeckItem extends MetaDeckCardProps {
+  counts: { pokemon: number; trainer: number; energy: number };
+}
 
 interface Props {
-  decks: UserDeckCardProps[];
+  items: MetaDeckItem[];
 }
 
 type SortKey =
-  | "date"
   | "name"
-  | "wins"
+  | "representation"
   | "likes"
   | "pokemon"
   | "trainer"
   | "energy";
 type SortDir = "asc" | "desc";
 
-function sortValue(deck: UserDeckCardProps, key: SortKey): number | string {
+function sortValue(item: MetaDeckItem, key: SortKey): number | string {
   switch (key) {
-    case "date":
-      return deck.createdAt ? new Date(deck.createdAt).getTime() : 0;
     case "name":
-      return deck.name.toLowerCase();
-    case "wins":
-      return deck.wl?.w ?? 0;
+      return item.name.toLowerCase();
+    case "representation":
+      return item.representation_pct;
     case "likes":
-      return deck.likeCount ?? 0;
+      return item.like_count ?? 0;
     case "pokemon":
-      return deck.counts?.pokemon ?? 0;
+      return item.counts.pokemon;
     case "trainer":
-      return deck.counts?.trainer ?? 0;
+      return item.counts.trainer;
     case "energy":
-      return deck.counts?.energy ?? 0;
+      return item.counts.energy;
   }
 }
 
-export default function MyDecksClient({ decks }: Props) {
+export default function MetaDecksClient({ items }: Props) {
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<SortKey>("date");
+  const [sort, setSort] = useState<SortKey>("representation");
   const [dir, setDir] = useState<SortDir>("desc");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const base = q ? decks.filter((d) => d.name.toLowerCase().includes(q)) : decks;
+    const base = q ? items.filter((d) => d.name.toLowerCase().includes(q)) : items;
     const sorted = [...base].sort((a, b) => {
       const av = sortValue(a, sort);
       const bv = sortValue(b, sort);
@@ -55,15 +54,10 @@ export default function MyDecksClient({ decks }: Props) {
       return 0;
     });
     return sorted;
-  }, [decks, query, sort, dir]);
+  }, [items, query, sort, dir]);
 
   return (
-    <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
-      <div className="mb-6">
-        <SectionHeader eyebrow="Your library" title="Deck Collection" />
-      </div>
-
-      {/* Toolbar */}
+    <>
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
         <div className="flex-1 relative">
           <svg
@@ -96,12 +90,10 @@ export default function MyDecksClient({ decks }: Props) {
               setDir(d);
             }}
           >
-            <option value="date:desc">Date Added (Descending)</option>
-            <option value="date:asc">Date Added (Ascending)</option>
+            <option value="representation:desc">Meta Makeup (Descending)</option>
+            <option value="representation:asc">Meta Makeup (Ascending)</option>
             <option value="name:asc">Deck Name (A–Z)</option>
             <option value="name:desc">Deck Name (Z–A)</option>
-            <option value="wins:desc">Wins (Descending)</option>
-            <option value="wins:asc">Wins (Ascending)</option>
             <option value="likes:desc">Likes (Descending)</option>
             <option value="likes:asc">Likes (Ascending)</option>
             <option value="pokemon:desc">Pokémon Card Count (Descending)</option>
@@ -111,35 +103,30 @@ export default function MyDecksClient({ decks }: Props) {
             <option value="energy:desc">Energy Card Count (Descending)</option>
             <option value="energy:asc">Energy Card Count (Ascending)</option>
           </PillSelect>
-          <Link
-            href="/"
-            className="text-xs font-semibold h-[38px] inline-flex items-center px-3 rounded-full border border-transparent bg-gradient-brand bg-origin-border text-white shadow-brand hover:shadow-brand-lg transition"
-          >
-            + New Deck
-          </Link>
         </div>
       </div>
 
-      {decks.length === 0 ? (
-        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
-          <p className="text-sm text-text-secondary">
-            No decks yet.{" "}
-            <Link href="/" className="text-accent hover:underline">
-              Create your first deck profile →
-            </Link>
-          </p>
-        </div>
-      ) : filtered.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
           <p className="text-sm text-text-secondary">No decks match “{query}”.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filtered.map((deck) => (
-            <UserDeckCard key={deck.id} {...deck} />
+          {filtered.map((item) => (
+            <MetaDeckCard
+              key={item.id}
+              id={item.id}
+              name={item.name}
+              image_url={item.image_url}
+              icon_url={item.icon_url}
+              icon_bg={item.icon_bg}
+              representation_pct={item.representation_pct}
+              like_count={item.like_count}
+              creators={item.creators}
+            />
           ))}
         </div>
       )}
-    </main>
+    </>
   );
 }

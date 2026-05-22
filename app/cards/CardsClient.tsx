@@ -5,10 +5,17 @@ import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { cardImageSmall } from "@/lib/cardImages";
 import type { CardIndexEntry } from "@/lib/cardsIndex";
-import type { SortKey, SortDir } from "@/lib/cardSearch";
+import type { SortKey, SortDir, OwnershipFilter } from "@/lib/cardSearch";
 import CardImage from "./CardImage";
 import CardFooterOverlay from "./CardFooterOverlay";
+import InventoryProvider from "./InventoryContext";
+import {
+  InventoryCapsule,
+  InventoryOverlay,
+  type InventoryMenuMode,
+} from "./InventoryCapsule";
 import SectionHeader from "@/app/components/ui/SectionHeader";
+import PillSelect from "@/app/components/ui/PillSelect";
 
 interface Facets {
   supertypes: string[];
@@ -34,6 +41,7 @@ interface Params {
   page: number;
   pageSize: number;
   view: "grid" | "list";
+  ownership: OwnershipFilter;
 }
 
 interface Props {
@@ -60,6 +68,7 @@ function buildUrl(pathname: string, params: Params): string {
   if (params.page !== 1) sp.set("page", String(params.page));
   if (params.pageSize !== 120) sp.set("pageSize", String(params.pageSize));
   if (params.view !== "grid") sp.set("view", params.view);
+  if (params.ownership !== "all") sp.set("ownership", params.ownership);
   const qs = sp.toString();
   return qs ? `${pathname}?${qs}` : pathname;
 }
@@ -139,6 +148,7 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
   };
 
   return (
+    <InventoryProvider>
     <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
       <div className="mb-6">
         <SectionHeader eyebrow="Pokémon TCG" title="Card Catalog" />
@@ -189,7 +199,7 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
           </PillSelect>
           <button
             onClick={() => setShowFilters((s) => !s)}
-            className={`text-xs font-semibold h-[30px] px-3 rounded-full transition ${
+            className={`text-xs font-semibold h-[38px] px-3 rounded-full transition ${
               activeFilterCount > 0
                 ? "border border-transparent bg-gradient-brand bg-origin-border text-white shadow-brand hover:shadow-brand-lg"
                 : "border border-black/10 bg-white hover:bg-surface"
@@ -197,10 +207,10 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
           >
             Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
           </button>
-          <div className="inline-flex rounded-full border border-black/10 bg-white overflow-hidden">
+          <div className="inline-flex h-[38px] rounded-full border border-black/10 bg-white overflow-hidden">
             <button
               onClick={() => updateParams({ view: "grid" })}
-              className={`text-xs font-semibold px-3 py-1.5 transition-colors ${
+              className={`text-xs font-semibold px-3 transition-colors ${
                 params.view === "grid" ? "bg-black text-white" : "hover:bg-surface"
               }`}
               aria-label="Grid view"
@@ -209,7 +219,7 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
             </button>
             <button
               onClick={() => updateParams({ view: "list" })}
-              className={`text-xs font-semibold px-3 py-1.5 transition-colors ${
+              className={`text-xs font-semibold px-3 transition-colors ${
                 params.view === "list" ? "bg-black text-white" : "hover:bg-surface"
               }`}
               aria-label="List view"
@@ -278,6 +288,12 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
         </div>
       )}
 
+      {/* Ownership scope */}
+      <OwnershipRadios
+        value={params.ownership}
+        onChange={(v) => updateParams({ ownership: v })}
+      />
+
       {/* Results */}
       {initialResult.cards.length === 0 ? (
         <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
@@ -300,6 +316,58 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
         />
       )}
     </main>
+    </InventoryProvider>
+  );
+}
+
+function OwnershipRadios({
+  value,
+  onChange,
+}: {
+  value: OwnershipFilter;
+  onChange: (v: OwnershipFilter) => void;
+}) {
+  const options: Array<{ key: OwnershipFilter; label: string }> = [
+    { key: "all", label: "All Cards" },
+    { key: "owned", label: "Owned" },
+    { key: "unowned", label: "Unowned" },
+  ];
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Ownership scope"
+      className="flex items-center gap-4 mb-4"
+    >
+      {options.map((o) => {
+        const selected = value === o.key;
+        return (
+          <label
+            key={o.key}
+            className="inline-flex items-center gap-2 cursor-pointer select-none text-xs font-medium text-text-secondary"
+          >
+            <input
+              type="radio"
+              name="ownership"
+              value={o.key}
+              checked={selected}
+              onChange={() => onChange(o.key)}
+              className="sr-only peer"
+            />
+            <span
+              aria-hidden="true"
+              className={`relative inline-flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${
+                selected
+                  ? "border-accent bg-white"
+                  : "border-black/25 bg-white peer-hover:border-black/50"
+              }`}
+            >
+              {selected && <span className="h-2 w-2 rounded-full bg-accent" />}
+            </span>
+            <span className={selected ? "text-text-primary" : ""}>{o.label}</span>
+          </label>
+        );
+      })}
+    </div>
   );
 }
 
@@ -437,11 +505,20 @@ function GridView({ cards }: { cards: CardIndexEntry[] }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
       {cards.map((c) => (
+        <GridTile key={c.id} card={c} />
+      ))}
+    </div>
+  );
+}
+
+function GridTile({ card: c }: { card: CardIndexEntry }) {
+  const [mode, setMode] = useState<InventoryMenuMode | null>(null);
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="relative w-full" style={{ aspectRatio: "245 / 342" }}>
         <Link
-          key={c.id}
           href={`/cards/${encodeURIComponent(c.id)}`}
-          className="group relative block rounded-xl overflow-hidden bg-surface hover:shadow-md transition-shadow"
-          style={{ aspectRatio: "245 / 342" }}
+          className="group absolute inset-0 block rounded-xl overflow-hidden bg-surface hover:shadow-md transition-shadow"
         >
           <CardImage
             src={cardImageSmall(c.setId, c.number)}
@@ -459,7 +536,22 @@ function GridView({ cards }: { cards: CardIndexEntry[] }) {
             marketPrice={c.marketPrice}
           />
         </Link>
-      ))}
+        {mode && (
+          <InventoryOverlay
+            setId={c.setId}
+            number={c.number}
+            rarity={c.rarity}
+            mode={mode}
+            display="card"
+            onClose={() => setMode(null)}
+          />
+        )}
+      </div>
+      <InventoryCapsule
+        setId={c.setId}
+        number={c.number}
+        onOpenMenu={(m) => setMode(m)}
+      />
     </div>
   );
 }
@@ -467,7 +559,7 @@ function GridView({ cards }: { cards: CardIndexEntry[] }) {
 function ListView({ cards }: { cards: CardIndexEntry[] }) {
   return (
     <div className="rounded-2xl border border-black/8 bg-white overflow-hidden">
-      <div className="hidden md:grid grid-cols-[64px_2fr_1.5fr_80px_80px_80px_80px] gap-3 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-text-muted border-b border-black/8">
+      <div className="hidden md:grid grid-cols-[64px_2fr_1.5fr_80px_80px_80px_80px_100px] gap-3 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-text-muted border-b border-black/8">
         <span></span>
         <span>Name</span>
         <span>Set</span>
@@ -475,42 +567,68 @@ function ListView({ cards }: { cards: CardIndexEntry[] }) {
         <span>Type</span>
         <span>HP</span>
         <span className="text-right">Price</span>
+        <span className="text-right">Owned</span>
       </div>
       <ul>
         {cards.map((c, i) => (
-          <li key={c.id} className={i > 0 ? "border-t border-black/8" : ""}>
-            <Link
-              href={`/cards/${encodeURIComponent(c.id)}`}
-              className="grid grid-cols-[48px_1fr] md:grid-cols-[64px_2fr_1.5fr_80px_80px_80px_80px] gap-3 px-4 py-2 items-center hover:bg-surface transition-colors"
-            >
-              <CardImage
-                src={cardImageSmall(c.setId, c.number)}
-                alt={`${c.name} — ${c.setName} ${c.number}`}
-                name={c.name}
-                setName={c.setName}
-                number={c.number}
-                className="w-12 h-[68px] md:w-14 md:h-[78px] object-cover rounded-md bg-surface text-[9px]"
-              />
-              <div className="md:contents">
-                <span className="text-sm font-medium text-text-primary truncate">{c.name}</span>
-                <span className="hidden md:inline text-sm text-text-secondary truncate">
-                  {c.setName}
-                  {c.ptcgoCode ? ` · ${c.ptcgoCode}` : ""}
-                </span>
-                <span className="hidden md:inline text-sm text-text-secondary">{c.number}</span>
-                <span className="hidden md:inline text-sm text-text-secondary">
-                  {c.types.join(", ") || c.supertype}
-                </span>
-                <span className="hidden md:inline text-sm text-text-secondary">{c.hp ?? "—"}</span>
-                <span className="hidden md:inline text-sm text-text-secondary text-right">
-                  {c.marketPrice > 0 ? `$${c.marketPrice.toFixed(2)}` : "—"}
-                </span>
-              </div>
-            </Link>
-          </li>
+          <ListRow key={c.id} card={c} isFirst={i === 0} />
         ))}
       </ul>
     </div>
+  );
+}
+
+function ListRow({ card: c, isFirst }: { card: CardIndexEntry; isFirst: boolean }) {
+  const [mode, setMode] = useState<InventoryMenuMode | null>(null);
+  return (
+    <li className={`relative ${isFirst ? "" : "border-t border-black/8"}`}>
+      <Link
+        href={`/cards/${encodeURIComponent(c.id)}`}
+        className="grid grid-cols-[48px_1fr_auto] md:grid-cols-[64px_2fr_1.5fr_80px_80px_80px_80px_100px] gap-3 px-4 py-2 items-center hover:bg-surface transition-colors"
+      >
+        <CardImage
+          src={cardImageSmall(c.setId, c.number)}
+          alt={`${c.name} — ${c.setName} ${c.number}`}
+          name={c.name}
+          setName={c.setName}
+          number={c.number}
+          className="w-12 h-[68px] md:w-14 md:h-[78px] object-cover rounded-md bg-surface text-[9px]"
+        />
+        <div className="md:contents">
+          <span className="text-sm font-medium text-text-primary truncate">{c.name}</span>
+          <span className="hidden md:inline text-sm text-text-secondary truncate">
+            {c.setName}
+            {c.ptcgoCode ? ` · ${c.ptcgoCode}` : ""}
+          </span>
+          <span className="hidden md:inline text-sm text-text-secondary">{c.number}</span>
+          <span className="hidden md:inline text-sm text-text-secondary">
+            {c.types.join(", ") || c.supertype}
+          </span>
+          <span className="hidden md:inline text-sm text-text-secondary">{c.hp ?? "—"}</span>
+          <span className="hidden md:inline text-sm text-text-secondary text-right">
+            {c.marketPrice > 0 ? `$${c.marketPrice.toFixed(2)}` : "—"}
+          </span>
+        </div>
+        <div className="justify-self-end md:justify-self-end">
+          <InventoryCapsule
+            setId={c.setId}
+            number={c.number}
+            onOpenMenu={(m) => setMode(m)}
+          />
+        </div>
+      </Link>
+      {mode && (
+        <InventoryOverlay
+          setId={c.setId}
+          number={c.number}
+          rarity={c.rarity}
+          cardName={c.name}
+          mode={mode}
+          display="modal"
+          onClose={() => setMode(null)}
+        />
+      )}
+    </li>
   );
 }
 
@@ -565,42 +683,3 @@ function Pagination({
   );
 }
 
-// Native <select> renders its own dropdown chrome on desktop, which
-// overrides border-radius on the trailing edge — the same `rounded-full`
-// that shows as a capsule on mobile reads as a rounded rect on desktop.
-// `appearance-none` strips the native widget so the pill shape holds; a
-// pointer-events-none chevron is painted over the right padding to keep
-// the affordance.
-function PillSelect({
-  value,
-  onChange,
-  children,
-}: {
-  value: string | number;
-  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="relative inline-flex">
-      <select
-        value={value}
-        onChange={onChange}
-        className="appearance-none text-xs font-semibold h-[30px] pl-3 pr-7 rounded-full border border-black/10 bg-white"
-      >
-        {children}
-      </select>
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 12 12"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-text-secondary"
-      >
-        <path d="M3 4.5 6 7.5 9 4.5" />
-      </svg>
-    </div>
-  );
-}

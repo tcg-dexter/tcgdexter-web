@@ -1,7 +1,7 @@
 import archetypesRaw from "@/data/meta-archetypes.json";
 import metaDecksRaw from "@/data/meta-decks.json";
 import SectionHeader from "@/app/components/ui/SectionHeader";
-import { MetaDeckCard } from "@/app/components/DeckPostCard";
+import MetaDecksClient, { type MetaDeckItem } from "./MetaDecksClient";
 import { metaPrimaryCard, typeColor } from "@/lib/metaPrimaryCard";
 
 interface Archetype {
@@ -37,52 +37,51 @@ export default function MetaDecksPage() {
   const metaDecks = metaDecksRaw as MetaDeck[];
   const lastUpdated = archetypes[0]?.last_updated;
 
+  const items: MetaDeckItem[] = archetypes.map((arch) => {
+    const deckData = metaDecks.find((d) => d.id === arch.id);
+    const cards = deckData?.variants?.[0]?.cards ?? deckData?.cards ?? [];
+    // Parse the icons string (e.g. `["dragapult"]`) saved by the
+    // Limitless scraper. Use as a hint for matching the deck's
+    // primary pokémon card in the list.
+    let iconList: string[] = [];
+    try {
+      iconList = arch.icons ? (JSON.parse(arch.icons) as string[]) : [];
+    } catch {
+      iconList = [];
+    }
+    const primary = metaPrimaryCard(cards, iconList);
+    const cardImage = primary?.imageUrl ?? arch.image_url ?? null;
+    const iconBg = typeColor(primary?.types);
+    const iconUrl = iconList[0]
+      ? `https://r2.limitlesstcg.net/pokemon/gen9/${iconList[0]}.png`
+      : null;
+    const creators: string[] = [];
+    for (const v of deckData?.variants ?? []) {
+      const c = (v.creator ?? "").trim() || "Trainer";
+      if (!creators.includes(c)) creators.push(c);
+      if (creators.length >= 5) break;
+    }
+    const counts = { pokemon: 0, trainer: 0, energy: 0 };
+    for (const c of cards) counts[c.category] += c.qty;
+    return {
+      id: arch.id,
+      name: arch.name,
+      image_url: cardImage,
+      icon_url: iconUrl,
+      icon_bg: iconBg,
+      representation_pct: arch.representation_pct,
+      creators,
+      counts,
+    };
+  });
+
   return (
     <main className="mx-auto max-w-6xl px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
-      <div className="mb-8">
+      <div className="mb-6">
         <SectionHeader eyebrow="Standard format" title="Top 30 Meta Decks" />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {archetypes.map((arch) => {
-          const deckData = metaDecks.find((d) => d.id === arch.id);
-          const cards =
-            deckData?.variants?.[0]?.cards ?? deckData?.cards ?? [];
-          // Parse the icons string (e.g. `["dragapult"]`) saved by the
-          // Limitless scraper. Use as a hint for matching the deck's
-          // primary pokémon card in the list.
-          let iconList: string[] = [];
-          try {
-            iconList = arch.icons ? (JSON.parse(arch.icons) as string[]) : [];
-          } catch {
-            iconList = [];
-          }
-          const primary = metaPrimaryCard(cards, iconList);
-          const cardImage = primary?.imageUrl ?? arch.image_url ?? null;
-          const iconBg = typeColor(primary?.types);
-          const iconUrl = iconList[0]
-            ? `https://r2.limitlesstcg.net/pokemon/gen9/${iconList[0]}.png`
-            : null;
-          const creators: string[] = [];
-          for (const v of deckData?.variants ?? []) {
-            const c = (v.creator ?? "").trim() || "Trainer";
-            if (!creators.includes(c)) creators.push(c);
-            if (creators.length >= 5) break;
-          }
-          return (
-            <MetaDeckCard
-              key={arch.id}
-              id={arch.id}
-              name={arch.name}
-              image_url={cardImage}
-              icon_url={iconUrl}
-              icon_bg={iconBg}
-              representation_pct={arch.representation_pct}
-              creators={creators}
-            />
-          );
-        })}
-      </div>
+      <MetaDecksClient items={items} />
 
       {lastUpdated && (
         <p className="mt-4 text-xs text-text-muted text-center">

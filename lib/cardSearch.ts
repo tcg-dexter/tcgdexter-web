@@ -1,9 +1,20 @@
 import { getAllCards, getSets, type CardIndexEntry } from "@/lib/cardsIndex";
 
 export type SortKey = "released" | "name" | "number" | "hp" | "price" | "rarity";
+export type SortDir = "asc" | "desc";
+export type OwnershipFilter = "all" | "owned" | "unowned";
 
 // Approximate ranking of pokemontcg.io rarity strings — higher = scarcer.
 // Unknown rarities get rank -1 so they sort to the end of a desc list.
+//
+// Modern (SV / ME era) hierarchy at the top:
+//   Mega Hyper Rare > Hyper Rare > Special Illustration Rare
+//   > Illustration Rare > Ultra / Double Rare > ...
+//
+// Legacy "Rare Secret" and "Rare Rainbow" sit just below modern Hyper
+// Rare — they were the top of their respective eras but the modern
+// gold-treatment Hyper Rare is now the strictly-highest set rarity, so
+// it (and the still-newer Mega Hyper Rare) outrank both.
 const RARITY_RANK: Record<string, number> = {
   "Common": 1,
   "Uncommon": 2,
@@ -33,19 +44,25 @@ const RARITY_RANK: Record<string, number> = {
   "Amazing Rare": 9,
   "Radiant Rare": 9,
   "Trainer Gallery Rare Holo": 9,
+  "Black White Rare": 10,
   "Illustration Rare": 10,
+  "Shiny Ultra Rare": 11,
   "Special Illustration Rare": 11,
-  "Hyper Rare": 12,
+  "Rare Holo Star": 11,
   "Rare Secret": 12,
   "Rare Rainbow": 12,
-  "Rare Holo Star": 11,
+  "Hyper Rare": 13,
+  "Mega Hyper Rare": 14,
+  // Draft-named variant of Mega Hyper Rare that ships on some me2pt5
+  // cards before the final rarity string is finalized; treat as the
+  // same tier so the sort stays stable.
+  "MEGA_ATTACK_RARE": 14,
 };
 
 function rarityRank(r: string | null): number {
   if (!r) return -1;
   return RARITY_RANK[r] ?? -1;
 }
-export type SortDir = "asc" | "desc";
 
 export interface CardSearchParams {
   q?: string;
@@ -62,6 +79,13 @@ export interface CardSearchParams {
   dir?: SortDir;
   page?: number;
   pageSize?: number;
+  /**
+   * Ownership filter. "owned" keeps only printings where `ownedKeys`
+   * contains the card; "unowned" inverts that; "all" (default) is a
+   * no-op. `ownedKeys` should hold `${setId}-${number}` keys.
+   */
+  ownership?: OwnershipFilter;
+  ownedKeys?: Set<string>;
 }
 
 export interface CardSearchResult {
@@ -136,6 +160,12 @@ function matchAndScore(
         tokenScore = 15;
       } else if (card.nameLower.includes(w)) {
         tokenScore = 5;
+      } else if (card.artistTokens.some((tok) => tok === w)) {
+        tokenScore = 12;
+      } else if (card.artistTokens.some((tok) => tok.startsWith(w))) {
+        tokenScore = 8;
+      } else if (card.artistLower?.includes(w)) {
+        tokenScore = 4;
       } else {
         return null;
       }
@@ -158,6 +188,11 @@ function applyFilters(card: CardIndexEntry, p: CardSearchParams): boolean {
   if (p.hpMax != null && (card.hp == null || card.hp > p.hpMax)) return false;
   if (p.priceMin != null && card.marketPrice < p.priceMin) return false;
   if (p.priceMax != null && card.marketPrice > p.priceMax) return false;
+  if (p.ownership === "owned" || p.ownership === "unowned") {
+    const owned = p.ownedKeys?.has(card.id) ?? false;
+    if (p.ownership === "owned" && !owned) return false;
+    if (p.ownership === "unowned" && owned) return false;
+  }
   return true;
 }
 

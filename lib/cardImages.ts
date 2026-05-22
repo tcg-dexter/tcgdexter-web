@@ -24,6 +24,12 @@ const SET_IMAGE_OVERRIDES: Record<string, { small: string; large: string }> = {
     small: "https://limitlesstcg.nyc3.digitaloceanspaces.com/tpci/POR/POR_{nnn}_R_EN_LG.png",
     large: "https://limitlesstcg.nyc3.digitaloceanspaces.com/tpci/POR/POR_{nnn}_R_EN.png",
   },
+  // Chaos Rising — pokemontcg.io has the metadata but routes its image URLs
+  // to images.scrydex.com for this set (no .png suffix, no zero-padding).
+  me4: {
+    small: "https://images.scrydex.com/pokemon/me4-{n}/small",
+    large: "https://images.scrydex.com/pokemon/me4-{n}/large",
+  },
 };
 
 function build(setId: string, number: string, variant: ImageVariant): string {

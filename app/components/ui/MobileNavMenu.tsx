@@ -6,7 +6,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import UnifiedSearch from "@/app/leaderboard/UnifiedSearch";
 import {
-  StackIcon,
   TrophyIcon,
   ChartBarIcon,
   BookOpenIcon,
@@ -217,10 +216,9 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
   // surfaces tell the same visual story.
   const INTERNAL_LINKS = [
     { href: "/cards", label: "Card Catalog", Icon: CardsIcon },
-    { href: "/", label: "Deck Profiler", Icon: StackIcon },
-    { href: "/my-decks", label: "My Decks", Icon: BookmarkIcon },
+    { href: "/my-decks", label: "Deck Collection", Icon: BookmarkIcon },
     { href: "/meta-decks", label: "Top 30 Meta Decks", Icon: ChartBarIcon },
-    { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
+    // { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
     { href: "/learn", label: "Learn to Play", Icon: BookOpenIcon },
   ];
 
@@ -270,14 +268,37 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
           the data-nav-menu-visible attribute below that hides the real
           toolbar, so only one toolbar is ever rendered at a time. */}
       <div className="flex-shrink-0 backdrop-blur-xl bg-bg/70">
-        <div className="mx-auto max-w-6xl px-6 h-14 flex items-center">
-          {/* Hamburger — tapping it closes the menu */}
-          <button
-            onClick={closeMenu}
-            aria-label="Close navigation menu"
-          >
-            <HamburgerIcon />
-          </button>
+        <div className="mx-auto max-w-6xl px-6">
+          {/* Hamburger stays pinned in the same spot as the closed toolbar so
+              tapping doesn't shift between open and closed states. */}
+          <div className="h-14 flex items-center">
+            <button
+              onClick={closeMenu}
+              aria-label="Close navigation menu"
+            >
+              <HamburgerIcon />
+            </button>
+          </div>
+          {/* Logo sits below the hamburger, only visible while the panel
+              is open. Forced to `bg-bg` so the home page's brand gradient
+              doesn't bleed through the header's translucent `bg-bg/70`. */}
+          <div className="-mx-6 px-6 bg-bg">
+            <Link
+              href="/"
+              aria-label="TCG Dexter — home"
+              className="inline-flex pt-4 pb-3"
+              onClick={closeMenu}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo-wordmark.png"
+                alt="TCG Dexter"
+                width={1920}
+                height={453}
+                className="h-8 w-auto"
+              />
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -295,27 +316,6 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
       >
         <nav className="mx-auto max-w-6xl w-full px-6 pt-4 pb-6">
           <ul className="flex flex-col gap-1">
-            {/* Auth item — top of nav */}
-            <li>
-              {isAuthed ? (
-                <Link
-                  href={username ? `/u/${username}` : "/settings"}
-                  className={linkClass}
-                  onClick={closeMenu}
-                >
-                  <UserIcon />
-                  <span>{displayName ?? "Profile"}</span>
-                </Link>
-              ) : (
-                <Link href="/sign-in" className={linkClass} onClick={closeMenu}>
-                  <UserIcon />
-                  <span>Sign in</span>
-                </Link>
-              )}
-            </li>
-
-            <li role="separator" className="my-4" />
-
             {INTERNAL_LINKS.map(({ href, label, Icon }) => (
               <li key={href}>
                 <Link href={href} className={linkClass} onClick={closeMenu}>
@@ -341,6 +341,28 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
                 </a>
               </li>
             ))}
+
+            <li role="separator" className="my-4" />
+
+            {/* Auth item — anchored at the bottom of the link list, above
+                the search bar. */}
+            <li>
+              {isAuthed ? (
+                <Link
+                  href={username ? `/u/${username}` : "/settings"}
+                  className={linkClass}
+                  onClick={closeMenu}
+                >
+                  <UserIcon />
+                  <span>{displayName ?? "Profile"}</span>
+                </Link>
+              ) : (
+                <Link href="/sign-in" className={linkClass} onClick={closeMenu}>
+                  <UserIcon />
+                  <span>Sign in</span>
+                </Link>
+              )}
+            </li>
           </ul>
         </nav>
 
@@ -348,7 +370,7 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
             `mt-auto`. `dropdownPosition="above"` flips the results dropdown
             so it opens upward over the link list instead of off-screen
             past the panel's bottom edge. */}
-        <div className="mt-auto mx-auto max-w-6xl w-full px-6 pb-8 pt-4">
+        <div className="mt-auto mx-auto max-w-6xl w-full px-6 pb-8 pt-2">
           <UnifiedSearch dropdownPosition="above" />
         </div>
       </div>

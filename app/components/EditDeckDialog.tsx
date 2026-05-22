@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { cardImageUrlFor } from "@/lib/primaryCardImage";
 
 interface DeckCard {
@@ -110,7 +111,10 @@ export default function EditDeckDialog({
     }
   }
 
-  return (
+  // Render through a portal to escape any ancestor that creates a
+  // containing block for fixed children (e.g. a card with backdrop-blur).
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -308,6 +312,7 @@ export default function EditDeckDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

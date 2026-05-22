@@ -51,7 +51,7 @@ from pathlib import Path
 
 CARDS_DB  = Path.home() / "Library/Application Support/Dexter/cards.db"
 PRICES_DB = Path.home() / "Library/Application Support/Dexter/prices.db"
-WEB_REPO  = Path.home() / "Desktop/tcgdexter-web"
+WEB_REPO  = Path(__file__).resolve().parent.parent
 OUT_FILE  = WEB_REPO / "data/cards-standard.json"
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -171,7 +171,186 @@ def load_cards(db_path: Path, prices: dict) -> dict[str, list[dict]]:
 
         cards_by_name[name].append(card_entry)
 
+    _apply_catalog_stubs(cards_by_name)
     return dict(cards_by_name)
+
+
+# Minimal records for printings present in user collections but not yet
+# synced into cards.db. The upstream pipeline (sync_new_sets.py) is the
+# proper place for these — these stubs are a transient gap-filler so
+# /my-collection imports resolve. Each entry is the smallest shape the
+# web app reads: name/set/number/rarity/supertype, everything else null
+# or empty. Remove individual stubs once cards.db carries them.
+CATALOG_STUBS: list[dict] = [
+    # Mega Evolution Black Star Promos (set_id "mep")
+    {"name": "Psyduck",                 "set_id": "mep",      "set_name": "Mega Evolution Black Star Promos", "ptcgo_code": "PR-ME", "number": "7",   "supertype": "Pokémon", "subtypes": ["Basic"],   "rarity": "Promo"},
+    {"name": "Alakazam",                "set_id": "mep",      "set_name": "Mega Evolution Black Star Promos", "ptcgo_code": "PR-ME", "number": "9",   "supertype": "Pokémon", "subtypes": ["Stage 2"], "rarity": "Promo"},
+    {"name": "Sneasel",                 "set_id": "mep",      "set_name": "Mega Evolution Black Star Promos", "ptcgo_code": "PR-ME", "number": "20",  "supertype": "Pokémon", "subtypes": ["Basic"],   "rarity": "Promo"},
+    {"name": "Haunter",                 "set_id": "mep",      "set_name": "Mega Evolution Black Star Promos", "ptcgo_code": "PR-ME", "number": "27",  "supertype": "Pokémon", "subtypes": ["Stage 1"], "rarity": "Promo"},
+    {"name": "N's Zekrom",              "set_id": "mep",      "set_name": "Mega Evolution Black Star Promos", "ptcgo_code": "PR-ME", "number": "31",  "supertype": "Pokémon", "subtypes": ["Basic"],   "rarity": "Promo"},
+    {"name": "Bulbasaur",               "set_id": "mep",      "set_name": "Mega Evolution Black Star Promos", "ptcgo_code": "PR-ME", "number": "37",  "supertype": "Pokémon", "subtypes": ["Basic"],   "rarity": "Promo"},
+    {"name": "Charmander",              "set_id": "mep",      "set_name": "Mega Evolution Black Star Promos", "ptcgo_code": "PR-ME", "number": "38",  "supertype": "Pokémon", "subtypes": ["Basic"],   "rarity": "Promo"},
+    {"name": "Squirtle",                "set_id": "mep",      "set_name": "Mega Evolution Black Star Promos", "ptcgo_code": "PR-ME", "number": "39",  "supertype": "Pokémon", "subtypes": ["Basic"],   "rarity": "Promo"},
+    # Scarlet & Violet Black Star Promos (svp) gaps
+    {"name": "Espeon ex",               "set_id": "svp",      "set_name": "Scarlet & Violet Black Star Promos", "ptcgo_code": "PR-SV", "number": "175", "supertype": "Pokémon", "subtypes": [], "rarity": "Promo"},
+    {"name": "Team Rocket's Mewtwo ex", "set_id": "svp",      "set_name": "Scarlet & Violet Black Star Promos", "ptcgo_code": "PR-SV", "number": "205", "supertype": "Pokémon", "subtypes": [], "rarity": "Promo"},
+    {"name": "Victini",                 "set_id": "svp",      "set_name": "Scarlet & Violet Black Star Promos", "ptcgo_code": "PR-SV", "number": "208", "supertype": "Pokémon", "subtypes": [], "rarity": "Promo"},
+    # Black Bolt (zsv10pt5) gap
+    {"name": "Antique Cover Fossil",    "set_id": "zsv10pt5", "set_name": "Black Bolt", "ptcgo_code": "BLK", "number": "80", "supertype": "Trainer", "subtypes": ["Item"], "rarity": "Common"},
+    # Chaos Rising (me4) — full set; released 2026/05/22 ahead of the cards.db sync.
+    # Mega Evolution chains: Pyroar/Floette/Dragalge are Stage 1 megas; Greninja/Gallade are Stage 2 megas.
+    # Trainer subtypes here are best-effort; the DexterDaemon sync will overwrite with the canonical values.
+    {"name": "Weedle",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "1",   "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Kakuna",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "2",   "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Common"},
+    {"name": "Beedrill ex",             "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "3",   "supertype": "Pokémon", "subtypes": ["Stage 2", "ex"],    "rarity": "Double Rare"},
+    {"name": "Carnivine",               "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "4",   "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Chespin",                 "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "5",   "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Quilladin",               "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "6",   "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Common"},
+    {"name": "Chesnaught",              "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "7",   "supertype": "Pokémon", "subtypes": ["Stage 2"],          "rarity": "Rare"},
+    {"name": "Vulpix",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "8",   "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Ninetales",               "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "9",   "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Uncommon"},
+    {"name": "Ho-Oh",                   "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "10",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Rare"},
+    {"name": "Fennekin",                "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "11",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Braixen",                 "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "12",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Common"},
+    {"name": "Delphox",                 "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "13",  "supertype": "Pokémon", "subtypes": ["Stage 2"],          "rarity": "Rare"},
+    {"name": "Litleo",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "14",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Mega Pyroar ex",          "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "15",  "supertype": "Pokémon", "subtypes": ["Stage 1", "MEGA", "ex"], "rarity": "Double Rare"},
+    {"name": "Remoraid",                "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "16",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Octillery",               "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "17",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Common"},
+    {"name": "Delibird",                "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "18",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Uncommon"},
+    {"name": "Keldeo",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "19",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Rare"},
+    {"name": "Froakie",                 "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "20",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Frogadier",               "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "21",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Common"},
+    {"name": "Mega Greninja ex",        "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "22",  "supertype": "Pokémon", "subtypes": ["Stage 2", "MEGA", "ex"], "rarity": "Double Rare"},
+    {"name": "Bergmite",                "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "23",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Avalugg",                 "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "24",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Uncommon"},
+    {"name": "Wimpod",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "25",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Golisopod",               "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "26",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Uncommon"},
+    {"name": "Mareep",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "27",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Flaaffy",                 "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "28",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Common"},
+    {"name": "Ampharos",                "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "29",  "supertype": "Pokémon", "subtypes": ["Stage 2"],          "rarity": "Rare"},
+    {"name": "Emolga",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "30",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Deoxys",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "31",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Uncommon"},
+    {"name": "Deoxys",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "32",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Uncommon"},
+    {"name": "Deoxys",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "33",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Uncommon"},
+    {"name": "Deoxys",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "34",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Uncommon"},
+    {"name": "Mega Floette ex",         "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "35",  "supertype": "Pokémon", "subtypes": ["Stage 1", "MEGA", "ex"], "rarity": "Double Rare"},
+    {"name": "Espurr",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "36",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Meowstic",                "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "37",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Uncommon"},
+    {"name": "Phantump",                "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "38",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Trevenant",               "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "39",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Rare"},
+    {"name": "Pumpkaboo",               "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "40",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Gourgeist ex",            "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "41",  "supertype": "Pokémon", "subtypes": ["Stage 1", "ex"],    "rarity": "Double Rare"},
+    {"name": "Xerneas",                 "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "42",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Rare"},
+    {"name": "Sudowoodo",               "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "43",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Uncommon"},
+    {"name": "Phanpy",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "44",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Donphan",                 "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "45",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Common"},
+    {"name": "Baltoy",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "46",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Claydol",                 "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "47",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Uncommon"},
+    {"name": "Mega Gallade ex",         "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "48",  "supertype": "Pokémon", "subtypes": ["Stage 2", "MEGA", "ex"], "rarity": "Double Rare"},
+    {"name": "Zubat",                   "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "49",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Golbat",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "50",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Common"},
+    {"name": "Crobat",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "51",  "supertype": "Pokémon", "subtypes": ["Stage 2"],          "rarity": "Rare"},
+    {"name": "Qwilfish",                "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "52",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Stunky",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "53",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Skuntank",                "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "54",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Uncommon"},
+    {"name": "Krookodile ex",           "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "55",  "supertype": "Pokémon", "subtypes": ["Stage 2", "ex"],    "rarity": "Double Rare"},
+    {"name": "Trubbish",                "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "56",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Garbodor",                "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "57",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Uncommon"},
+    {"name": "Skrelp",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "58",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Beldum",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "59",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Metang",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "60",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Common"},
+    {"name": "Metagross",               "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "61",  "supertype": "Pokémon", "subtypes": ["Stage 2"],          "rarity": "Uncommon"},
+    {"name": "Ferroseed",               "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "62",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Ferrothorn",              "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "63",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Uncommon"},
+    {"name": "Cobalion ex",             "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "64",  "supertype": "Pokémon", "subtypes": ["Basic", "ex"],      "rarity": "Double Rare"},
+    {"name": "Mega Dragalge ex",        "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "65",  "supertype": "Pokémon", "subtypes": ["Stage 1", "MEGA", "ex"], "rarity": "Double Rare"},
+    {"name": "Goomy",                   "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "66",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Sliggoo",                 "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "67",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Common"},
+    {"name": "Goodra",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "68",  "supertype": "Pokémon", "subtypes": ["Stage 2"],          "rarity": "Rare"},
+    {"name": "Tauros",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "69",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Uncommon"},
+    {"name": "Patrat",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "70",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Watchog",                 "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "71",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Common"},
+    {"name": "Minccino",                "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "72",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Common"},
+    {"name": "Cinccino ex",             "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "73",  "supertype": "Pokémon", "subtypes": ["Stage 1", "ex"],    "rarity": "Double Rare"},
+    {"name": "Adversity Policy",        "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "74",  "supertype": "Trainer", "subtypes": ["Item"],             "rarity": "Uncommon"},
+    {"name": "Ange Floette",            "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "75",  "supertype": "Trainer", "subtypes": ["Supporter"],        "rarity": "Uncommon"},
+    {"name": "AZ's Tranquility",        "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "76",  "supertype": "Trainer", "subtypes": ["Supporter"],        "rarity": "Uncommon"},
+    {"name": "Emma",                    "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "77",  "supertype": "Trainer", "subtypes": ["Supporter"],        "rarity": "Uncommon"},
+    {"name": "Great Haul Net",          "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "78",  "supertype": "Trainer", "subtypes": ["Item"],             "rarity": "Uncommon"},
+    {"name": "Philippe",                "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "79",  "supertype": "Trainer", "subtypes": ["Supporter"],        "rarity": "Uncommon"},
+    {"name": "Prism Tower",             "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "80",  "supertype": "Trainer", "subtypes": ["Stadium"],          "rarity": "Uncommon"},
+    {"name": "Roxie's Performance",     "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "81",  "supertype": "Trainer", "subtypes": ["Supporter"],        "rarity": "Uncommon"},
+    {"name": "Special Red Card",        "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "82",  "supertype": "Trainer", "subtypes": ["Item"],             "rarity": "Uncommon"},
+    {"name": "Transformation Tome",     "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "83",  "supertype": "Trainer", "subtypes": ["Item"],             "rarity": "Uncommon"},
+    {"name": "Bubbly Water Energy",     "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "84",  "supertype": "Energy",  "subtypes": ["Special"],          "rarity": "Rare"},
+    {"name": "Magnetic Metal Energy",   "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "85",  "supertype": "Energy",  "subtypes": ["Special"],          "rarity": "Rare"},
+    {"name": "Nitro Fire Energy",       "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "86",  "supertype": "Energy",  "subtypes": ["Special"],          "rarity": "Rare"},
+    {"name": "Chespin",                 "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "87",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Illustration Rare"},
+    {"name": "Froakie",                 "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "88",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Illustration Rare"},
+    {"name": "Frogadier",               "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "89",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Illustration Rare"},
+    {"name": "Ampharos",                "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "90",  "supertype": "Pokémon", "subtypes": ["Stage 2"],          "rarity": "Illustration Rare"},
+    {"name": "Xerneas",                 "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "91",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Illustration Rare"},
+    {"name": "Claydol",                 "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "92",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Illustration Rare"},
+    {"name": "Crobat",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "93",  "supertype": "Pokémon", "subtypes": ["Stage 2"],          "rarity": "Illustration Rare"},
+    {"name": "Metang",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "94",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Illustration Rare"},
+    {"name": "Sliggoo",                 "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "95",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Illustration Rare"},
+    {"name": "Tauros",                  "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "96",  "supertype": "Pokémon", "subtypes": ["Basic"],            "rarity": "Illustration Rare"},
+    {"name": "Watchog",                 "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "97",  "supertype": "Pokémon", "subtypes": ["Stage 1"],          "rarity": "Illustration Rare"},
+    {"name": "Beedrill ex",             "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "98",  "supertype": "Pokémon", "subtypes": ["Stage 2", "ex"],    "rarity": "Ultra Rare"},
+    {"name": "Mega Pyroar ex",          "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "99",  "supertype": "Pokémon", "subtypes": ["Stage 1", "MEGA", "ex"], "rarity": "Ultra Rare"},
+    {"name": "Mega Greninja ex",        "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "100", "supertype": "Pokémon", "subtypes": ["Stage 2", "MEGA", "ex"], "rarity": "Ultra Rare"},
+    {"name": "Mega Floette ex",         "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "101", "supertype": "Pokémon", "subtypes": ["Stage 1", "MEGA", "ex"], "rarity": "Ultra Rare"},
+    {"name": "Gourgeist ex",            "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "102", "supertype": "Pokémon", "subtypes": ["Stage 1", "ex"],    "rarity": "Ultra Rare"},
+    {"name": "Cobalion ex",             "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "103", "supertype": "Pokémon", "subtypes": ["Basic", "ex"],      "rarity": "Ultra Rare"},
+    {"name": "Mega Dragalge ex",        "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "104", "supertype": "Pokémon", "subtypes": ["Stage 1", "MEGA", "ex"], "rarity": "Ultra Rare"},
+    {"name": "Cinccino ex",             "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "105", "supertype": "Pokémon", "subtypes": ["Stage 1", "ex"],    "rarity": "Ultra Rare"},
+    {"name": "AZ's Tranquility",        "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "106", "supertype": "Trainer", "subtypes": ["Supporter"],        "rarity": "Ultra Rare"},
+    {"name": "Emma",                    "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "107", "supertype": "Trainer", "subtypes": ["Supporter"],        "rarity": "Ultra Rare"},
+    {"name": "Energy Retrieval",        "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "108", "supertype": "Trainer", "subtypes": ["Item"],             "rarity": "Ultra Rare"},
+    {"name": "Jumbo Ice Cream",         "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "109", "supertype": "Trainer", "subtypes": ["Item"],             "rarity": "Ultra Rare"},
+    {"name": "Philippe",                "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "110", "supertype": "Trainer", "subtypes": ["Supporter"],        "rarity": "Ultra Rare"},
+    {"name": "Prism Tower",             "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "111", "supertype": "Trainer", "subtypes": ["Stadium"],          "rarity": "Ultra Rare"},
+    {"name": "Roxie's Performance",     "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "112", "supertype": "Trainer", "subtypes": ["Supporter"],        "rarity": "Ultra Rare"},
+    {"name": "Special Red Card",        "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "113", "supertype": "Trainer", "subtypes": ["Item"],             "rarity": "Ultra Rare"},
+    {"name": "Surfing Beach",           "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "114", "supertype": "Trainer", "subtypes": ["Stadium"],          "rarity": "Ultra Rare"},
+    {"name": "Tool Scrapper",           "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "115", "supertype": "Trainer", "subtypes": ["Item"],             "rarity": "Ultra Rare"},
+    {"name": "Mega Greninja ex",        "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "116", "supertype": "Pokémon", "subtypes": ["Stage 2", "MEGA", "ex"], "rarity": "Special Illustration Rare"},
+    {"name": "Mega Floette ex",         "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "117", "supertype": "Pokémon", "subtypes": ["Stage 1", "MEGA", "ex"], "rarity": "Special Illustration Rare"},
+    {"name": "Mega Dragalge ex",        "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "118", "supertype": "Pokémon", "subtypes": ["Stage 1", "MEGA", "ex"], "rarity": "Special Illustration Rare"},
+    {"name": "Cinccino ex",             "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "119", "supertype": "Pokémon", "subtypes": ["Stage 1", "ex"],    "rarity": "Special Illustration Rare"},
+    {"name": "AZ's Tranquility",        "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "120", "supertype": "Trainer", "subtypes": ["Supporter"],        "rarity": "Special Illustration Rare"},
+    {"name": "Roxie's Performance",     "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "121", "supertype": "Trainer", "subtypes": ["Supporter"],        "rarity": "Special Illustration Rare"},
+    {"name": "Mega Greninja ex",        "set_id": "me4", "set_name": "Chaos Rising", "ptcgo_code": "CRI", "number": "122", "supertype": "Pokémon", "subtypes": ["Stage 2", "MEGA", "ex"], "rarity": "Mega Hyper Rare"},
+]
+
+
+def _apply_catalog_stubs(cards_by_name: dict[str, list[dict]]) -> None:
+    """Append CATALOG_STUBS entries to cards_by_name, skipping any printing
+    that's already present (so a sync that finally pulls the real card in
+    silently displaces the stub on the next run)."""
+    for s in CATALOG_STUBS:
+        bucket = cards_by_name.setdefault(s["name"], [])
+        if any(c.get("set_id") == s["set_id"] and c.get("number") == s["number"] for c in bucket):
+            continue
+        bucket.append({
+            "name": s["name"],
+            "set_id": s["set_id"],
+            "set_name": s["set_name"],
+            "ptcgo_code": s["ptcgo_code"],
+            "number": s["number"],
+            "supertype": s["supertype"],
+            "subtypes": s.get("subtypes", []),
+            "types": [],
+            "rarity": s["rarity"],
+            "hp": None,
+            "abilities": [],
+            "attacks": [],
+            "rules": [],
+            "regulation_mark": None,
+            "retreat_cost": None,
+            "market_price": 0,
+        })
 
 
 def git_push(repo: Path) -> bool:
