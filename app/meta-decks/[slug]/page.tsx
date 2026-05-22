@@ -2,8 +2,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import archetypesRaw from "@/data/meta-archetypes.json";
 import metaDecksRaw from "@/data/meta-decks.json";
-import DeckProfileView from "@/app/components/DeckProfileView";
-import { buildMetaAnalysis } from "@/lib/buildMetaAnalysis";
 import { metaPrimaryCard, typeColor } from "@/lib/metaPrimaryCard";
 import MetaProfileHeader from "./MetaProfileHeader";
 import MetaVariantCard from "./MetaVariantCard";
@@ -86,7 +84,6 @@ function buildDeckList(cards: DeckCard[]): string {
 function placingLabel(placing?: number): string | null {
   if (!placing || placing <= 0) return null;
   const v = placing;
-  // 11–13 are special (11th, 12th, 13th not 11st/12nd/13rd).
   if (v % 100 >= 11 && v % 100 <= 13) return `${v}th`;
   switch (v % 10) {
     case 1: return `${v}st`;
@@ -102,6 +99,15 @@ function countsFor(cards: DeckCard[]): { pokemon: number; trainer: number; energ
   return c;
 }
 
+/**
+ * Archetype landing page. Pure Twitter-style profile: banner + avatar +
+ * bio + "posts feed" of the top-5 deck list preview cards. Each card
+ * deep-links to /meta-decks/[slug]/[variantIndex] which renders the
+ * full deck profile for that specific list.
+ *
+ * No deck profile content (Overview, accordions, deck-list module, shop
+ * matches) renders on this page — those live on the per-variant route.
+ */
 export default async function MetaDeckDetailPage({
   params,
 }: {
@@ -117,7 +123,7 @@ export default async function MetaDeckDetailPage({
 
   // Parse archetype icons (e.g. `["dragapult"]`) for the avatar + primary
   // card detection. Mirrors the logic in app/meta-decks/page.tsx so the
-  // profile page and index page agree on which card to feature.
+  // landing page and index page agree on which card to feature.
   let iconList: string[] = [];
   try {
     iconList = arch.icons ? (JSON.parse(arch.icons) as string[]) : [];
@@ -128,41 +134,15 @@ export default async function MetaDeckDetailPage({
     ? `https://r2.limitlesstcg.net/pokemon/gen9/${iconList[0]}.png`
     : null;
 
-  // Prefer the new `variants` shape; fall back to the legacy single `cards`
-  // array for archetypes that haven't been re-scraped yet.
-  const variantCardSets: DeckCard[][] =
-    deckData?.variants && deckData.variants.length > 0
-      ? deckData.variants.map((v) => v.cards)
-      : deckData?.cards
-        ? [deckData.cards]
-        : [];
-
-  const cards = variantCardSets[0] ?? [];
-  const deckList = buildDeckList(cards);
-
+  const variantList = deckData?.variants ?? [];
   // Use the FIRST variant's primary card for the banner + avatar coloring.
-  // Each variant card below uses its own primary so visually distinct
-  // tech choices read differently.
-  const archetypePrimary = metaPrimaryCard(cards, iconList);
+  const firstCards = variantList[0]?.cards ?? deckData?.cards ?? [];
+  const archetypePrimary = metaPrimaryCard(firstCards, iconList);
   const bannerCardImage = archetypePrimary?.imageUrl ?? arch.image_url ?? null;
   const iconBg = typeColor(archetypePrimary?.types);
 
-  const analysis = buildMetaAnalysis(cards, {
-    name: arch.name,
-    rank,
-    conversionRate: arch.conversion_rate,
-    representationPct: arch.representation_pct,
-  });
-
-  // Fallback profiledAt — meta decks use last_updated date
-  const profiledAt = arch.last_updated
-    ? new Date(arch.last_updated).toISOString()
-    : new Date().toISOString();
-
-  // Build per-variant cards for the top-5 grid. Placing (e.g. "2nd") is
-  // folded into the contextLabel so the header right slot is free for the
-  // copy-list action.
-  const variantList = deckData?.variants ?? [];
+  // Build per-variant cards for the top-5 grid. variantIndex on the URL
+  // is 1-based for human friendliness (1st variant → /1, not /0).
   const variantCards = variantList.slice(0, 5).map((v, i) => {
     const variantPrimary = metaPrimaryCard(v.cards, iconList);
     const placing = placingLabel(v.placing);
@@ -173,6 +153,7 @@ export default async function MetaDeckDetailPage({
         : placing ?? (date || null);
     return {
       id: `${arch.id}-v${i}`,
+      href: `/meta-decks/${arch.id}/${i + 1}`,
       contextLabel,
       creator: (v.creator ?? "").trim() || "Trainer",
       deckList: buildDeckList(v.cards),
@@ -181,75 +162,63 @@ export default async function MetaDeckDetailPage({
     };
   });
 
-  // Full Twitter-profile-style header: banner + avatar + bio +
-  // top-5 variant cards (rendered as a child of the bio block).
-  const headerSlot = (
-    <MetaProfileHeader
-      name={arch.name}
-      annotation={arch.annotation ?? ""}
-      rank={rank}
-      cardImageUrl={bannerCardImage}
-      iconUrl={iconUrl}
-      iconBg={iconBg}
-      representationPct={`${(arch.representation_pct * 100).toFixed(1)}%`}
-      topCutEntries={arch.top_cut_entries}
-      conversionRate={`${(arch.conversion_rate * 100).toFixed(1)}%`}
-      winRate={`${(winRate * 100).toFixed(0)}%`}
-      winRateHighlight={winRate >= 0.55}
-      wins={arch.wins}
-      losses={arch.losses}
-      ties={arch.ties}
-      totalEntries={arch.total_entries}
-      preBanner={
-        <Link
-          href="/meta-decks"
-          className="text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors underline-offset-2 hover:underline"
-        >
-          ← Top 30 Meta Decks
-        </Link>
-      }
-    >
-      {variantCards.length > 0 ? (
-        <section aria-label="Top deck lists">
-          <h2 className="text-sm font-semibold text-text-primary mb-3">
-            Top {variantCards.length} Deck List{variantCards.length === 1 ? "" : "s"}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {variantCards.map((v) => (
-              <MetaVariantCard
-                key={v.id}
-                id={v.id}
-                archetypeName={arch.name}
-                annotation={arch.annotation}
-                contextLabel={v.contextLabel}
-                creator={v.creator}
-                deckList={v.deckList}
-                cardImageUrl={v.cardImageUrl}
-                iconUrl={iconUrl}
-                iconBg={iconBg}
-                counts={v.counts}
-              />
-            ))}
-          </div>
-        </section>
-      ) : (
-        <p className="text-sm text-text-muted italic">
-          Deck lists not yet available for this archetype.
-        </p>
-      )}
-    </MetaProfileHeader>
-  );
-
   return (
-    <DeckProfileView
-      variant="meta"
-      deckList={deckList}
-      analysis={analysis}
-      profiledAt={profiledAt}
-      pageTitle={arch.name}
-      subtitle={false}
-      headerSlot={headerSlot}
-      footerCta={null}
-    />
+    <main className="min-h-dvh flex flex-col bg-bg">
+      <MetaProfileHeader
+        name={arch.name}
+        annotation={arch.annotation ?? ""}
+        rank={rank}
+        cardImageUrl={bannerCardImage}
+        iconUrl={iconUrl}
+        iconBg={iconBg}
+        representationPct={`${(arch.representation_pct * 100).toFixed(1)}%`}
+        topCutEntries={arch.top_cut_entries}
+        conversionRate={`${(arch.conversion_rate * 100).toFixed(1)}%`}
+        winRate={`${(winRate * 100).toFixed(0)}%`}
+        winRateHighlight={winRate >= 0.55}
+        wins={arch.wins}
+        losses={arch.losses}
+        ties={arch.ties}
+        totalEntries={arch.total_entries}
+        preBanner={
+          <Link
+            href="/meta-decks"
+            className="text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors underline-offset-2 hover:underline"
+          >
+            ← Top 30 Meta Decks
+          </Link>
+        }
+      >
+        {variantCards.length > 0 ? (
+          <section aria-label="Top deck lists" className="pb-12">
+            <h2 className="text-sm font-semibold text-text-primary mb-3">
+              Top {variantCards.length} Deck List{variantCards.length === 1 ? "" : "s"}
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {variantCards.map((v) => (
+                <MetaVariantCard
+                  key={v.id}
+                  id={v.id}
+                  href={v.href}
+                  archetypeName={arch.name}
+                  annotation={arch.annotation}
+                  contextLabel={v.contextLabel}
+                  creator={v.creator}
+                  deckList={v.deckList}
+                  cardImageUrl={v.cardImageUrl}
+                  iconUrl={iconUrl}
+                  iconBg={iconBg}
+                  counts={v.counts}
+                />
+              ))}
+            </div>
+          </section>
+        ) : (
+          <p className="pb-12 text-sm text-text-muted italic">
+            Deck lists not yet available for this archetype.
+          </p>
+        )}
+      </MetaProfileHeader>
+    </main>
   );
 }

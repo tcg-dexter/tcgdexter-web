@@ -152,27 +152,49 @@ export default function MetaVariantCard({
     </div>
   );
 
+  // When an href is set, the avatar circle and deck-name text in the
+  // header become individual Links so the copy-list button can still own
+  // its own click target without bubbling into a navigation. Mirrors the
+  // header pattern in UserDeckCard.
+  const avatarNode = iconUrl ? (
+    <div
+      className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
+      style={{ background: iconBg ?? "#B0A89E" }}
+      aria-hidden
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={iconUrl}
+        alt=""
+        className="w-[22px] h-[22px] object-contain"
+      />
+    </div>
+  ) : null;
+
   return (
     <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-      {/* Header — archetype sprite + name + optional placing pill. */}
+      {/* Header — archetype sprite + name + copy-list button. */}
       <div className="flex items-center gap-2 px-3.5 pt-3">
-        {iconUrl ? (
-          <div
-            className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
-            style={{ background: iconBg ?? "#B0A89E" }}
-            aria-hidden
+        {avatarNode &&
+          (href ? (
+            <Link href={href} aria-label={`Open ${headerName}`} className="shrink-0">
+              {avatarNode}
+            </Link>
+          ) : (
+            avatarNode
+          ))}
+        {href ? (
+          <Link
+            href={href}
+            className="flex-1 min-w-0 text-[17px] font-semibold text-text-primary truncate hover:underline underline-offset-2"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={iconUrl}
-              alt=""
-              className="w-[22px] h-[22px] object-contain"
-            />
-          </div>
-        ) : null}
-        <p className="flex-1 min-w-0 text-[17px] font-semibold text-text-primary truncate">
-          {headerName}
-        </p>
+            {headerName}
+          </Link>
+        ) : (
+          <p className="flex-1 min-w-0 text-[17px] font-semibold text-text-primary truncate">
+            {headerName}
+          </p>
+        )}
         {/* Trailing slot — kept flush with the header's px-3.5 inset so the
             copy icon's right edge mirrors the avatar circle's left edge. */}
         <div className="shrink-0">
@@ -181,8 +203,8 @@ export default function MetaVariantCard({
       </div>
 
       {/* Body — primary card art + player handle + counts + tournament.
-          Wrapped in a <Link> only when an href is provided so the card
-          is keyboard-focusable as a single target. */}
+          Wrapped in a <Link> when href is set so the body is one big
+          click target on top of the header's per-element targets. */}
       {href ? (
         <Link href={href} className="block">
           {body}

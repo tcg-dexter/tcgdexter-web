@@ -172,14 +172,16 @@ export default function MetaProfileHeader({
           row so the action buttons don't crash into the avatar. */}
       <div className="mx-auto max-w-2xl px-6">
         {/* Avatar + actions row — both sit on the same baseline so the
-            avatar can overlap the banner above. */}
-        <div className="flex items-end justify-between gap-3 -mt-12 sm:-mt-16">
+            avatar can overlap the banner above. `relative z-10` ensures
+            the avatar paints above the banner's bottom gradient overlay
+            even though it lives in a later DOM block. */}
+        <div className="flex items-end justify-between gap-3 -mt-16 sm:-mt-20">
           <div
-            className="rounded-full ring-4 ring-bg flex items-center justify-center overflow-hidden shrink-0"
+            className="relative z-10 rounded-full ring-4 ring-bg flex items-center justify-center overflow-hidden shrink-0"
             style={{
               background: fallbackBg,
-              width: "96px",
-              height: "96px",
+              width: "128px",
+              height: "128px",
             }}
           >
             {iconUrl ? (
@@ -187,7 +189,7 @@ export default function MetaProfileHeader({
               <img
                 src={iconUrl}
                 alt=""
-                className="w-[72px] h-[72px] object-contain"
+                className="w-[116px] h-[116px] object-contain"
               />
             ) : null}
           </div>
@@ -238,10 +240,13 @@ export default function MetaProfileHeader({
             {totalEntries.toLocaleString()} entries across recent Standard tournaments
           </span>
         </div>
-
-        {/* Bio tail — variant cards grid sits here on the meta variant. */}
-        {children && <div className="mt-6">{children}</div>}
       </div>
+
+      {/* Bio tail — variant cards grid lives in its own wider container so
+          the 3-col desktop grid isn't cramped by the bio's 2xl width. */}
+      {children && (
+        <div className="mx-auto max-w-6xl px-6 mt-6">{children}</div>
+      )}
     </header>
   );
 }
