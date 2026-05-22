@@ -37,9 +37,20 @@ import type { ReactNode } from "react";
  */
 
 const BANNER_ASPECT_WH = 3;     // 3:1
-const CARDS_TOP_PCT = 25;       // % of banner height; nudged down 10% from 15
+const CARDS_TOP_PCT = 25;       // % of banner height; the *outer* cards' top
 const CARDS_SPAN_PCT = 100;     // % of inner container width — full span
 const CARD_WIDTH_PCT = 32;      // % of inner container width — per card
+
+// Fan-like-a-playing-hand tuning. The center card sits CENTER_RAISE_PCT
+// higher (closer to the banner top) than the outer cards; intermediate
+// cards interpolate along a quadratic so the fan reads as an arc rather
+// than a straight tilt. CARD_MAX_ROTATION_DEG is the outermost card's
+// tilt; intermediate cards interpolate linearly between 0 and ±max.
+// Cards rotate around their own bottom-center so the bottom edge of each
+// card stays put, mimicking the way real cards in a hand pivot at the
+// player's wrist.
+const CENTER_RAISE_PCT = 12.5;        // top % offset; centre = TOP_PCT − this
+const CARD_MAX_ROTATION_DEG = 12;     // degrees at the leftmost/rightmost
 
 interface Props {
   /** Archetype display name, e.g. "Dragapult". */
@@ -136,6 +147,30 @@ export default function MetaProfileHeader({
                 cardCount === 1
                   ? singleCardLeft
                   : cardsLeftStart + i * cardsStep;
+
+              // Fan geometry — per-card top + rotation derived from the
+              // card's signed distance from the row's center.
+              //
+              //   normDist = |i - center| / maxDist  (0 at centre, 1 at edge)
+              //   top      = CARDS_TOP_PCT - CENTER_RAISE_PCT × (1 - normDist²)
+              //   rotation = (i - center) / maxDist × CARD_MAX_ROTATION_DEG
+              //
+              // The quadratic on top gives the row a smooth arc — the
+              // middle card sits CENTER_RAISE_PCT higher than the outer
+              // cards, which themselves stay at CARDS_TOP_PCT so they
+              // never drop below the banner edge.
+              const center = (cardCount - 1) / 2;
+              const signedDist = i - center;
+              const maxDist = Math.max(center, 1);
+              const normDist = Math.abs(signedDist) / maxDist;
+              const top =
+                CARDS_TOP_PCT -
+                CENTER_RAISE_PCT * (1 - normDist * normDist);
+              const rotationDeg =
+                cardCount > 1
+                  ? (signedDist / maxDist) * CARD_MAX_ROTATION_DEG
+                  : 0;
+
               return (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -145,10 +180,12 @@ export default function MetaProfileHeader({
                   aria-hidden="true"
                   className="absolute pointer-events-none select-none drop-shadow-md"
                   style={{
-                    top: `${CARDS_TOP_PCT}%`,
+                    top: `${top}%`,
                     left: `${left}%`,
                     width: `${CARD_WIDTH_PCT}%`,
                     height: "auto",
+                    transform: `rotate(${rotationDeg}deg)`,
+                    transformOrigin: "50% 100%",
                     zIndex: i,
                   }}
                 />
