@@ -178,13 +178,23 @@ export default async function MetaDeckDetailPage({
   const iconBg = typeColor(archetypePrimary?.types);
 
   // Banner: the 7 most common cards across the top-5 deck lists,
-  // resolved to pokemontcg.io image URLs. Falls back to whatever the
-  // archetype's preview card image is when no variants exist (rare).
+  // resolved to pokemontcg.io image URLs. The archetype's "title card"
+  // (the same primary image we feature elsewhere on the page) is pinned
+  // to the last slot so it paints on top of the fan with the highest
+  // z-index. Falls back to whatever the archetype's preview card image
+  // is when no variants exist (rare).
   const topFiveVariants = variantList.slice(0, 5);
-  let bannerCards = topCardImagesAcrossVariants(topFiveVariants, 7);
-  if (bannerCards.length === 0) {
-    const fallback = archetypePrimary?.imageUrl ?? arch.image_url ?? null;
-    if (fallback) bannerCards = [fallback];
+  const titleCardImage = archetypePrimary?.imageUrl ?? arch.image_url ?? null;
+
+  let bannerCards: string[] = [];
+  if (titleCardImage) {
+    // Ask for 8 (instead of 7) so we still get 6 strong ranked picks
+    // even if the title card would have made the natural top 7.
+    const ranked = topCardImagesAcrossVariants(topFiveVariants, 8)
+      .filter((url) => url !== titleCardImage);
+    bannerCards = [...ranked.slice(0, 6), titleCardImage];
+  } else {
+    bannerCards = topCardImagesAcrossVariants(topFiveVariants, 7);
   }
 
   // Build per-variant cards for the top-5 grid. variantIndex on the URL
