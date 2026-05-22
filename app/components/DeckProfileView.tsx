@@ -321,6 +321,13 @@ interface Props {
    * when the deck is public.
    */
   shareUrl?: string;
+  /**
+   * Optional escape hatch — when provided, replaces the default text
+   * header treatment (pageTitle / preTitle / subtitle). Used by the
+   * meta deck profile to render a Twitter-style banner + avatar + bio
+   * header in place of the centered text block.
+   */
+  headerSlot?: React.ReactNode;
 }
 
 /**
@@ -347,6 +354,7 @@ export default function DeckProfileView({
   preOverviewSlot,
   postCtaSlot,
   shareUrl,
+  headerSlot,
 }: Props) {
   const result = analysis;
   const CARD_CLS = "rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm";
@@ -533,34 +541,36 @@ export default function DeckProfileView({
     <div className="min-h-dvh flex flex-col bg-bg">
 
       {/* ── Header ─────────────────────────────────────────── */}
-      <header
-        className={`flex-shrink-0 px-6 pt-[calc(env(safe-area-inset-top)_+_1.75rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] ${effectiveSubtitle ? "pb-8" : "pb-4"}`}
-      >
-        {variant === "shared" && (
-          <div className="flex justify-center mb-4">
-            <img
-              src="/logo-light.png"
-              alt="TCG Dexter"
-              className="max-w-full"
-              style={{ width: "288px", height: "auto" }}
-            />
-          </div>
-        )}
-        <div className="mx-auto max-w-2xl">
-          {preTitle && <div className="mb-2">{preTitle}</div>}
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-on-gradient">
-              {pageTitle}
-            </h1>
-            {titleAction}
-          </div>
-          {effectiveSubtitle && (
-            <div className="mt-2 text-sm text-on-gradient-muted">
-              {effectiveSubtitle}
+      {headerSlot ?? (
+        <header
+          className={`flex-shrink-0 px-6 pt-[calc(env(safe-area-inset-top)_+_1.75rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] ${effectiveSubtitle ? "pb-8" : "pb-4"}`}
+        >
+          {variant === "shared" && (
+            <div className="flex justify-center mb-4">
+              <img
+                src="/logo-light.png"
+                alt="TCG Dexter"
+                className="max-w-full"
+                style={{ width: "288px", height: "auto" }}
+              />
             </div>
           )}
-        </div>
-      </header>
+          <div className="mx-auto max-w-2xl">
+            {preTitle && <div className="mb-2">{preTitle}</div>}
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-on-gradient">
+                {pageTitle}
+              </h1>
+              {titleAction}
+            </div>
+            {effectiveSubtitle && (
+              <div className="mt-2 text-sm text-on-gradient-muted">
+                {effectiveSubtitle}
+              </div>
+            )}
+          </div>
+        </header>
+      )}
 
       {/* ── Results ────────────────────────────────────────── */}
       <main className="flex-1 px-6 pb-20">

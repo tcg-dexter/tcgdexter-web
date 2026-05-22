@@ -4,10 +4,14 @@ import archetypesRaw from "@/data/meta-archetypes.json";
 import metaDecksRaw from "@/data/meta-decks.json";
 import DeckProfileView from "@/app/components/DeckProfileView";
 import { buildMetaAnalysis } from "@/lib/buildMetaAnalysis";
+import { metaPrimaryCard, typeColor } from "@/lib/metaPrimaryCard";
+import MetaProfileHeader from "./MetaProfileHeader";
+import MetaVariantCard from "./MetaVariantCard";
 
 interface Archetype {
   id: string;
   name: string;
+  annotation?: string;
   total_entries: number;
   top_cut_entries: number;
   representation_pct: number;
@@ -17,6 +21,8 @@ interface Archetype {
   ties: number;
   last_updated: string;
   velocity?: number;
+  icons?: string;
+  image_url?: string;
 }
 
 interface DeckCard {
@@ -30,6 +36,8 @@ interface DeckCard {
 interface MetaDeckVariant {
   listId?: number;
   creator?: string;
+  placing?: number;
+  date?: string;
   cards: DeckCard[];
 }
 
@@ -75,6 +83,25 @@ function buildDeckList(cards: DeckCard[]): string {
   return lines.join("\n");
 }
 
+function placingLabel(placing?: number): string | null {
+  if (!placing || placing <= 0) return null;
+  const v = placing;
+  // 11–13 are special (11th, 12th, 13th not 11st/12nd/13rd).
+  if (v % 100 >= 11 && v % 100 <= 13) return `${v}th`;
+  switch (v % 10) {
+    case 1: return `${v}st`;
+    case 2: return `${v}nd`;
+    case 3: return `${v}rd`;
+    default: return `${v}th`;
+  }
+}
+
+function countsFor(cards: DeckCard[]): { pokemon: number; trainer: number; energy: number } {
+  const c = { pokemon: 0, trainer: 0, energy: 0 };
+  for (const card of cards) c[card.category] += card.qty;
+  return c;
+}
+
 export default async function MetaDeckDetailPage({
   params,
 }: {
@@ -87,6 +114,20 @@ export default async function MetaDeckDetailPage({
   const rank = getRank(arch.id);
   const winRate = getWinRate(arch);
   const deckData = (metaDecksRaw as MetaDeck[]).find((d) => d.id === arch.id);
+
+  // Parse archetype icons (e.g. `["dragapult"]`) for the avatar + primary
+  // card detection. Mirrors the logic in app/meta-decks/page.tsx so the
+  // profile page and index page agree on which card to feature.
+  let iconList: string[] = [];
+  try {
+    iconList = arch.icons ? (JSON.parse(arch.icons) as string[]) : [];
+  } catch {
+    iconList = [];
+  }
+  const iconUrl = iconList[0]
+    ? `https://r2.limitlesstcg.net/pokemon/gen9/${iconList[0]}.png`
+    : null;
+
   // Prefer the new `variants` shape; fall back to the legacy single `cards`
   // array for archetypes that haven't been re-scraped yet.
   const variantCardSets: DeckCard[][] =
@@ -98,11 +139,13 @@ export default async function MetaDeckDetailPage({
 
   const cards = variantCardSets[0] ?? [];
   const deckList = buildDeckList(cards);
-  const deckLists = variantCardSets.map(buildDeckList);
-  const deckListCreators: string[] =
-    deckData?.variants && deckData.variants.length > 0
-      ? deckData.variants.map((v) => (v.creator ?? "").trim() || "Trainer")
-      : ["Trainer"];
+
+  // Use the FIRST variant's primary card for the banner + avatar coloring.
+  // Each variant card below uses its own primary so visually distinct
+  // tech choices read differently.
+  const archetypePrimary = metaPrimaryCard(cards, iconList);
+  const bannerCardImage = archetypePrimary?.imageUrl ?? arch.image_url ?? null;
+  const iconBg = typeColor(archetypePrimary?.types);
 
   const analysis = buildMetaAnalysis(cards, {
     name: arch.name,
@@ -116,84 +159,40 @@ export default async function MetaDeckDetailPage({
     ? new Date(arch.last_updated).toISOString()
     : new Date().toISOString();
 
-  // preOverviewSlot: rank label sits above the Overview matrix
-  const preOverviewSlot = (
-    <p className="text-xs font-semibold uppercase tracking-widest text-accent">
-      #{rank} in Standard
-    </p>
-  );
+  // Build per-variant cards for the top-5 grid.
+  const variantList = deckData?.variants ?? [];
+  const variantCards = variantList.slice(0, 5).map((v, i) => {
+    const variantPrimary = metaPrimaryCard(v.cards, iconList);
+    return {
+      id: `${arch.id}-v${i}`,
+      placing: placingLabel(v.placing),
+      contextLabel: v.date ?? null,
+      creator: (v.creator ?? "").trim() || "Trainer",
+      cardImageUrl: variantPrimary?.imageUrl ?? null,
+      counts: countsFor(v.cards),
+    };
+  });
 
-  // topSlot: stat cards + tournament record sit below the Overview matrix
-  const topSlot = (
-    <div className="flex flex-col gap-4">
-      {/* Stats — single card, 4-column row */}
-      <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm px-5 py-4">
-        <div className="grid grid-cols-4">
-          <div className="text-center">
-            <p className="text-lg font-bold text-accent">{`${(arch.representation_pct * 100).toFixed(1)}%`}</p>
-            <p className="text-xs text-text-muted mt-0.5">Meta Share</p>
-          </div>
-          <div className="text-center">
-            <p className="text-lg font-bold text-amber-500">{String(arch.top_cut_entries)}</p>
-            <p className="text-xs text-text-muted mt-0.5">Top Cut</p>
-          </div>
-          <div className="text-center">
-            <p className="text-lg font-bold text-emerald-600">{`${(arch.conversion_rate * 100).toFixed(1)}%`}</p>
-            <p className="text-xs text-text-muted mt-0.5">Conversion</p>
-          </div>
-          <div className="text-center">
-            <p className={`text-lg font-bold ${winRate >= 0.55 ? "text-amber-500" : "text-text-secondary"}`}>{`${(winRate * 100).toFixed(0)}%`}</p>
-            <p className="text-xs text-text-muted mt-0.5">Win Rate</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Tournament record */}
-      <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm px-5 py-4">
-        <h3 className="text-sm font-semibold text-text-primary mb-2">Tournament Record</h3>
-        {/* Pills mirror the logged-match result style in
-            app/my-decks/[id]/MatchLog.tsx and the gradient-button pattern
-            from ShareButton: rounded-full + bg-gradient-brand for wins,
-            bg-black for losses, white with an inset 1 px shadow outline
-            for ties. No real `border` on any pill — that's what made the
-            earlier border-image attempt fail to clip against
-            border-radius. The tie's inset shadow gives it the visible
-            outline without adding to the box dimensions, so the three
-            chips still line up. */}
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-brand text-white">
-            {arch.wins}W
-          </span>
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-black text-white">
-            {arch.losses}L
-          </span>
-          {arch.ties > 0 && (
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-white text-text-primary shadow-[inset_0_0_0_1px_black]">
-              {arch.ties}T
-            </span>
-          )}
-        </div>
-        <p className="mt-2 text-xs text-text-primary">
-          {arch.total_entries} total entries across recent Standard tournaments
-        </p>
-      </div>
-
-      {cards.length === 0 && (
-        <p className="text-sm text-text-muted italic">Deck list not yet available for this archetype.</p>
-      )}
-    </div>
-  );
-
-  return (
-    <DeckProfileView
-      variant="meta"
-      deckList={deckList}
-      deckLists={deckLists}
-      deckListCreators={deckListCreators}
-      analysis={analysis}
-      profiledAt={profiledAt}
-      pageTitle={arch.name}
-      preTitle={
+  // Full Twitter-profile-style header: banner + avatar + bio +
+  // top-5 variant cards (rendered as a child of the bio block).
+  const headerSlot = (
+    <MetaProfileHeader
+      name={arch.name}
+      annotation={arch.annotation ?? ""}
+      rank={rank}
+      cardImageUrl={bannerCardImage}
+      iconUrl={iconUrl}
+      iconBg={iconBg}
+      representationPct={`${(arch.representation_pct * 100).toFixed(1)}%`}
+      topCutEntries={arch.top_cut_entries}
+      conversionRate={`${(arch.conversion_rate * 100).toFixed(1)}%`}
+      winRate={`${(winRate * 100).toFixed(0)}%`}
+      winRateHighlight={winRate >= 0.55}
+      wins={arch.wins}
+      losses={arch.losses}
+      ties={arch.ties}
+      totalEntries={arch.total_entries}
+      preBanner={
         <Link
           href="/meta-decks"
           className="text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors underline-offset-2 hover:underline"
@@ -201,9 +200,47 @@ export default async function MetaDeckDetailPage({
           ← Top 30 Meta Decks
         </Link>
       }
+    >
+      {variantCards.length > 0 ? (
+        <section aria-label="Top deck lists">
+          <h2 className="text-sm font-semibold text-text-primary mb-3">
+            Top {variantCards.length} Deck List{variantCards.length === 1 ? "" : "s"}
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {variantCards.map((v) => (
+              <MetaVariantCard
+                key={v.id}
+                id={v.id}
+                archetypeName={arch.name}
+                annotation={arch.annotation}
+                placing={v.placing}
+                contextLabel={v.contextLabel}
+                creator={v.creator}
+                cardImageUrl={v.cardImageUrl}
+                iconUrl={iconUrl}
+                iconBg={iconBg}
+                counts={v.counts}
+              />
+            ))}
+          </div>
+        </section>
+      ) : (
+        <p className="text-sm text-text-muted italic">
+          Deck lists not yet available for this archetype.
+        </p>
+      )}
+    </MetaProfileHeader>
+  );
+
+  return (
+    <DeckProfileView
+      variant="meta"
+      deckList={deckList}
+      analysis={analysis}
+      profiledAt={profiledAt}
+      pageTitle={arch.name}
       subtitle={false}
-      preOverviewSlot={preOverviewSlot}
-      topSlot={topSlot}
+      headerSlot={headerSlot}
       footerCta={null}
     />
   );
