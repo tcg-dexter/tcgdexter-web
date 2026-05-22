@@ -32,9 +32,9 @@ import type { ReactNode } from "react";
  */
 
 const BANNER_ASPECT_WH = 3;     // 3:1
-const CARD_TOP_PCT = 16;        // % of banner height — empty strip above
-const CARD_RIGHT_PCT = 6;       // % of banner width  — inset from right edge
-const CARD_WIDTH_PCT = 55;      // % of banner width  — card display width
+const CARD_TOP_PCT = 15;        // % of banner height — empty strip above
+const CARD_RIGHT_PCT = 15;      // % of banner width  — inset from right edge
+const CARD_WIDTH_PCT = 32;      // % of banner width  — card display width
 
 interface Props {
   /** Archetype display name, e.g. "Dragapult". */
