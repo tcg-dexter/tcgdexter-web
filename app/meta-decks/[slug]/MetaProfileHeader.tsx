@@ -223,10 +223,10 @@ export default function MetaProfileHeader({
             value={winRate}
             valueClass={winRateHighlight ? "text-amber-500" : "text-text-secondary"}
           />
-          <StatCard label="Wins" value={wins.toLocaleString()} valueClass="text-emerald-600" />
-          <StatCard label="Losses" value={losses.toLocaleString()} valueClass="text-text-secondary" />
+          <StatCard label="Wins" value={wins.toLocaleString()} tone="gradient" />
+          <StatCard label="Losses" value={losses.toLocaleString()} tone="dark" />
           {ties > 0 && (
-            <StatCard label="Ties" value={ties.toLocaleString()} valueClass="text-text-secondary" />
+            <StatCard label="Ties" value={ties.toLocaleString()} tone="ringed" />
           )}
           <StatCard
             label="Entries"
@@ -245,15 +245,53 @@ export default function MetaProfileHeader({
   );
 }
 
+/**
+ * Tile in the bio stat grid.
+ *
+ * Tones echo the original W/L/T pill chrome so the tournament-record
+ * trio still reads at a glance once flattened into the grid:
+ *
+ *  - "gradient" → site brand gradient bg, white text throughout (Wins)
+ *  - "dark"     → solid black bg, white text throughout (Losses)
+ *  - "ringed"   → default white card with a 1px black inset ring + black
+ *                 label (Ties), mirroring the outlined T pill
+ *  - "default"  → standard card chrome; `valueClass` colors the value
+ */
 function StatCard({
   label,
   value,
-  valueClass,
+  valueClass = "",
+  tone = "default",
 }: {
   label: string;
   value: string;
-  valueClass: string;
+  valueClass?: string;
+  tone?: "default" | "gradient" | "dark" | "ringed";
 }) {
+  if (tone === "gradient") {
+    return (
+      <div className="rounded-2xl bg-gradient-brand shadow-sm px-4 py-3 text-center text-white">
+        <p className="text-lg font-bold">{value}</p>
+        <p className="text-xs mt-0.5 opacity-90">{label}</p>
+      </div>
+    );
+  }
+  if (tone === "dark") {
+    return (
+      <div className="rounded-2xl bg-black shadow-sm px-4 py-3 text-center text-white">
+        <p className="text-lg font-bold">{value}</p>
+        <p className="text-xs mt-0.5 opacity-90">{label}</p>
+      </div>
+    );
+  }
+  if (tone === "ringed") {
+    return (
+      <div className="rounded-2xl bg-white/90 backdrop-blur-xl shadow-[inset_0_0_0_1px_black] px-4 py-3 text-center">
+        <p className="text-lg font-bold text-text-primary">{value}</p>
+        <p className="text-xs text-text-primary mt-0.5">{label}</p>
+      </div>
+    );
+  }
   return (
     <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm px-4 py-3 text-center">
       <p className={`text-lg font-bold ${valueClass}`}>{value}</p>
