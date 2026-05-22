@@ -210,13 +210,13 @@ export default function MetaProfileHeader({
           </h1>
         </div>
 
-        {/* Stats — single row, 4 columns; mirror the existing "stat cards"
-            so existing site users recognize the metrics. */}
-        <div className="mt-4 grid grid-cols-4 rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm px-3 py-3">
-          <Stat label="Meta Share" value={representationPct} valueClass="text-accent" />
-          <Stat label="Top Cut" value={String(topCutEntries)} valueClass="text-amber-500" />
-          <Stat label="Conversion" value={conversionRate} valueClass="text-emerald-600" />
-          <Stat
+        {/* Stats — one card per metric. 2x2 on narrow screens, 1x4 from
+            `sm:` up so each value gets its own surface. */}
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StatCard label="Meta Share" value={representationPct} valueClass="text-accent" />
+          <StatCard label="Top Cut" value={String(topCutEntries)} valueClass="text-amber-500" />
+          <StatCard label="Conversion" value={conversionRate} valueClass="text-emerald-600" />
+          <StatCard
             label="Win Rate"
             value={winRate}
             valueClass={winRateHighlight ? "text-amber-500" : "text-text-secondary"}
@@ -251,7 +251,7 @@ export default function MetaProfileHeader({
   );
 }
 
-function Stat({
+function StatCard({
   label,
   value,
   valueClass,
@@ -261,7 +261,7 @@ function Stat({
   valueClass: string;
 }) {
   return (
-    <div className="text-center">
+    <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm px-4 py-3 text-center">
       <p className={`text-lg font-bold ${valueClass}`}>{value}</p>
       <p className="text-xs text-text-muted mt-0.5">{label}</p>
     </div>
