@@ -4,6 +4,7 @@ import archetypesRaw from "@/data/meta-archetypes.json";
 import metaDecksRaw from "@/data/meta-decks.json";
 import { metaPrimaryCard, typeColor } from "@/lib/metaPrimaryCard";
 import { cardImageUrlFor } from "@/lib/primaryCardImage";
+import ThemeColor from "@/app/components/ThemeColor";
 import MetaProfileHeader from "./MetaProfileHeader";
 import MetaVariantCard from "./MetaVariantCard";
 
@@ -231,6 +232,11 @@ export default async function MetaDeckDetailPage({
           __html: "[data-site-toolbar]{display:none}",
         }}
       />
+      {/* Match the iOS Safari chrome + status-bar color to the banner
+          background so the page reads as one continuous surface from
+          the time/battery row down through the banner. Falls back to
+          the same neutral the banner uses when iconBg is unresolved. */}
+      <ThemeColor color={iconBg ?? "#B0A89E"} />
       <MetaProfileHeader
         name={arch.name}
         annotation={arch.annotation ?? ""}
