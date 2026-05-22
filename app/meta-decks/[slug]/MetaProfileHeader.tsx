@@ -254,13 +254,23 @@ export default function MetaProfileHeader({
         {/* Stats — one card per metric. The Tournament Record fields
             (Wins / Losses / Ties / Entries) sit as peer tiles in the
             same grid so the whole bio reads as a single stat board.
-            4 columns across all breakpoints. */}
+            4 columns across all breakpoints. Mobile-shortened labels
+            on the longer headers prevent any single tile from being
+            stretched by an unwrappable word. */}
         <div className="mt-4 grid grid-cols-4 gap-3">
-          <StatCard label="Meta Share" value={representationPct} valueClass="text-accent" />
-          <StatCard label="Top Cut" value={String(topCutEntries)} valueClass="text-amber-500" />
-          <StatCard label="Conversion" value={conversionRate} valueClass="text-emerald-600" />
           <StatCard
-            label="Win Rate"
+            label={<ResponsiveLabel mobile="Share" desktop="Meta Share" />}
+            value={representationPct}
+            valueClass="text-accent"
+          />
+          <StatCard label="Top Cut" value={String(topCutEntries)} valueClass="text-amber-500" />
+          <StatCard
+            label={<ResponsiveLabel mobile="Conv." desktop="Conversion" />}
+            value={conversionRate}
+            valueClass="text-emerald-600"
+          />
+          <StatCard
+            label={<ResponsiveLabel mobile="W Rate" desktop="Win Rate" />}
             value={winRate}
             valueClass={winRateHighlight ? "text-amber-500" : "text-text-secondary"}
           />
@@ -297,6 +307,11 @@ export default function MetaProfileHeader({
  *  - "ringed"   → default white card with a 1px black inset ring + black
  *                 label (Ties), mirroring the outlined T pill
  *  - "default"  → standard card chrome; `valueClass` colors the value
+ *
+ * Label is a ReactNode so callers can swap copy responsively (e.g. via
+ * `ResponsiveLabel` below) without per-tone overloads. `tabular-nums`
+ * on the value keeps "16.6%" and "19.6%" the same visual width across
+ * tiles instead of letting proportional-digit kerning shift them.
  */
 function StatCard({
   label,
@@ -304,7 +319,7 @@ function StatCard({
   valueClass = "",
   tone = "default",
 }: {
-  label: string;
+  label: ReactNode;
   value: string;
   valueClass?: string;
   tone?: "default" | "gradient" | "dark" | "ringed";
@@ -312,7 +327,7 @@ function StatCard({
   if (tone === "gradient") {
     return (
       <div className="rounded-2xl bg-gradient-brand shadow-sm px-4 py-3 text-center text-white">
-        <p className="text-lg font-bold">{value}</p>
+        <p className="text-lg font-bold tabular-nums">{value}</p>
         <p className="text-xs mt-0.5 opacity-90">{label}</p>
       </div>
     );
@@ -320,7 +335,7 @@ function StatCard({
   if (tone === "dark") {
     return (
       <div className="rounded-2xl bg-black shadow-sm px-4 py-3 text-center text-white">
-        <p className="text-lg font-bold">{value}</p>
+        <p className="text-lg font-bold tabular-nums">{value}</p>
         <p className="text-xs mt-0.5 opacity-90">{label}</p>
       </div>
     );
@@ -328,15 +343,34 @@ function StatCard({
   if (tone === "ringed") {
     return (
       <div className="rounded-2xl bg-white/90 backdrop-blur-xl shadow-[inset_0_0_0_1px_black] px-4 py-3 text-center">
-        <p className="text-lg font-bold text-text-primary">{value}</p>
+        <p className="text-lg font-bold text-text-primary tabular-nums">{value}</p>
         <p className="text-xs text-text-primary mt-0.5">{label}</p>
       </div>
     );
   }
   return (
     <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm px-4 py-3 text-center">
-      <p className={`text-lg font-bold ${valueClass}`}>{value}</p>
+      <p className={`text-lg font-bold tabular-nums ${valueClass}`}>{value}</p>
       <p className="text-xs text-text-muted mt-0.5">{label}</p>
     </div>
+  );
+}
+
+/** Tiny helper: render `mobile` text below `sm:` and `desktop` text from
+ *  `sm:` up. Used by the bio stat grid to keep tiles uniform-width on
+ *  mobile -- a single-word label like "Conversion" was overflowing its
+ *  tile's content area and visually breaking center alignment. */
+function ResponsiveLabel({
+  mobile,
+  desktop,
+}: {
+  mobile: string;
+  desktop: string;
+}) {
+  return (
+    <>
+      <span className="sm:hidden">{mobile}</span>
+      <span className="hidden sm:inline">{desktop}</span>
+    </>
   );
 }
