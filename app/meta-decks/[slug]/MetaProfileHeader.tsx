@@ -227,7 +227,10 @@ export default function MetaProfileHeader({
               <img
                 src={iconUrl}
                 alt=""
-                className="w-[116px] h-[116px] object-contain"
+                // Sprite sized to ~78% of the 128px circle so there's a
+                // visible ring of avatar-bg color around the artwork
+                // instead of the previous nearly-flush 116px fit.
+                className="w-[100px] h-[100px] object-contain"
               />
             ) : null}
           </div>

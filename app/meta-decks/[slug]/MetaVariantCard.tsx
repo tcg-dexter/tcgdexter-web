@@ -166,7 +166,9 @@ export default function MetaVariantCard({
       <img
         src={iconUrl}
         alt=""
-        className="w-[22px] h-[22px] object-contain"
+        // Matches the breathing-room ratio used by the landing avatar
+        // (sprite ≈ 70% of the circle) for consistent meta-page chrome.
+        className="w-[20px] h-[20px] object-contain"
       />
     </div>
   ) : null;
