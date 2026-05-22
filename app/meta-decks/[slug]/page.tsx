@@ -97,11 +97,11 @@ function countsFor(cards: DeckCard[]): { pokemon: number; trainer: number; energ
 }
 
 /**
- * Top N most-common cards across a set of deck-list variants, scored by
- * how many variants include the card (primary) then by total copies
- * across those variants (tie-break). Returns image URLs in order
- * (most-common first), filtering out any card the local DB can't
- * resolve to a pokemontcg.io image.
+ * Top N cards by aggregate copy count across a set of deck-list variants.
+ * Sums every printing's qty across all variants, sorts most → least,
+ * tie-breaks by number of variants the card appears in (broader consensus
+ * wins ties) then alphabetically. Skips any card the local DB can't
+ * resolve to a pokemontcg.io image so the banner always renders real art.
  */
 function topCardImagesAcrossVariants(
   variants: { cards: DeckCard[] }[],
@@ -124,8 +124,8 @@ function topCardImagesAcrossVariants(
     }
   }
   const ranked = Array.from(acc.values()).sort((a, b) => {
-    if (b.variants !== a.variants) return b.variants - a.variants;
     if (b.copies !== a.copies) return b.copies - a.copies;
+    if (b.variants !== a.variants) return b.variants - a.variants;
     return a.card.name.localeCompare(b.card.name);
   });
   const out: string[] = [];

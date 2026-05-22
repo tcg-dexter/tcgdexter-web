@@ -37,7 +37,7 @@ import type { ReactNode } from "react";
  */
 
 const BANNER_ASPECT_WH = 3;     // 3:1
-const CARDS_TOP_PCT = 15;       // matches the prior single-card top inset
+const CARDS_TOP_PCT = 25;       // % of banner height; nudged down 10% from 15
 const CARDS_SPAN_PCT = 100;     // % of inner container width — full span
 const CARD_WIDTH_PCT = 32;      // % of inner container width — per card
 
