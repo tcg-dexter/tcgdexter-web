@@ -213,8 +213,8 @@ export default function MetaProfileHeader({
         {/* Stats — one card per metric. The Tournament Record fields
             (Wins / Losses / Ties / Entries) sit as peer tiles in the
             same grid so the whole bio reads as a single stat board.
-            2x2 columns on narrow screens, 1x4 from `sm:` up. */}
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            3 columns on narrow screens, 4 from `sm:` up. */}
+        <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 gap-3">
           <StatCard label="Meta Share" value={representationPct} valueClass="text-accent" />
           <StatCard label="Top Cut" value={String(topCutEntries)} valueClass="text-amber-500" />
           <StatCard label="Conversion" value={conversionRate} valueClass="text-emerald-600" />
