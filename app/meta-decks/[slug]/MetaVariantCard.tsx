@@ -173,7 +173,9 @@ export default function MetaVariantCard({
         <p className="flex-1 min-w-0 text-[17px] font-semibold text-text-primary truncate">
           {headerName}
         </p>
-        <div className="shrink-0 -mr-2">
+        {/* Trailing slot — kept flush with the header's px-3.5 inset so the
+            copy icon's right edge mirrors the avatar circle's left edge. */}
+        <div className="shrink-0">
           <CopyDeckListButton deckList={deckList} iconOnly />
         </div>
       </div>
