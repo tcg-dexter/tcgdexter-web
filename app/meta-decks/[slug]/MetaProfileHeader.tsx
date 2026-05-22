@@ -5,9 +5,10 @@ import type { ReactNode } from "react";
  *
  * Layout:
  *   ┌─────────────────────────────────────────┐
- *   │  Banner — solid avatar-bg color with    │
- *   │  the preview card peeking from the      │
- *   │  right; card extends below banner edge  │
+ *   │ Banner — solid avatar-bg color with the │
+ *   │ 7 most common cards across the top-5    │
+ *   │ deck lists fanned across the middle,    │
+ *   │ each slightly overlapping the next      │
  *   │ ┌────┐                                  │
  *   │ │Avt │ overlapping bottom-left          │
  *   └─┴────┴──────────────────────────────────┘
@@ -16,33 +17,36 @@ import type { ReactNode } from "react";
  *
  * Banner card placement
  * ─────────────────────
- * The full preview-card image sits in the right portion of the banner
- * with padding above. The card is sized larger than the banner so it
- * extends past the bottom edge (clipped by overflow-hidden); only the
- * upper ~33-40 % of the card is visible. The banner background is the
- * avatar's energy-type color, so the strip of empty space above and to
- * the left of the card reads as a coherent backdrop.
+ * The 7 cards sit centered horizontally with even spacing — each card's
+ * left edge is offset by `STEP` (computed from total span / count) from
+ * the previous card's left, so adjacent cards visually overlap by
+ * (CARD_WIDTH_PCT − STEP) of the banner width. Cards are sized large
+ * enough that they extend past the banner's bottom edge; overflow-hidden
+ * clips them, so only the top portion of each card is visible.
  *
- * Tuning the four constants below changes how the card sits:
- *  - CARD_TOP_PCT     — vertical inset (padding above the card)
- *  - CARD_RIGHT_PCT   — horizontal inset from the banner's right edge
- *  - CARD_WIDTH_PCT   — display width of the card as % of banner width
- *                       (drives visible height via card aspect ratio)
- *  - BANNER_ASPECT_WH — banner aspect ratio (width / height)
+ * Tuning these constants changes how the cards sit:
+ *  - CARDS_TOP_PCT       — vertical inset (padding above the cards)
+ *  - CARDS_SPAN_PCT      — total horizontal span the row occupies
+ *  - CARD_WIDTH_PCT      — display width of each card as % of banner
+ *                          width (drives visible height via card aspect)
+ *  - BANNER_ASPECT_WH    — banner aspect ratio (width / height)
  */
 
 const BANNER_ASPECT_WH = 3;     // 3:1
-const CARD_TOP_PCT = 15;        // % of banner height — empty strip above
-const CARD_RIGHT_PCT = 15;      // % of banner width  — inset from right edge
-const CARD_WIDTH_PCT = 32;      // % of banner width  — card display width
+const CARDS_TOP_PCT = 32;       // % of banner height — empty strip above
+const CARDS_SPAN_PCT = 80;      // % of banner width  — total horizontal span
+const CARD_WIDTH_PCT = 15;      // % of banner width  — per-card display width
 
 interface Props {
   /** Archetype display name, e.g. "Dragapult". */
   name: string;
   /** Annotation appended after the name, e.g. "ex". Empty string skipped. */
   annotation?: string;
-  /** Pokémon TCG card image URL — same as the preview card image. */
-  cardImageUrl: string | null;
+  /** Up to 7 pokemontcg.io card image URLs — the most common cards across
+   *  the archetype's top-5 deck lists, ordered most → least common. They
+   *  fan across the banner with even overlap; later entries paint on top
+   *  of earlier ones. */
+  bannerCards: string[];
   /** Limitless sprite URL for the leading icon (e.g. dragapult.png). */
   iconUrl: string | null;
   /** Background color for the avatar circle — usually the primary card's
@@ -77,7 +81,7 @@ interface Props {
 export default function MetaProfileHeader({
   name,
   annotation,
-  cardImageUrl,
+  bannerCards,
   iconUrl,
   iconBg,
   representationPct,
@@ -95,31 +99,50 @@ export default function MetaProfileHeader({
 }: Props) {
   const fallbackBg = iconBg ?? "#B0A89E";
 
+  // Even-spaced overlap math — derive each card's left edge from the
+  // total span, the per-card width, and the count of cards we actually
+  // have to render (1..N). With N cards, there are (N-1) gaps; each gap
+  // is (SPAN - CARD_WIDTH) / (N-1). Single-card edge case falls back to
+  // centered placement.
+  const cardCount = bannerCards.length;
+  const cardsLeftStart = (100 - CARDS_SPAN_PCT) / 2;
+  const cardsStep =
+    cardCount > 1
+      ? (CARDS_SPAN_PCT - CARD_WIDTH_PCT) / (cardCount - 1)
+      : 0;
+  const singleCardLeft = (100 - CARD_WIDTH_PCT) / 2;
+
   return (
     <header className="flex-shrink-0">
-      {/* Banner — solid avatar-bg color with the preview card peeking
-          from the right. Sits flush at the top of the page; the back
-          button (preBanner) overlays the top-left so the banner owns
-          the full vertical space the old preBanner row used to take. */}
+      {/* Banner — solid avatar-bg color with the top-7 cards fanned
+          across the middle, each peeking from behind the next. Sits
+          flush at the top of the page; the back button (preBanner)
+          overlays the top-left. */}
       <div
         className="relative w-full overflow-hidden"
         style={{ aspectRatio: `${BANNER_ASPECT_WH} / 1`, background: fallbackBg }}
       >
-        {cardImageUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={cardImageUrl}
-            alt=""
-            aria-hidden="true"
-            className="absolute pointer-events-none select-none"
-            style={{
-              top: `${CARD_TOP_PCT}%`,
-              right: `${CARD_RIGHT_PCT}%`,
-              width: `${CARD_WIDTH_PCT}%`,
-              height: "auto",
-            }}
-          />
-        )}
+        {bannerCards.map((url, i) => {
+          const left =
+            cardCount === 1 ? singleCardLeft : cardsLeftStart + i * cardsStep;
+          return (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={`${i}-${url}`}
+              src={url}
+              alt=""
+              aria-hidden="true"
+              className="absolute pointer-events-none select-none drop-shadow-md"
+              style={{
+                top: `${CARDS_TOP_PCT}%`,
+                left: `${left}%`,
+                width: `${CARD_WIDTH_PCT}%`,
+                height: "auto",
+                zIndex: i,
+              }}
+            />
+          );
+        })}
 
         {/* Back button overlay — top-left, clears the iOS safe-area inset
             so it doesn't crash into a notch / dynamic island. Caller is

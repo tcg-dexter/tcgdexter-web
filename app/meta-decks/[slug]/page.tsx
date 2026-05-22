@@ -3,6 +3,7 @@ import Link from "next/link";
 import archetypesRaw from "@/data/meta-archetypes.json";
 import metaDecksRaw from "@/data/meta-decks.json";
 import { metaPrimaryCard, typeColor } from "@/lib/metaPrimaryCard";
+import { cardImageUrlFor } from "@/lib/primaryCardImage";
 import MetaProfileHeader from "./MetaProfileHeader";
 import MetaVariantCard from "./MetaVariantCard";
 
@@ -96,6 +97,47 @@ function countsFor(cards: DeckCard[]): { pokemon: number; trainer: number; energ
 }
 
 /**
+ * Top N most-common cards across a set of deck-list variants, scored by
+ * how many variants include the card (primary) then by total copies
+ * across those variants (tie-break). Returns image URLs in order
+ * (most-common first), filtering out any card the local DB can't
+ * resolve to a pokemontcg.io image.
+ */
+function topCardImagesAcrossVariants(
+  variants: { cards: DeckCard[] }[],
+  n: number,
+): string[] {
+  type Agg = { card: DeckCard; copies: number; variants: number };
+  const acc = new Map<string, Agg>();
+  for (const v of variants) {
+    const seenThisVariant = new Set<string>();
+    for (const c of v.cards) {
+      const key = `${c.name}|${c.setCode}|${c.number}`;
+      const existing = acc.get(key);
+      if (existing) {
+        existing.copies += c.qty;
+        if (!seenThisVariant.has(key)) existing.variants += 1;
+      } else {
+        acc.set(key, { card: c, copies: c.qty, variants: 1 });
+      }
+      seenThisVariant.add(key);
+    }
+  }
+  const ranked = Array.from(acc.values()).sort((a, b) => {
+    if (b.variants !== a.variants) return b.variants - a.variants;
+    if (b.copies !== a.copies) return b.copies - a.copies;
+    return a.card.name.localeCompare(b.card.name);
+  });
+  const out: string[] = [];
+  for (const entry of ranked) {
+    if (out.length >= n) break;
+    const url = cardImageUrlFor(entry.card);
+    if (url) out.push(url);
+  }
+  return out;
+}
+
+/**
  * Archetype landing page. Pure Twitter-style profile: banner + avatar +
  * bio + "posts feed" of the top-5 deck list preview cards. Each card
  * deep-links to /meta-decks/[slug]/[variantIndex] which renders the
@@ -130,11 +172,20 @@ export default async function MetaDeckDetailPage({
     : null;
 
   const variantList = deckData?.variants ?? [];
-  // Use the FIRST variant's primary card for the banner + avatar coloring.
+  // Use the FIRST variant's primary card for the avatar color hint.
   const firstCards = variantList[0]?.cards ?? deckData?.cards ?? [];
   const archetypePrimary = metaPrimaryCard(firstCards, iconList);
-  const bannerCardImage = archetypePrimary?.imageUrl ?? arch.image_url ?? null;
   const iconBg = typeColor(archetypePrimary?.types);
+
+  // Banner: the 7 most common cards across the top-5 deck lists,
+  // resolved to pokemontcg.io image URLs. Falls back to whatever the
+  // archetype's preview card image is when no variants exist (rare).
+  const topFiveVariants = variantList.slice(0, 5);
+  let bannerCards = topCardImagesAcrossVariants(topFiveVariants, 7);
+  if (bannerCards.length === 0) {
+    const fallback = archetypePrimary?.imageUrl ?? arch.image_url ?? null;
+    if (fallback) bannerCards = [fallback];
+  }
 
   // Build per-variant cards for the top-5 grid. variantIndex on the URL
   // is 1-based for human friendliness (1st variant → /1, not /0).
@@ -162,7 +213,7 @@ export default async function MetaDeckDetailPage({
       <MetaProfileHeader
         name={arch.name}
         annotation={arch.annotation ?? ""}
-        cardImageUrl={bannerCardImage}
+        bannerCards={bannerCards}
         iconUrl={iconUrl}
         iconBg={iconBg}
         representationPct={`${(arch.representation_pct * 100).toFixed(1)}%`}
