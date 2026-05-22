@@ -67,8 +67,6 @@ interface Props {
   name: string;
   /** Annotation appended after the name, e.g. "ex". Empty string skipped. */
   annotation?: string;
-  /** Rank in the Standard top-30 ranking. */
-  rank: number;
   /** Pokémon TCG card image URL — same as the preview card image. */
   cardImageUrl: string | null;
   /** Limitless sprite URL for the leading icon (e.g. dragapult.png). */
@@ -105,7 +103,6 @@ interface Props {
 export default function MetaProfileHeader({
   name,
   annotation,
-  rank,
   cardImageUrl,
   iconUrl,
   iconBg,
@@ -126,17 +123,9 @@ export default function MetaProfileHeader({
 
   return (
     <header className="flex-shrink-0">
-      {/* Top status bar — back link + rank pill, sits above the banner. */}
-      {preBanner && (
-        <div className="px-6 pt-[calc(env(safe-area-inset-top)_+_0.75rem)] pb-3 max-w-2xl mx-auto flex items-center justify-between gap-3">
-          {preBanner}
-          <span className="text-[11px] font-semibold uppercase tracking-widest text-accent shrink-0">
-            #{rank} in Standard
-          </span>
-        </div>
-      )}
-
-      {/* Banner — clipped card art. */}
+      {/* Banner — clipped card art. Sits flush at the top of the page;
+          the back button (preBanner) overlays the top-left so the banner
+          owns the full vertical space the old preBanner row used to take. */}
       <div
         className="relative w-full overflow-hidden"
         style={{ aspectRatio: `${BANNER_ASPECT_WH} / 1`, background: fallbackBg }}
@@ -165,6 +154,16 @@ export default function MetaProfileHeader({
               "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 100%)",
           }}
         />
+
+        {/* Back button overlay — top-left, clears the iOS safe-area inset
+            so it doesn't crash into a notch / dynamic island. Caller is
+            expected to style the link so it reads on top of card art
+            (translucent dark pill or similar). */}
+        {preBanner && (
+          <div className="absolute left-4 z-10" style={{ top: "calc(env(safe-area-inset-top) + 0.75rem)" }}>
+            {preBanner}
+          </div>
+        )}
       </div>
 
       {/* Bio section. The avatar overlaps the banner via negative margin;
@@ -213,8 +212,8 @@ export default function MetaProfileHeader({
         {/* Stats — one card per metric. The Tournament Record fields
             (Wins / Losses / Ties / Entries) sit as peer tiles in the
             same grid so the whole bio reads as a single stat board.
-            3 columns on narrow screens, 4 from `sm:` up. */}
-        <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 gap-3">
+            4 columns across all breakpoints. */}
+        <div className="mt-4 grid grid-cols-4 gap-3">
           <StatCard label="Meta Share" value={representationPct} valueClass="text-accent" />
           <StatCard label="Top Cut" value={String(topCutEntries)} valueClass="text-amber-500" />
           <StatCard label="Conversion" value={conversionRate} valueClass="text-emerald-600" />

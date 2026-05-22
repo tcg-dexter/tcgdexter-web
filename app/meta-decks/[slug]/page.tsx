@@ -55,10 +55,6 @@ export function generateStaticParams() {
   return top30.map((a) => ({ slug: a.id }));
 }
 
-function getRank(id: string): number {
-  return top30.findIndex((a) => a.id === id) + 1;
-}
-
 function getWinRate(a: Archetype): number {
   const total = a.wins + a.losses + a.ties;
   return total > 0 ? a.wins / total : 0;
@@ -117,7 +113,6 @@ export default async function MetaDeckDetailPage({
   const arch = top30.find((a) => a.id === slug);
   if (!arch) notFound();
 
-  const rank = getRank(arch.id);
   const winRate = getWinRate(arch);
   const deckData = (metaDecksRaw as MetaDeck[]).find((d) => d.id === arch.id);
 
@@ -167,7 +162,6 @@ export default async function MetaDeckDetailPage({
       <MetaProfileHeader
         name={arch.name}
         annotation={arch.annotation ?? ""}
-        rank={rank}
         cardImageUrl={bannerCardImage}
         iconUrl={iconUrl}
         iconBg={iconBg}
@@ -181,11 +175,22 @@ export default async function MetaDeckDetailPage({
         ties={arch.ties}
         totalEntries={arch.total_entries}
         preBanner={
+          /* Circular back button — overlays the top-left of the banner.
+             Translucent black so it reads against any card art. */
           <Link
             href="/meta-decks"
-            className="text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors underline-offset-2 hover:underline"
+            aria-label="Back to Top 30 Meta Decks"
+            className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-black/50 backdrop-blur-md text-white hover:bg-black/70 transition-colors shadow-sm"
           >
-            ← Top 30 Meta Decks
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2.5}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
           </Link>
         }
       >
