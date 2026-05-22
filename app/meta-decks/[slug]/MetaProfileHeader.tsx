@@ -37,6 +37,14 @@ const CARDS_TOP_PCT = 32;       // % of banner height — empty strip above
 const CARDS_SPAN_PCT = 80;      // % of banner width  — total horizontal span
 const CARD_WIDTH_PCT = 15;      // % of banner width  — per-card display width
 
+// Each card is cropped to its top slice — just enough to show the card
+// header + the bulk of the art frame; the bottom of the card (attacks,
+// text box, weakness row) is hidden. Card aspect is 245:342, so a 40 %
+// vertical slice gives a crop aspect of 245 / (0.4 × 342) ≈ 1.79.
+const CARD_VISIBLE_FRACTION = 0.4;
+const CARD_ASPECT_WH = 245 / 342;
+const CARD_CROP_ASPECT_WH = CARD_ASPECT_WH / CARD_VISIBLE_FRACTION;
+
 interface Props {
   /** Archetype display name, e.g. "Dragapult". */
   name: string;
@@ -125,22 +133,31 @@ export default function MetaProfileHeader({
         {bannerCards.map((url, i) => {
           const left =
             cardCount === 1 ? singleCardLeft : cardsLeftStart + i * cardsStep;
+          // Each card image lives inside an overflow-hidden frame whose
+          // aspect ratio matches the top slice we want to show, so only
+          // the top CARD_VISIBLE_FRACTION of the card is visible. Shadow
+          // sits on the frame (not the img) since overflow-hidden would
+          // clip a shadow on the inner element.
           return (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <div
               key={`${i}-${url}`}
-              src={url}
-              alt=""
-              aria-hidden="true"
-              className="absolute pointer-events-none select-none drop-shadow-md"
+              className="absolute overflow-hidden shadow-md pointer-events-none select-none"
               style={{
                 top: `${CARDS_TOP_PCT}%`,
                 left: `${left}%`,
                 width: `${CARD_WIDTH_PCT}%`,
-                height: "auto",
+                aspectRatio: `${CARD_CROP_ASPECT_WH} / 1`,
                 zIndex: i,
               }}
-            />
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={url}
+                alt=""
+                aria-hidden="true"
+                className="block w-full h-auto"
+              />
+            </div>
           );
         })}
 
