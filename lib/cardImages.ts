@@ -24,6 +24,11 @@ const SET_IMAGE_OVERRIDES: Record<string, { small: string; large: string }> = {
     small: "https://limitlesstcg.nyc3.digitaloceanspaces.com/tpci/POR/POR_{nnn}_R_EN_LG.png",
     large: "https://limitlesstcg.nyc3.digitaloceanspaces.com/tpci/POR/POR_{nnn}_R_EN.png",
   },
+  // Chaos Rising — not yet indexed by pokemontcg.io
+  me4: {
+    small: "https://limitlesstcg.nyc3.digitaloceanspaces.com/tpci/CHR/CHR_{nnn}_R_EN_LG.png",
+    large: "https://limitlesstcg.nyc3.digitaloceanspaces.com/tpci/CHR/CHR_{nnn}_R_EN.png",
+  },
 };
 
 function build(setId: string, number: string, variant: ImageVariant): string {
