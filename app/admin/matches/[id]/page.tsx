@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import BackButton from "@/app/components/ui/BackButton";
 import JudgeRulingForm from "./JudgeRulingForm";
 
 export const metadata: Metadata = {
@@ -103,12 +103,9 @@ export default async function AdminMatchPage({
 
   return (
     <main className="mx-auto max-w-2xl px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
-      <Link
-        href="/admin/matches/disputes"
-        className="inline-flex items-center text-xs text-text-muted hover:text-text-primary mb-3"
-      >
-        ← Back to queue
-      </Link>
+      <div className="mb-3">
+        <BackButton href="/admin/matches/disputes" ariaLabel="Back to queue" />
+      </div>
 
       <h1 className="text-xl font-semibold text-text-primary mb-4">
         Match dispute

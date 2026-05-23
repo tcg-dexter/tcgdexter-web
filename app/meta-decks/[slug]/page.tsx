@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import archetypesRaw from "@/data/meta-archetypes.json";
 import metaDecksRaw from "@/data/meta-decks.json";
 import { metaPrimaryCard, typeColor } from "@/lib/metaPrimaryCard";
 import { cardImageUrlFor } from "@/lib/primaryCardImage";
 import ThemeColor from "@/app/components/ThemeColor";
+import BackButton from "@/app/components/ui/BackButton";
 import MetaProfileHeader from "./MetaProfileHeader";
 import MetaVariantCard from "./MetaVariantCard";
 
@@ -283,23 +283,7 @@ export default async function MetaDeckDetailPage({
         ties={arch.ties}
         totalEntries={arch.total_entries}
         preBanner={
-          /* Circular back button — overlays the top-left of the banner.
-             Translucent black so it reads against any card art. */
-          <Link
-            href="/meta-decks"
-            aria-label="Back to Top 30 Meta Decks"
-            className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-black/50 backdrop-blur-md text-white hover:bg-black/70 transition-colors shadow-sm"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2.5}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-            </svg>
-          </Link>
+          <BackButton href="/meta-decks" ariaLabel="Back to Top 30 Meta Decks" />
         }
       >
         {variantCards.length > 0 ? (
