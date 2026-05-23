@@ -1,20 +1,11 @@
 import Link from "next/link";
+import DeckCardGrid from "@/app/components/DeckCardGrid";
 import DeckPriceModule from "@/app/components/DeckPriceModule";
 import DeckListCard from "@/app/components/DeckListCard";
 import MetaDeckListCarousel from "@/app/components/MetaDeckListCarousel";
 import SaveDeckButton from "@/app/components/SaveDeckButton";
 import ShareButton from "@/app/components/ShareButton";
 import StandardFormatInfo from "@/app/components/StandardFormatInfo";
-import { buildTypesByName, buildSubtypesByName } from "@/lib/cardTypes";
-import {
-  buildMatrixSlots,
-  hexToRgba,
-  isDarkHex,
-  matrixLabel,
-  MATRIX_ENERGY_PALETTE,
-  pokemonPrimaryTypes,
-  type MatrixSlot,
-} from "@/lib/deckMatrix";
 
 /* ─── Types ──────────────────────────────────────────────────── */
 
@@ -211,26 +202,6 @@ function CollapsibleSection({
   );
 }
 
-/** Legend row for the deck composition matrix — tiny sample tile + label + count. */
-function LegendItem({
-  label,
-  count,
-}: {
-  label: string;
-  count: number;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm font-semibold text-text-primary tabular-nums w-[1.5ch] text-right inline-block">
-        {count}
-      </span>
-      <span className="text-[11px] font-semibold uppercase tracking-widest text-text-secondary">
-        {label}
-      </span>
-    </div>
-  );
-}
-
 function StatPill({ count, label }: { count: number; label: string }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-full border border-border bg-bg px-3 py-1 text-sm text-text-secondary">
@@ -377,165 +348,19 @@ export default function DeckProfileView({
     </Link>
   );
 
-  const overviewNode = (() => {
-      const pokemonTypes = pokemonPrimaryTypes(
-        buildTypesByName(result.cards),
-      );
-      const subtypesByName = buildSubtypesByName(result.cards);
-      const slots = buildMatrixSlots(result.cards, pokemonTypes, subtypesByName);
-      const hasAce = slots.some(
-        (s) => s.kind === "trainer-ace" || s.kind === "energy-ace",
-      );
-      // For the Pokémon legend tile: sample the deck's dominant
-      // Pokémon type so the swatch reflects this specific build.
-      const pokemonTypeCounts = new Map<string, number>();
-      for (const s of slots) {
-        if (s.kind === "pokemon" && s.energyType) {
-          pokemonTypeCounts.set(
-            s.energyType,
-            (pokemonTypeCounts.get(s.energyType) ?? 0) + 1,
-          );
-        }
-      }
-      const dominantPokemonType = Array.from(
-        pokemonTypeCounts.entries(),
-      ).sort((a, b) => b[1] - a[1])[0]?.[0];
-      const pokemonSwatch = dominantPokemonType
-        ? MATRIX_ENERGY_PALETTE[dominantPokemonType]
-        : MATRIX_ENERGY_PALETTE.Colorless;
-      const renderSlot = (slot: MatrixSlot, i: number) => {
-        const tile = "aspect-square rounded-[4px] flex items-center justify-center";
-        const labelCls = "text-[10px] sm:text-sm font-semibold leading-none select-none";
-        if (slot.kind === "empty") {
-          return (
-            <div
-              key={i}
-              className="aspect-square rounded-[4px] border-[2px] border-dashed border-black/15"
-              title="Empty slot"
-            />
-          );
-        }
-        const label = matrixLabel(slot);
-        if (slot.kind === "pokemon") {
-          const baseColor = slot.energyType
-            ? MATRIX_ENERGY_PALETTE[slot.energyType]
-            : MATRIX_ENERGY_PALETTE.Colorless;
-          const bg = hexToRgba(baseColor, 0.5);
-          return (
-            <div
-              key={i}
-              className={tile}
-              style={{ background: bg }}
-              title={
-                slot.energyType
-                  ? `${slot.name ?? "Pokémon"} (${slot.energyType})`
-                  : slot.name ?? "Pokémon"
-              }
-            >
-              <span className={labelCls} style={{ color: "rgba(0,0,0,0.55)" }}>
-                {label}
-              </span>
-            </div>
-          );
-        }
-        if (slot.kind === "trainer") {
-          return (
-            <div
-              key={i}
-              className={tile}
-              style={{ background: "#E6E6E6" }}
-              title={slot.name ?? "Trainer"}
-            >
-              <span className={labelCls} style={{ color: "rgba(0,0,0,0.55)" }}>
-                {label}
-              </span>
-            </div>
-          );
-        }
-        if (slot.kind === "trainer-ace" || slot.kind === "energy-ace") {
-          return (
-            <div
-              key={i}
-              className={tile}
-              style={{ background: "#ED008C" }}
-              title={`${slot.name ?? ""} (ACE SPEC)`}
-            >
-              <span className={labelCls} style={{ color: "rgba(255,255,255,0.9)" }}>
-                {label}
-              </span>
-            </div>
-          );
-        }
-        if (slot.kind === "energy-basic") {
-          const color = slot.energyType
-            ? MATRIX_ENERGY_PALETTE[slot.energyType]
-            : MATRIX_ENERGY_PALETTE.Colorless;
-          const textColor = isDarkHex(color)
-            ? "rgba(255,255,255,0.9)"
-            : "rgba(0,0,0,0.55)";
-          return (
-            <div
-              key={i}
-              className={tile}
-              style={{ background: color }}
-              title={`${slot.energyType ?? "Energy"}${slot.name ? ` — ${slot.name}` : ""}`}
-            >
-              <span className={labelCls} style={{ color: textColor }}>
-                {label}
-              </span>
-            </div>
-          );
-        }
-        // energy-special (non-ACE)
-        return (
-          <div
-            key={i}
-            className={tile}
-            style={{ background: "linear-gradient(135deg,#C9C5BC 0%,#A8A8A8 100%)" }}
-            title={slot.name ?? "Special Energy"}
-          >
-            <span className={labelCls} style={{ color: "rgba(0,0,0,0.55)" }}>
-              {label}
-            </span>
-          </div>
-        );
-      };
-      return (
-        <div className={`${CARD_CLS} p-5`}>
-          <div className="flex items-baseline justify-between mb-5">
-            <h2 className="text-lg font-semibold">Overview</h2>
-            {result.deckSize !== 60 && (
-              <span className="text-sm font-mono tabular-nums text-accent">
-                {result.deckSize} / 60
-              </span>
-            )}
-          </div>
-
-          <div
-            className="grid grid-cols-12 gap-1.5 mb-5"
-            aria-label="Deck composition matrix"
-          >
-            {slots.map(renderSlot)}
-          </div>
-
-          {/* Legend — supertype counts with a mini sample tile
-              matching the matrix styling. */}
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-black/5 pt-4">
-            <LegendItem label="Pokémon" count={result.sections.pokemon} />
-            <LegendItem label="Trainer" count={result.sections.trainer} />
-            <LegendItem label="Energy" count={result.sections.energy} />
-            {hasAce && (
-              <LegendItem
-                label="ACE SPEC"
-                count={slots.filter(
-                  (s) => s.kind === "trainer-ace" || s.kind === "energy-ace",
-                ).length}
-              />
-            )}
-          </div>
-        </div>
-      );
-    })();
+  const overviewNode = (
+    <div className={`${CARD_CLS} p-5`}>
+      <div className="flex items-baseline justify-between mb-5">
+        <h2 className="text-lg font-semibold">Deck</h2>
+        {result.deckSize !== 60 && (
+          <span className="text-sm font-mono tabular-nums text-accent">
+            {result.deckSize} / 60
+          </span>
+        )}
+      </div>
+      <DeckCardGrid cards={result.cards} />
+    </div>
+  );
 
   return (
     <div className="min-h-dvh flex flex-col bg-bg">
