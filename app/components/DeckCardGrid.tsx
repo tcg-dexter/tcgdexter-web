@@ -201,7 +201,7 @@ export default function DeckCardGrid({ cards }: { cards: AnalysisCard[] }) {
           : `${t.name} ${number}`;
         const key = `${t.section}:${t.name.toLowerCase()}`;
         const tileClass =
-          "relative w-full rounded md:rounded-lg overflow-hidden bg-surface";
+          "relative w-full rounded overflow-hidden bg-surface";
         const aspectStyle = { aspectRatio: "245 / 342" };
         const body = (
           <>
