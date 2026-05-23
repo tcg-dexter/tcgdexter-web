@@ -100,7 +100,7 @@ export default function DeckCardGrid({ cards }: { cards: AnalysisCard[] }) {
 
   return (
     <div
-      className="grid grid-cols-4 md:grid-cols-6 gap-3"
+      className="grid grid-cols-4 md:grid-cols-10 gap-3"
       aria-label="Deck cards"
     >
       {tiles.map((t) => {
@@ -115,7 +115,7 @@ export default function DeckCardGrid({ cards }: { cards: AnalysisCard[] }) {
         return (
           <div
             key={`${t.section}:${t.name.toLowerCase()}`}
-            className="relative w-full rounded-xl overflow-hidden bg-surface"
+            className="relative w-full rounded md:rounded-lg overflow-hidden bg-surface"
             style={{ aspectRatio: "245 / 342" }}
           >
             <CardImage
