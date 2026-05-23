@@ -1,43 +1,18 @@
 interface Props {
-  setCode: string | null;
-  setId: string;
-  number: string;
-  setSize: number;
   copyCount: number;
 }
 
-function padNumber(n: string): string {
-  const m = n.match(/^(\d+)(.*)$/);
-  if (!m) return n;
-  return m[1].padStart(3, "0") + m[2];
-}
-
 /**
- * Deck-profile variant of `app/cards/CardFooterOverlay`. Same gradient + set
- * code badge treatment; the right slot shows the deck's copy count for that
- * card (×N) instead of the catalog's market price.
+ * Deck-profile variant of `app/cards/CardFooterOverlay`. Keeps the gradient
+ * fade-to-black but reduces the chrome to a single centered copy-count chip
+ * — the rest of the card's identity is already legible from the image.
  */
-export default function DeckTileFooter({
-  setCode,
-  setId,
-  number,
-  setSize,
-  copyCount,
-}: Props) {
-  const code = (setCode || setId || "").toUpperCase();
-  const num = padNumber(number);
-  const numberLabel = setSize > 0 ? `${num}/${setSize}` : num;
+export default function DeckTileFooter({ copyCount }: Props) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[15%] min-h-[36px] flex items-end justify-between gap-2 px-2 pb-[5px] bg-gradient-to-b from-transparent to-black to-80% text-white text-[12.5px] font-semibold leading-none tabular-nums overflow-hidden">
-      <span className="flex items-center gap-1 min-w-0">
-        {code && (
-          <span className="truncate rounded-md border border-white/70 px-1.5 py-0.5">
-            {code}
-          </span>
-        )}
-        <span className="truncate">{numberLabel}</span>
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[15%] min-h-[36px] flex items-end justify-center pb-1.5 bg-gradient-to-b from-transparent to-black to-80% overflow-hidden">
+      <span className="inline-flex items-center justify-center rounded-full bg-white text-black text-[13px] font-bold tabular-nums w-6 h-6 leading-none">
+        {copyCount}
       </span>
-      <span className="truncate mb-[3px]">&times;{copyCount}</span>
     </div>
   );
 }
