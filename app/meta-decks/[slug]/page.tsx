@@ -103,11 +103,13 @@ function countsFor(cards: DeckCard[]): { pokemon: number; trainer: number; energ
  * tie-breaks by number of variants the card appears in (broader consensus
  * wins ties) then alphabetically. Skips any card the local DB can't
  * resolve to a pokemontcg.io image so the banner always renders real art.
+ * Each entry carries its category so callers can group the fan by
+ * energy / trainer / pokemon (left → right toward the title card).
  */
-function topCardImagesAcrossVariants(
+function topCardsAcrossVariants(
   variants: { cards: DeckCard[] }[],
   n: number,
-): string[] {
+): { url: string; category: DeckCard["category"] }[] {
   type Agg = { card: DeckCard; copies: number; variants: number };
   const acc = new Map<string, Agg>();
   for (const v of variants) {
@@ -129,13 +131,39 @@ function topCardImagesAcrossVariants(
     if (b.variants !== a.variants) return b.variants - a.variants;
     return a.card.name.localeCompare(b.card.name);
   });
-  const out: string[] = [];
+  const out: { url: string; category: DeckCard["category"] }[] = [];
   for (const entry of ranked) {
     if (out.length >= n) break;
     const url = cardImageUrlFor(entry.card);
-    if (url) out.push(url);
+    if (url) out.push({ url, category: entry.card.category });
   }
   return out;
+}
+
+/**
+ * Arrange the 6 non-title banner picks across the fan so categories are
+ * spatially grouped, reading left → right: energy → trainer → pokemon →
+ * (title card pinned to slot 7 by the caller). Within each category the
+ * most-popular card sits closest to the title card, so the eye flows
+ * from the boldest art at the right inward through related categories.
+ */
+function arrangeBannerByCategory(
+  picks: { url: string; category: DeckCard["category"] }[],
+): string[] {
+  const buckets: Record<DeckCard["category"], string[]> = {
+    energy: [],
+    trainer: [],
+    pokemon: [],
+  };
+  for (const p of picks) buckets[p.category].push(p.url);
+  // Each bucket arrives in popularity-descending order. Reverse so the
+  // most popular within the bucket lands at the inner (right) edge,
+  // closest to the next group / title card.
+  return [
+    ...buckets.energy.reverse(),
+    ...buckets.trainer.reverse(),
+    ...buckets.pokemon.reverse(),
+  ];
 }
 
 /**
@@ -191,11 +219,13 @@ export default async function MetaDeckDetailPage({
   if (titleCardImage) {
     // Ask for 8 (instead of 7) so we still get 6 strong ranked picks
     // even if the title card would have made the natural top 7.
-    const ranked = topCardImagesAcrossVariants(topFiveVariants, 8)
-      .filter((url) => url !== titleCardImage);
-    bannerCards = [...ranked.slice(0, 6), titleCardImage];
+    const ranked = topCardsAcrossVariants(topFiveVariants, 8)
+      .filter((p) => p.url !== titleCardImage)
+      .slice(0, 6);
+    bannerCards = [...arrangeBannerByCategory(ranked), titleCardImage];
   } else {
-    bannerCards = topCardImagesAcrossVariants(topFiveVariants, 7);
+    const ranked = topCardsAcrossVariants(topFiveVariants, 7);
+    bannerCards = arrangeBannerByCategory(ranked);
   }
 
   // Build per-variant cards for the top-5 grid. variantIndex on the URL
