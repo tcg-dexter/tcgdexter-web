@@ -1,3 +1,4 @@
+import Link from "next/link";
 import CardImage from "@/app/cards/CardImage";
 import DeckTileFooter from "@/app/components/DeckTileFooter";
 import { cardImageSmall } from "@/lib/cardImages";
@@ -112,12 +113,12 @@ export default function DeckCardGrid({ cards }: { cards: AnalysisCard[] }) {
         const alt = setName
           ? `${t.name} — ${setName} ${number}`
           : `${t.name} ${number}`;
-        return (
-          <div
-            key={`${t.section}:${t.name.toLowerCase()}`}
-            className="relative w-full rounded md:rounded-lg overflow-hidden bg-surface"
-            style={{ aspectRatio: "245 / 342" }}
-          >
+        const key = `${t.section}:${t.name.toLowerCase()}`;
+        const tileClass =
+          "relative w-full rounded md:rounded-lg overflow-hidden bg-surface";
+        const aspectStyle = { aspectRatio: "245 / 342" };
+        const body = (
+          <>
             <CardImage
               src={src}
               alt={alt}
@@ -127,6 +128,23 @@ export default function DeckCardGrid({ cards }: { cards: AnalysisCard[] }) {
               className="w-full h-full object-contain"
             />
             <DeckTileFooter copyCount={t.copyCount} />
+          </>
+        );
+        // Unresolved cards (no entry) have no detail page to link to — stay
+        // as a plain non-interactive tile so the placeholder isn't a dead
+        // click target.
+        return entry ? (
+          <Link
+            key={key}
+            href={`/cards/${encodeURIComponent(entry.id)}`}
+            className={`${tileClass} block transition-shadow hover:shadow-md`}
+            style={aspectStyle}
+          >
+            {body}
+          </Link>
+        ) : (
+          <div key={key} className={tileClass} style={aspectStyle}>
+            {body}
           </div>
         );
       })}
