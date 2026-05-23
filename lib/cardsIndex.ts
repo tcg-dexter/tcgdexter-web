@@ -43,6 +43,12 @@ export interface CardIndexEntry {
   artist: string | null;
   artistLower: string | null;
   artistTokens: string[];
+  /** Card name this printing evolves from (e.g. Starmie ← Staryu). Null for
+   *  Basics, Trainers, Energy, and any printing where the upstream catalog
+   *  hasn't carried the field through yet. Populated by
+   *  `scripts/backfill_evolves_from.py` or by `export_cards_standard.py`
+   *  once cards.db gains the column. */
+  evolvesFrom: string | null;
 }
 
 export interface CardAttack {
@@ -78,6 +84,7 @@ export interface RawCard {
   attacks?: CardAttack[];
   abilities?: CardAbility[];
   rules?: string[];
+  evolves_from?: string | null;
 }
 
 let CARDS: CardIndexEntry[] | null = null;
@@ -140,6 +147,7 @@ function buildIndex(): CardIndexEntry[] {
         artist: c.artist ?? null,
         artistLower: c.artist ? c.artist.toLowerCase() : null,
         artistTokens: c.artist ? tokenizeArtist(c.artist) : [],
+        evolvesFrom: c.evolves_from ?? null,
       });
     }
   }

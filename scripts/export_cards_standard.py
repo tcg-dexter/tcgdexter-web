@@ -83,14 +83,35 @@ def load_cards(db_path: Path, prices: dict) -> dict[str, list[dict]]:
         print(f"ERROR: cards.db not found at {db_path}", file=sys.stderr)
         sys.exit(1)
 
+    # Preserve evolves_from from the existing JSON when present. The upstream
+    # cards.db may not carry this column yet — `backfill_evolves_from.py`
+    # populates the JSON directly from pokemontcg.io, and we want that value
+    # to survive a re-export. Keyed by (set_id, number).
+    preserved_evolves_from: dict[tuple[str, str], str | None] = {}
+    if OUT_FILE.exists():
+        try:
+            existing = json.loads(OUT_FILE.read_text())
+            for variants in existing.values():
+                for e in variants:
+                    if "evolves_from" in e:
+                        preserved_evolves_from[(e.get("set_id", ""), e.get("number", ""))] = e["evolves_from"]
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    # Try to pull evolves_from directly from cards.db when it's there; fall
+    # back to the preserved map otherwise.
     con = sqlite3.connect(str(db_path))
     con.row_factory = sqlite3.Row
-    rows = con.execute("""
+    has_evolves_col = any(
+        r["name"] == "evolves_from" for r in con.execute("PRAGMA table_info(cards)")
+    )
+    evolves_select = ", evolves_from" if has_evolves_col else ""
+    rows = con.execute(f"""
         SELECT id, name, number, set_id, set_name, set_release_date,
                rarity, supertype, hp, artist,
                types, subtypes, regulation_mark,
                abilities, attacks, retreat_cost,
-               weaknesses, rules
+               weaknesses, rules{evolves_select}
         FROM cards
     """).fetchall()
     con.close()
@@ -150,6 +171,11 @@ def load_cards(db_path: Path, prices: dict) -> dict[str, list[dict]]:
                 "text": a.get("text", ""),
             })
 
+        if has_evolves_col:
+            evolves_from = row["evolves_from"]
+        else:
+            evolves_from = preserved_evolves_from.get((row["set_id"], number))
+
         card_entry = {
             "name": name,
             "set_id": row["set_id"],
@@ -167,6 +193,7 @@ def load_cards(db_path: Path, prices: dict) -> dict[str, list[dict]]:
             "regulation_mark": row["regulation_mark"],
             "retreat_cost": row["retreat_cost"],
             "market_price": round(price, 2),
+            "evolves_from": evolves_from,
         }
 
         cards_by_name[name].append(card_entry)
@@ -350,6 +377,10 @@ def _apply_catalog_stubs(cards_by_name: dict[str, list[dict]]) -> None:
             "regulation_mark": None,
             "retreat_cost": None,
             "market_price": 0,
+            # Stubs default to None; backfill_evolves_from.py fills it in once
+            # the set lands in pokemontcg.io. Individual stubs may set the
+            # `evolves_from` key explicitly to seed it ahead of that.
+            "evolves_from": s.get("evolves_from"),
         })
 
 
