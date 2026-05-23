@@ -100,7 +100,7 @@ export default function DeckCardGrid({ cards }: { cards: AnalysisCard[] }) {
 
   return (
     <div
-      className="grid grid-cols-3 md:grid-cols-6 gap-3"
+      className="grid grid-cols-4 md:grid-cols-6 gap-3"
       aria-label="Deck cards"
     >
       {tiles.map((t) => {
