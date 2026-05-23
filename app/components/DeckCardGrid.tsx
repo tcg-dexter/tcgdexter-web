@@ -100,15 +100,13 @@ export default function DeckCardGrid({ cards }: { cards: AnalysisCard[] }) {
 
   return (
     <div
-      className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"
+      className="grid grid-cols-3 md:grid-cols-6 gap-3"
       aria-label="Deck cards"
     >
       {tiles.map((t) => {
         const entry = t.entry;
         const setId = entry?.setId ?? "";
         const number = entry?.number ?? t.fallbackNumber;
-        const setCode = entry?.ptcgoCode ?? t.fallbackSetCode ?? null;
-        const setSize = entry?.setSize ?? 0;
         const setName = entry?.setName ?? "";
         const src = setId ? cardImageSmall(setId, number) : "";
         const alt = setName
@@ -128,13 +126,7 @@ export default function DeckCardGrid({ cards }: { cards: AnalysisCard[] }) {
               number={number}
               className="w-full h-full object-contain"
             />
-            <DeckTileFooter
-              setCode={setCode}
-              setId={setId}
-              number={number}
-              setSize={setSize}
-              copyCount={t.copyCount}
-            />
+            <DeckTileFooter copyCount={t.copyCount} />
           </div>
         );
       })}
