@@ -348,19 +348,7 @@ export default function DeckProfileView({
     </Link>
   );
 
-  const overviewNode = (
-    <div className={`${CARD_CLS} p-5`}>
-      <div className="flex items-baseline justify-between mb-5">
-        <h2 className="text-lg font-semibold">Deck</h2>
-        {result.deckSize !== 60 && (
-          <span className="text-sm font-mono tabular-nums text-accent">
-            {result.deckSize} / 60
-          </span>
-        )}
-      </div>
-      <DeckCardGrid cards={result.cards} />
-    </div>
-  );
+  const overviewNode = <DeckCardGrid cards={result.cards} />;
 
   return (
     <div className="min-h-dvh flex flex-col bg-bg">
@@ -399,7 +387,7 @@ export default function DeckProfileView({
 
       {/* ── Results ────────────────────────────────────────── */}
       <main className="flex-1 px-6 pb-20">
-        <div className="mx-auto max-w-2xl flex flex-col gap-4">
+        <div className="flex flex-col gap-4">
 
           {/* Creator badge card */}
           {creator && (
