@@ -1,0 +1,217 @@
+Setup
+MoonSheikah chose tails for the opening coin flip.
+MoonSheikah won the coin toss.
+MoonSheikah decided to go first.
+MoonSheikah drew 7 cards for the opening hand.
+- 7 drawn cards.
+a11father drew 7 cards for the opening hand.
+- 7 drawn cards.
+   • Munkidori, Lillie's Determination, Basic Darkness Energy, N's Zorua, N's Zorua, Fezandipiti ex, Lillie's Determination
+MoonSheikah took a mulligan.
+- Cards revealed from Mulligan 1
+   • Buddy-Buddy Poffin, Hilda, Basic Water Energy, Basic Water Energy, Mega Starmie ex, Dawn, Mega Greninja ex
+MoonSheikah took 3 mulligans.
+- Cards revealed from Mulligan 2
+   • Boss's Orders, Special Red Card, Team Rocket's Petrel, Buddy-Buddy Poffin, Rare Candy, Poké Pad, Frogadier
+- Cards revealed from Mulligan 3
+   • Team Rocket's Petrel, Mega Starmie ex, Basic Water Energy, Ultra Ball, Ultra Ball, Surfing Beach, Boss's Orders
+a11father drew 3 more cards because MoonSheikah took at least 1 mulligan.
+- a11father drew 3 cards.
+   • Ultra Ball, N's PP Up, Lillie's Determination
+MoonSheikah played Fezandipiti ex to the Active Spot.
+a11father played N's Zorua to the Active Spot.
+a11father played N's Zorua to the Bench.
+
+MoonSheikah's Turn
+MoonSheikah drew a card.
+MoonSheikah attached Basic Water Energy to Fezandipiti ex in the Active Spot.
+MoonSheikah played Budew to the Bench.
+MoonSheikah played Buddy-Buddy Poffin.
+- MoonSheikah drew 2 cards and played them to the Bench.
+   • Staryu, Froakie
+- MoonSheikah shuffled their deck.
+MoonSheikah ended their turn.
+
+a11father's Turn
+a11father drew Night Stretcher.
+a11father attached Basic Darkness Energy to N's Zorua in the Active Spot.
+a11father played Lillie's Determination.
+- a11father shuffled 7 cards into their deck.
+   • Munkidori, Lillie's Determination, Fezandipiti ex, Lillie's Determination, Ultra Ball, N's PP Up, Night Stretcher
+- a11father drew 8 cards.
+   • N's Reshiram, Poké Pad, N's Zorua, N's PP Up, Fezandipiti ex, Basic Darkness Energy, N's Zoroark ex, Ultra Ball
+a11father played N's Zorua to the Bench.
+a11father played N's Reshiram to the Bench.
+a11father's N's Zorua used Scratch on MoonSheikah’s Fezandipiti ex for 20 damage.
+
+MoonSheikah's Turn
+MoonSheikah drew a card.
+MoonSheikah evolved Froakie to Frogadier on the Bench.
+MoonSheikah attached Basic Water Energy to Frogadier on the Bench.
+MoonSheikah played Boss's Orders.
+- a11father's N's Zorua was switched with a11father's N's Zorua to become the Active Pokémon.
+a11father's N's Zorua is now in the Active Spot.
+MoonSheikah ended their turn.
+
+a11father's Turn
+a11father drew N's Darmanitan.
+a11father evolved N's Zorua to N's Zoroark ex in the Active Spot.
+a11father played Poké Pad.
+- a11father drew N's Darumaka.
+- a11father shuffled their deck.
+a11father played N's Darumaka to the Bench.
+a11father's N's Zoroark ex used Trade.
+- a11father discarded N's PP Up.
+- a11father drew 2 cards.
+   • N's Zekrom, N's PP Up
+a11father attached Basic Darkness Energy to N's Zoroark ex in the Active Spot.
+a11father played Ultra Ball.
+- a11father discarded 2 cards.
+   • N's PP Up, Fezandipiti ex
+- a11father drew N's Zoroark ex.
+- a11father shuffled their deck.
+a11father evolved N's Zorua to N's Zoroark ex on the Bench.
+a11father's N's Zoroark ex used Trade.
+- a11father discarded N's Zekrom.
+- a11father drew 2 cards.
+   • Black Belt's Training, Buddy-Buddy Poffin
+a11father ended their turn.
+
+MoonSheikah's Turn
+MoonSheikah drew a card.
+MoonSheikah attached Basic Water Energy to Frogadier on the Bench.
+MoonSheikah retreated Fezandipiti ex to the Bench.
+- Basic Water Energy was discarded from MoonSheikah's Fezandipiti ex.
+MoonSheikah's Frogadier is now in the Active Spot.
+MoonSheikah played Energy Retrieval.
+- MoonSheikah moved MoonSheikah's Basic Water Energy to their hand.
+MoonSheikah's Frogadier used Aqua Edge on a11father’s N's Zoroark ex for 50 damage.
+
+a11father's Turn
+a11father drew Ultra Ball.
+a11father evolved N's Darumaka to N's Darmanitan on the Bench.
+a11father's N's Zoroark ex used Trade.
+- a11father discarded Buddy-Buddy Poffin.
+- a11father drew 2 cards.
+   • N's Zoroark ex, Lillie's Determination
+a11father evolved N's Zorua to N's Zoroark ex on the Bench.
+a11father's N's Zoroark ex used Trade.
+- a11father discarded Ultra Ball.
+- a11father drew 2 cards.
+   • Binding Mochi, N's Castle
+a11father's N's Zoroark ex used Trade.
+- a11father discarded Binding Mochi.
+- a11father drew 2 cards.
+   • Team Rocket's Petrel, Basic Darkness Energy
+a11father attached Basic Darkness Energy to N's Zoroark ex in the Active Spot.
+a11father played N's Castle to the Stadium spot.
+a11father played Black Belt's Training.
+a11father's N's Zoroark ex used Night Joker on MoonSheikah’s Frogadier for 90 damage.
+- a11father chose Flamebody Cannon
+- MoonSheikah's Staryu took 90 damage.
+- 2 cards were discarded from a11father's N's Zoroark ex.
+   • Basic Darkness Energy, Basic Darkness Energy
+MoonSheikah's Staryu was Knocked Out!
+a11father took a Prize card.
+Pecharunt ex was added to a11father's hand.
+
+MoonSheikah's Turn
+MoonSheikah drew a card.
+MoonSheikah played Night Stretcher.
+- MoonSheikah moved MoonSheikah's Staryu to their hand.
+MoonSheikah's Fezandipiti ex used Flip the Script.
+- MoonSheikah drew 3 cards.
+MoonSheikah attached Neo Upper Energy to Fezandipiti ex on the Bench.
+MoonSheikah played Ultra Ball.
+- MoonSheikah discarded 2 cards.
+   • Ultra Ball, Air Balloon
+- MoonSheikah drew Mega Greninja ex.
+- MoonSheikah shuffled their deck.
+MoonSheikah evolved Frogadier to Mega Greninja ex in the Active Spot.
+MoonSheikah played Staryu to the Bench.
+MoonSheikah's Mega Greninja ex used Ninja Spinner on a11father’s N's Zoroark ex for 200 damage.
+- Damage breakdown:
+   • Base damage: 120 damage
+   • Total damage: 200 damage
+
+- MoonSheikah moved MoonSheikah's Basic Water Energy to their hand.
+
+a11father's Turn
+a11father drew Hyper Aroma.
+a11father's N's Zoroark ex used Trade.
+- a11father discarded Hyper Aroma.
+- a11father drew 2 cards.
+   • Boss's Orders, Lillie's Determination
+a11father's N's Zoroark ex used Trade.
+- a11father discarded Pecharunt ex.
+- a11father drew 2 cards.
+   • Night Stretcher, Basic Darkness Energy
+a11father attached Basic Darkness Energy to N's Zoroark ex in the Active Spot.
+a11father played Night Stretcher.
+- a11father moved a11father's N's Zekrom to their hand.
+a11father played N's Zekrom to the Bench.
+a11father's N's Zoroark ex used Trade.
+- a11father discarded Lillie's Determination.
+- a11father drew 2 cards.
+   • N's PP Up, Janine's Secret Art
+a11father played Janine's Secret Art.
+- a11father attached Basic Darkness Energy to N's Zoroark ex on the Bench.
+- a11father attached Basic Darkness Energy to N's Zoroark ex in the Active Spot.
+- a11father shuffled their deck.
+- a11father's N's Zoroark ex is now Poisoned.
+a11father played N's PP Up.
+- a11father attached Basic Darkness Energy to N's Zoroark ex on the Bench.
+a11father's N's Zoroark ex used Night Joker on MoonSheikah’s Mega Greninja ex for 500 damage.
+- Damage breakdown:
+   • 25 damage counters: 500 damage
+
+- a11father chose Powerful Rage
+MoonSheikah's Mega Greninja ex was Knocked Out!
+- 3 cards were discarded from MoonSheikah's Mega Greninja ex.
+   • Basic Water Energy, Frogadier, Froakie
+a11father took 3 Prize cards.
+Air Balloon was added to a11father's hand.
+Cyrano was added to a11father's hand.
+Meowth ex was added to a11father's hand.
+MoonSheikah's Budew is now in the Active Spot.
+
+Pokémon Checkup
+1 damage counter was placed on a11father's N's Zoroark ex for the Special Condition Poisoned.
+
+MoonSheikah's Turn
+MoonSheikah drew a card.
+MoonSheikah evolved Staryu to Mega Starmie ex on the Bench.
+MoonSheikah's Fezandipiti ex used Flip the Script.
+- MoonSheikah drew 3 cards.
+MoonSheikah played Surfing Beach to the Stadium spot.
+- MoonSheikah discarded N's Castle.
+MoonSheikah played Froakie to the Bench.
+MoonSheikah attached Basic Water Energy to Froakie on the Bench.
+MoonSheikah's Budew used Itchy Pollen on a11father’s N's Zoroark ex for 20 damage. a11father's N's Zoroark ex took 10 more damage because of Grass Weakness.
+- Damage breakdown:
+   • Base damage: 10 damage
+   • Weakness to Grass: 10 damage
+   • Total damage: 20 damage
+
+a11father's N's Zoroark ex was Knocked Out!
+- 3 cards were discarded from a11father's N's Zoroark ex.
+   • Basic Darkness Energy, Basic Darkness Energy, N's Zorua
+MoonSheikah took 2 Prize cards.
+A card was added to MoonSheikah's hand.
+A card was added to MoonSheikah's hand.
+a11father's N's Zoroark ex is now in the Active Spot.
+
+a11father's Turn
+a11father drew Xerosic's Machinations.
+a11father's N's Zoroark ex used Night Joker on MoonSheikah’s Budew for 90 damage.
+- a11father chose Flamebody Cannon
+- MoonSheikah's Froakie took 90 damage.
+- 2 cards were discarded from a11father's N's Zoroark ex.
+   • Basic Darkness Energy, Basic Darkness Energy
+MoonSheikah's Budew was Knocked Out!
+MoonSheikah's Froakie was Knocked Out!
+Basic Water Energy was discarded from MoonSheikah's Froakie.
+a11father took 2 Prize cards.
+Team Rocket's Petrel was added to a11father's hand.
+N's Zekrom was added to a11father's hand.
+All Prize cards taken. a11father wins.

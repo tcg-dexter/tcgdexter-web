@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import MatchForm, { type MatchFormData } from "@/app/components/MatchForm";
+import MatchEntry from "@/app/components/MatchEntry";
 import {
   deckResult,
   viewerLost,
@@ -273,8 +274,13 @@ export default function MatchLog({
       {/* ── New match form (shown when formOpen) ─────────── */}
       {!readOnly && formOpen && (
         <div className="mb-4">
-          <MatchForm
-            onSubmit={handleNewMatch}
+          <MatchEntry
+            savedDeckId={savedDeckId}
+            onSubmitManual={handleNewMatch}
+            onImported={() => {
+              closeForm();
+              router.refresh();
+            }}
             onCancel={closeForm}
           />
         </div>

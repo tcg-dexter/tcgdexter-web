@@ -1,0 +1,655 @@
+// Pattern-based parser for TCG Live battle logs.
+//
+// Strategy: each primary block text is matched against an ordered list
+// of regex patterns. The first match wins. The parser also inspects the
+// block's children to extract sub-events (card lists, damage breakdowns,
+// follow-up discards) into the resulting action's payload OR as their
+// own subsequent actions when they carry meaningful state changes.
+//
+// Player perspective ("player" vs "opponent") is NOT decided here — the
+// parser emits raw handles, and lib/battle-log/normalize.ts applies the
+// chosen player handle to map handles to actors.
+
+import {
+  PARSER_VERSION,
+  type ParsedAction,
+  type ParsedTurn,
+  type BattleLogParseResult,
+  type SpecialCondition,
+} from "./types";
+import { tokenize, type Block, type Section } from "./tokenize";
+
+/* ─── Helpers ─────────────────────────────────────────────────── */
+
+/** Normalize curly apostrophes/quotes to straight so a single pattern matches. */
+function normalizeQuotes(s: string): string {
+  return s.replace(/[’‘]/g, "'").replace(/[“”]/g, '"');
+}
+
+/** Split a comma-separated list of card names (the bullet child format). */
+function splitCardList(text: string): string[] {
+  return text
+    .split(/,\s*/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function collectRevealedCards(block: Block): string[] {
+  const out: string[] = [];
+  for (const child of block.children) {
+    if (child.kind === "bullet") {
+      out.push(...splitCardList(child.text));
+    }
+  }
+  return out;
+}
+
+/** Build a payload-augmented ParsedAction. */
+function action(
+  action_type: ParsedAction["action_type"],
+  actor_handle: string | null,
+  raw_text: string,
+  payload: Record<string, unknown> = {},
+): ParsedAction {
+  return { action_type, actor: null, actor_handle, raw_text, payload };
+}
+
+/* ─── Pattern table ───────────────────────────────────────────── */
+//
+// Patterns are listed roughly in order of specificity. More specific
+// patterns must come before more general ones (e.g., "drew N cards for
+// the opening hand" before "drew N cards").
+
+type PatternHandler = (
+  match: RegExpMatchArray,
+  block: Block,
+) => ParsedAction | ParsedAction[] | null;
+
+interface Pattern {
+  re: RegExp;
+  handle: PatternHandler;
+}
+
+const PATTERNS: Pattern[] = [
+  // ── Setup ────────────────────────────────────────────────────
+  {
+    re: /^(.+?) chose (tails|heads) for the opening coin flip\.$/,
+    handle: (m, b) => action("coin_flip", m[1], b.text, { choice: m[2] }),
+  },
+  {
+    re: /^(.+?) won the coin toss\.$/,
+    handle: (m, b) => action("coin_toss_won", m[1], b.text),
+  },
+  {
+    re: /^(.+?) decided to go (first|second)\.$/,
+    handle: (m, b) => action("chose_first", m[1], b.text, { order: m[2] }),
+  },
+  {
+    re: /^(.+?) drew (\d+) cards for the opening hand\.$/,
+    handle: (m, b) =>
+      action("opening_hand", m[1], b.text, {
+        count: Number(m[2]),
+        revealed_cards: collectRevealedCards(b),
+      }),
+  },
+  {
+    re: /^(.+?) took a mulligan\.$/,
+    handle: (m, b) =>
+      action("mulligan", m[1], b.text, {
+        revealed_cards: collectRevealedCards(b),
+      }),
+  },
+  {
+    re: /^(.+?) took (\d+) mulligans\.$/,
+    handle: (m, b) =>
+      action("mulligan_total", m[1], b.text, {
+        total: Number(m[2]),
+        revealed_cards: collectRevealedCards(b),
+      }),
+  },
+  {
+    re: /^(.+?) drew (\d+) more cards because (.+?) took at least 1 mulligan\.$/,
+    handle: (m, b) =>
+      action("mulligan_bonus_draw", m[1], b.text, {
+        count: Number(m[2]),
+        because_of: m[3],
+        revealed_cards: collectRevealedCards(b),
+      }),
+  },
+
+  // ── Plays / placements ───────────────────────────────────────
+  {
+    re: /^(.+?) played (.+?) to the Active Spot\.$/,
+    handle: (m, b) => action("play_to_active", m[1], b.text, { card: m[2] }),
+  },
+  {
+    re: /^(.+?) played (.+?) to the Bench\.$/,
+    handle: (m, b) => action("play_to_bench", m[1], b.text, { card: m[2] }),
+  },
+  {
+    re: /^(.+?) played (.+?) to the Stadium spot\.$/,
+    handle: (m, b) => {
+      const replaced: string[] = [];
+      for (const c of b.children) {
+        const dm = c.text.match(/^(.+?) discarded (.+?)\.$/);
+        if (dm) replaced.push(dm[2]);
+      }
+      return action("play_stadium", m[1], b.text, {
+        card: m[2],
+        ...(replaced.length ? { replaced_stadium: replaced } : {}),
+      });
+    },
+  },
+
+  // ── Energy attach ────────────────────────────────────────────
+  {
+    re: /^(.+?) attached (.+?) to (.+?) in the Active Spot\.$/,
+    handle: (m, b) =>
+      action("attach_energy", m[1], b.text, {
+        energy: m[2],
+        target: m[3],
+        location: "active",
+      }),
+  },
+  {
+    re: /^(.+?) attached (.+?) to (.+?) on the Bench\.$/,
+    handle: (m, b) =>
+      action("attach_energy", m[1], b.text, {
+        energy: m[2],
+        target: m[3],
+        location: "bench",
+      }),
+  },
+
+  // ── Evolve ───────────────────────────────────────────────────
+  {
+    re: /^(.+?) evolved (.+?) to (.+?) in the Active Spot\.$/,
+    handle: (m, b) =>
+      action("evolve", m[1], b.text, {
+        from: m[2],
+        to: m[3],
+        location: "active",
+      }),
+  },
+  {
+    re: /^(.+?) evolved (.+?) to (.+?) on the Bench\.$/,
+    handle: (m, b) =>
+      action("evolve", m[1], b.text, {
+        from: m[2],
+        to: m[3],
+        location: "bench",
+      }),
+  },
+
+  // ── Retreat ──────────────────────────────────────────────────
+  {
+    re: /^(.+?) retreated (.+?) to the Bench\.$/,
+    handle: (m, b) => {
+      const discardedEnergies: string[] = [];
+      for (const c of b.children) {
+        const em = c.text.match(/^(.+?) was discarded from (.+?)'s (.+?)\.$/);
+        if (em) discardedEnergies.push(em[1]);
+      }
+      return action("retreat", m[1], b.text, {
+        pokemon: m[2],
+        discarded_energies: discardedEnergies,
+      });
+    },
+  },
+
+  // ── Switch (Active promoted, often follows retreat or KO) ────
+  {
+    re: /^(.+?)'s (.+?) is now in the Active Spot\.$/,
+    handle: (m, b) =>
+      action("switch_active", m[1], b.text, { pokemon: m[2] }),
+  },
+
+  // ── Turn boundaries ──────────────────────────────────────────
+  {
+    re: /^(.+?) ended their turn\.$/,
+    handle: (m, b) => action("turn_end", m[1], b.text),
+  },
+
+  // ── Attacks ──────────────────────────────────────────────────
+  // Damage line may end with: "<Pokemon> took N more damage because of <Type> Weakness."
+  {
+    re: /^(.+?)'s (.+?) used (.+?) on (.+?)'s (.+?) for (\d+) damage\.(?:\s+(.+?)'s (.+?) took (\d+) more damage because of (.+?) Weakness\.)?$/,
+    handle: (m, b) => {
+      const damageBreakdown: string[] = [];
+      const choices: string[] = [];
+      const splashDamage: Array<{ pokemon: string; damage: number; handle: string }> = [];
+      const discardsFromAttacker: string[] = [];
+
+      for (const c of b.children) {
+        const t = c.text;
+        if (/^Damage breakdown:/i.test(t)) {
+          // Followed by bullet items; collect them too.
+          continue;
+        }
+        const choice = t.match(/^(?:.+? )?chose (.+)$/);
+        if (choice) {
+          choices.push(choice[1].replace(/\.$/, ""));
+          continue;
+        }
+        const splash = t.match(/^(.+?)'s (.+?) took (\d+) damage\.$/);
+        if (splash) {
+          splashDamage.push({
+            handle: splash[1],
+            pokemon: splash[2],
+            damage: Number(splash[3]),
+          });
+          continue;
+        }
+        const disc = t.match(/^(\d+) cards were discarded from (.+?)'s (.+?)\.$/);
+        if (disc) {
+          // Capture the count; the cards themselves come via bullets that
+          // were already merged here when iterating children, but for the
+          // attacker discard we keep them in the payload below via
+          // collectRevealedCards if needed.
+          discardsFromAttacker.push(`${disc[1]}x from ${disc[2]}'s ${disc[3]}`);
+          continue;
+        }
+      }
+
+      const revealed = collectRevealedCards(b);
+
+      return action("attack", m[1], b.text, {
+        attacker: m[2],
+        attack_name: m[3],
+        defender_handle: m[4],
+        defender: m[5],
+        damage: Number(m[6]),
+        weakness_bonus: m[9] ? Number(m[9]) : null,
+        weakness_target: m[8] || null,
+        weakness_type: m[10] || null,
+        damage_breakdown_raw: damageBreakdown,
+        choices,
+        splash_damage: splashDamage,
+        discards_from_attacker_summary: discardsFromAttacker,
+        revealed_cards_in_block: revealed,
+      });
+    },
+  },
+
+  // ── Ability used (no target / no damage) ─────────────────────
+  {
+    re: /^(.+?)'s (.+?) used (.+?)\.$/,
+    handle: (m, b) => {
+      const revealed = collectRevealedCards(b);
+      const discards: string[] = [];
+      const draws: number[] = [];
+      for (const c of b.children) {
+        const d = c.text.match(/^(.+?) discarded (.+?)\.$/);
+        if (d) discards.push(d[2]);
+        const dr = c.text.match(/^(.+?) drew (\d+) cards\.$/);
+        if (dr) draws.push(Number(dr[2]));
+      }
+      return action("ability_used", m[1], b.text, {
+        source: m[2],
+        ability_name: m[3],
+        revealed_cards: revealed,
+        discards,
+        draws,
+      });
+    },
+  },
+
+  // ── KO & prizes ──────────────────────────────────────────────
+  {
+    re: /^(.+?)'s (.+?) was Knocked Out!$/,
+    handle: (m, b) => action("knock_out", m[1], b.text, { pokemon: m[2] }),
+  },
+  {
+    re: /^(.+?) took a Prize card\.$/,
+    handle: (m, b) => action("prize_taken", m[1], b.text, { count: 1 }),
+  },
+  {
+    re: /^(.+?) took (\d+) Prize cards\.$/,
+    handle: (m, b) =>
+      action("prize_taken", m[1], b.text, { count: Number(m[2]) }),
+  },
+
+  // Prize-taken often has a follow-up line: "<card> was added to <handle>'s hand."
+  // Treat that as its own action (handled by a separate pattern below).
+  {
+    re: /^A card was added to (.+?)'s hand\.$/,
+    handle: (m, b) => action("add_to_hand", m[1], b.text, { hidden: true }),
+  },
+  {
+    re: /^(.+?) was added to (.+?)'s hand\.$/,
+    handle: (m, b) =>
+      action("add_to_hand", m[2], b.text, { card: m[1], hidden: false }),
+  },
+
+  // ── Card flow ────────────────────────────────────────────────
+  {
+    re: /^(.+?) drew a card\.$/,
+    handle: (m, b) => action("draw", m[1], b.text, { count: 1 }),
+  },
+  {
+    re: /^(.+?) drew (\d+) cards\.$/,
+    handle: (m, b) =>
+      action("draw", m[1], b.text, {
+        count: Number(m[2]),
+        revealed_cards: collectRevealedCards(b),
+      }),
+  },
+  {
+    re: /^(.+?) drew (.+?)\.$/,
+    handle: (m, b) =>
+      action("draw", m[1], b.text, { count: 1, card: m[2] }),
+  },
+  {
+    re: /^(.+?) shuffled (\d+) cards into their deck\.$/,
+    handle: (m, b) =>
+      action("shuffle", m[1], b.text, {
+        cards_shuffled_in: Number(m[2]),
+        revealed_cards: collectRevealedCards(b),
+      }),
+  },
+  {
+    re: /^(.+?) shuffled their deck\.$/,
+    handle: (m, b) => action("shuffle", m[1], b.text),
+  },
+  {
+    re: /^(.+?) discarded (\d+) cards\.$/,
+    handle: (m, b) =>
+      action("discard", m[1], b.text, {
+        count: Number(m[2]),
+        revealed_cards: collectRevealedCards(b),
+      }),
+  },
+  {
+    re: /^(.+?) discarded (.+?)\.$/,
+    handle: (m, b) => action("discard", m[1], b.text, { card: m[2] }),
+  },
+  {
+    re: /^(.+?) moved (.+?)'s (.+?) to their hand\.$/,
+    handle: (m, b) =>
+      action("move_to_hand", m[1], b.text, {
+        owner: m[2],
+        card: m[3],
+      }),
+  },
+
+  // ── Conditions & checkup damage ──────────────────────────────
+  {
+    re: /^(.+?)'s (.+?) is now (Poisoned|Burned|Asleep|Confused|Paralyzed)\.$/,
+    handle: (m, b) =>
+      action("condition_applied", m[1], b.text, {
+        pokemon: m[2],
+        condition: m[3] as SpecialCondition,
+      }),
+  },
+  {
+    re: /^(\d+) damage counter(?:s)? (?:was|were) placed on (.+?)'s (.+?) for the Special Condition (Poisoned|Burned)\.$/,
+    handle: (m, b) =>
+      action("damage_counter_placed", m[2], b.text, {
+        counters: Number(m[1]),
+        pokemon: m[3],
+        from_condition: m[4],
+      }),
+  },
+
+  // ── Discards initiated by board state (retreat energy, KO discard) ─
+  {
+    re: /^(.+?) was discarded from (.+?)'s (.+?)\.$/,
+    handle: (m, b) =>
+      action("discard_from_pokemon", m[2], b.text, {
+        owner: m[2],
+        pokemon: m[3],
+        card: m[1],
+      }),
+  },
+
+  // ── Played a non-Pokemon card (supporter / item / tool) ──────
+  // This is intentionally one of the last patterns: by the time we get
+  // here we've already matched "played X to the Bench/Active/Stadium"
+  // and "played X to the Active Spot". Anything else "X played Y." is
+  // a supporter or item — we cannot reliably distinguish without a card
+  // catalog. Marked play_item; the post-processor can re-tag using the
+  // card index later.
+  {
+    re: /^(.+?) played (.+?)\.$/,
+    handle: (m, b) => {
+      const revealed = collectRevealedCards(b);
+      const draws: number[] = [];
+      const switches: Array<{ from: string; to: string; handle: string }> = [];
+      for (const c of b.children) {
+        const dr = c.text.match(/^(.+?) drew (\d+) cards\.$/);
+        if (dr) draws.push(Number(dr[2]));
+        const sw = c.text.match(/^(.+?)'s (.+?) was switched with (.+?)'s (.+?) to become the Active Pok[eé]mon\.$/);
+        if (sw) switches.push({ handle: sw[1], from: sw[2], to: sw[4] });
+      }
+      return action("play_item", m[1], b.text, {
+        card: m[2],
+        revealed_cards: revealed,
+        draws_caused: draws,
+        forced_switches: switches,
+      });
+    },
+  },
+
+  // ── Game end ─────────────────────────────────────────────────
+  {
+    re: /^All Prize cards taken\. (.+?) wins\.$/,
+    handle: (m, b) =>
+      action("game_end", m[1], b.text, { reason: "prizes", winner: m[1] }),
+  },
+  {
+    re: /^(.+?) had no Pok[eé]mon left\. (.+?) wins\.$/,
+    handle: (m, b) =>
+      action("game_end", m[2], b.text, {
+        reason: "no_active",
+        winner: m[2],
+        loser: m[1],
+      }),
+  },
+  {
+    re: /^(.+?) decked out\. (.+?) wins\.$/,
+    handle: (m, b) =>
+      action("game_end", m[2], b.text, {
+        reason: "deck_out",
+        winner: m[2],
+        loser: m[1],
+      }),
+  },
+  {
+    re: /^(.+?) conceded\. (.+?) wins\.$/,
+    handle: (m, b) =>
+      action("game_end", m[2], b.text, {
+        reason: "concede",
+        winner: m[2],
+        loser: m[1],
+      }),
+  },
+];
+
+/* ─── Block → actions ─────────────────────────────────────────── */
+
+/**
+ * Some child (dash) lines carry meaningful state changes that deserve
+ * their own action entries — conditions inflicted by trainer effects,
+ * energy attaches inside Janine's Secret Art / N's PP Up, checkup damage
+ * counter placement. Extract them so the action stream is complete even
+ * when the parent block is something generic like "played Janine's
+ * Secret Art."
+ */
+function extractChildActions(block: Block): ParsedAction[] {
+  const out: ParsedAction[] = [];
+  for (const child of block.children) {
+    if (child.kind !== "dash") continue;
+    const t = normalizeQuotes(child.text);
+
+    const cond = t.match(
+      /^(.+?)'s (.+?) is now (Poisoned|Burned|Asleep|Confused|Paralyzed)\.$/,
+    );
+    if (cond) {
+      out.push(
+        action("condition_applied", cond[1], child.raw, {
+          pokemon: cond[2],
+          condition: cond[3],
+        }),
+      );
+      continue;
+    }
+
+    const attachActive = t.match(
+      /^(.+?) attached (.+?) to (.+?) in the Active Spot\.$/,
+    );
+    if (attachActive) {
+      out.push(
+        action("attach_energy", attachActive[1], child.raw, {
+          energy: attachActive[2],
+          target: attachActive[3],
+          location: "active",
+          via_effect: true,
+        }),
+      );
+      continue;
+    }
+
+    const attachBench = t.match(
+      /^(.+?) attached (.+?) to (.+?) on the Bench\.$/,
+    );
+    if (attachBench) {
+      out.push(
+        action("attach_energy", attachBench[1], child.raw, {
+          energy: attachBench[2],
+          target: attachBench[3],
+          location: "bench",
+          via_effect: true,
+        }),
+      );
+      continue;
+    }
+
+    const counter = t.match(
+      /^(\d+) damage counter(?:s)? (?:was|were) placed on (.+?)'s (.+?) for the Special Condition (Poisoned|Burned)\.$/,
+    );
+    if (counter) {
+      out.push(
+        action("damage_counter_placed", counter[2], child.raw, {
+          counters: Number(counter[1]),
+          pokemon: counter[3],
+          from_condition: counter[4],
+        }),
+      );
+    }
+  }
+  return out;
+}
+
+function parseBlock(block: Block): { actions: ParsedAction[]; unmatched: boolean } {
+  const text = normalizeQuotes(block.text);
+  for (const p of PATTERNS) {
+    const m = text.match(p.re);
+    if (m) {
+      const result = p.handle(m, { ...block, text });
+      if (!result) continue;
+      const primary = Array.isArray(result) ? result : [result];
+      return {
+        actions: [...primary, ...extractChildActions(block)],
+        unmatched: false,
+      };
+    }
+  }
+  return {
+    actions: [
+      action("unknown", null, block.text),
+      ...extractChildActions(block),
+    ],
+    unmatched: true,
+  };
+}
+
+/* ─── Main entry ──────────────────────────────────────────────── */
+
+export function parseBattleLog(raw: string): BattleLogParseResult {
+  const sections: Section[] = tokenize(raw);
+
+  const actions: ParsedAction[] = [];
+  const turns: ParsedTurn[] = [];
+  const unmatched: string[] = [];
+  const handleSeen: string[] = [];
+
+  function noteHandle(h: string | null) {
+    if (!h) return;
+    if (!handleSeen.includes(h)) handleSeen.push(h);
+  }
+
+  // Per-player turn counters keyed by raw handle.
+  const turnCountByHandle = new Map<string, number>();
+
+  let turnNumber = 0;
+
+  for (const section of sections) {
+    if (section.kind === "other") continue;
+
+    turnNumber += 1;
+    const phase =
+      section.kind === "setup"
+        ? "setup"
+        : section.kind === "checkup"
+        ? "checkup"
+        : "turn";
+
+    let playerTurnNumber: number | null = null;
+    if (section.kind === "turn" && section.handle) {
+      const prev = turnCountByHandle.get(section.handle) ?? 0;
+      playerTurnNumber = prev + 1;
+      turnCountByHandle.set(section.handle, playerTurnNumber);
+    }
+
+    const turnAt = actions.length;
+
+    // For "turn" sections, synthesize an explicit turn_start at the top so
+    // the action stream is self-describing without leaning on the turns
+    // table. (Helpful for downstream analytics queries.)
+    if (section.kind === "turn" && section.handle) {
+      actions.push(
+        action("turn_start", section.handle, section.header ?? `${section.handle}'s Turn`, {
+          phase,
+          turn_number: turnNumber,
+          player_turn_number: playerTurnNumber,
+        }),
+      );
+      noteHandle(section.handle);
+    }
+
+    for (const block of section.blocks) {
+      const result = parseBlock(block);
+      for (const a of result.actions) {
+        actions.push(a);
+        noteHandle(a.actor_handle);
+        // Game-end winner handle is in payload, also worth tracking.
+        if (a.action_type === "game_end" && typeof a.payload.winner === "string") {
+          noteHandle(a.payload.winner);
+        }
+      }
+      if (result.unmatched) unmatched.push(block.text);
+    }
+
+    const turnEnd = actions.length;
+
+    turns.push({
+      turn_number: turnNumber,
+      player_turn_number: playerTurnNumber,
+      actor:
+        section.kind === "checkup" || section.kind === "setup" ? "system" : "player", // placeholder, normalized later
+      actor_handle: section.handle,
+      phase,
+      action_indices: Array.from({ length: turnEnd - turnAt }, (_, i) => turnAt + i),
+    });
+  }
+
+  return {
+    handles: handleSeen,
+    player_handle: null,
+    opponent_handle: null,
+    actions,
+    turns,
+    unmatched,
+    parser_version: PARSER_VERSION,
+  };
+}
