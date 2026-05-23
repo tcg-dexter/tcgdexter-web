@@ -12,12 +12,6 @@ interface AnalysisCard {
   section: "pokemon" | "trainer" | "energy";
 }
 
-const SECTION_ORDER: Record<AnalysisCard["section"], number> = {
-  pokemon: 0,
-  trainer: 1,
-  energy: 2,
-};
-
 interface Tile {
   name: string;
   copyCount: number;
@@ -40,6 +34,102 @@ function resolveEntry(
     candidates.find((c) => c.number === card.number) ??
     candidates[0]
   );
+}
+
+/**
+ * Order a deck's tiles for the grid:
+ *   • Pokémon first, grouped into evolution lines (Basic → Stage 1 → … → Mega).
+ *     A tile's evolvesFrom is matched (case-insensitive) against other Pokémon
+ *     names in the deck. Chains that bottom out at a Pokémon not in the deck
+ *     still group together — that Pokémon's lowest-in-deck stage acts as the
+ *     root. Lines are ordered by total copy count desc (most-played line
+ *     first); within a line, by evolution depth asc, then qty desc, name asc.
+ *   • Trainers next, then Energy. Both sorted by qty desc, name asc — no
+ *     evolution grouping applies.
+ *
+ * Safe when `evolvesFrom` is null everywhere (pre-backfill): every Pokémon
+ * becomes its own line, so the result degrades to the previous qty/name
+ * ordering within section.
+ */
+function orderTiles(tiles: Tile[]): Tile[] {
+  const pokemon = tiles.filter((t) => t.section === "pokemon");
+  const trainer = tiles.filter((t) => t.section === "trainer");
+  const energy = tiles.filter((t) => t.section === "energy");
+
+  return [...orderPokemonByLine(pokemon), ...byQtyName(trainer), ...byQtyName(energy)];
+}
+
+function byQtyName(tiles: Tile[]): Tile[] {
+  return [...tiles].sort(
+    (a, b) =>
+      b.copyCount - a.copyCount || a.name.localeCompare(b.name),
+  );
+}
+
+function orderPokemonByLine(tiles: Tile[]): Tile[] {
+  if (tiles.length <= 1) return tiles;
+
+  const byLowerName = new Map<string, Tile>();
+  for (const t of tiles) byLowerName.set(t.name.toLowerCase(), t);
+
+  // Resolve each tile's in-deck parent (or null if its evolvesFrom isn't in
+  // the deck, or it's a Basic with no evolvesFrom).
+  const parentOf = new Map<Tile, Tile | null>();
+  for (const t of tiles) {
+    const parentName = t.entry?.evolvesFrom?.trim().toLowerCase() ?? null;
+    parentOf.set(t, parentName ? byLowerName.get(parentName) ?? null : null);
+  }
+
+  // Walk to the root for each tile (defensive against cycles).
+  function rootOf(tile: Tile): Tile {
+    const seen = new Set<Tile>();
+    let cur = tile;
+    while (parentOf.get(cur) && !seen.has(cur)) {
+      seen.add(cur);
+      cur = parentOf.get(cur)!;
+    }
+    return cur;
+  }
+
+  function depthOf(tile: Tile): number {
+    const seen = new Set<Tile>();
+    let d = 0;
+    let cur = tile;
+    while (parentOf.get(cur) && !seen.has(cur)) {
+      seen.add(cur);
+      cur = parentOf.get(cur)!;
+      d++;
+    }
+    return d;
+  }
+
+  const linesByRoot = new Map<Tile, Tile[]>();
+  for (const t of tiles) {
+    const root = rootOf(t);
+    const arr = linesByRoot.get(root) ?? [];
+    arr.push(t);
+    linesByRoot.set(root, arr);
+  }
+
+  const lines = Array.from(linesByRoot.entries()).map(([root, members]) => ({
+    root,
+    members,
+    totalQty: members.reduce((s, t) => s + t.copyCount, 0),
+  }));
+  lines.sort(
+    (a, b) =>
+      b.totalQty - a.totalQty || a.root.name.localeCompare(b.root.name),
+  );
+  for (const line of lines) {
+    line.members.sort(
+      (a, b) =>
+        depthOf(a) - depthOf(b) ||
+        b.copyCount - a.copyCount ||
+        a.name.localeCompare(b.name),
+    );
+  }
+
+  return lines.flatMap((l) => l.members);
 }
 
 /**
@@ -82,7 +172,7 @@ export default function DeckCardGrid({ cards }: { cards: AnalysisCard[] }) {
     if (arr) arr.push(c);
     else byNameIndex.set(c.nameLower, [c]);
   }
-  const tiles = Array.from(grouped.values()).map((tile) => {
+  const allTiles = Array.from(grouped.values()).map((tile) => {
     tile.entry = resolveEntry(byNameIndex, {
       name: tile.name,
       number: tile.fallbackNumber,
@@ -90,12 +180,8 @@ export default function DeckCardGrid({ cards }: { cards: AnalysisCard[] }) {
     });
     return tile;
   });
-  tiles.sort((a, b) => {
-    const so = SECTION_ORDER[a.section] - SECTION_ORDER[b.section];
-    if (so) return so;
-    if (b.copyCount !== a.copyCount) return b.copyCount - a.copyCount;
-    return a.name.localeCompare(b.name);
-  });
+
+  const tiles = orderTiles(allTiles);
 
   if (tiles.length === 0) return null;
 
