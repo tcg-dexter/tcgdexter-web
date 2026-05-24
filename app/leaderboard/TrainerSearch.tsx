@@ -8,7 +8,6 @@ interface ProfileHit {
   display_name: string;
   username: string;
   avatar_url: string | null;
-  trainer_title: string | null;
 }
 
 export default function TrainerSearch() {
@@ -34,7 +33,7 @@ export default function TrainerSearch() {
       const supabase = createClient();
       const { data } = await supabase
         .from("profiles")
-        .select("display_name, username, avatar_url, trainer_title")
+        .select("display_name, username, avatar_url")
         .eq("is_public", true)
         .not("username", "is", null)
         .or(`username.ilike.${val.toLowerCase()}%,display_name.ilike.${val}%`)
@@ -94,9 +93,6 @@ export default function TrainerSearch() {
                   <div className="text-sm font-semibold text-text-primary truncate">{p.display_name}</div>
                   <div className="text-xs text-text-muted">@{p.username}</div>
                 </div>
-                {p.trainer_title && (
-                  <div className="ml-auto text-xs text-text-muted flex-shrink-0">{p.trainer_title}</div>
-                )}
               </Link>
             </li>
           ))}

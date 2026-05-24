@@ -3,7 +3,6 @@
 import { useState, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { getTierByTitle } from "@/lib/trainer-tiers";
 import archetypesRaw from "@/data/meta-archetypes.json";
 
 interface Archetype {
@@ -17,7 +16,6 @@ interface TrainerResult {
   username: string;
   display_name: string;
   avatar_url: string | null;
-  trainer_title: string | null;
 }
 
 interface DeckResult {
@@ -77,7 +75,7 @@ export default function UnifiedSearch({ dropdownPosition = "below" }: Props = {}
     const [{ data: trainers }, { data: rawDecks }] = await Promise.all([
       supabase
         .from("profiles")
-        .select("display_name, username, avatar_url, trainer_title")
+        .select("display_name, username, avatar_url")
         .eq("is_public", true)
         .not("username", "is", null)
         .or(`username.ilike.${val.toLowerCase()}%,display_name.ilike.${val}%`)
@@ -187,7 +185,6 @@ export default function UnifiedSearch({ dropdownPosition = "below" }: Props = {}
                     Trainers
                   </p>
                   {results.trainers.map((t) => {
-                    const tier = getTierByTitle(t.trainer_title ?? "Rookie Trainer");
                     const initial = t.display_name.trim().charAt(0).toUpperCase();
                     return (
                       <Link
@@ -213,11 +210,6 @@ export default function UnifiedSearch({ dropdownPosition = "below" }: Props = {}
                           </span>
                           <span className="text-xs text-text-muted">@{t.username}</span>
                         </div>
-                        <span
-                          className={`hidden sm:inline text-xs font-semibold px-1.5 py-0.5 rounded-full border flex-shrink-0 ${tier.color} ${tier.borderColor} ${tier.bgColor}`}
-                        >
-                          {tier.title}
-                        </span>
                       </Link>
                     );
                   })}

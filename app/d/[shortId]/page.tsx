@@ -7,7 +7,6 @@ import DeckProfileView, {
 } from "@/app/components/DeckProfileView";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getTierByTitle } from "@/lib/trainer-tiers";
 import { repriceDeck } from "@/lib/reprice-deck";
 import QRCodeButton from "@/app/components/QRCodeButton";
 import CopyDeckListButton from "@/app/components/CopyDeckListButton";
@@ -51,16 +50,12 @@ async function fetchCreator(userId: string | null): Promise<DeckCreator | null> 
     const admin = createAdminClient();
     const { data } = await admin
       .from("profiles")
-      .select("display_name, trainer_title")
+      .select("display_name")
       .eq("id", userId)
       .maybeSingle();
     if (!data) return null;
-    const tier = getTierByTitle(data.trainer_title ?? "Rookie Trainer");
     return {
       displayName: data.display_name ?? "Trainer",
-      trainerTitle: tier.title,
-      badgeSlug: tier.slug,
-      tierColor: tier.color,
     };
   } catch {
     return null;

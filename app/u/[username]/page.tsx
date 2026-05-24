@@ -2,7 +2,6 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getTierByTitle } from "@/lib/trainer-tiers";
 import { UserDeckCard } from "@/app/components/DeckPostCard";
 import { primaryCardImageUrl } from "@/lib/primaryCardImage";
 import MatchHeatMap from "@/app/profile/MatchHeatMap";
@@ -18,7 +17,6 @@ interface ProfileRow {
   display_name: string;
   username: string;
   bio: string | null;
-  trainer_title: string | null;
   created_at: string;
   is_public: boolean;
 }
@@ -80,7 +78,7 @@ export default async function ProfilePage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, display_name, username, bio, trainer_title, created_at, is_public")
+    .select("id, display_name, username, bio, created_at, is_public")
     .eq("username", username.toLowerCase())
     .maybeSingle();
   if (!profile) notFound();
@@ -191,11 +189,11 @@ export default async function ProfilePage({
       ]
     : [];
 
-  const tier = getTierByTitle(profile.trainer_title ?? "Rookie Trainer");
   const joinedDate = new Date(profile.created_at).toLocaleDateString("en-US", {
     month: "short",
     year: "numeric",
   });
+  const initial = profile.display_name.trim().charAt(0).toUpperCase();
 
   const achievements = await listAchievements(supabase, profile.id);
   const certifiedTrainer = achievements.find((a) => a.key === CERTIFIED_TRAINER);
@@ -214,12 +212,9 @@ export default async function ProfilePage({
       <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5 mb-6">
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`/badges/${tier.slug}.svg`}
-              alt={tier.title}
-              className="w-14 h-14"
-            />
+            <div className="w-14 h-14 rounded-full bg-surface flex items-center justify-center text-xl font-bold text-text-secondary">
+              {initial}
+            </div>
           </div>
 
           <div className="flex-1 min-w-0">
@@ -230,11 +225,6 @@ export default async function ProfilePage({
                 </h1>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   <span className="text-sm text-text-muted">@{profile.username}</span>
-                  <span
-                    className={`text-xs font-semibold px-1.5 py-0.5 rounded-full border ${tier.color} ${tier.borderColor} ${tier.bgColor}`}
-                  >
-                    {tier.title}
-                  </span>
                 </div>
               </div>
               {isOwner && (

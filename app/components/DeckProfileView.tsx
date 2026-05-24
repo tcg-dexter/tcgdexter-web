@@ -244,10 +244,6 @@ function StatPill({ count, label }: { count: number; label: string }) {
 
 export interface DeckCreator {
   displayName: string;
-  trainerTitle: string;
-  badgeSlug: string;
-  /** Tailwind text-color class for the tier. */
-  tierColor: string;
 }
 
 interface Props {
@@ -576,22 +572,12 @@ export default function DeckProfileView({
       <main className="flex-1 px-6 pb-20">
         <div className="mx-auto max-w-2xl flex flex-col gap-4">
 
-          {/* Creator badge card */}
+          {/* Creator attribution */}
           {creator && (
-            <div className={`flex items-center gap-3 ${CARD_CLS} px-4 py-3`}>
-              <img
-                src={`/badges/${creator.badgeSlug}.svg`}
-                alt={creator.trainerTitle}
-                className="w-10 h-10 flex-shrink-0"
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-text-primary truncate">
-                  {creator.displayName}
-                </p>
-                <p className={`text-xs font-medium ${creator.tierColor}`}>
-                  {creator.trainerTitle}
-                </p>
-              </div>
+            <div className={`flex items-center ${CARD_CLS} px-4 py-3`}>
+              <p className="text-sm font-semibold text-text-primary truncate">
+                {creator.displayName}
+              </p>
             </div>
           )}
 
