@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import MatchForm, { type MatchFormData } from "@/app/components/MatchForm";
 import MatchEntry from "@/app/components/MatchEntry";
+import BattleLogDetail from "@/app/components/BattleLogDetail";
 import {
   deckResult,
   viewerLost,
@@ -22,6 +23,7 @@ interface Match {
   opponent_deck_list: string | null;
   notes: string | null;
   played_at: string | null;
+  source?: "manual" | "tcg_live_log";
 }
 
 export interface SharedDeckMatchRow extends SharedMatchCore {
@@ -93,6 +95,7 @@ export default function MatchLog({
   const router = useRouter();
   const [matches, setMatches] = useState<Match[]>(initialMatches);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [logOpenId, setLogOpenId] = useState<string | null>(null);
 
   // Support both controlled (open prop) and uncontrolled (internal state) modes.
   const [internalOpen, setInternalOpen] = useState(false);
@@ -332,72 +335,98 @@ export default function MatchLog({
                   </div>
                 );
               }
+              const hasLog = match.source === "tcg_live_log";
+              const logOpen = logOpenId === match.id;
               return (
                 <div
                   key={match.id}
-                  className={`flex items-start gap-3 px-1 py-3 ${
+                  className={`px-1 py-3 ${
                     i < arr.length - 1 ? "border-b border-border/50" : ""
                   }`}
                 >
-                  <span
-                    className={`flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold ${s.bg} ${s.text}`}
-                  >
-                    {s.label}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 text-sm">
-                      {match.opponent_archetype && (
-                        <span className="font-semibold text-text-primary truncate">
-                          vs {match.opponent_archetype}
-                        </span>
-                      )}
-                      {match.opponent_name && !match.opponent_archetype && (
-                        <span className="font-semibold text-text-primary truncate">
-                          vs {match.opponent_name}
-                        </span>
-                      )}
-                      {match.opponent_name && match.opponent_archetype && (
-                        <span className="text-xs text-text-muted truncate">
-                          ({match.opponent_name})
-                        </span>
-                      )}
-                      {!match.opponent_archetype && !match.opponent_name && (
-                        <span className="text-text-muted text-sm">Match logged</span>
+                  <div className="flex items-start gap-3">
+                    <span
+                      className={`flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold ${s.bg} ${s.text}`}
+                    >
+                      {s.label}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 text-sm">
+                        {match.opponent_archetype && (
+                          <span className="font-semibold text-text-primary truncate">
+                            vs {match.opponent_archetype}
+                          </span>
+                        )}
+                        {match.opponent_name && !match.opponent_archetype && (
+                          <span className="font-semibold text-text-primary truncate">
+                            vs {match.opponent_name}
+                          </span>
+                        )}
+                        {match.opponent_name && match.opponent_archetype && (
+                          <span className="text-xs text-text-muted truncate">
+                            ({match.opponent_name})
+                          </span>
+                        )}
+                        {!match.opponent_archetype && !match.opponent_name && (
+                          <span className="text-text-muted text-sm">Match logged</span>
+                        )}
+                      </div>
+                      {match.notes && (
+                        <p className="text-xs text-text-muted mt-0.5 leading-relaxed">
+                          {match.notes}
+                        </p>
                       )}
                     </div>
-                    {match.notes && (
-                      <p className="text-xs text-text-muted mt-0.5 leading-relaxed">
-                        {match.notes}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {dateStr && (
-                      <span className="text-xs text-text-muted">{dateStr}</span>
-                    )}
-                    {!readOnly && (
-                      <>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {dateStr && (
+                        <span className="text-xs text-text-muted">{dateStr}</span>
+                      )}
+                      {hasLog && (
                         <button
-                          onClick={() => { setEditingId(match.id); closeForm(); }}
-                          className="text-text-muted/50 hover:text-accent transition-colors"
-                          title="Edit match"
+                          onClick={() =>
+                            setLogOpenId((prev) => (prev === match.id ? null : match.id))
+                          }
+                          className={`transition-colors ${
+                            logOpen
+                              ? "text-accent"
+                              : "text-text-muted/50 hover:text-accent"
+                          }`}
+                          aria-label={logOpen ? "Hide battle log" : "View battle log"}
+                          aria-expanded={logOpen}
+                          title={logOpen ? "Hide battle log" : "View battle log"}
                         >
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                          {/* clipboard-list / log icon */}
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 4h6a1 1 0 011 1v1h3a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h3V5a1 1 0 011-1z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6M9 16h6M9 8h6" />
                           </svg>
                         </button>
-                        <button
-                          onClick={() => handleDelete(match.id)}
-                          className="text-text-muted/50 hover:text-accent transition-colors"
-                          title="Delete match"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </>
-                    )}
+                      )}
+                      {!readOnly && (
+                        <>
+                          <button
+                            onClick={() => { setEditingId(match.id); closeForm(); }}
+                            className="text-text-muted/50 hover:text-accent transition-colors"
+                            title="Edit match"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(match.id)}
+                            className="text-text-muted/50 hover:text-accent transition-colors"
+                            title="Delete match"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
+                  {hasLog && logOpen && <BattleLogDetail matchId={match.id} />}
                 </div>
               );
             }
