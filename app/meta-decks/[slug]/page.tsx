@@ -304,8 +304,6 @@ export default async function MetaDeckDetailPage({
                   creator={v.creator}
                   deckList={v.deckList}
                   cardImageUrl={v.cardImageUrl}
-                  iconUrl={iconUrl}
-                  iconBg={iconBg}
                   counts={v.counts}
                 />
               ))}
