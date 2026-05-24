@@ -251,17 +251,6 @@ export default async function MetaDeckDetailPage({
 
   return (
     <main className="min-h-dvh flex flex-col bg-bg">
-      {/* Suppress the mobile hamburger toolbar on this route so the
-          banner anchors to the very top of the viewport. The back
-          button overlaid on the banner is the only nav affordance
-          needed here. The site-wide toolbar is `xl:hidden` already, so
-          this only affects below-xl widths -- the dual desktop
-          sidebars are untouched. */}
-      <style
-        dangerouslySetInnerHTML={{
-          __html: "[data-site-toolbar]{display:none}",
-        }}
-      />
       {/* Match the iOS Safari chrome + status-bar color to the banner
           background so the page reads as one continuous surface from
           the time/battery row down through the banner. Falls back to
