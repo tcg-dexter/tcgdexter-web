@@ -260,7 +260,7 @@ export default async function MetaDeckDetailPage({
           below-xl widths. */}
       <style
         dangerouslySetInnerHTML={{
-          __html: `[data-site-toolbar]{background:${iconBg ?? "#B0A89E"};backdrop-filter:none;-webkit-backdrop-filter:none}`,
+          __html: `[data-site-toolbar]{background:${iconBg ?? "#B0A89E"};backdrop-filter:none;-webkit-backdrop-filter:none}[data-site-toolbar] button[aria-label="Toggle navigation menu"]{color:#fff}`,
         }}
       />
       {/* Match the iOS Safari chrome + status-bar color to the banner
