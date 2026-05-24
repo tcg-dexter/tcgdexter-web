@@ -160,12 +160,22 @@ function matchAndScore(
         tokenScore = 15;
       } else if (card.nameLower.includes(w)) {
         tokenScore = 5;
+      } else if (card.effectNames.some((n) => n === w)) {
+        tokenScore = 22;
+      } else if (card.effectNameTokens.some((tok) => tok === w)) {
+        tokenScore = 18;
+      } else if (card.effectNameTokens.some((tok) => tok.startsWith(w))) {
+        tokenScore = 12;
       } else if (card.artistTokens.some((tok) => tok === w)) {
         tokenScore = 12;
       } else if (card.artistTokens.some((tok) => tok.startsWith(w))) {
         tokenScore = 8;
       } else if (card.artistLower?.includes(w)) {
         tokenScore = 4;
+      } else if (card.effectText.includes(w)) {
+        // Substring fallback for effect text — lowest priority since it'll
+        // happily match common words like "draw" or "damage".
+        tokenScore = 3;
       } else {
         return null;
       }
