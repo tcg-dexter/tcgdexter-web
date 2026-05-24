@@ -260,21 +260,21 @@ export function searchCards(params: CardSearchParams): CardSearchResult {
         if (s == null) continue;
         filtered.push({ card: c, score: s });
       }
-      filtered.sort((a, b) => b.score - a.score || compareCards(a.card, b.card, sort, dir));
-      const total = filtered.length;
-      const start = (page - 1) * pageSize;
-      return {
-        cards: filtered.slice(start, start + pageSize).map((s) => s.card),
-        total,
-        page,
-        pageSize,
-      };
+      // Fall through to the shared sort path below. Earlier we sorted by
+      // score-desc here with the user's sort as a tiebreaker, but that made
+      // the sort picker effectively inert during search — a query like
+      // "mew" produces wildly different scores (name hit vs. effect-text
+      // hit), so the score always dominated. Use the user's sort as the
+      // primary ordering and keep score as a *tiebreaker* via compareCards.
     }
   } else {
     filtered = all.filter((c) => applyFilters(c, params)).map((c) => ({ card: c, score: 0 }));
   }
 
-  filtered.sort((a, b) => compareCards(a.card, b.card, sort, dir));
+  filtered.sort(
+    (a, b) =>
+      compareCards(a.card, b.card, sort, dir) || b.score - a.score,
+  );
   const total = filtered.length;
   const start = (page - 1) * pageSize;
   return {
