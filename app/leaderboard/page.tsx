@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getTierByTitle } from "@/lib/trainer-tiers";
 import { UserDeckCard } from "@/app/components/DeckPostCard";
 import { primaryCardImageUrl } from "@/lib/primaryCardImage";
 // Note: the global UnifiedSearch (./UnifiedSearch) used to live here in the
@@ -15,7 +14,6 @@ interface ProfileRow {
   display_name: string;
   username: string;
   avatar_url: string | null;
-  trainer_title: string | null;
 }
 
 interface DeckRow {
@@ -71,7 +69,7 @@ async function fetchLeaderboard(): Promise<Array<ProfileRow & { totalLikes: numb
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, display_name, username, avatar_url, trainer_title")
+    .select("id, display_name, username, avatar_url")
     .in("id", topIds)
     .eq("is_public", true)
     .not("username", "is", null);
@@ -142,7 +140,7 @@ export default async function LeaderboardPage() {
       {top3.length > 0 && (
         <div className="rounded-xl border border-black/8 bg-white shadow-sm overflow-hidden mb-8">
           {top3.map((trainer, i) => {
-            const tier = getTierByTitle(trainer.trainer_title ?? "Rookie Trainer");
+            const initial = trainer.display_name.trim().charAt(0).toUpperCase();
             return (
               <Link
                 key={trainer.id}
@@ -150,13 +148,17 @@ export default async function LeaderboardPage() {
                 className="flex items-center gap-3 px-5 py-4 hover:bg-black/[0.02] transition border-b border-black/5 last:border-b-0"
               >
                 <span className="text-xl w-7 flex-shrink-0">{rankMedal[i]}</span>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/badges/${tier.slug}.svg`} alt={tier.title} className="w-8 h-8 flex-shrink-0" />
+                {trainer.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={trainer.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-surface flex items-center justify-center text-sm font-bold text-text-secondary flex-shrink-0">
+                    {initial}
+                  </div>
+                )}
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-semibold text-text-primary truncate">{trainer.display_name}</div>
-                </div>
-                <div className={`hidden sm:flex text-xs font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 ${tier.color} ${tier.borderColor} ${tier.bgColor}`}>
-                  {tier.title}
+                  <div className="text-xs text-text-muted truncate">@{trainer.username}</div>
                 </div>
                 <div className="text-xs text-text-muted flex-shrink-0">
                   <span className="font-semibold tabular-nums text-text-primary">{trainer.totalLikes}</span> likes

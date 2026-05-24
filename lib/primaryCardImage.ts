@@ -1,4 +1,5 @@
 import cardData from "@/data/cards-standard.json";
+import { cardImageSmall } from "@/lib/cardImages";
 
 interface AnalysisCard {
   qty: number;
@@ -53,16 +54,37 @@ function resolveEntry(card: Pick<AnalysisCard, "name" | "number" | "setCode">):
   );
 }
 
+/** Strict resolver — only returns an entry when set+number both match. Used
+ *  for image URL lookups where a loose fallback would produce a wrong-card
+ *  image (e.g. "Psychic Energy MEE 5" matching base1 Blastoise via number=5). */
+function resolveEntryExact(
+  card: Pick<AnalysisCard, "name" | "number" | "setCode">,
+): CardEntry | null {
+  const entries =
+    CARD_DB[card.name] ??
+    CARD_DB_LOWER.get(card.name.toLowerCase()) ??
+    [];
+  return (
+    entries.find((e) => e.ptcgo_code === card.setCode && e.number === card.number) ??
+    null
+  );
+}
+
 /**
- * Resolve a single deck-list card to its pokemontcg.io image URL.
- * Returns null when the card name + number can't be matched in the DB.
+ * Resolve a single deck-list card to its image URL. Returns null when no
+ * exact set+number match exists in the local DB — callers should treat
+ * null as "no image available" and skip the card. We deliberately do NOT
+ * fall back to a loose number-only or first-entry match: pokemontcg.io
+ * serves a card-back PNG body on 404, so a wrong-set URL renders as a
+ * card back rather than failing visibly. Routes through cardImageSmall
+ * so per-set CDN overrides (ME-era sets etc.) are honored.
  */
 export function cardImageUrlFor(
   card: Pick<AnalysisCard, "name" | "number" | "setCode">,
 ): string | null {
-  const match = resolveEntry(card);
+  const match = resolveEntryExact(card);
   if (!match?.set_id) return null;
-  return `https://images.pokemontcg.io/${match.set_id}/${card.number}.png`;
+  return cardImageSmall(match.set_id, card.number);
 }
 
 /**

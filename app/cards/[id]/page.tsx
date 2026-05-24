@@ -7,6 +7,7 @@ import {
   getRawCard,
 } from "@/lib/cardsIndex";
 import { cardImageLarge, cardImageSmall } from "@/lib/cardImages";
+import BackButton from "@/app/components/ui/BackButton";
 import CardImage from "../CardImage";
 
 interface Props {
@@ -41,10 +42,11 @@ export default function CardDetailPage({ params }: Props) {
 
   return (
     <main className="mx-auto max-w-5xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
-      <div className="mb-4">
-        <Link href="/cards" className="text-xs font-semibold text-text-secondary hover:text-text-primary">
-          ← Back to Cards
-        </Link>
+      {/* Desktop-only spacing wrapper — on mobile the BackButton portals
+          into the sticky toolbar, so we collapse this row to avoid a
+          phantom 16px gap above the card content. */}
+      <div className="hidden xl:block mb-4">
+        <BackButton href="/cards" ariaLabel="Back to Cards" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-[minmax(0,400px)_1fr] gap-6">

@@ -90,8 +90,8 @@ export default function MetaDecksClient({ items }: Props) {
               setDir(d);
             }}
           >
-            <option value="representation:desc">Meta Makeup (Descending)</option>
-            <option value="representation:asc">Meta Makeup (Ascending)</option>
+            <option value="representation:desc">Meta Share (Descending)</option>
+            <option value="representation:asc">Meta Share (Ascending)</option>
             <option value="name:asc">Deck Name (A–Z)</option>
             <option value="name:desc">Deck Name (Z–A)</option>
             <option value="likes:desc">Likes (Descending)</option>

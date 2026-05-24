@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import archetypesRaw from "@/data/meta-archetypes.json";
 import metaDecksRaw from "@/data/meta-decks.json";
 import { metaPrimaryCard, typeColor } from "@/lib/metaPrimaryCard";
 import { cardImageUrlFor } from "@/lib/primaryCardImage";
 import ThemeColor from "@/app/components/ThemeColor";
+import BackButton from "@/app/components/ui/BackButton";
 import MetaProfileHeader from "./MetaProfileHeader";
 import MetaVariantCard from "./MetaVariantCard";
 
@@ -103,11 +103,13 @@ function countsFor(cards: DeckCard[]): { pokemon: number; trainer: number; energ
  * tie-breaks by number of variants the card appears in (broader consensus
  * wins ties) then alphabetically. Skips any card the local DB can't
  * resolve to a pokemontcg.io image so the banner always renders real art.
+ * Each entry carries its category so callers can group the fan by
+ * energy / trainer / pokemon (left → right toward the title card).
  */
-function topCardImagesAcrossVariants(
+function topCardsAcrossVariants(
   variants: { cards: DeckCard[] }[],
   n: number,
-): string[] {
+): { url: string; category: DeckCard["category"] }[] {
   type Agg = { card: DeckCard; copies: number; variants: number };
   const acc = new Map<string, Agg>();
   for (const v of variants) {
@@ -129,13 +131,39 @@ function topCardImagesAcrossVariants(
     if (b.variants !== a.variants) return b.variants - a.variants;
     return a.card.name.localeCompare(b.card.name);
   });
-  const out: string[] = [];
+  const out: { url: string; category: DeckCard["category"] }[] = [];
   for (const entry of ranked) {
     if (out.length >= n) break;
     const url = cardImageUrlFor(entry.card);
-    if (url) out.push(url);
+    if (url) out.push({ url, category: entry.card.category });
   }
   return out;
+}
+
+/**
+ * Arrange the 6 non-title banner picks across the fan so categories are
+ * spatially grouped, reading left → right: energy → trainer → pokemon →
+ * (title card pinned to slot 7 by the caller). Within each category the
+ * most-popular card sits closest to the title card, so the eye flows
+ * from the boldest art at the right inward through related categories.
+ */
+function arrangeBannerByCategory(
+  picks: { url: string; category: DeckCard["category"] }[],
+): string[] {
+  const buckets: Record<DeckCard["category"], string[]> = {
+    energy: [],
+    trainer: [],
+    pokemon: [],
+  };
+  for (const p of picks) buckets[p.category].push(p.url);
+  // Each bucket arrives in popularity-descending order. Reverse so the
+  // most popular within the bucket lands at the inner (right) edge,
+  // closest to the next group / title card.
+  return [
+    ...buckets.energy.reverse(),
+    ...buckets.trainer.reverse(),
+    ...buckets.pokemon.reverse(),
+  ];
 }
 
 /**
@@ -191,11 +219,13 @@ export default async function MetaDeckDetailPage({
   if (titleCardImage) {
     // Ask for 8 (instead of 7) so we still get 6 strong ranked picks
     // even if the title card would have made the natural top 7.
-    const ranked = topCardImagesAcrossVariants(topFiveVariants, 8)
-      .filter((url) => url !== titleCardImage);
-    bannerCards = [...ranked.slice(0, 6), titleCardImage];
+    const ranked = topCardsAcrossVariants(topFiveVariants, 8)
+      .filter((p) => p.url !== titleCardImage)
+      .slice(0, 6);
+    bannerCards = [...arrangeBannerByCategory(ranked), titleCardImage];
   } else {
-    bannerCards = topCardImagesAcrossVariants(topFiveVariants, 7);
+    const ranked = topCardsAcrossVariants(topFiveVariants, 7);
+    bannerCards = arrangeBannerByCategory(ranked);
   }
 
   // Build per-variant cards for the top-5 grid. variantIndex on the URL
@@ -221,15 +251,16 @@ export default async function MetaDeckDetailPage({
 
   return (
     <main className="min-h-dvh flex flex-col bg-bg">
-      {/* Suppress the mobile hamburger toolbar on this route so the
-          banner anchors to the very top of the viewport. The back
-          button overlaid on the banner is the only nav affordance
-          needed here. The site-wide toolbar is `xl:hidden` already, so
-          this only affects below-xl widths -- the dual desktop
-          sidebars are untouched. */}
+      {/* Paint the mobile sticky toolbar in the banner color so the
+          toolbar, the iOS status bar (set via ThemeColor below), and the
+          banner itself all read as one continuous surface. The toolbar
+          stays sticky and in layout flow, but the visual seam between
+          it and the banner disappears because both are the same color.
+          The toolbar is `xl:hidden` already, so this only affects
+          below-xl widths. */}
       <style
         dangerouslySetInnerHTML={{
-          __html: "[data-site-toolbar]{display:none}",
+          __html: `[data-site-toolbar]{background:${iconBg ?? "#B0A89E"};backdrop-filter:none;-webkit-backdrop-filter:none}[data-site-toolbar] button[aria-label="Toggle navigation menu"]{color:#fff}`,
         }}
       />
       {/* Match the iOS Safari chrome + status-bar color to the banner
@@ -253,23 +284,7 @@ export default async function MetaDeckDetailPage({
         ties={arch.ties}
         totalEntries={arch.total_entries}
         preBanner={
-          /* Circular back button — overlays the top-left of the banner.
-             Translucent black so it reads against any card art. */
-          <Link
-            href="/meta-decks"
-            aria-label="Back to Top 30 Meta Decks"
-            className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-black/50 backdrop-blur-md text-white hover:bg-black/70 transition-colors shadow-sm"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2.5}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-            </svg>
-          </Link>
+          <BackButton href="/meta-decks" ariaLabel="Back to Top 30 Meta Decks" />
         }
       >
         {variantCards.length > 0 ? (
@@ -289,8 +304,6 @@ export default async function MetaDeckDetailPage({
                   creator={v.creator}
                   deckList={v.deckList}
                   cardImageUrl={v.cardImageUrl}
-                  iconUrl={iconUrl}
-                  iconBg={iconBg}
                   counts={v.counts}
                 />
               ))}

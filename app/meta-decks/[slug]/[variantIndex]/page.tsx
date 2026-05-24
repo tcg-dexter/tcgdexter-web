@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import archetypesRaw from "@/data/meta-archetypes.json";
 import metaDecksRaw from "@/data/meta-decks.json";
 import DeckProfileView from "@/app/components/DeckProfileView";
+import BackButton from "@/app/components/ui/BackButton";
 import { buildMetaAnalysis } from "@/lib/buildMetaAnalysis";
 
 interface Archetype {
@@ -146,12 +146,10 @@ export default async function MetaVariantPage({
       profiledAt={profiledAt}
       pageTitle={archetypeFullName}
       preTitle={
-        <Link
+        <BackButton
           href={`/meta-decks/${arch.id}`}
-          className="text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors underline-offset-2 hover:underline"
-        >
-          ← {archetypeFullName}
-        </Link>
+          ariaLabel={`Back to ${archetypeFullName}`}
+        />
       }
       subtitle={
         <span className="text-text-secondary">{subtitleText}</span>

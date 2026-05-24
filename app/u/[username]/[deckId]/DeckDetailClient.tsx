@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import BackButton from "@/app/components/ui/BackButton";
 import DeckProfileView, {
   type AnalysisResult,
   type DeckCreator,
@@ -23,6 +23,7 @@ interface Match {
   opponent_deck_list: string | null;
   notes: string | null;
   played_at: string;
+  source?: "manual" | "tcg_live_log";
 }
 
 interface ParsedCard {
@@ -215,12 +216,10 @@ export default function DeckDetailClient({
         creator={creator ?? undefined}
         shareUrl={canonicalShareUrl}
         preTitle={
-          <Link
+          <BackButton
             href={`/u/${username}`}
-            className="text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors underline-offset-2 hover:underline"
-          >
-            ← @{username}&apos;s decks
-          </Link>
+            ariaLabel={`Back to @${username}'s decks`}
+          />
         }
         subtitle={
           <div className="flex items-center gap-2">
@@ -284,12 +283,10 @@ export default function DeckDetailClient({
       subtitle={false}
       shareUrl={shareUrl}
       preTitle={
-        <Link
+        <BackButton
           href={`/u/${username}`}
-          className="text-xs font-semibold text-text-secondary hover:text-text-primary transition-colors underline-offset-2 hover:underline"
-        >
-          ← @{username}&apos;s decks
-        </Link>
+          ariaLabel={`Back to @${username}'s decks`}
+        />
       }
       preOverviewSlot={
         <>

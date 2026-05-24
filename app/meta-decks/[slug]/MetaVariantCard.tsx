@@ -25,10 +25,6 @@ interface Props {
   deckList: string;
   /** Primary card image for THIS variant's deck list (pokemontcg.io). */
   cardImageUrl: string | null;
-  /** Limitless sprite for the archetype (shared across variants). */
-  iconUrl: string | null;
-  /** Avatar bg colour — primary card's energy-type color. */
-  iconBg: string | null;
   /** Pokémon / Trainer / Energy totals for the variant's card list. */
   counts: CardCounts;
   /**
@@ -116,32 +112,20 @@ export default function MetaVariantCard({
   creator,
   deckList,
   cardImageUrl,
-  iconUrl,
-  iconBg,
   counts,
   href,
 }: Props) {
   const headerName = annotation
     ? `${archetypeName} ${annotation}`
     : archetypeName;
-  const initials = creator.trim().charAt(0).toUpperCase() || "T";
-  const playerBg = avatarBg(creator || "Trainer");
+  const displayCreator = creator || "Trainer";
+  const initials = displayCreator.trim().charAt(0).toUpperCase() || "T";
+  const playerBg = avatarBg(displayCreator);
 
   const body = (
     <div className="flex gap-3.5 p-3.5 pt-3">
       <CardArt url={cardImageUrl} name={headerName} />
       <div className="flex-1 min-w-0 flex flex-col">
-        <div className="flex items-center gap-1.5 mb-2">
-          <div
-            className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-[10px] font-bold text-white"
-            style={{ background: playerBg }}
-          >
-            {initials}
-          </div>
-          <p className="text-[13px] font-semibold text-text-muted truncate">
-            {creator || "Trainer"}
-          </p>
-        </div>
         <TypeCounts counts={counts} />
         {contextLabel && (
           <p className="mt-auto text-[11px] text-text-muted truncate">
@@ -152,49 +136,41 @@ export default function MetaVariantCard({
     </div>
   );
 
-  // When an href is set, the avatar circle and deck-name text in the
-  // header become individual Links so the copy-list button can still own
-  // its own click target without bubbling into a navigation. Mirrors the
-  // header pattern in UserDeckCard.
-  const avatarNode = iconUrl ? (
+  // Header avatar is the player's initials monogram, mirroring the
+  // UserDeckCard body style. When an href is set, the avatar circle and
+  // creator name become individual Links so the copy-list button can
+  // still own its own click target without bubbling.
+  const avatarNode = (
     <div
-      className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
-      style={{ background: iconBg ?? "#B0A89E" }}
+      className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-[12px] font-bold text-white"
+      style={{ background: playerBg }}
       aria-hidden
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={iconUrl}
-        alt=""
-        // Matches the breathing-room ratio used by the landing avatar
-        // (sprite ≈ 70% of the circle) for consistent meta-page chrome.
-        className="w-[20px] h-[20px] object-contain"
-      />
+      {initials}
     </div>
-  ) : null;
+  );
 
   return (
     <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-      {/* Header — archetype sprite + name + copy-list button. */}
+      {/* Header — creator monogram + creator name + copy-list button. */}
       <div className="flex items-center gap-2 px-3.5 pt-3">
-        {avatarNode &&
-          (href ? (
-            <Link href={href} aria-label={`Open ${headerName}`} className="shrink-0">
-              {avatarNode}
-            </Link>
-          ) : (
-            avatarNode
-          ))}
+        {href ? (
+          <Link href={href} aria-label={`Open ${displayCreator}`} className="shrink-0">
+            {avatarNode}
+          </Link>
+        ) : (
+          avatarNode
+        )}
         {href ? (
           <Link
             href={href}
             className="flex-1 min-w-0 text-[17px] font-semibold text-text-primary truncate hover:underline underline-offset-2"
           >
-            {headerName}
+            {displayCreator}
           </Link>
         ) : (
           <p className="flex-1 min-w-0 text-[17px] font-semibold text-text-primary truncate">
-            {headerName}
+            {displayCreator}
           </p>
         )}
         {/* Trailing slot — kept flush with the header's px-3.5 inset so the

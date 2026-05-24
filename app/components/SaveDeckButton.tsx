@@ -40,7 +40,6 @@ export default function SaveDeckButton({
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [signInPrompt, setSignInPrompt] = useState(false);
-  const [newTitle, setNewTitle] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -91,10 +90,6 @@ export default function SaveDeckButton({
       const data = await res.json();
       if (res.ok) {
         setStatus("saved");
-        if (data.newTitle) {
-          setNewTitle(data.newTitle);
-          setTimeout(() => setNewTitle(null), 6000);
-        }
         setTimeout(() => setStatus("idle"), 5000);
       } else {
         setStatus("error");
@@ -142,16 +137,6 @@ export default function SaveDeckButton({
           </>
         )}
       </button>
-
-      {/* ── Title upgrade toast ─────────────────────────────── */}
-      {newTitle && (
-        <div className="fixed bottom-16 left-1/2 -translate-x-1/2 z-50 rounded-lg bg-text-primary px-5 py-3 text-sm font-semibold text-bg shadow-lg animate-fade-toast flex items-center gap-3">
-          <svg className="w-5 h-5 text-yellow-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14l-5-4.87 6.91-1.01z" />
-          </svg>
-          <span>You earned the title: {newTitle}!</span>
-        </div>
-      )}
 
       {/* ── Error toast ────────────────────────────────────── */}
       {status === "error" && errorMsg && (

@@ -269,24 +269,15 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
           toolbar, so only one toolbar is ever rendered at a time. */}
       <div className="flex-shrink-0 backdrop-blur-xl bg-bg/70">
         <div className="mx-auto max-w-6xl px-6">
-          {/* Hamburger stays pinned in the same spot as the closed toolbar so
-              tapping doesn't shift between open and closed states. */}
-          <div className="h-14 flex items-center">
-            <button
-              onClick={closeMenu}
-              aria-label="Close navigation menu"
-            >
-              <HamburgerIcon />
-            </button>
-          </div>
-          {/* Logo sits below the hamburger, only visible while the panel
-              is open. Forced to `bg-bg` so the home page's brand gradient
-              doesn't bleed through the header's translucent `bg-bg/70`. */}
-          <div className="-mx-6 px-6 bg-bg">
+          {/* Header row: logo (home link) on the left, hamburger close on
+              the right. Both share the same h-14 baseline as the closed
+              toolbar so the hamburger doesn't shift between open and
+              closed states. */}
+          <div className="h-14 flex items-center justify-between">
             <Link
               href="/"
               aria-label="TCG Dexter — home"
-              className="inline-flex pt-4 pb-3"
+              className="inline-flex items-center"
               onClick={closeMenu}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -298,6 +289,12 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
                 className="h-8 w-auto"
               />
             </Link>
+            <button
+              onClick={closeMenu}
+              aria-label="Close navigation menu"
+            >
+              <HamburgerIcon />
+            </button>
           </div>
         </div>
       </div>

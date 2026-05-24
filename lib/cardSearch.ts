@@ -95,26 +95,24 @@ export interface CardSearchResult {
   pageSize: number;
 }
 
-function parseQueryTokens(q: string): { numeric: string[]; setCodes: Set<string>; words: string[] } {
+function parseQueryTokens(q: string): { numeric: string[]; words: string[] } {
   const tokens = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const knownCodes = new Set(
-    getSets()
-      .map((s) => s.ptcgoCode?.toLowerCase())
-      .filter((c): c is string => !!c)
-  );
   const numeric: string[] = [];
-  const setCodes = new Set<string>();
   const words: string[] = [];
   for (const t of tokens) {
     if (/^\d+(\/\d+)?$/.test(t)) {
       numeric.push(t.split("/")[0]);
-    } else if (knownCodes.has(t)) {
-      setCodes.add(t);
     } else {
+      // Note: we deliberately do *not* route set abbreviations (MEW,
+      // PAR, etc.) into a separate set-filter bucket. Many three-letter
+      // set codes collide with Pokémon names (Mew, Snom, Onix), and
+      // routing them to a set filter dropped the actual cards from the
+      // results. Users who want to scope by set use the explicit set
+      // filter chip; the free-text input is name + effect + artist.
       words.push(t);
     }
   }
-  return { numeric, setCodes, words };
+  return { numeric, words };
 }
 
 interface ScoredCard {
@@ -127,12 +125,6 @@ function matchAndScore(
   query: ReturnType<typeof parseQueryTokens>
 ): number | null {
   let score = 0;
-
-  if (query.setCodes.size > 0) {
-    const code = card.ptcgoCode?.toLowerCase();
-    if (!code || !query.setCodes.has(code)) return null;
-    score += 5;
-  }
 
   if (query.numeric.length > 0) {
     for (const n of query.numeric) {
@@ -160,12 +152,22 @@ function matchAndScore(
         tokenScore = 15;
       } else if (card.nameLower.includes(w)) {
         tokenScore = 5;
+      } else if (card.effectNames.some((n) => n === w)) {
+        tokenScore = 22;
+      } else if (card.effectNameTokens.some((tok) => tok === w)) {
+        tokenScore = 18;
+      } else if (card.effectNameTokens.some((tok) => tok.startsWith(w))) {
+        tokenScore = 12;
       } else if (card.artistTokens.some((tok) => tok === w)) {
         tokenScore = 12;
       } else if (card.artistTokens.some((tok) => tok.startsWith(w))) {
         tokenScore = 8;
       } else if (card.artistLower?.includes(w)) {
         tokenScore = 4;
+      } else if (card.effectText.includes(w)) {
+        // Substring fallback for effect text — lowest priority since it'll
+        // happily match common words like "draw" or "damage".
+        tokenScore = 3;
       } else {
         return null;
       }
@@ -248,7 +250,7 @@ export function searchCards(params: CardSearchParams): CardSearchResult {
 
   if (q) {
     const tokens = parseQueryTokens(q);
-    if (tokens.numeric.length === 0 && tokens.setCodes.size === 0 && tokens.words.length === 0) {
+    if (tokens.numeric.length === 0 && tokens.words.length === 0) {
       filtered = all.filter((c) => applyFilters(c, params)).map((c) => ({ card: c, score: 0 }));
     } else {
       filtered = [];
@@ -258,21 +260,21 @@ export function searchCards(params: CardSearchParams): CardSearchResult {
         if (s == null) continue;
         filtered.push({ card: c, score: s });
       }
-      filtered.sort((a, b) => b.score - a.score || compareCards(a.card, b.card, sort, dir));
-      const total = filtered.length;
-      const start = (page - 1) * pageSize;
-      return {
-        cards: filtered.slice(start, start + pageSize).map((s) => s.card),
-        total,
-        page,
-        pageSize,
-      };
+      // Fall through to the shared sort path below. Earlier we sorted by
+      // score-desc here with the user's sort as a tiebreaker, but that made
+      // the sort picker effectively inert during search — a query like
+      // "mew" produces wildly different scores (name hit vs. effect-text
+      // hit), so the score always dominated. Use the user's sort as the
+      // primary ordering and keep score as a *tiebreaker* via compareCards.
     }
   } else {
     filtered = all.filter((c) => applyFilters(c, params)).map((c) => ({ card: c, score: 0 }));
   }
 
-  filtered.sort((a, b) => compareCards(a.card, b.card, sort, dir));
+  filtered.sort(
+    (a, b) =>
+      compareCards(a.card, b.card, sort, dir) || b.score - a.score,
+  );
   const total = filtered.length;
   const start = (page - 1) * pageSize;
   return {

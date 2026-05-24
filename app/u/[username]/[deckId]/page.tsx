@@ -3,7 +3,6 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { type AnalysisResult, type DeckCreator } from "@/app/components/DeckProfileView";
-import { getTierByTitle } from "@/lib/trainer-tiers";
 import { repriceDeck } from "@/lib/reprice-deck";
 import type { SharedDeckMatchRow } from "@/app/my-decks/[id]/MatchLog";
 import DeckDetailClient from "./DeckDetailClient";
@@ -26,7 +25,6 @@ interface ProfileRecord {
   display_name: string;
   username: string;
   avatar_url: string | null;
-  trainer_title: string | null;
   is_public: boolean;
 }
 
@@ -38,6 +36,7 @@ interface MatchRecord {
   opponent_deck_list: string | null;
   notes: string | null;
   played_at: string;
+  source: "manual" | "tcg_live_log";
 }
 
 export async function generateMetadata({
@@ -87,7 +86,7 @@ export default async function DeckPage({
   // Fetch profile without is_public filter so owners can see their own page
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, display_name, username, avatar_url, trainer_title, is_public")
+    .select("id, display_name, username, avatar_url, is_public")
     .eq("username", username.toLowerCase())
     .maybeSingle();
   if (!profile) notFound();
@@ -138,7 +137,7 @@ export default async function DeckPage({
   if (isOwner) {
     const { data: matches } = await supabase
       .from("matches")
-      .select("id, result, opponent_name, opponent_archetype, opponent_deck_list, notes, played_at")
+      .select("id, result, opponent_name, opponent_archetype, opponent_deck_list, notes, played_at, source")
       .eq("saved_deck_id", deck.id)
       .order("played_at", { ascending: false });
     initialMatches = (matches ?? []) as MatchRecord[];
@@ -247,12 +246,8 @@ export default async function DeckPage({
     initialLiked = Boolean(likeRow);
   }
 
-  const tier = getTierByTitle(profile.trainer_title ?? "Rookie Trainer");
   const creator: DeckCreator = {
     displayName: profile.display_name,
-    trainerTitle: tier.title,
-    badgeSlug: tier.slug,
-    tierColor: tier.color,
   };
 
   return (

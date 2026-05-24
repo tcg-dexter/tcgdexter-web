@@ -13,8 +13,6 @@ import archetypesRaw from "@/data/meta-archetypes.json";
 import metaDecksRaw from "@/data/meta-decks.json";
 import { MetaDeckCard } from "@/app/components/DeckPostCard";
 import { metaPrimaryCard, typeColor } from "@/lib/metaPrimaryCard";
-import { getTierByTitle } from "@/lib/trainer-tiers";
-import type { TopTrainer } from "@/app/page";
 
 const EXAMPLE_DECK = `Pokémon: 13
 1 Meowth ex POR 62
@@ -115,14 +113,10 @@ const top3Cards = (() => {
   });
 })();
 
-const rankMedal = ["🥇", "🥈", "🥉"];
-
 export default function HomeClient({
   stats,
-  topTrainers,
 }: {
   stats: Array<{ label: string; value: string }>;
-  topTrainers: TopTrainer[];
 }) {
   const [deckList, setDeckList] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -307,50 +301,6 @@ export default function HomeClient({
               ))}
             </div>
           </section>
-
-          {/* Top Trainers — hidden from UI; keep block for future re-enable */}
-          {false && (
-          <section className="mx-auto max-w-2xl px-6 py-6">
-            <div className="mb-6">
-              <div className="text-xs uppercase tracking-widest text-accent mb-3 flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-[#ff8a3d] opacity-75 animate-ping" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[#ff8a3d]" />
-                </span>
-                Live leaderboard
-              </div>
-              <h2 className="text-4xl font-semibold tracking-tight">Top Trainers</h2>
-            </div>
-
-            {topTrainers.length > 0 && (
-              <div className="rounded-xl border border-black/8 bg-white shadow-sm overflow-hidden">
-                {topTrainers.map((trainer, i) => {
-                  const tier = getTierByTitle(trainer.trainer_title ?? "Rookie Trainer");
-                  return (
-                    <Link
-                      key={trainer.id}
-                      href={`/u/${trainer.username}`}
-                      className="flex items-center gap-3 px-5 py-4 hover:bg-black/[0.02] transition border-b border-black/5 last:border-b-0"
-                    >
-                      <span className="text-xl w-7 flex-shrink-0">{rankMedal[i]}</span>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-text-primary truncate">{trainer.display_name}</div>
-                      </div>
-                      <div className={`hidden sm:flex text-xs font-semibold px-2 py-0.5 rounded-full border flex-shrink-0 ${tier.color} ${tier.borderColor} ${tier.bgColor}`}>
-                        {tier.title}
-                      </div>
-                      <div className="text-xs text-text-muted flex-shrink-0">
-                        <span className="font-semibold tabular-nums text-text-primary">{trainer.totalLikes}</span> likes
-                        {" · "}
-                        <span className="font-semibold tabular-nums text-text-primary">{trainer.deckCount}</span> decks
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-          )}
 
           {/* Secondary CTA */}
           <section className="mx-auto max-w-4xl px-6 py-24 text-center">

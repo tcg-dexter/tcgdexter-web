@@ -43,6 +43,22 @@ export interface CardIndexEntry {
   artist: string | null;
   artistLower: string | null;
   artistTokens: string[];
+  /** Card name this printing evolves from (e.g. Starmie ← Staryu). Null for
+   *  Basics, Trainers, Energy, and any printing where the upstream catalog
+   *  hasn't carried the field through yet. Populated by
+   *  `scripts/backfill_evolves_from.py` or by `export_cards_standard.py`
+   *  once cards.db gains the column. */
+  evolvesFrom: string | null;
+  /** Lowercased ability + attack names, used by catalog search for
+   *  exact/prefix matching ("battle compressor", "mega hammer"). */
+  effectNames: string[];
+  /** Per-word tokens drawn from ability + attack names — drives partial
+   *  matching (e.g. "hammer" hits "Mega Hammer"). */
+  effectNameTokens: string[];
+  /** Concatenated lowercase text of every ability + attack effect on the
+   *  card (rules text excluded — those sit on Trainers/Energy and are
+   *  caught by `name`). Used for substring fallback matching. */
+  effectText: string;
 }
 
 export interface CardAttack {
@@ -78,6 +94,7 @@ export interface RawCard {
   attacks?: CardAttack[];
   abilities?: CardAbility[];
   rules?: string[];
+  evolves_from?: string | null;
 }
 
 let CARDS: CardIndexEntry[] | null = null;
@@ -94,6 +111,13 @@ function tokenizeArtist(name: string): string[] {
   return name
     .toLowerCase()
     .split(/[\s\-’'.:,&()\/]+/)
+    .filter(Boolean);
+}
+
+function tokenizeEffect(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[\s\-’'.:,&()\/!?]+/)
     .filter(Boolean);
 }
 
@@ -116,6 +140,25 @@ function buildIndex(): CardIndexEntry[] {
     for (const c of variants) {
       const hpNum = c.hp == null ? null : Number(c.hp);
       const numericMatch = c.number.match(/^(\d+)/);
+      const abilities = c.abilities ?? [];
+      const attacks = c.attacks ?? [];
+      const effectNames: string[] = [];
+      const effectNameTokens: string[] = [];
+      const effectTextParts: string[] = [];
+      for (const a of abilities) {
+        if (a.name) {
+          effectNames.push(a.name.toLowerCase());
+          effectNameTokens.push(...tokenizeEffect(a.name));
+        }
+        if (a.text) effectTextParts.push(a.text.toLowerCase());
+      }
+      for (const a of attacks) {
+        if (a.name) {
+          effectNames.push(a.name.toLowerCase());
+          effectNameTokens.push(...tokenizeEffect(a.name));
+        }
+        if (a.text) effectTextParts.push(a.text.toLowerCase());
+      }
       out.push({
         id: `${c.set_id}-${c.number}`,
         name: c.name,
@@ -140,6 +183,10 @@ function buildIndex(): CardIndexEntry[] {
         artist: c.artist ?? null,
         artistLower: c.artist ? c.artist.toLowerCase() : null,
         artistTokens: c.artist ? tokenizeArtist(c.artist) : [],
+        evolvesFrom: c.evolves_from ?? null,
+        effectNames,
+        effectNameTokens,
+        effectText: effectTextParts.join(" "),
       });
     }
   }
