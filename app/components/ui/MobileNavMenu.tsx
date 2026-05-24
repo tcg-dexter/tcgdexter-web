@@ -270,8 +270,10 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
       <div className="flex-shrink-0 backdrop-blur-xl bg-bg/70">
         <div className="mx-auto max-w-6xl px-6">
           {/* Hamburger stays pinned in the same spot as the closed toolbar so
-              tapping doesn't shift between open and closed states. */}
-          <div className="h-14 flex items-center">
+              tapping doesn't shift between open and closed states. The
+              closed toolbar pushes the trigger to the right via
+              justify-between, so we mirror that here with justify-end. */}
+          <div className="h-14 flex items-center justify-end">
             <button
               onClick={closeMenu}
               aria-label="Close navigation menu"

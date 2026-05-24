@@ -369,7 +369,11 @@ export default function DeckProfileView({
             </div>
           )}
           <div>
-            {preTitle && <div className="mb-2">{preTitle}</div>}
+            {/* `hidden xl:block` — current callers pass a `BackButton`,
+                which portals into the mobile toolbar slot on small
+                viewports. Collapsing the wrapper below xl avoids a
+                phantom 8px gap above the page title. */}
+            {preTitle && <div className="hidden xl:block mb-2">{preTitle}</div>}
             <div className="flex items-center gap-2">
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-on-gradient">
                 {pageTitle}

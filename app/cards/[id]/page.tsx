@@ -42,7 +42,10 @@ export default function CardDetailPage({ params }: Props) {
 
   return (
     <main className="mx-auto max-w-5xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
-      <div className="mb-4">
+      {/* Desktop-only spacing wrapper — on mobile the BackButton portals
+          into the sticky toolbar, so we collapse this row to avoid a
+          phantom 16px gap above the card content. */}
+      <div className="hidden xl:block mb-4">
         <BackButton href="/cards" ariaLabel="Back to Cards" />
       </div>
 

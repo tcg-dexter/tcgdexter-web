@@ -103,7 +103,10 @@ export default async function AdminMatchPage({
 
   return (
     <main className="mx-auto max-w-2xl px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
-      <div className="mb-3">
+      {/* Desktop-only spacing wrapper — on mobile the BackButton portals
+          into the sticky toolbar; collapsing here avoids a phantom 12px
+          gap above the heading. */}
+      <div className="hidden xl:block mb-3">
         <BackButton href="/admin/matches/disputes" ariaLabel="Back to queue" />
       </div>
 
