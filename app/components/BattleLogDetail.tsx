@@ -475,6 +475,20 @@ export default function BattleLogDetail({ matchId }: Props) {
         const isPlayer = turn.actor === "player";
         const isOpponent = turn.actor === "opponent";
 
+        // For the Setup cell, group actions by actor so the reader can
+        // see at a glance what each player did pre-game (coin flip,
+        // mulligans, first Pokémon placements) rather than scanning an
+        // interleaved list. Falls back to a flat list if every setup
+        // action somehow lacks a player attribution.
+        const setupGroups =
+          turn.phase === "setup"
+            ? groupSetupActions(
+                actions,
+                data.match.player_handle,
+                data.match.opponent_handle,
+              )
+            : null;
+
         return (
           <div
             key={turn.id}
@@ -490,26 +504,109 @@ export default function BattleLogDetail({ matchId }: Props) {
                 {turnLabel}
               </span>
             </div>
-            <ul className="flex flex-col gap-1">
-              {actions.map((a) => {
-                const label = labelFor(a);
-                if (!label) return null;
-                return (
-                  <li
-                    key={a.id}
-                    className="flex items-start gap-2 text-xs text-text-secondary leading-snug"
-                  >
-                    <span className="mt-0.5 text-text-muted">
-                      <Icon type={a.action_type} className="w-3.5 h-3.5" />
-                    </span>
-                    <span className="flex-1 min-w-0 break-words">{label}</span>
-                  </li>
-                );
-              })}
-            </ul>
+            {setupGroups && setupGroups.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                {setupGroups.map((group) => (
+                  <div key={group.key}>
+                    <div className="mb-1 flex items-center gap-2">
+                      <span
+                        className={`inline-block h-1.5 w-1.5 rounded-full ${
+                          group.actor === "player"
+                            ? "bg-accent"
+                            : group.actor === "opponent"
+                            ? "bg-black"
+                            : "bg-text-muted"
+                        }`}
+                      />
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+                        {group.handle ?? "Other"}
+                      </span>
+                    </div>
+                    <ActionList actions={group.actions} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <ActionList actions={actions} />
+            )}
           </div>
         );
       })}
     </div>
+  );
+}
+
+/* ─── Helpers ─────────────────────────────────────────────────── */
+
+interface SetupGroup {
+  key: string;
+  actor: Actor;
+  handle: string | null;
+  actions: ApiAction[];
+}
+
+/**
+ * Split the Setup cell's actions into one group per actor, preserving
+ * encounter order (whichever side acts first appears on top). Handle
+ * labels come from the match-level player_handle / opponent_handle —
+ * action rows themselves don't carry the raw handle.
+ */
+function groupSetupActions(
+  actions: ApiAction[],
+  playerHandle: string | null,
+  opponentHandle: string | null,
+): SetupGroup[] {
+  const byKey = new Map<string, SetupGroup>();
+  const order: string[] = [];
+
+  for (const a of actions) {
+    const actor: Actor = a.actor ?? null;
+    const key =
+      actor === "player"
+        ? "player"
+        : actor === "opponent"
+        ? "opponent"
+        : "system";
+    let group = byKey.get(key);
+    if (!group) {
+      group = {
+        key,
+        actor,
+        handle:
+          actor === "player"
+            ? playerHandle
+            : actor === "opponent"
+            ? opponentHandle
+            : null,
+        actions: [],
+      };
+      byKey.set(key, group);
+      order.push(key);
+    }
+    group.actions.push(a);
+  }
+
+  return order.map((k) => byKey.get(k)!);
+}
+
+function ActionList({ actions }: { actions: ApiAction[] }) {
+  return (
+    <ul className="flex flex-col gap-1">
+      {actions.map((a) => {
+        const label = labelFor(a);
+        if (!label) return null;
+        return (
+          <li
+            key={a.id}
+            className="flex items-start gap-2 text-xs text-text-secondary leading-snug"
+          >
+            <span className="mt-0.5 text-text-muted">
+              <Icon type={a.action_type} className="w-3.5 h-3.5" />
+            </span>
+            <span className="flex-1 min-w-0 break-words">{label}</span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
