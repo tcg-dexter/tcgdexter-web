@@ -23,6 +23,7 @@ interface Match {
   opponent_deck_list: string | null;
   notes: string | null;
   played_at: string;
+  source?: "manual" | "tcg_live_log";
 }
 
 interface ParsedCard {

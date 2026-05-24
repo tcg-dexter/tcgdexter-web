@@ -442,22 +442,30 @@ export default function BattleLogDetail({ matchId }: Props) {
 
   // Only render turns that have at least one visible action (after the
   // implicit turn_start/turn_end synthetic events are filtered out).
+  // Each entry also gets a globalTurnNumber that increments only on
+  // actual play turns (skipping setup / checkup), so the cell header
+  // counts 1, 2, 3, 4… across both players rather than 1-1, 2-2.
+  let playTurnCounter = 0;
   const renderableTurns = data.turns
-    .map((t) => ({
-      turn: t,
-      actions: (actionsByTurn.get(t.id) ?? []).filter(
-        (a) => a.action_type !== "turn_start" && a.action_type !== "turn_end",
-      ),
-    }))
+    .map((t) => {
+      if (t.phase === "turn") playTurnCounter += 1;
+      return {
+        turn: t,
+        globalTurnNumber: t.phase === "turn" ? playTurnCounter : null,
+        actions: (actionsByTurn.get(t.id) ?? []).filter(
+          (a) => a.action_type !== "turn_start" && a.action_type !== "turn_end",
+        ),
+      };
+    })
     .filter(({ actions, turn }) => actions.length > 0 || turn.phase === "setup");
 
   return (
     <div className="mt-3 flex flex-col gap-2">
-      {renderableTurns.map(({ turn, actions }) => {
+      {renderableTurns.map(({ turn, actions, globalTurnNumber }) => {
         const title = cellTitle(turn, data.match.player_handle);
         const turnLabel =
-          turn.phase === "turn" && turn.player_turn_number != null
-            ? `Turn ${turn.player_turn_number}`
+          turn.phase === "turn" && globalTurnNumber != null
+            ? `Turn ${globalTurnNumber}`
             : turn.phase === "setup"
             ? "Pre-game"
             : turn.phase === "checkup"
