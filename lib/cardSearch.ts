@@ -95,26 +95,24 @@ export interface CardSearchResult {
   pageSize: number;
 }
 
-function parseQueryTokens(q: string): { numeric: string[]; setCodes: Set<string>; words: string[] } {
+function parseQueryTokens(q: string): { numeric: string[]; words: string[] } {
   const tokens = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const knownCodes = new Set(
-    getSets()
-      .map((s) => s.ptcgoCode?.toLowerCase())
-      .filter((c): c is string => !!c)
-  );
   const numeric: string[] = [];
-  const setCodes = new Set<string>();
   const words: string[] = [];
   for (const t of tokens) {
     if (/^\d+(\/\d+)?$/.test(t)) {
       numeric.push(t.split("/")[0]);
-    } else if (knownCodes.has(t)) {
-      setCodes.add(t);
     } else {
+      // Note: we deliberately do *not* route set abbreviations (MEW,
+      // PAR, etc.) into a separate set-filter bucket. Many three-letter
+      // set codes collide with Pokémon names (Mew, Snom, Onix), and
+      // routing them to a set filter dropped the actual cards from the
+      // results. Users who want to scope by set use the explicit set
+      // filter chip; the free-text input is name + effect + artist.
       words.push(t);
     }
   }
-  return { numeric, setCodes, words };
+  return { numeric, words };
 }
 
 interface ScoredCard {
@@ -127,12 +125,6 @@ function matchAndScore(
   query: ReturnType<typeof parseQueryTokens>
 ): number | null {
   let score = 0;
-
-  if (query.setCodes.size > 0) {
-    const code = card.ptcgoCode?.toLowerCase();
-    if (!code || !query.setCodes.has(code)) return null;
-    score += 5;
-  }
 
   if (query.numeric.length > 0) {
     for (const n of query.numeric) {
@@ -258,7 +250,7 @@ export function searchCards(params: CardSearchParams): CardSearchResult {
 
   if (q) {
     const tokens = parseQueryTokens(q);
-    if (tokens.numeric.length === 0 && tokens.setCodes.size === 0 && tokens.words.length === 0) {
+    if (tokens.numeric.length === 0 && tokens.words.length === 0) {
       filtered = all.filter((c) => applyFilters(c, params)).map((c) => ({ card: c, score: 0 }));
     } else {
       filtered = [];
