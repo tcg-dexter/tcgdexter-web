@@ -83,18 +83,23 @@ def load_cards(db_path: Path, prices: dict) -> dict[str, list[dict]]:
         print(f"ERROR: cards.db not found at {db_path}", file=sys.stderr)
         sys.exit(1)
 
-    # Preserve evolves_from from the existing JSON when present. The upstream
-    # cards.db may not carry this column yet — `backfill_evolves_from.py`
-    # populates the JSON directly from pokemontcg.io, and we want that value
-    # to survive a re-export. Keyed by (set_id, number).
+    # Preserve fields from the existing JSON that the upstream cards.db may
+    # not carry yet. `backfill_evolves_from.py` and `backfill_artist.py`
+    # populate these fields directly from pokemontcg.io; we don't want
+    # re-running the export to blow that away when the column in cards.db
+    # is missing or NULL. Keyed by (set_id, number).
     preserved_evolves_from: dict[tuple[str, str], str | None] = {}
+    preserved_artist: dict[tuple[str, str], str | None] = {}
     if OUT_FILE.exists():
         try:
             existing = json.loads(OUT_FILE.read_text())
             for variants in existing.values():
                 for e in variants:
+                    key = (e.get("set_id", ""), e.get("number", ""))
                     if "evolves_from" in e:
-                        preserved_evolves_from[(e.get("set_id", ""), e.get("number", ""))] = e["evolves_from"]
+                        preserved_evolves_from[key] = e["evolves_from"]
+                    if e.get("artist"):
+                        preserved_artist[key] = e["artist"]
         except (json.JSONDecodeError, OSError):
             pass
 
@@ -186,7 +191,7 @@ def load_cards(db_path: Path, prices: dict) -> dict[str, list[dict]]:
             "types": types,
             "rarity": row["rarity"],
             "hp": row["hp"],
-            "artist": row["artist"],
+            "artist": row["artist"] or preserved_artist.get((row["set_id"], number)),
             "abilities": abilities,
             "attacks": attacks,
             "rules": rules,
