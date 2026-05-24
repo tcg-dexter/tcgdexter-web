@@ -5,6 +5,7 @@ import ThemeProvider from "./components/ThemeProvider";
 import SiteNav from "./components/ui/SiteNav";
 import SiteFooter from "./components/ui/SiteFooter";
 import GlobalSearchHotkey from "./components/ui/GlobalSearchHotkey";
+import NavigationTracker from "./components/ui/NavigationTracker";
 
 /* Geist Sans — clean, modern typeface from Vercel */
 const geistSans = localFont({
@@ -61,6 +62,7 @@ export default function RootLayout({
               kicking in at 1280 px). Mobile, portrait tablet, and landscape
               iPad / smaller laptops keep the original mobile-nav layout. */}
           <div className="min-h-dvh bg-bg text-text-primary antialiased overflow-x-hidden xl:pl-[230px] xl:pr-[230px]">
+            <NavigationTracker />
             <SiteNav />
             {children}
             <SiteFooter />
