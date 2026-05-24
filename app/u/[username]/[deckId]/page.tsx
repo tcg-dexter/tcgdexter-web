@@ -3,7 +3,6 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { type AnalysisResult, type DeckCreator } from "@/app/components/DeckProfileView";
-import { getTierByTitle } from "@/lib/trainer-tiers";
 import { repriceDeck } from "@/lib/reprice-deck";
 import type { SharedDeckMatchRow } from "@/app/my-decks/[id]/MatchLog";
 import DeckDetailClient from "./DeckDetailClient";
@@ -26,7 +25,6 @@ interface ProfileRecord {
   display_name: string;
   username: string;
   avatar_url: string | null;
-  trainer_title: string | null;
   is_public: boolean;
 }
 
@@ -88,7 +86,7 @@ export default async function DeckPage({
   // Fetch profile without is_public filter so owners can see their own page
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, display_name, username, avatar_url, trainer_title, is_public")
+    .select("id, display_name, username, avatar_url, is_public")
     .eq("username", username.toLowerCase())
     .maybeSingle();
   if (!profile) notFound();
@@ -248,12 +246,8 @@ export default async function DeckPage({
     initialLiked = Boolean(likeRow);
   }
 
-  const tier = getTierByTitle(profile.trainer_title ?? "Rookie Trainer");
   const creator: DeckCreator = {
     displayName: profile.display_name,
-    trainerTitle: tier.title,
-    badgeSlug: tier.slug,
-    tierColor: tier.color,
   };
 
   return (

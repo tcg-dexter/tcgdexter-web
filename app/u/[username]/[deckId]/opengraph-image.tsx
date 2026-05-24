@@ -39,7 +39,6 @@ interface OwnerRecord {
   displayName: string;
   username: string;
   avatarUrl: string | null;
-  trainerTitle: string | null;
 }
 
 async function fetchDeck(deckId: string): Promise<DeckRecord | null> {
@@ -67,16 +66,16 @@ async function fetchOwner(userId: string): Promise<OwnerRecord | null> {
   if (!url || !key) return null;
   try {
     const res = await fetch(
-      `${url}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&is_public=eq.true&select=display_name,username,avatar_url,trainer_title`,
+      `${url}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&is_public=eq.true&select=display_name,username,avatar_url`,
       {
         headers: { apikey: key, Authorization: `Bearer ${key}`, Accept: "application/json" },
         next: { revalidate: 3600 },
       },
     );
     if (!res.ok) return null;
-    const rows = (await res.json()) as Array<{ display_name: string; username: string; avatar_url: string | null; trainer_title: string | null }>;
+    const rows = (await res.json()) as Array<{ display_name: string; username: string; avatar_url: string | null }>;
     if (!rows.length) return null;
-    return { displayName: rows[0].display_name, username: rows[0].username, avatarUrl: rows[0].avatar_url, trainerTitle: rows[0].trainer_title };
+    return { displayName: rows[0].display_name, username: rows[0].username, avatarUrl: rows[0].avatar_url };
   } catch { return null; }
 }
 
