@@ -251,6 +251,18 @@ export default async function MetaDeckDetailPage({
 
   return (
     <main className="min-h-dvh flex flex-col bg-bg">
+      {/* Paint the mobile sticky toolbar in the banner color so the
+          toolbar, the iOS status bar (set via ThemeColor below), and the
+          banner itself all read as one continuous surface. The toolbar
+          stays sticky and in layout flow, but the visual seam between
+          it and the banner disappears because both are the same color.
+          The toolbar is `xl:hidden` already, so this only affects
+          below-xl widths. */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `[data-site-toolbar]{background:${iconBg ?? "#B0A89E"};backdrop-filter:none;-webkit-backdrop-filter:none}`,
+        }}
+      />
       {/* Match the iOS Safari chrome + status-bar color to the banner
           background so the page reads as one continuous surface from
           the time/battery row down through the banner. Falls back to
