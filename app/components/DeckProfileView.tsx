@@ -349,10 +349,21 @@ export default function DeckProfileView({
   return (
     <div className="min-h-dvh flex flex-col bg-bg">
 
+      {/* Back button anchored at the very top of available space
+          (desktop-only; mobile portals into the toolbar). Matches the
+          meta archetype page's flush-top placement. */}
+      {preTitle && (
+        <div className="hidden xl:block px-6 pt-[calc(env(safe-area-inset-top)_+_0.75rem)]">
+          {preTitle}
+        </div>
+      )}
+
       {/* ── Header ─────────────────────────────────────────── */}
       {headerSlot ?? (
         <header
-          className={`flex-shrink-0 px-6 pt-[calc(env(safe-area-inset-top)_+_1.75rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] ${effectiveSubtitle ? "pb-8" : "pb-4"}`}
+          className={`flex-shrink-0 px-6 pt-[calc(env(safe-area-inset-top)_+_1.75rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] ${
+            preTitle ? "xl:pt-4" : ""
+          } ${effectiveSubtitle ? "pb-8" : "pb-4"}`}
         >
           {variant === "shared" && (
             <div className="flex justify-center mb-4">
@@ -365,11 +376,6 @@ export default function DeckProfileView({
             </div>
           )}
           <div>
-            {/* `hidden xl:block` — current callers pass a `BackButton`,
-                which portals into the mobile toolbar slot on small
-                viewports. Collapsing the wrapper below xl avoids a
-                phantom 8px gap above the page title. */}
-            {preTitle && <div className="hidden xl:block mb-2">{preTitle}</div>}
             <div className="flex items-center gap-2">
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-on-gradient">
                 {pageTitle}
