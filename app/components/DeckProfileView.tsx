@@ -362,7 +362,7 @@ export default function DeckProfileView({
       {headerSlot ?? (
         <header
           className={`flex-shrink-0 px-6 pt-[calc(env(safe-area-inset-top)_+_1.75rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] ${
-            preTitle ? "xl:pt-4" : ""
+            preTitle ? "xl:pt-8" : ""
           } ${effectiveSubtitle ? "pb-8" : "pb-4"}`}
         >
           {variant === "shared" && (
