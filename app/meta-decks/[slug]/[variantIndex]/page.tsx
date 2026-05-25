@@ -4,6 +4,7 @@ import metaDecksRaw from "@/data/meta-decks.json";
 import DeckProfileView from "@/app/components/DeckProfileView";
 import BackButton from "@/app/components/ui/BackButton";
 import { buildMetaAnalysis } from "@/lib/buildMetaAnalysis";
+import { formatMetaVariantDate } from "@/lib/formatMetaVariantDate";
 
 interface Archetype {
   id: string;
@@ -135,7 +136,8 @@ export default async function MetaVariantPage({
   const subtitleParts: string[] = [];
   if (placing) subtitleParts.push(`${placing} by ${creator}`);
   else subtitleParts.push(`by ${creator}`);
-  if (variant.date) subtitleParts.push(variant.date);
+  const dateLabel = formatMetaVariantDate(variant.date);
+  if (dateLabel) subtitleParts.push(dateLabel);
   const subtitleText = subtitleParts.join(" · ");
 
   return (

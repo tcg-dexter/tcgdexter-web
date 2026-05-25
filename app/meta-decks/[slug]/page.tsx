@@ -7,6 +7,7 @@ import ThemeColor from "@/app/components/ThemeColor";
 import BackButton from "@/app/components/ui/BackButton";
 import MetaProfileHeader from "./MetaProfileHeader";
 import MetaVariantCard from "./MetaVariantCard";
+import { formatMetaVariantDate } from "@/lib/formatMetaVariantDate";
 
 interface Archetype {
   id: string;
@@ -233,7 +234,7 @@ export default async function MetaDeckDetailPage({
   const variantCards = variantList.slice(0, 5).map((v, i) => {
     const variantPrimary = metaPrimaryCard(v.cards, iconList);
     const placing = placingLabel(v.placing);
-    const date = (v.date ?? "").trim();
+    const date = formatMetaVariantDate(v.date);
     const contextLabel =
       placing && date
         ? `${placing} · ${date}`
