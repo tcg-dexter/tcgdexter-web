@@ -26,7 +26,7 @@ import subprocess
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
 
-WEB_REPO  = Path.home() / "Desktop/tcgdexter-web"
+WEB_REPO  = Path.home() / "TCG Dexter/tcgdexter-web"
 META_FILE = WEB_REPO / "data" / "meta-archetypes.json"
 CARDS_FILE = WEB_REPO / "data" / "cards-standard.json"
 OUT_FILE  = WEB_REPO / "data" / "meta-decks.json"
