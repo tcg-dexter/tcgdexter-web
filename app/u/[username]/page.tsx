@@ -322,7 +322,7 @@ export default async function ProfilePage({
       )}
 
       </div>
-      <div>
+      <div className="mt-6 lg:mt-0">
       {/* Match heatmap — only for owner (manual match data is private) */}
       {isOwner && heatmapMatches.length > 0 && (
         <MatchHeatMap matches={heatmapMatches} />
