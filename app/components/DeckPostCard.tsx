@@ -171,6 +171,8 @@ export function MetaDeckCard({
         initialLikes={like_count}
         saveHref={href}
         deckName={name}
+        hideSave
+        hideShare
       />
     </div>
   );

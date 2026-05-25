@@ -1,5 +1,6 @@
 import Link from "next/link";
 import CopyDeckListButton from "@/app/components/CopyDeckListButton";
+import DeckCardFooter from "@/app/components/DeckCardFooter";
 
 interface CardCounts {
   pokemon: number;
@@ -10,6 +11,8 @@ interface CardCounts {
 interface Props {
   /** Stable key — typically `${archetypeSlug}-v${index}`. */
   id: string;
+  /** Archetype slug — drives the Save action's meta clone endpoint. */
+  archetypeId: string;
   /** Display title on the card — usually the archetype name. */
   archetypeName: string;
   /** Annotation appended after the name (e.g. "ex"). Optional. */
@@ -106,6 +109,7 @@ function TypeCounts({ counts }: { counts: CardCounts }) {
  * post is a known player's build of the archetype.
  */
 export default function MetaVariantCard({
+  archetypeId,
   archetypeName,
   annotation,
   contextLabel,
@@ -190,6 +194,14 @@ export default function MetaVariantCard({
       ) : (
         body
       )}
+
+      <DeckCardFooter
+        metaArchetypeId={archetypeId}
+        initialLikes={0}
+        saveHref={href ?? `/meta-decks/${archetypeId}`}
+        deckName={headerName}
+        hideLikes
+      />
     </div>
   );
 }

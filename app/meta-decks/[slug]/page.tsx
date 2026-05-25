@@ -299,6 +299,7 @@ export default async function MetaDeckDetailPage({
                   key={v.id}
                   id={v.id}
                   href={v.href}
+                  archetypeId={arch.id}
                   archetypeName={arch.name}
                   annotation={arch.annotation}
                   contextLabel={v.contextLabel}

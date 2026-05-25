@@ -31,6 +31,10 @@ interface Props {
   /** Hide the Save action — used on a viewer's own library / profile where
    *  the save state is redundant (their decks are already saved by definition). */
   hideSave?: boolean;
+  /** Hide the Share action. */
+  hideShare?: boolean;
+  /** Hide the Like action. */
+  hideLikes?: boolean;
 }
 
 type PromptKind = "like" | "save" | null;
@@ -43,6 +47,8 @@ export default function DeckCardFooter({
   saveHref,
   deckName,
   hideSave = false,
+  hideShare = false,
+  hideLikes = false,
 }: Props) {
   const router = useRouter();
   const [liked, setLiked] = useState(false);
@@ -258,7 +264,7 @@ export default function DeckCardFooter({
   return (
     <>
       <div className="flex items-center justify-around border-t border-black/5">
-        {deckId !== undefined && (
+        {deckId !== undefined && !hideLikes && (
           <button
             onClick={handleLike}
             aria-pressed={liked}
@@ -312,6 +318,7 @@ export default function DeckCardFooter({
           </button>
         )}
 
+        {!hideShare && (
         <button
           onClick={handleShare}
           aria-label="Share deck"
@@ -332,6 +339,7 @@ export default function DeckCardFooter({
           </svg>
           Share
         </button>
+        )}
       </div>
 
       {/* ── Sign-in prompt ────────────────────────────────────────── */}
