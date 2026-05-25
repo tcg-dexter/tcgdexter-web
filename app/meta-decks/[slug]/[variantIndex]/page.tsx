@@ -140,6 +140,15 @@ export default async function MetaVariantPage({
   if (dateLabel) subtitleParts.push(dateLabel);
   const subtitleText = subtitleParts.join(" · ");
 
+  const initials = creator.trim().charAt(0).toUpperCase() || "T";
+  const AVATAR_PALETTE = [
+    "#3b6fd4", "#d43b9a", "#27ae60", "#e67e22", "#9b59b6", "#c0392b",
+  ];
+  const avatarBg = AVATAR_PALETTE[
+    creator.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) %
+      AVATAR_PALETTE.length
+  ];
+
   return (
     <DeckProfileView
       variant="meta"
@@ -154,7 +163,16 @@ export default async function MetaVariantPage({
         />
       }
       subtitle={
-        <span className="text-text-secondary">{subtitleText}</span>
+        <span className="inline-flex items-center gap-2 text-text-secondary">
+          <span
+            className="w-7 h-7 rounded-full shrink-0 inline-flex items-center justify-center text-[12px] font-bold text-white"
+            style={{ background: avatarBg }}
+            aria-hidden
+          >
+            {initials}
+          </span>
+          {subtitleText}
+        </span>
       }
       footerCta={null}
     />
