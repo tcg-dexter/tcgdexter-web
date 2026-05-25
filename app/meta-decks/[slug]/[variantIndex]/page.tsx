@@ -162,17 +162,17 @@ export default async function MetaVariantPage({
           ariaLabel={`Back to ${archetypeFullName}`}
         />
       }
-      subtitle={
-        <span className="inline-flex items-center gap-2 text-text-secondary">
-          <span
-            className="w-7 h-7 rounded-full shrink-0 inline-flex items-center justify-center text-[12px] font-bold text-white"
-            style={{ background: avatarBg }}
-            aria-hidden
-          >
-            {initials}
-          </span>
-          {subtitleText}
+      titleLeading={
+        <span
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full shrink-0 inline-flex items-center justify-center text-sm font-bold text-white"
+          style={{ background: avatarBg }}
+          aria-hidden
+        >
+          {initials}
         </span>
+      }
+      subtitle={
+        <span className="text-text-secondary">{subtitleText}</span>
       }
       footerCta={null}
     />
