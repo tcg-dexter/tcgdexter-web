@@ -41,11 +41,11 @@ export default function CardDetailPage({ params }: Props) {
     : [];
 
   return (
-    <main className="mx-auto max-w-5xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
-      {/* Desktop-only spacing wrapper — on mobile the BackButton portals
-          into the sticky toolbar, so we collapse this row to avoid a
-          phantom 16px gap above the card content. */}
-      <div className="hidden xl:block mb-4">
+    <main className="mx-auto max-w-5xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] xl:pt-[calc(env(safe-area-inset-top)_+_0.75rem)] pb-24">
+      {/* Desktop-only — back button flushes to the top of the available
+          space (matching deck profile pages); on mobile the BackButton
+          portals into the sticky toolbar. */}
+      <div className="hidden xl:block mb-8">
         <BackButton href="/cards" ariaLabel="Back to Cards" />
       </div>
 
