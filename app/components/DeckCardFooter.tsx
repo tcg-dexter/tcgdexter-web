@@ -28,6 +28,9 @@ interface Props {
   saveHref: string;
   /** Display name surfaced inside the share modal heading. */
   deckName?: string;
+  /** Hide the Save action — used on a viewer's own library / profile where
+   *  the save state is redundant (their decks are already saved by definition). */
+  hideSave?: boolean;
 }
 
 type PromptKind = "like" | "save" | null;
@@ -39,6 +42,7 @@ export default function DeckCardFooter({
   initialLikes,
   saveHref,
   deckName,
+  hideSave = false,
 }: Props) {
   const router = useRouter();
   const [liked, setLiked] = useState(false);
@@ -280,7 +284,7 @@ export default function DeckCardFooter({
           </button>
         )}
 
-        {saveMode !== "none" && (
+        {saveMode !== "none" && !hideSave && (
           <button
             onClick={handleSave}
             aria-pressed={saved || isOwner}

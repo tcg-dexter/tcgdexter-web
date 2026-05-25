@@ -359,6 +359,7 @@ export function UserDeckCard({
         initialLikes={likeCount}
         saveHref={href}
         deckName={name}
+        hideSave
       />
 
       {canEdit && (
