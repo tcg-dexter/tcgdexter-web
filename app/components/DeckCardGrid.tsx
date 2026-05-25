@@ -233,7 +233,7 @@ export default function DeckCardGrid({ cards }: { cards: AnalysisCard[] }) {
 
   return (
     <div
-      className="grid grid-cols-4 md:grid-cols-10 gap-3"
+      className="grid grid-cols-5 md:grid-cols-10 gap-3"
       aria-label="Deck cards"
     >
       {tiles.map((t) => {
