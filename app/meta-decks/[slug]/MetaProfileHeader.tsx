@@ -33,10 +33,12 @@ import type { ReactNode } from "react";
  *  - CARDS_TOP_PCT     — % of banner height; vertical inset to first card
  *  - CARDS_SPAN_PCT    — % of inner container width; total fan span
  *  - CARD_WIDTH_PCT    — % of inner container width; per-card display width
- *  - BANNER_ASPECT_WH  — banner aspect ratio (width / height)
+ *
+ * Banner aspect ratio is set on the element itself: 16:5 on mobile (a
+ * tighter top crop so the cards sit closer to the top edge), 3:1 from
+ * `sm:` up.
  */
 
-const BANNER_ASPECT_WH = 3;     // 3:1
 const CARDS_TOP_PCT = 25;       // % of banner height; the *outer* cards' top
 const CARDS_SPAN_PCT = 80;      // % of inner container width — fan total span
 const CARD_WIDTH_PCT = 32;      // % of inner container width — per card
@@ -134,8 +136,8 @@ export default function MetaProfileHeader({
           flush at the top of the page; the back button (preBanner)
           overlays the top-left. */}
       <div
-        className="relative w-full overflow-hidden"
-        style={{ aspectRatio: `${BANNER_ASPECT_WH} / 1`, background: fallbackBg }}
+        className="relative w-full overflow-hidden aspect-[16/5] sm:aspect-[3/1]"
+        style={{ background: fallbackBg }}
       >
         {/* Cards layer — constrained to the same max-w-6xl ± px-6 the
             variant grid below uses, so the fan spans the full width of
