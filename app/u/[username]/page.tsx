@@ -271,7 +271,7 @@ export default async function ProfilePage({
               </p>
             )}
 
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 mt-3 text-xs">
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 mt-3 text-sm">
               <div>
                 <dt className="text-text-muted">Record</dt>
                 <dd className="font-semibold text-text-primary">
