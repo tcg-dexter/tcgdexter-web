@@ -31,24 +31,31 @@ export interface CollectionStats {
   marketValue: number;
 }
 
+const PAGE = 1000;
+
 export async function computeCollectionStats(
   supabase: SupabaseClient,
   userId: string
 ): Promise<CollectionStats> {
-  const { data, error } = await supabase
-    .from("user_card_collection")
-    .select("set_id, number, quantity")
-    .eq("user_id", userId);
-
-  if (error || !data) return { cardCount: 0, marketValue: 0 };
-
   const prices = priceIndex();
   let cardCount = 0;
   let marketValue = 0;
-  for (const row of data as Array<{ set_id: string; number: string; quantity: number }>) {
-    cardCount += row.quantity;
-    const price = prices.get(`${row.set_id}|${row.number}`);
-    if (price) marketValue += price * row.quantity;
+  let from = 0;
+  // Supabase capped at 1000 rows per request; paginate to cover full collection.
+  for (;;) {
+    const { data, error } = await supabase
+      .from("user_card_collection")
+      .select("set_id, number, quantity")
+      .eq("user_id", userId)
+      .range(from, from + PAGE - 1);
+    if (error || !data) break;
+    for (const row of data as Array<{ set_id: string; number: string; quantity: number }>) {
+      cardCount += row.quantity;
+      const price = prices.get(`${row.set_id}|${row.number}`);
+      if (price) marketValue += price * row.quantity;
+    }
+    if (data.length < PAGE) break;
+    from += PAGE;
   }
   return { cardCount, marketValue: Math.round(marketValue * 100) / 100 };
 }
