@@ -78,11 +78,11 @@ export default function BackButton({ href, ariaLabel, className = "" }: Props) {
   }
 
   const baseClass =
-    "items-center justify-center w-9 h-9 rounded-full bg-black/50 backdrop-blur-md text-white hover:bg-black/70 transition-colors shadow-sm";
+    "items-center justify-center w-7 h-7 rounded-full bg-black/50 backdrop-blur-md text-white hover:bg-black/70 transition-colors shadow-sm";
 
   const icon = (
     <svg
-      className="w-4 h-4"
+      className="w-3 h-3"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
