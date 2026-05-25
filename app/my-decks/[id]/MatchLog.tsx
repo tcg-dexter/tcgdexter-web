@@ -404,7 +404,6 @@ export default function MatchLog({
                           {match.notes}
                         </p>
                       )}
-                      {hasLog && <BattleLogDetail matchId={match.id} />}
                       {!readOnly && (
                         <div className="flex items-center gap-2">
                           <button
@@ -421,6 +420,7 @@ export default function MatchLog({
                           </button>
                         </div>
                       )}
+                      {hasLog && <BattleLogDetail matchId={match.id} />}
                     </div>
                   )}
                 </div>
