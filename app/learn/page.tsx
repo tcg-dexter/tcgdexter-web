@@ -17,7 +17,9 @@ export default function LearnIndexPage() {
     <main className="mx-auto max-w-2xl px-6 py-10 sm:py-14">
       <header className="mb-10">
         <h1 className="text-3xl sm:text-4xl font-bold text-text-primary mb-3 leading-tight">
-          Pokémon Trading Card Game
+          Learn to Play
+          <br />
+          Pokémon TCG
         </h1>
         <p className="text-base sm:text-lg text-text-secondary leading-relaxed">
           {lessons.length} short lessons, about {totalMinutes} minutes total. By
