@@ -16,9 +16,6 @@ export default function LearnIndexPage() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-10 sm:py-14">
       <header className="mb-10">
-        <p className="text-xs font-semibold text-accent uppercase tracking-[0.15em] mb-2">
-          Learn to Play
-        </p>
         <h1 className="text-3xl sm:text-4xl font-bold text-text-primary mb-3 leading-tight">
           Pokémon Trading Card Game
         </h1>

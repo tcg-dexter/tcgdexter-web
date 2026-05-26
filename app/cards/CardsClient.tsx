@@ -151,7 +151,7 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
     <InventoryProvider>
     <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
       <div className="mb-6">
-        <SectionHeader eyebrow="Pokémon TCG" title="Card Catalog" />
+        <SectionHeader title="Card Catalog" />
       </div>
 
       {/* Toolbar */}

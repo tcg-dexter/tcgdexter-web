@@ -78,7 +78,7 @@ export default function MetaDecksPage() {
   return (
     <main className="mx-auto max-w-6xl px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
       <div className="mb-6">
-        <SectionHeader eyebrow="Standard format" title="Top 30 Meta Decks" />
+        <SectionHeader title="Top 30 Meta Decks" />
       </div>
 
       <MetaDecksClient items={items} />
