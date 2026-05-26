@@ -191,8 +191,8 @@ def is_standard_legal(cards: list[dict], card_db: dict[str, list[dict]] | None) 
     return len(issues) == 0, issues
 
 
-MAX_VARIANTS = 5
-LIST_SCAN_LIMIT = 25
+MAX_VARIANTS = 12
+LIST_SCAN_LIMIT = 40
 
 
 def scrape_variants_for_archetype(name: str, card_db: dict | None) -> list[dict]:

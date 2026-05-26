@@ -59,7 +59,7 @@ export default function MetaDecksPage() {
     for (const v of deckData?.variants ?? []) {
       const c = (v.creator ?? "").trim() || "Trainer";
       if (!creators.includes(c)) creators.push(c);
-      if (creators.length >= 5) break;
+      if (creators.length >= 12) break;
     }
     const counts = { pokemon: 0, trainer: 0, energy: 0 };
     for (const c of cards) counts[c.category] += c.qty;

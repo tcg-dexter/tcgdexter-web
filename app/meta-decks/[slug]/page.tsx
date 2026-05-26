@@ -231,7 +231,7 @@ export default async function MetaDeckDetailPage({
 
   // Build per-variant cards for the top-5 grid. variantIndex on the URL
   // is 1-based for human friendliness (1st variant → /1, not /0).
-  const variantCards = variantList.slice(0, 5).map((v, i) => {
+  const variantCards = variantList.slice(0, 12).map((v, i) => {
     const variantPrimary = metaPrimaryCard(v.cards, iconList);
     const placing = placingLabel(v.placing);
     const date = formatMetaVariantDate(v.date);
