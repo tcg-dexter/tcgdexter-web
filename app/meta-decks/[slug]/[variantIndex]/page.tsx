@@ -4,6 +4,7 @@ import metaDecksRaw from "@/data/meta-decks.json";
 import DeckProfileView from "@/app/components/DeckProfileView";
 import BackButton from "@/app/components/ui/BackButton";
 import { buildMetaAnalysis } from "@/lib/buildMetaAnalysis";
+import { formatMetaVariantDate } from "@/lib/formatMetaVariantDate";
 
 interface Archetype {
   id: string;
@@ -32,6 +33,7 @@ interface MetaDeckVariant {
   creator?: string;
   placing?: number;
   date?: string;
+  variantName?: string | null;
   cards: DeckCard[];
 }
 
@@ -135,8 +137,18 @@ export default async function MetaVariantPage({
   const subtitleParts: string[] = [];
   if (placing) subtitleParts.push(`${placing} by ${creator}`);
   else subtitleParts.push(`by ${creator}`);
-  if (variant.date) subtitleParts.push(variant.date);
+  const dateLabel = formatMetaVariantDate(variant.date);
+  if (dateLabel) subtitleParts.push(dateLabel);
   const subtitleText = subtitleParts.join(" · ");
+
+  const initials = creator.trim().charAt(0).toUpperCase() || "T";
+  const AVATAR_PALETTE = [
+    "#3b6fd4", "#d43b9a", "#27ae60", "#e67e22", "#9b59b6", "#c0392b",
+  ];
+  const avatarBg = AVATAR_PALETTE[
+    creator.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) %
+      AVATAR_PALETTE.length
+  ];
 
   return (
     <DeckProfileView
@@ -150,6 +162,15 @@ export default async function MetaVariantPage({
           href={`/meta-decks/${arch.id}`}
           ariaLabel={`Back to ${archetypeFullName}`}
         />
+      }
+      titleLeading={
+        <span
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full shrink-0 inline-flex items-center justify-center text-sm font-bold text-white"
+          style={{ background: avatarBg }}
+          aria-hidden
+        >
+          {initials}
+        </span>
       }
       subtitle={
         <span className="text-text-secondary">{subtitleText}</span>

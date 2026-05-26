@@ -7,6 +7,7 @@ import ThemeColor from "@/app/components/ThemeColor";
 import BackButton from "@/app/components/ui/BackButton";
 import MetaProfileHeader from "./MetaProfileHeader";
 import MetaVariantCard from "./MetaVariantCard";
+import { formatMetaVariantDate } from "@/lib/formatMetaVariantDate";
 
 interface Archetype {
   id: string;
@@ -38,6 +39,7 @@ interface MetaDeckVariant {
   creator?: string;
   placing?: number;
   date?: string;
+  variantName?: string | null;
   cards: DeckCard[];
 }
 
@@ -230,10 +232,10 @@ export default async function MetaDeckDetailPage({
 
   // Build per-variant cards for the top-5 grid. variantIndex on the URL
   // is 1-based for human friendliness (1st variant → /1, not /0).
-  const variantCards = variantList.slice(0, 5).map((v, i) => {
+  const variantCards = variantList.slice(0, 12).map((v, i) => {
     const variantPrimary = metaPrimaryCard(v.cards, iconList);
     const placing = placingLabel(v.placing);
-    const date = (v.date ?? "").trim();
+    const date = formatMetaVariantDate(v.date);
     const contextLabel =
       placing && date
         ? `${placing} · ${date}`
@@ -242,6 +244,7 @@ export default async function MetaDeckDetailPage({
       id: `${arch.id}-v${i}`,
       href: `/meta-decks/${arch.id}/${i + 1}`,
       contextLabel,
+      variantName: (v.variantName ?? "").trim() || null,
       creator: (v.creator ?? "").trim() || "Trainer",
       deckList: buildDeckList(v.cards),
       cardImageUrl: variantPrimary?.imageUrl ?? null,
@@ -298,8 +301,12 @@ export default async function MetaDeckDetailPage({
                   key={v.id}
                   id={v.id}
                   href={v.href}
+                  archetypeId={arch.id}
                   archetypeName={arch.name}
                   annotation={arch.annotation}
+                  variantName={v.variantName}
+                  iconUrl={iconUrl}
+                  iconBg={iconBg}
                   contextLabel={v.contextLabel}
                   creator={v.creator}
                   deckList={v.deckList}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import CopyDeckListButton from "@/app/components/CopyDeckListButton";
+import DeckCardFooter from "@/app/components/DeckCardFooter";
 
 interface CardCounts {
   pokemon: number;
@@ -10,15 +11,28 @@ interface CardCounts {
 interface Props {
   /** Stable key — typically `${archetypeSlug}-v${index}`. */
   id: string;
-  /** Display title on the card — usually the archetype name. */
+  /** Archetype slug — drives the Save action's meta clone endpoint. */
+  archetypeId: string;
+  /** Parent archetype display name — used as the header title when this
+   *  variant has no specific sub-archetype tag from Limitless. */
   archetypeName: string;
-  /** Annotation appended after the name (e.g. "ex"). Optional. */
+  /** Annotation appended after the archetype name (e.g. "ex"). Optional. */
   annotation?: string;
+  /** Sub-archetype label scraped from Limitless's variant dropdown
+   *  (e.g. "Dragapult Blaziken"). When present this is the header title;
+   *  when null we fall back to the parent archetype name. */
+  variantName?: string | null;
+  /** Pokémon icon for the archetype — shown in the header next to the
+   *  variant title. Mirrors UserDeckCard's deck-icon avatar. */
+  iconUrl?: string | null;
+  /** Background color behind the header icon (typing tint). */
+  iconBg?: string | null;
   /** Tournament + date label as scraped from limitlesstcg.com. Placing
    *  (e.g. "2nd") is folded into this string by the caller so the header
    *  right slot is free for the copy-list action. */
   contextLabel?: string | null;
-  /** Player name. Shown beneath the card art with an initials avatar. */
+  /** Player name. Shown in the body next to an initials avatar, matching
+   *  UserDeckCard's `@username` slot. */
   creator: string;
   /** Full deck list text — handed to CopyDeckListButton for the
    *  clipboard write. Same format the carousel below the bio uses. */
@@ -106,8 +120,12 @@ function TypeCounts({ counts }: { counts: CardCounts }) {
  * post is a known player's build of the archetype.
  */
 export default function MetaVariantCard({
+  archetypeId,
   archetypeName,
   annotation,
+  variantName,
+  iconUrl,
+  iconBg,
   contextLabel,
   creator,
   deckList,
@@ -115,17 +133,32 @@ export default function MetaVariantCard({
   counts,
   href,
 }: Props) {
-  const headerName = annotation
+  const fallbackName = annotation
     ? `${archetypeName} ${annotation}`
     : archetypeName;
+  const headerName = (variantName ?? "").trim() || fallbackName;
   const displayCreator = creator || "Trainer";
   const initials = displayCreator.trim().charAt(0).toUpperCase() || "T";
   const playerBg = avatarBg(displayCreator);
 
+  // Body mirrors UserDeckCard: small avatar + @creator above TypeCounts,
+  // tournament context pinned to the bottom.
   const body = (
     <div className="flex gap-3.5 p-3.5 pt-3">
       <CardArt url={cardImageUrl} name={headerName} />
       <div className="flex-1 min-w-0 flex flex-col">
+        <div className="flex items-center gap-1.5 mb-2">
+          <div
+            className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-[10px] font-bold text-white"
+            style={{ background: playerBg }}
+            aria-hidden
+          >
+            {initials}
+          </div>
+          <p className="text-[13px] font-semibold text-text-muted truncate">
+            {displayCreator}
+          </p>
+        </div>
         <TypeCounts counts={counts} />
         {contextLabel && (
           <p className="mt-auto text-[11px] text-text-muted truncate">
@@ -136,41 +169,49 @@ export default function MetaVariantCard({
     </div>
   );
 
-  // Header avatar is the player's initials monogram, mirroring the
-  // UserDeckCard body style. When an href is set, the avatar circle and
-  // creator name become individual Links so the copy-list button can
-  // still own its own click target without bubbling.
-  const avatarNode = (
+  // Header avatar is the archetype's Pokémon icon — same pattern as
+  // UserDeckCard, where the deck's primary Pokémon sits next to its name.
+  const headerAvatar = (
     <div
-      className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-[12px] font-bold text-white"
-      style={{ background: playerBg }}
+      className="w-7 h-7 rounded-full flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
+      style={{ background: iconBg ?? "#B0A89E" }}
       aria-hidden
     >
-      {initials}
+      {iconUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={iconUrl}
+          alt=""
+          className="w-[22px] h-[22px] object-contain"
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).style.visibility = "hidden";
+          }}
+        />
+      ) : null}
     </div>
   );
 
   return (
     <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-      {/* Header — creator monogram + creator name + copy-list button. */}
+      {/* Header — archetype icon + variant name + copy-list button. */}
       <div className="flex items-center gap-2 px-3.5 pt-3">
         {href ? (
-          <Link href={href} aria-label={`Open ${displayCreator}`} className="shrink-0">
-            {avatarNode}
+          <Link href={href} aria-label={`Open ${headerName}`} className="shrink-0">
+            {headerAvatar}
           </Link>
         ) : (
-          avatarNode
+          headerAvatar
         )}
         {href ? (
           <Link
             href={href}
             className="flex-1 min-w-0 text-[17px] font-semibold text-text-primary truncate hover:underline underline-offset-2"
           >
-            {displayCreator}
+            {headerName}
           </Link>
         ) : (
           <p className="flex-1 min-w-0 text-[17px] font-semibold text-text-primary truncate">
-            {displayCreator}
+            {headerName}
           </p>
         )}
         {/* Trailing slot — kept flush with the header's px-3.5 inset so the
@@ -180,7 +221,7 @@ export default function MetaVariantCard({
         </div>
       </div>
 
-      {/* Body — primary card art + player handle + counts + tournament.
+      {/* Body — primary card art + creator handle + counts + tournament.
           Wrapped in a <Link> when href is set so the body is one big
           click target on top of the header's per-element targets. */}
       {href ? (
@@ -190,6 +231,14 @@ export default function MetaVariantCard({
       ) : (
         body
       )}
+
+      <DeckCardFooter
+        metaArchetypeId={archetypeId}
+        initialLikes={0}
+        saveHref={href ?? `/meta-decks/${archetypeId}`}
+        deckName={headerName}
+        hideLikes
+      />
     </div>
   );
 }

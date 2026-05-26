@@ -11,6 +11,7 @@ import {
   listAchievements,
 } from "@/lib/learn/achievements";
 import CertifiedTrainerBadge from "@/app/learn/quiz/CertifiedTrainerBadge";
+import { computeCollectionStats } from "@/lib/collection-stats";
 
 interface ProfileRow {
   id: string;
@@ -19,6 +20,7 @@ interface ProfileRow {
   bio: string | null;
   created_at: string;
   is_public: boolean;
+  tcg_live_handle: string | null;
 }
 
 interface DeckRow {
@@ -78,7 +80,7 @@ export default async function ProfilePage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, display_name, username, bio, created_at, is_public")
+    .select("id, display_name, username, bio, created_at, is_public, tcg_live_handle")
     .eq("username", username.toLowerCase())
     .maybeSingle();
   if (!profile) notFound();
@@ -189,11 +191,17 @@ export default async function ProfilePage({
       ]
     : [];
 
-  const joinedDate = new Date(profile.created_at).toLocaleDateString("en-US", {
-    month: "short",
-    year: "numeric",
-  });
+  const collectionStats = await computeCollectionStats(supabase, profile.id);
   const initial = profile.display_name.trim().charAt(0).toUpperCase();
+  const winRate =
+    globalWins + globalLosses > 0
+      ? Math.round((globalWins / (globalWins + globalLosses)) * 100)
+      : null;
+  const marketValueDisplay = collectionStats.marketValue.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: collectionStats.marketValue >= 100 ? 0 : 2,
+  });
 
   const achievements = await listAchievements(supabase, profile.id);
   const certifiedTrainer = achievements.find((a) => a.key === CERTIFIED_TRAINER);
@@ -208,8 +216,10 @@ export default async function ProfilePage({
 
   return (
     <main className="mx-auto max-w-6xl px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
+      <div className="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start mb-6">
+      <div className="flex flex-col gap-6">
       {/* Profile module */}
-      <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5 mb-6">
+      <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5">
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0">
             <div className="w-14 h-14 rounded-full bg-surface flex items-center justify-center text-xl font-bold text-text-secondary">
@@ -261,32 +271,61 @@ export default async function ProfilePage({
               </p>
             )}
 
-            <div className="flex items-center gap-2 mt-3 text-xs text-text-muted flex-wrap">
-              {globalTotal > 0 && (
-                <>
-                  <span>
-                    <span className="font-semibold text-emerald-700">{globalWins}W</span>
-                    {" · "}
-                    <span className="font-semibold text-rose-700">{globalLosses}L</span>
-                    {globalDraws > 0 && (
-                      <>
-                        {" · "}
-                        <span className="font-semibold text-stone-600">{globalDraws}D</span>
-                      </>
-                    )}
-                  </span>
-                  <span>·</span>
-                </>
-              )}
-              <span>Joined {joinedDate}</span>
-            </div>
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 mt-3 text-sm">
+              <div>
+                <dt className="text-text-muted">Record</dt>
+                <dd className="font-semibold text-text-primary">
+                  {globalTotal > 0 ? (
+                    <>
+                      <span className="text-emerald-700">{globalWins}W</span>
+                      {" · "}
+                      <span className="text-rose-700">{globalLosses}L</span>
+                      {globalDraws > 0 && (
+                        <>
+                          {" · "}
+                          <span className="text-stone-600">{globalDraws}D</span>
+                        </>
+                      )}
+                      {winRate !== null && (
+                        <span className="text-text-muted font-normal"> ({winRate}%)</span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-text-muted font-normal">No matches yet</span>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-text-muted">Decks</dt>
+                <dd className="font-semibold text-text-primary">{decks.length}</dd>
+              </div>
+              <div>
+                <dt className="text-text-muted">Cards owned</dt>
+                <dd className="font-semibold text-text-primary">
+                  {collectionStats.cardCount.toLocaleString("en-US")}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-text-muted">Collection value</dt>
+                <dd className="font-semibold text-text-primary">{marketValueDisplay}</dd>
+              </div>
+            </dl>
+
+            {profile.tcg_live_handle && (
+              <p className="mt-3 text-xs text-text-muted">
+                TCG Live:{" "}
+                <span className="font-semibold text-text-primary">
+                  {profile.tcg_live_handle}
+                </span>
+              </p>
+            )}
           </div>
         </div>
       </div>
 
       {/* Achievements — earned badges (owner sees an empty state nudge) */}
       {showAchievementsCard && (
-        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5 mb-6">
+        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5">
           <h2 className="text-sm font-semibold text-text-primary mb-3">
             Achievements
           </h2>
@@ -319,10 +358,14 @@ export default async function ProfilePage({
         </div>
       )}
 
+      </div>
+      <div className="mt-6 lg:mt-0">
       {/* Match heatmap — only for owner (manual match data is private) */}
       {isOwner && heatmapMatches.length > 0 && (
         <MatchHeatMap matches={heatmapMatches} />
       )}
+      </div>
+      </div>
 
       {/* Deck feed */}
       <div className="mt-6">

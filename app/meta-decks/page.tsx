@@ -59,7 +59,7 @@ export default function MetaDecksPage() {
     for (const v of deckData?.variants ?? []) {
       const c = (v.creator ?? "").trim() || "Trainer";
       if (!creators.includes(c)) creators.push(c);
-      if (creators.length >= 5) break;
+      if (creators.length >= 12) break;
     }
     const counts = { pokemon: 0, trainer: 0, energy: 0 };
     for (const c of cards) counts[c.category] += c.qty;
@@ -76,9 +76,9 @@ export default function MetaDecksPage() {
   });
 
   return (
-    <main className="mx-auto max-w-6xl px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
+    <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
       <div className="mb-6">
-        <SectionHeader eyebrow="Standard format" title="Top 30 Meta Decks" />
+        <SectionHeader title="Top 30 Meta Decks" />
       </div>
 
       <MetaDecksClient items={items} />

@@ -95,7 +95,7 @@ export default function MatchLog({
   const router = useRouter();
   const [matches, setMatches] = useState<Match[]>(initialMatches);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [logOpenId, setLogOpenId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Support both controlled (open prop) and uncontrolled (internal state) modes.
   const [internalOpen, setInternalOpen] = useState(false);
@@ -336,7 +336,8 @@ export default function MatchLog({
                 );
               }
               const hasLog = match.source === "tcg_live_log";
-              const logOpen = logOpenId === match.id;
+              const isExpanded = expandedId === match.id;
+              const canExpand = hasLog || Boolean(match.notes) || !readOnly;
               return (
                 <div
                   key={match.id}
@@ -371,62 +372,57 @@ export default function MatchLog({
                           <span className="text-text-muted text-sm">Match logged</span>
                         )}
                       </div>
+                      {dateStr && (
+                        <p className="text-xs text-text-muted mt-0.5">{dateStr}</p>
+                      )}
+                    </div>
+                    {canExpand && (
+                      <button
+                        onClick={() =>
+                          setExpandedId((prev) => (prev === match.id ? null : match.id))
+                        }
+                        aria-label={isExpanded ? "Hide match details" : "Show match details"}
+                        aria-expanded={isExpanded}
+                        className="flex-shrink-0 text-text-muted/60 hover:text-text-primary transition-colors"
+                      >
+                        <svg
+                          className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  {isExpanded && (
+                    <div className="mt-2 ml-11 flex flex-col gap-3">
                       {match.notes && (
-                        <p className="text-xs text-text-muted mt-0.5 leading-relaxed">
+                        <p className="text-xs text-text-secondary leading-relaxed whitespace-pre-wrap">
                           {match.notes}
                         </p>
                       )}
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {dateStr && (
-                        <span className="text-xs text-text-muted">{dateStr}</span>
-                      )}
-                      {hasLog && (
-                        <button
-                          onClick={() =>
-                            setLogOpenId((prev) => (prev === match.id ? null : match.id))
-                          }
-                          className={`transition-colors ${
-                            logOpen
-                              ? "text-accent"
-                              : "text-text-muted/50 hover:text-accent"
-                          }`}
-                          aria-label={logOpen ? "Hide battle log" : "View battle log"}
-                          aria-expanded={logOpen}
-                          title={logOpen ? "Hide battle log" : "View battle log"}
-                        >
-                          {/* clipboard-list / log icon */}
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 4h6a1 1 0 011 1v1h3a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h3V5a1 1 0 011-1z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6M9 16h6M9 8h6" />
-                          </svg>
-                        </button>
-                      )}
                       {!readOnly && (
-                        <>
+                        <div className="flex items-center gap-2">
                           <button
                             onClick={() => { setEditingId(match.id); closeForm(); }}
-                            className="text-text-muted/50 hover:text-accent transition-colors"
-                            title="Edit match"
+                            className="inline-flex items-center gap-1 rounded-full border border-black/10 px-3 py-1.5 text-xs font-semibold text-text-primary hover:bg-black/5 transition-colors"
                           >
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                            </svg>
+                            Edit
                           </button>
                           <button
                             onClick={() => handleDelete(match.id)}
-                            className="text-text-muted/50 hover:text-accent transition-colors"
-                            title="Delete match"
+                            className="inline-flex items-center gap-1 rounded-full border border-accent/30 px-3 py-1.5 text-xs font-semibold text-accent hover:bg-accent/5 transition-colors"
                           >
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                            Delete
                           </button>
-                        </>
+                        </div>
                       )}
+                      {hasLog && <BattleLogDetail matchId={match.id} />}
                     </div>
-                  </div>
-                  {hasLog && logOpen && <BattleLogDetail matchId={match.id} />}
+                  )}
                 </div>
               );
             }

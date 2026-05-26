@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import MobileNavMenu from "./MobileNavMenu";
+import MobileToolbarLogo from "./MobileToolbarLogo";
 import SiteSidebar from "./SiteSidebar";
 import SiteSidebarRight from "./SiteSidebarRight";
 
@@ -43,17 +44,24 @@ export default async function SiteNav() {
   return (
     <>
       {/* Mobile / portrait-tablet: sticky top toolbar.
-          Layout: back-button slot pinned to the left, hamburger pinned to
-          the right. `BackButton` portals its render into #mobile-back-slot
-          on small viewports so every back affordance shares the row with
-          the menu trigger. Pages without a back button leave the slot
-          empty and the hamburger floats alone on the right. */}
+          Layout: left side groups the back-button slot with a
+          `MobileToolbarLogo` that renders only on top-level routes; the
+          hamburger trigger is pinned to the right. `BackButton` portals
+          its render into #mobile-back-slot on small viewports so every
+          back affordance shares the row with the menu trigger. Pages
+          without a back button leave the slot empty; on top-level pages
+          the logo takes that space as a persistent home button (and is
+          positioned to match the logo inside `MobileNavMenu`'s open
+          panel exactly, so opening the menu doesn't shift it). */}
       <nav
         data-site-toolbar
         className="xl:hidden sticky top-0 z-30 backdrop-blur-xl bg-bg/70"
       >
         <div className="mx-auto max-w-6xl px-6 h-14 flex items-center justify-between">
-          <div id="mobile-back-slot" className="flex items-center" />
+          <div className="flex items-center">
+            <div id="mobile-back-slot" className="flex items-center" />
+            <MobileToolbarLogo />
+          </div>
           <MobileNavMenu
             isAuthed={!!user}
             displayName={displayName}

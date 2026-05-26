@@ -18,38 +18,67 @@ import type { ReactNode } from "react";
  *
  * Banner card placement
  * ─────────────────────
- * Each card sits at CARDS_TOP_PCT from the top of the banner and renders
- * at full height; cards that extend past the bottom of the banner are
- * clipped by the banner's overflow-hidden. The row of cards is centered
- * horizontally within the same max-w-6xl container the variant grid
- * below uses, so the fan visually spans the full width of the deck-list
- * preview row.
+ * Cards are *bottom-anchored*: each card sits with its bottom edge at
+ * the banner's bottom edge, then shifts down by a fraction of its own
+ * height (`BOTTOM_CLIP_PCT`) via `transform: translateY(...)`. Because
+ * translateY's percentage is relative to the element's own height, the
+ * portion of each card that gets clipped by `overflow-hidden` is a
+ * fixed fraction of card height — *independent of banner height*. So a
+ * shorter banner only trims the empty avatar-color space above the
+ * cards; it never eats into the visible portion of the cards below.
+ *
+ * The row is horizontally centered inside the same max-w-6xl container
+ * the variant grid below uses, so the fan spans the full width of the
+ * deck-list preview row.
  *
  * Per-card left offset is derived from `(SPAN - CARD_WIDTH) / (count-1)`
  * so the row always spans the full container regardless of how many
  * cards we actually have (1..7).
  *
+ * Banner sizing is responsive:
+ *
+ *   - Mobile (< `sm:`): explicit `h-[calc(34vw-12px)]`. The formula
+ *     targets a constant ~4px gap between the raised centre card's top
+ *     edge and the banner top across common phone viewports. It is
+ *     derived from `CARD_WIDTH_PCT`, the inner container's 48px gutters
+ *     (`mx-6` × 2), the pokemon-card aspect (~1.396), and the centre
+ *     card's effective height fraction `1 − (BOTTOM_CLIP_PCT −
+ *     CENTER_RAISE_CARD_PCT)/100 = 0.76`. Re-derive if any of those
+ *     change: `banner_h ≈ 0.76 × CARD_WIDTH_PCT/100 × 1.396 × (vw − 48)
+ *     + 4`, which simplifies to ≈ `0.34 × vw − 12 px` with the current
+ *     constants.
+ *   - `sm:` and up: `sm:h-auto sm:aspect-[3/1]` cancels the calc'd
+ *     height and falls back to the original 3:1 aspect. Desktop render
+ *     is unchanged.
+ *
+ * The centre card is the binding constraint because CENTER_RAISE_CARD_PCT
+ * lifts it higher than the outer cards.
+ *
  * Tuning constants:
- *  - CARDS_TOP_PCT     — % of banner height; vertical inset to first card
- *  - CARDS_SPAN_PCT    — % of inner container width; total fan span
- *  - CARD_WIDTH_PCT    — % of inner container width; per-card display width
- *  - BANNER_ASPECT_WH  — banner aspect ratio (width / height)
+ *  - BOTTOM_CLIP_PCT       — % of card height that sits below the banner
+ *  - CENTER_RAISE_CARD_PCT — % of card height the centre card is raised
+ *  - CARDS_SPAN_PCT        — % of inner container width; total fan span
+ *  - CARD_WIDTH_PCT        — % of inner container width; per-card display width
  */
 
-const BANNER_ASPECT_WH = 3;     // 3:1
-const CARDS_TOP_PCT = 25;       // % of banner height; the *outer* cards' top
 const CARDS_SPAN_PCT = 80;      // % of inner container width — fan total span
 const CARD_WIDTH_PCT = 32;      // % of inner container width — per card
 
-// Fan-like-a-playing-hand tuning. The center card sits CENTER_RAISE_PCT
-// higher (closer to the banner top) than the outer cards; intermediate
-// cards interpolate along a quadratic so the fan reads as an arc rather
-// than a straight tilt. CARD_MAX_ROTATION_DEG is the outermost card's
-// tilt; intermediate cards interpolate linearly between 0 and ±max.
-// Cards rotate around their own bottom-center so the bottom edge of each
-// card stays put, mimicking the way real cards in a hand pivot at the
-// player's wrist.
-const CENTER_RAISE_PCT = 12.5;        // top % offset; centre = TOP_PCT − this
+// Fan-like-a-playing-hand tuning. The center card sits
+// CENTER_RAISE_CARD_PCT higher (less clipped) than the outer cards;
+// intermediate cards interpolate along a quadratic so the fan reads as
+// an arc rather than a straight tilt. CARD_MAX_ROTATION_DEG is the
+// outermost card's tilt; intermediate cards interpolate linearly
+// between 0 and ±max. Cards rotate around their own bottom-center so
+// the bottom edge of each card stays put, mimicking the way real cards
+// in a hand pivot at the player's wrist.
+//
+// BOTTOM_CLIP_PCT and CENTER_RAISE_CARD_PCT are calibrated against the
+// previous top-anchored geometry (CARDS_TOP_PCT=25, CENTER_RAISE_PCT=12.5
+// of banner height) at a typical desktop viewport so the desktop render
+// stays visually unchanged.
+const BOTTOM_CLIP_PCT = 35;           // % of card height — outer card clip
+const CENTER_RAISE_CARD_PCT = 11;     // % of card height — centre raise
 const CARD_MAX_ROTATION_DEG = 12;     // degrees at the leftmost/rightmost
 
 interface Props {
@@ -134,8 +163,8 @@ export default function MetaProfileHeader({
           flush at the top of the page; the back button (preBanner)
           overlays the top-left. */}
       <div
-        className="relative w-full overflow-hidden"
-        style={{ aspectRatio: `${BANNER_ASPECT_WH} / 1`, background: fallbackBg }}
+        className="relative w-full overflow-hidden h-[calc(34vw-12px)] sm:h-auto sm:aspect-[3/1]"
+        style={{ background: fallbackBg }}
       >
         {/* Cards layer — constrained to the same max-w-6xl ± px-6 the
             variant grid below uses, so the fan spans the full width of
@@ -148,24 +177,26 @@ export default function MetaProfileHeader({
                   ? singleCardLeft
                   : cardsLeftStart + i * cardsStep;
 
-              // Fan geometry — per-card top + rotation derived from the
+              // Fan geometry — per-card clip + rotation derived from the
               // card's signed distance from the row's center.
               //
               //   normDist = |i - center| / maxDist  (0 at centre, 1 at edge)
-              //   top      = CARDS_TOP_PCT - CENTER_RAISE_PCT × (1 - normDist²)
+              //   clipPct  = BOTTOM_CLIP_PCT - CENTER_RAISE_CARD_PCT × (1 - normDist²)
               //   rotation = (i - center) / maxDist × CARD_MAX_ROTATION_DEG
               //
-              // The quadratic on top gives the row a smooth arc — the
-              // middle card sits CENTER_RAISE_PCT higher than the outer
-              // cards, which themselves stay at CARDS_TOP_PCT so they
-              // never drop below the banner edge.
+              // The quadratic on clipPct gives the row a smooth arc — the
+              // middle card sits CENTER_RAISE_CARD_PCT higher (less
+              // clipped) than the outer cards. clipPct is a percentage of
+              // the card's own height, applied via translateY, so the
+              // bottom-clip stays a fixed fraction of card height even
+              // when the banner gets shorter (mobile aspect-[16/5]).
               const center = (cardCount - 1) / 2;
               const signedDist = i - center;
               const maxDist = Math.max(center, 1);
               const normDist = Math.abs(signedDist) / maxDist;
-              const top =
-                CARDS_TOP_PCT -
-                CENTER_RAISE_PCT * (1 - normDist * normDist);
+              const clipPct =
+                BOTTOM_CLIP_PCT -
+                CENTER_RAISE_CARD_PCT * (1 - normDist * normDist);
               const rotationDeg =
                 cardCount > 1
                   ? (signedDist / maxDist) * CARD_MAX_ROTATION_DEG
@@ -180,11 +211,11 @@ export default function MetaProfileHeader({
                   aria-hidden="true"
                   className="absolute pointer-events-none select-none drop-shadow-md"
                   style={{
-                    top: `${top}%`,
+                    bottom: 0,
                     left: `${left}%`,
                     width: `${CARD_WIDTH_PCT}%`,
                     height: "auto",
-                    transform: `rotate(${rotationDeg}deg)`,
+                    transform: `translateY(${clipPct}%) rotate(${rotationDeg}deg)`,
                     transformOrigin: "50% 100%",
                     zIndex: i,
                   }}

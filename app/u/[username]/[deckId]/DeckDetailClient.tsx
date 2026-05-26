@@ -13,7 +13,8 @@ import LikeButton from "@/app/components/LikeButton";
 import EditDeckDialog from "@/app/components/EditDeckDialog";
 import MatchLog, { type SharedDeckMatchRow } from "@/app/my-decks/[id]/MatchLog";
 import DeckNotes from "@/app/my-decks/[id]/DeckNotes";
-import { primaryCardImageUrl } from "@/lib/primaryCardImage";
+import { primaryCardImageUrl, deckAvatarInfo, pokemonSlug } from "@/lib/primaryCardImage";
+import { typeColor } from "@/lib/metaPrimaryCard";
 
 interface Match {
   id: string;
@@ -128,6 +129,23 @@ export default function DeckDetailClient({
   const [deckName, setDeckName] = useState(pageTitle);
   const [editOpen, setEditOpen] = useState(false);
 
+  const avatar = deckAvatarInfo(analysis.cards ?? [], coverImageUrl);
+  const avatarSlug = avatar ? pokemonSlug(avatar.name) : "";
+  const avatarUrl = avatarSlug
+    ? `https://r2.limitlesstcg.net/pokemon/gen9/${avatarSlug}.png`
+    : null;
+  const avatarBg = avatar ? typeColor(avatar.types) : "#B0A89E";
+  const titleLeading = avatarUrl ? (
+    <span
+      className="w-9 h-9 sm:w-10 sm:h-10 rounded-full shrink-0 inline-flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
+      style={{ background: avatarBg }}
+      aria-hidden
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={avatarUrl} alt="" className="w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] object-contain" />
+    </span>
+  ) : null;
+
   async function toggleVisibility() {
     if (visibilityBusy) return;
     const next = !isPublic;
@@ -213,6 +231,7 @@ export default function DeckDetailClient({
         analysis={analysis}
         profiledAt={profiledAt}
         pageTitle={pageTitle}
+        titleLeading={titleLeading}
         creator={creator ?? undefined}
         shareUrl={canonicalShareUrl}
         preTitle={
@@ -279,6 +298,7 @@ export default function DeckDetailClient({
       analysis={analysis}
       profiledAt={profiledAt}
       pageTitle={deckName}
+      titleLeading={titleLeading}
       titleAction={titleAction}
       subtitle={false}
       shareUrl={shareUrl}

@@ -21,18 +21,64 @@ interface Tile {
   entry: CardIndexEntry | null;
 }
 
+const ENERGY_SYMBOL_TO_TYPE: Record<string, string> = {
+  R: "Fire", W: "Water", G: "Grass", L: "Lightning",
+  P: "Psychic", F: "Fighting", D: "Darkness", M: "Metal",
+  Y: "Fairy", N: "Dragon", C: "Colorless",
+};
+
+/** "Basic {D} Energy" → "basic darkness energy" so the by-name index hits.
+ *  Decklist exports sometimes emit the symbol form, but the card DB stores
+ *  the spelled-out name. */
+function normalizeBasicEnergyName(name: string): string | null {
+  const m = name.match(/^Basic\s+\{([A-Z])\}\s+Energy$/i);
+  if (!m) return null;
+  const type = ENERGY_SYMBOL_TO_TYPE[m[1].toUpperCase()];
+  return type ? `basic ${type.toLowerCase()} energy` : null;
+}
+
+const SECRET_RARITIES = new Set([
+  "Hyper Rare",
+  "Rare Secret",
+  "Special Illustration Rare",
+  "Illustration Rare",
+  "Rare Rainbow",
+  "Rare Holo Star",
+]);
+
+/** When no exact (set, number) match exists, pick the most recent canonical
+ *  printing by set release date. Skips secret/hyper/illustration rares so
+ *  basic energies fall back to a plain reprint, not a $60 special art. */
+function pickMostRecentCanonical(
+  candidates: CardIndexEntry[],
+): CardIndexEntry | null {
+  const canonical = candidates.filter(
+    (c) => !c.rarity || !SECRET_RARITIES.has(c.rarity),
+  );
+  const pool = canonical.length ? canonical : candidates;
+  return [...pool].sort((a, b) => {
+    const dateDiff = b.setReleaseDate.localeCompare(a.setReleaseDate);
+    if (dateDiff !== 0) return dateDiff;
+    return (a.numberNumeric ?? 9999) - (b.numberNumeric ?? 9999);
+  })[0] ?? null;
+}
+
 function resolveEntry(
   byNameIndex: Map<string, CardIndexEntry[]>,
   card: Pick<AnalysisCard, "name" | "number" | "setCode">,
 ): CardIndexEntry | null {
-  const candidates = byNameIndex.get(card.name.toLowerCase());
-  if (!candidates?.length) return null;
+  const lookupName =
+    byNameIndex.get(card.name.toLowerCase()) ??
+    (normalizeBasicEnergyName(card.name)
+      ? byNameIndex.get(normalizeBasicEnergyName(card.name)!)
+      : null);
+  if (!lookupName?.length) return null;
   return (
-    candidates.find(
+    lookupName.find(
       (c) => c.ptcgoCode === card.setCode && c.number === card.number,
     ) ??
-    candidates.find((c) => c.number === card.number) ??
-    candidates[0]
+    lookupName.find((c) => c.number === card.number) ??
+    pickMostRecentCanonical(lookupName)
   );
 }
 
@@ -187,7 +233,7 @@ export default function DeckCardGrid({ cards }: { cards: AnalysisCard[] }) {
 
   return (
     <div
-      className="grid grid-cols-4 md:grid-cols-10 gap-3"
+      className="grid grid-cols-5 md:grid-cols-10 gap-3"
       aria-label="Deck cards"
     >
       {tiles.map((t) => {

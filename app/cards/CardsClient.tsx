@@ -66,7 +66,7 @@ function buildUrl(pathname: string, params: Params): string {
   if (params.sort !== "released") sp.set("sort", params.sort);
   if (params.dir !== defaultDir) sp.set("dir", params.dir);
   if (params.page !== 1) sp.set("page", String(params.page));
-  if (params.pageSize !== 120) sp.set("pageSize", String(params.pageSize));
+  if (params.pageSize !== 60) sp.set("pageSize", String(params.pageSize));
   if (params.view !== "grid") sp.set("view", params.view);
   if (params.ownership !== "all") sp.set("ownership", params.ownership);
   const qs = sp.toString();
@@ -151,7 +151,7 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
     <InventoryProvider>
     <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
       <div className="mb-6">
-        <SectionHeader eyebrow="Pokémon TCG" title="Card Catalog" />
+        <SectionHeader title="Card Catalog" />
       </div>
 
       {/* Toolbar */}
@@ -533,7 +533,6 @@ function GridTile({ card: c }: { card: CardIndexEntry }) {
             setId={c.setId}
             number={c.number}
             setSize={c.setSize}
-            marketPrice={c.marketPrice}
           />
         </Link>
         {mode && (
@@ -547,13 +546,26 @@ function GridTile({ card: c }: { card: CardIndexEntry }) {
           />
         )}
       </div>
-      <InventoryCapsule
-        setId={c.setId}
-        number={c.number}
-        onOpenMenu={(m) => setMode(m)}
-      />
+      <div className="grid grid-cols-2 items-center w-full gap-2">
+        <span className="text-xs font-semibold tabular-nums text-text-primary truncate">
+          {formatGridPrice(c.marketPrice)}
+        </span>
+        <div className="justify-self-end">
+          <InventoryCapsule
+            setId={c.setId}
+            number={c.number}
+            onOpenMenu={(m) => setMode(m)}
+          />
+        </div>
+      </div>
     </div>
   );
+}
+
+function formatGridPrice(p: number): string {
+  if (!p || p <= 0) return "—";
+  if (p >= 1000) return `$${Math.round(p).toLocaleString()}`;
+  return `$${p.toFixed(2)}`;
 }
 
 function ListView({ cards }: { cards: CardIndexEntry[] }) {
