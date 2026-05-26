@@ -38,7 +38,7 @@ export default async function CardsPage({
   const dir = (asString(searchParams.dir) as SortDir | undefined) ?? "desc";
   const view = asString(searchParams.view) === "list" ? "list" : "grid";
   const page = asNumber(searchParams.page) ?? 1;
-  const pageSize = asNumber(searchParams.pageSize) ?? 120;
+  const pageSize = asNumber(searchParams.pageSize) ?? 60;
   const rawOwnership = asString(searchParams.ownership);
   const ownership: OwnershipFilter =
     rawOwnership === "owned" || rawOwnership === "unowned" ? rawOwnership : "all";

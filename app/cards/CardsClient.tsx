@@ -66,7 +66,7 @@ function buildUrl(pathname: string, params: Params): string {
   if (params.sort !== "released") sp.set("sort", params.sort);
   if (params.dir !== defaultDir) sp.set("dir", params.dir);
   if (params.page !== 1) sp.set("page", String(params.page));
-  if (params.pageSize !== 120) sp.set("pageSize", String(params.pageSize));
+  if (params.pageSize !== 60) sp.set("pageSize", String(params.pageSize));
   if (params.view !== "grid") sp.set("view", params.view);
   if (params.ownership !== "all") sp.set("ownership", params.ownership);
   const qs = sp.toString();
