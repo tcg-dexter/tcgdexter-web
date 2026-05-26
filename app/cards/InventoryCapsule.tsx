@@ -57,7 +57,7 @@ export function InventoryCapsule({ setId, number, onOpenMenu }: CapsuleProps) {
 
   return (
     <div
-      className="inline-flex items-center gap-0 rounded-full border border-black/10 bg-white text-xs font-semibold select-none"
+      className="inline-flex items-center gap-0 rounded-full border border-black/10 bg-white text-sm font-semibold select-none"
       onClick={(e) => e.stopPropagation()}
     >
       <button
@@ -65,18 +65,18 @@ export function InventoryCapsule({ setId, number, onOpenMenu }: CapsuleProps) {
         onClick={handleRemove}
         disabled={signedIn === true && present.length === 0}
         aria-label="Remove from collection"
-        className="h-[26px] w-[26px] flex items-center justify-center rounded-l-full hover:bg-surface disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+        className="h-[31px] w-[31px] flex items-center justify-center rounded-l-full hover:bg-surface disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
       >
         <span aria-hidden="true" className="leading-none">−</span>
       </button>
-      <span className="min-w-[20px] text-center tabular-nums text-text-primary">
+      <span className="min-w-[24px] text-center tabular-nums text-text-primary">
         {total}
       </span>
       <button
         type="button"
         onClick={handleAdd}
         aria-label="Add to collection"
-        className="h-[26px] w-[26px] flex items-center justify-center rounded-r-full hover:bg-surface transition-colors"
+        className="h-[31px] w-[31px] flex items-center justify-center rounded-r-full hover:bg-surface transition-colors"
       >
         <span aria-hidden="true" className="leading-none">+</span>
       </button>
