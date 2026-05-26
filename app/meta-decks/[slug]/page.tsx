@@ -39,6 +39,7 @@ interface MetaDeckVariant {
   creator?: string;
   placing?: number;
   date?: string;
+  variantName?: string | null;
   cards: DeckCard[];
 }
 
@@ -243,6 +244,7 @@ export default async function MetaDeckDetailPage({
       id: `${arch.id}-v${i}`,
       href: `/meta-decks/${arch.id}/${i + 1}`,
       contextLabel,
+      variantName: (v.variantName ?? "").trim() || null,
       creator: (v.creator ?? "").trim() || "Trainer",
       deckList: buildDeckList(v.cards),
       cardImageUrl: variantPrimary?.imageUrl ?? null,
@@ -302,6 +304,9 @@ export default async function MetaDeckDetailPage({
                   archetypeId={arch.id}
                   archetypeName={arch.name}
                   annotation={arch.annotation}
+                  variantName={v.variantName}
+                  iconUrl={iconUrl}
+                  iconBg={iconBg}
                   contextLabel={v.contextLabel}
                   creator={v.creator}
                   deckList={v.deckList}

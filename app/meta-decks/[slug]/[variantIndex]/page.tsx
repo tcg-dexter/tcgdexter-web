@@ -33,6 +33,7 @@ interface MetaDeckVariant {
   creator?: string;
   placing?: number;
   date?: string;
+  variantName?: string | null;
   cards: DeckCard[];
 }
 
