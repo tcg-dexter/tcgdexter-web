@@ -1,6 +1,7 @@
 import Link from "next/link";
 import CopyDeckListButton from "@/app/components/CopyDeckListButton";
 import DeckCardFooter from "@/app/components/DeckCardFooter";
+import SpriteIcon from "./SpriteIcon";
 
 interface CardCounts {
   pokemon: number;
@@ -178,15 +179,7 @@ export default function MetaVariantCard({
       aria-hidden
     >
       {iconUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={iconUrl}
-          alt=""
-          className="w-[22px] h-[22px] object-contain"
-          onError={(e) => {
-            (e.currentTarget as HTMLImageElement).style.visibility = "hidden";
-          }}
-        />
+        <SpriteIcon src={iconUrl} className="w-[22px] h-[22px] object-contain" />
       ) : null}
     </div>
   );
