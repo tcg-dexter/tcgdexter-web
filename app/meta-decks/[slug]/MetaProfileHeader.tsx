@@ -35,11 +35,12 @@ import type { ReactNode } from "react";
  * so the row always spans the full container regardless of how many
  * cards we actually have (1..7).
  *
- * Banner aspect ratio is responsive: `aspect-[16/5]` on mobile (tighter
- * top crop), `sm:aspect-[3/1]` from the `sm:` breakpoint up. The mobile
- * value is calibrated so the empty top space above the outer cards reads
- * roughly the way it does on desktop (relative to card size). Desktop
- * stays at 3:1 to preserve the existing render.
+ * Banner aspect ratio is responsive: `aspect-[10/3]` on mobile (the
+ * tightest top crop that still keeps the *raised centre card's top*
+ * inside the banner across common phone viewports — ≤ ~1px margin at
+ * 430px, more headroom below that), and `sm:aspect-[3/1]` from the
+ * `sm:` breakpoint up. The centre card is the binding constraint because
+ * CENTER_RAISE_CARD_PCT lifts it higher than the outer cards.
  *
  * Tuning constants:
  *  - BOTTOM_CLIP_PCT       — % of card height that sits below the banner
@@ -150,7 +151,7 @@ export default function MetaProfileHeader({
           flush at the top of the page; the back button (preBanner)
           overlays the top-left. */}
       <div
-        className="relative w-full overflow-hidden aspect-[16/5] sm:aspect-[3/1]"
+        className="relative w-full overflow-hidden aspect-[10/3] sm:aspect-[3/1]"
         style={{ background: fallbackBg }}
       >
         {/* Cards layer — constrained to the same max-w-6xl ± px-6 the
