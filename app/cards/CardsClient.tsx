@@ -533,7 +533,6 @@ function GridTile({ card: c }: { card: CardIndexEntry }) {
             setId={c.setId}
             number={c.number}
             setSize={c.setSize}
-            marketPrice={c.marketPrice}
           />
         </Link>
         {mode && (
@@ -547,13 +546,26 @@ function GridTile({ card: c }: { card: CardIndexEntry }) {
           />
         )}
       </div>
-      <InventoryCapsule
-        setId={c.setId}
-        number={c.number}
-        onOpenMenu={(m) => setMode(m)}
-      />
+      <div className="grid grid-cols-2 items-center w-full gap-2">
+        <span className="text-xs font-semibold tabular-nums text-text-primary truncate">
+          {formatGridPrice(c.marketPrice)}
+        </span>
+        <div className="justify-self-end">
+          <InventoryCapsule
+            setId={c.setId}
+            number={c.number}
+            onOpenMenu={(m) => setMode(m)}
+          />
+        </div>
+      </div>
     </div>
   );
+}
+
+function formatGridPrice(p: number): string {
+  if (!p || p <= 0) return "—";
+  if (p >= 1000) return `$${Math.round(p).toLocaleString()}`;
+  return `$${p.toFixed(2)}`;
 }
 
 function ListView({ cards }: { cards: CardIndexEntry[] }) {
