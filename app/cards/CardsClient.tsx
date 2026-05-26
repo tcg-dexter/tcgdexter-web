@@ -547,7 +547,7 @@ function GridTile({ card: c }: { card: CardIndexEntry }) {
         )}
       </div>
       <div className="grid grid-cols-2 items-center w-full gap-2">
-        <span className="text-sm font-semibold tabular-nums text-text-primary truncate">
+        <span className="text-xs font-semibold tabular-nums text-text-primary truncate">
           {formatGridPrice(c.marketPrice)}
         </span>
         <div className="justify-self-end">
