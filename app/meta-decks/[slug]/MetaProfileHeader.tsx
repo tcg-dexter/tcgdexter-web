@@ -35,12 +35,24 @@ import type { ReactNode } from "react";
  * so the row always spans the full container regardless of how many
  * cards we actually have (1..7).
  *
- * Banner aspect ratio is responsive: `aspect-[10/3]` on mobile (the
- * tightest top crop that still keeps the *raised centre card's top*
- * inside the banner across common phone viewports — ≤ ~1px margin at
- * 430px, more headroom below that), and `sm:aspect-[3/1]` from the
- * `sm:` breakpoint up. The centre card is the binding constraint because
- * CENTER_RAISE_CARD_PCT lifts it higher than the outer cards.
+ * Banner sizing is responsive:
+ *
+ *   - Mobile (< `sm:`): explicit `h-[calc(34vw-12px)]`. The formula
+ *     targets a constant ~4px gap between the raised centre card's top
+ *     edge and the banner top across common phone viewports. It is
+ *     derived from `CARD_WIDTH_PCT`, the inner container's 48px gutters
+ *     (`mx-6` × 2), the pokemon-card aspect (~1.396), and the centre
+ *     card's effective height fraction `1 − (BOTTOM_CLIP_PCT −
+ *     CENTER_RAISE_CARD_PCT)/100 = 0.76`. Re-derive if any of those
+ *     change: `banner_h ≈ 0.76 × CARD_WIDTH_PCT/100 × 1.396 × (vw − 48)
+ *     + 4`, which simplifies to ≈ `0.34 × vw − 12 px` with the current
+ *     constants.
+ *   - `sm:` and up: `sm:h-auto sm:aspect-[3/1]` cancels the calc'd
+ *     height and falls back to the original 3:1 aspect. Desktop render
+ *     is unchanged.
+ *
+ * The centre card is the binding constraint because CENTER_RAISE_CARD_PCT
+ * lifts it higher than the outer cards.
  *
  * Tuning constants:
  *  - BOTTOM_CLIP_PCT       — % of card height that sits below the banner
@@ -151,7 +163,7 @@ export default function MetaProfileHeader({
           flush at the top of the page; the back button (preBanner)
           overlays the top-left. */}
       <div
-        className="relative w-full overflow-hidden aspect-[10/3] sm:aspect-[3/1]"
+        className="relative w-full overflow-hidden h-[calc(34vw-12px)] sm:h-auto sm:aspect-[3/1]"
         style={{ background: fallbackBg }}
       >
         {/* Cards layer — constrained to the same max-w-6xl ± px-6 the
