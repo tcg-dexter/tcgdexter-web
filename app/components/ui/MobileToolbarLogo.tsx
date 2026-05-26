@@ -12,10 +12,16 @@ import { usePathname } from "next/navigation";
  * sits at pixel-identical coordinates whether the menu is open or
  * closed, and toggling the menu never shifts it.
  *
- * Top-level == the routes the nav menu links to from a "front door"
- * (Card Catalog, Deck Collection, Top 30 Meta Decks, Learn to Play),
- * plus the root user-profile page (`/u/<username>`, not its sub-routes).
- * These pages never render a `BackButton` portaled into the mobile
+ * Where it shows up:
+ *  - The four "front door" pages the nav menu links to (Card Catalog,
+ *    Deck Collection, Top 30 Meta Decks, Learn to Play).
+ *  - Every page inside the Learn UX (`/learn/*`) — lessons, quiz, etc.
+ *    Lesson pages don't render a `BackButton` portaled into the mobile
+ *    back-slot, so the logo sits in the same leftmost position as on
+ *    the front-door pages with no conflict.
+ *  - The root user-profile page (`/u/<username>`, not its sub-routes).
+ *
+ * None of these pages render a `BackButton` portaled into the mobile
  * back-slot, so the logo and back button are mutually exclusive in
  * practice — when one is visible, the other is empty.
  *
@@ -33,6 +39,8 @@ const TOP_LEVEL_EXACT = new Set<string>([
 
 function isTopLevelPath(pathname: string): boolean {
   if (TOP_LEVEL_EXACT.has(pathname)) return true;
+  // Entire Learn UX — lesson detail (/learn/[slug]), quiz, etc.
+  if (pathname.startsWith("/learn/")) return true;
   // User profile root: /u/<username> with no further path segments.
   return /^\/u\/[^/]+$/.test(pathname);
 }
