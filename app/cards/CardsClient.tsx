@@ -22,6 +22,8 @@ interface Facets {
   types: string[];
   subtypes: string[];
   regulations: string[];
+  rarities: string[];
+  retreatCosts: number[];
   sets: Array<{ id: string; name: string; ptcgoCode: string | null }>;
 }
 
@@ -36,6 +38,8 @@ interface Params {
   hpMax?: number;
   priceMin?: number;
   priceMax?: number;
+  rarity: string[];
+  retreatCost: number[];
   sort: SortKey;
   dir: SortDir;
   page: number;
@@ -62,6 +66,8 @@ function buildUrl(pathname: string, params: Params): string {
   if (params.hpMax != null) sp.set("hpMax", String(params.hpMax));
   if (params.priceMin != null) sp.set("priceMin", String(params.priceMin));
   if (params.priceMax != null) sp.set("priceMax", String(params.priceMax));
+  if (params.rarity.length) sp.set("rarity", params.rarity.join(","));
+  if (params.retreatCost.length) sp.set("retreatCost", params.retreatCost.map(String).join(","));
   const defaultDir = params.sort === "name" || params.sort === "number" ? "asc" : "desc";
   if (params.sort !== "released") sp.set("sort", params.sort);
   if (params.dir !== defaultDir) sp.set("dir", params.dir);
@@ -129,7 +135,9 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
     (params.hpMin != null ? 1 : 0) +
     (params.hpMax != null ? 1 : 0) +
     (params.priceMin != null ? 1 : 0) +
-    (params.priceMax != null ? 1 : 0);
+    (params.priceMax != null ? 1 : 0) +
+    params.rarity.length +
+    params.retreatCost.length;
 
   const clearFilters = () => {
     setParams((p) => ({
@@ -143,6 +151,8 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
       hpMax: undefined,
       priceMin: undefined,
       priceMax: undefined,
+      rarity: [],
+      retreatCost: [],
       page: 1,
     }));
   };
@@ -256,6 +266,25 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
             options={facets.regulations}
             selected={params.regulation}
             onToggle={(v) => toggleArrayValue("regulation", v)}
+          />
+          <FacetGroup
+            label="Rarity"
+            options={facets.rarities}
+            selected={params.rarity}
+            onToggle={(v) => toggleArrayValue("rarity", v)}
+          />
+          <FacetGroup
+            label="Retreat Cost"
+            options={facets.retreatCosts.map(String)}
+            selected={params.retreatCost.map(String)}
+            onToggle={(v) => {
+              const n = Number(v);
+              setParams((p) => {
+                const cur = p.retreatCost;
+                const next = cur.includes(n) ? cur.filter((x) => x !== n) : [...cur, n];
+                return { ...p, retreatCost: next, page: 1 };
+              });
+            }}
           />
           <SetFacet
             sets={facets.sets}
