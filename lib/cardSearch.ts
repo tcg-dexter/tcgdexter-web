@@ -68,7 +68,6 @@ export interface CardSearchParams {
   q?: string;
   supertype?: string[];
   type?: string[];
-  subtype?: string[];
   regulation?: string[];
   setId?: string[];
   hpMin?: number;
@@ -183,7 +182,6 @@ function matchAndScore(
 function applyFilters(card: CardIndexEntry, p: CardSearchParams): boolean {
   if (p.supertype?.length && !p.supertype.includes(card.supertype)) return false;
   if (p.type?.length && !card.types.some((t) => p.type!.includes(t))) return false;
-  if (p.subtype?.length && !card.subtypes.some((s) => p.subtype!.includes(s))) return false;
   if (p.regulation?.length) {
     if (!card.regulationMark || !p.regulation.includes(card.regulationMark)) return false;
   }
@@ -293,14 +291,12 @@ export function getFilterFacets() {
   const cards = getAllCards();
   const supertypes = new Set<string>();
   const types = new Set<string>();
-  const subtypes = new Set<string>();
   const regulations = new Set<string>();
   const rarities = new Set<string>();
   const retreatCosts = new Set<number>();
   for (const c of cards) {
     supertypes.add(c.supertype);
     c.types.forEach((t) => types.add(t));
-    c.subtypes.forEach((s) => subtypes.add(s));
     if (c.regulationMark) regulations.add(c.regulationMark);
     if (c.rarity) rarities.add(c.rarity);
     if (c.supertype === "Pokémon") retreatCosts.add(c.retreatCost);
@@ -308,7 +304,6 @@ export function getFilterFacets() {
   return {
     supertypes: Array.from(supertypes).sort(),
     types: Array.from(types).sort(),
-    subtypes: Array.from(subtypes).sort(),
     regulations: Array.from(regulations).sort(),
     rarities: Array.from(rarities).sort((a, b) => (RARITY_RANK[a] ?? 999) - (RARITY_RANK[b] ?? 999)),
     retreatCosts: Array.from(retreatCosts).sort((a, b) => a - b),

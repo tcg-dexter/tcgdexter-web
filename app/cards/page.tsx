@@ -83,7 +83,6 @@ export default async function CardsPage({
     q: asString(searchParams.q),
     supertype: asArray(searchParams.supertype),
     type: asArray(searchParams.type),
-    subtype: asArray(searchParams.subtype),
     regulation: asArray(searchParams.regulation),
     setId: asArray(searchParams.setId),
     hpMin: asNumber(searchParams.hpMin),
@@ -111,7 +110,6 @@ export default async function CardsPage({
         q: params.q ?? "",
         supertype: params.supertype ?? [],
         type: params.type ?? [],
-        subtype: params.subtype ?? [],
         regulation: params.regulation ?? [],
         setId: params.setId ?? [],
         hpMin: params.hpMin,
@@ -126,6 +124,7 @@ export default async function CardsPage({
         pageSize,
         view,
         ownership,
+        variant: [],
       }}
     />
   );
