@@ -6,9 +6,10 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { cardImageSmall } from "@/lib/cardImages";
 import type { CardIndexEntry } from "@/lib/cardsIndex";
 import type { SortKey, SortDir, OwnershipFilter } from "@/lib/cardSearch";
+import { COLLECTION_VARIANTS } from "@/lib/inventory";
 import CardImage from "./CardImage";
 import CardFooterOverlay from "./CardFooterOverlay";
-import InventoryProvider from "./InventoryContext";
+import InventoryProvider, { useInventory } from "./InventoryContext";
 import {
   InventoryCapsule,
   InventoryOverlay,
@@ -20,7 +21,6 @@ import PillSelect from "@/app/components/ui/PillSelect";
 interface Facets {
   supertypes: string[];
   types: string[];
-  subtypes: string[];
   regulations: string[];
   rarities: string[];
   retreatCosts: number[];
@@ -31,7 +31,6 @@ interface Params {
   q: string;
   supertype: string[];
   type: string[];
-  subtype: string[];
   regulation: string[];
   setId: string[];
   hpMin?: number;
@@ -46,6 +45,7 @@ interface Params {
   pageSize: number;
   view: "grid" | "list";
   ownership: OwnershipFilter;
+  variant: string[];
 }
 
 interface Props {
@@ -59,7 +59,6 @@ function buildUrl(pathname: string, params: Params): string {
   if (params.q) sp.set("q", params.q);
   if (params.supertype.length) sp.set("supertype", params.supertype.join(","));
   if (params.type.length) sp.set("type", params.type.join(","));
-  if (params.subtype.length) sp.set("subtype", params.subtype.join(","));
   if (params.regulation.length) sp.set("regulation", params.regulation.join(","));
   if (params.setId.length) sp.set("setId", params.setId.join(","));
   if (params.hpMin != null) sp.set("hpMin", String(params.hpMin));
@@ -75,6 +74,7 @@ function buildUrl(pathname: string, params: Params): string {
   if (params.pageSize !== 60) sp.set("pageSize", String(params.pageSize));
   if (params.view !== "grid") sp.set("view", params.view);
   if (params.ownership !== "all") sp.set("ownership", params.ownership);
+  if (params.ownership === "owned" && params.variant.length) sp.set("variant", params.variant.join(","));
   const qs = sp.toString();
   return qs ? `${pathname}?${qs}` : pathname;
 }
@@ -129,8 +129,8 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
   const activeFilterCount =
     params.supertype.length +
     params.type.length +
-    params.subtype.length +
     params.regulation.length +
+    (params.ownership === "owned" ? params.variant.length : 0) +
     params.setId.length +
     (params.hpMin != null ? 1 : 0) +
     (params.hpMax != null ? 1 : 0) +
@@ -144,7 +144,6 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
       ...p,
       supertype: [],
       type: [],
-      subtype: [],
       regulation: [],
       setId: [],
       hpMin: undefined,
@@ -153,6 +152,7 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
       priceMax: undefined,
       rarity: [],
       retreatCost: [],
+      variant: [],
       page: 1,
     }));
   };
@@ -255,12 +255,14 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
             selected={params.type}
             onToggle={(v) => toggleArrayValue("type", v)}
           />
-          <FacetGroup
-            label="Subtype"
-            options={facets.subtypes}
-            selected={params.subtype}
-            onToggle={(v) => toggleArrayValue("subtype", v)}
-          />
+          {params.ownership === "owned" && (
+            <FacetGroup
+              label="Variant Type"
+              options={COLLECTION_VARIANTS.map((v) => v.label)}
+              selected={params.variant}
+              onToggle={(v) => toggleArrayValue("variant", v)}
+            />
+          )}
           <FacetGroup
             label="Regulation"
             options={facets.regulations}
@@ -320,19 +322,15 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
       {/* Ownership scope */}
       <OwnershipRadios
         value={params.ownership}
-        onChange={(v) => updateParams({ ownership: v })}
+        onChange={(v) => updateParams({ ownership: v, ...(v !== "owned" ? { variant: [] } : {}) })}
       />
 
       {/* Results */}
-      {initialResult.cards.length === 0 ? (
-        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
-          <p className="text-sm text-text-secondary">No cards match these filters.</p>
-        </div>
-      ) : params.view === "grid" ? (
-        <GridView cards={initialResult.cards} />
-      ) : (
-        <ListView cards={initialResult.cards} />
-      )}
+      <VariantFilteredView
+        cards={initialResult.cards}
+        variantFilter={params.ownership === "owned" ? params.variant : []}
+        view={params.view}
+      />
 
       {/* Pagination */}
       {initialResult.total > params.pageSize && (
@@ -347,6 +345,35 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
     </main>
     </InventoryProvider>
   );
+}
+
+function VariantFilteredView({
+  cards,
+  variantFilter,
+  view,
+}: {
+  cards: CardIndexEntry[];
+  variantFilter: string[];
+  view: "grid" | "list";
+}) {
+  const { presentVariants } = useInventory();
+  const displayed = useMemo(() => {
+    if (variantFilter.length === 0) return cards;
+    return cards.filter((c) =>
+      presentVariants(c.setId, c.number).some((v) =>
+        variantFilter.includes(COLLECTION_VARIANTS.find((x) => x.key === v)?.label ?? "")
+      )
+    );
+  }, [cards, variantFilter, presentVariants]);
+
+  if (displayed.length === 0) {
+    return (
+      <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
+        <p className="text-sm text-text-secondary">No cards match these filters.</p>
+      </div>
+    );
+  }
+  return view === "grid" ? <GridView cards={displayed} /> : <ListView cards={displayed} />;
 }
 
 function OwnershipRadios({

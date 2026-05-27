@@ -23,7 +23,6 @@ export async function GET(req: Request) {
     q: sp.get("q") ?? undefined,
     supertype: multi(sp, "supertype"),
     type: multi(sp, "type"),
-    subtype: multi(sp, "subtype"),
     regulation: multi(sp, "regulation"),
     setId: multi(sp, "setId"),
     hpMin: num(sp, "hpMin"),
