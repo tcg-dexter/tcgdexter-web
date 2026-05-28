@@ -118,29 +118,6 @@ export default function MatchHeatMap({ matches }: { matches: MatchRow[] }) {
         ))}
       </div>
 
-      <div className="mt-3 flex items-center justify-between">
-        <span className="text-xs text-text-muted">
-          {total} match{total === 1 ? "" : "es"} in window
-        </span>
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-text-muted">Less</span>
-          {HEAT_LEVELS.map((lvl) => (
-            <span
-              key={lvl.label}
-              className="w-3 h-3 rounded-[3px]"
-              style={heatStyle(lvl.count)}
-              title={`${lvl.label} match${lvl.count === 1 ? "" : "es"}`}
-            />
-          ))}
-          <span className="text-xs text-text-muted">More</span>
-        </div>
-      </div>
-
-      {total === 0 && (
-        <p className="mt-3 text-xs text-text-muted">
-          Log matches on your deck pages to build your activity map.
-        </p>
-      )}
     </div>
   );
 }

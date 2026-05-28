@@ -75,17 +75,22 @@ export default async function CardsPage({
     }
   }
 
+  const retreatCostRaw = asArray(searchParams.retreatCost)
+    ?.map(Number)
+    .filter(Number.isFinite);
+
   const params = {
     q: asString(searchParams.q),
     supertype: asArray(searchParams.supertype),
     type: asArray(searchParams.type),
-    subtype: asArray(searchParams.subtype),
     regulation: asArray(searchParams.regulation),
     setId: asArray(searchParams.setId),
     hpMin: asNumber(searchParams.hpMin),
     hpMax: asNumber(searchParams.hpMax),
     priceMin: asNumber(searchParams.priceMin),
     priceMax: asNumber(searchParams.priceMax),
+    rarity: asArray(searchParams.rarity),
+    retreatCost: retreatCostRaw,
     sort,
     dir,
     page,
@@ -105,19 +110,21 @@ export default async function CardsPage({
         q: params.q ?? "",
         supertype: params.supertype ?? [],
         type: params.type ?? [],
-        subtype: params.subtype ?? [],
         regulation: params.regulation ?? [],
         setId: params.setId ?? [],
         hpMin: params.hpMin,
         hpMax: params.hpMax,
         priceMin: params.priceMin,
         priceMax: params.priceMax,
+        rarity: params.rarity ?? [],
+        retreatCost: params.retreatCost ?? [],
         sort,
         dir,
         page,
         pageSize,
         view,
         ownership,
+        variant: [],
       }}
     />
   );

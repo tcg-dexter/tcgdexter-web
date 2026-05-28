@@ -6,9 +6,10 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { cardImageSmall } from "@/lib/cardImages";
 import type { CardIndexEntry } from "@/lib/cardsIndex";
 import type { SortKey, SortDir, OwnershipFilter } from "@/lib/cardSearch";
+import { COLLECTION_VARIANTS } from "@/lib/inventory";
 import CardImage from "./CardImage";
 import CardFooterOverlay from "./CardFooterOverlay";
-import InventoryProvider from "./InventoryContext";
+import InventoryProvider, { useInventory } from "./InventoryContext";
 import {
   InventoryCapsule,
   InventoryOverlay,
@@ -20,8 +21,9 @@ import PillSelect from "@/app/components/ui/PillSelect";
 interface Facets {
   supertypes: string[];
   types: string[];
-  subtypes: string[];
   regulations: string[];
+  rarities: string[];
+  retreatCosts: number[];
   sets: Array<{ id: string; name: string; ptcgoCode: string | null }>;
 }
 
@@ -29,19 +31,21 @@ interface Params {
   q: string;
   supertype: string[];
   type: string[];
-  subtype: string[];
   regulation: string[];
   setId: string[];
   hpMin?: number;
   hpMax?: number;
   priceMin?: number;
   priceMax?: number;
+  rarity: string[];
+  retreatCost: number[];
   sort: SortKey;
   dir: SortDir;
   page: number;
   pageSize: number;
   view: "grid" | "list";
   ownership: OwnershipFilter;
+  variant: string[];
 }
 
 interface Props {
@@ -55,13 +59,14 @@ function buildUrl(pathname: string, params: Params): string {
   if (params.q) sp.set("q", params.q);
   if (params.supertype.length) sp.set("supertype", params.supertype.join(","));
   if (params.type.length) sp.set("type", params.type.join(","));
-  if (params.subtype.length) sp.set("subtype", params.subtype.join(","));
   if (params.regulation.length) sp.set("regulation", params.regulation.join(","));
   if (params.setId.length) sp.set("setId", params.setId.join(","));
   if (params.hpMin != null) sp.set("hpMin", String(params.hpMin));
   if (params.hpMax != null) sp.set("hpMax", String(params.hpMax));
   if (params.priceMin != null) sp.set("priceMin", String(params.priceMin));
   if (params.priceMax != null) sp.set("priceMax", String(params.priceMax));
+  if (params.rarity.length) sp.set("rarity", params.rarity.join(","));
+  if (params.retreatCost.length) sp.set("retreatCost", params.retreatCost.map(String).join(","));
   const defaultDir = params.sort === "name" || params.sort === "number" ? "asc" : "desc";
   if (params.sort !== "released") sp.set("sort", params.sort);
   if (params.dir !== defaultDir) sp.set("dir", params.dir);
@@ -69,6 +74,7 @@ function buildUrl(pathname: string, params: Params): string {
   if (params.pageSize !== 60) sp.set("pageSize", String(params.pageSize));
   if (params.view !== "grid") sp.set("view", params.view);
   if (params.ownership !== "all") sp.set("ownership", params.ownership);
+  if (params.ownership === "owned" && params.variant.length) sp.set("variant", params.variant.join(","));
   const qs = sp.toString();
   return qs ? `${pathname}?${qs}` : pathname;
 }
@@ -123,26 +129,30 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
   const activeFilterCount =
     params.supertype.length +
     params.type.length +
-    params.subtype.length +
     params.regulation.length +
+    (params.ownership === "owned" ? params.variant.length : 0) +
     params.setId.length +
     (params.hpMin != null ? 1 : 0) +
     (params.hpMax != null ? 1 : 0) +
     (params.priceMin != null ? 1 : 0) +
-    (params.priceMax != null ? 1 : 0);
+    (params.priceMax != null ? 1 : 0) +
+    params.rarity.length +
+    params.retreatCost.length;
 
   const clearFilters = () => {
     setParams((p) => ({
       ...p,
       supertype: [],
       type: [],
-      subtype: [],
       regulation: [],
       setId: [],
       hpMin: undefined,
       hpMax: undefined,
       priceMin: undefined,
       priceMax: undefined,
+      rarity: [],
+      retreatCost: [],
+      variant: [],
       page: 1,
     }));
   };
@@ -245,17 +255,38 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
             selected={params.type}
             onToggle={(v) => toggleArrayValue("type", v)}
           />
-          <FacetGroup
-            label="Subtype"
-            options={facets.subtypes}
-            selected={params.subtype}
-            onToggle={(v) => toggleArrayValue("subtype", v)}
-          />
+          {params.ownership === "owned" && (
+            <FacetGroup
+              label="Variant Type"
+              options={COLLECTION_VARIANTS.map((v) => v.label)}
+              selected={params.variant}
+              onToggle={(v) => toggleArrayValue("variant", v)}
+            />
+          )}
           <FacetGroup
             label="Regulation"
             options={facets.regulations}
             selected={params.regulation}
             onToggle={(v) => toggleArrayValue("regulation", v)}
+          />
+          <FacetGroup
+            label="Rarity"
+            options={facets.rarities}
+            selected={params.rarity}
+            onToggle={(v) => toggleArrayValue("rarity", v)}
+          />
+          <FacetGroup
+            label="Retreat Cost"
+            options={facets.retreatCosts.map(String)}
+            selected={params.retreatCost.map(String)}
+            onToggle={(v) => {
+              const n = Number(v);
+              setParams((p) => {
+                const cur = p.retreatCost;
+                const next = cur.includes(n) ? cur.filter((x) => x !== n) : [...cur, n];
+                return { ...p, retreatCost: next, page: 1 };
+              });
+            }}
           />
           <SetFacet
             sets={facets.sets}
@@ -291,19 +322,15 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
       {/* Ownership scope */}
       <OwnershipRadios
         value={params.ownership}
-        onChange={(v) => updateParams({ ownership: v })}
+        onChange={(v) => updateParams({ ownership: v, ...(v !== "owned" ? { variant: [] } : {}) })}
       />
 
       {/* Results */}
-      {initialResult.cards.length === 0 ? (
-        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
-          <p className="text-sm text-text-secondary">No cards match these filters.</p>
-        </div>
-      ) : params.view === "grid" ? (
-        <GridView cards={initialResult.cards} />
-      ) : (
-        <ListView cards={initialResult.cards} />
-      )}
+      <VariantFilteredView
+        cards={initialResult.cards}
+        variantFilter={params.ownership === "owned" ? params.variant : []}
+        view={params.view}
+      />
 
       {/* Pagination */}
       {initialResult.total > params.pageSize && (
@@ -318,6 +345,35 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
     </main>
     </InventoryProvider>
   );
+}
+
+function VariantFilteredView({
+  cards,
+  variantFilter,
+  view,
+}: {
+  cards: CardIndexEntry[];
+  variantFilter: string[];
+  view: "grid" | "list";
+}) {
+  const { presentVariants } = useInventory();
+  const displayed = useMemo(() => {
+    if (variantFilter.length === 0) return cards;
+    return cards.filter((c) =>
+      presentVariants(c.setId, c.number).some((v) =>
+        variantFilter.includes(COLLECTION_VARIANTS.find((x) => x.key === v)?.label ?? "")
+      )
+    );
+  }, [cards, variantFilter, presentVariants]);
+
+  if (displayed.length === 0) {
+    return (
+      <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
+        <p className="text-sm text-text-secondary">No cards match these filters.</p>
+      </div>
+    );
+  }
+  return view === "grid" ? <GridView cards={displayed} /> : <ListView cards={displayed} />;
 }
 
 function OwnershipRadios({
@@ -547,7 +603,7 @@ function GridTile({ card: c }: { card: CardIndexEntry }) {
         )}
       </div>
       <div className="grid grid-cols-2 items-center w-full gap-2">
-        <span className="text-xs font-semibold tabular-nums text-text-primary truncate">
+        <span className="text-xs font-semibold tabular-nums text-text-primary truncate pl-2">
           {formatGridPrice(c.marketPrice)}
         </span>
         <div className="justify-self-end">
