@@ -227,7 +227,7 @@ export default function BattleLogImportTab({ savedDeckId, onSuccess, onCancel }:
           className="w-full mb-2 rounded-lg bg-bg px-3 py-2 text-xs font-mono text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 resize-y [font-size:16px] sm:text-xs"
         />
         <p className="text-xs text-text-muted mb-3">
-          At the end of a TCG Live match, tap the export icon and choose <span className="font-semibold">Copy battle log</span>. Paste it here.
+          After your match ends, click <span className="font-semibold">Battle Log</span>, then click <span className="font-semibold">Export</span> to copy to your clipboard.
         </p>
 
         {error && <p className="text-xs text-accent mb-2">{error}</p>}
