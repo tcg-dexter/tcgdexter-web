@@ -216,10 +216,10 @@ export default async function ProfilePage({
 
   return (
     <main className="mx-auto max-w-6xl px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
-      <div className="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-stretch mb-6">
-      <div className="flex flex-col gap-6 lg:h-full">
+      <div className="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start mb-6">
+      <div className="flex flex-col gap-6">
       {/* Profile module */}
-      <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5 flex-1">
+      <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5">
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0">
             <div className="w-14 h-14 rounded-full bg-surface flex items-center justify-center text-xl font-bold text-text-secondary">
@@ -359,7 +359,7 @@ export default async function ProfilePage({
       )}
 
       </div>
-      <div className="mt-6 lg:mt-0 lg:h-full">
+      <div className="mt-6 lg:mt-0">
       {/* Match heatmap — only for owner (manual match data is private) */}
       {isOwner && heatmapMatches.length > 0 && (
         <MatchHeatMap matches={heatmapMatches} />
