@@ -264,63 +264,63 @@ export default async function ProfilePage({
                 </Link>
               )}
             </div>
-
-            {profile.bio && (
-              <p className="text-base text-text-secondary leading-relaxed mt-2 whitespace-pre-wrap">
-                {profile.bio}
-              </p>
-            )}
-
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 mt-3 text-base">
-              <div>
-                <dt className="text-text-muted">Record</dt>
-                <dd className="font-semibold text-text-primary">
-                  {globalTotal > 0 ? (
-                    <>
-                      <span className="text-emerald-700">{globalWins}W</span>
-                      {" · "}
-                      <span className="text-rose-700">{globalLosses}L</span>
-                      {globalDraws > 0 && (
-                        <>
-                          {" · "}
-                          <span className="text-stone-600">{globalDraws}D</span>
-                        </>
-                      )}
-                      {winRate !== null && (
-                        <span className="text-text-muted font-normal"> ({winRate}%)</span>
-                      )}
-                    </>
-                  ) : (
-                    <span className="text-text-muted font-normal">No matches yet</span>
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-text-muted">Decks</dt>
-                <dd className="font-semibold text-text-primary">{decks.length}</dd>
-              </div>
-              <div>
-                <dt className="text-text-muted">Cards owned</dt>
-                <dd className="font-semibold text-text-primary">
-                  {collectionStats.cardCount.toLocaleString("en-US")}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-text-muted">Collection value</dt>
-                <dd className="font-semibold text-text-primary">{marketValueDisplay}</dd>
-              </div>
-            </dl>
-
-            {profile.tcg_live_handle && (
-              <p className="mt-3 text-sm text-text-muted">
-                TCG Live:{" "}
-                <span className="font-semibold text-text-primary">
-                  {profile.tcg_live_handle}
-                </span>
-              </p>
-            )}
           </div>
         </div>
+
+        {profile.bio && (
+          <p className="text-base text-text-secondary leading-relaxed mt-4 whitespace-pre-wrap">
+            {profile.bio}
+          </p>
+        )}
+
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-2 mt-4 text-base">
+          <div>
+            <dt className="text-text-muted">Record</dt>
+            <dd className="font-semibold text-text-primary">
+              {globalTotal > 0 ? (
+                <>
+                  <span className="text-emerald-700">{globalWins}W</span>
+                  {" · "}
+                  <span className="text-rose-700">{globalLosses}L</span>
+                  {globalDraws > 0 && (
+                    <>
+                      {" · "}
+                      <span className="text-stone-600">{globalDraws}D</span>
+                    </>
+                  )}
+                  {winRate !== null && (
+                    <span className="text-text-muted font-normal"> ({winRate}%)</span>
+                  )}
+                </>
+              ) : (
+                <span className="text-text-muted font-normal">No matches yet</span>
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-text-muted">Decks</dt>
+            <dd className="font-semibold text-text-primary">{decks.length}</dd>
+          </div>
+          <div>
+            <dt className="text-text-muted">Cards owned</dt>
+            <dd className="font-semibold text-text-primary">
+              {collectionStats.cardCount.toLocaleString("en-US")}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-text-muted">Collection value</dt>
+            <dd className="font-semibold text-text-primary">{marketValueDisplay}</dd>
+          </div>
+        </dl>
+
+        {profile.tcg_live_handle && (
+          <p className="mt-4 text-sm text-text-muted">
+            TCG Live:{" "}
+            <span className="font-semibold text-text-primary">
+              {profile.tcg_live_handle}
+            </span>
+          </p>
+        )}
       </div>
 
       {/* Achievements — earned badges (owner sees an empty state nudge) */}
