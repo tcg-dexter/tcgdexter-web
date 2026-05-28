@@ -94,7 +94,7 @@ export default function MatchHeatMap({ matches }: { matches: MatchRow[] }) {
   const total = cells.reduce((sum, c) => sum + (c.isFuture ? 0 : c.count), 0);
 
   return (
-    <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5 h-full">
+    <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5">
       <div className="flex items-baseline justify-between mb-3">
         <h2 className="text-lg font-semibold text-text-primary">Match Activity</h2>
         <span className="text-xs text-text-muted">Last 20 weeks</span>
