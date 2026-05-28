@@ -25,7 +25,7 @@ export default function CardFooterOverlay({
       <span className="flex items-center min-w-0">
         <span className="truncate rounded-md border border-white/70 px-0.5 py-0.5">{code}</span>
       </span>
-      <span className="truncate">{numberLabel}</span>
+      <span className="truncate mb-[3px]">{numberLabel}</span>
     </div>
   );
 }
