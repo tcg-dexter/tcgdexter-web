@@ -437,6 +437,11 @@ const PATTERNS: Pattern[] = [
       action("game_end", m[1], b.text, { reason: "prizes", winner: m[1] }),
   },
   {
+    re: /^Knocked Out all your opponent's Pok[eé]mon in play and took all your Prize cards\. (.+?) wins\.$/,
+    handle: (m, b) =>
+      action("game_end", m[1], b.text, { reason: "prizes", winner: m[1] }),
+  },
+  {
     re: /^(.+?) had no Pok[eé]mon left\. (.+?) wins\.$/,
     handle: (m, b) =>
       action("game_end", m[2], b.text, {
