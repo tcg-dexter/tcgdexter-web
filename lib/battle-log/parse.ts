@@ -108,7 +108,7 @@ const PATTERNS: Pattern[] = [
       }),
   },
   {
-    re: /^(.+?) drew (\d+) more cards because (.+?) took at least 1 mulligan\.$/,
+    re: /^(.+?) drew (\d+) more cards? because (.+?) took at least 1 mulligan\.$/,
     handle: (m, b) =>
       action("mulligan_bonus_draw", m[1], b.text, {
         count: Number(m[2]),
@@ -391,6 +391,12 @@ const PATTERNS: Pattern[] = [
       }),
   },
 
+  // ── Passive card/effect activation (Stadium triggers, Tool triggers) ─
+  {
+    re: /^(.+?) was activated\.$/,
+    handle: (m, b) => action("effect_activated", null, b.text, { card: m[1] }),
+  },
+
   // ── Discards initiated by board state (retreat energy, KO discard) ─
   {
     re: /^(.+?) was discarded from (.+?)'s (.+?)\.$/,
@@ -438,6 +444,11 @@ const PATTERNS: Pattern[] = [
   },
   {
     re: /^Knocked Out all your opponent's Pok[eé]mon in play and took all your Prize cards\. (.+?) wins\.$/,
+    handle: (m, b) =>
+      action("game_end", m[1], b.text, { reason: "prizes", winner: m[1] }),
+  },
+  {
+    re: /^Opponent Knocked Out all your Pok[eé]mon in play and took all their Prize cards\. (.+?) wins\.$/,
     handle: (m, b) =>
       action("game_end", m[1], b.text, { reason: "prizes", winner: m[1] }),
   },
