@@ -61,7 +61,7 @@ function MatchCard({ match }: { match: RecentMatch }) {
   if (match.deckImageUrl && match.opponentImageUrl) {
     return (
       <Link
-        href={`/u/${match.username}/${match.deckId}`}
+        href={`/battles/${match.id}`}
         className="block rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       >
         <div className="flex items-end justify-center gap-3 px-4 pt-5 pb-3">
@@ -97,7 +97,7 @@ function MatchCard({ match }: { match: RecentMatch }) {
   // Simple layout — deck image (if available) + info side by side
   return (
     <Link
-      href={`/u/${match.username}/${match.deckId}`}
+      href={`/battles/${match.id}`}
       className="block rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
     >
       <div className="flex gap-3.5 p-3.5">
