@@ -381,9 +381,10 @@ function cellTitle(turn: ApiTurn, playerHandle: string | null): string {
 
 interface Props {
   matchId: string;
+  apiUrl?: string;
 }
 
-export default function BattleLogDetail({ matchId }: Props) {
+export default function BattleLogDetail({ matchId, apiUrl }: Props) {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -391,7 +392,7 @@ export default function BattleLogDetail({ matchId }: Props) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetch(`/api/matches/${matchId}/battle-log`)
+    fetch(apiUrl ?? `/api/matches/${matchId}/battle-log`)
       .then(async (r) => {
         const json = await r.json();
         if (!r.ok) throw new Error(json.error ?? "Failed to load battle log.");
