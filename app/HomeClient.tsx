@@ -22,6 +22,9 @@ export type RecentMatch = {
   deckId: string;
   deckName: string;
   username: string;
+  deckImageUrl: string | null;
+  opponentImageUrl: string | null;
+  opponentAttackerName: string | null;
 };
 
 function relativeTime(iso: string): string {
@@ -42,31 +45,82 @@ function MatchCard({ match }: { match: RecentMatch }) {
     draw: { label: "Draw", bg: "bg-gray-100",  text: "text-gray-500"  },
   }[match.result];
 
+  const badge = (
+    <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold tracking-wide ${cfg.bg} ${cfg.text}`}>
+      {cfg.label}
+    </span>
+  );
+
+  const vsLabel = match.opponentArchetype
+    ? `vs. ${match.opponentArchetype}`
+    : match.opponentAttackerName
+    ? `vs. ${match.opponentAttackerName}`
+    : null;
+
+  // Versus layout — battle log match with both card images
+  if (match.deckImageUrl && match.opponentImageUrl) {
+    return (
+      <Link
+        href={`/u/${match.username}/${match.deckId}`}
+        className="block rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+      >
+        <div className="flex items-end justify-center gap-3 px-4 pt-5 pb-3">
+          <div style={{ transform: "rotate(-6deg)", transformOrigin: "bottom center" }}>
+            <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={match.deckImageUrl} alt={match.deckName} className="w-full h-full object-contain" />
+            </div>
+          </div>
+          <span className="mb-6 text-[10px] font-black text-text-muted tracking-[0.2em]">VS</span>
+          <div style={{ transform: "rotate(6deg)", transformOrigin: "bottom center" }}>
+            <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={match.opponentImageUrl} alt={match.opponentAttackerName ?? "Opponent"} className="w-full h-full object-contain" />
+            </div>
+          </div>
+        </div>
+        <div className="px-3.5 pb-3.5">
+          <div className="flex items-center gap-2 mb-1.5">
+            {badge}
+            <p className="flex-1 min-w-0 text-[15px] font-semibold text-text-primary truncate">{match.deckName}</p>
+          </div>
+          <p className="text-[12px] font-medium text-text-muted mb-0.5">@{match.username}</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[12px] text-text-secondary truncate">{vsLabel ?? ""}</p>
+            <p className="shrink-0 text-[11px] text-text-muted">{relativeTime(match.createdAt)}</p>
+          </div>
+        </div>
+      </Link>
+    );
+  }
+
+  // Simple layout — deck image (if available) + info side by side
   return (
     <Link
       href={`/u/${match.username}/${match.deckId}`}
-      className="block rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow p-3.5"
+      className="block rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
     >
-      <div className="flex items-center gap-2 mb-2">
-        <span
-          className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold tracking-wide ${cfg.bg} ${cfg.text}`}
-        >
-          {cfg.label}
-        </span>
-        <p className="flex-1 min-w-0 text-[15px] font-semibold text-text-primary truncate">
-          {match.deckName}
-        </p>
-      </div>
-      <p className="text-[12px] font-medium text-text-muted mb-2">
-        @{match.username}
-      </p>
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[12px] text-text-secondary truncate">
-          {match.opponentArchetype ? `vs. ${match.opponentArchetype}` : ""}
-        </p>
-        <p className="shrink-0 text-[11px] text-text-muted">
-          {relativeTime(match.createdAt)}
-        </p>
+      <div className="flex gap-3.5 p-3.5">
+        {match.deckImageUrl && (
+          <div
+            className="shrink-0 rounded-lg overflow-hidden border border-black/[0.07] bg-[var(--surface)]"
+            style={{ width: 72, height: 101 }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={match.deckImageUrl} alt={match.deckName} className="w-full h-full object-contain" />
+          </div>
+        )}
+        <div className="flex-1 min-w-0 flex flex-col">
+          <div className="flex items-center gap-2 mb-2">
+            {badge}
+            <p className="flex-1 min-w-0 text-[15px] font-semibold text-text-primary truncate">{match.deckName}</p>
+          </div>
+          <p className="text-[12px] font-medium text-text-muted mb-2">@{match.username}</p>
+          <div className="flex items-center justify-between gap-2 mt-auto">
+            <p className="text-[12px] text-text-secondary truncate">{vsLabel ?? ""}</p>
+            <p className="shrink-0 text-[11px] text-text-muted">{relativeTime(match.createdAt)}</p>
+          </div>
+        </div>
       </div>
     </Link>
   );
