@@ -50,7 +50,7 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
 
     if (deckErr || !deckRows?.length) return [];
 
-    const ownerIds = [...new Set(deckRows.map((d) => d.user_id as string))];
+    const ownerIds = Array.from(new Set(deckRows.map((d) => d.user_id as string)));
     const { data: profileRows, error: profErr } = await admin
       .from("profiles")
       .select("id, username")
