@@ -14,6 +14,64 @@ import metaDecksRaw from "@/data/meta-decks.json";
 import { MetaDeckCard } from "@/app/components/DeckPostCard";
 import { metaPrimaryCard, typeColor } from "@/lib/metaPrimaryCard";
 
+export type RecentMatch = {
+  id: string;
+  result: "win" | "loss" | "draw";
+  opponentArchetype: string | null;
+  createdAt: string;
+  deckId: string;
+  deckName: string;
+  username: string;
+};
+
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 60) return `${Math.max(mins, 1)}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function MatchCard({ match }: { match: RecentMatch }) {
+  const cfg = {
+    win:  { label: "Win",  bg: "bg-green-100", text: "text-green-700" },
+    loss: { label: "Loss", bg: "bg-red-100",   text: "text-red-700"   },
+    draw: { label: "Draw", bg: "bg-gray-100",  text: "text-gray-500"  },
+  }[match.result];
+
+  return (
+    <Link
+      href={`/u/${match.username}/${match.deckId}`}
+      className="block rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow p-3.5"
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <span
+          className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold tracking-wide ${cfg.bg} ${cfg.text}`}
+        >
+          {cfg.label}
+        </span>
+        <p className="flex-1 min-w-0 text-[15px] font-semibold text-text-primary truncate">
+          {match.deckName}
+        </p>
+      </div>
+      <p className="text-[12px] font-medium text-text-muted mb-2">
+        @{match.username}
+      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[12px] text-text-secondary truncate">
+          {match.opponentArchetype ? `vs. ${match.opponentArchetype}` : ""}
+        </p>
+        <p className="shrink-0 text-[11px] text-text-muted">
+          {relativeTime(match.createdAt)}
+        </p>
+      </div>
+    </Link>
+  );
+}
+
 const EXAMPLE_DECK = `Pokémon: 13
 1 Meowth ex POR 62
 1 N's Darmanitan JTG 27
@@ -115,8 +173,10 @@ const top3Cards = (() => {
 
 export default function HomeClient({
   stats,
+  recentMatches = [],
 }: {
   stats: Array<{ label: string; value: string }>;
+  recentMatches?: RecentMatch[];
 }) {
   const [deckList, setDeckList] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -308,6 +368,25 @@ export default function HomeClient({
               A dex for your decks. Save your own lists, share with fellow trainers, and browse the top meta archetypes. Track your progress and earn badges.
             </div>
           </section>
+
+          {/* Recent Matches */}
+          {recentMatches.length > 0 && (
+            <section className="mx-auto max-w-6xl px-6 pb-16">
+              <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
+                <div>
+                  <div className="text-xs uppercase tracking-widest text-accent mb-3">
+                    Recent Matches
+                  </div>
+                  <h2 className="text-4xl font-semibold tracking-tight">Latest battles from the community.</h2>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {recentMatches.map((m) => (
+                  <MatchCard key={m.id} match={m} />
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Final CTA */}
           <section className="mx-auto max-w-5xl px-6 pb-32">
