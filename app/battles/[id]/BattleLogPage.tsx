@@ -52,9 +52,10 @@ export default function BattleLogPage({
 
   return (
     <div className="min-h-screen bg-bg">
-      <div className="mx-auto max-w-2xl px-4 pt-[calc(env(safe-area-inset-top)_+_1.5rem)] pb-16">
 
-        {/* Back link */}
+      {/* Header — constrained width */}
+      <div className="mx-auto max-w-2xl px-4 pt-[calc(env(safe-area-inset-top)_+_1.5rem)] pb-4">
+
         <Link
           href="/"
           className="mb-5 inline-flex items-center gap-1 text-xs font-semibold text-text-muted hover:text-text-primary transition-colors"
@@ -62,8 +63,7 @@ export default function BattleLogPage({
           ← Home
         </Link>
 
-        {/* Match header */}
-        <div className="mt-1 mb-6 rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5">
+        <div className="mt-1 rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5">
           <div className="flex items-start gap-3">
             <span className={`mt-0.5 shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold tracking-wide ${cfg.bg} ${cfg.text}`}>
               {cfg.label}
@@ -91,27 +91,17 @@ export default function BattleLogPage({
                   style={{ width: 88, height: 123 }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={deckImageUrl!}
-                    alt={deckName}
-                    className="w-full h-full object-contain"
-                  />
+                  <img src={deckImageUrl!} alt={deckName} className="w-full h-full object-contain" />
                 </div>
               </div>
-              <span className="mb-7 text-[10px] font-black text-text-muted tracking-[0.2em]">
-                VS
-              </span>
+              <span className="mb-7 text-[10px] font-black text-text-muted tracking-[0.2em]">VS</span>
               <div style={{ transform: "rotate(6deg)", transformOrigin: "bottom center" }}>
                 <div
                   className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]"
                   style={{ width: 88, height: 123 }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={opponentImageUrl!}
-                    alt={opponentAttackerName ?? "Opponent"}
-                    className="w-full h-full object-contain"
-                  />
+                  <img src={opponentImageUrl!} alt={opponentAttackerName ?? "Opponent"} className="w-full h-full object-contain" />
                 </div>
               </div>
             </div>
@@ -125,20 +115,18 @@ export default function BattleLogPage({
                 style={{ width: 88, height: 123 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={deckImageUrl}
-                  alt={deckName}
-                  className="w-full h-full object-contain"
-                />
+                <img src={deckImageUrl} alt={deckName} className="w-full h-full object-contain" />
               </div>
             </div>
           )}
         </div>
+      </div>
 
-        {/* Battle log */}
+      {/* Battle log — full width */}
+      <div className="px-3 pb-16">
         {hasBattleLog ? (
           <>
-            <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-text-muted">
+            <p className="mb-1 mt-1 text-xs font-semibold uppercase tracking-widest text-text-muted px-1">
               Battle Log
             </p>
             <BattleLogDetail
@@ -152,6 +140,7 @@ export default function BattleLogPage({
           </div>
         )}
       </div>
+
     </div>
   );
 }
