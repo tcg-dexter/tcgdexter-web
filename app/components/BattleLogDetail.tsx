@@ -494,10 +494,14 @@ export default function BattleLogDetail({ matchId, apiUrl }: Props) {
           <div
             key={turn.id}
             className={`rounded-lg bg-bg p-3 ${
-              isPlayer ? "shadow-[inset_3px_0_0_0_var(--accent)]" : ""
-            } ${isOpponent ? "shadow-[inset_3px_0_0_0_black]" : ""}`}
+              isPlayer
+                ? "mr-auto w-[88%] shadow-[inset_3px_0_0_0_var(--accent)]"
+                : isOpponent
+                ? "ml-auto w-[88%] shadow-[inset_-3px_0_0_0_var(--accent)]"
+                : ""
+            }`}
           >
-            <div className="flex items-center justify-between mb-2">
+            <div className={`flex items-center justify-between mb-2 ${isOpponent ? "flex-row-reverse" : ""}`}>
               <span className="text-xs font-semibold text-text-primary truncate">
                 {title}
               </span>
