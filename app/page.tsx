@@ -121,14 +121,14 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
     }
 
     const topAttackerByMatch = new Map<string, string>();
-    for (const [matchId, attackerMap] of opponentDmg) {
+    opponentDmg.forEach((attackerMap, matchId) => {
       let topName = "";
       let topDmg = 0;
-      for (const [name, dmg] of attackerMap) {
+      attackerMap.forEach((dmg, name) => {
         if (dmg > topDmg) { topDmg = dmg; topName = name; }
-      }
+      });
       if (topName) topAttackerByMatch.set(matchId, topName);
-    }
+    });
 
     return matchRows.flatMap((m) => {
       const deck = deckById.get(m.saved_deck_id as string);
