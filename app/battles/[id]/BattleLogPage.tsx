@@ -27,15 +27,6 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-const RESULT_CFG = {
-  win:  { label: "Win",  badgeBg: "bg-green-100",  badgeText: "text-green-700",  glow: "bg-green-400",  heroBg: "from-[#091209]" },
-  loss: { label: "Loss", badgeBg: "bg-red-100",    badgeText: "text-red-700",    glow: "bg-red-400",    heroBg: "from-[#12090a]" },
-  draw: { label: "Draw", badgeBg: "bg-white/10",   badgeText: "text-white/55",   glow: "bg-white/30",   heroBg: "from-[#0d0d0d]" },
-};
-
-const CARD_W = 112;
-const CARD_H = 157; // ~1.4 aspect ratio (standard Pokémon card)
-
 export default function BattleLogPage({
   matchId,
   result,
@@ -48,128 +39,100 @@ export default function BattleLogPage({
   opponentImageUrl,
   hasBattleLog,
 }: Props) {
-  const cfg = RESULT_CFG[result];
-  const vsLabel = opponentArchetype ?? opponentAttackerName ?? null;
+  const cfg = {
+    win:  { label: "Win",  bg: "bg-green-100", text: "text-green-700" },
+    loss: { label: "Loss", bg: "bg-red-100",   text: "text-red-700"   },
+    draw: { label: "Draw", bg: "bg-gray-100",  text: "text-gray-500"  },
+  }[result];
+
+  const vsLabel = opponentArchetype
+    ?? (opponentAttackerName ? `${opponentAttackerName}` : null);
+
   const showVersus = !!deckImageUrl && !!opponentImageUrl;
 
   return (
     <div className="min-h-screen bg-bg">
 
-      {/* ── Hero banner ─────────────────────────────────────────── */}
-      <div className={`bg-gradient-to-b ${cfg.heroBg} to-[#0f0f0f] rounded-b-[32px] overflow-hidden`}>
+      {/* Header — constrained width */}
+      <div className="mx-auto max-w-2xl px-4 pt-[calc(env(safe-area-inset-top)_+_1.5rem)] pb-4">
 
-        {/* Back link */}
-        <div className="px-4 pt-[calc(env(safe-area-inset-top)_+_0.875rem)]">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white/35 hover:text-white/65 transition-colors"
-          >
-            ← Home
-          </Link>
-        </div>
+        <Link
+          href="/"
+          className="mb-5 inline-flex items-center gap-1 text-xs font-semibold text-text-muted hover:text-text-primary transition-colors"
+        >
+          ← Home
+        </Link>
 
-        {/* Result badge with color bloom */}
-        <div className="relative flex justify-center items-center pt-5 pb-2">
-          <div className={`absolute w-36 h-12 blur-3xl opacity-25 rounded-full ${cfg.glow}`} />
-          <span className={`relative px-5 py-1.5 rounded-full text-[11px] font-bold tracking-widest uppercase ${cfg.badgeBg} ${cfg.badgeText}`}>
-            {cfg.label}
-          </span>
-        </div>
+        <div className="mt-1 rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5">
+          <div className="flex items-start gap-3">
+            <span className={`mt-0.5 shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold tracking-wide ${cfg.bg} ${cfg.text}`}>
+              {cfg.label}
+            </span>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-[17px] font-semibold text-text-primary leading-tight truncate">
+                {deckName}
+              </h1>
+              <p className="text-[12px] font-medium text-text-muted mt-0.5">@{username}</p>
+              {vsLabel && (
+                <p className="text-[13px] text-text-secondary mt-1">vs. {vsLabel}</p>
+              )}
+            </div>
+            <p className="shrink-0 text-[11px] text-text-muted mt-0.5">
+              {relativeTime(createdAt)}
+            </p>
+          </div>
 
-        {/* Card images */}
-        {showVersus ? (
-          <>
-            <div className="flex items-end justify-center gap-3 px-5 pt-3">
-              {/* Player card */}
-              <div className="flex-1 flex justify-end">
-                <div style={{ transform: "rotate(-6deg)", transformOrigin: "bottom center" }}>
-                  <div
-                    className="rounded-xl overflow-hidden bg-[var(--surface)]"
-                    style={{ width: CARD_W, height: CARD_H, boxShadow: "0 12px 48px rgba(0,0,0,0.75)" }}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={deckImageUrl!} alt={deckName} className="w-full h-full object-contain" />
-                  </div>
+          {/* Versus card images */}
+          {showVersus && (
+            <div className="mt-5 flex items-end justify-center gap-4">
+              <div style={{ transform: "rotate(-6deg)", transformOrigin: "bottom center" }}>
+                <div
+                  className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]"
+                  style={{ width: 88, height: 123 }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={deckImageUrl!} alt={deckName} className="w-full h-full object-contain" />
                 </div>
               </div>
-
-              {/* VS */}
-              <div className="shrink-0 flex items-center mb-14">
-                <span className="text-[9px] font-black text-white/20 tracking-[0.3em]">VS</span>
-              </div>
-
-              {/* Opponent card */}
-              <div className="flex-1 flex justify-start">
-                <div style={{ transform: "rotate(6deg)", transformOrigin: "bottom center" }}>
-                  <div
-                    className="rounded-xl overflow-hidden bg-[var(--surface)]"
-                    style={{ width: CARD_W, height: CARD_H, boxShadow: "0 12px 48px rgba(0,0,0,0.75)" }}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={opponentImageUrl!} alt={opponentAttackerName ?? "Opponent"} className="w-full h-full object-contain" />
-                  </div>
+              <span className="mb-7 text-[10px] font-black text-text-muted tracking-[0.2em]">VS</span>
+              <div style={{ transform: "rotate(6deg)", transformOrigin: "bottom center" }}>
+                <div
+                  className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]"
+                  style={{ width: 88, height: 123 }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={opponentImageUrl!} alt={opponentAttackerName ?? "Opponent"} className="w-full h-full object-contain" />
                 </div>
               </div>
             </div>
+          )}
 
-            {/* Player labels — mirror the card alignment */}
-            <div className="flex justify-between px-5 pt-3 pb-5">
-              <div className="flex-1 pl-2">
-                <p className="text-[11px] font-semibold text-white/60 truncate" style={{ maxWidth: CARD_W + 20 }}>{deckName}</p>
-                <p className="text-[10px] text-white/30 mt-0.5">@{username}</p>
-              </div>
-              <div className="flex-1 text-right pr-2">
-                <p className="text-[11px] font-semibold text-white/60 truncate ml-auto" style={{ maxWidth: CARD_W + 20 }}>
-                  {vsLabel ?? "Opponent"}
-                </p>
-                <p className="text-[10px] text-white/30 mt-0.5">Opponent</p>
-              </div>
-            </div>
-          </>
-        ) : deckImageUrl ? (
-          <>
-            <div className="flex justify-center pt-3">
+          {/* Deck image only */}
+          {!showVersus && deckImageUrl && (
+            <div className="mt-4 flex justify-center">
               <div
-                className="rounded-xl overflow-hidden bg-[var(--surface)]"
-                style={{ width: CARD_W, height: CARD_H, boxShadow: "0 12px 48px rgba(0,0,0,0.75)" }}
+                className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]"
+                style={{ width: 88, height: 123 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={deckImageUrl} alt={deckName} className="w-full h-full object-contain" />
               </div>
             </div>
-            <div className="pt-3 pb-5 text-center px-4">
-              <p className="text-[13px] font-semibold text-white/70 truncate">{deckName}</p>
-              <p className="text-[11px] text-white/35 mt-0.5">
-                @{username}{vsLabel ? ` · vs. ${vsLabel}` : ""}
-              </p>
-            </div>
-          </>
-        ) : (
-          <div className="px-6 pt-4 pb-6">
-            <h1 className="text-lg font-semibold text-white/80">{deckName}</h1>
-            <p className="text-[12px] text-white/40 mt-1">
-              @{username}{vsLabel ? ` · vs. ${vsLabel}` : ""}
-            </p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* ── Date / meta strip ───────────────────────────────────── */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-black/[0.06]">
-        <p className="text-[11px] text-text-muted">
-          {vsLabel ? `vs. ${vsLabel}` : deckName}
-        </p>
-        <p className="text-[11px] text-text-muted">{relativeTime(createdAt)}</p>
-      </div>
-
-      {/* ── Battle log ──────────────────────────────────────────── */}
-      <div className="px-3 pt-3 pb-16">
+      {/* Battle log — full width */}
+      <div className="px-3 pb-16">
         {hasBattleLog ? (
           <>
-            <p className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+            <p className="mb-1 mt-1 text-xs font-semibold uppercase tracking-widest text-text-muted px-1">
               Battle Log
             </p>
-            <BattleLogDetail matchId={matchId} apiUrl={`/api/battles/${matchId}/log`} />
+            <BattleLogDetail
+              matchId={matchId}
+              apiUrl={`/api/battles/${matchId}/log`}
+            />
           </>
         ) : (
           <div className="rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5 text-sm text-text-muted text-center">
