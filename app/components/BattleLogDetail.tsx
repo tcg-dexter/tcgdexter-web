@@ -493,23 +493,21 @@ export default function BattleLogDetail({ matchId, apiUrl }: Props) {
         return (
           <div
             key={turn.id}
-            className={`rounded-xl p-3.5 ${
+            className={`rounded-lg bg-bg p-3 ${
               isPlayer
-                ? "mr-auto w-[88%] bg-white border border-black/[0.06] shadow-[inset_3px_0_0_0_var(--accent)]"
+                ? "mr-auto w-[88%] shadow-[inset_3px_0_0_0_var(--accent)]"
                 : isOpponent
-                ? "ml-auto w-[88%] bg-white border border-black/[0.06] shadow-[inset_-3px_0_0_0_var(--accent)]"
-                : "bg-bg border border-black/[0.04]"
+                ? "ml-auto w-[88%] shadow-[inset_-3px_0_0_0_var(--accent)]"
+                : ""
             }`}
           >
-            <div className={`flex items-center justify-between mb-2.5 ${isOpponent ? "flex-row-reverse" : ""}`}>
+            <div className={`flex items-center justify-between mb-2 ${isOpponent ? "flex-row-reverse" : ""}`}>
               <span className="text-xs font-semibold text-text-primary truncate">
                 {title}
               </span>
-              {turnLabel ? (
-                <span className="shrink-0 rounded bg-black/[0.05] px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-text-secondary">
-                  {turnLabel}
-                </span>
-              ) : null}
+              <span className="text-[11px] font-semibold text-text-muted tabular-nums">
+                {turnLabel}
+              </span>
             </div>
             {setupGroups && setupGroups.length > 0 ? (
               <div className="flex flex-col gap-3">
@@ -525,9 +523,7 @@ export default function BattleLogDetail({ matchId, apiUrl }: Props) {
                             : "bg-text-muted"
                         }`}
                       />
-                      <span className={`text-[11px] font-semibold uppercase tracking-wide ${
-                        group.actor === "player" ? "text-accent" : "text-text-muted"
-                      }`}>
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
                         {group.handle ?? "Other"}
                       </span>
                     </div>
@@ -598,32 +594,18 @@ function groupSetupActions(
   return order.map((k) => byKey.get(k)!);
 }
 
-const ACTION_ICON_COLOR: Partial<Record<string, string>> = {
-  attack:       "text-accent",
-  knock_out:    "text-red-500",
-  prize_taken:  "text-amber-500",
-  game_end:     "text-accent",
-  ability_used: "text-violet-500",
-};
-
-const KEY_ACTIONS = new Set(["attack", "knock_out", "prize_taken", "game_end"]);
-
 function ActionList({ actions }: { actions: ApiAction[] }) {
   return (
-    <ul className="flex flex-col gap-1.5">
+    <ul className="flex flex-col gap-1">
       {actions.map((a) => {
         const label = labelFor(a);
         if (!label) return null;
-        const isKey = KEY_ACTIONS.has(a.action_type);
-        const iconColor = ACTION_ICON_COLOR[a.action_type] ?? "text-text-muted";
         return (
           <li
             key={a.id}
-            className={`flex items-start gap-2 text-xs leading-snug ${
-              isKey ? "text-text-primary font-medium" : "text-text-secondary"
-            }`}
+            className="flex items-start gap-2 text-xs text-text-secondary leading-snug"
           >
-            <span className={`mt-0.5 ${iconColor}`}>
+            <span className="mt-0.5 text-text-muted">
               <Icon type={a.action_type} className="w-3.5 h-3.5" />
             </span>
             <span className="flex-1 min-w-0 break-words">{label}</span>
