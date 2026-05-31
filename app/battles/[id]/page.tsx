@@ -84,6 +84,37 @@ export default async function BattleRoute({
     dmgByAttacker.forEach((dmg, name) => {
       if (dmg > topDmg) { topDmg = dmg; opponentAttackerName = name; }
     });
+
+    // Fallback: if the opponent never attacked (early concede, KO before
+    // their attack landed, etc.), pick the highest-rank Pokémon they
+    // played or evolved into. Routes through primaryPokemonCard so we
+    // get the same stage/qty preference used for deck primary cards.
+    if (!opponentAttackerName) {
+      const { data: playRows } = await admin
+        .from("match_actions")
+        .select("action_type, payload")
+        .eq("match_id", id)
+        .eq("actor", "opponent")
+        .in("action_type", ["play_to_active", "play_to_bench", "evolve"]);
+
+      const countByName = new Map<string, number>();
+      for (const row of playRows ?? []) {
+        const payload = row.payload as Record<string, unknown>;
+        const name =
+          row.action_type === "evolve"
+            ? (typeof payload?.to === "string" ? payload.to : null)
+            : (typeof payload?.card === "string" ? payload.card : null);
+        if (name) countByName.set(name, (countByName.get(name) ?? 0) + 1);
+      }
+      if (countByName.size > 0) {
+        const synthetic: AnalysisCard[] = Array.from(countByName.entries()).map(
+          ([name, qty]) => ({ name, qty, number: "", setCode: "", section: "pokemon" }),
+        );
+        const primary = primaryPokemonCard(synthetic);
+        if (primary) opponentAttackerName = primary.card.name;
+      }
+    }
+
     if (opponentAttackerName) opponentImageUrl = cardImageUrlForName(opponentAttackerName);
   }
 
