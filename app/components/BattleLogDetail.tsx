@@ -696,11 +696,9 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
 
   return (
     <div
-      className={`flex gap-3 px-3 py-3 ${isLast ? "" : "border-b border-[var(--border)]/15"} ${
-        isResult ? "bg-accent/[0.06]" : ""
-      }`}
+      className={`flex gap-3 px-3 pt-3 ${isResult ? "bg-accent/[0.06]" : ""}`}
     >
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-center self-stretch">
         <div
           className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
           style={avatarStyle}
@@ -721,10 +719,16 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
             </span>
           )}
         </div>
-        {!isLast && <div className="w-px flex-1 bg-[var(--border)]/20 mt-1.5" />}
+        {!isLast && (
+          <div className="w-0.5 flex-1 bg-[var(--border)]/40 mt-1.5" />
+        )}
       </div>
 
-      <div className="flex-1 min-w-0 pb-1">
+      <div
+        className={`flex-1 min-w-0 pb-3 ${
+          isLast ? "" : "border-b border-[var(--border)]/20"
+        }`}
+      >
         <div className="flex items-baseline gap-1.5 flex-wrap">
           <span className="text-sm font-bold text-text-primary truncate">
             {post.displayName}
