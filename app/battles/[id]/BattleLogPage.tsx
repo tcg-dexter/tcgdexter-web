@@ -132,6 +132,7 @@ export default function BattleLogPage({
             <BattleLogDetail
               matchId={matchId}
               apiUrl={`/api/battles/${matchId}/log`}
+              result={result}
             />
           </>
         ) : (

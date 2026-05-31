@@ -452,9 +452,10 @@ function statsFor(actions: ApiAction[]): PostStats {
 interface Props {
   matchId: string;
   apiUrl?: string;
+  result?: "win" | "loss" | "draw" | null;
 }
 
-export default function BattleLogDetail({ matchId, apiUrl }: Props) {
+export default function BattleLogDetail({ matchId, apiUrl, result }: Props) {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -543,10 +544,14 @@ export default function BattleLogDetail({ matchId, apiUrl }: Props) {
   // loser. The match record carries `result` ("win" | "loss" |
   // "draw") from the player's perspective — preferred over the
   // game_end action, which isn't stored for every match.
+  // Prefer the result prop passed in by the page (always present);
+  // fall back to data.match.result from the API for callers that
+  // don't pass it.
+  const matchResult = result ?? data.match.result;
   const winnerActor: "player" | "opponent" | null =
-    data.match.result === "win"
+    matchResult === "win"
       ? "player"
-      : data.match.result === "loss"
+      : matchResult === "loss"
       ? "opponent"
       : null;
   const matchHasEnded = winnerActor != null;
