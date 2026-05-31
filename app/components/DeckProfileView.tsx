@@ -132,7 +132,7 @@ const ENERGY_COLORS: Record<string, string> = {
   Lightning: "bg-yellow-100 text-black border-yellow-200",
   Psychic: "bg-violet-100 text-black border-violet-200",
   Fighting: "bg-amber-100 text-black border-amber-200",
-  Darkness: "bg-teal-200 text-black border-teal-400",
+  Darkness: "bg-teal-400 text-black border-teal-600",
   Metal: "bg-zinc-100 text-black border-zinc-200",
   Fairy: "bg-pink-100 text-black border-pink-200",
   Dragon: "bg-amber-100 text-black border-amber-200",
