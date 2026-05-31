@@ -564,7 +564,6 @@ export default function BattleLogDetail({ matchId, apiUrl, result }: Props) {
     label: string;
     actions: ApiAction[];
     system?: SystemAccount;
-    replyTo?: string;
     outcome?: "win" | "loss";
   }
 
@@ -574,18 +573,6 @@ export default function BattleLogDetail({ matchId, apiUrl, result }: Props) {
   }
 
   const posts: Post[] = [];
-
-  function pushReplyTarget(forKind: PostKind, forDisplay: string): string | undefined {
-    // Walk backwards through the existing posts to find the last
-    // "real" player post (skip system broadcasts and self-replies).
-    for (let i = posts.length - 1; i >= 0; i--) {
-      const prev = posts[i];
-      if (prev.kind === "system") continue;
-      if (prev.displayName === forDisplay) return undefined;
-      return prev.displayName;
-    }
-    return forKind === "player" ? opponentHandle : playerHandle;
-  }
 
   for (const { turn, actions, globalTurnNumber } of renderableTurns) {
     if (turn.phase === "setup") {
@@ -630,7 +617,6 @@ export default function BattleLogDetail({ matchId, apiUrl, result }: Props) {
       const isPlayer = turn.actor === "player";
       const display = turn.actor_handle ?? (isPlayer ? playerHandle : opponentHandle);
       const kind: PostKind = isPlayer ? "player" : "opponent";
-      const replyTo = pushReplyTarget(kind, display);
       posts.push({
         key: turn.id,
         kind,
@@ -638,7 +624,6 @@ export default function BattleLogDetail({ matchId, apiUrl, result }: Props) {
         handle: handleSlug(display),
         label: globalTurnNumber != null ? `Turn ${globalTurnNumber}` : "",
         actions,
-        replyTo,
         outcome: outcomeFor(isPlayer ? "player" : "opponent"),
       });
     } else if (turn.phase === "checkup") {
@@ -686,7 +671,6 @@ interface ThreadPostInput {
   label: string;
   actions: ApiAction[];
   system?: SystemAccount;
-  replyTo?: string;
   outcome?: "win" | "loss";
 }
 
@@ -757,13 +741,6 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
             </>
           )}
         </div>
-
-        {post.replyTo && (
-          <div className="mb-1 text-[11px] text-text-muted">
-            Replying to{" "}
-            <span className="text-[#1d9bf0]">@{handleSlug(post.replyTo)}</span>
-          </div>
-        )}
 
         <div className="mt-1">
           <ActionList actions={post.actions} />
@@ -853,17 +830,17 @@ function groupSetupActions(
 
 function ActionList({ actions }: { actions: ApiAction[] }) {
   return (
-    <ul className="flex flex-col gap-1">
+    <ul className="flex flex-col gap-1.5">
       {actions.map((a) => {
         const label = labelFor(a);
         if (!label) return null;
         return (
           <li
             key={a.id}
-            className="flex items-start gap-2 text-xs text-text-secondary leading-snug"
+            className="flex items-start gap-2 text-sm text-text-secondary leading-snug"
           >
             <span className="mt-0.5 text-text-muted">
-              <Icon type={a.action_type} className="w-3.5 h-3.5" />
+              <Icon type={a.action_type} className="w-4 h-4" />
             </span>
             <span className="flex-1 min-w-0 break-words">{label}</span>
           </li>
