@@ -323,9 +323,14 @@ function StatCard({
 }
 
 /** One row in the per-side activity table — label sits in the middle,
- *  left/right values flank it, and a centered bar visualizes each
- *  side's share. The bar grows out from the center so a tie reads as
- *  two equal halves and a runaway lead reads as one side dominating. */
+ *  left/right values flank it, and a diverging pair of bars grows
+ *  out from a center axis. Each half is scaled to that row's max so
+ *  the larger side fills its half completely; a 0 stays a stub, a tie
+ *  reads as two equal lengths reaching for the middle.
+ *
+ *  Unlike a single split bar (which always sums to 100%), diverging
+ *  bars preserve *absolute* counts visually — a 2-vs-2 row looks
+ *  smaller than a 48-vs-12 row, not the same. */
 function StatBarRow({
   label,
   leftValue,
@@ -335,9 +340,9 @@ function StatBarRow({
   leftValue: number;
   rightValue: number;
 }) {
-  const total = Math.max(leftValue + rightValue, 1);
-  const leftPct = (leftValue / total) * 100;
-  const rightPct = (rightValue / total) * 100;
+  const max = Math.max(leftValue, rightValue, 1);
+  const leftPct = (leftValue / max) * 100;
+  const rightPct = (rightValue / max) * 100;
   return (
     <div className="py-2">
       <div className="grid grid-cols-[1fr_auto_1fr] items-baseline gap-x-3">
@@ -351,15 +356,30 @@ function StatBarRow({
           {rightValue}
         </span>
       </div>
-      <div className="mt-1.5 flex h-1.5 w-full overflow-hidden rounded-full bg-surface">
-        <div
-          className="h-full bg-gradient-brand transition-[width]"
-          style={{ width: `${leftPct}%` }}
-        />
-        <div
-          className="h-full bg-black/80 transition-[width]"
-          style={{ width: `${rightPct}%` }}
-        />
+      <div className="relative mt-1.5 h-1.5 w-full">
+        {/* Track behind both halves so empty rows still show structure. */}
+        <div className="absolute inset-0 rounded-full bg-surface/70" />
+
+        <div className="relative flex h-full w-full">
+          {/* Left half — bar grows from the center outward to the left. */}
+          <div className="flex-1 flex justify-end">
+            <div
+              className="h-full rounded-l-full bg-gradient-brand transition-[width]"
+              style={{ width: `${leftPct}%` }}
+            />
+          </div>
+          {/* Right half — bar grows from the center outward to the right. */}
+          <div className="flex-1 flex justify-start">
+            <div
+              className="h-full rounded-r-full bg-black/85 transition-[width]"
+              style={{ width: `${rightPct}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Center axis tick — sits half a hair above and below the track
+            so it reads as the spine the bars push off of. */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-px h-3 bg-black/30" />
       </div>
     </div>
   );
