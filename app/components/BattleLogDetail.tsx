@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type SVGProps } from "react";
+import { useEffect, useState, type CSSProperties, type SVGProps } from "react";
 
 /* ─── Types (mirror lib/battle-log + the API response) ────────── */
 
@@ -537,6 +537,17 @@ export default function BattleLogDetail({ matchId, apiUrl }: Props) {
   const playerHandle = data.match.player_handle ?? "You";
   const opponentHandle = data.match.opponent_handle ?? "Opponent";
 
+  // Find the winner (if the match has ended) so we can color the
+  // player/opponent avatars with the site's win gradient vs solid
+  // black for the loser. The game_end action carries a `winner`
+  // string in its payload — match it against the known handles.
+  const winnerHandle: string | null = (() => {
+    const end = data.actions.find((a) => a.action_type === "game_end");
+    const w = end ? (end.payload?.winner as string | undefined) : undefined;
+    return w ?? null;
+  })();
+  const matchHasEnded = winnerHandle != null;
+
   interface Post {
     key: string;
     kind: PostKind;
@@ -546,6 +557,12 @@ export default function BattleLogDetail({ matchId, apiUrl }: Props) {
     actions: ApiAction[];
     system?: SystemAccount;
     replyTo?: string;
+    outcome?: "win" | "loss";
+  }
+
+  function outcomeFor(display: string): "win" | "loss" | undefined {
+    if (!matchHasEnded || !winnerHandle) return undefined;
+    return display === winnerHandle ? "win" : "loss";
   }
 
   const posts: Post[] = [];
@@ -593,6 +610,7 @@ export default function BattleLogDetail({ matchId, apiUrl }: Props) {
             label: "Pre-game",
             actions: group.actions,
             system: isPlayer || isOpponent ? undefined : SYSTEM_ACCOUNTS.setup,
+            outcome: isPlayer || isOpponent ? outcomeFor(display) : undefined,
           });
         }
       }
@@ -609,6 +627,7 @@ export default function BattleLogDetail({ matchId, apiUrl }: Props) {
         label: globalTurnNumber != null ? `Turn ${globalTurnNumber}` : "",
         actions,
         replyTo,
+        outcome: outcomeFor(display),
       });
     } else if (turn.phase === "checkup") {
       posts.push({
@@ -656,13 +675,23 @@ interface ThreadPostInput {
   actions: ApiAction[];
   system?: SystemAccount;
   replyTo?: string;
+  outcome?: "win" | "loss";
 }
+
+const WIN_GRADIENT = "linear-gradient(135deg,#F2A20C 0%,#D91E0D 50%,#A60D0D 100%)";
+const LOSS_COLOR = "#1a1a1a";
 
 function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }) {
   const isSystem = post.kind === "system";
   const isResult = post.system?.handle === "game";
   const stats = statsFor(post.actions);
-  const avatarColor = post.system?.bg ?? avatarBg(post.displayName);
+  const avatarStyle: CSSProperties = post.system
+    ? { background: post.system.bg }
+    : post.outcome === "win"
+    ? { background: WIN_GRADIENT }
+    : post.outcome === "loss"
+    ? { background: LOSS_COLOR }
+    : { background: avatarBg(post.displayName) };
   const SystemGlyph = post.system ? ICONS[post.system.glyph] : null;
 
   return (
@@ -674,7 +703,7 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
       <div className="flex flex-col items-center">
         <div
           className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-          style={{ background: avatarColor }}
+          style={avatarStyle}
         >
           {SystemGlyph ? (
             <SystemGlyph className="w-4 h-4" />
