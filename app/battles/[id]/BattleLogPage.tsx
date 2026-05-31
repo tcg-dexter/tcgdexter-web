@@ -193,7 +193,7 @@ export default function BattleLogPage({
           underneath, with no section headings so the whole block reads
           as one continuous summary. */}
       <div className="mx-auto w-full max-w-2xl px-4 mt-4">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <StatCard
             label="Winner"
             value={winnerName ?? "Draw"}
@@ -204,10 +204,9 @@ export default function BattleLogPage({
             value={totalTurns != null ? String(totalTurns) : "—"}
           />
           <StatCard label="Date" value={formatPlayedAt(playedAt)} />
-          <StatCard label="Played" value={relativeTime(createdAt)} />
         </div>
 
-        <div className="mt-3 rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5">
+        <div className="mt-5 px-1">
           <StatChart
             playerName={playerSideName}
             opponentName={opponentSideName}
@@ -320,7 +319,7 @@ function StatChart({
         return (
           <div key={row.label} className="contents">
             <div
-              className={`text-[10px] font-semibold uppercase tracking-widest text-text-muted py-2.5 ${
+              className={`text-[11px] font-semibold uppercase tracking-widest text-text-primary py-2.5 ${
                 i > 0 ? "border-t border-black/[0.06]" : ""
               }`}
             >
