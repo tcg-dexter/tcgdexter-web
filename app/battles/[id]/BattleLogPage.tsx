@@ -86,8 +86,11 @@ export default function BattleLogPage({
       <style
         dangerouslySetInnerHTML={{
           __html:
-            `html{background:${bannerGradient}}` +
-            `[data-site-toolbar]{background:${bannerGradient};backdrop-filter:none;-webkit-backdrop-filter:none}` +
+            // Paint the sticky toolbar with the same gradient and
+            // extend it up through the iOS safe-area inset so the
+            // status bar / notch region is covered by the gradient
+            // rather than the page's bg-bg wrapper below.
+            `[data-site-toolbar]{background:${bannerGradient};padding-top:env(safe-area-inset-top);backdrop-filter:none;-webkit-backdrop-filter:none}` +
             `[data-site-toolbar] button[aria-label="Toggle navigation menu"]{color:#fff}`,
         }}
       />
