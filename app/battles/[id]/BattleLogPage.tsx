@@ -299,11 +299,11 @@ function StatCard({
   );
 }
 
-/** Small horizontal bar chart: one row per stat, one column per
- *  player. Each row's bars are scaled to the row's own max, so the
- *  longer-bar side reads as "more" at a glance and absolute scale
- *  stays comparable across rows of the same metric in other matches.
- *  Player bars use the brand gradient; opponent bars use solid dark. */
+/** Per-stat table: one row per stat, one column per player. Numbers
+ *  carry the comparison — the leader on each row is bolded a touch
+ *  heavier so the eye still lands on it without a bar telling you to.
+ *  Row separators keep the rhythm of a chart without the visual
+ *  weight of axes. */
 function StatChart({
   playerName,
   opponentName,
@@ -314,54 +314,53 @@ function StatChart({
   rows: { label: string; left: number; right: number }[];
 }) {
   return (
-    <div className="grid grid-cols-[88px_1fr_1fr] gap-x-4 gap-y-4 items-center">
-      {/* Column headers — top-left is blank, then each player. */}
+    <div className="grid grid-cols-[1fr_auto_auto] gap-x-6">
+      {/* Column headers — label column header blank, then each player. */}
       <div />
-      <div className="text-[11px] font-bold text-text-primary truncate">
+      <div className="pb-2 text-[11px] font-bold text-text-primary truncate text-right tabular-nums">
         {playerName}
       </div>
-      <div className="text-[11px] font-bold text-text-primary truncate">
+      <div className="pb-2 text-[11px] font-bold text-text-primary truncate text-right tabular-nums">
         {opponentName}
       </div>
 
-      {rows.map((row) => {
-        const max = Math.max(row.left, row.right, 1);
+      {rows.map((row, i) => {
+        const playerLeads = row.left > row.right;
+        const opponentLeads = row.right > row.left;
         return (
           <div key={row.label} className="contents">
-            <div className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+            <div
+              className={`text-[10px] font-semibold uppercase tracking-widest text-text-muted py-2.5 ${
+                i > 0 ? "border-t border-black/[0.06]" : ""
+              }`}
+            >
               {row.label}
             </div>
-            <ChartCell value={row.left} pct={(row.left / max) * 100} tone="player" />
-            <ChartCell value={row.right} pct={(row.right / max) * 100} tone="opponent" />
+            <div
+              className={`py-2.5 text-right tabular-nums tabular-nums ${
+                i > 0 ? "border-t border-black/[0.06]" : ""
+              } ${
+                playerLeads
+                  ? "text-base font-bold text-text-primary"
+                  : "text-sm font-semibold text-text-secondary"
+              }`}
+            >
+              {row.left}
+            </div>
+            <div
+              className={`py-2.5 text-right tabular-nums ${
+                i > 0 ? "border-t border-black/[0.06]" : ""
+              } ${
+                opponentLeads
+                  ? "text-base font-bold text-text-primary"
+                  : "text-sm font-semibold text-text-secondary"
+              }`}
+            >
+              {row.right}
+            </div>
           </div>
         );
       })}
-    </div>
-  );
-}
-
-function ChartCell({
-  value,
-  pct,
-  tone,
-}: {
-  value: number;
-  pct: number;
-  tone: "player" | "opponent";
-}) {
-  return (
-    <div className="flex items-center gap-2 min-w-0">
-      <div className="h-2 flex-1 rounded-full bg-surface overflow-hidden min-w-0">
-        <div
-          className={`h-full rounded-full transition-[width] ${
-            tone === "player" ? "bg-gradient-brand" : "bg-black/85"
-          }`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <span className="text-sm font-bold text-text-primary tabular-nums shrink-0 w-8 text-right">
-        {value}
-      </span>
     </div>
   );
 }
