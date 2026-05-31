@@ -170,7 +170,11 @@ export default function MetaProfileHeader({
             variant grid below uses, so the fan spans the full width of
             the deck-list preview row regardless of viewport. */}
         <div className="absolute inset-0 mx-auto max-w-6xl">
-          <div className="relative h-full mx-6">
+          {/* Desktop (sm:+) shrinks the fan to 90% of its mobile size while
+              keeping each card's bottom edge pinned to the banner's bottom
+              via `origin-bottom`. Banner height is unaffected because the
+              scale is purely a transform on the cards layer. */}
+          <div className="relative h-full mx-6 sm:scale-90 sm:origin-bottom">
             {bannerCards.map((url, i) => {
               const left =
                 cardCount === 1
