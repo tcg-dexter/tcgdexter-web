@@ -189,14 +189,33 @@ export default function BattleLogPage({
         </div>
       </div>
 
-      {/* Battle stats — meta-archetype-style stat board. Headline tiles
-          row mirrors the meta page's grid-cols-4 of StatCards (with
-          gradient/dark/ringed tones for the result), and a per-side
-          activity table beneath surfaces what each player actually did
-          in the parsed log. */}
+      {/* Battle stats — read as a small horizontal bar chart: one row
+          per stat, one column per player. Per-row maxes drive the bar
+          lengths so absolute scale stays visible (a 48-vs-12 damage row
+          is much heavier than a 3-vs-4 pokémon row). Match-level facts
+          that don't belong to either side (date, turns, etc.) sit in
+          their own panel below. */}
       <div className="mx-auto w-full max-w-2xl px-4 mt-4">
         <p className="text-[11px] font-semibold uppercase tracking-widest text-text-muted mb-2 px-1">
           Battle Stats
+        </p>
+        <div className="rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5">
+          <StatChart
+            playerName={playerSideName}
+            opponentName={opponentSideName}
+            rows={[
+              { label: "Damage", left: playerStats.damage, right: opponentStats.damage },
+              { label: "Pokémon Played", left: playerStats.pokemon, right: opponentStats.pokemon },
+              { label: "Supporters", left: playerStats.supporters, right: opponentStats.supporters },
+              { label: "Items", left: playerStats.items, right: opponentStats.items },
+              { label: "Energy Attached", left: playerStats.energy, right: opponentStats.energy },
+            ]}
+          />
+        </div>
+
+        {/* Match-level facts — not tied to either player. */}
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-text-muted mb-2 px-1 mt-5">
+          Match
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard
@@ -210,48 +229,6 @@ export default function BattleLogPage({
           />
           <StatCard label="Date" value={formatPlayedAt(playedAt)} />
           <StatCard label="Played" value={relativeTime(createdAt)} />
-        </div>
-
-        <div className="mt-3 rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5">
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-3 pb-3 border-b border-black/[0.06]">
-            <p className="text-xs font-bold text-text-primary truncate">
-              {playerSideName}
-            </p>
-            <p className="text-[10px] uppercase tracking-widest text-text-muted">
-              vs
-            </p>
-            <p className="text-xs font-bold text-text-primary truncate text-right">
-              {opponentSideName}
-            </p>
-          </div>
-
-          <div className="mt-2 flex flex-col">
-            <StatBarRow
-              label="Damage"
-              leftValue={playerStats.damage}
-              rightValue={opponentStats.damage}
-            />
-            <StatBarRow
-              label="Pokémon Played"
-              leftValue={playerStats.pokemon}
-              rightValue={opponentStats.pokemon}
-            />
-            <StatBarRow
-              label="Supporters"
-              leftValue={playerStats.supporters}
-              rightValue={opponentStats.supporters}
-            />
-            <StatBarRow
-              label="Items"
-              leftValue={playerStats.items}
-              rightValue={opponentStats.items}
-            />
-            <StatBarRow
-              label="Energy Attached"
-              leftValue={playerStats.energy}
-              rightValue={opponentStats.energy}
-            />
-          </div>
         </div>
       </div>
 
@@ -322,65 +299,69 @@ function StatCard({
   );
 }
 
-/** One row in the per-side activity table — label sits in the middle,
- *  left/right values flank it, and a diverging pair of bars grows
- *  out from a center axis. Each half is scaled to that row's max so
- *  the larger side fills its half completely; a 0 stays a stub, a tie
- *  reads as two equal lengths reaching for the middle.
- *
- *  Unlike a single split bar (which always sums to 100%), diverging
- *  bars preserve *absolute* counts visually — a 2-vs-2 row looks
- *  smaller than a 48-vs-12 row, not the same. */
-function StatBarRow({
-  label,
-  leftValue,
-  rightValue,
+/** Small horizontal bar chart: one row per stat, one column per
+ *  player. Each row's bars are scaled to the row's own max, so the
+ *  longer-bar side reads as "more" at a glance and absolute scale
+ *  stays comparable across rows of the same metric in other matches.
+ *  Player bars use the brand gradient; opponent bars use solid dark. */
+function StatChart({
+  playerName,
+  opponentName,
+  rows,
 }: {
-  label: string;
-  leftValue: number;
-  rightValue: number;
+  playerName: string;
+  opponentName: string;
+  rows: { label: string; left: number; right: number }[];
 }) {
-  const max = Math.max(leftValue, rightValue, 1);
-  const leftPct = (leftValue / max) * 100;
-  const rightPct = (rightValue / max) * 100;
   return (
-    <div className="py-2">
-      <div className="grid grid-cols-[1fr_auto_1fr] items-baseline gap-x-3">
-        <span className="text-base font-bold text-text-primary tabular-nums">
-          {leftValue}
-        </span>
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
-          {label}
-        </span>
-        <span className="text-base font-bold text-text-primary tabular-nums text-right">
-          {rightValue}
-        </span>
+    <div className="grid grid-cols-[88px_1fr_1fr] gap-x-4 gap-y-4 items-center">
+      {/* Column headers — top-left is blank, then each player. */}
+      <div />
+      <div className="text-[11px] font-bold text-text-primary truncate">
+        {playerName}
       </div>
-      <div className="relative mt-1.5 h-1.5 w-full">
-        {/* Track behind both halves so empty rows still show structure. */}
-        <div className="absolute inset-0 rounded-full bg-surface/70" />
-
-        <div className="relative flex h-full w-full">
-          {/* Left half — bar grows from the center outward to the left. */}
-          <div className="flex-1 flex justify-end">
-            <div
-              className="h-full rounded-l-full bg-gradient-brand transition-[width]"
-              style={{ width: `${leftPct}%` }}
-            />
-          </div>
-          {/* Right half — bar grows from the center outward to the right. */}
-          <div className="flex-1 flex justify-start">
-            <div
-              className="h-full rounded-r-full bg-black/85 transition-[width]"
-              style={{ width: `${rightPct}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Center axis tick — sits half a hair above and below the track
-            so it reads as the spine the bars push off of. */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-px h-3 bg-black/30" />
+      <div className="text-[11px] font-bold text-text-primary truncate">
+        {opponentName}
       </div>
+
+      {rows.map((row) => {
+        const max = Math.max(row.left, row.right, 1);
+        return (
+          <div key={row.label} className="contents">
+            <div className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+              {row.label}
+            </div>
+            <ChartCell value={row.left} pct={(row.left / max) * 100} tone="player" />
+            <ChartCell value={row.right} pct={(row.right / max) * 100} tone="opponent" />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ChartCell({
+  value,
+  pct,
+  tone,
+}: {
+  value: number;
+  pct: number;
+  tone: "player" | "opponent";
+}) {
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      <div className="h-2 flex-1 rounded-full bg-surface overflow-hidden min-w-0">
+        <div
+          className={`h-full rounded-full transition-[width] ${
+            tone === "player" ? "bg-gradient-brand" : "bg-black/85"
+          }`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="text-sm font-bold text-text-primary tabular-nums shrink-0 w-8 text-right">
+        {value}
+      </span>
     </div>
   );
 }
