@@ -38558,6 +38558,2176 @@
     "hasRotatedCards": false
   },
   {
+    "id": "marnie-s-grimmsnarl-ex",
+    "name": "Marnie's Grimmsnarl",
+    "cards": [
+      {
+        "qty": 4,
+        "name": "Marnie's Impidimp",
+        "setCode": "DRI",
+        "number": "134",
+        "category": "pokemon"
+      },
+      {
+        "qty": 2,
+        "name": "Marnie's Morgrem",
+        "setCode": "DRI",
+        "number": "135",
+        "category": "pokemon"
+      },
+      {
+        "qty": 3,
+        "name": "Marnie's Grimmsnarl ex",
+        "setCode": "DRI",
+        "number": "136",
+        "category": "pokemon"
+      },
+      {
+        "qty": 4,
+        "name": "Munkidori",
+        "setCode": "TWM",
+        "number": "95",
+        "category": "pokemon"
+      },
+      {
+        "qty": 3,
+        "name": "Snorunt",
+        "setCode": "ASC",
+        "number": "46",
+        "category": "pokemon"
+      },
+      {
+        "qty": 3,
+        "name": "Froslass",
+        "setCode": "TWM",
+        "number": "53",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Yveltal",
+        "setCode": "MEG",
+        "number": "88",
+        "category": "pokemon"
+      },
+      {
+        "qty": 1,
+        "name": "Budew",
+        "setCode": "ASC",
+        "number": "16",
+        "category": "pokemon"
+      },
+      {
+        "qty": 4,
+        "name": "Lillie's Determination",
+        "setCode": "MEG",
+        "number": "119",
+        "category": "trainer"
+      },
+      {
+        "qty": 4,
+        "name": "Team Rocket's Petrel",
+        "setCode": "DRI",
+        "number": "176",
+        "category": "trainer"
+      },
+      {
+        "qty": 2,
+        "name": "Boss's Orders",
+        "setCode": "MEG",
+        "number": "114",
+        "category": "trainer"
+      },
+      {
+        "qty": 2,
+        "name": "Judge",
+        "setCode": "POR",
+        "number": "76",
+        "category": "trainer"
+      },
+      {
+        "qty": 4,
+        "name": "Pok\u00e9 Pad",
+        "setCode": "POR",
+        "number": "81",
+        "category": "trainer"
+      },
+      {
+        "qty": 3,
+        "name": "Night Stretcher",
+        "setCode": "ASC",
+        "number": "196",
+        "category": "trainer"
+      },
+      {
+        "qty": 3,
+        "name": "Buddy-Buddy Poffin",
+        "setCode": "TEF",
+        "number": "144",
+        "category": "trainer"
+      },
+      {
+        "qty": 2,
+        "name": "Rare Candy",
+        "setCode": "MEG",
+        "number": "125",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Secret Box",
+        "setCode": "TWM",
+        "number": "163",
+        "category": "trainer"
+      },
+      {
+        "qty": 1,
+        "name": "Air Balloon",
+        "setCode": "ASC",
+        "number": "181",
+        "category": "trainer"
+      },
+      {
+        "qty": 4,
+        "name": "Spikemuth Gym",
+        "setCode": "DRI",
+        "number": "169",
+        "category": "trainer"
+      },
+      {
+        "qty": 9,
+        "name": "Darkness Energy",
+        "setCode": "MEE",
+        "number": "7",
+        "category": "energy"
+      }
+    ],
+    "variants": [
+      {
+        "placing": 37,
+        "date": "23rd May 2026 - Regional Melbourne",
+        "cards": [
+          {
+            "qty": 4,
+            "name": "Marnie's Impidimp",
+            "setCode": "DRI",
+            "number": "134",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie's Morgrem",
+            "setCode": "DRI",
+            "number": "135",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Marnie's Grimmsnarl ex",
+            "setCode": "DRI",
+            "number": "136",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Munkidori",
+            "setCode": "TWM",
+            "number": "95",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Snorunt",
+            "setCode": "ASC",
+            "number": "46",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Froslass",
+            "setCode": "TWM",
+            "number": "53",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Yveltal",
+            "setCode": "MEG",
+            "number": "88",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Budew",
+            "setCode": "ASC",
+            "number": "16",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Team Rocket's Petrel",
+            "setCode": "DRI",
+            "number": "176",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Boss's Orders",
+            "setCode": "MEG",
+            "number": "114",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Judge",
+            "setCode": "POR",
+            "number": "76",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Pok\u00e9 Pad",
+            "setCode": "POR",
+            "number": "81",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Buddy-Buddy Poffin",
+            "setCode": "TEF",
+            "number": "144",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Rare Candy",
+            "setCode": "MEG",
+            "number": "125",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Secret Box",
+            "setCode": "TWM",
+            "number": "163",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Air Balloon",
+            "setCode": "ASC",
+            "number": "181",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Spikemuth Gym",
+            "setCode": "DRI",
+            "number": "169",
+            "category": "trainer"
+          },
+          {
+            "qty": 9,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          }
+        ],
+        "creator": "Billy Coles",
+        "variantName": "Grimmsnarl Froslass"
+      },
+      {
+        "placing": 56,
+        "date": "23rd May 2026 - Regional Melbourne",
+        "cards": [
+          {
+            "qty": 4,
+            "name": "Munkidori",
+            "setCode": "TWM",
+            "number": "95",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Marnie's Impidimp",
+            "setCode": "DRI",
+            "number": "134",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie's Morgrem",
+            "setCode": "DRI",
+            "number": "135",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Marnie's Grimmsnarl ex",
+            "setCode": "DRI",
+            "number": "136",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Snorunt",
+            "setCode": "ASC",
+            "number": "46",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Froslass",
+            "setCode": "TWM",
+            "number": "53",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Budew",
+            "setCode": "ASC",
+            "number": "16",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Psyduck",
+            "setCode": "ASC",
+            "number": "39",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Team Rocket's Petrel",
+            "setCode": "DRI",
+            "number": "176",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Boss's Orders",
+            "setCode": "MEG",
+            "number": "114",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Larry's Skill",
+            "setCode": "PRE",
+            "number": "115",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Pok\u00e9 Pad",
+            "setCode": "POR",
+            "number": "81",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Buddy-Buddy Poffin",
+            "setCode": "TEF",
+            "number": "144",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Rare Candy",
+            "setCode": "MEG",
+            "number": "125",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Energy Switch",
+            "setCode": "MEG",
+            "number": "115",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Unfair Stamp",
+            "setCode": "TWM",
+            "number": "165",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Air Balloon",
+            "setCode": "ASC",
+            "number": "181",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Spikemuth Gym",
+            "setCode": "DRI",
+            "number": "169",
+            "category": "trainer"
+          },
+          {
+            "qty": 9,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          }
+        ],
+        "creator": "Ethan Cooper",
+        "variantName": "Grimmsnarl Froslass"
+      },
+      {
+        "placing": 157,
+        "date": "23rd May 2026 - Regional Melbourne",
+        "cards": [
+          {
+            "qty": 4,
+            "name": "Munkidori",
+            "setCode": "TWM",
+            "number": "95",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Marnie's Impidimp",
+            "setCode": "DRI",
+            "number": "134",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie's Morgrem",
+            "setCode": "DRI",
+            "number": "135",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie's Grimmsnarl ex",
+            "setCode": "DRI",
+            "number": "136",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Snorunt",
+            "setCode": "ASC",
+            "number": "46",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Froslass",
+            "setCode": "TWM",
+            "number": "53",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Yveltal",
+            "setCode": "MEG",
+            "number": "88",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Shaymin",
+            "setCode": "DRI",
+            "number": "10",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Tatsugiri",
+            "setCode": "TWM",
+            "number": "131",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Budew",
+            "setCode": "ASC",
+            "number": "16",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Team Rocket's Petrel",
+            "setCode": "DRI",
+            "number": "176",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Boss's Orders",
+            "setCode": "MEG",
+            "number": "114",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Pok\u00e9 Pad",
+            "setCode": "POR",
+            "number": "81",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Buddy-Buddy Poffin",
+            "setCode": "TEF",
+            "number": "144",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Rare Candy",
+            "setCode": "MEG",
+            "number": "125",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Energy Switch",
+            "setCode": "MEG",
+            "number": "115",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Unfair Stamp",
+            "setCode": "TWM",
+            "number": "165",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Air Balloon",
+            "setCode": "ASC",
+            "number": "181",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Spikemuth Gym",
+            "setCode": "DRI",
+            "number": "169",
+            "category": "trainer"
+          },
+          {
+            "qty": 9,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          }
+        ],
+        "creator": "Aaron Day",
+        "variantName": "Grimmsnarl Froslass"
+      },
+      {
+        "placing": 172,
+        "date": "23rd May 2026 - Regional Melbourne",
+        "cards": [
+          {
+            "qty": 4,
+            "name": "Munkidori",
+            "setCode": "TWM",
+            "number": "95",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Marnie's Impidimp",
+            "setCode": "DRI",
+            "number": "134",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie's Morgrem",
+            "setCode": "DRI",
+            "number": "135",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie's Grimmsnarl ex",
+            "setCode": "DRI",
+            "number": "136",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Snorunt",
+            "setCode": "ASC",
+            "number": "46",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Froslass",
+            "setCode": "TWM",
+            "number": "53",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Budew",
+            "setCode": "ASC",
+            "number": "16",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Yveltal",
+            "setCode": "MEG",
+            "number": "88",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Bloodmoon Ursaluna ex",
+            "setCode": "TWM",
+            "number": "141",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Fezandipiti ex",
+            "setCode": "ASC",
+            "number": "142",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Team Rocket's Petrel",
+            "setCode": "DRI",
+            "number": "176",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Boss's Orders",
+            "setCode": "MEG",
+            "number": "114",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Judge",
+            "setCode": "POR",
+            "number": "76",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Pok\u00e9 Pad",
+            "setCode": "POR",
+            "number": "81",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Ultra Ball",
+            "setCode": "MEG",
+            "number": "131",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Rare Candy",
+            "setCode": "MEG",
+            "number": "125",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Buddy-Buddy Poffin",
+            "setCode": "TEF",
+            "number": "144",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Secret Box",
+            "setCode": "TWM",
+            "number": "163",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Air Balloon",
+            "setCode": "ASC",
+            "number": "181",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Spikemuth Gym",
+            "setCode": "DRI",
+            "number": "169",
+            "category": "trainer"
+          },
+          {
+            "qty": 9,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          }
+        ],
+        "creator": "Kai Whittaker",
+        "variantName": "Grimmsnarl Froslass"
+      },
+      {
+        "placing": 151,
+        "date": "16th May 2026 - Regional Campinas",
+        "cards": [
+          {
+            "qty": 4,
+            "name": "Munkidori",
+            "setCode": "TWM",
+            "number": "95",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Marnie's Impidimp",
+            "setCode": "DRI",
+            "number": "134",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie's Morgrem",
+            "setCode": "DRI",
+            "number": "135",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie's Grimmsnarl ex",
+            "setCode": "DRI",
+            "number": "136",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Snorunt",
+            "setCode": "ASC",
+            "number": "46",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Froslass",
+            "setCode": "TWM",
+            "number": "53",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Budew",
+            "setCode": "ASC",
+            "number": "16",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Yveltal",
+            "setCode": "MEG",
+            "number": "88",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Boss's Orders",
+            "setCode": "MEG",
+            "number": "114",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Team Rocket's Petrel",
+            "setCode": "DRI",
+            "number": "176",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Judge",
+            "setCode": "POR",
+            "number": "76",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Larry's Skill",
+            "setCode": "PRE",
+            "number": "115",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Pok\u00e9 Pad",
+            "setCode": "POR",
+            "number": "81",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Buddy-Buddy Poffin",
+            "setCode": "TEF",
+            "number": "144",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Pok\u00e9gear 3.0",
+            "setCode": "SVI",
+            "number": "186",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Rare Candy",
+            "setCode": "MEG",
+            "number": "125",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Energy Recycler",
+            "setCode": "DRI",
+            "number": "164",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Energy Switch",
+            "setCode": "MEG",
+            "number": "115",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Secret Box",
+            "setCode": "TWM",
+            "number": "163",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Punk Helmet",
+            "setCode": "PFL",
+            "number": "92",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Spikemuth Gym",
+            "setCode": "DRI",
+            "number": "169",
+            "category": "trainer"
+          },
+          {
+            "qty": 9,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          }
+        ],
+        "creator": "Jorge Rivero Daca",
+        "variantName": "Grimmsnarl Froslass"
+      },
+      {
+        "placing": 82,
+        "date": "16th May 2026 - Regional Utrecht",
+        "cards": [
+          {
+            "qty": 4,
+            "name": "Munkidori",
+            "setCode": "TWM",
+            "number": "95",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Marnie's Impidimp",
+            "setCode": "DRI",
+            "number": "134",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie's Morgrem",
+            "setCode": "DRI",
+            "number": "135",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie's Grimmsnarl ex",
+            "setCode": "DRI",
+            "number": "136",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Snorunt",
+            "setCode": "ASC",
+            "number": "46",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Froslass",
+            "setCode": "TWM",
+            "number": "53",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Budew",
+            "setCode": "ASC",
+            "number": "16",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Tatsugiri",
+            "setCode": "TWM",
+            "number": "131",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Shaymin",
+            "setCode": "DRI",
+            "number": "10",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Yveltal",
+            "setCode": "MEG",
+            "number": "88",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Team Rocket's Petrel",
+            "setCode": "DRI",
+            "number": "176",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Boss's Orders",
+            "setCode": "MEG",
+            "number": "114",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Buddy-Buddy Poffin",
+            "setCode": "TEF",
+            "number": "144",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Pok\u00e9 Pad",
+            "setCode": "POR",
+            "number": "81",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Rare Candy",
+            "setCode": "MEG",
+            "number": "125",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Unfair Stamp",
+            "setCode": "TWM",
+            "number": "165",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Energy Switch",
+            "setCode": "MEG",
+            "number": "115",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Air Balloon",
+            "setCode": "ASC",
+            "number": "181",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Spikemuth Gym",
+            "setCode": "DRI",
+            "number": "169",
+            "category": "trainer"
+          },
+          {
+            "qty": 9,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          }
+        ],
+        "creator": "Nicklas Rosu",
+        "variantName": "Grimmsnarl Froslass"
+      },
+      {
+        "placing": 309,
+        "date": "16th May 2026 - Regional Utrecht",
+        "cards": [
+          {
+            "qty": 4,
+            "name": "Munkidori",
+            "setCode": "TWM",
+            "number": "95",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Marnie's Impidimp",
+            "setCode": "DRI",
+            "number": "134",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie's Morgrem",
+            "setCode": "DRI",
+            "number": "135",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie's Grimmsnarl ex",
+            "setCode": "DRI",
+            "number": "136",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Snorunt",
+            "setCode": "ASC",
+            "number": "46",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Froslass",
+            "setCode": "TWM",
+            "number": "53",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Dunsparce",
+            "setCode": "JTG",
+            "number": "120",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Dudunsparce",
+            "setCode": "TEF",
+            "number": "129",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Bloodmoon Ursaluna ex",
+            "setCode": "TWM",
+            "number": "141",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Budew",
+            "setCode": "ASC",
+            "number": "16",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Yveltal",
+            "setCode": "MEG",
+            "number": "88",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Meowth ex",
+            "setCode": "POR",
+            "number": "62",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Fezandipiti ex",
+            "setCode": "ASC",
+            "number": "142",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Team Rocket's Petrel",
+            "setCode": "DRI",
+            "number": "176",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Boss's Orders",
+            "setCode": "MEG",
+            "number": "114",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Colress's Tenacity",
+            "setCode": "SFA",
+            "number": "57",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Pok\u00e9 Pad",
+            "setCode": "POR",
+            "number": "81",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Buddy-Buddy Poffin",
+            "setCode": "TEF",
+            "number": "144",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Rare Candy",
+            "setCode": "MEG",
+            "number": "125",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Unfair Stamp",
+            "setCode": "TWM",
+            "number": "165",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Energy Switch",
+            "setCode": "MEG",
+            "number": "115",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Ultra Ball",
+            "setCode": "MEG",
+            "number": "131",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Tool Scrapper",
+            "setCode": "ASC",
+            "number": "212",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Air Balloon",
+            "setCode": "ASC",
+            "number": "181",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Spikemuth Gym",
+            "setCode": "DRI",
+            "number": "169",
+            "category": "trainer"
+          },
+          {
+            "qty": 7,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          },
+          {
+            "qty": 1,
+            "name": "Psychic Energy",
+            "setCode": "MEE",
+            "number": "5",
+            "category": "energy"
+          },
+          {
+            "qty": 1,
+            "name": "Prism Energy",
+            "setCode": "ASC",
+            "number": "216",
+            "category": "energy"
+          }
+        ],
+        "creator": "Francesca M Mizzi",
+        "variantName": "Grimmsnarl Froslass"
+      },
+      {
+        "placing": 393,
+        "date": "16th May 2026 - Regional Utrecht",
+        "cards": [
+          {
+            "qty": 4,
+            "name": "Munkidori",
+            "setCode": "TWM",
+            "number": "95",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Marnie's Impidimp",
+            "setCode": "DRI",
+            "number": "134",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie's Morgrem",
+            "setCode": "DRI",
+            "number": "135",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie's Grimmsnarl ex",
+            "setCode": "DRI",
+            "number": "136",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Snorunt",
+            "setCode": "ASC",
+            "number": "46",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Froslass",
+            "setCode": "TWM",
+            "number": "53",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Yveltal",
+            "setCode": "MEG",
+            "number": "88",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Shaymin",
+            "setCode": "DRI",
+            "number": "10",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Pecharunt ex",
+            "setCode": "SFA",
+            "number": "39",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Tatsugiri",
+            "setCode": "TWM",
+            "number": "131",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Budew",
+            "setCode": "ASC",
+            "number": "16",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Fezandipiti ex",
+            "setCode": "ASC",
+            "number": "142",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Team Rocket's Petrel",
+            "setCode": "DRI",
+            "number": "176",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Boss's Orders",
+            "setCode": "MEG",
+            "number": "114",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Pok\u00e9 Pad",
+            "setCode": "POR",
+            "number": "81",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Ultra Ball",
+            "setCode": "MEG",
+            "number": "131",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Buddy-Buddy Poffin",
+            "setCode": "TEF",
+            "number": "144",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Rare Candy",
+            "setCode": "MEG",
+            "number": "125",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Unfair Stamp",
+            "setCode": "TWM",
+            "number": "165",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Energy Switch",
+            "setCode": "MEG",
+            "number": "115",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Air Balloon",
+            "setCode": "ASC",
+            "number": "181",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Spikemuth Gym",
+            "setCode": "DRI",
+            "number": "169",
+            "category": "trainer"
+          },
+          {
+            "qty": 8,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          }
+        ],
+        "creator": "Alessio Indelicato",
+        "variantName": "Grimmsnarl Froslass"
+      },
+      {
+        "placing": 166,
+        "date": "9th May 2026 - Regional Los Angeles, CA",
+        "cards": [
+          {
+            "qty": 4,
+            "name": "Munkidori",
+            "setCode": "TWM",
+            "number": "95",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Marnie's Impidimp",
+            "setCode": "DRI",
+            "number": "134",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie's Morgrem",
+            "setCode": "DRI",
+            "number": "135",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie's Grimmsnarl ex",
+            "setCode": "DRI",
+            "number": "136",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Snorunt",
+            "setCode": "ASC",
+            "number": "46",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Froslass",
+            "setCode": "TWM",
+            "number": "53",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Yveltal",
+            "setCode": "MEG",
+            "number": "88",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Shaymin",
+            "setCode": "DRI",
+            "number": "10",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Budew",
+            "setCode": "ASC",
+            "number": "16",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Team Rocket's Petrel",
+            "setCode": "DRI",
+            "number": "176",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Boss's Orders",
+            "setCode": "MEG",
+            "number": "114",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Judge",
+            "setCode": "POR",
+            "number": "76",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Pok\u00e9 Pad",
+            "setCode": "POR",
+            "number": "81",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Buddy-Buddy Poffin",
+            "setCode": "TEF",
+            "number": "144",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Rare Candy",
+            "setCode": "MEG",
+            "number": "125",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Energy Switch",
+            "setCode": "MEG",
+            "number": "115",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Unfair Stamp",
+            "setCode": "TWM",
+            "number": "165",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Air Balloon",
+            "setCode": "ASC",
+            "number": "181",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Spikemuth Gym",
+            "setCode": "DRI",
+            "number": "169",
+            "category": "trainer"
+          },
+          {
+            "qty": 9,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          }
+        ],
+        "creator": "Benjamin Wilhelm",
+        "variantName": "Grimmsnarl Froslass"
+      },
+      {
+        "placing": 169,
+        "date": "9th May 2026 - Regional Los Angeles, CA",
+        "cards": [
+          {
+            "qty": 4,
+            "name": "Munkidori",
+            "setCode": "TWM",
+            "number": "95",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Marnie's Impidimp",
+            "setCode": "DRI",
+            "number": "134",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie's Morgrem",
+            "setCode": "DRI",
+            "number": "135",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Marnie's Grimmsnarl ex",
+            "setCode": "DRI",
+            "number": "136",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Snorunt",
+            "setCode": "ASC",
+            "number": "46",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Snorunt",
+            "setCode": "TWM",
+            "number": "51",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Froslass",
+            "setCode": "TWM",
+            "number": "53",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Yveltal",
+            "setCode": "MEG",
+            "number": "88",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Budew",
+            "setCode": "ASC",
+            "number": "16",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Marnie's Morpeko",
+            "setCode": "DRI",
+            "number": "137",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Team Rocket's Petrel",
+            "setCode": "DRI",
+            "number": "176",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Boss's Orders",
+            "setCode": "MEG",
+            "number": "114",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Judge",
+            "setCode": "POR",
+            "number": "76",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Pok\u00e9 Pad",
+            "setCode": "POR",
+            "number": "81",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Buddy-Buddy Poffin",
+            "setCode": "TEF",
+            "number": "144",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Rare Candy",
+            "setCode": "MEG",
+            "number": "125",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Unfair Stamp",
+            "setCode": "TWM",
+            "number": "165",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Air Balloon",
+            "setCode": "ASC",
+            "number": "181",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Spikemuth Gym",
+            "setCode": "DRI",
+            "number": "169",
+            "category": "trainer"
+          },
+          {
+            "qty": 9,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          }
+        ],
+        "creator": "Michael Ingalls",
+        "variantName": "Grimmsnarl Froslass"
+      },
+      {
+        "placing": 222,
+        "date": "9th May 2026 - Regional Los Angeles, CA",
+        "cards": [
+          {
+            "qty": 4,
+            "name": "Munkidori",
+            "setCode": "TWM",
+            "number": "95",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Marnie's Impidimp",
+            "setCode": "DRI",
+            "number": "134",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie's Morgrem",
+            "setCode": "DRI",
+            "number": "135",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Marnie's Grimmsnarl ex",
+            "setCode": "DRI",
+            "number": "136",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Snorunt",
+            "setCode": "ASC",
+            "number": "46",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Froslass",
+            "setCode": "TWM",
+            "number": "53",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Yveltal",
+            "setCode": "MEG",
+            "number": "88",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Shaymin",
+            "setCode": "DRI",
+            "number": "10",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Tatsugiri",
+            "setCode": "TWM",
+            "number": "131",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Budew",
+            "setCode": "ASC",
+            "number": "16",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Team Rocket's Petrel",
+            "setCode": "DRI",
+            "number": "176",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Boss's Orders",
+            "setCode": "MEG",
+            "number": "114",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Pok\u00e9 Pad",
+            "setCode": "POR",
+            "number": "81",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Rare Candy",
+            "setCode": "MEG",
+            "number": "125",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Buddy-Buddy Poffin",
+            "setCode": "TEF",
+            "number": "144",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Unfair Stamp",
+            "setCode": "TWM",
+            "number": "165",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Energy Switch",
+            "setCode": "MEG",
+            "number": "115",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Air Balloon",
+            "setCode": "ASC",
+            "number": "181",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Spikemuth Gym",
+            "setCode": "DRI",
+            "number": "169",
+            "category": "trainer"
+          },
+          {
+            "qty": 9,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          }
+        ],
+        "creator": "Phillip Chao",
+        "variantName": "Grimmsnarl Froslass"
+      },
+      {
+        "placing": 118,
+        "date": "25th April 2026 - Regional Prague",
+        "cards": [
+          {
+            "qty": 4,
+            "name": "Munkidori",
+            "setCode": "TWM",
+            "number": "95",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Marnie's Impidimp",
+            "setCode": "DRI",
+            "number": "134",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie's Morgrem",
+            "setCode": "DRI",
+            "number": "135",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Marnie's Grimmsnarl ex",
+            "setCode": "DRI",
+            "number": "136",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Snorunt",
+            "setCode": "ASC",
+            "number": "46",
+            "category": "pokemon"
+          },
+          {
+            "qty": 3,
+            "name": "Froslass",
+            "setCode": "TWM",
+            "number": "53",
+            "category": "pokemon"
+          },
+          {
+            "qty": 2,
+            "name": "Budew",
+            "setCode": "ASC",
+            "number": "16",
+            "category": "pokemon"
+          },
+          {
+            "qty": 1,
+            "name": "Bloodmoon Ursaluna ex",
+            "setCode": "TWM",
+            "number": "141",
+            "category": "pokemon"
+          },
+          {
+            "qty": 4,
+            "name": "Lillie's Determination",
+            "setCode": "MEG",
+            "number": "119",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Carmine",
+            "setCode": "TWM",
+            "number": "145",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Judge",
+            "setCode": "POR",
+            "number": "76",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Team Rocket's Petrel",
+            "setCode": "DRI",
+            "number": "176",
+            "category": "trainer"
+          },
+          {
+            "qty": 4,
+            "name": "Pok\u00e9 Pad",
+            "setCode": "POR",
+            "number": "81",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Buddy-Buddy Poffin",
+            "setCode": "TEF",
+            "number": "144",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Night Stretcher",
+            "setCode": "ASC",
+            "number": "196",
+            "category": "trainer"
+          },
+          {
+            "qty": 2,
+            "name": "Rare Candy",
+            "setCode": "MEG",
+            "number": "125",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Secret Box",
+            "setCode": "TWM",
+            "number": "163",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Ultra Ball",
+            "setCode": "MEG",
+            "number": "131",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Lucky Helmet",
+            "setCode": "TWM",
+            "number": "158",
+            "category": "trainer"
+          },
+          {
+            "qty": 1,
+            "name": "Air Balloon",
+            "setCode": "ASC",
+            "number": "181",
+            "category": "trainer"
+          },
+          {
+            "qty": 3,
+            "name": "Spikemuth Gym",
+            "setCode": "DRI",
+            "number": "169",
+            "category": "trainer"
+          },
+          {
+            "qty": 9,
+            "name": "Darkness Energy",
+            "setCode": "MEE",
+            "number": "7",
+            "category": "energy"
+          }
+        ],
+        "creator": "Bj\u00f6rn Reinsdorf",
+        "variantName": "Grimmsnarl Froslass"
+      }
+    ],
+    "hasRotatedCards": false
+  },
+  {
     "id": "crustle-mysterious-rock-inn",
     "name": "Crustle",
     "cards": [
@@ -40961,2176 +43131,6 @@
         ],
         "creator": "Matheus S.",
         "variantName": null
-      }
-    ],
-    "hasRotatedCards": false
-  },
-  {
-    "id": "marnie-s-grimmsnarl-ex",
-    "name": "Marnie's Grimmsnarl",
-    "cards": [
-      {
-        "qty": 4,
-        "name": "Marnie's Impidimp",
-        "setCode": "DRI",
-        "number": "134",
-        "category": "pokemon"
-      },
-      {
-        "qty": 2,
-        "name": "Marnie's Morgrem",
-        "setCode": "DRI",
-        "number": "135",
-        "category": "pokemon"
-      },
-      {
-        "qty": 3,
-        "name": "Marnie's Grimmsnarl ex",
-        "setCode": "DRI",
-        "number": "136",
-        "category": "pokemon"
-      },
-      {
-        "qty": 4,
-        "name": "Munkidori",
-        "setCode": "TWM",
-        "number": "95",
-        "category": "pokemon"
-      },
-      {
-        "qty": 3,
-        "name": "Snorunt",
-        "setCode": "ASC",
-        "number": "46",
-        "category": "pokemon"
-      },
-      {
-        "qty": 3,
-        "name": "Froslass",
-        "setCode": "TWM",
-        "number": "53",
-        "category": "pokemon"
-      },
-      {
-        "qty": 1,
-        "name": "Yveltal",
-        "setCode": "MEG",
-        "number": "88",
-        "category": "pokemon"
-      },
-      {
-        "qty": 1,
-        "name": "Budew",
-        "setCode": "ASC",
-        "number": "16",
-        "category": "pokemon"
-      },
-      {
-        "qty": 4,
-        "name": "Lillie's Determination",
-        "setCode": "MEG",
-        "number": "119",
-        "category": "trainer"
-      },
-      {
-        "qty": 4,
-        "name": "Team Rocket's Petrel",
-        "setCode": "DRI",
-        "number": "176",
-        "category": "trainer"
-      },
-      {
-        "qty": 2,
-        "name": "Boss's Orders",
-        "setCode": "MEG",
-        "number": "114",
-        "category": "trainer"
-      },
-      {
-        "qty": 2,
-        "name": "Judge",
-        "setCode": "POR",
-        "number": "76",
-        "category": "trainer"
-      },
-      {
-        "qty": 4,
-        "name": "Pok\u00e9 Pad",
-        "setCode": "POR",
-        "number": "81",
-        "category": "trainer"
-      },
-      {
-        "qty": 3,
-        "name": "Night Stretcher",
-        "setCode": "ASC",
-        "number": "196",
-        "category": "trainer"
-      },
-      {
-        "qty": 3,
-        "name": "Buddy-Buddy Poffin",
-        "setCode": "TEF",
-        "number": "144",
-        "category": "trainer"
-      },
-      {
-        "qty": 2,
-        "name": "Rare Candy",
-        "setCode": "MEG",
-        "number": "125",
-        "category": "trainer"
-      },
-      {
-        "qty": 1,
-        "name": "Secret Box",
-        "setCode": "TWM",
-        "number": "163",
-        "category": "trainer"
-      },
-      {
-        "qty": 1,
-        "name": "Air Balloon",
-        "setCode": "ASC",
-        "number": "181",
-        "category": "trainer"
-      },
-      {
-        "qty": 4,
-        "name": "Spikemuth Gym",
-        "setCode": "DRI",
-        "number": "169",
-        "category": "trainer"
-      },
-      {
-        "qty": 9,
-        "name": "Darkness Energy",
-        "setCode": "MEE",
-        "number": "7",
-        "category": "energy"
-      }
-    ],
-    "variants": [
-      {
-        "placing": 37,
-        "date": "23rd May 2026 - Regional Melbourne",
-        "cards": [
-          {
-            "qty": 4,
-            "name": "Marnie's Impidimp",
-            "setCode": "DRI",
-            "number": "134",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Marnie's Morgrem",
-            "setCode": "DRI",
-            "number": "135",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Marnie's Grimmsnarl ex",
-            "setCode": "DRI",
-            "number": "136",
-            "category": "pokemon"
-          },
-          {
-            "qty": 4,
-            "name": "Munkidori",
-            "setCode": "TWM",
-            "number": "95",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Snorunt",
-            "setCode": "ASC",
-            "number": "46",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Froslass",
-            "setCode": "TWM",
-            "number": "53",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Yveltal",
-            "setCode": "MEG",
-            "number": "88",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Budew",
-            "setCode": "ASC",
-            "number": "16",
-            "category": "pokemon"
-          },
-          {
-            "qty": 4,
-            "name": "Lillie's Determination",
-            "setCode": "MEG",
-            "number": "119",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Team Rocket's Petrel",
-            "setCode": "DRI",
-            "number": "176",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Boss's Orders",
-            "setCode": "MEG",
-            "number": "114",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Judge",
-            "setCode": "POR",
-            "number": "76",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Pok\u00e9 Pad",
-            "setCode": "POR",
-            "number": "81",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Night Stretcher",
-            "setCode": "ASC",
-            "number": "196",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Buddy-Buddy Poffin",
-            "setCode": "TEF",
-            "number": "144",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Rare Candy",
-            "setCode": "MEG",
-            "number": "125",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Secret Box",
-            "setCode": "TWM",
-            "number": "163",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Air Balloon",
-            "setCode": "ASC",
-            "number": "181",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Spikemuth Gym",
-            "setCode": "DRI",
-            "number": "169",
-            "category": "trainer"
-          },
-          {
-            "qty": 9,
-            "name": "Darkness Energy",
-            "setCode": "MEE",
-            "number": "7",
-            "category": "energy"
-          }
-        ],
-        "creator": "Billy Coles",
-        "variantName": "Grimmsnarl Froslass"
-      },
-      {
-        "placing": 56,
-        "date": "23rd May 2026 - Regional Melbourne",
-        "cards": [
-          {
-            "qty": 4,
-            "name": "Munkidori",
-            "setCode": "TWM",
-            "number": "95",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Marnie's Impidimp",
-            "setCode": "DRI",
-            "number": "134",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Marnie's Morgrem",
-            "setCode": "DRI",
-            "number": "135",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Marnie's Grimmsnarl ex",
-            "setCode": "DRI",
-            "number": "136",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Snorunt",
-            "setCode": "ASC",
-            "number": "46",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Froslass",
-            "setCode": "TWM",
-            "number": "53",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Budew",
-            "setCode": "ASC",
-            "number": "16",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Psyduck",
-            "setCode": "ASC",
-            "number": "39",
-            "category": "pokemon"
-          },
-          {
-            "qty": 4,
-            "name": "Lillie's Determination",
-            "setCode": "MEG",
-            "number": "119",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Team Rocket's Petrel",
-            "setCode": "DRI",
-            "number": "176",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Boss's Orders",
-            "setCode": "MEG",
-            "number": "114",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Larry's Skill",
-            "setCode": "PRE",
-            "number": "115",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Pok\u00e9 Pad",
-            "setCode": "POR",
-            "number": "81",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Buddy-Buddy Poffin",
-            "setCode": "TEF",
-            "number": "144",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Night Stretcher",
-            "setCode": "ASC",
-            "number": "196",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Rare Candy",
-            "setCode": "MEG",
-            "number": "125",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Energy Switch",
-            "setCode": "MEG",
-            "number": "115",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Unfair Stamp",
-            "setCode": "TWM",
-            "number": "165",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Air Balloon",
-            "setCode": "ASC",
-            "number": "181",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Spikemuth Gym",
-            "setCode": "DRI",
-            "number": "169",
-            "category": "trainer"
-          },
-          {
-            "qty": 9,
-            "name": "Darkness Energy",
-            "setCode": "MEE",
-            "number": "7",
-            "category": "energy"
-          }
-        ],
-        "creator": "Ethan Cooper",
-        "variantName": "Grimmsnarl Froslass"
-      },
-      {
-        "placing": 157,
-        "date": "23rd May 2026 - Regional Melbourne",
-        "cards": [
-          {
-            "qty": 4,
-            "name": "Munkidori",
-            "setCode": "TWM",
-            "number": "95",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Marnie's Impidimp",
-            "setCode": "DRI",
-            "number": "134",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Marnie's Morgrem",
-            "setCode": "DRI",
-            "number": "135",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Marnie's Grimmsnarl ex",
-            "setCode": "DRI",
-            "number": "136",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Snorunt",
-            "setCode": "ASC",
-            "number": "46",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Froslass",
-            "setCode": "TWM",
-            "number": "53",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Yveltal",
-            "setCode": "MEG",
-            "number": "88",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Shaymin",
-            "setCode": "DRI",
-            "number": "10",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Tatsugiri",
-            "setCode": "TWM",
-            "number": "131",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Budew",
-            "setCode": "ASC",
-            "number": "16",
-            "category": "pokemon"
-          },
-          {
-            "qty": 4,
-            "name": "Team Rocket's Petrel",
-            "setCode": "DRI",
-            "number": "176",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Lillie's Determination",
-            "setCode": "MEG",
-            "number": "119",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Boss's Orders",
-            "setCode": "MEG",
-            "number": "114",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Pok\u00e9 Pad",
-            "setCode": "POR",
-            "number": "81",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Buddy-Buddy Poffin",
-            "setCode": "TEF",
-            "number": "144",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Night Stretcher",
-            "setCode": "ASC",
-            "number": "196",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Rare Candy",
-            "setCode": "MEG",
-            "number": "125",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Energy Switch",
-            "setCode": "MEG",
-            "number": "115",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Unfair Stamp",
-            "setCode": "TWM",
-            "number": "165",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Air Balloon",
-            "setCode": "ASC",
-            "number": "181",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Spikemuth Gym",
-            "setCode": "DRI",
-            "number": "169",
-            "category": "trainer"
-          },
-          {
-            "qty": 9,
-            "name": "Darkness Energy",
-            "setCode": "MEE",
-            "number": "7",
-            "category": "energy"
-          }
-        ],
-        "creator": "Aaron Day",
-        "variantName": "Grimmsnarl Froslass"
-      },
-      {
-        "placing": 172,
-        "date": "23rd May 2026 - Regional Melbourne",
-        "cards": [
-          {
-            "qty": 4,
-            "name": "Munkidori",
-            "setCode": "TWM",
-            "number": "95",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Marnie's Impidimp",
-            "setCode": "DRI",
-            "number": "134",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Marnie's Morgrem",
-            "setCode": "DRI",
-            "number": "135",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Marnie's Grimmsnarl ex",
-            "setCode": "DRI",
-            "number": "136",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Snorunt",
-            "setCode": "ASC",
-            "number": "46",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Froslass",
-            "setCode": "TWM",
-            "number": "53",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Budew",
-            "setCode": "ASC",
-            "number": "16",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Yveltal",
-            "setCode": "MEG",
-            "number": "88",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Bloodmoon Ursaluna ex",
-            "setCode": "TWM",
-            "number": "141",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Fezandipiti ex",
-            "setCode": "ASC",
-            "number": "142",
-            "category": "pokemon"
-          },
-          {
-            "qty": 4,
-            "name": "Lillie's Determination",
-            "setCode": "MEG",
-            "number": "119",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Team Rocket's Petrel",
-            "setCode": "DRI",
-            "number": "176",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Boss's Orders",
-            "setCode": "MEG",
-            "number": "114",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Judge",
-            "setCode": "POR",
-            "number": "76",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Pok\u00e9 Pad",
-            "setCode": "POR",
-            "number": "81",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Night Stretcher",
-            "setCode": "ASC",
-            "number": "196",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Ultra Ball",
-            "setCode": "MEG",
-            "number": "131",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Rare Candy",
-            "setCode": "MEG",
-            "number": "125",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Buddy-Buddy Poffin",
-            "setCode": "TEF",
-            "number": "144",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Secret Box",
-            "setCode": "TWM",
-            "number": "163",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Air Balloon",
-            "setCode": "ASC",
-            "number": "181",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Spikemuth Gym",
-            "setCode": "DRI",
-            "number": "169",
-            "category": "trainer"
-          },
-          {
-            "qty": 9,
-            "name": "Darkness Energy",
-            "setCode": "MEE",
-            "number": "7",
-            "category": "energy"
-          }
-        ],
-        "creator": "Kai Whittaker",
-        "variantName": "Grimmsnarl Froslass"
-      },
-      {
-        "placing": 151,
-        "date": "16th May 2026 - Regional Campinas",
-        "cards": [
-          {
-            "qty": 4,
-            "name": "Munkidori",
-            "setCode": "TWM",
-            "number": "95",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Marnie's Impidimp",
-            "setCode": "DRI",
-            "number": "134",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Marnie's Morgrem",
-            "setCode": "DRI",
-            "number": "135",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Marnie's Grimmsnarl ex",
-            "setCode": "DRI",
-            "number": "136",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Snorunt",
-            "setCode": "ASC",
-            "number": "46",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Froslass",
-            "setCode": "TWM",
-            "number": "53",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Budew",
-            "setCode": "ASC",
-            "number": "16",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Yveltal",
-            "setCode": "MEG",
-            "number": "88",
-            "category": "pokemon"
-          },
-          {
-            "qty": 4,
-            "name": "Lillie's Determination",
-            "setCode": "MEG",
-            "number": "119",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Boss's Orders",
-            "setCode": "MEG",
-            "number": "114",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Team Rocket's Petrel",
-            "setCode": "DRI",
-            "number": "176",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Judge",
-            "setCode": "POR",
-            "number": "76",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Larry's Skill",
-            "setCode": "PRE",
-            "number": "115",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Pok\u00e9 Pad",
-            "setCode": "POR",
-            "number": "81",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Buddy-Buddy Poffin",
-            "setCode": "TEF",
-            "number": "144",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Night Stretcher",
-            "setCode": "ASC",
-            "number": "196",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Pok\u00e9gear 3.0",
-            "setCode": "SVI",
-            "number": "186",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Rare Candy",
-            "setCode": "MEG",
-            "number": "125",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Energy Recycler",
-            "setCode": "DRI",
-            "number": "164",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Energy Switch",
-            "setCode": "MEG",
-            "number": "115",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Secret Box",
-            "setCode": "TWM",
-            "number": "163",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Punk Helmet",
-            "setCode": "PFL",
-            "number": "92",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Spikemuth Gym",
-            "setCode": "DRI",
-            "number": "169",
-            "category": "trainer"
-          },
-          {
-            "qty": 9,
-            "name": "Darkness Energy",
-            "setCode": "MEE",
-            "number": "7",
-            "category": "energy"
-          }
-        ],
-        "creator": "Jorge Rivero Daca",
-        "variantName": "Grimmsnarl Froslass"
-      },
-      {
-        "placing": 82,
-        "date": "16th May 2026 - Regional Utrecht",
-        "cards": [
-          {
-            "qty": 4,
-            "name": "Munkidori",
-            "setCode": "TWM",
-            "number": "95",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Marnie's Impidimp",
-            "setCode": "DRI",
-            "number": "134",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Marnie's Morgrem",
-            "setCode": "DRI",
-            "number": "135",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Marnie's Grimmsnarl ex",
-            "setCode": "DRI",
-            "number": "136",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Snorunt",
-            "setCode": "ASC",
-            "number": "46",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Froslass",
-            "setCode": "TWM",
-            "number": "53",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Budew",
-            "setCode": "ASC",
-            "number": "16",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Tatsugiri",
-            "setCode": "TWM",
-            "number": "131",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Shaymin",
-            "setCode": "DRI",
-            "number": "10",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Yveltal",
-            "setCode": "MEG",
-            "number": "88",
-            "category": "pokemon"
-          },
-          {
-            "qty": 4,
-            "name": "Lillie's Determination",
-            "setCode": "MEG",
-            "number": "119",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Team Rocket's Petrel",
-            "setCode": "DRI",
-            "number": "176",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Boss's Orders",
-            "setCode": "MEG",
-            "number": "114",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Buddy-Buddy Poffin",
-            "setCode": "TEF",
-            "number": "144",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Pok\u00e9 Pad",
-            "setCode": "POR",
-            "number": "81",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Night Stretcher",
-            "setCode": "ASC",
-            "number": "196",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Rare Candy",
-            "setCode": "MEG",
-            "number": "125",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Unfair Stamp",
-            "setCode": "TWM",
-            "number": "165",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Energy Switch",
-            "setCode": "MEG",
-            "number": "115",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Air Balloon",
-            "setCode": "ASC",
-            "number": "181",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Spikemuth Gym",
-            "setCode": "DRI",
-            "number": "169",
-            "category": "trainer"
-          },
-          {
-            "qty": 9,
-            "name": "Darkness Energy",
-            "setCode": "MEE",
-            "number": "7",
-            "category": "energy"
-          }
-        ],
-        "creator": "Nicklas Rosu",
-        "variantName": "Grimmsnarl Froslass"
-      },
-      {
-        "placing": 309,
-        "date": "16th May 2026 - Regional Utrecht",
-        "cards": [
-          {
-            "qty": 4,
-            "name": "Munkidori",
-            "setCode": "TWM",
-            "number": "95",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Marnie's Impidimp",
-            "setCode": "DRI",
-            "number": "134",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Marnie's Morgrem",
-            "setCode": "DRI",
-            "number": "135",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Marnie's Grimmsnarl ex",
-            "setCode": "DRI",
-            "number": "136",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Snorunt",
-            "setCode": "ASC",
-            "number": "46",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Froslass",
-            "setCode": "TWM",
-            "number": "53",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Dunsparce",
-            "setCode": "JTG",
-            "number": "120",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Dudunsparce",
-            "setCode": "TEF",
-            "number": "129",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Bloodmoon Ursaluna ex",
-            "setCode": "TWM",
-            "number": "141",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Budew",
-            "setCode": "ASC",
-            "number": "16",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Yveltal",
-            "setCode": "MEG",
-            "number": "88",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Meowth ex",
-            "setCode": "POR",
-            "number": "62",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Fezandipiti ex",
-            "setCode": "ASC",
-            "number": "142",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Lillie's Determination",
-            "setCode": "MEG",
-            "number": "119",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Team Rocket's Petrel",
-            "setCode": "DRI",
-            "number": "176",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Boss's Orders",
-            "setCode": "MEG",
-            "number": "114",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Colress's Tenacity",
-            "setCode": "SFA",
-            "number": "57",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Pok\u00e9 Pad",
-            "setCode": "POR",
-            "number": "81",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Buddy-Buddy Poffin",
-            "setCode": "TEF",
-            "number": "144",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Rare Candy",
-            "setCode": "MEG",
-            "number": "125",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Night Stretcher",
-            "setCode": "ASC",
-            "number": "196",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Unfair Stamp",
-            "setCode": "TWM",
-            "number": "165",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Energy Switch",
-            "setCode": "MEG",
-            "number": "115",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Ultra Ball",
-            "setCode": "MEG",
-            "number": "131",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Tool Scrapper",
-            "setCode": "ASC",
-            "number": "212",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Air Balloon",
-            "setCode": "ASC",
-            "number": "181",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Spikemuth Gym",
-            "setCode": "DRI",
-            "number": "169",
-            "category": "trainer"
-          },
-          {
-            "qty": 7,
-            "name": "Darkness Energy",
-            "setCode": "MEE",
-            "number": "7",
-            "category": "energy"
-          },
-          {
-            "qty": 1,
-            "name": "Psychic Energy",
-            "setCode": "MEE",
-            "number": "5",
-            "category": "energy"
-          },
-          {
-            "qty": 1,
-            "name": "Prism Energy",
-            "setCode": "ASC",
-            "number": "216",
-            "category": "energy"
-          }
-        ],
-        "creator": "Francesca M Mizzi",
-        "variantName": "Grimmsnarl Froslass"
-      },
-      {
-        "placing": 393,
-        "date": "16th May 2026 - Regional Utrecht",
-        "cards": [
-          {
-            "qty": 4,
-            "name": "Munkidori",
-            "setCode": "TWM",
-            "number": "95",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Marnie's Impidimp",
-            "setCode": "DRI",
-            "number": "134",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Marnie's Morgrem",
-            "setCode": "DRI",
-            "number": "135",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Marnie's Grimmsnarl ex",
-            "setCode": "DRI",
-            "number": "136",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Snorunt",
-            "setCode": "ASC",
-            "number": "46",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Froslass",
-            "setCode": "TWM",
-            "number": "53",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Yveltal",
-            "setCode": "MEG",
-            "number": "88",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Shaymin",
-            "setCode": "DRI",
-            "number": "10",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Pecharunt ex",
-            "setCode": "SFA",
-            "number": "39",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Tatsugiri",
-            "setCode": "TWM",
-            "number": "131",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Budew",
-            "setCode": "ASC",
-            "number": "16",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Fezandipiti ex",
-            "setCode": "ASC",
-            "number": "142",
-            "category": "pokemon"
-          },
-          {
-            "qty": 4,
-            "name": "Lillie's Determination",
-            "setCode": "MEG",
-            "number": "119",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Team Rocket's Petrel",
-            "setCode": "DRI",
-            "number": "176",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Boss's Orders",
-            "setCode": "MEG",
-            "number": "114",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Pok\u00e9 Pad",
-            "setCode": "POR",
-            "number": "81",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Night Stretcher",
-            "setCode": "ASC",
-            "number": "196",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Ultra Ball",
-            "setCode": "MEG",
-            "number": "131",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Buddy-Buddy Poffin",
-            "setCode": "TEF",
-            "number": "144",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Rare Candy",
-            "setCode": "MEG",
-            "number": "125",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Unfair Stamp",
-            "setCode": "TWM",
-            "number": "165",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Energy Switch",
-            "setCode": "MEG",
-            "number": "115",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Air Balloon",
-            "setCode": "ASC",
-            "number": "181",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Spikemuth Gym",
-            "setCode": "DRI",
-            "number": "169",
-            "category": "trainer"
-          },
-          {
-            "qty": 8,
-            "name": "Darkness Energy",
-            "setCode": "MEE",
-            "number": "7",
-            "category": "energy"
-          }
-        ],
-        "creator": "Alessio Indelicato",
-        "variantName": "Grimmsnarl Froslass"
-      },
-      {
-        "placing": 166,
-        "date": "9th May 2026 - Regional Los Angeles, CA",
-        "cards": [
-          {
-            "qty": 4,
-            "name": "Munkidori",
-            "setCode": "TWM",
-            "number": "95",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Marnie's Impidimp",
-            "setCode": "DRI",
-            "number": "134",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Marnie's Morgrem",
-            "setCode": "DRI",
-            "number": "135",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Marnie's Grimmsnarl ex",
-            "setCode": "DRI",
-            "number": "136",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Snorunt",
-            "setCode": "ASC",
-            "number": "46",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Froslass",
-            "setCode": "TWM",
-            "number": "53",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Yveltal",
-            "setCode": "MEG",
-            "number": "88",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Shaymin",
-            "setCode": "DRI",
-            "number": "10",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Budew",
-            "setCode": "ASC",
-            "number": "16",
-            "category": "pokemon"
-          },
-          {
-            "qty": 4,
-            "name": "Lillie's Determination",
-            "setCode": "MEG",
-            "number": "119",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Team Rocket's Petrel",
-            "setCode": "DRI",
-            "number": "176",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Boss's Orders",
-            "setCode": "MEG",
-            "number": "114",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Judge",
-            "setCode": "POR",
-            "number": "76",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Pok\u00e9 Pad",
-            "setCode": "POR",
-            "number": "81",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Buddy-Buddy Poffin",
-            "setCode": "TEF",
-            "number": "144",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Night Stretcher",
-            "setCode": "ASC",
-            "number": "196",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Rare Candy",
-            "setCode": "MEG",
-            "number": "125",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Energy Switch",
-            "setCode": "MEG",
-            "number": "115",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Unfair Stamp",
-            "setCode": "TWM",
-            "number": "165",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Air Balloon",
-            "setCode": "ASC",
-            "number": "181",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Spikemuth Gym",
-            "setCode": "DRI",
-            "number": "169",
-            "category": "trainer"
-          },
-          {
-            "qty": 9,
-            "name": "Darkness Energy",
-            "setCode": "MEE",
-            "number": "7",
-            "category": "energy"
-          }
-        ],
-        "creator": "Benjamin Wilhelm",
-        "variantName": "Grimmsnarl Froslass"
-      },
-      {
-        "placing": 169,
-        "date": "9th May 2026 - Regional Los Angeles, CA",
-        "cards": [
-          {
-            "qty": 4,
-            "name": "Munkidori",
-            "setCode": "TWM",
-            "number": "95",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Marnie's Impidimp",
-            "setCode": "DRI",
-            "number": "134",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Marnie's Morgrem",
-            "setCode": "DRI",
-            "number": "135",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Marnie's Grimmsnarl ex",
-            "setCode": "DRI",
-            "number": "136",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Snorunt",
-            "setCode": "ASC",
-            "number": "46",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Snorunt",
-            "setCode": "TWM",
-            "number": "51",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Froslass",
-            "setCode": "TWM",
-            "number": "53",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Yveltal",
-            "setCode": "MEG",
-            "number": "88",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Budew",
-            "setCode": "ASC",
-            "number": "16",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Marnie's Morpeko",
-            "setCode": "DRI",
-            "number": "137",
-            "category": "pokemon"
-          },
-          {
-            "qty": 4,
-            "name": "Lillie's Determination",
-            "setCode": "MEG",
-            "number": "119",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Team Rocket's Petrel",
-            "setCode": "DRI",
-            "number": "176",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Boss's Orders",
-            "setCode": "MEG",
-            "number": "114",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Judge",
-            "setCode": "POR",
-            "number": "76",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Pok\u00e9 Pad",
-            "setCode": "POR",
-            "number": "81",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Buddy-Buddy Poffin",
-            "setCode": "TEF",
-            "number": "144",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Rare Candy",
-            "setCode": "MEG",
-            "number": "125",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Night Stretcher",
-            "setCode": "ASC",
-            "number": "196",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Unfair Stamp",
-            "setCode": "TWM",
-            "number": "165",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Air Balloon",
-            "setCode": "ASC",
-            "number": "181",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Spikemuth Gym",
-            "setCode": "DRI",
-            "number": "169",
-            "category": "trainer"
-          },
-          {
-            "qty": 9,
-            "name": "Darkness Energy",
-            "setCode": "MEE",
-            "number": "7",
-            "category": "energy"
-          }
-        ],
-        "creator": "Michael Ingalls",
-        "variantName": "Grimmsnarl Froslass"
-      },
-      {
-        "placing": 222,
-        "date": "9th May 2026 - Regional Los Angeles, CA",
-        "cards": [
-          {
-            "qty": 4,
-            "name": "Munkidori",
-            "setCode": "TWM",
-            "number": "95",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Marnie's Impidimp",
-            "setCode": "DRI",
-            "number": "134",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Marnie's Morgrem",
-            "setCode": "DRI",
-            "number": "135",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Marnie's Grimmsnarl ex",
-            "setCode": "DRI",
-            "number": "136",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Snorunt",
-            "setCode": "ASC",
-            "number": "46",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Froslass",
-            "setCode": "TWM",
-            "number": "53",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Yveltal",
-            "setCode": "MEG",
-            "number": "88",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Shaymin",
-            "setCode": "DRI",
-            "number": "10",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Tatsugiri",
-            "setCode": "TWM",
-            "number": "131",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Budew",
-            "setCode": "ASC",
-            "number": "16",
-            "category": "pokemon"
-          },
-          {
-            "qty": 4,
-            "name": "Team Rocket's Petrel",
-            "setCode": "DRI",
-            "number": "176",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Lillie's Determination",
-            "setCode": "MEG",
-            "number": "119",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Boss's Orders",
-            "setCode": "MEG",
-            "number": "114",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Pok\u00e9 Pad",
-            "setCode": "POR",
-            "number": "81",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Rare Candy",
-            "setCode": "MEG",
-            "number": "125",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Buddy-Buddy Poffin",
-            "setCode": "TEF",
-            "number": "144",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Night Stretcher",
-            "setCode": "ASC",
-            "number": "196",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Unfair Stamp",
-            "setCode": "TWM",
-            "number": "165",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Energy Switch",
-            "setCode": "MEG",
-            "number": "115",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Air Balloon",
-            "setCode": "ASC",
-            "number": "181",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Spikemuth Gym",
-            "setCode": "DRI",
-            "number": "169",
-            "category": "trainer"
-          },
-          {
-            "qty": 9,
-            "name": "Darkness Energy",
-            "setCode": "MEE",
-            "number": "7",
-            "category": "energy"
-          }
-        ],
-        "creator": "Phillip Chao",
-        "variantName": "Grimmsnarl Froslass"
-      },
-      {
-        "placing": 118,
-        "date": "25th April 2026 - Regional Prague",
-        "cards": [
-          {
-            "qty": 4,
-            "name": "Munkidori",
-            "setCode": "TWM",
-            "number": "95",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Marnie's Impidimp",
-            "setCode": "DRI",
-            "number": "134",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Marnie's Morgrem",
-            "setCode": "DRI",
-            "number": "135",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Marnie's Grimmsnarl ex",
-            "setCode": "DRI",
-            "number": "136",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Snorunt",
-            "setCode": "ASC",
-            "number": "46",
-            "category": "pokemon"
-          },
-          {
-            "qty": 3,
-            "name": "Froslass",
-            "setCode": "TWM",
-            "number": "53",
-            "category": "pokemon"
-          },
-          {
-            "qty": 2,
-            "name": "Budew",
-            "setCode": "ASC",
-            "number": "16",
-            "category": "pokemon"
-          },
-          {
-            "qty": 1,
-            "name": "Bloodmoon Ursaluna ex",
-            "setCode": "TWM",
-            "number": "141",
-            "category": "pokemon"
-          },
-          {
-            "qty": 4,
-            "name": "Lillie's Determination",
-            "setCode": "MEG",
-            "number": "119",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Carmine",
-            "setCode": "TWM",
-            "number": "145",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Judge",
-            "setCode": "POR",
-            "number": "76",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Team Rocket's Petrel",
-            "setCode": "DRI",
-            "number": "176",
-            "category": "trainer"
-          },
-          {
-            "qty": 4,
-            "name": "Pok\u00e9 Pad",
-            "setCode": "POR",
-            "number": "81",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Buddy-Buddy Poffin",
-            "setCode": "TEF",
-            "number": "144",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Night Stretcher",
-            "setCode": "ASC",
-            "number": "196",
-            "category": "trainer"
-          },
-          {
-            "qty": 2,
-            "name": "Rare Candy",
-            "setCode": "MEG",
-            "number": "125",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Secret Box",
-            "setCode": "TWM",
-            "number": "163",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Ultra Ball",
-            "setCode": "MEG",
-            "number": "131",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Lucky Helmet",
-            "setCode": "TWM",
-            "number": "158",
-            "category": "trainer"
-          },
-          {
-            "qty": 1,
-            "name": "Air Balloon",
-            "setCode": "ASC",
-            "number": "181",
-            "category": "trainer"
-          },
-          {
-            "qty": 3,
-            "name": "Spikemuth Gym",
-            "setCode": "DRI",
-            "number": "169",
-            "category": "trainer"
-          },
-          {
-            "qty": 9,
-            "name": "Darkness Energy",
-            "setCode": "MEE",
-            "number": "7",
-            "category": "energy"
-          }
-        ],
-        "creator": "Bj\u00f6rn Reinsdorf",
-        "variantName": "Grimmsnarl Froslass"
       }
     ],
     "hasRotatedCards": false

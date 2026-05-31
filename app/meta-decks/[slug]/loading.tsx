@@ -1,5 +1,5 @@
-import DeckProfileSkeleton from "@/app/components/skeletons/DeckProfileSkeleton";
+import DeckProfileLoading from "@/app/components/DeckProfileLoading";
 
 export default function MetaDeckLoading() {
-  return <DeckProfileSkeleton />;
+  return <DeckProfileLoading />;
 }

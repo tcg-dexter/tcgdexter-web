@@ -12,6 +12,7 @@ interface Props {
   style?: React.CSSProperties;
   loading?: "lazy" | "eager";
   decoding?: "async" | "sync" | "auto";
+  fetchPriority?: "high" | "low" | "auto";
 }
 
 /**
@@ -29,6 +30,7 @@ export default function CardImage({
   style,
   loading = "lazy",
   decoding = "async",
+  fetchPriority = "low",
 }: Props) {
   const [failed, setFailed] = useState(false);
 
@@ -58,6 +60,7 @@ export default function CardImage({
       alt={alt}
       loading={loading}
       decoding={decoding}
+      fetchPriority={fetchPriority}
       className={className}
       style={style}
       onError={() => setFailed(true)}

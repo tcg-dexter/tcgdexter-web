@@ -87,6 +87,17 @@ export function cardImageUrlFor(
   return cardImageSmall(match.set_id, card.number);
 }
 
+/** Derive a card image URL from a Pokémon name alone (no set/number).
+ *  Used when only the attacker name is known from a battle log. Picks the
+ *  first DB entry for that name — may not be the most recent printing, but
+ *  is acceptable for illustrative display. Returns null on no match. */
+export function cardImageUrlForName(name: string): string | null {
+  const entries = CARD_DB[name] ?? CARD_DB_LOWER.get(name.toLowerCase()) ?? [];
+  const entry = entries.find((e) => e.set_id) ?? null;
+  if (!entry) return null;
+  return cardImageSmall(entry.set_id, entry.number);
+}
+
 /**
  * Given a saved deck's analysis.cards list, returns the pokemontcg.io image
  * URL for the most prominent Pokémon: highest stage first, then highest copy

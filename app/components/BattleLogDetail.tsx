@@ -381,9 +381,10 @@ function cellTitle(turn: ApiTurn, playerHandle: string | null): string {
 
 interface Props {
   matchId: string;
+  apiUrl?: string;
 }
 
-export default function BattleLogDetail({ matchId }: Props) {
+export default function BattleLogDetail({ matchId, apiUrl }: Props) {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -391,7 +392,7 @@ export default function BattleLogDetail({ matchId }: Props) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetch(`/api/matches/${matchId}/battle-log`)
+    fetch(apiUrl ?? `/api/matches/${matchId}/battle-log`)
       .then(async (r) => {
         const json = await r.json();
         if (!r.ok) throw new Error(json.error ?? "Failed to load battle log.");
@@ -493,10 +494,14 @@ export default function BattleLogDetail({ matchId }: Props) {
           <div
             key={turn.id}
             className={`rounded-lg bg-bg p-3 ${
-              isPlayer ? "shadow-[inset_3px_0_0_0_var(--accent)]" : ""
-            } ${isOpponent ? "shadow-[inset_3px_0_0_0_black]" : ""}`}
+              isPlayer
+                ? "mr-auto w-[88%] shadow-[inset_3px_0_0_0_var(--accent)]"
+                : isOpponent
+                ? "ml-auto w-[88%] shadow-[inset_-3px_0_0_0_var(--accent)]"
+                : ""
+            }`}
           >
-            <div className="flex items-center justify-between mb-2">
+            <div className={`flex items-center justify-between mb-2 ${isOpponent ? "flex-row-reverse" : ""}`}>
               <span className="text-xs font-semibold text-text-primary truncate">
                 {title}
               </span>

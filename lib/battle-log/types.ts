@@ -60,6 +60,7 @@ export type ActionType =
   | "ability_used"
   | "damage_dealt"
   | "discard_from_pokemon"
+  | "effect_activated"
   | "knock_out"
   | "prize_taken"
   // Conditions
