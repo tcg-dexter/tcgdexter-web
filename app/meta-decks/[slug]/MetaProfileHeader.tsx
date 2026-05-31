@@ -174,7 +174,7 @@ export default function MetaProfileHeader({
               keeping each card's bottom edge pinned to the banner's bottom
               via `origin-bottom`. Banner height is unaffected because the
               scale is purely a transform on the cards layer. */}
-          <div className="relative h-full mx-6 sm:scale-90 sm:origin-bottom">
+          <div className="relative h-full mx-6 sm:scale-90 sm:origin-bottom sm:translate-y-[10px]">
             {bannerCards.map((url, i) => {
               const left =
                 cardCount === 1
