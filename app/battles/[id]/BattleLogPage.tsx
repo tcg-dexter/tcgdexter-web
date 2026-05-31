@@ -65,14 +65,19 @@ export default function BattleLogPage({
   const opponentLabel =
     opponentAttackerName ?? opponentArchetype ?? "Opponent";
 
-  // Gradient between the two energy-type colors. Falls back to a soft
-  // neutral when both sides resolve to the same color so the banner
-  // doesn't read as a flat block.
+  // Horizontal gradient between the two energy-type colors. We use 90°
+  // (left → right) on purpose: the toolbar and banner share the same
+  // viewport width, so a horizontal gradient painted on both surfaces
+  // lines up exactly and the banner reads as continuing up through the
+  // toolbar into the device's top edge. A diagonal gradient would
+  // sample at different pixel positions on each surface and seam.
   const bannerGradient =
     playerColor === opponentColor
-      ? `linear-gradient(135deg, ${playerColor} 0%, ${shade(playerColor, -18)} 100%)`
-      : `linear-gradient(135deg, ${playerColor} 0%, ${opponentColor} 100%)`;
-  const themeColor = playerColor;
+      ? `linear-gradient(90deg, ${playerColor} 0%, ${shade(playerColor, -18)} 100%)`
+      : `linear-gradient(90deg, ${playerColor} 0%, ${opponentColor} 100%)`;
+  // Theme color for iOS status bar — pick the mid-mix so the status bar
+  // blends with the gradient's center rather than favoring one side.
+  const themeColor = mix(playerColor, opponentColor, 0.5);
 
   return (
     <main className="min-h-dvh flex flex-col bg-bg">
@@ -80,7 +85,7 @@ export default function BattleLogPage({
           surface with the banner. */}
       <style
         dangerouslySetInnerHTML={{
-          __html: `[data-site-toolbar]{background:${themeColor};backdrop-filter:none;-webkit-backdrop-filter:none}[data-site-toolbar] button[aria-label="Toggle navigation menu"]{color:#fff}`,
+          __html: `[data-site-toolbar]{background:${bannerGradient};backdrop-filter:none;-webkit-backdrop-filter:none}[data-site-toolbar] button[aria-label="Toggle navigation menu"]{color:#fff}`,
         }}
       />
       <ThemeColor color={themeColor} />
@@ -211,6 +216,26 @@ function BannerCard({
       }}
     />
   );
+}
+
+/** Blend two hex colors by a 0..1 ratio (0 = a, 1 = b). Used for the iOS
+ *  status-bar theme color so it sits between the gradient's endpoints
+ *  instead of favoring one side. */
+function mix(aHex: string, bHex: string, ratio: number): string {
+  const a = hexToRgb(aHex);
+  const b = hexToRgb(bHex);
+  if (!a || !b) return aHex;
+  const r = Math.round(a[0] + (b[0] - a[0]) * ratio);
+  const g = Math.round(a[1] + (b[1] - a[1]) * ratio);
+  const bl = Math.round(a[2] + (b[2] - a[2]) * ratio);
+  return `#${[r, g, bl].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function hexToRgb(hex: string): [number, number, number] | null {
+  const m = hex.match(/^#?([0-9a-f]{6})$/i);
+  if (!m) return null;
+  const num = parseInt(m[1], 16);
+  return [(num >> 16) & 0xff, (num >> 8) & 0xff, num & 0xff];
 }
 
 /** Shift a hex color's lightness by a percentage delta (positive = lighter,
