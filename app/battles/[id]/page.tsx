@@ -27,7 +27,9 @@ export default async function BattleRoute({
 
   const { data: match } = await admin
     .from("matches")
-    .select("id, result, opponent_archetype, created_at, saved_deck_id, source")
+    .select(
+      "id, result, opponent_archetype, created_at, played_at, saved_deck_id, source, total_turns, player_handle, opponent_handle",
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -62,22 +64,27 @@ export default async function BattleRoute({
 
   let opponentAttackerName: string | null = null;
   let opponentImageUrl: string | null = null;
+  let playerDamage = 0;
+  let opponentDamage = 0;
 
   if (hasBattleLog) {
     const { data: attackRows } = await admin
       .from("match_actions")
-      .select("payload")
+      .select("actor, payload")
       .eq("match_id", id)
-      .eq("action_type", "attack")
-      .eq("actor", "opponent");
+      .eq("action_type", "attack");
 
     const dmgByAttacker = new Map<string, number>();
     for (const row of attackRows ?? []) {
       const payload = row.payload as Record<string, unknown>;
-      const attacker = typeof payload?.attacker === "string" ? payload.attacker : null;
       const damage = typeof payload?.damage === "number" ? payload.damage : 0;
-      if (attacker && damage) {
-        dmgByAttacker.set(attacker, (dmgByAttacker.get(attacker) ?? 0) + damage);
+      if (row.actor === "player") playerDamage += damage;
+      else if (row.actor === "opponent") {
+        opponentDamage += damage;
+        const attacker = typeof payload?.attacker === "string" ? payload.attacker : null;
+        if (attacker && damage) {
+          dmgByAttacker.set(attacker, (dmgByAttacker.get(attacker) ?? 0) + damage);
+        }
       }
     }
     let topDmg = 0;
@@ -122,20 +129,39 @@ export default async function BattleRoute({
     opponentAttackerName ? cardTypesForName(opponentAttackerName) : undefined,
   );
 
+  const playerHandle = (match.player_handle as string | null) ?? null;
+  const opponentHandle = (match.opponent_handle as string | null) ?? null;
+  const playedAt =
+    (match.played_at as string | null) ?? (match.created_at as string);
+  const totalTurns = (match.total_turns as number | null) ?? null;
+  const winnerName =
+    match.result === "win"
+      ? playerHandle ?? (profile.username as string)
+      : match.result === "loss"
+      ? opponentHandle ?? (match.opponent_archetype as string | null) ?? "Opponent"
+      : null;
+
   return (
     <BattleLogPage
       matchId={id}
       result={match.result as "win" | "loss" | "draw"}
       opponentArchetype={match.opponent_archetype as string | null}
       createdAt={match.created_at as string}
+      playedAt={playedAt}
       deckName={deck.name as string}
       username={profile.username as string}
       deckImageUrl={deckImageUrl}
       playerPokemonName={playerPokemonName}
       playerColor={playerColor}
+      playerHandle={playerHandle}
       opponentAttackerName={opponentAttackerName}
       opponentImageUrl={opponentImageUrl}
       opponentColor={opponentColor}
+      opponentHandle={opponentHandle}
+      winnerName={winnerName}
+      totalTurns={totalTurns}
+      playerDamage={playerDamage}
+      opponentDamage={opponentDamage}
       hasBattleLog={hasBattleLog}
     />
   );

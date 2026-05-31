@@ -9,15 +9,31 @@ interface Props {
   result: "win" | "loss" | "draw";
   opponentArchetype: string | null;
   createdAt: string;
+  playedAt: string;
   deckName: string;
   username: string;
   deckImageUrl: string | null;
   playerPokemonName: string | null;
   playerColor: string;
+  playerHandle: string | null;
   opponentAttackerName: string | null;
   opponentImageUrl: string | null;
   opponentColor: string;
+  opponentHandle: string | null;
+  winnerName: string | null;
+  totalTurns: number | null;
+  playerDamage: number;
+  opponentDamage: number;
   hasBattleLog: boolean;
+}
+
+function formatPlayedAt(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function relativeTime(iso: string): string {
@@ -45,25 +61,30 @@ export default function BattleLogPage({
   result,
   opponentArchetype,
   createdAt,
+  playedAt,
   deckName,
   username,
   deckImageUrl,
   playerPokemonName,
   playerColor,
+  playerHandle,
   opponentAttackerName,
   opponentImageUrl,
   opponentColor,
+  opponentHandle,
+  winnerName,
+  totalTurns,
+  playerDamage,
+  opponentDamage,
   hasBattleLog,
 }: Props) {
-  const cfg = {
-    win:  { label: "Win",  bg: "bg-green-100", text: "text-green-700" },
-    loss: { label: "Loss", bg: "bg-red-100",   text: "text-red-700"   },
-    draw: { label: "Draw", bg: "bg-gray-100",  text: "text-gray-500"  },
-  }[result];
-
   const playerLabel = playerPokemonName ?? deckName;
   const opponentLabel =
     opponentAttackerName ?? opponentArchetype ?? "Opponent";
+  const playerSideName =
+    playerHandle ?? username ?? "You";
+  const opponentSideName =
+    opponentHandle ?? opponentArchetype ?? "Opponent";
 
   // Vertical gradient anchored to the winner: winner's color at the top,
   // loser's color at the bottom. The top color is a single solid hex,
@@ -160,22 +181,40 @@ export default function BattleLogPage({
         </div>
       </div>
 
-      {/* Match meta — Win badge, deck name, time. */}
+      {/* Battle stats overview — replaces the old result card. Surfaces
+          the headline outcome (winner / draw), played-at date, total
+          turn count from the parsed log, and total damage dealt by
+          each side. */}
       <div className="mx-auto w-full max-w-2xl px-4 mt-4">
         <div className="rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5">
-          <div className="flex items-start gap-3">
-            <span className={`mt-0.5 shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold tracking-wide ${cfg.bg} ${cfg.text}`}>
-              {cfg.label}
-            </span>
-            <div className="min-w-0 flex-1">
-              <h1 className="text-[17px] font-semibold text-text-primary leading-tight truncate">
-                {deckName}
-              </h1>
-              <p className="text-[12px] font-medium text-text-muted mt-0.5">@{username}</p>
-            </div>
-            <p className="shrink-0 text-[11px] text-text-muted mt-0.5">
-              {relativeTime(createdAt)}
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-text-muted">
+            Battle Stats
+          </p>
+
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <StatTile
+              label="Winner"
+              value={winnerName ?? "Draw"}
+              tone={result === "win" ? "gradient" : result === "loss" ? "dark" : "muted"}
+            />
+            <StatTile label="Date" value={formatPlayedAt(playedAt)} />
+            <StatTile
+              label="Turns"
+              value={totalTurns != null ? String(totalTurns) : "—"}
+            />
+            <StatTile label="Played" value={relativeTime(createdAt)} />
+          </div>
+
+          <div className="mt-4">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-text-muted mb-2">
+              Total Damage
             </p>
+            <DamageRow
+              leftName={playerSideName}
+              leftValue={playerDamage}
+              rightName={opponentSideName}
+              rightValue={opponentDamage}
+            />
           </div>
         </div>
       </div>
@@ -200,6 +239,89 @@ export default function BattleLogPage({
         )}
       </div>
     </main>
+  );
+}
+
+function StatTile({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: string;
+  tone?: "default" | "gradient" | "dark" | "muted";
+}) {
+  if (tone === "gradient") {
+    return (
+      <div className="rounded-xl bg-gradient-brand shadow-sm px-3 py-2.5 text-white">
+        <p className="text-[10px] uppercase tracking-widest opacity-80">{label}</p>
+        <p className="text-base font-bold leading-tight truncate">{value}</p>
+      </div>
+    );
+  }
+  if (tone === "dark") {
+    return (
+      <div className="rounded-xl bg-black shadow-sm px-3 py-2.5 text-white">
+        <p className="text-[10px] uppercase tracking-widest opacity-80">{label}</p>
+        <p className="text-base font-bold leading-tight truncate">{value}</p>
+      </div>
+    );
+  }
+  if (tone === "muted") {
+    return (
+      <div className="rounded-xl bg-surface shadow-sm px-3 py-2.5">
+        <p className="text-[10px] uppercase tracking-widest text-text-muted">{label}</p>
+        <p className="text-base font-bold text-text-primary leading-tight truncate">{value}</p>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-xl border border-black/[0.06] bg-bg shadow-sm px-3 py-2.5">
+      <p className="text-[10px] uppercase tracking-widest text-text-muted">{label}</p>
+      <p className="text-base font-bold text-text-primary leading-tight truncate tabular-nums">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+/** Two-sided damage bar: each side's value sits next to its name, and a
+ *  horizontal bar underneath shows their share of the total. Lets you
+ *  see at a glance who dealt more damage without doing the math. */
+function DamageRow({
+  leftName,
+  leftValue,
+  rightName,
+  rightValue,
+}: {
+  leftName: string;
+  leftValue: number;
+  rightName: string;
+  rightValue: number;
+}) {
+  const total = Math.max(leftValue + rightValue, 1);
+  const leftPct = (leftValue / total) * 100;
+  return (
+    <div>
+      <div className="flex items-baseline justify-between text-xs">
+        <span className="font-semibold text-text-primary truncate max-w-[45%]">
+          {leftName}
+        </span>
+        <span className="font-semibold text-text-primary truncate max-w-[45%] text-right">
+          {rightName}
+        </span>
+      </div>
+      <div className="mt-1 flex items-baseline justify-between text-lg font-bold tabular-nums">
+        <span>{leftValue}</span>
+        <span>{rightValue}</span>
+      </div>
+      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface">
+        <div
+          className="h-full bg-gradient-brand transition-[width]"
+          style={{ width: `${leftPct}%` }}
+        />
+      </div>
+    </div>
   );
 }
 
