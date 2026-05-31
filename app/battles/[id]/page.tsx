@@ -64,27 +64,57 @@ export default async function BattleRoute({
 
   let opponentAttackerName: string | null = null;
   let opponentImageUrl: string | null = null;
-  let playerDamage = 0;
-  let opponentDamage = 0;
+  const stats = {
+    player: { damage: 0, pokemon: 0, supporters: 0, items: 0, energy: 0 },
+    opponent: { damage: 0, pokemon: 0, supporters: 0, items: 0, energy: 0 },
+  };
 
   if (hasBattleLog) {
-    const { data: attackRows } = await admin
+    const { data: statRows } = await admin
       .from("match_actions")
-      .select("actor, payload")
+      .select("actor, action_type, payload")
       .eq("match_id", id)
-      .eq("action_type", "attack");
+      .in("action_type", [
+        "attack",
+        "play_to_active",
+        "play_to_bench",
+        "play_supporter",
+        "play_item",
+        "attach_energy",
+      ]);
 
     const dmgByAttacker = new Map<string, number>();
-    for (const row of attackRows ?? []) {
+    for (const row of statRows ?? []) {
+      const side: "player" | "opponent" | null =
+        row.actor === "player" ? "player" : row.actor === "opponent" ? "opponent" : null;
+      if (!side) continue;
+      const bucket = stats[side];
       const payload = row.payload as Record<string, unknown>;
-      const damage = typeof payload?.damage === "number" ? payload.damage : 0;
-      if (row.actor === "player") playerDamage += damage;
-      else if (row.actor === "opponent") {
-        opponentDamage += damage;
-        const attacker = typeof payload?.attacker === "string" ? payload.attacker : null;
-        if (attacker && damage) {
-          dmgByAttacker.set(attacker, (dmgByAttacker.get(attacker) ?? 0) + damage);
+      switch (row.action_type) {
+        case "attack": {
+          const damage = typeof payload?.damage === "number" ? payload.damage : 0;
+          bucket.damage += damage;
+          if (side === "opponent") {
+            const attacker = typeof payload?.attacker === "string" ? payload.attacker : null;
+            if (attacker && damage) {
+              dmgByAttacker.set(attacker, (dmgByAttacker.get(attacker) ?? 0) + damage);
+            }
+          }
+          break;
         }
+        case "play_to_active":
+        case "play_to_bench":
+          bucket.pokemon += 1;
+          break;
+        case "play_supporter":
+          bucket.supporters += 1;
+          break;
+        case "play_item":
+          bucket.items += 1;
+          break;
+        case "attach_energy":
+          bucket.energy += 1;
+          break;
       }
     }
     let topDmg = 0;
@@ -160,8 +190,8 @@ export default async function BattleRoute({
       opponentHandle={opponentHandle}
       winnerName={winnerName}
       totalTurns={totalTurns}
-      playerDamage={playerDamage}
-      opponentDamage={opponentDamage}
+      playerStats={stats.player}
+      opponentStats={stats.opponent}
       hasBattleLog={hasBattleLog}
     />
   );

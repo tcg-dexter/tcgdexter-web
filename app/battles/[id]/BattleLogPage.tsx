@@ -22,9 +22,17 @@ interface Props {
   opponentHandle: string | null;
   winnerName: string | null;
   totalTurns: number | null;
-  playerDamage: number;
-  opponentDamage: number;
+  playerStats: BattleSideStats;
+  opponentStats: BattleSideStats;
   hasBattleLog: boolean;
+}
+
+export interface BattleSideStats {
+  damage: number;
+  pokemon: number;
+  supporters: number;
+  items: number;
+  energy: number;
 }
 
 function formatPlayedAt(iso: string): string {
@@ -74,8 +82,8 @@ export default function BattleLogPage({
   opponentHandle,
   winnerName,
   totalTurns,
-  playerDamage,
-  opponentDamage,
+  playerStats,
+  opponentStats,
   hasBattleLog,
 }: Props) {
   const playerLabel = playerPokemonName ?? deckName;
@@ -181,39 +189,67 @@ export default function BattleLogPage({
         </div>
       </div>
 
-      {/* Battle stats overview — replaces the old result card. Surfaces
-          the headline outcome (winner / draw), played-at date, total
-          turn count from the parsed log, and total damage dealt by
-          each side. */}
+      {/* Battle stats — meta-archetype-style stat board. Headline tiles
+          row mirrors the meta page's grid-cols-4 of StatCards (with
+          gradient/dark/ringed tones for the result), and a per-side
+          activity table beneath surfaces what each player actually did
+          in the parsed log. */}
       <div className="mx-auto w-full max-w-2xl px-4 mt-4">
-        <div className="rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-text-muted">
-            Battle Stats
-          </p>
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-text-muted mb-2 px-1">
+          Battle Stats
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StatCard
+            label="Winner"
+            value={winnerName ?? "Draw"}
+            tone={result === "win" ? "gradient" : result === "loss" ? "dark" : "ringed"}
+          />
+          <StatCard
+            label="Turns"
+            value={totalTurns != null ? String(totalTurns) : "—"}
+          />
+          <StatCard label="Date" value={formatPlayedAt(playedAt)} />
+          <StatCard label="Played" value={relativeTime(createdAt)} />
+        </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <StatTile
-              label="Winner"
-              value={winnerName ?? "Draw"}
-              tone={result === "win" ? "gradient" : result === "loss" ? "dark" : "muted"}
-            />
-            <StatTile label="Date" value={formatPlayedAt(playedAt)} />
-            <StatTile
-              label="Turns"
-              value={totalTurns != null ? String(totalTurns) : "—"}
-            />
-            <StatTile label="Played" value={relativeTime(createdAt)} />
+        <div className="mt-3 rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-3 pb-3 border-b border-black/[0.06]">
+            <p className="text-xs font-bold text-text-primary truncate">
+              {playerSideName}
+            </p>
+            <p className="text-[10px] uppercase tracking-widest text-text-muted">
+              vs
+            </p>
+            <p className="text-xs font-bold text-text-primary truncate text-right">
+              {opponentSideName}
+            </p>
           </div>
 
-          <div className="mt-4">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-text-muted mb-2">
-              Total Damage
-            </p>
-            <DamageRow
-              leftName={playerSideName}
-              leftValue={playerDamage}
-              rightName={opponentSideName}
-              rightValue={opponentDamage}
+          <div className="mt-2 flex flex-col">
+            <StatBarRow
+              label="Damage"
+              leftValue={playerStats.damage}
+              rightValue={opponentStats.damage}
+            />
+            <StatBarRow
+              label="Pokémon Played"
+              leftValue={playerStats.pokemon}
+              rightValue={opponentStats.pokemon}
+            />
+            <StatBarRow
+              label="Supporters"
+              leftValue={playerStats.supporters}
+              rightValue={opponentStats.supporters}
+            />
+            <StatBarRow
+              label="Items"
+              leftValue={playerStats.items}
+              rightValue={opponentStats.items}
+            />
+            <StatBarRow
+              label="Energy Attached"
+              leftValue={playerStats.energy}
+              rightValue={opponentStats.energy}
             />
           </div>
         </div>
@@ -242,83 +278,87 @@ export default function BattleLogPage({
   );
 }
 
-function StatTile({
+/** Headline tile matching the meta archetype StatCard tones so the
+ *  result panel reads as one consistent design language across the
+ *  site. Tones mirror the W/L/T tiles on /meta-decks/[slug]. */
+function StatCard({
   label,
   value,
   tone = "default",
 }: {
   label: string;
   value: string;
-  tone?: "default" | "gradient" | "dark" | "muted";
+  tone?: "default" | "gradient" | "dark" | "ringed";
 }) {
   if (tone === "gradient") {
     return (
-      <div className="rounded-xl bg-gradient-brand shadow-sm px-3 py-2.5 text-white">
-        <p className="text-[10px] uppercase tracking-widest opacity-80">{label}</p>
-        <p className="text-base font-bold leading-tight truncate">{value}</p>
+      <div className="rounded-2xl bg-gradient-brand shadow-sm px-4 py-3 text-center text-white">
+        <p className="text-lg font-bold tabular-nums truncate">{value}</p>
+        <p className="text-xs mt-0.5 opacity-90">{label}</p>
       </div>
     );
   }
   if (tone === "dark") {
     return (
-      <div className="rounded-xl bg-black shadow-sm px-3 py-2.5 text-white">
-        <p className="text-[10px] uppercase tracking-widest opacity-80">{label}</p>
-        <p className="text-base font-bold leading-tight truncate">{value}</p>
+      <div className="rounded-2xl bg-black shadow-sm px-4 py-3 text-center text-white">
+        <p className="text-lg font-bold tabular-nums truncate">{value}</p>
+        <p className="text-xs mt-0.5 opacity-90">{label}</p>
       </div>
     );
   }
-  if (tone === "muted") {
+  if (tone === "ringed") {
     return (
-      <div className="rounded-xl bg-surface shadow-sm px-3 py-2.5">
-        <p className="text-[10px] uppercase tracking-widest text-text-muted">{label}</p>
-        <p className="text-base font-bold text-text-primary leading-tight truncate">{value}</p>
+      <div className="rounded-2xl bg-white/90 backdrop-blur-xl shadow-[inset_0_0_0_1px_black] px-4 py-3 text-center">
+        <p className="text-lg font-bold text-text-primary tabular-nums truncate">{value}</p>
+        <p className="text-xs text-text-primary mt-0.5">{label}</p>
       </div>
     );
   }
   return (
-    <div className="rounded-xl border border-black/[0.06] bg-bg shadow-sm px-3 py-2.5">
-      <p className="text-[10px] uppercase tracking-widest text-text-muted">{label}</p>
-      <p className="text-base font-bold text-text-primary leading-tight truncate tabular-nums">
-        {value}
-      </p>
+    <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm px-4 py-3 text-center">
+      <p className="text-lg font-bold text-text-primary tabular-nums truncate">{value}</p>
+      <p className="text-xs text-text-muted mt-0.5">{label}</p>
     </div>
   );
 }
 
-/** Two-sided damage bar: each side's value sits next to its name, and a
- *  horizontal bar underneath shows their share of the total. Lets you
- *  see at a glance who dealt more damage without doing the math. */
-function DamageRow({
-  leftName,
+/** One row in the per-side activity table — label sits in the middle,
+ *  left/right values flank it, and a centered bar visualizes each
+ *  side's share. The bar grows out from the center so a tie reads as
+ *  two equal halves and a runaway lead reads as one side dominating. */
+function StatBarRow({
+  label,
   leftValue,
-  rightName,
   rightValue,
 }: {
-  leftName: string;
+  label: string;
   leftValue: number;
-  rightName: string;
   rightValue: number;
 }) {
   const total = Math.max(leftValue + rightValue, 1);
   const leftPct = (leftValue / total) * 100;
+  const rightPct = (rightValue / total) * 100;
   return (
-    <div>
-      <div className="flex items-baseline justify-between text-xs">
-        <span className="font-semibold text-text-primary truncate max-w-[45%]">
-          {leftName}
+    <div className="py-2">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-baseline gap-x-3">
+        <span className="text-base font-bold text-text-primary tabular-nums">
+          {leftValue}
         </span>
-        <span className="font-semibold text-text-primary truncate max-w-[45%] text-right">
-          {rightName}
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+          {label}
+        </span>
+        <span className="text-base font-bold text-text-primary tabular-nums text-right">
+          {rightValue}
         </span>
       </div>
-      <div className="mt-1 flex items-baseline justify-between text-lg font-bold tabular-nums">
-        <span>{leftValue}</span>
-        <span>{rightValue}</span>
-      </div>
-      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface">
+      <div className="mt-1.5 flex h-1.5 w-full overflow-hidden rounded-full bg-surface">
         <div
           className="h-full bg-gradient-brand transition-[width]"
           style={{ width: `${leftPct}%` }}
+        />
+        <div
+          className="h-full bg-black/80 transition-[width]"
+          style={{ width: `${rightPct}%` }}
         />
       </div>
     </div>
