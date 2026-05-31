@@ -189,34 +189,10 @@ export default function BattleLogPage({
         </div>
       </div>
 
-      {/* Battle stats — read as a small horizontal bar chart: one row
-          per stat, one column per player. Per-row maxes drive the bar
-          lengths so absolute scale stays visible (a 48-vs-12 damage row
-          is much heavier than a 3-vs-4 pokémon row). Match-level facts
-          that don't belong to either side (date, turns, etc.) sit in
-          their own panel below. */}
+      {/* Battle stats — match-level tiles on top, per-side stat table
+          underneath, with no section headings so the whole block reads
+          as one continuous summary. */}
       <div className="mx-auto w-full max-w-2xl px-4 mt-4">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-text-muted mb-2 px-1">
-          Battle Stats
-        </p>
-        <div className="rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5">
-          <StatChart
-            playerName={playerSideName}
-            opponentName={opponentSideName}
-            rows={[
-              { label: "Damage", left: playerStats.damage, right: opponentStats.damage },
-              { label: "Pokémon Played", left: playerStats.pokemon, right: opponentStats.pokemon },
-              { label: "Supporters", left: playerStats.supporters, right: opponentStats.supporters },
-              { label: "Items", left: playerStats.items, right: opponentStats.items },
-              { label: "Energy Attached", left: playerStats.energy, right: opponentStats.energy },
-            ]}
-          />
-        </div>
-
-        {/* Match-level facts — not tied to either player. */}
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-text-muted mb-2 px-1 mt-5">
-          Match
-        </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard
             label="Winner"
@@ -229,6 +205,20 @@ export default function BattleLogPage({
           />
           <StatCard label="Date" value={formatPlayedAt(playedAt)} />
           <StatCard label="Played" value={relativeTime(createdAt)} />
+        </div>
+
+        <div className="mt-3 rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5">
+          <StatChart
+            playerName={playerSideName}
+            opponentName={opponentSideName}
+            rows={[
+              { label: "Damage", left: playerStats.damage, right: opponentStats.damage },
+              { label: "Pokémon Played", left: playerStats.pokemon, right: opponentStats.pokemon },
+              { label: "Supporters", left: playerStats.supporters, right: opponentStats.supporters },
+              { label: "Items", left: playerStats.items, right: opponentStats.items },
+              { label: "Energy Attached", left: playerStats.energy, right: opponentStats.energy },
+            ]}
+          />
         </div>
       </div>
 
