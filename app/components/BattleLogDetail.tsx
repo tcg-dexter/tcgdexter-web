@@ -368,7 +368,7 @@ function Icon({ type, className }: { type: string; className?: string }) {
   return <Cmp className={className} />;
 }
 
-/* ─── Avatar helper ───────────────────────────────────────────── */
+/* ─── Avatar + identity helpers ───────────────────────────────── */
 
 const AVATAR_PALETTE = [
   "#3b6fd4",
@@ -389,6 +389,61 @@ function avatarBg(name: string): string {
 function avatarInitial(name: string): string {
   const trimmed = name.trim();
   return trimmed.length ? trimmed[0].toUpperCase() : "?";
+}
+
+function handleSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 20) || "user";
+}
+
+type PostKind = "player" | "opponent" | "system";
+
+interface SystemAccount {
+  displayName: string;
+  handle: string;
+  glyph: IconKey;
+  bg: string;
+}
+
+const SYSTEM_ACCOUNTS: Record<"setup" | "checkup" | "game", SystemAccount> = {
+  setup: { displayName: "Setup", handle: "setup", glyph: "shuffle", bg: "#475569" },
+  checkup: { displayName: "Pokémon Checkup", handle: "checkup", glyph: "droplet", bg: "#7c3aed" },
+  game: { displayName: "Game", handle: "game", glyph: "trophy", bg: "#0f172a" },
+};
+
+interface PostStats {
+  drew: number;
+  damage: number;
+  ko: number;
+  prizes: number;
+}
+
+function statsFor(actions: ApiAction[]): PostStats {
+  const stats: PostStats = { drew: 0, damage: 0, ko: 0, prizes: 0 };
+  for (const a of actions) {
+    switch (a.action_type) {
+      case "draw":
+      case "mulligan_bonus_draw":
+      case "opening_hand":
+        stats.drew += (p<number>(a, "count") ?? 1);
+        break;
+      case "attack":
+      case "damage_dealt":
+      case "damage_counter_placed": {
+        const d =
+          p<number>(a, "damage") ??
+          (p<number>(a, "counters") ?? 0) * 10;
+        stats.damage += d;
+        break;
+      }
+      case "knock_out":
+        stats.ko += 1;
+        break;
+      case "prize_taken":
+        stats.prizes += p<number>(a, "count") ?? 1;
+        break;
+    }
+  }
+  return stats;
 }
 
 /* ─── Component ───────────────────────────────────────────────── */
@@ -482,67 +537,108 @@ export default function BattleLogDetail({ matchId, apiUrl }: Props) {
   const playerHandle = data.match.player_handle ?? "You";
   const opponentHandle = data.match.opponent_handle ?? "Opponent";
 
-  const posts: { key: string; handle: string; label: string; actions: ApiAction[] }[] = [];
+  interface Post {
+    key: string;
+    kind: PostKind;
+    displayName: string;
+    handle: string;
+    label: string;
+    actions: ApiAction[];
+    system?: SystemAccount;
+    replyTo?: string;
+  }
+
+  const posts: Post[] = [];
+
+  function pushReplyTarget(forKind: PostKind, forDisplay: string): string | undefined {
+    // Walk backwards through the existing posts to find the last
+    // "real" player post (skip system broadcasts and self-replies).
+    for (let i = posts.length - 1; i >= 0; i--) {
+      const prev = posts[i];
+      if (prev.kind === "system") continue;
+      if (prev.displayName === forDisplay) return undefined;
+      return prev.displayName;
+    }
+    return forKind === "player" ? opponentHandle : playerHandle;
+  }
 
   for (const { turn, actions, globalTurnNumber } of renderableTurns) {
     if (turn.phase === "setup") {
       const groups = groupSetupActions(actions, playerHandle, opponentHandle);
-      if (groups.length === 0) {
+      const expand = groups.length > 0 ? groups : null;
+      if (!expand) {
         posts.push({
           key: `${turn.id}-setup`,
-          handle: "Setup",
+          kind: "system",
+          displayName: SYSTEM_ACCOUNTS.setup.displayName,
+          handle: SYSTEM_ACCOUNTS.setup.handle,
           label: "Pre-game",
           actions,
+          system: SYSTEM_ACCOUNTS.setup,
         });
       } else {
-        for (const group of groups) {
+        for (const group of expand) {
+          const isPlayer = group.actor === "player";
+          const isOpponent = group.actor === "opponent";
+          const display = isPlayer
+            ? playerHandle
+            : isOpponent
+            ? opponentHandle
+            : SYSTEM_ACCOUNTS.setup.displayName;
           posts.push({
             key: `${turn.id}-${group.key}`,
-            handle:
-              group.actor === "player"
-                ? playerHandle
-                : group.actor === "opponent"
-                ? opponentHandle
-                : "Setup",
+            kind: isPlayer ? "player" : isOpponent ? "opponent" : "system",
+            displayName: display,
+            handle: isPlayer || isOpponent ? handleSlug(display) : SYSTEM_ACCOUNTS.setup.handle,
             label: "Pre-game",
             actions: group.actions,
+            system: isPlayer || isOpponent ? undefined : SYSTEM_ACCOUNTS.setup,
           });
         }
       }
     } else if (turn.phase === "turn") {
+      const isPlayer = turn.actor === "player";
+      const display = turn.actor_handle ?? (isPlayer ? playerHandle : opponentHandle);
+      const kind: PostKind = isPlayer ? "player" : "opponent";
+      const replyTo = pushReplyTarget(kind, display);
       posts.push({
         key: turn.id,
-        handle:
-          turn.actor_handle ??
-          (turn.actor === "player" ? playerHandle : opponentHandle),
+        kind,
+        displayName: display,
+        handle: handleSlug(display),
         label: globalTurnNumber != null ? `Turn ${globalTurnNumber}` : "",
         actions,
+        replyTo,
       });
     } else if (turn.phase === "checkup") {
       posts.push({
         key: turn.id,
-        handle: "Checkup",
+        kind: "system",
+        displayName: SYSTEM_ACCOUNTS.checkup.displayName,
+        handle: SYSTEM_ACCOUNTS.checkup.handle,
         label: "Between turns",
         actions,
+        system: SYSTEM_ACCOUNTS.checkup,
       });
     } else {
       posts.push({
         key: turn.id,
-        handle: "Game",
-        label: "Result",
+        kind: "system",
+        displayName: SYSTEM_ACCOUNTS.game.displayName,
+        handle: SYSTEM_ACCOUNTS.game.handle,
+        label: "Final",
         actions,
+        system: SYSTEM_ACCOUNTS.game,
       });
     }
   }
 
   return (
-    <div className="mt-3 flex flex-col">
+    <div className="mt-3 flex flex-col rounded-lg bg-bg overflow-hidden">
       {posts.map((post, i) => (
         <ThreadPost
           key={post.key}
-          handle={post.handle}
-          label={post.label}
-          actions={post.actions}
+          post={post}
           isLast={i === posts.length - 1}
         />
       ))}
@@ -552,44 +648,107 @@ export default function BattleLogDetail({ matchId, apiUrl }: Props) {
 
 /* ─── Thread post ─────────────────────────────────────────────── */
 
-function ThreadPost({
-  handle,
-  label,
-  actions,
-  isLast,
-}: {
+interface ThreadPostInput {
+  kind: PostKind;
+  displayName: string;
   handle: string;
   label: string;
   actions: ApiAction[];
-  isLast: boolean;
-}) {
+  system?: SystemAccount;
+  replyTo?: string;
+}
+
+function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }) {
+  const isSystem = post.kind === "system";
+  const isResult = post.system?.handle === "game";
+  const stats = statsFor(post.actions);
+  const avatarColor = post.system?.bg ?? avatarBg(post.displayName);
+  const SystemGlyph = post.system ? ICONS[post.system.glyph] : null;
+
   return (
-    <div className="flex gap-3">
+    <div
+      className={`flex gap-3 px-3 py-3 ${isLast ? "" : "border-b border-[var(--border)]/15"} ${
+        isResult ? "bg-accent/[0.06]" : ""
+      }`}
+    >
       <div className="flex flex-col items-center">
         <div
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-          style={{ background: avatarBg(handle) }}
+          className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+          style={{ background: avatarColor }}
         >
-          {avatarInitial(handle)}
+          {SystemGlyph ? (
+            <SystemGlyph className="w-4 h-4" />
+          ) : (
+            avatarInitial(post.displayName)
+          )}
+          {isSystem && (
+            <span
+              className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#1d9bf0] ring-2 ring-bg"
+              aria-label="Verified"
+            >
+              <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" fill="none" stroke="white" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12l5 5 9-11" />
+              </svg>
+            </span>
+          )}
         </div>
-        {!isLast && <div className="w-px flex-1 bg-[var(--border)]/30 mt-1" />}
+        {!isLast && <div className="w-px flex-1 bg-[var(--border)]/20 mt-1.5" />}
       </div>
-      <div className={`flex-1 min-w-0 ${isLast ? "" : "pb-4"}`}>
-        <div className="mb-1 flex items-baseline gap-1.5">
-          <span className="text-xs font-semibold text-text-primary truncate">
-            {handle}
+
+      <div className="flex-1 min-w-0 pb-1">
+        <div className="flex items-baseline gap-1.5 flex-wrap">
+          <span className="text-sm font-bold text-text-primary truncate">
+            {post.displayName}
           </span>
-          {label && (
+          <span className="text-xs text-text-muted truncate">
+            @{post.handle}
+          </span>
+          {post.label && (
             <>
-              <span className="text-[11px] text-text-muted">·</span>
-              <span className="text-[11px] font-semibold text-text-muted tabular-nums">
-                {label}
+              <span className="text-xs text-text-muted">·</span>
+              <span className="text-xs text-text-muted tabular-nums">
+                {post.label}
               </span>
             </>
           )}
         </div>
-        <ActionList actions={actions} />
+
+        {post.replyTo && (
+          <div className="mb-1 text-[11px] text-text-muted">
+            Replying to{" "}
+            <span className="text-[#1d9bf0]">@{handleSlug(post.replyTo)}</span>
+          </div>
+        )}
+
+        <div className="mt-1">
+          <ActionList actions={post.actions} />
+        </div>
+
+        {!isResult && (stats.drew + stats.damage + stats.ko + stats.prizes > 0) && (
+          <PostStatsRow stats={stats} />
+        )}
       </div>
+    </div>
+  );
+}
+
+function PostStatsRow({ stats }: { stats: PostStats }) {
+  const items: { icon: IconKey; n: number; title: string }[] = [];
+  if (stats.drew > 0) items.push({ icon: "hand", n: stats.drew, title: "Cards drawn" });
+  if (stats.damage > 0) items.push({ icon: "impact", n: stats.damage, title: "Damage dealt" });
+  if (stats.ko > 0) items.push({ icon: "skull", n: stats.ko, title: "Knock-outs" });
+  if (stats.prizes > 0) items.push({ icon: "trophy", n: stats.prizes, title: "Prizes taken" });
+  return (
+    <div className="mt-2 flex items-center gap-4 text-[11px] text-text-muted">
+      {items.map(({ icon, n, title }) => {
+        const Cmp = ICONS[icon];
+        return (
+          <span key={icon} className="flex items-center gap-1 tabular-nums" title={title}>
+            <Cmp className="w-3 h-3" />
+            {n}
+          </span>
+        );
+      })}
     </div>
   );
 }
