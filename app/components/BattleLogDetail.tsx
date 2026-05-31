@@ -32,6 +32,7 @@ interface ApiResponse {
     player_handle: string | null;
     opponent_handle: string | null;
     parser_version: number | null;
+    result: "win" | "loss" | "draw" | null;
   };
   turns: ApiTurn[];
   actions: ApiAction[];
@@ -539,15 +540,15 @@ export default function BattleLogDetail({ matchId, apiUrl }: Props) {
 
   // Find the winning side so we can color the player/opponent
   // avatars with the site's win gradient vs solid black for the
-  // loser. The game_end action carries `actor` ("player" |
-  // "opponent") which is more reliable than the payload's raw
-  // winner handle string (case/whitespace can drift).
-  const winnerActor: "player" | "opponent" | null = (() => {
-    const end = data.actions.find((a) => a.action_type === "game_end");
-    if (!end) return null;
-    if (end.actor === "player" || end.actor === "opponent") return end.actor;
-    return null;
-  })();
+  // loser. The match record carries `result` ("win" | "loss" |
+  // "draw") from the player's perspective — preferred over the
+  // game_end action, which isn't stored for every match.
+  const winnerActor: "player" | "opponent" | null =
+    data.match.result === "win"
+      ? "player"
+      : data.match.result === "loss"
+      ? "opponent"
+      : null;
   const matchHasEnded = winnerActor != null;
 
   interface Post {
@@ -726,13 +727,13 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
           )}
         </div>
         {!isLast && (
-          <div className="w-0.5 flex-1 bg-border/40 mt-1.5" />
+          <div className="w-0.5 flex-1 min-h-[16px] bg-[#cbd5e1] mt-1.5" />
         )}
       </div>
 
       <div
         className={`flex-1 min-w-0 pb-3 ${
-          isLast ? "" : "border-b border-border/20"
+          isLast ? "" : "border-b border-[#e2e8f0]"
         }`}
       >
         <div className="flex items-baseline gap-1.5 flex-wrap">
