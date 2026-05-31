@@ -85,7 +85,10 @@ export default function BattleLogPage({
           surface with the banner. */}
       <style
         dangerouslySetInnerHTML={{
-          __html: `[data-site-toolbar]{background:${bannerGradient};backdrop-filter:none;-webkit-backdrop-filter:none}[data-site-toolbar] button[aria-label="Toggle navigation menu"]{color:#fff}`,
+          __html:
+            `html{background:${bannerGradient}}` +
+            `[data-site-toolbar]{background:${bannerGradient};backdrop-filter:none;-webkit-backdrop-filter:none}` +
+            `[data-site-toolbar] button[aria-label="Toggle navigation menu"]{color:#fff}`,
         }}
       />
       <ThemeColor color={themeColor} />
