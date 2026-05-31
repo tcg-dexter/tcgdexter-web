@@ -65,19 +65,29 @@ export default function BattleLogPage({
   const opponentLabel =
     opponentAttackerName ?? opponentArchetype ?? "Opponent";
 
-  // Horizontal gradient between the two energy-type colors. We use 90°
-  // (left → right) on purpose: the toolbar and banner share the same
-  // viewport width, so a horizontal gradient painted on both surfaces
-  // lines up exactly and the banner reads as continuing up through the
-  // toolbar into the device's top edge. A diagonal gradient would
-  // sample at different pixel positions on each surface and seam.
+  // Vertical gradient anchored to the winner: winner's color at the top,
+  // loser's color at the bottom. The top color is a single solid hex,
+  // which lets us paint the sticky toolbar + iOS status bar with the
+  // exact same color so the gradient reads as continuing up through
+  // the device's top edge — the meta archetype banner uses the same
+  // trick (solid color matches across toolbar/banner/safe-area).
+  const winnerColor =
+    result === "win"
+      ? playerColor
+      : result === "loss"
+      ? opponentColor
+      : playerColor;
+  const loserColor =
+    result === "win"
+      ? opponentColor
+      : result === "loss"
+      ? playerColor
+      : opponentColor;
   const bannerGradient =
-    playerColor === opponentColor
-      ? `linear-gradient(90deg, ${playerColor} 0%, ${shade(playerColor, -18)} 100%)`
-      : `linear-gradient(90deg, ${playerColor} 0%, ${opponentColor} 100%)`;
-  // Theme color for iOS status bar — pick the mid-mix so the status bar
-  // blends with the gradient's center rather than favoring one side.
-  const themeColor = mix(playerColor, opponentColor, 0.5);
+    winnerColor === loserColor
+      ? `linear-gradient(180deg, ${winnerColor} 0%, ${shade(winnerColor, -18)} 100%)`
+      : `linear-gradient(180deg, ${winnerColor} 0%, ${loserColor} 100%)`;
+  const themeColor = winnerColor;
 
   return (
     <main className="min-h-dvh flex flex-col bg-bg">
@@ -86,11 +96,10 @@ export default function BattleLogPage({
       <style
         dangerouslySetInnerHTML={{
           __html:
-            // Paint the sticky toolbar with the same gradient and
-            // extend it up through the iOS safe-area inset so the
-            // status bar / notch region is covered by the gradient
-            // rather than the page's bg-bg wrapper below.
-            `[data-site-toolbar]{background:${bannerGradient};padding-top:env(safe-area-inset-top);backdrop-filter:none;-webkit-backdrop-filter:none}` +
+            // Toolbar + iOS status bar share the winner's solid color
+            // (the top of the vertical gradient), so the gradient
+            // visually continues all the way to the device top.
+            `[data-site-toolbar]{background:${winnerColor};backdrop-filter:none;-webkit-backdrop-filter:none}` +
             `[data-site-toolbar] button[aria-label="Toggle navigation menu"]{color:#fff}`,
         }}
       />
@@ -222,26 +231,6 @@ function BannerCard({
       }}
     />
   );
-}
-
-/** Blend two hex colors by a 0..1 ratio (0 = a, 1 = b). Used for the iOS
- *  status-bar theme color so it sits between the gradient's endpoints
- *  instead of favoring one side. */
-function mix(aHex: string, bHex: string, ratio: number): string {
-  const a = hexToRgb(aHex);
-  const b = hexToRgb(bHex);
-  if (!a || !b) return aHex;
-  const r = Math.round(a[0] + (b[0] - a[0]) * ratio);
-  const g = Math.round(a[1] + (b[1] - a[1]) * ratio);
-  const bl = Math.round(a[2] + (b[2] - a[2]) * ratio);
-  return `#${[r, g, bl].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
-}
-
-function hexToRgb(hex: string): [number, number, number] | null {
-  const m = hex.match(/^#?([0-9a-f]{6})$/i);
-  if (!m) return null;
-  const num = parseInt(m[1], 16);
-  return [(num >> 16) & 0xff, (num >> 8) & 0xff, num & 0xff];
 }
 
 /** Shift a hex color's lightness by a percentage delta (positive = lighter,
