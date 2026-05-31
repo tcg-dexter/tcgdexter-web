@@ -115,7 +115,7 @@ export const TYPE_COLOR: Record<string, string> = {
   Lightning: "#E8C232",
   Psychic: "#B061BD",
   Fighting: "#BD5A2A",
-  Darkness: "#318C98",
+  Darkness: "#0d9488",
   Metal: "#7E8B96",
   Dragon: "#C7A126",
   Fairy: "#D86CB0",
