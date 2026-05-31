@@ -537,16 +537,18 @@ export default function BattleLogDetail({ matchId, apiUrl }: Props) {
   const playerHandle = data.match.player_handle ?? "You";
   const opponentHandle = data.match.opponent_handle ?? "Opponent";
 
-  // Find the winner (if the match has ended) so we can color the
-  // player/opponent avatars with the site's win gradient vs solid
-  // black for the loser. The game_end action carries a `winner`
-  // string in its payload — match it against the known handles.
-  const winnerHandle: string | null = (() => {
+  // Find the winning side so we can color the player/opponent
+  // avatars with the site's win gradient vs solid black for the
+  // loser. The game_end action carries `actor` ("player" |
+  // "opponent") which is more reliable than the payload's raw
+  // winner handle string (case/whitespace can drift).
+  const winnerActor: "player" | "opponent" | null = (() => {
     const end = data.actions.find((a) => a.action_type === "game_end");
-    const w = end ? (end.payload?.winner as string | undefined) : undefined;
-    return w ?? null;
+    if (!end) return null;
+    if (end.actor === "player" || end.actor === "opponent") return end.actor;
+    return null;
   })();
-  const matchHasEnded = winnerHandle != null;
+  const matchHasEnded = winnerActor != null;
 
   interface Post {
     key: string;
@@ -560,9 +562,9 @@ export default function BattleLogDetail({ matchId, apiUrl }: Props) {
     outcome?: "win" | "loss";
   }
 
-  function outcomeFor(display: string): "win" | "loss" | undefined {
-    if (!matchHasEnded || !winnerHandle) return undefined;
-    return display === winnerHandle ? "win" : "loss";
+  function outcomeFor(actor: "player" | "opponent"): "win" | "loss" | undefined {
+    if (!matchHasEnded || !winnerActor) return undefined;
+    return actor === winnerActor ? "win" : "loss";
   }
 
   const posts: Post[] = [];
@@ -610,7 +612,11 @@ export default function BattleLogDetail({ matchId, apiUrl }: Props) {
             label: "Pre-game",
             actions: group.actions,
             system: isPlayer || isOpponent ? undefined : SYSTEM_ACCOUNTS.setup,
-            outcome: isPlayer || isOpponent ? outcomeFor(display) : undefined,
+            outcome: isPlayer
+              ? outcomeFor("player")
+              : isOpponent
+              ? outcomeFor("opponent")
+              : undefined,
           });
         }
       }
@@ -627,7 +633,7 @@ export default function BattleLogDetail({ matchId, apiUrl }: Props) {
         label: globalTurnNumber != null ? `Turn ${globalTurnNumber}` : "",
         actions,
         replyTo,
-        outcome: outcomeFor(display),
+        outcome: outcomeFor(isPlayer ? "player" : "opponent"),
       });
     } else if (turn.phase === "checkup") {
       posts.push({
@@ -720,13 +726,13 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
           )}
         </div>
         {!isLast && (
-          <div className="w-0.5 flex-1 bg-[var(--border)]/40 mt-1.5" />
+          <div className="w-0.5 flex-1 bg-border/40 mt-1.5" />
         )}
       </div>
 
       <div
         className={`flex-1 min-w-0 pb-3 ${
-          isLast ? "" : "border-b border-[var(--border)]/20"
+          isLast ? "" : "border-b border-border/20"
         }`}
       >
         <div className="flex items-baseline gap-1.5 flex-wrap">
