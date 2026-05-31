@@ -368,13 +368,27 @@ function Icon({ type, className }: { type: string; className?: string }) {
   return <Cmp className={className} />;
 }
 
-/* ─── Cell header helper ──────────────────────────────────────── */
+/* ─── Avatar helper ───────────────────────────────────────────── */
 
-function cellTitle(turn: ApiTurn, playerHandle: string | null): string {
-  if (turn.phase === "setup") return "Setup";
-  if (turn.phase === "checkup") return "Pokémon Checkup";
-  if (turn.phase === "end") return "End";
-  return turn.actor_handle ?? (turn.actor === "player" ? playerHandle ?? "You" : "Opponent");
+const AVATAR_PALETTE = [
+  "#3b6fd4",
+  "#d43b9a",
+  "#27ae60",
+  "#e67e22",
+  "#9b59b6",
+  "#c0392b",
+  "#1abc9c",
+  "#34495e",
+];
+
+function avatarBg(name: string): string {
+  const h = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return AVATAR_PALETTE[h % AVATAR_PALETTE.length];
+}
+
+function avatarInitial(name: string): string {
+  const trimmed = name.trim();
+  return trimmed.length ? trimmed[0].toUpperCase() : "?";
 }
 
 /* ─── Component ───────────────────────────────────────────────── */
@@ -444,7 +458,7 @@ export default function BattleLogDetail({ matchId, apiUrl }: Props) {
   // Only render turns that have at least one visible action (after the
   // implicit turn_start/turn_end synthetic events are filtered out).
   // Each entry also gets a globalTurnNumber that increments only on
-  // actual play turns (skipping setup / checkup), so the cell header
+  // actual play turns (skipping setup / checkup), so the post header
   // counts 1, 2, 3, 4… across both players rather than 1-1, 2-2.
   let playTurnCounter = 0;
   const renderableTurns = data.turns
@@ -460,83 +474,122 @@ export default function BattleLogDetail({ matchId, apiUrl }: Props) {
     })
     .filter(({ actions, turn }) => actions.length > 0 || turn.phase === "setup");
 
+  // Flatten turns into a single linear stream of "posts". Setup turns
+  // expand into one post per actor; everything else becomes a single
+  // post attributed either to the actor's handle or to a synthetic
+  // "Setup" / "Checkup" / "Game" user so readers see the same avatar +
+  // handle + body shape on every entry in the thread.
+  const playerHandle = data.match.player_handle ?? "You";
+  const opponentHandle = data.match.opponent_handle ?? "Opponent";
+
+  const posts: { key: string; handle: string; label: string; actions: ApiAction[] }[] = [];
+
+  for (const { turn, actions, globalTurnNumber } of renderableTurns) {
+    if (turn.phase === "setup") {
+      const groups = groupSetupActions(actions, playerHandle, opponentHandle);
+      if (groups.length === 0) {
+        posts.push({
+          key: `${turn.id}-setup`,
+          handle: "Setup",
+          label: "Pre-game",
+          actions,
+        });
+      } else {
+        for (const group of groups) {
+          posts.push({
+            key: `${turn.id}-${group.key}`,
+            handle:
+              group.actor === "player"
+                ? playerHandle
+                : group.actor === "opponent"
+                ? opponentHandle
+                : "Setup",
+            label: "Pre-game",
+            actions: group.actions,
+          });
+        }
+      }
+    } else if (turn.phase === "turn") {
+      posts.push({
+        key: turn.id,
+        handle:
+          turn.actor_handle ??
+          (turn.actor === "player" ? playerHandle : opponentHandle),
+        label: globalTurnNumber != null ? `Turn ${globalTurnNumber}` : "",
+        actions,
+      });
+    } else if (turn.phase === "checkup") {
+      posts.push({
+        key: turn.id,
+        handle: "Checkup",
+        label: "Between turns",
+        actions,
+      });
+    } else {
+      posts.push({
+        key: turn.id,
+        handle: "Game",
+        label: "Result",
+        actions,
+      });
+    }
+  }
+
   return (
-    <div className="mt-3 flex flex-col gap-2">
-      {renderableTurns.map(({ turn, actions, globalTurnNumber }) => {
-        const title = cellTitle(turn, data.match.player_handle);
-        const turnLabel =
-          turn.phase === "turn" && globalTurnNumber != null
-            ? `Turn ${globalTurnNumber}`
-            : turn.phase === "setup"
-            ? "Pre-game"
-            : turn.phase === "checkup"
-            ? "Between turns"
-            : "";
+    <div className="mt-3 flex flex-col">
+      {posts.map((post, i) => (
+        <ThreadPost
+          key={post.key}
+          handle={post.handle}
+          label={post.label}
+          actions={post.actions}
+          isLast={i === posts.length - 1}
+        />
+      ))}
+    </div>
+  );
+}
 
-        const isPlayer = turn.actor === "player";
-        const isOpponent = turn.actor === "opponent";
+/* ─── Thread post ─────────────────────────────────────────────── */
 
-        // For the Setup cell, group actions by actor so the reader can
-        // see at a glance what each player did pre-game (coin flip,
-        // mulligans, first Pokémon placements) rather than scanning an
-        // interleaved list. Falls back to a flat list if every setup
-        // action somehow lacks a player attribution.
-        const setupGroups =
-          turn.phase === "setup"
-            ? groupSetupActions(
-                actions,
-                data.match.player_handle,
-                data.match.opponent_handle,
-              )
-            : null;
-
-        return (
-          <div
-            key={turn.id}
-            className={`rounded-lg bg-bg p-3 ${
-              isPlayer
-                ? "mr-auto w-[88%] shadow-[inset_3px_0_0_0_var(--accent)]"
-                : isOpponent
-                ? "ml-auto w-[88%] shadow-[inset_-3px_0_0_0_var(--accent)]"
-                : ""
-            }`}
-          >
-            <div className={`flex items-center justify-between mb-2 ${isOpponent ? "flex-row-reverse" : ""}`}>
-              <span className="text-xs font-semibold text-text-primary truncate">
-                {title}
-              </span>
+function ThreadPost({
+  handle,
+  label,
+  actions,
+  isLast,
+}: {
+  handle: string;
+  label: string;
+  actions: ApiAction[];
+  isLast: boolean;
+}) {
+  return (
+    <div className="flex gap-3">
+      <div className="flex flex-col items-center">
+        <div
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+          style={{ background: avatarBg(handle) }}
+        >
+          {avatarInitial(handle)}
+        </div>
+        {!isLast && <div className="w-px flex-1 bg-[var(--border)]/30 mt-1" />}
+      </div>
+      <div className={`flex-1 min-w-0 ${isLast ? "" : "pb-4"}`}>
+        <div className="mb-1 flex items-baseline gap-1.5">
+          <span className="text-xs font-semibold text-text-primary truncate">
+            {handle}
+          </span>
+          {label && (
+            <>
+              <span className="text-[11px] text-text-muted">·</span>
               <span className="text-[11px] font-semibold text-text-muted tabular-nums">
-                {turnLabel}
+                {label}
               </span>
-            </div>
-            {setupGroups && setupGroups.length > 0 ? (
-              <div className="flex flex-col gap-3">
-                {setupGroups.map((group) => (
-                  <div key={group.key}>
-                    <div className="mb-1 flex items-center gap-2">
-                      <span
-                        className={`inline-block h-1.5 w-1.5 rounded-full ${
-                          group.actor === "player"
-                            ? "bg-accent"
-                            : group.actor === "opponent"
-                            ? "bg-black"
-                            : "bg-text-muted"
-                        }`}
-                      />
-                      <span className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
-                        {group.handle ?? "Other"}
-                      </span>
-                    </div>
-                    <ActionList actions={group.actions} />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <ActionList actions={actions} />
-            )}
-          </div>
-        );
-      })}
+            </>
+          )}
+        </div>
+        <ActionList actions={actions} />
+      </div>
     </div>
   );
 }
