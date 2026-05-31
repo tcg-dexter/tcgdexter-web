@@ -1,6 +1,12 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
-import { primaryCardImageUrl, cardImageUrlForName } from "@/lib/primaryCardImage";
+import {
+  primaryCardImageUrl,
+  primaryPokemonCard,
+  cardImageUrlForName,
+  cardTypesForName,
+} from "@/lib/primaryCardImage";
+import { typeColor } from "@/lib/metaPrimaryCard";
 import BattleLogPage from "./BattleLogPage";
 
 type AnalysisCard = {
@@ -45,8 +51,12 @@ export default async function BattleRoute({
 
   const analysis = deck.analysis as { cards?: AnalysisCard[] } | null | undefined;
   const coverUrl = deck.cover_image_url as string | null | undefined;
+  const analysisCards = analysis?.cards ?? [];
+  const playerPrimary = analysisCards.length ? primaryPokemonCard(analysisCards) : null;
   const deckImageUrl: string | null =
-    coverUrl ?? (analysis?.cards ? primaryCardImageUrl(analysis.cards) : null);
+    coverUrl ?? (analysisCards.length ? primaryCardImageUrl(analysisCards) : null);
+  const playerPokemonName: string | null = playerPrimary?.card.name ?? null;
+  const playerColor: string = typeColor(playerPrimary?.types);
 
   const hasBattleLog = (match.source as string) === "tcg_live_log";
 
@@ -77,6 +87,10 @@ export default async function BattleRoute({
     if (opponentAttackerName) opponentImageUrl = cardImageUrlForName(opponentAttackerName);
   }
 
+  const opponentColor: string = typeColor(
+    opponentAttackerName ? cardTypesForName(opponentAttackerName) : undefined,
+  );
+
   return (
     <BattleLogPage
       matchId={id}
@@ -86,8 +100,11 @@ export default async function BattleRoute({
       deckName={deck.name as string}
       username={profile.username as string}
       deckImageUrl={deckImageUrl}
+      playerPokemonName={playerPokemonName}
+      playerColor={playerColor}
       opponentAttackerName={opponentAttackerName}
       opponentImageUrl={opponentImageUrl}
+      opponentColor={opponentColor}
       hasBattleLog={hasBattleLog}
     />
   );

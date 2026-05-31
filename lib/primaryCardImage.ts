@@ -146,6 +146,14 @@ export function cardTypesFor(
   return resolveEntry(card)?.types ?? [];
 }
 
+/** Resolve types for a Pokémon by name alone. Used when the card identity
+ *  comes from a battle log (no set/number known). Picks the first DB entry
+ *  that has a types[] array. */
+export function cardTypesForName(name: string): string[] {
+  const entries = CARD_DB[name] ?? CARD_DB_LOWER.get(name.toLowerCase()) ?? [];
+  return entries.find((e) => e.types?.length)?.types ?? [];
+}
+
 export interface DeckAvatarInfo {
   /** The card name used to derive the sprite slug. */
   name: string;
