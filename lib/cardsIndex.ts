@@ -46,8 +46,8 @@ export interface CardIndexEntry {
   /** Card name this printing evolves from (e.g. Starmie ← Staryu). Null for
    *  Basics, Trainers, Energy, and any printing where the upstream catalog
    *  hasn't carried the field through yet. Populated by
-   *  `scripts/backfill_evolves_from.py` or by `export_cards_standard.py`
-   *  once cards.db gains the column. */
+   *  `scripts/backfill_evolves_from.py`; preserved across daily exports by
+   *  `dexter-ops/scripts/export_cards_standard.py`. */
   evolvesFrom: string | null;
   /** Lowercased ability + attack names, used by catalog search for
    *  exact/prefix matching ("battle compressor", "mega hammer"). */
