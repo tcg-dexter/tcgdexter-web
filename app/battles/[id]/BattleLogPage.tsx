@@ -4,6 +4,7 @@ import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import BattleLogDetail from "@/app/components/BattleLogDetail";
 import BackButton from "@/app/components/ui/BackButton";
 import ThemeColor from "@/app/components/ThemeColor";
+import { shade } from "@/lib/color";
 
 interface Props {
   matchId: string;
@@ -454,15 +455,3 @@ function BannerCard({
   );
 }
 
-/** Shift a hex color's lightness by a percentage delta (positive = lighter,
- *  negative = darker). Used to synthesize a gradient end when both
- *  matchup sides resolve to the same energy-type color. */
-function shade(hex: string, deltaPct: number): string {
-  const m = hex.match(/^#?([0-9a-f]{6})$/i);
-  if (!m) return hex;
-  const num = parseInt(m[1], 16);
-  const r = Math.max(0, Math.min(255, ((num >> 16) & 0xff) + Math.round(255 * deltaPct / 100)));
-  const g = Math.max(0, Math.min(255, ((num >> 8) & 0xff) + Math.round(255 * deltaPct / 100)));
-  const b = Math.max(0, Math.min(255, (num & 0xff) + Math.round(255 * deltaPct / 100)));
-  return `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
-}

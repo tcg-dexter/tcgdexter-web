@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { shade } from "@/lib/color";
 
 /**
  * Twitter-profile-style header for a meta deck page.
@@ -142,6 +143,12 @@ export default function MetaProfileHeader({
   children,
 }: Props) {
   const fallbackBg = iconBg ?? "#B0A89E";
+  // Vertical gradient: accent color at the top → a few shades darker
+  // at the bottom. Mirrors the battle banner's matchup gradient so the
+  // page-top treatment reads consistently across the site, and lets
+  // the sticky mobile toolbar stay painted with the solid top color
+  // (still equal to the gradient's 0% stop).
+  const bannerGradient = `linear-gradient(180deg, ${fallbackBg} 0%, ${shade(fallbackBg, -22)} 100%)`;
 
   // Even-spaced overlap math — derive each card's left edge from the
   // total span, the per-card width, and the count of cards we actually
@@ -164,7 +171,7 @@ export default function MetaProfileHeader({
           overlays the top-left. */}
       <div
         className="relative w-full overflow-hidden h-[calc(34vw-12px)] sm:h-auto sm:aspect-[3/1]"
-        style={{ background: fallbackBg }}
+        style={{ background: bannerGradient }}
       >
         {/* Cards layer — constrained to the same max-w-6xl ± px-6 the
             variant grid below uses, so the fan spans the full width of
