@@ -198,7 +198,7 @@ export default function BattleLogPage({
       {/* Battle stats — match-level tiles on top, per-side stat table
           underneath, with no section headings so the whole block reads
           as one continuous summary. */}
-      <div className="mx-auto w-full max-w-2xl px-4 mt-4">
+      <div className="mx-auto w-full max-w-2xl px-4 mt-8">
         <div className="grid grid-cols-3 gap-3">
           <StatCard
             label="W"
