@@ -201,7 +201,7 @@ export default function BattleLogPage({
       <div className="mx-auto w-full max-w-2xl px-4 mt-4">
         <div className="grid grid-cols-3 gap-3">
           <StatCard
-            label="Winner"
+            label="W"
             value={winnerName ?? "Draw"}
             tone={result === "win" ? "gradient" : result === "loss" ? "dark" : "ringed"}
           />
@@ -210,6 +210,7 @@ export default function BattleLogPage({
             value={totalTurns != null ? String(totalTurns) : "—"}
           />
           <StatCard
+            label="L"
             value={loserName ?? "—"}
             tone="dark"
           />
