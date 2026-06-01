@@ -72,25 +72,25 @@ function MatchCard({ match }: { match: RecentMatch }) {
         href={`/battles/${match.id}`}
         className="block rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       >
-        <div className="flex items-end justify-center gap-3 px-4 pt-5 pb-3">
-          <div className="relative" style={{ transform: "rotate(-6deg)", transformOrigin: "bottom center" }}>
-            <div className="absolute -inset-px rounded-[6px] bg-gradient-brand opacity-30 blur-xl" />
-            <div className="relative rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={match.deckImageUrl} alt={match.deckName} className="w-full h-full object-contain" />
+        <div className="bg-gradient-brand">
+          <div className="flex items-end justify-center gap-3 px-4 pt-5 pb-3">
+            <div style={{ transform: "rotate(-6deg)", transformOrigin: "bottom center" }}>
+              <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={match.deckImageUrl} alt={match.deckName} className="w-full h-full object-contain" />
+              </div>
+            </div>
+            <span className="mb-6 text-[10px] font-black text-white/90 tracking-[0.2em]">VS</span>
+            <div style={{ transform: "rotate(6deg)", transformOrigin: "bottom center" }}>
+              <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={match.opponentImageUrl} alt={match.opponentAttackerName ?? "Opponent"} className="w-full h-full object-contain" />
+              </div>
             </div>
           </div>
-          <span className="mb-6 text-[10px] font-black text-text-muted tracking-[0.2em]">VS</span>
-          <div className="relative" style={{ transform: "rotate(6deg)", transformOrigin: "bottom center" }}>
-            <div className="absolute -inset-px rounded-[6px] bg-gradient-brand opacity-30 blur-xl" />
-            <div className="relative rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={match.opponentImageUrl} alt={match.opponentAttackerName ?? "Opponent"} className="w-full h-full object-contain" />
-            </div>
+          <div className="px-3.5 pb-2 flex items-center justify-end gap-2">
+            <p className="text-[11px] text-white/80">{relativeTime(match.createdAt)}</p>
           </div>
-        </div>
-        <div className="px-3.5 pb-2 flex items-center justify-end gap-2">
-          <p className="text-[11px] text-text-muted">{relativeTime(match.createdAt)}</p>
         </div>
         {footer}
       </Link>
@@ -103,18 +103,18 @@ function MatchCard({ match }: { match: RecentMatch }) {
       href={`/battles/${match.id}`}
       className="block rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
     >
-      <div className="flex gap-3.5 p-3.5">
+      <div className="bg-gradient-brand flex gap-3.5 p-3.5">
         {match.deckImageUrl && (
-          <div className="relative shrink-0" style={{ width: 72, height: 101 }}>
-            <div className="absolute -inset-px rounded-lg bg-gradient-brand opacity-30 blur-xl" />
-            <div className="relative w-full h-full rounded-lg overflow-hidden border border-black/[0.07] bg-[var(--surface)]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={match.deckImageUrl} alt={match.deckName} className="w-full h-full object-contain" />
-            </div>
+          <div
+            className="shrink-0 rounded-lg overflow-hidden border border-black/[0.07] bg-[var(--surface)]"
+            style={{ width: 72, height: 101 }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={match.deckImageUrl} alt={match.deckName} className="w-full h-full object-contain" />
           </div>
         )}
         <div className="flex-1 min-w-0 flex items-center justify-end gap-2">
-          <p className="text-[11px] text-text-muted">{relativeTime(match.createdAt)}</p>
+          <p className="text-[11px] text-white/80">{relativeTime(match.createdAt)}</p>
         </div>
       </div>
       {footer}
