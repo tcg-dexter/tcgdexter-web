@@ -18,6 +18,7 @@ export type RecentMatch = {
   id: string;
   result: "win" | "loss" | "draw";
   opponentArchetype: string | null;
+  opponentHandle: string | null;
   createdAt: string;
   deckId: string;
   deckName: string;
@@ -51,11 +52,30 @@ function MatchCard({ match }: { match: RecentMatch }) {
     </span>
   );
 
-  const vsLabel = match.opponentArchetype
-    ? `vs. ${match.opponentArchetype}`
-    : match.opponentAttackerName
-    ? `vs. ${match.opponentAttackerName}`
-    : null;
+  const opponentDeckLabel =
+    match.opponentArchetype ?? match.opponentAttackerName ?? "Unknown deck";
+  const opponentHandleLabel = match.opponentHandle ?? "Opponent";
+
+  const footer = (
+    <div className="grid grid-cols-2 gap-3 px-3.5 pt-3 pb-3.5 border-t border-black/[0.06]">
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium text-text-muted truncate">
+          {match.username}&rsquo;s
+        </p>
+        <p className="text-[13px] font-semibold text-text-primary truncate">
+          {match.deckName}
+        </p>
+      </div>
+      <div className="min-w-0 text-right">
+        <p className="text-[11px] font-medium text-text-muted truncate">
+          {opponentHandleLabel}&rsquo;s
+        </p>
+        <p className="text-[13px] font-semibold text-text-primary truncate">
+          {opponentDeckLabel}
+        </p>
+      </div>
+    </div>
+  );
 
   // Versus layout — battle log match with both card images
   if (match.deckImageUrl && match.opponentImageUrl) {
@@ -79,17 +99,11 @@ function MatchCard({ match }: { match: RecentMatch }) {
             </div>
           </div>
         </div>
-        <div className="px-3.5 pb-3.5">
-          <div className="flex items-center gap-2 mb-1.5">
-            {badge}
-            <p className="flex-1 min-w-0 text-[15px] font-semibold text-text-primary truncate">{match.deckName}</p>
-          </div>
-          <p className="text-[12px] font-medium text-text-muted mb-0.5">@{match.username}</p>
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[12px] text-text-secondary truncate">{vsLabel ?? ""}</p>
-            <p className="shrink-0 text-[11px] text-text-muted">{relativeTime(match.createdAt)}</p>
-          </div>
+        <div className="px-3.5 pb-2 flex items-center justify-between gap-2">
+          {badge}
+          <p className="text-[11px] text-text-muted">{relativeTime(match.createdAt)}</p>
         </div>
+        {footer}
       </Link>
     );
   }
@@ -110,18 +124,12 @@ function MatchCard({ match }: { match: RecentMatch }) {
             <img src={match.deckImageUrl} alt={match.deckName} className="w-full h-full object-contain" />
           </div>
         )}
-        <div className="flex-1 min-w-0 flex flex-col">
-          <div className="flex items-center gap-2 mb-2">
-            {badge}
-            <p className="flex-1 min-w-0 text-[15px] font-semibold text-text-primary truncate">{match.deckName}</p>
-          </div>
-          <p className="text-[12px] font-medium text-text-muted mb-2">@{match.username}</p>
-          <div className="flex items-center justify-between gap-2 mt-auto">
-            <p className="text-[12px] text-text-secondary truncate">{vsLabel ?? ""}</p>
-            <p className="shrink-0 text-[11px] text-text-muted">{relativeTime(match.createdAt)}</p>
-          </div>
+        <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+          {badge}
+          <p className="text-[11px] text-text-muted">{relativeTime(match.createdAt)}</p>
         </div>
       </div>
+      {footer}
     </Link>
   );
 }

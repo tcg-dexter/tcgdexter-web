@@ -82,7 +82,7 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
     // so non-log matches aren't promote-worthy on the home feed.
     const { data: matchRows, error: matchErr } = await admin
       .from("matches")
-      .select("id, result, opponent_archetype, created_at, saved_deck_id")
+      .select("id, result, opponent_archetype, opponent_handle, created_at, saved_deck_id")
       .eq("source", "tcg_live_log")
       .in("saved_deck_id", pubDecks.map((d) => d.id))
       .order("created_at", { ascending: false })
@@ -195,6 +195,7 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
         id: m.id as string,
         result: m.result as "win" | "loss" | "draw",
         opponentArchetype: m.opponent_archetype as string | null,
+        opponentHandle: (m.opponent_handle as string | null) ?? null,
         createdAt: m.created_at as string,
         deckId: deck.id as string,
         deckName: deck.name as string,
