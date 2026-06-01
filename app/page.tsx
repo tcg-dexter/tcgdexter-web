@@ -72,10 +72,14 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
     const pubDecks = deckRows.filter((d) => pubProfileIds.has(d.user_id as string));
     if (!pubDecks.length) return [];
 
-    // Step 2: 6 most recent matches on those decks
+    // Step 2: 6 most recent matches on those decks. Restrict to matches
+    // with a parsed battle log (source = 'tcg_live_log') — the /battles
+    // detail page only has a story to tell when there's a log to render,
+    // so non-log matches aren't promote-worthy on the home feed.
     const { data: matchRows, error: matchErr } = await admin
       .from("matches")
       .select("id, result, opponent_archetype, created_at, saved_deck_id")
+      .eq("source", "tcg_live_log")
       .in("saved_deck_id", pubDecks.map((d) => d.id))
       .order("created_at", { ascending: false })
       .limit(6);
