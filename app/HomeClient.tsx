@@ -73,7 +73,7 @@ function MatchCard({ match }: { match: RecentMatch }) {
         className="block rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       >
         <div className="relative bg-gradient-brand">
-          <div className="flex items-end justify-center gap-3 px-4 pt-5 pb-3">
+          <div className="flex items-end justify-center gap-8 px-4 pt-5 pb-3">
             <div style={{ transform: "rotate(-6deg)", transformOrigin: "bottom center" }}>
               <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
