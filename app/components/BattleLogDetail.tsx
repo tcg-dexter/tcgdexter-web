@@ -403,11 +403,13 @@ interface SystemAccount {
   handle: string;
   glyph: IconKey;
   bg: string;
+  /** Optional short text label rendered in place of the glyph (e.g. "PC"). */
+  label?: string;
 }
 
 const SYSTEM_ACCOUNTS: Record<"setup" | "checkup" | "game", SystemAccount> = {
   setup: { displayName: "Setup", handle: "setup", glyph: "shuffle", bg: "#475569" },
-  checkup: { displayName: "Pokémon Checkup", handle: "checkup", glyph: "droplet", bg: "#7c3aed" },
+  checkup: { displayName: "Pokémon Checkup", handle: "checkup", glyph: "droplet", bg: "#7c3aed", label: "PC" },
   game: { displayName: "Game", handle: "game", glyph: "trophy", bg: "#0f172a" },
 };
 
@@ -699,7 +701,9 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
           className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
           style={avatarStyle}
         >
-          {SystemGlyph ? (
+          {post.system?.label ? (
+            <span className="text-[11px] font-bold tracking-tight">{post.system.label}</span>
+          ) : SystemGlyph ? (
             <SystemGlyph className="w-4 h-4" />
           ) : (
             avatarInitial(post.displayName)
