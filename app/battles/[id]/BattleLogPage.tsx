@@ -141,7 +141,7 @@ export default function BattleLogPage({
           cards bottom-anchored and the matchup label centered between
           them in white. */}
       <div
-        className="relative w-full overflow-hidden h-[calc(34vw-12px)] sm:h-auto sm:aspect-[3/1]"
+        className="relative w-full overflow-hidden h-[calc(30.6vw-10.8px)] sm:h-auto sm:aspect-[3/1]"
         style={{ background: bannerGradient }}
       >
         <div className="absolute inset-0 mx-auto max-w-6xl">
@@ -166,7 +166,7 @@ export default function BattleLogPage({
             {/* Centered matchup text. Stays vertically and horizontally
                 centered in the banner; cards sit beneath it visually
                 because zIndex isn't set, so the text paints on top. */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-6">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-6 pb-[3.4vw] sm:pb-0">
               <div className="text-center text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]">
                 <p className="text-lg sm:text-5xl font-bold leading-tight truncate">
                   {playerLabel}
