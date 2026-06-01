@@ -231,13 +231,25 @@ export default function BattleLogPage({
         </div>
       </div>
 
-      {/* Battle log — full width */}
+      {/* Battle log — full width. The heading sits above the thread
+          as a strong section break: bold uppercase title flanked by a
+          short accent rule, with a turn-count caption underneath. */}
       <div className="px-3 pb-16">
         {hasBattleLog ? (
           <>
-            <p className="mb-1 mt-4 text-xs font-semibold uppercase tracking-widest text-text-muted px-1">
-              Battle Log
-            </p>
+            <div className="mt-8 mb-2 px-1">
+              <div className="flex items-baseline gap-3">
+                <h2 className="text-xl font-black uppercase tracking-[0.15em] text-text-primary">
+                  Battle Log
+                </h2>
+                <span className="h-px flex-1 bg-text-primary/15" />
+              </div>
+              {totalTurns != null && (
+                <p className="mt-1 text-[11px] font-semibold uppercase tracking-widest text-text-muted">
+                  {totalTurns} turn{totalTurns === 1 ? "" : "s"}
+                </p>
+              )}
+            </div>
             <BattleLogDetail
               matchId={matchId}
               apiUrl={`/api/battles/${matchId}/log`}
