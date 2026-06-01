@@ -168,16 +168,16 @@ export default function BattleLogPage({
                 because zIndex isn't set, so the text paints on top. */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-6">
               <div className="text-center text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]">
-                <p className="text-lg sm:text-2xl font-bold leading-tight truncate">
+                <p className="text-lg sm:text-5xl font-bold leading-tight truncate">
                   {playerLabel}
                 </p>
-                <p className="my-0.5 sm:my-1 text-xs sm:text-sm font-semibold uppercase tracking-[0.25em] opacity-90">
+                <p className="my-0.5 sm:my-2 text-xs sm:text-2xl font-semibold uppercase tracking-[0.25em] opacity-90">
                   vs
                 </p>
-                <p className="text-lg sm:text-2xl font-bold leading-tight truncate">
+                <p className="text-lg sm:text-5xl font-bold leading-tight truncate">
                   {opponentLabel}
                 </p>
-                <p className="mt-1.5 sm:mt-2 text-[11px] sm:text-xs font-medium uppercase tracking-[0.2em] opacity-80">
+                <p className="mt-1.5 sm:mt-3 text-[11px] sm:text-sm font-medium uppercase tracking-[0.2em] opacity-80">
                   {formatPlayedAt(playedAt)}
                 </p>
               </div>
