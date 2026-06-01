@@ -222,10 +222,10 @@ export default function BattleLogPage({
             playerName={playerSideName}
             opponentName={opponentSideName}
             rows={[
-              { label: "Damage", left: playerStats.damage, right: opponentStats.damage },
+              { label: "Damage Dealt", left: playerStats.damage, right: opponentStats.damage },
               { label: "Pokémon Played", left: playerStats.pokemon, right: opponentStats.pokemon },
-              { label: "Supporters", left: playerStats.supporters, right: opponentStats.supporters },
-              { label: "Items", left: playerStats.items, right: opponentStats.items },
+              { label: "Supporters Played", left: playerStats.supporters, right: opponentStats.supporters },
+              { label: "Items Played", left: playerStats.items, right: opponentStats.items },
               { label: "Energy Attached", left: playerStats.energy, right: opponentStats.energy },
             ]}
           />
