@@ -72,7 +72,7 @@ function MatchCard({ match }: { match: RecentMatch }) {
         href={`/battles/${match.id}`}
         className="block rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       >
-        <div className="bg-gradient-brand">
+        <div className="relative bg-gradient-brand">
           <div className="flex items-end justify-center gap-3 px-4 pt-5 pb-3">
             <div style={{ transform: "rotate(-6deg)", transformOrigin: "bottom center" }}>
               <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
@@ -80,7 +80,6 @@ function MatchCard({ match }: { match: RecentMatch }) {
                 <img src={match.deckImageUrl} alt={match.deckName} className="w-full h-full object-contain" />
               </div>
             </div>
-            <span className="mb-6 text-[10px] font-black text-white/90 tracking-[0.2em]">VS</span>
             <div style={{ transform: "rotate(6deg)", transformOrigin: "bottom center" }}>
               <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -91,6 +90,9 @@ function MatchCard({ match }: { match: RecentMatch }) {
           <div className="px-3.5 pb-2 flex items-center justify-end gap-2">
             <p className="text-[11px] text-white/80">{relativeTime(match.createdAt)}</p>
           </div>
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-[10px] font-black text-white/90 tracking-[0.2em]">
+            VS
+          </span>
         </div>
         {footer}
       </Link>
@@ -424,10 +426,7 @@ export default function HomeClient({
             <section className="mx-auto max-w-6xl px-6 pb-16">
               <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
                 <div>
-                  <div className="text-xs uppercase tracking-widest text-accent mb-3">
-                    Recent Battles
-                  </div>
-                  <h2 className="text-4xl font-semibold tracking-tight">Latest battles from the community.</h2>
+                  <h2 className="text-4xl font-semibold tracking-tight">Recent Battles</h2>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
