@@ -425,7 +425,7 @@ export default function HomeClient({
               <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
                 <div>
                   <div className="text-xs uppercase tracking-widest text-accent mb-3">
-                    Recent Matches
+                    Recent Battles
                   </div>
                   <h2 className="text-4xl font-semibold tracking-tight">Latest battles from the community.</h2>
                 </div>
