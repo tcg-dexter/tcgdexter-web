@@ -170,6 +170,12 @@ export default async function BattleRoute({
       : match.result === "loss"
       ? opponentHandle ?? (match.opponent_archetype as string | null) ?? "Opponent"
       : null;
+  const loserName =
+    match.result === "win"
+      ? opponentHandle ?? (match.opponent_archetype as string | null) ?? "Opponent"
+      : match.result === "loss"
+      ? playerHandle ?? (profile.username as string)
+      : null;
 
   return (
     <BattleLogPage
@@ -189,6 +195,7 @@ export default async function BattleRoute({
       opponentColor={opponentColor}
       opponentHandle={opponentHandle}
       winnerName={winnerName}
+      loserName={loserName}
       totalTurns={totalTurns}
       playerStats={stats.player}
       opponentStats={stats.opponent}

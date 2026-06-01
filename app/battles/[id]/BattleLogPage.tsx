@@ -22,6 +22,7 @@ interface Props {
   opponentColor: string;
   opponentHandle: string | null;
   winnerName: string | null;
+  loserName: string | null;
   totalTurns: number | null;
   playerStats: BattleSideStats;
   opponentStats: BattleSideStats;
@@ -82,6 +83,7 @@ export default function BattleLogPage({
   opponentColor,
   opponentHandle,
   winnerName,
+  loserName,
   totalTurns,
   playerStats,
   opponentStats,
@@ -175,6 +177,9 @@ export default function BattleLogPage({
                 <p className="text-lg sm:text-2xl font-bold leading-tight truncate">
                   {opponentLabel}
                 </p>
+                <p className="mt-1.5 sm:mt-2 text-[11px] sm:text-xs font-medium uppercase tracking-[0.2em] opacity-80">
+                  {formatPlayedAt(playedAt)}
+                </p>
               </div>
             </div>
           </div>
@@ -204,7 +209,10 @@ export default function BattleLogPage({
             label="Turns"
             value={totalTurns != null ? String(totalTurns) : "—"}
           />
-          <StatCard label="Date" value={formatPlayedAt(playedAt)} />
+          <StatCard
+            value={loserName ?? "—"}
+            tone="dark"
+          />
         </div>
 
         <div className="mt-5 px-1">
@@ -255,7 +263,7 @@ function StatCard({
   value,
   tone = "default",
 }: {
-  label: string;
+  label?: string;
   value: string;
   tone?: "default" | "gradient" | "dark" | "ringed";
 }) {
@@ -281,9 +289,9 @@ function StatCard({
       : "text-xs text-text-muted mt-0.5";
 
   return (
-    <div className={chrome}>
+    <div className={`${chrome} flex flex-col justify-center`}>
       <FitText text={value} className={valueClass} maxSize={18} minSize={10} />
-      <p className={labelClass}>{label}</p>
+      {label && <p className={labelClass}>{label}</p>}
     </div>
   );
 }
