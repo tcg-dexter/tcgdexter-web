@@ -1,5 +1,9 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { primaryCardImageUrl, cardImageUrlForName } from "@/lib/primaryCardImage";
+import {
+  primaryCardImageUrl,
+  cardImageUrlForName,
+  primaryPokemonCard,
+} from "@/lib/primaryCardImage";
 import HomeClient, { type RecentMatch } from "./HomeClient";
 
 // Revalidate the home page (and its stat counts) at most once per minute.
@@ -91,18 +95,29 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
     const matchDeckIds = Array.from(new Set(matchRows.map((m) => m.saved_deck_id as string)));
     const matchIds = matchRows.map((m) => m.id as string);
 
-    const [{ data: deckDetailRows }, { data: attackRows }] = await Promise.all([
-      admin
-        .from("saved_decks")
-        .select("id, cover_image_url, analysis")
-        .in("id", matchDeckIds),
-      admin
-        .from("match_actions")
-        .select("match_id, payload")
-        .in("match_id", matchIds)
-        .eq("action_type", "attack")
-        .eq("actor", "opponent"),
-    ]);
+    const [{ data: deckDetailRows }, { data: attackRows }, { data: playRows }] =
+      await Promise.all([
+        admin
+          .from("saved_decks")
+          .select("id, cover_image_url, analysis")
+          .in("id", matchDeckIds),
+        admin
+          .from("match_actions")
+          .select("match_id, payload")
+          .in("match_id", matchIds)
+          .eq("action_type", "attack")
+          .eq("actor", "opponent"),
+        // Fallback inputs: opponent's played/evolved Pokémon. Used when
+        // the opponent never attacked (concede, KO'd before swinging),
+        // mirroring the /battles/[id] page's opponent-card resolution
+        // so home-page previews and the battle banner stay in sync.
+        admin
+          .from("match_actions")
+          .select("match_id, action_type, payload")
+          .in("match_id", matchIds)
+          .eq("actor", "opponent")
+          .in("action_type", ["play_to_active", "play_to_bench", "evolve"]),
+      ]);
 
     // Build lookups
     const deckById = new Map(pubDecks.map((d) => [d.id as string, d]));
@@ -132,6 +147,32 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
         if (dmg > topDmg) { topDmg = dmg; topName = name; }
       });
       if (topName) topAttackerByMatch.set(matchId, topName);
+    });
+
+    // Fallback per match: highest-rank Pokémon the opponent put into play.
+    // Aggregate play_to_active/play_to_bench/evolve counts per match, then
+    // route through primaryPokemonCard so stage/qty preference matches the
+    // battle page's logic.
+    const opponentPlaysByMatch = new Map<string, Map<string, number>>();
+    for (const row of playRows ?? []) {
+      const payload = row.payload as Record<string, unknown> | null;
+      const name =
+        row.action_type === "evolve"
+          ? (typeof payload?.to === "string" ? payload.to : null)
+          : (typeof payload?.card === "string" ? payload.card : null);
+      if (!name) continue;
+      const matchId = row.match_id as string;
+      if (!opponentPlaysByMatch.has(matchId)) opponentPlaysByMatch.set(matchId, new Map());
+      const m = opponentPlaysByMatch.get(matchId)!;
+      m.set(name, (m.get(name) ?? 0) + 1);
+    }
+    opponentPlaysByMatch.forEach((countByName, matchId) => {
+      if (topAttackerByMatch.has(matchId)) return;
+      const synthetic: AnalysisCard[] = Array.from(countByName.entries()).map(
+        ([name, qty]) => ({ name, qty, number: "", setCode: "", section: "pokemon" }),
+      );
+      const primary = primaryPokemonCard(synthetic);
+      if (primary) topAttackerByMatch.set(matchId, primary.card.name);
     });
 
     return matchRows.flatMap((m) => {
