@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import BattleLogDetail from "@/app/components/BattleLogDetail";
 import BackButton from "@/app/components/ui/BackButton";
 import ThemeColor from "@/app/components/ThemeColor";
@@ -291,8 +292,9 @@ function StatCard({
 /** Per-stat table: one row per stat, one column per player. Numbers
  *  carry the comparison — the leader on each row is bolded a touch
  *  heavier so the eye still lands on it without a bar telling you to.
- *  Row separators keep the rhythm of a chart without the visual
- *  weight of axes. */
+ *  Row dividers span the entire grid width (col-span-3) so the
+ *  separators read as one continuous line rather than three column
+ *  segments. */
 function StatChart({
   playerName,
   opponentName,
@@ -313,22 +315,19 @@ function StatChart({
         {opponentName}
       </div>
 
-      {rows.map((row, i) => {
+      {rows.map((row) => {
         const playerLeads = row.left > row.right;
         const opponentLeads = row.right > row.left;
         return (
-          <div key={row.label} className="contents">
-            <div
-              className={`text-[11px] font-semibold uppercase tracking-widest text-text-primary py-2.5 ${
-                i > 0 ? "border-t border-black/[0.06]" : ""
-              }`}
-            >
+          <Fragment key={row.label}>
+            {/* Full-width separator above each row — spans all three
+                columns so the line reads as one continuous rule. */}
+            <div className="col-span-3 border-t border-black/[0.08]" />
+            <div className="text-[11px] font-semibold uppercase tracking-widest text-text-primary py-2.5">
               {row.label}
             </div>
             <div
-              className={`py-2.5 text-right tabular-nums tabular-nums ${
-                i > 0 ? "border-t border-black/[0.06]" : ""
-              } ${
+              className={`py-2.5 text-right tabular-nums ${
                 playerLeads
                   ? "text-base font-bold text-text-primary"
                   : "text-sm font-semibold text-text-secondary"
@@ -338,8 +337,6 @@ function StatChart({
             </div>
             <div
               className={`py-2.5 text-right tabular-nums ${
-                i > 0 ? "border-t border-black/[0.06]" : ""
-              } ${
                 opponentLeads
                   ? "text-base font-bold text-text-primary"
                   : "text-sm font-semibold text-text-secondary"
@@ -347,7 +344,7 @@ function StatChart({
             >
               {row.right}
             </div>
-          </div>
+          </Fragment>
         );
       })}
     </div>
