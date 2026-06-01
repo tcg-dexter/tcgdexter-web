@@ -383,38 +383,22 @@ function StatChart({
         {opponentName}
       </div>
 
-      {rows.map((row) => {
-        const playerLeads = row.left > row.right;
-        const opponentLeads = row.right > row.left;
-        return (
-          <Fragment key={row.label}>
-            {/* Full-width separator above each row — spans all three
-                columns so the line reads as one continuous rule. */}
-            <div className="col-span-3 border-t border-black/[0.08]" />
-            <div className="text-[11px] font-semibold uppercase tracking-widest text-text-primary py-2.5">
-              {row.label}
-            </div>
-            <div
-              className={`py-2.5 text-right tabular-nums ${
-                playerLeads
-                  ? "text-base font-bold text-text-primary"
-                  : "text-sm font-semibold text-text-secondary"
-              }`}
-            >
-              {row.left}
-            </div>
-            <div
-              className={`py-2.5 text-right tabular-nums ${
-                opponentLeads
-                  ? "text-base font-bold text-text-primary"
-                  : "text-sm font-semibold text-text-secondary"
-              }`}
-            >
-              {row.right}
-            </div>
-          </Fragment>
-        );
-      })}
+      {rows.map((row) => (
+        <Fragment key={row.label}>
+          {/* Full-width separator above each row — spans all three
+              columns so the line reads as one continuous rule. */}
+          <div className="col-span-3 border-t border-black/[0.08]" />
+          <div className="text-[11px] font-semibold uppercase tracking-widest text-text-primary py-2.5">
+            {row.label}
+          </div>
+          <div className="py-2.5 text-right tabular-nums text-sm font-semibold text-text-secondary">
+            {row.left}
+          </div>
+          <div className="py-2.5 text-right tabular-nums text-sm font-semibold text-text-secondary">
+            {row.right}
+          </div>
+        </Fragment>
+      ))}
     </div>
   );
 }
