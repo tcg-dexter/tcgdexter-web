@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import BattleLogDetail from "@/app/components/BattleLogDetail";
 import BackButton from "@/app/components/ui/BackButton";
 import ThemeColor from "@/app/components/ThemeColor";
@@ -247,7 +247,9 @@ export default function BattleLogPage({
 
 /** Headline tile matching the meta archetype StatCard tones so the
  *  result panel reads as one consistent design language across the
- *  site. Tones mirror the W/L/T tiles on /meta-decks/[slug]. */
+ *  site. Tones mirror the W/L/T tiles on /meta-decks/[slug]. The
+ *  value auto-shrinks to fit the tile width so long handles like
+ *  "MoonSheikah" don't truncate. */
 function StatCard({
   label,
   value,
@@ -257,34 +259,100 @@ function StatCard({
   value: string;
   tone?: "default" | "gradient" | "dark" | "ringed";
 }) {
-  if (tone === "gradient") {
-    return (
-      <div className="rounded-2xl bg-gradient-brand shadow-sm px-4 py-3 text-center text-white">
-        <p className="text-lg font-bold tabular-nums truncate">{value}</p>
-        <p className="text-xs mt-0.5 opacity-90">{label}</p>
-      </div>
-    );
-  }
-  if (tone === "dark") {
-    return (
-      <div className="rounded-2xl bg-black shadow-sm px-4 py-3 text-center text-white">
-        <p className="text-lg font-bold tabular-nums truncate">{value}</p>
-        <p className="text-xs mt-0.5 opacity-90">{label}</p>
-      </div>
-    );
-  }
-  if (tone === "ringed") {
-    return (
-      <div className="rounded-2xl bg-white/90 backdrop-blur-xl shadow-[inset_0_0_0_1px_black] px-4 py-3 text-center">
-        <p className="text-lg font-bold text-text-primary tabular-nums truncate">{value}</p>
-        <p className="text-xs text-text-primary mt-0.5">{label}</p>
-      </div>
-    );
-  }
+  const chrome =
+    tone === "gradient"
+      ? "rounded-2xl bg-gradient-brand shadow-sm px-4 py-3 text-center text-white"
+      : tone === "dark"
+      ? "rounded-2xl bg-black shadow-sm px-4 py-3 text-center text-white"
+      : tone === "ringed"
+      ? "rounded-2xl bg-white/90 backdrop-blur-xl shadow-[inset_0_0_0_1px_black] px-4 py-3 text-center"
+      : "rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm px-4 py-3 text-center";
+
+  const valueClass =
+    tone === "gradient" || tone === "dark"
+      ? "font-bold tabular-nums"
+      : "font-bold text-text-primary tabular-nums";
+
+  const labelClass =
+    tone === "gradient" || tone === "dark"
+      ? "text-xs mt-0.5 opacity-90"
+      : tone === "ringed"
+      ? "text-xs text-text-primary mt-0.5"
+      : "text-xs text-text-muted mt-0.5";
+
   return (
-    <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm px-4 py-3 text-center">
-      <p className="text-lg font-bold text-text-primary tabular-nums truncate">{value}</p>
-      <p className="text-xs text-text-muted mt-0.5">{label}</p>
+    <div className={chrome}>
+      <FitText text={value} className={valueClass} maxSize={18} minSize={10} />
+      <p className={labelClass}>{label}</p>
+    </div>
+  );
+}
+
+/** Render `text` at the largest font-size between `minSize` and
+ *  `maxSize` that still fits on a single line inside the parent
+ *  container. Measures via a hidden span on layout + on container
+ *  resize, then picks the largest size whose rendered width is ≤
+ *  the available width. Keeps the chosen size monotonic (never
+ *  bouncing up and down) by re-measuring on every observer fire. */
+function FitText({
+  text,
+  className = "",
+  maxSize = 18,
+  minSize = 10,
+}: {
+  text: string;
+  className?: string;
+  maxSize?: number;
+  minSize?: number;
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const measureRef = useRef<HTMLSpanElement | null>(null);
+  const [size, setSize] = useState(maxSize);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    const measure = measureRef.current;
+    if (!container || !measure) return;
+
+    const fit = () => {
+      const cw = container.clientWidth;
+      if (cw <= 0) return;
+      // Measure at the maximum candidate size, then scale down.
+      measure.style.fontSize = `${maxSize}px`;
+      const tw = measure.scrollWidth;
+      if (tw <= cw) {
+        setSize(maxSize);
+        return;
+      }
+      const scaled = Math.max(minSize, Math.floor((maxSize * cw) / tw));
+      setSize(scaled);
+    };
+
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [text, maxSize, minSize]);
+
+  return (
+    <div ref={containerRef} className="w-full overflow-hidden">
+      {/* The visible, fitted line. */}
+      <p
+        className={`whitespace-nowrap leading-tight ${className}`}
+        style={{ fontSize: `${size}px` }}
+      >
+        {text}
+      </p>
+      {/* Hidden measurer — same text, sized at maxSize so we can
+          divide to derive the fit-size. Absolutely sized off-flow so
+          it doesn't affect layout. */}
+      <span
+        ref={measureRef}
+        aria-hidden="true"
+        className={`invisible absolute -left-[9999px] whitespace-nowrap ${className}`}
+      >
+        {text}
+      </span>
     </div>
   );
 }
