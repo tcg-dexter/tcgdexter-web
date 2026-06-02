@@ -300,6 +300,16 @@ export default function MetaProfileHeader({
             on the longer headers prevent any single tile from being
             stretched by an unwrappable word. */}
         <div className="mt-4 grid grid-cols-4 gap-3">
+          <StatCard label="Wins" value={wins.toLocaleString()} tone="gradient" />
+          <StatCard label="Losses" value={losses.toLocaleString()} tone="dark" />
+          {ties > 0 && (
+            <StatCard label="Ties" value={ties.toLocaleString()} tone="ringed" />
+          )}
+          <StatCard
+            label="Entries"
+            value={totalEntries.toLocaleString()}
+            valueClass="text-text-primary"
+          />
           <StatCard
             label={<ResponsiveLabel mobile="Share" desktop="Meta Share" />}
             value={representationPct}
@@ -315,16 +325,6 @@ export default function MetaProfileHeader({
             label={<ResponsiveLabel mobile="W Rate" desktop="Win Rate" />}
             value={winRate}
             valueClass={winRateHighlight ? "text-amber-500" : "text-text-secondary"}
-          />
-          <StatCard label="Wins" value={wins.toLocaleString()} tone="gradient" />
-          <StatCard label="Losses" value={losses.toLocaleString()} tone="dark" />
-          {ties > 0 && (
-            <StatCard label="Ties" value={ties.toLocaleString()} tone="ringed" />
-          )}
-          <StatCard
-            label="Entries"
-            value={totalEntries.toLocaleString()}
-            valueClass="text-text-primary"
           />
         </div>
       </div>
