@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo } from "react";
 import DeckCardFooter from "./DeckCardFooter";
-import EditDeckDialog from "./EditDeckDialog";
-import { primaryCardImageUrl } from "@/lib/primaryCardImage";
+import { deckAvatarInfo } from "@/lib/primaryCardImage";
+import { metaTopPokemonByCount, type MetaAvatar } from "@/lib/metaPrimaryCard";
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
@@ -237,101 +237,48 @@ export function UserDeckCard({
   cards,
   coverImageUrl: initialCoverImageUrl,
 }: UserDeckCardProps) {
-  const [name, setName] = useState(initialName);
-  const [imageUrl, setImageUrl] = useState(initialImageUrl ?? null);
-  const [coverImageUrl, setCoverImageUrl] = useState(initialCoverImageUrl ?? null);
-  const [editOpen, setEditOpen] = useState(false);
+  const name = initialName;
+  const imageUrl = initialImageUrl ?? null;
+  const coverImageUrl = initialCoverImageUrl ?? null;
 
-  async function handleEditSave({
-    name: nextName,
-    coverUrl,
-  }: {
-    name: string;
-    coverUrl: string | null;
-  }) {
-    const payload: { name?: string; cover_image_url?: string | null } = {};
-    if (nextName !== name) payload.name = nextName;
-    if (coverUrl !== coverImageUrl) payload.cover_image_url = coverUrl;
-    if (Object.keys(payload).length === 0) return;
-
-    const prevName = name;
-    const prevImage = imageUrl;
-    const prevCover = coverImageUrl;
-    if ("name" in payload) setName(nextName);
-    if ("cover_image_url" in payload) {
-      setCoverImageUrl(coverUrl);
-      setImageUrl(
-        coverUrl ?? primaryCardImageUrl(cards ?? []) ?? null,
-      );
-    }
-
-    try {
-      const res = await fetch(`/api/saved-decks/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        setName(prevName);
-        setImageUrl(prevImage);
-        setCoverImageUrl(prevCover);
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(data?.error ?? "Failed to save changes.");
-      }
-    } catch (e) {
-      setName(prevName);
-      setImageUrl(prevImage);
-      setCoverImageUrl(prevCover);
-      throw e;
-    }
-  }
-
-  const canEdit = !!ownerUserId && !!cards;
+  // Avatar 1 = the existing primary sprite. Avatars 2 & 3 = next two
+  // Pokémon by total copy count, deduped against avatar 1's evolution
+  // line (same logic as MetaVariantCard).
+  const secondaryAvatars = useMemo<MetaAvatar[]>(() => {
+    if (!cards || cards.length === 0) return [];
+    const primary = deckAvatarInfo(cards, coverImageUrl);
+    const adapted = cards.map((c) => ({
+      qty: c.qty,
+      name: c.name,
+      number: c.number,
+      setCode: c.setCode,
+      category: c.section,
+    }));
+    return metaTopPokemonByCount(adapted, 2, primary ? [primary.name] : []);
+  }, [cards, coverImageUrl]);
 
   return (
     <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-      {/* Header — avatar + deck name + ellipsis (sits outside the <Link>
-          so the ellipsis can open the edit modal without nav). */}
-      <div className="flex items-center gap-2 px-3.5 pt-3">
-        {iconUrl ? (
-          <Link href={href} aria-label={`Open ${name}`} className="shrink-0">
-            <div
-              className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
-              style={{ background: iconBg ?? "#B0A89E" }}
-              aria-hidden
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={iconUrl}
-                alt=""
-                className="w-7 h-7 object-contain"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.visibility = "hidden";
-                }}
-              />
-            </div>
-          </Link>
-        ) : null}
+      {/* Header — deck name + 3-avatar stack (primary + top-2 by copy count). */}
+      <div className="flex items-center gap-3 px-3.5 pt-3">
         <Link
           href={href}
           className="flex-1 min-w-0 text-[17px] font-semibold text-text-primary truncate hover:underline underline-offset-2"
         >
           {name}
         </Link>
-        {canEdit && (
-          <button
-            type="button"
-            onClick={() => setEditOpen(true)}
-            aria-label="Edit deck"
-            className="shrink-0 -mr-1 inline-flex items-center justify-center w-7 h-7 rounded-full text-text-muted hover:bg-black/5 hover:text-text-primary transition"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-              <circle cx="5" cy="12" r="1.6" />
-              <circle cx="12" cy="12" r="1.6" />
-              <circle cx="19" cy="12" r="1.6" />
-            </svg>
-          </button>
-        )}
+        <Link
+          href={href}
+          aria-label={`Open ${name}`}
+          className="shrink-0 flex items-center"
+        >
+          <Avatar iconUrl={iconUrl ?? null} iconBg={iconBg ?? null} />
+          {secondaryAvatars.map((a) => (
+            <div key={a.name} className="-ml-2">
+              <Avatar iconUrl={a.iconUrl} iconBg={a.iconBg} />
+            </div>
+          ))}
+        </Link>
       </div>
 
       {/* Body */}
@@ -356,17 +303,28 @@ export function UserDeckCard({
         hideSave
       />
 
-      {canEdit && (
-        <EditDeckDialog
-          open={editOpen}
-          onClose={() => setEditOpen(false)}
-          initialName={name}
-          cards={cards ?? []}
-          currentCoverUrl={coverImageUrl}
-          defaultCoverUrl={primaryCardImageUrl(cards ?? [])}
-          onSave={handleEditSave}
+    </div>
+  );
+}
+
+function Avatar({ iconUrl, iconBg }: { iconUrl: string | null; iconBg: string | null }) {
+  return (
+    <div
+      className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden ring-2 ring-white"
+      style={{ background: iconBg ?? "#B0A89E" }}
+      aria-hidden
+    >
+      {iconUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={iconUrl}
+          alt=""
+          className="w-7 h-7 object-contain"
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).style.visibility = "hidden";
+          }}
         />
-      )}
+      ) : null}
     </div>
   );
 }
