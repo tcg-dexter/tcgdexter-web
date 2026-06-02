@@ -85,7 +85,7 @@ function TypeCounts({ counts }: { counts: CardCounts }) {
         {rows.map(({ label, n }) => (
           <span
             key={label}
-            className="h-5 flex items-center text-[13px] font-bold text-text-primary tabular-nums"
+            className="h-6 flex items-center text-[16px] font-bold text-text-primary tabular-nums"
           >
             {n}
           </span>
@@ -95,7 +95,7 @@ function TypeCounts({ counts }: { counts: CardCounts }) {
         {rows.map(({ label }) => (
           <span
             key={label}
-            className="h-5 flex items-center text-[10px] uppercase tracking-[0.05em] font-semibold text-text-muted"
+            className="h-6 flex items-center text-[12px] uppercase tracking-[0.05em] font-semibold text-text-muted"
           >
             {label}
           </span>
