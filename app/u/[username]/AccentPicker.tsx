@@ -113,7 +113,7 @@ export default function AccentPicker({ current }: Props) {
         <div
           role="dialog"
           aria-label="Choose banner color"
-          className="absolute right-0 bottom-full mb-2 z-20 w-56 rounded-2xl border border-black/8 bg-white/95 backdrop-blur-xl shadow-lg p-3"
+          className="absolute right-0 top-full mt-3 z-30 w-56 rounded-2xl border border-black/8 bg-white/95 backdrop-blur-xl shadow-lg p-3"
         >
           <p className="text-xs font-semibold uppercase tracking-widest text-text-muted px-1 pb-2">
             Banner color

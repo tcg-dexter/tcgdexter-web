@@ -92,11 +92,20 @@ export default function UserProfileHeader({
       <div
         className="relative w-full overflow-hidden h-[calc(34vw-12px)] sm:h-auto sm:aspect-[3/1]"
         style={{ background: gradient }}
-      >
-        {bannerOverlay && (
-          <div className="absolute bottom-3 right-3 z-10">{bannerOverlay}</div>
-        )}
-      </div>
+      />
+
+      {/* Banner bottom-right overlay (pencil edit button). Rendered as
+          a sibling of the banner with matching geometry so the
+          AccentPicker popover can open downward past the banner edge
+          without being clipped by overflow-hidden. z-30 keeps the
+          popover above the settings gear in the bio block. */}
+      {bannerOverlay && (
+        <div className="absolute inset-x-0 top-0 h-[calc(34vw-12px)] sm:h-auto sm:aspect-[3/1] z-30 pointer-events-none">
+          <div className="absolute bottom-3 right-3 pointer-events-auto">
+            {bannerOverlay}
+          </div>
+        </div>
+      )}
 
       {/* Centered banner overlay (team-of-6). Sized to the banner so
           flex centering aligns inside the banner's bounds, and
