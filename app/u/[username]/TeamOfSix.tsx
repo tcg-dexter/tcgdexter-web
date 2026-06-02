@@ -7,6 +7,11 @@ import { pokemonSlug } from "@/lib/primaryCardImage";
 interface Props {
   initial: (string | null)[];
   isOwner: boolean;
+  /** Names shown when the search input is empty. Contextual — derived
+   *  from the owner's deck avatars (or top-10 meta fallback) by the
+   *  page. Lets users one-tap their familiar Pokémon without needing
+   *  to type or load the full names list. */
+  defaultSuggestions?: string[];
 }
 
 const SLOTS = 6;
@@ -39,7 +44,11 @@ function spriteUrl(name: string): string {
  * PATCHes to `/api/profile` are debounced 700ms so a 6-pick session
  * costs roughly one API call.
  */
-export default function TeamOfSix({ initial, isOwner }: Props) {
+export default function TeamOfSix({
+  initial,
+  isOwner,
+  defaultSuggestions = [],
+}: Props) {
   const [team, setTeam] = useState<(string | null)[]>(() => normalize(initial));
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
   const [names, setNames] = useState<string[] | null>(null);
@@ -110,7 +119,14 @@ export default function TeamOfSix({ initial, isOwner }: Props) {
     if (!isOwner) return;
     setActiveSlot(i);
     setQuery("");
-    ensureNames();
+    // Defer the names-list fetch until the user actually types — the
+    // empty-query view shows `defaultSuggestions`, which the page
+    // already had in memory for free.
+  }
+
+  function handleQueryChange(value: string) {
+    setQuery(value);
+    if (value.trim().length > 0) ensureNames();
   }
 
   function pickName(name: string) {
@@ -135,12 +151,16 @@ export default function TeamOfSix({ initial, isOwner }: Props) {
     scheduleSave(next);
   }
 
+  const trimmedQuery = query.trim();
+
+  // Empty query → contextual defaults from the page (deck avatars or
+  // top-10 meta). Falls back to the still-loading-or-empty full list.
+  // Non-empty query → search the full names list once it's loaded;
+  // prefix matches surface before substring matches.
   const results = useMemo(() => {
+    if (!trimmedQuery) return defaultSuggestions;
     if (!names) return [];
-    const q = query.trim().toLowerCase();
-    if (!q) return names.slice(0, RESULT_LIMIT);
-    // Prefix matches first, then substring matches. Cheap enough at
-    // ~1.7k names without any indexing.
+    const q = trimmedQuery.toLowerCase();
     const prefix: string[] = [];
     const sub: string[] = [];
     for (const n of names) {
@@ -150,7 +170,7 @@ export default function TeamOfSix({ initial, isOwner }: Props) {
       if (prefix.length + sub.length >= RESULT_LIMIT * 2) break;
     }
     return [...prefix, ...sub].slice(0, RESULT_LIMIT);
-  }, [names, query]);
+  }, [names, trimmedQuery, defaultSuggestions]);
 
   return (
     <div ref={containerRef} className="relative">
@@ -181,15 +201,17 @@ export default function TeamOfSix({ initial, isOwner }: Props) {
             ref={inputRef}
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => handleQueryChange(e.target.value)}
             placeholder="Search Pokémon…"
             className="w-full rounded-lg bg-bg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent/30 [font-size:16px] sm:text-sm"
           />
           <div className="mt-2 max-h-72 overflow-y-auto">
-            {!names ? (
+            {trimmedQuery && !names ? (
               <p className="text-xs text-text-muted px-2 py-3">Loading…</p>
             ) : results.length === 0 ? (
-              <p className="text-xs text-text-muted px-2 py-3">No matches.</p>
+              <p className="text-xs text-text-muted px-2 py-3">
+                {trimmedQuery ? "No matches." : "No suggestions yet."}
+              </p>
             ) : (
               <ul className="grid grid-cols-1">
                 {results.map((n) => (

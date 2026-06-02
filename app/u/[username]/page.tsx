@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { UserDeckCard } from "@/app/components/DeckPostCard";
-import { primaryCardImageUrl } from "@/lib/primaryCardImage";
+import { primaryCardImageUrl, deckAvatarInfo } from "@/lib/primaryCardImage";
+import metaArchetypesRaw from "@/data/meta-archetypes.json";
 import MatchHeatMap from "@/app/profile/MatchHeatMap";
 import {
   CERTIFIED_TRAINER,
@@ -201,6 +202,36 @@ export default async function ProfilePage({
   const hasAnyTeamPick = teamArray.some((slot) => !!slot);
   const showTeam = isOwner || hasAnyTeamPick;
 
+  // Default suggestions shown in the team picker before the user types.
+  // Owner with saved decks: the unique Pokémon driving each deck's
+  // avatar (a quick way to bring their actual roster into the picker).
+  // Owner with no decks: the top 10 meta archetypes by total entries
+  // — a reasonable starting roster when there's no personal signal.
+  // Visitors don't see the picker, so this stays empty for them.
+  let teamSuggestions: string[] = [];
+  if (isOwner) {
+    if (decks.length > 0) {
+      const seen = new Set<string>();
+      for (const deck of decks) {
+        const info = deckAvatarInfo(
+          deck.analysis?.cards ?? [],
+          deck.cover_image_url
+        );
+        if (info && !seen.has(info.name)) {
+          seen.add(info.name);
+          teamSuggestions.push(info.name);
+        }
+      }
+    } else {
+      const top10 = [
+        ...(metaArchetypesRaw as Array<{ name: string; total_entries: number }>),
+      ]
+        .sort((a, b) => b.total_entries - a.total_entries)
+        .slice(0, 10);
+      teamSuggestions = top10.map((a) => a.name);
+    }
+  }
+
   const belowStats = (
     <>
       {/* Match Activity — owner-only (manual match data is private). */}
@@ -302,7 +333,13 @@ export default async function ProfilePage({
           ) : undefined
         }
         bannerCenter={
-          showTeam ? <TeamOfSix initial={teamArray} isOwner={isOwner} /> : undefined
+          showTeam ? (
+            <TeamOfSix
+              initial={teamArray}
+              isOwner={isOwner}
+              defaultSuggestions={teamSuggestions}
+            />
+          ) : undefined
         }
         actions={
           isOwner ? (
