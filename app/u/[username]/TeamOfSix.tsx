@@ -174,8 +174,8 @@ export default function TeamOfSix({
 
   return (
     <div ref={containerRef} className="relative">
-      {/* Slot row */}
-      <div className="flex justify-center gap-2 sm:gap-3">
+      {/* Slot grid — 3×2 on mobile, single row of 6 (large) on lg+. */}
+      <div className="grid grid-cols-3 gap-2 lg:grid-cols-6 lg:gap-4">
         {team.map((name, i) => (
           <Slot
             key={i}
@@ -252,21 +252,23 @@ function Slot({
   onOpen: () => void;
   onClear: () => void;
 }) {
+  // Shared circle sizing — 36px mobile, 144px (3x) on lg+. Border and
+  // shadow stay constant; the inner glyph scales via flex children.
+  const circle = "w-9 h-9 lg:w-36 lg:h-36";
+
   // Visitor + empty slot → dimmed, non-interactive.
   if (!isOwner && !name) {
     return (
       <div
         aria-hidden="true"
-        className="w-9 h-9 sm:w-12 sm:h-12 rounded-full border-2 border-white/70 bg-white/30"
+        className={`${circle} rounded-full border-2 border-white/70 bg-white/30`}
       />
     );
   }
 
   const ring = isActive ? "ring-2 ring-offset-2 ring-white ring-offset-transparent" : "";
 
-  // Filled slot. Owners can click to swap; long-press/right-click could
-  // clear but we keep it simple: click swaps, the popover's outside
-  // click closes it.
+  // Filled slot. Owners can click to swap; right-click clears.
   if (name) {
     return (
       <button
@@ -279,11 +281,11 @@ function Slot({
         }}
         aria-label={isOwner ? `Change slot (${name})` : name}
         title={isOwner ? `${name} — click to change, right-click to clear` : name}
-        className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full border-2 border-white bg-white/70 overflow-hidden flex items-center justify-center shadow-md ${ring} ${
+        className={`${circle} rounded-full border-2 border-white bg-white/70 overflow-hidden flex items-center justify-center shadow-md ${ring} ${
           isOwner ? "cursor-pointer" : "cursor-default"
         }`}
       >
-        <SpriteImg name={name} size={44} />
+        <SpriteImg name={name} className="w-full h-full text-sm lg:text-6xl" />
       </button>
     );
   }
@@ -294,10 +296,10 @@ function Slot({
       type="button"
       onClick={onOpen}
       aria-label="Add Pokémon to team"
-      className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full border-2 border-white bg-white/70 flex items-center justify-center shadow-md hover:bg-white/90 transition-colors ${ring}`}
+      className={`${circle} rounded-full border-2 border-white bg-white/70 flex items-center justify-center shadow-md hover:bg-white/90 transition-colors ${ring}`}
     >
       <svg
-        className="w-4 h-4 sm:w-5 sm:h-5"
+        className="w-4 h-4 lg:w-14 lg:h-14"
         fill="none"
         viewBox="0 0 24 24"
         stroke="black"
@@ -313,16 +315,31 @@ function Slot({
 
 /**
  * Limitless sprite with onError fallback to the Pokémon's first
- * letter on a neutral surface. Keeps the row visually consistent even
- * when a sprite is missing for an obscure form.
+ * letter on a neutral surface. Accepts either an explicit numeric
+ * `size` (popover list — fixed dimensions) or a `className` (slot —
+ * `w-full h-full` plus responsive `text-*` for the fallback letter).
  */
-function SpriteImg({ name, size }: { name: string; size: number }) {
+function SpriteImg({
+  name,
+  size,
+  className,
+}: {
+  name: string;
+  size?: number;
+  className?: string;
+}) {
   const [errored, setErrored] = useState(false);
+  const sizeStyle = size ? { width: size, height: size } : undefined;
+  const fallbackStyle = size
+    ? { ...sizeStyle, fontSize: size * 0.45 }
+    : sizeStyle;
   if (errored) {
     return (
       <div
-        className="flex items-center justify-center rounded-full bg-surface text-text-secondary font-semibold"
-        style={{ width: size, height: size, fontSize: size * 0.45 }}
+        className={`flex items-center justify-center rounded-full bg-surface text-text-secondary font-semibold ${
+          className ?? ""
+        }`}
+        style={fallbackStyle}
         aria-hidden="true"
       >
         {name.trim().charAt(0).toUpperCase()}
@@ -338,8 +355,8 @@ function SpriteImg({ name, size }: { name: string; size: number }) {
       decoding="async"
       width={size}
       height={size}
-      className="object-contain"
-      style={{ width: size, height: size }}
+      className={`object-contain ${className ?? ""}`}
+      style={sizeStyle}
       onError={() => setErrored(true)}
     />
   );

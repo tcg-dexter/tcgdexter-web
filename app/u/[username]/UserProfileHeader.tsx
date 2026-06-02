@@ -98,11 +98,18 @@ export default function UserProfileHeader({
         )}
       </div>
 
-      {/* Centered banner overlay (team-of-6). Sits as a sibling of the
-          banner so its dropdown can overflow downward into the bio
-          area without being clipped by the banner's overflow-hidden. */}
+      {/* Centered banner overlay (team-of-6). Sized to the banner so
+          flex centering aligns inside the banner's bounds, and
+          rendered as a sibling of the banner (not a child) so the
+          team picker's popover can overflow downward into the bio
+          area without being clipped by the banner's overflow-hidden.
+          Below lg the team sits at the upper-center of the banner
+          (clearing the avatar that straddles the bottom edge); at lg+
+          it centers vertically as well. */}
       {bannerCenter && (
-        <div className="absolute left-0 right-0 top-3 sm:top-6 flex justify-center z-20 pointer-events-none">
+        <div
+          className="absolute inset-x-0 top-0 h-[calc(34vw-12px)] sm:h-auto sm:aspect-[3/1] flex justify-center items-start lg:items-center z-20 pointer-events-none pt-3 sm:pt-5 lg:pt-0"
+        >
           <div className="pointer-events-auto">{bannerCenter}</div>
         </div>
       )}
