@@ -174,8 +174,9 @@ export default function TeamOfSix({
 
   return (
     <div ref={containerRef} className="relative">
-      {/* Slot grid — 3×2 on mobile, single row of 6 (large) on lg+. */}
-      <div className="grid grid-cols-3 gap-2 lg:grid-cols-6 lg:gap-4">
+      {/* Slot row — single row of 6 across all breakpoints. Desktop
+          icons are larger (see `circle` sizing in Slot below). */}
+      <div className="flex justify-center gap-2 lg:gap-4">
         {team.map((name, i) => (
           <Slot
             key={i}

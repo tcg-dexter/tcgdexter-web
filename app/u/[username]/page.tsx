@@ -14,8 +14,10 @@ import CertifiedTrainerBadge from "@/app/learn/quiz/CertifiedTrainerBadge";
 import UserProfileHeader, {
   StatCard,
   bannerGradientFor,
+  bannerTopColorFor,
   type BannerAccent,
 } from "./UserProfileHeader";
+import ThemeColor from "@/app/components/ThemeColor";
 import AccentPicker from "./AccentPicker";
 import TeamOfSix from "./TeamOfSix";
 
@@ -316,6 +318,11 @@ export default async function ProfilePage({
 
   return (
     <main className="min-h-dvh flex flex-col bg-bg pb-24">
+      {/* Match the iOS Safari / Android Chrome status-bar color to the
+          banner's top gradient stop so the gradient reads as one
+          continuous surface from the device notch down through the
+          banner. Mirrors the meta-archetype page treatment. */}
+      <ThemeColor color={bannerTopColorFor(profile.banner_accent)} />
       <UserProfileHeader
         displayName={profile.display_name}
         username={profile.username}
