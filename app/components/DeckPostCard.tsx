@@ -43,24 +43,32 @@ function CardArt({ url, name }: { url?: string | null; name: string }) {
   );
 }
 
-function TypeCounts({ counts }: { counts: CardCounts }) {
+function TypeCounts({ counts, size = "sm" }: { counts: CardCounts; size?: "sm" | "md" }) {
   const rows = [
     { label: "Pokémon", n: counts.pokemon },
     { label: "Trainer", n: counts.trainer },
     { label: "Energy", n: counts.energy },
   ];
+  const numCls =
+    size === "md"
+      ? "h-6 flex items-center text-[16px] font-bold text-text-primary tabular-nums"
+      : "h-5 flex items-center text-[13px] font-bold text-text-primary tabular-nums";
+  const labelCls =
+    size === "md"
+      ? "h-6 flex items-center text-[12px] uppercase tracking-[0.05em] font-semibold text-text-muted"
+      : "h-5 flex items-center text-[10px] uppercase tracking-[0.05em] font-semibold text-text-muted";
   return (
     <div className="flex gap-2 mb-2.5">
       <div className="flex flex-col items-end">
         {rows.map(({ label, n }) => (
-          <span key={label} className="h-5 flex items-center text-[13px] font-bold text-text-primary tabular-nums">
+          <span key={label} className={numCls}>
             {n}
           </span>
         ))}
       </div>
       <div className="flex flex-col items-start">
         {rows.map(({ label }) => (
-          <span key={label} className="h-5 flex items-center text-[10px] uppercase tracking-[0.05em] font-semibold text-text-muted">
+          <span key={label} className={labelCls}>
             {label}
           </span>
         ))}
@@ -220,8 +228,6 @@ export function UserDeckCard({
   name: initialName,
   href,
   imageUrl: initialImageUrl,
-  username,
-  displayName,
   counts,
   wl,
   likeCount = 0,
@@ -231,9 +237,6 @@ export function UserDeckCard({
   cards,
   coverImageUrl: initialCoverImageUrl,
 }: UserDeckCardProps) {
-  const initials = (displayName ?? username).charAt(0).toUpperCase();
-  const bg = avatarBg(username);
-
   const [name, setName] = useState(initialName);
   const [imageUrl, setImageUrl] = useState(initialImageUrl ?? null);
   const [coverImageUrl, setCoverImageUrl] = useState(initialCoverImageUrl ?? null);
@@ -336,19 +339,8 @@ export function UserDeckCard({
         <div className="flex gap-3.5 p-3.5 pt-3">
           <CardArt url={imageUrl} name={name} />
           <div className="flex-1 min-w-0 flex flex-col">
-            <div className="flex items-center gap-1.5 mb-2">
-              <div
-                className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-[10px] font-bold text-white"
-                style={{ background: bg }}
-              >
-                {initials}
-              </div>
-              <p className="text-[13px] font-semibold text-text-muted truncate">
-                @{username}
-              </p>
-            </div>
-            {counts && <TypeCounts counts={counts} />}
-            <div className="mt-auto">
+            {counts && <TypeCounts counts={counts} size="md" />}
+            <div className="mt-auto flex justify-end">
               {wl ? <WLCircles wl={wl} /> : null}
             </div>
           </div>
