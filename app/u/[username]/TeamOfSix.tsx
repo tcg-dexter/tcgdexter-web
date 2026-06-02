@@ -252,9 +252,10 @@ function Slot({
   onOpen: () => void;
   onClear: () => void;
 }) {
-  // Shared circle sizing — 36px mobile, 144px (3x) on lg+. Border and
-  // shadow stay constant; the inner glyph scales via flex children.
-  const circle = "w-9 h-9 lg:w-36 lg:h-36";
+  // Shared circle sizing — 36px mobile, 108px on lg+ (25% smaller
+  // than the prior 144px). Border and shadow stay constant; the inner
+  // glyph scales via flex children.
+  const circle = "w-9 h-9 lg:w-[108px] lg:h-[108px]";
 
   // Visitor + empty slot → dimmed, non-interactive.
   if (!isOwner && !name) {
@@ -285,7 +286,10 @@ function Slot({
           isOwner ? "cursor-pointer" : "cursor-default"
         }`}
       >
-        <SpriteImg name={name} className="w-full h-full text-sm lg:text-6xl" />
+        <SpriteImg
+          name={name}
+          className="w-full h-full lg:w-3/4 lg:h-3/4 text-sm lg:text-3xl"
+        />
       </button>
     );
   }
@@ -299,7 +303,7 @@ function Slot({
       className={`${circle} rounded-full border-2 border-white bg-white/70 flex items-center justify-center shadow-md hover:bg-white/90 transition-colors ${ring}`}
     >
       <svg
-        className="w-4 h-4 lg:w-14 lg:h-14"
+        className="w-4 h-4 lg:w-8 lg:h-8"
         fill="none"
         viewBox="0 0 24 24"
         stroke="black"
