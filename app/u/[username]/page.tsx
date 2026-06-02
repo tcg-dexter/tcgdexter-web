@@ -18,6 +18,7 @@ import UserProfileHeader, {
   type BannerAccent,
 } from "./UserProfileHeader";
 import ThemeColor from "@/app/components/ThemeColor";
+import { ResponsiveLabel } from "@/app/components/StatCard";
 import AccentPicker from "./AccentPicker";
 import TeamOfSix from "./TeamOfSix";
 
@@ -292,7 +293,7 @@ export default async function ProfilePage({
         tone="dark"
       />
       <StatCard
-        label="Win Rate"
+        label={<ResponsiveLabel mobile="W Rate" desktop="Win Rate" />}
         value={isOwner && winRate !== null ? `${winRate}%` : "—"}
         valueClass={
           isOwner && winRate !== null && winRate >= 60
@@ -318,10 +319,24 @@ export default async function ProfilePage({
 
   return (
     <main className="min-h-dvh flex flex-col bg-bg pb-24">
+      {/* Paint the mobile sticky toolbar in the banner's top stop so
+          the toolbar, the iOS status bar (set via ThemeColor below),
+          and the banner all read as one continuous surface. Without
+          this the toolbar leaves a visible seam between device chrome
+          and banner. xl:hidden already scopes the toolbar to below-xl,
+          so this only affects mobile/tablet. Mirrors the
+          meta-archetype page treatment. */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `[data-site-toolbar]{background:${bannerTopColorFor(
+            profile.banner_accent
+          )};backdrop-filter:none;-webkit-backdrop-filter:none}[data-site-toolbar] button[aria-label="Toggle navigation menu"]{color:#fff}`,
+        }}
+      />
       {/* Match the iOS Safari / Android Chrome status-bar color to the
           banner's top gradient stop so the gradient reads as one
           continuous surface from the device notch down through the
-          banner. Mirrors the meta-archetype page treatment. */}
+          banner. */}
       <ThemeColor color={bannerTopColorFor(profile.banner_accent)} />
       <UserProfileHeader
         displayName={profile.display_name}
