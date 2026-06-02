@@ -447,9 +447,6 @@ export default function HomeClient({
                 <h2 className="text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05] max-w-3xl mx-auto text-text-primary">
                   Ready to see what your deck is really made of?
                 </h2>
-                <p className="mt-6 text-lg text-text-secondary max-w-xl mx-auto">
-                  Free forever for your first 10 profiles. No card, no catch, no email spam.
-                </p>
                 <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
                   <Link
                     href="/"
