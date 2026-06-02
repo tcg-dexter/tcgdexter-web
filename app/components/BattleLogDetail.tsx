@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type SVGProps } from "react";
+import { useEffect, useState, type CSSProperties, type SVGProps } from "react";
 
 /* ─── Types (mirror lib/battle-log + the API response) ────────── */
 
@@ -32,6 +32,7 @@ interface ApiResponse {
     player_handle: string | null;
     opponent_handle: string | null;
     parser_version: number | null;
+    result: "win" | "loss" | "draw" | null;
   };
   turns: ApiTurn[];
   actions: ApiAction[];
@@ -368,13 +369,84 @@ function Icon({ type, className }: { type: string; className?: string }) {
   return <Cmp className={className} />;
 }
 
-/* ─── Cell header helper ──────────────────────────────────────── */
+/* ─── Avatar + identity helpers ───────────────────────────────── */
 
-function cellTitle(turn: ApiTurn, playerHandle: string | null): string {
-  if (turn.phase === "setup") return "Setup";
-  if (turn.phase === "checkup") return "Pokémon Checkup";
-  if (turn.phase === "end") return "End";
-  return turn.actor_handle ?? (turn.actor === "player" ? playerHandle ?? "You" : "Opponent");
+const AVATAR_PALETTE = [
+  "#3b6fd4",
+  "#d43b9a",
+  "#27ae60",
+  "#e67e22",
+  "#9b59b6",
+  "#c0392b",
+  "#1abc9c",
+  "#34495e",
+];
+
+function avatarBg(name: string): string {
+  const h = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return AVATAR_PALETTE[h % AVATAR_PALETTE.length];
+}
+
+function avatarInitial(name: string): string {
+  const trimmed = name.trim();
+  return trimmed.length ? trimmed[0].toUpperCase() : "?";
+}
+
+function handleSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 20) || "user";
+}
+
+type PostKind = "player" | "opponent" | "system";
+
+interface SystemAccount {
+  displayName: string;
+  handle: string;
+  glyph: IconKey;
+  bg: string;
+  /** Optional short text label rendered in place of the glyph (e.g. "PC"). */
+  label?: string;
+}
+
+const SYSTEM_ACCOUNTS: Record<"setup" | "checkup" | "game", SystemAccount> = {
+  setup: { displayName: "Setup", handle: "setup", glyph: "shuffle", bg: "#475569" },
+  checkup: { displayName: "Pokémon Checkup", handle: "checkup", glyph: "droplet", bg: "#7c3aed", label: "PC" },
+  game: { displayName: "Game", handle: "game", glyph: "trophy", bg: "#0f172a" },
+};
+
+interface PostStats {
+  drew: number;
+  damage: number;
+  ko: number;
+  prizes: number;
+}
+
+function statsFor(actions: ApiAction[]): PostStats {
+  const stats: PostStats = { drew: 0, damage: 0, ko: 0, prizes: 0 };
+  for (const a of actions) {
+    switch (a.action_type) {
+      case "draw":
+      case "mulligan_bonus_draw":
+      case "opening_hand":
+        stats.drew += (p<number>(a, "count") ?? 1);
+        break;
+      case "attack":
+      case "damage_dealt":
+      case "damage_counter_placed": {
+        const d =
+          p<number>(a, "damage") ??
+          (p<number>(a, "counters") ?? 0) * 10;
+        stats.damage += d;
+        break;
+      }
+      case "knock_out":
+        stats.ko += 1;
+        break;
+      case "prize_taken":
+        stats.prizes += p<number>(a, "count") ?? 1;
+        break;
+    }
+  }
+  return stats;
 }
 
 /* ─── Component ───────────────────────────────────────────────── */
@@ -382,9 +454,10 @@ function cellTitle(turn: ApiTurn, playerHandle: string | null): string {
 interface Props {
   matchId: string;
   apiUrl?: string;
+  result?: "win" | "loss" | "draw" | null;
 }
 
-export default function BattleLogDetail({ matchId, apiUrl }: Props) {
+export default function BattleLogDetail({ matchId, apiUrl, result }: Props) {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -444,7 +517,7 @@ export default function BattleLogDetail({ matchId, apiUrl }: Props) {
   // Only render turns that have at least one visible action (after the
   // implicit turn_start/turn_end synthetic events are filtered out).
   // Each entry also gets a globalTurnNumber that increments only on
-  // actual play turns (skipping setup / checkup), so the cell header
+  // actual play turns (skipping setup / checkup), so the post header
   // counts 1, 2, 3, 4… across both players rather than 1-1, 2-2.
   let playTurnCounter = 0;
   const renderableTurns = data.turns
@@ -460,81 +533,246 @@ export default function BattleLogDetail({ matchId, apiUrl }: Props) {
     })
     .filter(({ actions, turn }) => actions.length > 0 || turn.phase === "setup");
 
+  // Flatten turns into a single linear stream of "posts". Setup turns
+  // expand into one post per actor; everything else becomes a single
+  // post attributed either to the actor's handle or to a synthetic
+  // "Setup" / "Checkup" / "Game" user so readers see the same avatar +
+  // handle + body shape on every entry in the thread.
+  const playerHandle = data.match.player_handle ?? "You";
+  const opponentHandle = data.match.opponent_handle ?? "Opponent";
+
+  // Find the winning side so we can color the player/opponent
+  // avatars with the site's win gradient vs solid black for the
+  // loser. The match record carries `result` ("win" | "loss" |
+  // "draw") from the player's perspective — preferred over the
+  // game_end action, which isn't stored for every match.
+  // Prefer the result prop passed in by the page (always present);
+  // fall back to data.match.result from the API for callers that
+  // don't pass it.
+  const matchResult = result ?? data.match.result;
+  const winnerActor: "player" | "opponent" | null =
+    matchResult === "win"
+      ? "player"
+      : matchResult === "loss"
+      ? "opponent"
+      : null;
+  const matchHasEnded = winnerActor != null;
+
+  interface Post {
+    key: string;
+    kind: PostKind;
+    displayName: string;
+    handle: string;
+    label: string;
+    actions: ApiAction[];
+    system?: SystemAccount;
+    outcome?: "win" | "loss";
+  }
+
+  function outcomeFor(actor: "player" | "opponent"): "win" | "loss" | undefined {
+    if (!matchHasEnded || !winnerActor) return undefined;
+    return actor === winnerActor ? "win" : "loss";
+  }
+
+  const posts: Post[] = [];
+
+  for (const { turn, actions, globalTurnNumber } of renderableTurns) {
+    if (turn.phase === "setup") {
+      const groups = groupSetupActions(actions, playerHandle, opponentHandle);
+      const expand = groups.length > 0 ? groups : null;
+      if (!expand) {
+        posts.push({
+          key: `${turn.id}-setup`,
+          kind: "system",
+          displayName: SYSTEM_ACCOUNTS.setup.displayName,
+          handle: SYSTEM_ACCOUNTS.setup.handle,
+          label: "Pre-game",
+          actions,
+          system: SYSTEM_ACCOUNTS.setup,
+        });
+      } else {
+        for (const group of expand) {
+          const isPlayer = group.actor === "player";
+          const isOpponent = group.actor === "opponent";
+          const display = isPlayer
+            ? playerHandle
+            : isOpponent
+            ? opponentHandle
+            : SYSTEM_ACCOUNTS.setup.displayName;
+          posts.push({
+            key: `${turn.id}-${group.key}`,
+            kind: isPlayer ? "player" : isOpponent ? "opponent" : "system",
+            displayName: display,
+            handle: isPlayer || isOpponent ? handleSlug(display) : SYSTEM_ACCOUNTS.setup.handle,
+            label: "Pre-game",
+            actions: group.actions,
+            system: isPlayer || isOpponent ? undefined : SYSTEM_ACCOUNTS.setup,
+            outcome: isPlayer
+              ? outcomeFor("player")
+              : isOpponent
+              ? outcomeFor("opponent")
+              : undefined,
+          });
+        }
+      }
+    } else if (turn.phase === "turn") {
+      const isPlayer = turn.actor === "player";
+      const display = turn.actor_handle ?? (isPlayer ? playerHandle : opponentHandle);
+      const kind: PostKind = isPlayer ? "player" : "opponent";
+      posts.push({
+        key: turn.id,
+        kind,
+        displayName: display,
+        handle: handleSlug(display),
+        label: globalTurnNumber != null ? `Turn ${globalTurnNumber}` : "",
+        actions,
+        outcome: outcomeFor(isPlayer ? "player" : "opponent"),
+      });
+    } else if (turn.phase === "checkup") {
+      posts.push({
+        key: turn.id,
+        kind: "system",
+        displayName: SYSTEM_ACCOUNTS.checkup.displayName,
+        handle: SYSTEM_ACCOUNTS.checkup.handle,
+        label: "Between turns",
+        actions,
+        system: SYSTEM_ACCOUNTS.checkup,
+      });
+    } else {
+      posts.push({
+        key: turn.id,
+        kind: "system",
+        displayName: SYSTEM_ACCOUNTS.game.displayName,
+        handle: SYSTEM_ACCOUNTS.game.handle,
+        label: "Final",
+        actions,
+        system: SYSTEM_ACCOUNTS.game,
+      });
+    }
+  }
+
   return (
-    <div className="mt-3 flex flex-col gap-2">
-      {renderableTurns.map(({ turn, actions, globalTurnNumber }) => {
-        const title = cellTitle(turn, data.match.player_handle);
-        const turnLabel =
-          turn.phase === "turn" && globalTurnNumber != null
-            ? `Turn ${globalTurnNumber}`
-            : turn.phase === "setup"
-            ? "Pre-game"
-            : turn.phase === "checkup"
-            ? "Between turns"
-            : "";
+    <div className="mt-3 flex flex-col rounded-lg bg-bg overflow-hidden">
+      {posts.map((post, i) => (
+        <ThreadPost
+          key={post.key}
+          post={post}
+          isLast={i === posts.length - 1}
+        />
+      ))}
+    </div>
+  );
+}
 
-        const isPlayer = turn.actor === "player";
-        const isOpponent = turn.actor === "opponent";
+/* ─── Thread post ─────────────────────────────────────────────── */
 
-        // For the Setup cell, group actions by actor so the reader can
-        // see at a glance what each player did pre-game (coin flip,
-        // mulligans, first Pokémon placements) rather than scanning an
-        // interleaved list. Falls back to a flat list if every setup
-        // action somehow lacks a player attribution.
-        const setupGroups =
-          turn.phase === "setup"
-            ? groupSetupActions(
-                actions,
-                data.match.player_handle,
-                data.match.opponent_handle,
-              )
-            : null;
+interface ThreadPostInput {
+  kind: PostKind;
+  displayName: string;
+  handle: string;
+  label: string;
+  actions: ApiAction[];
+  system?: SystemAccount;
+  outcome?: "win" | "loss";
+}
 
+const WIN_GRADIENT = "linear-gradient(135deg,#F2A20C 0%,#D91E0D 50%,#A60D0D 100%)";
+const LOSS_COLOR = "#1a1a1a";
+
+function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }) {
+  const isSystem = post.kind === "system";
+  const isResult = post.system?.handle === "game";
+  const stats = statsFor(post.actions);
+  const avatarStyle: CSSProperties = post.system
+    ? { background: post.system.bg }
+    : post.outcome === "win"
+    ? { background: WIN_GRADIENT }
+    : post.outcome === "loss"
+    ? { background: LOSS_COLOR }
+    : { background: avatarBg(post.displayName) };
+  const SystemGlyph = post.system ? ICONS[post.system.glyph] : null;
+
+  return (
+    <div
+      className={`flex gap-3 px-3 pt-3 ${isResult ? "bg-accent/[0.06]" : ""}`}
+    >
+      <div className="flex flex-col items-center self-stretch">
+        <div
+          className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+          style={avatarStyle}
+        >
+          {post.system?.label ? (
+            <span className="text-[11px] font-bold tracking-tight">{post.system.label}</span>
+          ) : SystemGlyph ? (
+            <SystemGlyph className="w-4 h-4" />
+          ) : (
+            avatarInitial(post.displayName)
+          )}
+          {isSystem && (
+            <span
+              className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#1d9bf0] ring-2 ring-bg"
+              aria-label="Verified"
+            >
+              <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" fill="none" stroke="white" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12l5 5 9-11" />
+              </svg>
+            </span>
+          )}
+        </div>
+        {!isLast && (
+          <div className="w-0.5 flex-1 min-h-[16px] bg-[#cbd5e1] mt-1.5" />
+        )}
+      </div>
+
+      <div
+        className={`flex-1 min-w-0 pb-3 ${
+          isLast ? "" : "border-b border-[#e2e8f0]"
+        }`}
+      >
+        <div className="flex items-baseline gap-1.5 flex-wrap">
+          <span className="text-sm font-bold text-text-primary truncate">
+            {post.displayName}
+          </span>
+          <span className="text-xs text-text-muted truncate">
+            @{post.handle}
+          </span>
+          {post.label && (
+            <>
+              <span className="text-xs text-text-muted">·</span>
+              <span className="text-xs text-text-muted tabular-nums">
+                {post.label}
+              </span>
+            </>
+          )}
+        </div>
+
+        <div className="mt-1">
+          <ActionList actions={post.actions} />
+        </div>
+
+        {!isResult && (stats.drew + stats.damage + stats.ko + stats.prizes > 0) && (
+          <PostStatsRow stats={stats} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PostStatsRow({ stats }: { stats: PostStats }) {
+  const items: { icon: IconKey; n: number; title: string }[] = [];
+  if (stats.drew > 0) items.push({ icon: "hand", n: stats.drew, title: "Cards drawn" });
+  if (stats.damage > 0) items.push({ icon: "impact", n: stats.damage, title: "Damage dealt" });
+  if (stats.ko > 0) items.push({ icon: "skull", n: stats.ko, title: "Knock-outs" });
+  if (stats.prizes > 0) items.push({ icon: "trophy", n: stats.prizes, title: "Prizes taken" });
+  return (
+    <div className="mt-2 flex items-center gap-4 text-[11px] text-text-muted">
+      {items.map(({ icon, n, title }) => {
+        const Cmp = ICONS[icon];
         return (
-          <div
-            key={turn.id}
-            className={`rounded-lg bg-bg p-3 ${
-              isPlayer
-                ? "mr-auto w-[88%] shadow-[inset_3px_0_0_0_var(--accent)]"
-                : isOpponent
-                ? "ml-auto w-[88%] shadow-[inset_-3px_0_0_0_var(--accent)]"
-                : ""
-            }`}
-          >
-            <div className={`flex items-center justify-between mb-2 ${isOpponent ? "flex-row-reverse" : ""}`}>
-              <span className="text-xs font-semibold text-text-primary truncate">
-                {title}
-              </span>
-              <span className="text-[11px] font-semibold text-text-muted tabular-nums">
-                {turnLabel}
-              </span>
-            </div>
-            {setupGroups && setupGroups.length > 0 ? (
-              <div className="flex flex-col gap-3">
-                {setupGroups.map((group) => (
-                  <div key={group.key}>
-                    <div className="mb-1 flex items-center gap-2">
-                      <span
-                        className={`inline-block h-1.5 w-1.5 rounded-full ${
-                          group.actor === "player"
-                            ? "bg-accent"
-                            : group.actor === "opponent"
-                            ? "bg-black"
-                            : "bg-text-muted"
-                        }`}
-                      />
-                      <span className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
-                        {group.handle ?? "Other"}
-                      </span>
-                    </div>
-                    <ActionList actions={group.actions} />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <ActionList actions={actions} />
-            )}
-          </div>
+          <span key={icon} className="flex items-center gap-1 tabular-nums" title={title}>
+            <Cmp className="w-3 h-3" />
+            {n}
+          </span>
         );
       })}
     </div>
@@ -596,17 +834,17 @@ function groupSetupActions(
 
 function ActionList({ actions }: { actions: ApiAction[] }) {
   return (
-    <ul className="flex flex-col gap-1">
+    <ul className="flex flex-col gap-1.5">
       {actions.map((a) => {
         const label = labelFor(a);
         if (!label) return null;
         return (
           <li
             key={a.id}
-            className="flex items-start gap-2 text-xs text-text-secondary leading-snug"
+            className="flex items-start gap-2 text-sm text-text-secondary leading-snug"
           >
             <span className="mt-0.5 text-text-muted">
-              <Icon type={a.action_type} className="w-3.5 h-3.5" />
+              <Icon type={a.action_type} className="w-4 h-4" />
             </span>
             <span className="flex-1 min-w-0 break-words">{label}</span>
           </li>

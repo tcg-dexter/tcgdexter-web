@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { shade } from "@/lib/color";
 
 /**
  * Twitter-profile-style header for a meta deck page.
@@ -142,6 +143,12 @@ export default function MetaProfileHeader({
   children,
 }: Props) {
   const fallbackBg = iconBg ?? "#B0A89E";
+  // Vertical gradient: accent color at the top → a few shades darker
+  // at the bottom. Mirrors the battle banner's matchup gradient so the
+  // page-top treatment reads consistently across the site, and lets
+  // the sticky mobile toolbar stay painted with the solid top color
+  // (still equal to the gradient's 0% stop).
+  const bannerGradient = `linear-gradient(180deg, ${fallbackBg} 0%, ${shade(fallbackBg, -22)} 100%)`;
 
   // Even-spaced overlap math — derive each card's left edge from the
   // total span, the per-card width, and the count of cards we actually
@@ -164,13 +171,17 @@ export default function MetaProfileHeader({
           overlays the top-left. */}
       <div
         className="relative w-full overflow-hidden h-[calc(34vw-12px)] sm:h-auto sm:aspect-[3/1]"
-        style={{ background: fallbackBg }}
+        style={{ background: bannerGradient }}
       >
         {/* Cards layer — constrained to the same max-w-6xl ± px-6 the
             variant grid below uses, so the fan spans the full width of
             the deck-list preview row regardless of viewport. */}
         <div className="absolute inset-0 mx-auto max-w-6xl">
-          <div className="relative h-full mx-6">
+          {/* Desktop (sm:+) shrinks the fan to 90% of its mobile size while
+              keeping each card's bottom edge pinned to the banner's bottom
+              via `origin-bottom`. Banner height is unaffected because the
+              scale is purely a transform on the cards layer. */}
+          <div className="relative h-full mx-6 sm:scale-90 sm:origin-bottom sm:translate-y-[10px]">
             {bannerCards.map((url, i) => {
               const left =
                 cardCount === 1
@@ -248,7 +259,7 @@ export default function MetaProfileHeader({
           <div
             className="relative z-10 rounded-full ring-4 ring-bg flex items-center justify-center overflow-hidden shrink-0"
             style={{
-              background: fallbackBg,
+              background: bannerGradient,
               width: "128px",
               height: "128px",
             }}
@@ -289,6 +300,16 @@ export default function MetaProfileHeader({
             on the longer headers prevent any single tile from being
             stretched by an unwrappable word. */}
         <div className="mt-4 grid grid-cols-4 gap-3">
+          <StatCard label="Wins" value={wins.toLocaleString()} tone="gradient" />
+          <StatCard label="Losses" value={losses.toLocaleString()} tone="dark" />
+          {ties > 0 && (
+            <StatCard label="Ties" value={ties.toLocaleString()} tone="ringed" />
+          )}
+          <StatCard
+            label="Entries"
+            value={totalEntries.toLocaleString()}
+            valueClass="text-text-primary"
+          />
           <StatCard
             label={<ResponsiveLabel mobile="Share" desktop="Meta Share" />}
             value={representationPct}
@@ -304,16 +325,6 @@ export default function MetaProfileHeader({
             label={<ResponsiveLabel mobile="W Rate" desktop="Win Rate" />}
             value={winRate}
             valueClass={winRateHighlight ? "text-amber-500" : "text-text-secondary"}
-          />
-          <StatCard label="Wins" value={wins.toLocaleString()} tone="gradient" />
-          <StatCard label="Losses" value={losses.toLocaleString()} tone="dark" />
-          {ties > 0 && (
-            <StatCard label="Ties" value={ties.toLocaleString()} tone="ringed" />
-          )}
-          <StatCard
-            label="Entries"
-            value={totalEntries.toLocaleString()}
-            valueClass="text-text-primary"
           />
         </div>
       </div>

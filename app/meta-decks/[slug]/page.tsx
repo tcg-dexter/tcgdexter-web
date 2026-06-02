@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import archetypesRaw from "@/data/meta-archetypes.json";
 import metaDecksRaw from "@/data/meta-decks.json";
-import { metaPrimaryCard, typeColor } from "@/lib/metaPrimaryCard";
+import { metaPrimaryCard, metaTopPokemonByCount, typeColor } from "@/lib/metaPrimaryCard";
 import { cardImageUrlFor } from "@/lib/primaryCardImage";
 import ThemeColor from "@/app/components/ThemeColor";
 import BackButton from "@/app/components/ui/BackButton";
@@ -62,23 +62,6 @@ export function generateStaticParams() {
 function getWinRate(a: Archetype): number {
   const total = a.wins + a.losses + a.ties;
   return total > 0 ? a.wins / total : 0;
-}
-
-function buildDeckList(cards: DeckCard[]): string {
-  const groups: Record<string, DeckCard[]> = { pokemon: [], trainer: [], energy: [] };
-  for (const card of cards) groups[card.category]?.push(card);
-  const lines: string[] = [];
-  for (const [label, group] of [
-    ["Pokémon", groups.pokemon],
-    ["Trainer", groups.trainer],
-    ["Energy", groups.energy],
-  ] as [string, DeckCard[]][]) {
-    if (group.length === 0) continue;
-    if (lines.length > 0) lines.push("");
-    lines.push(`${label}: ${group.reduce((s, c) => s + c.qty, 0)}`);
-    for (const c of group) lines.push(`${c.qty} ${c.name} ${c.setCode} ${c.number}`);
-  }
-  return lines.join("\n");
 }
 
 function placingLabel(placing?: number): string | null {
@@ -235,20 +218,34 @@ export default async function MetaDeckDetailPage({
   const variantCards = variantList.slice(0, 12).map((v, i) => {
     const variantPrimary = metaPrimaryCard(v.cards, iconList);
     const placing = placingLabel(v.placing);
-    const date = formatMetaVariantDate(v.date);
-    const contextLabel =
-      placing && date
-        ? `${placing} · ${date}`
-        : placing ?? (date || null);
+    const placingLine = placing ? `${placing} Place` : null;
+    // Legacy variant `date` arrives as "<date> - <competition>" (e.g.
+    // "16th May 2026 - Regional Campinas"); newer scrapes emit a raw ISO
+    // string with no competition name. Split when the dash is present so
+    // the preview card can stack date + competition on their own lines.
+    const rawDate = (v.date ?? "").trim();
+    const dashIdx = rawDate.indexOf(" - ");
+    const datePart = dashIdx >= 0 ? rawDate.slice(0, dashIdx) : rawDate;
+    const competitionName = dashIdx >= 0 ? rawDate.slice(dashIdx + 3).trim() : null;
+    const dateLine = formatMetaVariantDate(datePart || null);
+    // Ask for extras so the AvatarStack can shift forward when a sprite
+    // URL 404s on the limitless host (some forms / regionals aren't there).
+    const secondaryAvatars = metaTopPokemonByCount(
+      v.cards,
+      5,
+      archetypePrimary ? [archetypePrimary.name] : [],
+    );
     return {
       id: `${arch.id}-v${i}`,
       href: `/meta-decks/${arch.id}/${i + 1}`,
-      contextLabel,
+      placingLine,
+      competitionName,
+      dateLine,
       variantName: (v.variantName ?? "").trim() || null,
       creator: (v.creator ?? "").trim() || "Trainer",
-      deckList: buildDeckList(v.cards),
       cardImageUrl: variantPrimary?.imageUrl ?? null,
       counts: countsFor(v.cards),
+      secondaryAvatars,
     };
   });
 
@@ -293,7 +290,7 @@ export default async function MetaDeckDetailPage({
         {variantCards.length > 0 ? (
           <section aria-label="Top deck lists" className="pb-12">
             <h2 className="text-sm font-semibold text-text-primary mb-3">
-              Top {variantCards.length} Deck List{variantCards.length === 1 ? "" : "s"}
+              Top Deck Lists
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {variantCards.map((v) => (
@@ -307,11 +304,13 @@ export default async function MetaDeckDetailPage({
                   variantName={v.variantName}
                   iconUrl={iconUrl}
                   iconBg={iconBg}
-                  contextLabel={v.contextLabel}
+                  placingLine={v.placingLine}
+                  competitionName={v.competitionName}
+                  dateLine={v.dateLine}
                   creator={v.creator}
-                  deckList={v.deckList}
                   cardImageUrl={v.cardImageUrl}
                   counts={v.counts}
+                  secondaryAvatars={v.secondaryAvatars}
                 />
               ))}
             </div>

@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo } from "react";
 import DeckCardFooter from "./DeckCardFooter";
-import EditDeckDialog from "./EditDeckDialog";
-import { primaryCardImageUrl } from "@/lib/primaryCardImage";
+import AvatarStack, { type AvatarStackItem } from "./AvatarStack";
+import { deckAvatarInfo } from "@/lib/primaryCardImage";
+import { metaTopPokemonByCount } from "@/lib/metaPrimaryCard";
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
@@ -43,24 +44,32 @@ function CardArt({ url, name }: { url?: string | null; name: string }) {
   );
 }
 
-function TypeCounts({ counts }: { counts: CardCounts }) {
+function TypeCounts({ counts, size = "sm" }: { counts: CardCounts; size?: "sm" | "md" }) {
   const rows = [
     { label: "Pokémon", n: counts.pokemon },
     { label: "Trainer", n: counts.trainer },
     { label: "Energy", n: counts.energy },
   ];
+  const numCls =
+    size === "md"
+      ? "h-6 flex items-center text-[16px] font-bold text-text-primary tabular-nums"
+      : "h-5 flex items-center text-[13px] font-bold text-text-primary tabular-nums";
+  const labelCls =
+    size === "md"
+      ? "h-6 flex items-center text-[12px] uppercase tracking-[0.05em] font-semibold text-text-muted"
+      : "h-5 flex items-center text-[10px] uppercase tracking-[0.05em] font-semibold text-text-muted";
   return (
     <div className="flex gap-2 mb-2.5">
       <div className="flex flex-col items-end">
         {rows.map(({ label, n }) => (
-          <span key={label} className="h-5 flex items-center text-[13px] font-bold text-text-primary tabular-nums">
+          <span key={label} className={numCls}>
             {n}
           </span>
         ))}
       </div>
       <div className="flex flex-col items-start">
         {rows.map(({ label }) => (
-          <span key={label} className="h-5 flex items-center text-[10px] uppercase tracking-[0.05em] font-semibold text-text-muted">
+          <span key={label} className={labelCls}>
             {label}
           </span>
         ))}
@@ -125,7 +134,7 @@ export function MetaDeckCard({
         <div className="flex items-center gap-2 px-3.5 pt-3">
           {icon_url ? (
             <div
-              className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
+              className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
               style={{ background: icon_bg ?? "#B0A89E" }}
               aria-hidden
             >
@@ -133,7 +142,7 @@ export function MetaDeckCard({
               <img
                 src={icon_url}
                 alt=""
-                className="w-[22px] h-[22px] object-contain"
+                className="w-7 h-7 object-contain"
               />
             </div>
           ) : null}
@@ -220,8 +229,6 @@ export function UserDeckCard({
   name: initialName,
   href,
   imageUrl: initialImageUrl,
-  username,
-  displayName,
   counts,
   wl,
   likeCount = 0,
@@ -231,104 +238,58 @@ export function UserDeckCard({
   cards,
   coverImageUrl: initialCoverImageUrl,
 }: UserDeckCardProps) {
-  const initials = (displayName ?? username).charAt(0).toUpperCase();
-  const bg = avatarBg(username);
+  const name = initialName;
+  const imageUrl = initialImageUrl ?? null;
+  const coverImageUrl = initialCoverImageUrl ?? null;
 
-  const [name, setName] = useState(initialName);
-  const [imageUrl, setImageUrl] = useState(initialImageUrl ?? null);
-  const [coverImageUrl, setCoverImageUrl] = useState(initialCoverImageUrl ?? null);
-  const [editOpen, setEditOpen] = useState(false);
-
-  async function handleEditSave({
-    name: nextName,
-    coverUrl,
-  }: {
-    name: string;
-    coverUrl: string | null;
-  }) {
-    const payload: { name?: string; cover_image_url?: string | null } = {};
-    if (nextName !== name) payload.name = nextName;
-    if (coverUrl !== coverImageUrl) payload.cover_image_url = coverUrl;
-    if (Object.keys(payload).length === 0) return;
-
-    const prevName = name;
-    const prevImage = imageUrl;
-    const prevCover = coverImageUrl;
-    if ("name" in payload) setName(nextName);
-    if ("cover_image_url" in payload) {
-      setCoverImageUrl(coverUrl);
-      setImageUrl(
-        coverUrl ?? primaryCardImageUrl(cards ?? []) ?? null,
-      );
-    }
-
-    try {
-      const res = await fetch(`/api/saved-decks/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        setName(prevName);
-        setImageUrl(prevImage);
-        setCoverImageUrl(prevCover);
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(data?.error ?? "Failed to save changes.");
-      }
-    } catch (e) {
-      setName(prevName);
-      setImageUrl(prevImage);
-      setCoverImageUrl(prevCover);
-      throw e;
-    }
-  }
-
-  const canEdit = !!ownerUserId && !!cards;
+  // Avatar 1 = the existing primary sprite. Slots 2 & 3 are picked from a
+  // larger candidate pool (next Pokémon by total copy count, deduped
+  // against avatar 1's evolution line — same logic as MetaVariantCard).
+  // We over-fetch the pool so AvatarStack can shift forward when a sprite
+  // 404s on the limitless host (some forms / regionals aren't covered).
+  const avatarItems = useMemo<AvatarStackItem[]>(() => {
+    const primaryItem: AvatarStackItem = {
+      key: "primary",
+      iconUrl: iconUrl ?? null,
+      iconBg: iconBg ?? null,
+    };
+    if (!cards || cards.length === 0) return [primaryItem];
+    const primary = deckAvatarInfo(cards, coverImageUrl);
+    const adapted = cards.map((c) => ({
+      qty: c.qty,
+      name: c.name,
+      number: c.number,
+      setCode: c.setCode,
+      category: c.section,
+    }));
+    const pool = metaTopPokemonByCount(
+      adapted,
+      5,
+      primary ? [primary.name] : [],
+    );
+    return [
+      primaryItem,
+      ...pool.map((a) => ({ key: a.name, iconUrl: a.iconUrl, iconBg: a.iconBg })),
+    ];
+  }, [cards, coverImageUrl, iconUrl, iconBg]);
 
   return (
     <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-      {/* Header — avatar + deck name + ellipsis (sits outside the <Link>
-          so the ellipsis can open the edit modal without nav). */}
-      <div className="flex items-center gap-2 px-3.5 pt-3">
-        {iconUrl ? (
-          <Link href={href} aria-label={`Open ${name}`} className="shrink-0">
-            <div
-              className="w-7 h-7 rounded-full flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
-              style={{ background: iconBg ?? "#B0A89E" }}
-              aria-hidden
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={iconUrl}
-                alt=""
-                className="w-[22px] h-[22px] object-contain"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.visibility = "hidden";
-                }}
-              />
-            </div>
-          </Link>
-        ) : null}
+      {/* Header — deck name + 3-avatar stack (primary + top-2 by copy count). */}
+      <div className="flex items-center gap-3 px-3.5 pt-3">
         <Link
           href={href}
           className="flex-1 min-w-0 text-[17px] font-semibold text-text-primary truncate hover:underline underline-offset-2"
         >
           {name}
         </Link>
-        {canEdit && (
-          <button
-            type="button"
-            onClick={() => setEditOpen(true)}
-            aria-label="Edit deck"
-            className="shrink-0 -mr-1 inline-flex items-center justify-center w-7 h-7 rounded-full text-text-muted hover:bg-black/5 hover:text-text-primary transition"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-              <circle cx="5" cy="12" r="1.6" />
-              <circle cx="12" cy="12" r="1.6" />
-              <circle cx="19" cy="12" r="1.6" />
-            </svg>
-          </button>
-        )}
+        <Link
+          href={href}
+          aria-label={`Open ${name}`}
+          className="shrink-0 flex items-center"
+        >
+          <AvatarStack items={avatarItems} count={3} />
+        </Link>
       </div>
 
       {/* Body */}
@@ -336,19 +297,8 @@ export function UserDeckCard({
         <div className="flex gap-3.5 p-3.5 pt-3">
           <CardArt url={imageUrl} name={name} />
           <div className="flex-1 min-w-0 flex flex-col">
-            <div className="flex items-center gap-1.5 mb-2">
-              <div
-                className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-[10px] font-bold text-white"
-                style={{ background: bg }}
-              >
-                {initials}
-              </div>
-              <p className="text-[13px] font-semibold text-text-muted truncate">
-                @{username}
-              </p>
-            </div>
-            {counts && <TypeCounts counts={counts} />}
-            <div className="mt-auto">
+            {counts && <TypeCounts counts={counts} size="md" />}
+            <div className="mt-auto flex justify-end">
               {wl ? <WLCircles wl={wl} /> : null}
             </div>
           </div>
@@ -364,17 +314,7 @@ export function UserDeckCard({
         hideSave
       />
 
-      {canEdit && (
-        <EditDeckDialog
-          open={editOpen}
-          onClose={() => setEditOpen(false)}
-          initialName={name}
-          cards={cards ?? []}
-          currentCoverUrl={coverImageUrl}
-          defaultCoverUrl={primaryCardImageUrl(cards ?? [])}
-          onSave={handleEditSave}
-        />
-      )}
     </div>
   );
 }
+

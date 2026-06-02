@@ -18,6 +18,7 @@ export type RecentMatch = {
   id: string;
   result: "win" | "loss" | "draw";
   opponentArchetype: string | null;
+  opponentHandle: string | null;
   createdAt: string;
   deckId: string;
   deckName: string;
@@ -39,23 +40,30 @@ function relativeTime(iso: string): string {
 }
 
 function MatchCard({ match }: { match: RecentMatch }) {
-  const cfg = {
-    win:  { label: "Win",  bg: "bg-green-100", text: "text-green-700" },
-    loss: { label: "Loss", bg: "bg-red-100",   text: "text-red-700"   },
-    draw: { label: "Draw", bg: "bg-gray-100",  text: "text-gray-500"  },
-  }[match.result];
+  const opponentDeckLabel =
+    match.opponentArchetype ?? match.opponentAttackerName ?? "Unknown deck";
+  const opponentHandleLabel = match.opponentHandle ?? "Opponent";
 
-  const badge = (
-    <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold tracking-wide ${cfg.bg} ${cfg.text}`}>
-      {cfg.label}
-    </span>
+  const footer = (
+    <div className="grid grid-cols-2 gap-3 px-3.5 pt-3 pb-3.5 border-t border-black/[0.06]">
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium text-text-muted truncate">
+          {match.username}&rsquo;s
+        </p>
+        <p className="text-[13px] font-semibold text-text-primary truncate">
+          {match.deckName}
+        </p>
+      </div>
+      <div className="min-w-0 text-right">
+        <p className="text-[11px] font-medium text-text-muted truncate">
+          {opponentHandleLabel}&rsquo;s
+        </p>
+        <p className="text-[13px] font-semibold text-text-primary truncate">
+          {opponentDeckLabel}
+        </p>
+      </div>
+    </div>
   );
-
-  const vsLabel = match.opponentArchetype
-    ? `vs. ${match.opponentArchetype}`
-    : match.opponentAttackerName
-    ? `vs. ${match.opponentAttackerName}`
-    : null;
 
   // Versus layout — battle log match with both card images
   if (match.deckImageUrl && match.opponentImageUrl) {
@@ -64,32 +72,30 @@ function MatchCard({ match }: { match: RecentMatch }) {
         href={`/battles/${match.id}`}
         className="block rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       >
-        <div className="flex items-end justify-center gap-3 px-4 pt-5 pb-3">
-          <div style={{ transform: "rotate(-6deg)", transformOrigin: "bottom center" }}>
-            <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={match.deckImageUrl} alt={match.deckName} className="w-full h-full object-contain" />
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-brand opacity-80" />
+          <div className="relative flex items-end justify-center gap-8 px-4 pt-5 pb-3">
+            <div style={{ transform: "rotate(-6deg)", transformOrigin: "bottom center" }}>
+              <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={match.deckImageUrl} alt={match.deckName} className="w-full h-full object-contain" />
+              </div>
+            </div>
+            <div style={{ transform: "rotate(6deg)", transformOrigin: "bottom center" }}>
+              <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={match.opponentImageUrl} alt={match.opponentAttackerName ?? "Opponent"} className="w-full h-full object-contain" />
+              </div>
             </div>
           </div>
-          <span className="mb-6 text-[10px] font-black text-text-muted tracking-[0.2em]">VS</span>
-          <div style={{ transform: "rotate(6deg)", transformOrigin: "bottom center" }}>
-            <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={match.opponentImageUrl} alt={match.opponentAttackerName ?? "Opponent"} className="w-full h-full object-contain" />
-            </div>
+          <div className="relative px-3.5 pb-2 flex items-center justify-end gap-2">
+            <p className="text-[11px] text-white/80">{relativeTime(match.createdAt)}</p>
           </div>
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-[10px] font-black text-white/90 tracking-[0.2em]">
+            VS
+          </span>
         </div>
-        <div className="px-3.5 pb-3.5">
-          <div className="flex items-center gap-2 mb-1.5">
-            {badge}
-            <p className="flex-1 min-w-0 text-[15px] font-semibold text-text-primary truncate">{match.deckName}</p>
-          </div>
-          <p className="text-[12px] font-medium text-text-muted mb-0.5">@{match.username}</p>
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[12px] text-text-secondary truncate">{vsLabel ?? ""}</p>
-            <p className="shrink-0 text-[11px] text-text-muted">{relativeTime(match.createdAt)}</p>
-          </div>
-        </div>
+        {footer}
       </Link>
     );
   }
@@ -100,28 +106,22 @@ function MatchCard({ match }: { match: RecentMatch }) {
       href={`/battles/${match.id}`}
       className="block rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
     >
-      <div className="flex gap-3.5 p-3.5">
+      <div className="relative flex gap-3.5 p-3.5">
+        <div className="absolute inset-0 bg-gradient-brand opacity-80" />
         {match.deckImageUrl && (
           <div
-            className="shrink-0 rounded-lg overflow-hidden border border-black/[0.07] bg-[var(--surface)]"
+            className="relative shrink-0 rounded-lg overflow-hidden border border-black/[0.07] bg-[var(--surface)]"
             style={{ width: 72, height: 101 }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={match.deckImageUrl} alt={match.deckName} className="w-full h-full object-contain" />
           </div>
         )}
-        <div className="flex-1 min-w-0 flex flex-col">
-          <div className="flex items-center gap-2 mb-2">
-            {badge}
-            <p className="flex-1 min-w-0 text-[15px] font-semibold text-text-primary truncate">{match.deckName}</p>
-          </div>
-          <p className="text-[12px] font-medium text-text-muted mb-2">@{match.username}</p>
-          <div className="flex items-center justify-between gap-2 mt-auto">
-            <p className="text-[12px] text-text-secondary truncate">{vsLabel ?? ""}</p>
-            <p className="shrink-0 text-[11px] text-text-muted">{relativeTime(match.createdAt)}</p>
-          </div>
+        <div className="relative flex-1 min-w-0 flex items-center justify-end gap-2">
+          <p className="text-[11px] text-white/80">{relativeTime(match.createdAt)}</p>
         </div>
       </div>
+      {footer}
     </Link>
   );
 }
@@ -428,10 +428,7 @@ export default function HomeClient({
             <section className="mx-auto max-w-6xl px-6 pb-16">
               <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
                 <div>
-                  <div className="text-xs uppercase tracking-widest text-accent mb-3">
-                    Recent Matches
-                  </div>
-                  <h2 className="text-4xl font-semibold tracking-tight">Latest battles from the community.</h2>
+                  <h2 className="text-4xl font-semibold tracking-tight">Recent Battles</h2>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -450,9 +447,6 @@ export default function HomeClient({
                 <h2 className="text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05] max-w-3xl mx-auto text-text-primary">
                   Ready to see what your deck is really made of?
                 </h2>
-                <p className="mt-6 text-lg text-text-secondary max-w-xl mx-auto">
-                  Free forever for your first 10 profiles. No card, no catch, no email spam.
-                </p>
                 <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
                   <Link
                     href="/"

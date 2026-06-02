@@ -31,7 +31,7 @@ export async function GET(
 
   const { data: match, error: matchErr } = await supabase
     .from("matches")
-    .select("id, player_handle, opponent_handle, parser_version, source")
+    .select("id, player_handle, opponent_handle, parser_version, source, result")
     .eq("id", id)
     .maybeSingle();
 
@@ -68,6 +68,7 @@ export async function GET(
       player_handle: match.player_handle,
       opponent_handle: match.opponent_handle,
       parser_version: match.parser_version,
+      result: match.result,
     },
     turns: turns ?? [],
     actions: actions ?? [],
