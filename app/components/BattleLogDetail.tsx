@@ -453,7 +453,7 @@ function statsFor(actions: ApiAction[]): PostStats {
 
 interface Props {
   matchId: string;
-  apiUrl?: string;
+  apiUrl: string;
   result?: "win" | "loss" | "draw" | null;
 }
 
@@ -465,7 +465,7 @@ export default function BattleLogDetail({ matchId, apiUrl, result }: Props) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetch(apiUrl ?? `/api/matches/${matchId}/battle-log`)
+    fetch(apiUrl)
       .then(async (r) => {
         const json = await r.json();
         if (!r.ok) throw new Error(json.error ?? "Failed to load battle log.");
