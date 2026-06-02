@@ -16,6 +16,7 @@ import UserProfileHeader, {
   type BannerAccent,
 } from "./UserProfileHeader";
 import AccentPicker from "./AccentPicker";
+import TeamOfSix from "./TeamOfSix";
 
 interface ProfileRow {
   id: string;
@@ -27,6 +28,7 @@ interface ProfileRow {
   tcg_live_handle: string | null;
   avatar_url: string | null;
   banner_accent: string | null;
+  team_of_6: (string | null)[] | null;
 }
 
 interface DeckRow {
@@ -108,7 +110,7 @@ export default async function ProfilePage({
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, display_name, username, bio, created_at, is_public, tcg_live_handle, avatar_url, banner_accent"
+      "id, display_name, username, bio, created_at, is_public, tcg_live_handle, avatar_url, banner_accent, team_of_6"
     )
     .eq("username", username.toLowerCase())
     .maybeSingle<ProfileRow>();
@@ -189,6 +191,15 @@ export default async function ProfilePage({
   // Resolve once so the Wins tile and the match-activity heatmap pick
   // up the same banner accent as the header.
   const bannerGradient = bannerGradientFor(profile.banner_accent);
+
+  // Render the team row for owners always (so they can start picking)
+  // and for visitors only when the user has chosen at least one
+  // Pokémon — otherwise the banner stays clean.
+  const teamArray: (string | null)[] = Array.isArray(profile.team_of_6)
+    ? profile.team_of_6
+    : [];
+  const hasAnyTeamPick = teamArray.some((slot) => !!slot);
+  const showTeam = isOwner || hasAnyTeamPick;
 
   const belowStats = (
     <>
@@ -289,6 +300,9 @@ export default async function ProfilePage({
               current={(profile.banner_accent ?? null) as BannerAccent | null}
             />
           ) : undefined
+        }
+        bannerCenter={
+          showTeam ? <TeamOfSix initial={teamArray} isOwner={isOwner} /> : undefined
         }
         actions={
           isOwner ? (

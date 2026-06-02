@@ -62,6 +62,10 @@ interface Props {
    *  they share the exact same `max-w-2xl px-6` parent as the stat grid
    *  and line up edge-to-edge with it. */
   belowStats?: ReactNode;
+  /** Centered overlay rendered in front of the banner — used for the
+   *  team-of-6 row. Sits *outside* the banner's `overflow-hidden` so
+   *  the picker popover can extend below the banner edge. */
+  bannerCenter?: ReactNode;
 }
 
 export default function UserProfileHeader({
@@ -73,6 +77,7 @@ export default function UserProfileHeader({
   bannerAccent,
   actions,
   bannerOverlay,
+  bannerCenter,
   stats,
   belowStats,
 }: Props) {
@@ -80,7 +85,7 @@ export default function UserProfileHeader({
   const initial = displayName.trim().charAt(0).toUpperCase() || "?";
 
   return (
-    <header className="flex-shrink-0">
+    <header className="relative flex-shrink-0">
       {/* Banner — solid gradient, matching the meta archetype banner's
           sizing so the avatar overlap math (-mt-16 sm:-mt-20) lands at
           the same visual offset. */}
@@ -92,6 +97,15 @@ export default function UserProfileHeader({
           <div className="absolute bottom-3 right-3 z-10">{bannerOverlay}</div>
         )}
       </div>
+
+      {/* Centered banner overlay (team-of-6). Sits as a sibling of the
+          banner so its dropdown can overflow downward into the bio
+          area without being clipped by the banner's overflow-hidden. */}
+      {bannerCenter && (
+        <div className="absolute left-0 right-0 top-3 sm:top-6 flex justify-center z-20 pointer-events-none">
+          <div className="pointer-events-auto">{bannerCenter}</div>
+        </div>
+      )}
 
       {/* Bio section. Avatar overlaps the banner via negative margin. */}
       <div className="mx-auto max-w-2xl px-6">

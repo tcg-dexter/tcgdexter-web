@@ -69,6 +69,7 @@ export async function PATCH(req: Request) {
     avatar_url?: string | null;
     bio?: string | null;
     banner_accent?: string | null;
+    team_of_6?: (string | null)[] | null;
   };
   try {
     body = await req.json();
@@ -187,6 +188,36 @@ export async function PATCH(req: Request) {
       );
     }
     updates.banner_accent = body.banner_accent;
+  }
+
+  // ── team_of_6 ─────────────────────────────────────────────────
+  // 6-slot Pokémon roster for the banner. Each entry is a short
+  // display name (e.g. "Pikachu") or null for an empty slot. We don't
+  // validate against the names list — that's a build-time artifact and
+  // the column check constraint already caps array length at 6.
+  if (body.team_of_6 === null) {
+    updates.team_of_6 = null;
+  } else if (Array.isArray(body.team_of_6)) {
+    if (body.team_of_6.length > 6) {
+      return NextResponse.json(
+        { error: "Team of 6 cannot exceed 6 slots." },
+        { status: 400 }
+      );
+    }
+    const cleaned: (string | null)[] = [];
+    for (const slot of body.team_of_6) {
+      if (slot === null || slot === undefined || slot === "") {
+        cleaned.push(null);
+      } else if (typeof slot === "string" && slot.length <= 60) {
+        cleaned.push(slot);
+      } else {
+        return NextResponse.json(
+          { error: "Invalid team slot." },
+          { status: 400 }
+        );
+      }
+    }
+    updates.team_of_6 = cleaned;
   }
 
   // ── bio ───────────────────────────────────────────────────────
