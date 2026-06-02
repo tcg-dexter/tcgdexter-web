@@ -68,6 +68,7 @@ export async function PATCH(req: Request) {
     is_public?: boolean;
     avatar_url?: string | null;
     bio?: string | null;
+    banner_accent?: string | null;
   };
   try {
     body = await req.json();
@@ -157,6 +158,35 @@ export async function PATCH(req: Request) {
   // policy already restricts who can write into the avatars bucket.
   if (body.avatar_url === null || typeof body.avatar_url === "string") {
     updates.avatar_url = body.avatar_url;
+  }
+
+  // ── banner_accent ─────────────────────────────────────────────
+  // Per-user banner color. Null clears (falls back to brand gradient);
+  // a string must be one of the 11 energy keys mirrored in the
+  // profiles_banner_accent_check constraint.
+  if (body.banner_accent === null) {
+    updates.banner_accent = null;
+  } else if (typeof body.banner_accent === "string") {
+    const ACCENT_KEYS = new Set([
+      "Fire",
+      "Water",
+      "Grass",
+      "Lightning",
+      "Psychic",
+      "Fighting",
+      "Darkness",
+      "Metal",
+      "Dragon",
+      "Fairy",
+      "Colorless",
+    ]);
+    if (!ACCENT_KEYS.has(body.banner_accent)) {
+      return NextResponse.json(
+        { error: "Invalid banner color." },
+        { status: 400 }
+      );
+    }
+    updates.banner_accent = body.banner_accent;
   }
 
   // ── bio ───────────────────────────────────────────────────────

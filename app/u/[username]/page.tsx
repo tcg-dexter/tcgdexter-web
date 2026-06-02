@@ -10,7 +10,11 @@ import {
   listAchievements,
 } from "@/lib/learn/achievements";
 import CertifiedTrainerBadge from "@/app/learn/quiz/CertifiedTrainerBadge";
-import { computeCollectionStats } from "@/lib/collection-stats";
+import UserProfileHeader, {
+  StatCard,
+  type BannerAccent,
+} from "./UserProfileHeader";
+import AccentPicker from "./AccentPicker";
 
 interface ProfileRow {
   id: string;
@@ -20,6 +24,8 @@ interface ProfileRow {
   created_at: string;
   is_public: boolean;
   tcg_live_handle: string | null;
+  avatar_url: string | null;
+  banner_accent: string | null;
 }
 
 interface DeckRow {
@@ -69,6 +75,27 @@ export async function generateMetadata({
   };
 }
 
+/** Longest consecutive `win` run across matches sorted by played_at
+ *  (falling back to created_at). Used by the Streak stat tile. */
+function computeLongestWinStreak(matches: MatchRow[]): number {
+  const sorted = [...matches].sort((a, b) => {
+    const ka = a.played_at ?? a.created_at;
+    const kb = b.played_at ?? b.created_at;
+    return ka.localeCompare(kb);
+  });
+  let best = 0;
+  let cur = 0;
+  for (const m of sorted) {
+    if (m.result === "win") {
+      cur++;
+      if (cur > best) best = cur;
+    } else {
+      cur = 0;
+    }
+  }
+  return best;
+}
+
 export default async function ProfilePage({
   params,
 }: {
@@ -79,9 +106,11 @@ export default async function ProfilePage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, display_name, username, bio, created_at, is_public, tcg_live_handle")
+    .select(
+      "id, display_name, username, bio, created_at, is_public, tcg_live_handle, avatar_url, banner_accent"
+    )
     .eq("username", username.toLowerCase())
-    .maybeSingle();
+    .maybeSingle<ProfileRow>();
   if (!profile) notFound();
 
   const {
@@ -128,23 +157,14 @@ export default async function ProfilePage({
   // Global W-L: manual matches only (owner-only; visitors see no record).
   const globalWins = isOwner ? manualMatches.filter((m) => m.result === "win").length : 0;
   const globalLosses = isOwner ? manualMatches.filter((m) => m.result === "loss").length : 0;
-  const globalDraws = isOwner ? manualMatches.filter((m) => m.result === "draw").length : 0;
-  const globalTotal = globalWins + globalLosses + globalDraws;
-
-  // Heatmap dates: manual played_at (owner only — manual match data is private).
-  const heatmapMatches: MatchRow[] = isOwner ? manualMatches : [];
-
-  const collectionStats = await computeCollectionStats(supabase, profile.id);
-  const initial = profile.display_name.trim().charAt(0).toUpperCase();
   const winRate =
     globalWins + globalLosses > 0
       ? Math.round((globalWins / (globalWins + globalLosses)) * 100)
       : null;
-  const marketValueDisplay = collectionStats.marketValue.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: collectionStats.marketValue >= 100 ? 0 : 2,
-  });
+  const longestStreak = isOwner ? computeLongestWinStreak(manualMatches) : null;
+
+  // Heatmap dates: manual played_at (owner only — manual match data is private).
+  const heatmapMatches: MatchRow[] = isOwner ? manualMatches : [];
 
   const achievements = await listAchievements(supabase, profile.id);
   const certifiedTrainer = achievements.find((a) => a.key === CERTIFIED_TRAINER);
@@ -157,161 +177,142 @@ export default async function ProfilePage({
     : null;
   const showAchievementsCard = isOwner || achievements.length > 0;
 
-  return (
-    <main className="mx-auto max-w-6xl px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
-      <div className="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start mb-6">
-      <div className="flex flex-col gap-6">
-      {/* Profile module */}
-      <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5">
-        <div className="flex items-start gap-4">
-          <div className="flex-shrink-0">
-            <div className="w-14 h-14 rounded-full bg-surface flex items-center justify-center text-xl font-bold text-text-secondary">
-              {initial}
-            </div>
-          </div>
+  // Public deck stats (visible to both owner and visitor).
+  const publicDeckCount = decks.filter((d) => d.is_public).length;
+  const totalLikes = decks.reduce((s, d) => s + (d.like_count ?? 0), 0);
+  const joinedYear = new Date(profile.created_at).getFullYear();
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <h1 className="text-xl font-semibold text-text-primary leading-tight truncate">
-                  {profile.display_name}
-                </h1>
-                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  <span className="text-sm text-text-muted">@{profile.username}</span>
+  // Visitor placeholder for owner-private cells.
+  const ownerOnly = (value: string) => (isOwner ? value : "—");
+
+  const stats = (
+    <>
+      <StatCard
+        label="Wins"
+        value={ownerOnly(globalWins.toLocaleString())}
+        tone="gradient"
+      />
+      <StatCard
+        label="Losses"
+        value={ownerOnly(globalLosses.toLocaleString())}
+        tone="dark"
+      />
+      <StatCard
+        label="Win Rate"
+        value={isOwner && winRate !== null ? `${winRate}%` : "—"}
+        valueClass={
+          isOwner && winRate !== null && winRate >= 60
+            ? "text-amber-500"
+            : "text-text-secondary"
+        }
+      />
+      <StatCard label="Decks" value={decks.length.toLocaleString()} />
+      <StatCard label="Public" value={publicDeckCount.toLocaleString()} />
+      <StatCard
+        label="Likes"
+        value={totalLikes.toLocaleString()}
+        valueClass="text-rose-600"
+      />
+      <StatCard
+        label="Streak"
+        value={isOwner && longestStreak !== null ? longestStreak.toLocaleString() : "—"}
+        valueClass="text-emerald-600"
+      />
+      <StatCard label="Joined" value={String(joinedYear)} />
+    </>
+  );
+
+  return (
+    <main className="min-h-dvh flex flex-col bg-bg pb-24">
+      <UserProfileHeader
+        displayName={profile.display_name}
+        username={profile.username}
+        bio={profile.bio}
+        tcgLiveHandle={profile.tcg_live_handle}
+        avatarUrl={profile.avatar_url}
+        bannerAccent={profile.banner_accent}
+        stats={stats}
+        actions={
+          isOwner ? (
+            <>
+              <AccentPicker
+                current={(profile.banner_accent ?? null) as BannerAccent | null}
+              />
+              <Link
+                href="/settings"
+                aria-label="Settings"
+                className="text-text-muted hover:text-text-primary transition-colors"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.75}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+              </Link>
+            </>
+          ) : undefined
+        }
+      />
+
+      {/* Match Activity — owner-only (manual match data is private). */}
+      {isOwner && heatmapMatches.length > 0 && (
+        <div className="mx-auto max-w-2xl px-6 mt-6">
+          <MatchHeatMap matches={heatmapMatches} />
+        </div>
+      )}
+
+      {/* Achievements — earned badges; owner sees an empty-state nudge. */}
+      {showAchievementsCard && (
+        <div className="mx-auto max-w-2xl px-6 mt-6">
+          <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5">
+            <h2 className="text-sm font-semibold text-text-primary mb-3">
+              Achievements
+            </h2>
+            {certifiedTrainer ? (
+              <div className="flex items-center gap-3">
+                <CertifiedTrainerBadge size="sm" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-text-primary">
+                    Certified Trainer
+                  </p>
+                  <p className="text-xs text-text-muted">
+                    Earned {certifiedDate}
+                  </p>
                 </div>
               </div>
-              {isOwner && (
-                <Link
-                  href="/settings"
-                  aria-label="Settings"
-                  className="flex-shrink-0 text-text-muted hover:text-text-primary transition-colors"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={1.75}
+            ) : (
+              isOwner && (
+                <p className="text-sm text-text-secondary">
+                  Pass the{" "}
+                  <Link
+                    href="/learn/quiz"
+                    className="text-accent hover:underline"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                </Link>
-              )}
-            </div>
+                    Trainer Quiz
+                  </Link>{" "}
+                  to earn your first badge.
+                </p>
+              )
+            )}
           </div>
         </div>
-
-        {profile.bio && (
-          <p className="text-base text-text-secondary leading-relaxed mt-4 whitespace-pre-wrap">
-            {profile.bio}
-          </p>
-        )}
-
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-2 mt-4 text-base">
-          <div>
-            <dt className="text-text-muted">Record</dt>
-            <dd className="font-semibold text-text-primary">
-              {globalTotal > 0 ? (
-                <>
-                  <span className="text-emerald-700">{globalWins}W</span>
-                  {" · "}
-                  <span className="text-rose-700">{globalLosses}L</span>
-                  {globalDraws > 0 && (
-                    <>
-                      {" · "}
-                      <span className="text-stone-600">{globalDraws}D</span>
-                    </>
-                  )}
-                  {winRate !== null && (
-                    <span className="text-text-muted font-normal"> ({winRate}%)</span>
-                  )}
-                </>
-              ) : (
-                <span className="text-text-muted font-normal">No matches yet</span>
-              )}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-text-muted">Decks</dt>
-            <dd className="font-semibold text-text-primary">{decks.length}</dd>
-          </div>
-          <div>
-            <dt className="text-text-muted">Cards owned</dt>
-            <dd className="font-semibold text-text-primary">
-              {collectionStats.cardCount.toLocaleString("en-US")}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-text-muted">Collection value</dt>
-            <dd className="font-semibold text-text-primary">{marketValueDisplay}</dd>
-          </div>
-        </dl>
-
-        {profile.tcg_live_handle && (
-          <p className="mt-4 text-sm text-text-muted">
-            TCG Live:{" "}
-            <span className="font-semibold text-text-primary">
-              {profile.tcg_live_handle}
-            </span>
-          </p>
-        )}
-      </div>
-
-      {/* Achievements — earned badges (owner sees an empty state nudge) */}
-      {showAchievementsCard && (
-        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5">
-          <h2 className="text-sm font-semibold text-text-primary mb-3">
-            Achievements
-          </h2>
-          {certifiedTrainer ? (
-            <div className="flex items-center gap-3">
-              <CertifiedTrainerBadge size="sm" />
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-text-primary">
-                  Certified Trainer
-                </p>
-                <p className="text-xs text-text-muted">
-                  Earned {certifiedDate}
-                </p>
-              </div>
-            </div>
-          ) : (
-            isOwner && (
-              <p className="text-sm text-text-secondary">
-                Pass the{" "}
-                <Link
-                  href="/learn/quiz"
-                  className="text-accent hover:underline"
-                >
-                  Trainer Quiz
-                </Link>{" "}
-                to earn your first badge.
-              </p>
-            )
-          )}
-        </div>
       )}
-
-      </div>
-      <div className="mt-6 lg:mt-0">
-      {/* Match heatmap — only for owner (manual match data is private) */}
-      {isOwner && heatmapMatches.length > 0 && (
-        <MatchHeatMap matches={heatmapMatches} />
-      )}
-      </div>
-      </div>
 
       {/* Deck feed */}
-      <div className="mt-6">
+      <div className="mx-auto max-w-6xl px-6 mt-6">
         <h2 className="text-lg font-semibold text-text-primary mb-3 px-1">
           Decks
           {decks.length > 0 && (

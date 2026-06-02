@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { shade } from "@/lib/color";
+import { StatCard, ResponsiveLabel } from "@/app/components/StatCard";
 
 /**
  * Twitter-profile-style header for a meta deck page.
@@ -338,81 +339,3 @@ export default function MetaProfileHeader({
   );
 }
 
-/**
- * Tile in the bio stat grid.
- *
- * Tones echo the original W/L/T pill chrome so the tournament-record
- * trio still reads at a glance once flattened into the grid:
- *
- *  - "gradient" → site brand gradient bg, white text throughout (Wins)
- *  - "dark"     → solid black bg, white text throughout (Losses)
- *  - "ringed"   → default white card with a 1px black inset ring + black
- *                 label (Ties), mirroring the outlined T pill
- *  - "default"  → standard card chrome; `valueClass` colors the value
- *
- * Label is a ReactNode so callers can swap copy responsively (e.g. via
- * `ResponsiveLabel` below) without per-tone overloads. `tabular-nums`
- * on the value keeps "16.6%" and "19.6%" the same visual width across
- * tiles instead of letting proportional-digit kerning shift them.
- */
-function StatCard({
-  label,
-  value,
-  valueClass = "",
-  tone = "default",
-}: {
-  label: ReactNode;
-  value: string;
-  valueClass?: string;
-  tone?: "default" | "gradient" | "dark" | "ringed";
-}) {
-  if (tone === "gradient") {
-    return (
-      <div className="rounded-2xl bg-gradient-brand shadow-sm px-4 py-3 text-center text-white">
-        <p className="text-lg font-bold tabular-nums">{value}</p>
-        <p className="text-xs mt-0.5 opacity-90">{label}</p>
-      </div>
-    );
-  }
-  if (tone === "dark") {
-    return (
-      <div className="rounded-2xl bg-black shadow-sm px-4 py-3 text-center text-white">
-        <p className="text-lg font-bold tabular-nums">{value}</p>
-        <p className="text-xs mt-0.5 opacity-90">{label}</p>
-      </div>
-    );
-  }
-  if (tone === "ringed") {
-    return (
-      <div className="rounded-2xl bg-white/90 backdrop-blur-xl shadow-[inset_0_0_0_1px_black] px-4 py-3 text-center">
-        <p className="text-lg font-bold text-text-primary tabular-nums">{value}</p>
-        <p className="text-xs text-text-primary mt-0.5">{label}</p>
-      </div>
-    );
-  }
-  return (
-    <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm px-4 py-3 text-center">
-      <p className={`text-lg font-bold tabular-nums ${valueClass}`}>{value}</p>
-      <p className="text-xs text-text-muted mt-0.5">{label}</p>
-    </div>
-  );
-}
-
-/** Tiny helper: render `mobile` text below `sm:` and `desktop` text from
- *  `sm:` up. Used by the bio stat grid to keep tiles uniform-width on
- *  mobile -- a single-word label like "Conversion" was overflowing its
- *  tile's content area and visually breaking center alignment. */
-function ResponsiveLabel({
-  mobile,
-  desktop,
-}: {
-  mobile: string;
-  desktop: string;
-}) {
-  return (
-    <>
-      <span className="sm:hidden">{mobile}</span>
-      <span className="hidden sm:inline">{desktop}</span>
-    </>
-  );
-}
