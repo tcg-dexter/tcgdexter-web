@@ -185,6 +185,50 @@ export default async function ProfilePage({
   // Visitor placeholder for owner-private cells.
   const ownerOnly = (value: string) => (isOwner ? value : "—");
 
+  const belowStats = (
+    <>
+      {/* Match Activity — owner-only (manual match data is private). */}
+      {isOwner && heatmapMatches.length > 0 && (
+        <MatchHeatMap matches={heatmapMatches} />
+      )}
+
+      {/* Achievements — earned badges; owner sees an empty-state nudge. */}
+      {showAchievementsCard && (
+        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5">
+          <h2 className="text-sm font-semibold text-text-primary mb-3">
+            Achievements
+          </h2>
+          {certifiedTrainer ? (
+            <div className="flex items-center gap-3">
+              <CertifiedTrainerBadge size="sm" />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-text-primary">
+                  Certified Trainer
+                </p>
+                <p className="text-xs text-text-muted">
+                  Earned {certifiedDate}
+                </p>
+              </div>
+            </div>
+          ) : (
+            isOwner && (
+              <p className="text-sm text-text-secondary">
+                Pass the{" "}
+                <Link
+                  href="/learn/quiz"
+                  className="text-accent hover:underline"
+                >
+                  Trainer Quiz
+                </Link>{" "}
+                to earn your first badge.
+              </p>
+            )
+          )}
+        </div>
+      )}
+    </>
+  );
+
   const stats = (
     <>
       <StatCard
@@ -232,6 +276,7 @@ export default async function ProfilePage({
         avatarUrl={profile.avatar_url}
         bannerAccent={profile.banner_accent}
         stats={stats}
+        belowStats={belowStats}
         actions={
           isOwner ? (
             <>
@@ -266,50 +311,6 @@ export default async function ProfilePage({
           ) : undefined
         }
       />
-
-      {/* Match Activity — owner-only (manual match data is private). */}
-      {isOwner && heatmapMatches.length > 0 && (
-        <div className="mx-auto max-w-2xl px-6 mt-6">
-          <MatchHeatMap matches={heatmapMatches} />
-        </div>
-      )}
-
-      {/* Achievements — earned badges; owner sees an empty-state nudge. */}
-      {showAchievementsCard && (
-        <div className="mx-auto max-w-2xl px-6 mt-6">
-          <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5">
-            <h2 className="text-sm font-semibold text-text-primary mb-3">
-              Achievements
-            </h2>
-            {certifiedTrainer ? (
-              <div className="flex items-center gap-3">
-                <CertifiedTrainerBadge size="sm" />
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-text-primary">
-                    Certified Trainer
-                  </p>
-                  <p className="text-xs text-text-muted">
-                    Earned {certifiedDate}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              isOwner && (
-                <p className="text-sm text-text-secondary">
-                  Pass the{" "}
-                  <Link
-                    href="/learn/quiz"
-                    className="text-accent hover:underline"
-                  >
-                    Trainer Quiz
-                  </Link>{" "}
-                  to earn your first badge.
-                </p>
-              )
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Deck feed */}
       <div className="mx-auto max-w-6xl px-6 mt-6">

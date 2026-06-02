@@ -54,6 +54,11 @@ interface Props {
   /** 8 StatCard tiles. Caller-built so the page can wire in owner-vs-
    *  visitor data without duplicating the layout. */
   stats: ReactNode;
+  /** Content rendered inside the bio block, below the stat grid. Used
+   *  by the profile page for the match-activity + achievements cards so
+   *  they share the exact same `max-w-2xl px-6` parent as the stat grid
+   *  and line up edge-to-edge with it. */
+  belowStats?: ReactNode;
 }
 
 export default function UserProfileHeader({
@@ -65,6 +70,7 @@ export default function UserProfileHeader({
   bannerAccent,
   actions,
   stats,
+  belowStats,
 }: Props) {
   const gradient = bannerGradientFor(bannerAccent);
   const initial = displayName.trim().charAt(0).toUpperCase() || "?";
@@ -130,6 +136,11 @@ export default function UserProfileHeader({
 
         {/* 8-cell stat grid — wired in by the page. */}
         <div className="mt-4 grid grid-cols-4 gap-3">{stats}</div>
+
+        {/* Match activity, achievements, etc. Sit in the same bio
+         *  container as the stat grid so their card edges line up with
+         *  the stat row's outer edge. */}
+        {belowStats && <div className="mt-6 space-y-6">{belowStats}</div>}
       </div>
     </header>
   );
