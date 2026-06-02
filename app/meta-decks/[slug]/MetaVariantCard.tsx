@@ -141,7 +141,7 @@ export default function MetaVariantCard({
       <div className="flex-1 min-w-0 flex flex-col">
         <TypeCounts counts={counts} />
         {hasAccolade && (
-          <div className="mt-auto flex flex-col leading-tight">
+          <div className="mt-auto flex flex-col items-end text-right leading-tight">
             {placingLine && (
               <span className="text-[11px] font-semibold text-text-primary truncate">
                 {placingLine}
