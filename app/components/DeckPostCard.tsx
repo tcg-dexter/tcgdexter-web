@@ -125,7 +125,7 @@ export function MetaDeckCard({
         <div className="flex items-center gap-2 px-3.5 pt-3">
           {icon_url ? (
             <div
-              className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
+              className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
               style={{ background: icon_bg ?? "#B0A89E" }}
               aria-hidden
             >
@@ -133,7 +133,7 @@ export function MetaDeckCard({
               <img
                 src={icon_url}
                 alt=""
-                className="w-[22px] h-[22px] object-contain"
+                className="w-7 h-7 object-contain"
               />
             </div>
           ) : null}
