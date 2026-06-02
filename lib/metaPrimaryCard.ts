@@ -106,6 +106,54 @@ export function metaPrimaryCard(
   };
 }
 
+export interface MetaAvatar {
+  iconUrl: string;
+  iconBg: string;
+  name: string;
+}
+
+/**
+ * Top N Pokémon in a deck list ranked by HP, de-duplicated by name. Used
+ * to populate the small avatar stack on meta-archetype preview cards.
+ * Names in `excludeNames` (e.g. the archetype primary already shown as
+ * avatar 1) are skipped so the stack doesn't repeat the same Pokémon.
+ */
+export function metaTopPokemonByHp(
+  cards: DeckCard[],
+  limit: number,
+  excludeNames: string[] = [],
+): MetaAvatar[] {
+  const exclude = new Set(excludeNames.map((n) => n.toLowerCase()));
+  const byName = new Map<string, { entry: CardEntry | null; hp: number; name: string }>();
+  for (const c of cards) {
+    if (c.category !== "pokemon") continue;
+    const lower = c.name.toLowerCase();
+    if (exclude.has(lower)) continue;
+    const entry = resolve(c);
+    const hp = entry?.hp == null ? 0 : Number(entry.hp) || 0;
+    const prev = byName.get(lower);
+    if (!prev || hp > prev.hp) byName.set(lower, { entry, hp, name: c.name });
+  }
+  return Array.from(byName.values())
+    .sort((a, b) => b.hp - a.hp)
+    .slice(0, limit)
+    .map((x) => ({
+      iconUrl: pokemonSpriteUrl(x.name),
+      iconBg: typeColor(x.entry?.types),
+      name: x.name,
+    }));
+}
+
+function pokemonSpriteUrl(name: string): string {
+  const slug = name
+    .toLowerCase()
+    .replace(/[’'.,]/g, "")
+    .replace(/\s+(ex|v|vmax|vstar|gx)\b/gi, "")
+    .trim()
+    .replace(/\s+/g, "-");
+  return `https://r2.limitlesstcg.net/pokemon/gen9/${slug}.png`;
+}
+
 /** Background color for the energy-type avatar circle. Aligned with the
  *  Pokémon TCG type palette so e.g. Fire is red-orange, Water blue, etc. */
 export const TYPE_COLOR: Record<string, string> = {

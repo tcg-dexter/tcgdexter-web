@@ -1,7 +1,7 @@
 import Link from "next/link";
-import CopyDeckListButton from "@/app/components/CopyDeckListButton";
 import DeckCardFooter from "@/app/components/DeckCardFooter";
 import SpriteIcon from "./SpriteIcon";
+import type { MetaAvatar } from "@/lib/metaPrimaryCard";
 
 interface CardCounts {
   pokemon: number;
@@ -32,33 +32,22 @@ interface Props {
    *  (e.g. "2nd") is folded into this string by the caller so the header
    *  right slot is free for the copy-list action. */
   contextLabel?: string | null;
-  /** Player name. Shown in the body next to an initials avatar, matching
-   *  UserDeckCard's `@username` slot. */
+  /** Player name. Rendered as "{creator}'s" above the variant title. */
   creator: string;
-  /** Full deck list text — handed to CopyDeckListButton for the
-   *  clipboard write. Same format the carousel below the bio uses. */
-  deckList: string;
   /** Primary card image for THIS variant's deck list (pokemontcg.io). */
   cardImageUrl: string | null;
   /** Pokémon / Trainer / Energy totals for the variant's card list. */
   counts: CardCounts;
+  /** Up to 2 additional Pokémon avatars (next-highest HP, deduped against
+   *  the archetype primary) stacked next to the archetype avatar in the
+   *  body. */
+  secondaryAvatars: MetaAvatar[];
   /**
    * Optional click-through. When omitted the card is visual-only.
    * (TODO: wire to a `/meta-decks/[slug]/[variantIndex]` sub-route or a
    * limitless decklist URL once `listId` is preserved by the scraper.)
    */
   href?: string;
-}
-
-// Deterministic palette for the player-initial avatar — same pattern used
-// by UserDeckCard in app/components/DeckPostCard.tsx so card chrome
-// matches across the site.
-const AVATAR_PALETTE = [
-  "#3b6fd4", "#d43b9a", "#27ae60", "#e67e22", "#9b59b6", "#c0392b",
-];
-function avatarBg(name: string): string {
-  const h = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return AVATAR_PALETTE[h % AVATAR_PALETTE.length];
 }
 
 function CardArt({ url, name }: { url?: string | null; name: string }) {
@@ -129,9 +118,9 @@ export default function MetaVariantCard({
   iconBg,
   contextLabel,
   creator,
-  deckList,
   cardImageUrl,
   counts,
+  secondaryAvatars,
   href,
 }: Props) {
   const fallbackName = annotation
@@ -139,28 +128,24 @@ export default function MetaVariantCard({
     : archetypeName;
   const headerName = (variantName ?? "").trim() || fallbackName;
   const displayCreator = creator || "Trainer";
-  const initials = displayCreator.trim().charAt(0).toUpperCase() || "T";
-  const playerBg = avatarBg(displayCreator);
 
-  // Body mirrors UserDeckCard: small avatar + @creator above TypeCounts,
-  // tournament context pinned to the bottom.
+  const avatarStack = (
+    <div className="flex">
+      <Avatar iconUrl={iconUrl ?? null} iconBg={iconBg ?? null} />
+      {secondaryAvatars.map((a) => (
+        <div key={a.name} className="-ml-2">
+          <Avatar iconUrl={a.iconUrl} iconBg={a.iconBg} />
+        </div>
+      ))}
+    </div>
+  );
+
   const body = (
     <div className="flex gap-3.5 p-3.5 pt-3">
       <CardArt url={cardImageUrl} name={headerName} />
       <div className="flex-1 min-w-0 flex flex-col">
-        <div className="flex items-center gap-1.5 mb-2">
-          <div
-            className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-[10px] font-bold text-white"
-            style={{ background: playerBg }}
-            aria-hidden
-          >
-            {initials}
-          </div>
-          <p className="text-[13px] font-semibold text-text-muted truncate">
-            {displayCreator}
-          </p>
-        </div>
         <TypeCounts counts={counts} />
+        <div className="mb-2">{avatarStack}</div>
         {contextLabel && (
           <p className="mt-auto text-[11px] text-text-muted truncate">
             {contextLabel}
@@ -170,53 +155,32 @@ export default function MetaVariantCard({
     </div>
   );
 
-  // Header avatar is the archetype's Pokémon icon — same pattern as
-  // UserDeckCard, where the deck's primary Pokémon sits next to its name.
-  const headerAvatar = (
-    <div
-      className="w-7 h-7 rounded-full flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
-      style={{ background: iconBg ?? "#B0A89E" }}
-      aria-hidden
-    >
-      {iconUrl ? (
-        <SpriteIcon src={iconUrl} className="w-[22px] h-[22px] object-contain" />
-      ) : null}
+  const headerTitle = (
+    <div className="flex-1 min-w-0">
+      <p className="text-xs font-medium text-text-muted truncate">
+        {displayCreator}&apos;s
+      </p>
+      <p className="text-[17px] font-semibold text-text-primary truncate leading-tight">
+        {headerName}
+      </p>
     </div>
   );
 
   return (
     <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-      {/* Header — archetype icon + variant name + copy-list button. */}
-      <div className="flex items-center gap-2 px-3.5 pt-3">
-        {href ? (
-          <Link href={href} aria-label={`Open ${headerName}`} className="shrink-0">
-            {headerAvatar}
-          </Link>
-        ) : (
-          headerAvatar
-        )}
+      <div className="px-3.5 pt-3">
         {href ? (
           <Link
             href={href}
-            className="flex-1 min-w-0 text-[17px] font-semibold text-text-primary truncate hover:underline underline-offset-2"
+            className="block hover:[&_h2]:underline underline-offset-2"
           >
-            {headerName}
+            {headerTitle}
           </Link>
         ) : (
-          <p className="flex-1 min-w-0 text-[17px] font-semibold text-text-primary truncate">
-            {headerName}
-          </p>
+          headerTitle
         )}
-        {/* Trailing slot — kept flush with the header's px-3.5 inset so the
-            copy icon's right edge mirrors the avatar circle's left edge. */}
-        <div className="shrink-0">
-          <CopyDeckListButton deckList={deckList} iconOnly />
-        </div>
       </div>
 
-      {/* Body — primary card art + creator handle + counts + tournament.
-          Wrapped in a <Link> when href is set so the body is one big
-          click target on top of the header's per-element targets. */}
       {href ? (
         <Link href={href} className="block">
           {body}
@@ -232,6 +196,20 @@ export default function MetaVariantCard({
         deckName={headerName}
         hideLikes
       />
+    </div>
+  );
+}
+
+function Avatar({ iconUrl, iconBg }: { iconUrl: string | null; iconBg: string | null }) {
+  return (
+    <div
+      className="w-7 h-7 rounded-full flex items-center justify-center overflow-hidden ring-2 ring-white"
+      style={{ background: iconBg ?? "#B0A89E" }}
+      aria-hidden
+    >
+      {iconUrl ? (
+        <SpriteIcon src={iconUrl} className="w-[22px] h-[22px] object-contain" />
+      ) : null}
     </div>
   );
 }
