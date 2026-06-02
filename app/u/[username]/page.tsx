@@ -256,18 +256,18 @@ export default async function ProfilePage({
             : "text-text-secondary"
         }
       />
-      <StatCard label="Decks" value={decks.length.toLocaleString()} />
+      <StatCard
+        label="Streak"
+        value={isOwner && longestStreak !== null ? longestStreak.toLocaleString() : "—"}
+        valueClass="text-emerald-600"
+      />
       <StatCard label="Public" value={publicDeckCount.toLocaleString()} />
       <StatCard
         label="Likes"
         value={totalLikes.toLocaleString()}
         valueClass="text-rose-600"
       />
-      <StatCard
-        label="Streak"
-        value={isOwner && longestStreak !== null ? longestStreak.toLocaleString() : "—"}
-        valueClass="text-emerald-600"
-      />
+      <StatCard label="Decks" value={decks.length.toLocaleString()} />
       <StatCard label="Joined" value={String(joinedYear)} />
     </>
   );
