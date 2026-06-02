@@ -259,7 +259,7 @@ export default function MetaProfileHeader({
           <div
             className="relative z-10 rounded-full ring-4 ring-bg flex items-center justify-center overflow-hidden shrink-0"
             style={{
-              background: fallbackBg,
+              background: bannerGradient,
               width: "128px",
               height: "128px",
             }}
