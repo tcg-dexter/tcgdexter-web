@@ -218,11 +218,16 @@ export default async function MetaDeckDetailPage({
   const variantCards = variantList.slice(0, 12).map((v, i) => {
     const variantPrimary = metaPrimaryCard(v.cards, iconList);
     const placing = placingLabel(v.placing);
-    const date = formatMetaVariantDate(v.date);
-    const contextLabel =
-      placing && date
-        ? `${placing} · ${date}`
-        : placing ?? (date || null);
+    const placingLine = placing ? `${placing} Place` : null;
+    // Legacy variant `date` arrives as "<date> - <competition>" (e.g.
+    // "16th May 2026 - Regional Campinas"); newer scrapes emit a raw ISO
+    // string with no competition name. Split when the dash is present so
+    // the preview card can stack date + competition on their own lines.
+    const rawDate = (v.date ?? "").trim();
+    const dashIdx = rawDate.indexOf(" - ");
+    const datePart = dashIdx >= 0 ? rawDate.slice(0, dashIdx) : rawDate;
+    const competitionName = dashIdx >= 0 ? rawDate.slice(dashIdx + 3).trim() : null;
+    const dateLine = formatMetaVariantDate(datePart || null);
     const secondaryAvatars = metaTopPokemonByCount(
       v.cards,
       2,
@@ -231,7 +236,9 @@ export default async function MetaDeckDetailPage({
     return {
       id: `${arch.id}-v${i}`,
       href: `/meta-decks/${arch.id}/${i + 1}`,
-      contextLabel,
+      placingLine,
+      competitionName,
+      dateLine,
       variantName: (v.variantName ?? "").trim() || null,
       creator: (v.creator ?? "").trim() || "Trainer",
       cardImageUrl: variantPrimary?.imageUrl ?? null,
@@ -295,7 +302,9 @@ export default async function MetaDeckDetailPage({
                   variantName={v.variantName}
                   iconUrl={iconUrl}
                   iconBg={iconBg}
-                  contextLabel={v.contextLabel}
+                  placingLine={v.placingLine}
+                  competitionName={v.competitionName}
+                  dateLine={v.dateLine}
                   creator={v.creator}
                   cardImageUrl={v.cardImageUrl}
                   counts={v.counts}

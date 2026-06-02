@@ -28,10 +28,13 @@ interface Props {
   iconUrl?: string | null;
   /** Background color behind the header icon (typing tint). */
   iconBg?: string | null;
-  /** Tournament + date label as scraped from limitlesstcg.com. Placing
-   *  (e.g. "2nd") is folded into this string by the caller so the header
-   *  right slot is free for the copy-list action. */
-  contextLabel?: string | null;
+  /** "Nth Place" line for the accolade stack, or null when placing is
+   *  unknown. */
+  placingLine?: string | null;
+  /** Tournament / event name parsed out of the variant's date string. */
+  competitionName?: string | null;
+  /** Human-readable date for the accolade stack. */
+  dateLine?: string | null;
   /** Player name. Rendered as "{creator}'s" above the variant title. */
   creator: string;
   /** Primary card image for THIS variant's deck list (pokemontcg.io). */
@@ -116,7 +119,9 @@ export default function MetaVariantCard({
   variantName,
   iconUrl,
   iconBg,
-  contextLabel,
+  placingLine,
+  competitionName,
+  dateLine,
   creator,
   cardImageUrl,
   counts,
@@ -129,15 +134,30 @@ export default function MetaVariantCard({
   const headerName = (variantName ?? "").trim() || fallbackName;
   const displayCreator = creator || "Trainer";
 
+  const hasAccolade = Boolean(placingLine || competitionName || dateLine);
   const body = (
     <div className="flex gap-3.5 p-3.5 pt-3">
       <CardArt url={cardImageUrl} name={headerName} />
       <div className="flex-1 min-w-0 flex flex-col">
         <TypeCounts counts={counts} />
-        {contextLabel && (
-          <p className="mt-auto text-[11px] text-text-muted truncate">
-            {contextLabel}
-          </p>
+        {hasAccolade && (
+          <div className="mt-auto flex flex-col leading-tight">
+            {placingLine && (
+              <span className="text-[11px] font-semibold text-text-primary truncate">
+                {placingLine}
+              </span>
+            )}
+            {competitionName && (
+              <span className="text-[11px] text-text-secondary truncate">
+                {competitionName}
+              </span>
+            )}
+            {dateLine && (
+              <span className="text-[11px] text-text-muted truncate">
+                {dateLine}
+              </span>
+            )}
+          </div>
         )}
       </div>
     </div>
