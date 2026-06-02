@@ -12,6 +12,7 @@ import {
 import CertifiedTrainerBadge from "@/app/learn/quiz/CertifiedTrainerBadge";
 import UserProfileHeader, {
   StatCard,
+  bannerGradientFor,
   type BannerAccent,
 } from "./UserProfileHeader";
 import AccentPicker from "./AccentPicker";
@@ -185,11 +186,15 @@ export default async function ProfilePage({
   // Visitor placeholder for owner-private cells.
   const ownerOnly = (value: string) => (isOwner ? value : "—");
 
+  // Resolve once so the Wins tile and the match-activity heatmap pick
+  // up the same banner accent as the header.
+  const bannerGradient = bannerGradientFor(profile.banner_accent);
+
   const belowStats = (
     <>
       {/* Match Activity — owner-only (manual match data is private). */}
       {isOwner && heatmapMatches.length > 0 && (
-        <MatchHeatMap matches={heatmapMatches} />
+        <MatchHeatMap matches={heatmapMatches} accent={profile.banner_accent} />
       )}
 
       {/* Achievements — earned badges; owner sees an empty-state nudge. */}
@@ -235,6 +240,7 @@ export default async function ProfilePage({
         label="Wins"
         value={ownerOnly(globalWins.toLocaleString())}
         tone="gradient"
+        gradientCss={bannerGradient}
       />
       <StatCard
         label="Losses"
@@ -277,17 +283,20 @@ export default async function ProfilePage({
         bannerAccent={profile.banner_accent}
         stats={stats}
         belowStats={belowStats}
+        bannerOverlay={
+          isOwner ? (
+            <AccentPicker
+              current={(profile.banner_accent ?? null) as BannerAccent | null}
+            />
+          ) : undefined
+        }
         actions={
           isOwner ? (
-            <>
-              <AccentPicker
-                current={(profile.banner_accent ?? null) as BannerAccent | null}
-              />
-              <Link
-                href="/settings"
-                aria-label="Settings"
-                className="text-text-muted hover:text-text-primary transition-colors"
-              >
+            <Link
+              href="/settings"
+              aria-label="Settings"
+              className="text-text-muted hover:text-text-primary transition-colors"
+            >
                 <svg
                   className="w-5 h-5"
                   fill="none"
@@ -306,8 +315,7 @@ export default async function ProfilePage({
                     d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                   />
                 </svg>
-              </Link>
-            </>
+            </Link>
           ) : undefined
         }
       />

@@ -4,8 +4,12 @@
  * Layout: 20 columns × 7 rows (Sun → Sat). Each column is one calendar
  * week. The rightmost column is the current week; days after today are
  * rendered at 0% opacity to preserve the grid shape. Colors come from
- * the Sign-in gradient stops (#F2A20C → #D91E0D → #A60D0D) + opacity.
+ * the heat palette resolved against the user's chosen banner accent
+ * — brand (default) or one of the 11 energy types.
  */
+
+import { ENERGY_HEX } from "@/app/components/DeckProfileView";
+import { shade } from "@/lib/color";
 
 type MatchRow = {
   played_at: string | null;
@@ -19,13 +23,50 @@ type Cell = {
   isFuture: boolean;
 };
 
-// Heat palette — uses the Sign-in-with-Email / trainer progress gradient stops.
-function heatStyle(count: number): React.CSSProperties {
+/** Four heat tiers (used for counts 1, 2, 3, and 4+). Tier 1 is also
+ *  used at 40% alpha implicitly via `tier1Alpha` for the lightest cells.
+ *  The brand palette keeps the legacy three-stop ramp (orange → red →
+ *  dark red); energy accents derive light/mid/dark shades from a single
+ *  base hex so each cell still reads as the same hue family as the
+ *  banner. */
+type HeatPalette = {
+  tier1Alpha: string; // 1 match: low-density, fades into the surface
+  tier2: string;      // 2 matches
+  tier3: string;      // 3 matches
+  tier4: string;      // 4+ matches
+};
+
+const BRAND_HEAT: HeatPalette = {
+  tier1Alpha: "rgba(242,162,12,0.4)", // #F2A20C @ 40%
+  tier2: "#F2A20C",                   // gradient start
+  tier3: "#D91E0D",                   // gradient middle
+  tier4: "#A60D0D",                   // gradient end
+};
+
+/** Resolve the 4-tier palette for a given banner_accent. NULL or an
+ *  unrecognized accent → brand. Energy accents reuse `shade()` to step
+ *  the base hue darker for higher counts, mirroring the banner's
+ *  top→bottom gradient direction. */
+function heatPalette(accent: string | null): HeatPalette {
+  if (!accent) return BRAND_HEAT;
+  const hex = ENERGY_HEX[accent];
+  if (!hex) return BRAND_HEAT;
+  // Hex with 40% alpha for tier-1 — mirrors the brand palette's faded
+  // first tier. The 8-bit alpha suffix `66` = 0x66/0xff ≈ 0.4.
+  return {
+    tier1Alpha: `${hex}66`,
+    tier2: hex,
+    tier3: shade(hex, -14),
+    tier4: shade(hex, -28),
+  };
+}
+
+function heatStyle(count: number, palette: HeatPalette): React.CSSProperties {
   if (count <= 0) return { backgroundColor: "var(--surface)" };
-  if (count === 1) return { backgroundColor: "rgba(242,162,12,0.4)" };   // #F2A20C @ 40%
-  if (count === 2) return { backgroundColor: "#F2A20C" };                // gradient start
-  if (count === 3) return { backgroundColor: "#D91E0D" };                // gradient middle
-  return { backgroundColor: "#A60D0D" };                                 // gradient end (4+)
+  if (count === 1) return { backgroundColor: palette.tier1Alpha };
+  if (count === 2) return { backgroundColor: palette.tier2 };
+  if (count === 3) return { backgroundColor: palette.tier3 };
+  return { backgroundColor: palette.tier4 };
 }
 
 const HEAT_LEVELS: { label: string; count: number }[] = [
@@ -89,9 +130,18 @@ function buildCells(matches: MatchRow[]): Cell[] {
   return cells;
 }
 
-export default function MatchHeatMap({ matches }: { matches: MatchRow[] }) {
+export default function MatchHeatMap({
+  matches,
+  accent = null,
+}: {
+  matches: MatchRow[];
+  /** profiles.banner_accent — drives the heat palette so the module
+   *  reads as the same theme as the page banner. */
+  accent?: string | null;
+}) {
   const cells = buildCells(matches);
   const total = cells.reduce((sum, c) => sum + (c.isFuture ? 0 : c.count), 0);
+  const palette = heatPalette(accent);
 
   return (
     <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5">
@@ -106,7 +156,7 @@ export default function MatchHeatMap({ matches }: { matches: MatchRow[] }) {
             key={c.key}
             className="aspect-square rounded-[4px]"
             style={{
-              ...heatStyle(c.count),
+              ...heatStyle(c.count, palette),
               ...(c.isFuture ? { opacity: 0 } : null),
             }}
             title={

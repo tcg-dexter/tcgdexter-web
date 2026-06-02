@@ -17,15 +17,26 @@ export function StatCard({
   value,
   valueClass = "",
   tone = "default",
+  gradientCss,
 }: {
   label: ReactNode;
   value: string;
   valueClass?: string;
   tone?: "default" | "gradient" | "dark" | "ringed";
+  /** Override the `gradient` tone's background. When omitted, the tile
+   *  falls back to the site brand gradient (`bg-gradient-brand`). Used
+   *  by the profile page so the Wins tile picks up the user's chosen
+   *  banner accent. */
+  gradientCss?: string;
 }) {
   if (tone === "gradient") {
     return (
-      <div className="rounded-2xl bg-gradient-brand shadow-sm px-4 py-3 text-center text-white">
+      <div
+        className={`rounded-2xl shadow-sm px-4 py-3 text-center text-white ${
+          gradientCss ? "" : "bg-gradient-brand"
+        }`}
+        style={gradientCss ? { background: gradientCss } : undefined}
+      >
         <p className="text-lg font-bold tabular-nums">{value}</p>
         <p className="text-xs mt-0.5 opacity-90">{label}</p>
       </div>

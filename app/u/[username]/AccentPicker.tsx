@@ -89,13 +89,13 @@ export default function AccentPicker({ current }: Props) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label="Banner color"
+        aria-label="Edit banner color"
         aria-expanded={open}
-        className="text-text-muted hover:text-text-primary transition-colors"
+        className="flex items-center justify-center w-8 h-8 rounded-full bg-white/85 text-text-primary shadow-md ring-1 ring-black/10 backdrop-blur hover:bg-white transition-colors"
       >
-        {/* Paint-palette icon */}
+        {/* Pencil icon — "edit banner". */}
         <svg
-          className="w-5 h-5"
+          className="w-4 h-4"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -104,11 +104,8 @@ export default function AccentPicker({ current }: Props) {
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
-            d="M12 21a9 9 0 110-18 9 9 0 016.36 15.36c-.78.78-2.05.78-2.83 0a2 2 0 00-2.83 0c-.39.39-.59.9-.59 1.41 0 .51-.2 1.02-.59 1.41-.39.39-.9.59-1.41.59z"
+            d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zM19.5 7.125L16.875 4.5"
           />
-          <circle cx="7.5" cy="10.5" r="1" fill="currentColor" />
-          <circle cx="12" cy="7" r="1" fill="currentColor" />
-          <circle cx="16.5" cy="10.5" r="1" fill="currentColor" />
         </svg>
       </button>
 
@@ -116,7 +113,7 @@ export default function AccentPicker({ current }: Props) {
         <div
           role="dialog"
           aria-label="Choose banner color"
-          className="absolute right-0 top-full mt-2 z-20 w-56 rounded-2xl border border-black/8 bg-white/95 backdrop-blur-xl shadow-lg p-3"
+          className="absolute right-0 bottom-full mb-2 z-20 w-56 rounded-2xl border border-black/8 bg-white/95 backdrop-blur-xl shadow-lg p-3"
         >
           <p className="text-xs font-semibold uppercase tracking-widest text-text-muted px-1 pb-2">
             Banner color

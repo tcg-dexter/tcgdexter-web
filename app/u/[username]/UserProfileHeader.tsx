@@ -48,9 +48,12 @@ interface Props {
   tcgLiveHandle: string | null;
   avatarUrl: string | null;
   bannerAccent: string | null;
-  /** Owner-only actions (settings gear + accent picker). Rendered inline
-   *  on the right of the avatar overlap row, mirroring the meta header. */
+  /** Owner-only actions (e.g. settings gear). Rendered inline on the
+   *  right of the avatar overlap row, mirroring the meta header. */
   actions?: ReactNode;
+  /** Owner-only overlay rendered absolutely at the bottom-right of the
+   *  banner (typically the accent picker). */
+  bannerOverlay?: ReactNode;
   /** 8 StatCard tiles. Caller-built so the page can wire in owner-vs-
    *  visitor data without duplicating the layout. */
   stats: ReactNode;
@@ -69,6 +72,7 @@ export default function UserProfileHeader({
   avatarUrl,
   bannerAccent,
   actions,
+  bannerOverlay,
   stats,
   belowStats,
 }: Props) {
@@ -83,7 +87,11 @@ export default function UserProfileHeader({
       <div
         className="relative w-full overflow-hidden h-[calc(34vw-12px)] sm:h-auto sm:aspect-[3/1]"
         style={{ background: gradient }}
-      />
+      >
+        {bannerOverlay && (
+          <div className="absolute bottom-3 right-3 z-10">{bannerOverlay}</div>
+        )}
+      </div>
 
       {/* Bio section. Avatar overlaps the banner via negative margin. */}
       <div className="mx-auto max-w-2xl px-6">
