@@ -3,8 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import type { UserDeckCardProps } from "@/app/components/DeckPostCard";
 import { primaryCardImageUrl, deckAvatarInfo, pokemonSlug } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
-import { deckResult } from "@/lib/shared-matches";
-import type { SharedMatchCore } from "@/lib/shared-matches";
 import MyDecksClient from "./MyDecksClient";
 
 interface DeckRow {
@@ -60,17 +58,6 @@ export default async function MyDecksPage() {
     .select("saved_deck_id, result");
   const manualMatches = (matchesRaw ?? []) as MatchRow[];
 
-  const { data: sharedRaw } = await supabase
-    .from("shared_matches")
-    .select(
-      `id, creator_user_id, opponent_user_id, creator_decklist_id, opponent_decklist_id,
-       creator_result, opponent_result, status, final_outcome, final_winner_user_id,
-       judge_ruled, finalized_at`
-    )
-    .eq("status", "finalized")
-    .or(`creator_user_id.eq.${user.id},opponent_user_id.eq.${user.id}`);
-  const sharedMatches = (sharedRaw ?? []) as SharedMatchCore[];
-
   const deckWL = new Map<string, { w: number; l: number; d: number }>();
   for (const m of manualMatches) {
     if (!m.saved_deck_id) continue;
@@ -79,20 +66,6 @@ export default async function MyDecksPage() {
     else if (m.result === "loss") prev.l++;
     else if (m.result === "draw") prev.d++;
     deckWL.set(m.saved_deck_id, prev);
-  }
-  for (const sm of sharedMatches) {
-    const deckId =
-      sm.creator_user_id === user.id
-        ? sm.creator_decklist_id
-        : sm.opponent_decklist_id;
-    if (!deckId) continue;
-    const r = deckResult(sm, deckId);
-    if (!r) continue;
-    const prev = deckWL.get(deckId) ?? { w: 0, l: 0, d: 0 };
-    if (r === "win") prev.w++;
-    else if (r === "loss") prev.l++;
-    else prev.d++;
-    deckWL.set(deckId, prev);
   }
 
   const deckCards: UserDeckCardProps[] = decks.map((deck) => {

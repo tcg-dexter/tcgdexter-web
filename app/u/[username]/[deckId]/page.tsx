@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { type AnalysisResult, type DeckCreator } from "@/app/components/DeckProfileView";
 import { repriceDeck } from "@/lib/reprice-deck";
-import type { SharedDeckMatchRow } from "@/app/my-decks/[id]/MatchLog";
 import DeckDetailClient from "./DeckDetailClient";
 
 interface DeckRecord {
@@ -143,97 +142,6 @@ export default async function DeckPage({
     initialMatches = (matches ?? []) as MatchRecord[];
   }
 
-  // Verified shared matches involving this deck (public). Hydrate the
-  // opponent (the *other* participant from this deck's POV) so the row can
-  // render their name and deck.
-  const { data: sharedRaw } = await supabase
-    .from("shared_matches")
-    .select(
-      `id, creator_user_id, opponent_user_id, creator_decklist_id, opponent_decklist_id,
-       creator_result, opponent_result, status, final_outcome, final_winner_user_id,
-       judge_ruled, finalized_at`
-    )
-    .eq("status", "finalized")
-    .or(`creator_decklist_id.eq.${deck.id},opponent_decklist_id.eq.${deck.id}`)
-    .order("finalized_at", { ascending: false });
-
-  const initialSharedMatches: SharedDeckMatchRow[] = [];
-  if (sharedRaw && sharedRaw.length > 0) {
-    const otherUserIds = Array.from(
-      new Set(
-        sharedRaw
-          .map((m) =>
-            m.creator_user_id === profile.id ? m.opponent_user_id : m.creator_user_id
-          )
-          .filter(Boolean) as string[]
-      )
-    );
-    const otherDeckIds = Array.from(
-      new Set(
-        sharedRaw
-          .map((m) =>
-            m.creator_decklist_id === deck.id
-              ? m.opponent_decklist_id
-              : m.creator_decklist_id
-          )
-          .filter(Boolean) as string[]
-      )
-    );
-
-    const [{ data: oppProfiles }, { data: oppDecks }] = await Promise.all([
-      otherUserIds.length > 0
-        ? supabase
-            .from("profiles")
-            .select("id, display_name, username")
-            .in("id", otherUserIds)
-        : Promise.resolve({ data: [] }),
-      otherDeckIds.length > 0
-        ? supabase
-            .from("saved_decks")
-            .select("id, name, analysis")
-            .in("id", otherDeckIds)
-        : Promise.resolve({ data: [] }),
-    ]);
-
-    const profileById = new Map(
-      (oppProfiles ?? []).map((p) => [p.id, p] as const)
-    );
-    const deckById = new Map((oppDecks ?? []).map((d) => [d.id, d] as const));
-
-    for (const sm of sharedRaw) {
-      const oppUserId =
-        sm.creator_user_id === profile.id ? sm.opponent_user_id : sm.creator_user_id;
-      const oppDeckId =
-        sm.creator_decklist_id === deck.id
-          ? sm.opponent_decklist_id
-          : sm.creator_decklist_id;
-
-      const opp = oppUserId ? profileById.get(oppUserId) : null;
-      const oppDeck = oppDeckId ? deckById.get(oppDeckId) : null;
-
-      initialSharedMatches.push({
-        id: sm.id,
-        creator_user_id: sm.creator_user_id,
-        opponent_user_id: sm.opponent_user_id,
-        creator_decklist_id: sm.creator_decklist_id,
-        opponent_decklist_id: sm.opponent_decklist_id,
-        creator_result: sm.creator_result,
-        opponent_result: sm.opponent_result,
-        status: sm.status,
-        final_outcome: sm.final_outcome,
-        final_winner_user_id: sm.final_winner_user_id,
-        judge_ruled: sm.judge_ruled,
-        finalized_at: sm.finalized_at,
-        opponent_display_name: opp?.display_name ?? null,
-        opponent_username: opp?.username ?? null,
-        opponent_deck_name: oppDeck?.name ?? null,
-        opponent_deck_archetype:
-          ((oppDeck?.analysis as { metaMatch?: { archetypeName?: string | null } } | null)
-            ?.metaMatch?.archetypeName) ?? null,
-      });
-    }
-  }
-
   // Visitor-only: check if current user has liked this deck
   let initialLiked = false;
   if (!isOwner && viewer) {
@@ -262,8 +170,6 @@ export default async function DeckPage({
       initialIsPublic={deck.is_public}
       canonicalShareUrl={canonicalShareUrl}
       initialMatches={initialMatches}
-      initialSharedMatches={initialSharedMatches}
-      viewerId={viewer?.id ?? null}
       initialNotes={deck.notes ?? ""}
       initialLiked={initialLiked}
       initialLikeCount={deck.like_count ?? 0}
