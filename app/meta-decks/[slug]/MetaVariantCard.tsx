@@ -165,7 +165,7 @@ export default function MetaVariantCard({
 
   const headerTitle = (
     <div className="flex-1 min-w-0">
-      <p className="text-xs font-medium text-text-muted truncate">
+      <p className="text-xs font-semibold truncate bg-gradient-brand bg-clip-text text-transparent">
         {displayCreator}&apos;s
       </p>
       <p className="text-[17px] font-semibold text-text-primary truncate leading-tight">

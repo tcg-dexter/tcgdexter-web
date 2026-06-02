@@ -288,7 +288,7 @@ export default async function MetaDeckDetailPage({
         {variantCards.length > 0 ? (
           <section aria-label="Top deck lists" className="pb-12">
             <h2 className="text-sm font-semibold text-text-primary mb-3">
-              Top {variantCards.length} Deck List{variantCards.length === 1 ? "" : "s"}
+              Top Deck Lists
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {variantCards.map((v) => (
