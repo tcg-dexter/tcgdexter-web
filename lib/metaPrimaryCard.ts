@@ -9,6 +9,7 @@ interface CardEntry {
   subtypes: string[];
   types?: string[];
   hp: string | number | null;
+  evolves_from?: string | null;
 }
 
 const CARD_DB = cardData as unknown as Record<string, CardEntry[]>;
@@ -124,7 +125,10 @@ export function metaTopPokemonByCount(
   limit: number,
   excludeNames: string[] = [],
 ): MetaAvatar[] {
-  const exclude = new Set(excludeNames.map((n) => n.toLowerCase()));
+  const exclude = new Set<string>();
+  for (const name of excludeNames) {
+    for (const n of evolutionLineNames(name)) exclude.add(n);
+  }
   const byName = new Map<
     string,
     { entry: CardEntry | null; hp: number; qty: number; name: string }
@@ -154,6 +158,31 @@ export function metaTopPokemonByCount(
       iconBg: typeColor(x.entry?.types),
       name: x.name,
     }));
+}
+
+/**
+ * Walk the evolves_from chain from `name` back to its Basic, returning the
+ * lowercase names of every stage in the line (including `name` itself).
+ * Resolves each parent through the lowercased catalog so suffixed forms
+ * like "Charizard ex" still pre-evolve through "Charmeleon" → "Charmander".
+ * Cycle-safe.
+ */
+function evolutionLineNames(name: string): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  let current: string | null = name;
+  while (current !== null) {
+    const lower: string = current.toLowerCase();
+    if (seen.has(lower)) break;
+    seen.add(lower);
+    out.push(lower);
+    const entries: CardEntry[] =
+      CARD_DB[current] ?? CARD_DB_LOWER.get(lower) ?? [];
+    const parent: string | null =
+      entries.find((e: CardEntry) => e.evolves_from)?.evolves_from ?? null;
+    current = parent && parent.trim() ? parent.trim() : null;
+  }
+  return out;
 }
 
 function pokemonSpriteUrl(name: string): string {
