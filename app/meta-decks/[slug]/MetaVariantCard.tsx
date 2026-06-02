@@ -165,7 +165,13 @@ export default function MetaVariantCard({
 
   const headerTitle = (
     <div className="flex-1 min-w-0">
-      <p className="text-xs font-semibold truncate bg-gradient-brand bg-clip-text text-transparent">
+      <p
+        className="text-xs font-semibold truncate bg-clip-text text-transparent"
+        style={{
+          backgroundImage:
+            "linear-gradient(90deg, #C2820A 0%, #A8160A 50%, #7A0908 100%)",
+        }}
+      >
         {displayCreator}&apos;s
       </p>
       <p className="text-[17px] font-semibold text-text-primary truncate leading-tight">
