@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 import { UserDeckCard } from "@/app/components/DeckPostCard";
 import { primaryCardImageUrl } from "@/lib/primaryCardImage";
 import MatchHeatMap from "@/app/profile/MatchHeatMap";
-import { deckResult, viewerResult, type SharedMatchCore } from "@/lib/shared-matches";
 import {
   CERTIFIED_TRAINER,
   listAchievements,
@@ -115,20 +114,7 @@ export default async function ProfilePage({
     manualMatches = (matches ?? []) as MatchRow[];
   }
 
-  // Verified shared matches involving this user, finalized only.
-  // Public to all viewers; we count both creator-side and opponent-side.
-  const { data: sharedRaw } = await supabase
-    .from("shared_matches")
-    .select(
-      `id, creator_user_id, opponent_user_id, creator_decklist_id, opponent_decklist_id,
-       creator_result, opponent_result, status, final_outcome, final_winner_user_id,
-       judge_ruled, finalized_at`
-    )
-    .eq("status", "finalized")
-    .or(`creator_user_id.eq.${profile.id},opponent_user_id.eq.${profile.id}`);
-  const sharedMatches = (sharedRaw ?? []) as SharedMatchCore[];
-
-  // Per-deck W-L: manual (owner only) + verified (everyone)
+  // Per-deck W-L: manual matches only (owner sees their own; visitors see none).
   const deckWL = new Map<string, { w: number; l: number; d: number }>();
   for (const m of manualMatches) {
     if (!m.saved_deck_id) continue;
@@ -138,58 +124,15 @@ export default async function ProfilePage({
     else if (m.result === "draw") prev.d++;
     deckWL.set(m.saved_deck_id, prev);
   }
-  for (const sm of sharedMatches) {
-    // Identify which deck belongs to this profile and bump its W-L bucket.
-    const deckId =
-      sm.creator_user_id === profile.id
-        ? sm.creator_decklist_id
-        : sm.opponent_decklist_id;
-    if (!deckId) continue;
-    const r = deckResult(sm, deckId);
-    if (!r) continue;
-    const prev = deckWL.get(deckId) ?? { w: 0, l: 0, d: 0 };
-    if (r === "win") prev.w++;
-    else if (r === "loss") prev.l++;
-    else prev.d++;
-    deckWL.set(deckId, prev);
-  }
 
-  // Global W-L: manual (owner only) + verified (public)
-  const verifiedWins = sharedMatches.filter(
-    (m) => viewerResult(m, profile.id) === "win"
-  ).length;
-  const verifiedLosses = sharedMatches.filter(
-    (m) => viewerResult(m, profile.id) === "loss"
-  ).length;
-  const verifiedDraws = sharedMatches.filter(
-    (m) => viewerResult(m, profile.id) === "draw"
-  ).length;
-
-  const manualWins = manualMatches.filter((m) => m.result === "win").length;
-  const manualLosses = manualMatches.filter((m) => m.result === "loss").length;
-  const manualDraws = manualMatches.filter((m) => m.result === "draw").length;
-
-  const globalWins = (isOwner ? manualWins : 0) + verifiedWins;
-  const globalLosses = (isOwner ? manualLosses : 0) + verifiedLosses;
-  const globalDraws = (isOwner ? manualDraws : 0) + verifiedDraws;
+  // Global W-L: manual matches only (owner-only; visitors see no record).
+  const globalWins = isOwner ? manualMatches.filter((m) => m.result === "win").length : 0;
+  const globalLosses = isOwner ? manualMatches.filter((m) => m.result === "loss").length : 0;
+  const globalDraws = isOwner ? manualMatches.filter((m) => m.result === "draw").length : 0;
   const globalTotal = globalWins + globalLosses + globalDraws;
 
-  // Heatmap dates: manual played_at + verified finalized_at (owner only)
-  const heatmapMatches: MatchRow[] = isOwner
-    ? [
-        ...manualMatches,
-        ...sharedMatches.map<MatchRow>((m) => ({
-          saved_deck_id:
-            m.creator_user_id === profile.id
-              ? m.creator_decklist_id
-              : m.opponent_decklist_id,
-          result:
-            viewerResult(m, profile.id) ?? "draw",
-          played_at: m.finalized_at ?? null,
-          created_at: m.finalized_at ?? new Date().toISOString(),
-        })),
-      ]
-    : [];
+  // Heatmap dates: manual played_at (owner only — manual match data is private).
+  const heatmapMatches: MatchRow[] = isOwner ? manualMatches : [];
 
   const collectionStats = await computeCollectionStats(supabase, profile.id);
   const initial = profile.display_name.trim().charAt(0).toUpperCase();

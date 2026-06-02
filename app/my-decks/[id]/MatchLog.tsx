@@ -5,12 +5,6 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import MatchForm, { type MatchFormData } from "@/app/components/MatchForm";
 import MatchEntry from "@/app/components/MatchEntry";
-import {
-  deckResult,
-  viewerLost,
-  type SharedMatchCore,
-  type SharedResult,
-} from "@/lib/shared-matches";
 
 /* ─── Types ──────────────────────────────────────────────────── */
 
@@ -25,39 +19,15 @@ interface Match {
   source?: "manual" | "tcg_live_log";
 }
 
-export interface SharedDeckMatchRow extends SharedMatchCore {
-  /** Display name for the *other* participant on this deck profile. */
-  opponent_display_name: string | null;
-  opponent_username: string | null;
-  opponent_deck_name: string | null;
-  opponent_deck_archetype: string | null;
-}
-
 interface Props {
   savedDeckId: string;
   initialMatches: Match[];
-  /** Verified shared matches involving this deck. Public to all viewers. */
-  initialSharedMatches?: SharedDeckMatchRow[];
   /** When true, hides log/edit/delete affordances (visitor view). */
   readOnly?: boolean;
-  /** Viewer's user id, or null for unauthenticated. Used for judge-note visibility. */
-  viewerId?: string | null;
   /** Controlled form-open state. When provided the parent drives open/close. */
   open?: boolean;
   /** Called when the form should open or close (controlled mode). */
   onOpenChange?: (open: boolean) => void;
-}
-
-interface UnifiedRow {
-  kind: "manual" | "verified";
-  id: string;
-  result: SharedResult;
-  date: string | null;
-  // manual-only
-  manual?: Match;
-  // verified-only
-  verified?: SharedDeckMatchRow;
-  showJudgeNote?: boolean;
 }
 
 /* ─── Result styling ─────────────────────────────────────────── */
@@ -85,9 +55,7 @@ const RESULT_STYLE = {
 export default function MatchLog({
   savedDeckId,
   initialMatches,
-  initialSharedMatches = [],
   readOnly = false,
-  viewerId = null,
   open,
   onOpenChange,
 }: Props) {
@@ -107,38 +75,16 @@ export default function MatchLog({
     else setInternalOpen(false);
   }
 
-  // ── Unified rows (manual + verified), sorted by date desc ──
-  const rows: UnifiedRow[] = useMemo(() => {
-    const out: UnifiedRow[] = [];
-    for (const m of matches) {
-      out.push({
-        kind: "manual",
-        id: m.id,
-        result: m.result,
-        date: m.played_at,
-        manual: m,
-      });
-    }
-    for (const sm of initialSharedMatches) {
-      const r = deckResult(sm, savedDeckId);
-      if (!r) continue;
-      out.push({
-        kind: "verified",
-        id: sm.id,
-        result: r,
-        date: sm.finalized_at ?? null,
-        verified: sm,
-        showJudgeNote: viewerLost(sm, viewerId) && sm.judge_ruled,
-      });
-    }
-    return out.sort((a, b) => {
-      const at = a.date ? Date.parse(a.date) : 0;
-      const bt = b.date ? Date.parse(b.date) : 0;
+  // ── Rows (manual matches), sorted by date desc ─────────────
+  const rows = useMemo(() => {
+    return [...matches].sort((a, b) => {
+      const at = a.played_at ? Date.parse(a.played_at) : 0;
+      const bt = b.played_at ? Date.parse(b.played_at) : 0;
       return bt - at;
     });
-  }, [matches, initialSharedMatches, savedDeckId, viewerId]);
+  }, [matches]);
 
-  // ── Stats (combined manual + verified) ─────────────────────
+  // ── Stats ───────────────────────────────────────────────────
   const wins = rows.filter((r) => r.result === "win").length;
   const losses = rows.filter((r) => r.result === "loss").length;
   const draws = rows.filter((r) => r.result === "draw").length;
@@ -292,7 +238,7 @@ export default function MatchLog({
       {rows.length === 0 && !formOpen && (
         <p className="text-sm text-text-muted mt-3 text-center">
           {readOnly
-            ? "No verified matches yet."
+            ? "No matches yet."
             : "No matches logged yet. Tap Log Match after your next game."}
         </p>
       )}
@@ -300,182 +246,136 @@ export default function MatchLog({
       {/* ── Match List ────────────────────────────────────── */}
       {rows.length > 0 && (
         <div className="mt-4 flex flex-col">
-          {(historyExpanded ? rows : rows.slice(0, 3)).map((row, i, arr) => {
-            const s = RESULT_STYLE[row.result];
-            const dateStr = row.date
-              ? new Date(row.date).toLocaleDateString("en-US", {
+          {(historyExpanded ? rows : rows.slice(0, 3)).map((match, i, arr) => {
+            const s = RESULT_STYLE[match.result];
+            const dateStr = match.played_at
+              ? new Date(match.played_at).toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                 })
               : null;
 
-            if (row.kind === "manual") {
-              const match = row.manual!;
-              const isEditing = editingId === match.id;
-              if (isEditing && !readOnly) {
-                return (
-                  <div
-                    key={match.id}
-                    className={`py-3 ${i < arr.length - 1 ? "border-b border-border/50" : ""}`}
-                  >
-                    <MatchForm
-                      initial={{
-                        result: match.result,
-                        opponent_name: match.opponent_name,
-                        opponent_archetype: match.opponent_archetype,
-                        opponent_deck_list: match.opponent_deck_list,
-                        notes: match.notes,
-                        played_at: match.played_at,
-                      }}
-                      onSubmit={(data) => handleEditMatch(match.id, data)}
-                      onCancel={() => setEditingId(null)}
-                      submitLabel="Update Match"
-                    />
-                  </div>
-                );
-              }
-              const hasLog = match.source === "tcg_live_log";
-              const isExpanded = expandedId === match.id;
-              const canExpand = Boolean(match.notes) || !readOnly;
+            const isEditing = editingId === match.id;
+            if (isEditing && !readOnly) {
               return (
                 <div
                   key={match.id}
-                  className={`px-1 py-3 ${
-                    i < arr.length - 1 ? "border-b border-border/50" : ""
-                  }`}
+                  className={`py-3 ${i < arr.length - 1 ? "border-b border-border/50" : ""}`}
                 >
-                  <div className="flex items-start gap-3">
-                    <span
-                      className={`flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold ${s.bg} ${s.text}`}
-                    >
-                      {s.label}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 text-sm">
-                        {match.opponent_archetype && (
-                          <span className="font-semibold text-text-primary truncate">
-                            vs {match.opponent_archetype}
-                          </span>
-                        )}
-                        {match.opponent_name && !match.opponent_archetype && (
-                          <span className="font-semibold text-text-primary truncate">
-                            vs {match.opponent_name}
-                          </span>
-                        )}
-                        {match.opponent_name && match.opponent_archetype && (
-                          <span className="text-xs text-text-muted truncate">
-                            ({match.opponent_name})
-                          </span>
-                        )}
-                        {!match.opponent_archetype && !match.opponent_name && (
-                          <span className="text-text-muted text-sm">Match logged</span>
-                        )}
-                      </div>
-                      {dateStr && (
-                        <p className="text-xs text-text-muted mt-0.5">{dateStr}</p>
-                      )}
-                    </div>
-                    <div className="flex-shrink-0 flex items-center gap-2">
-                      {hasLog && (
-                        <Link
-                          href={`/battles/${match.id}`}
-                          className="inline-flex items-center gap-1 rounded-full border border-black/10 bg-white px-3 py-1 text-[11px] font-semibold text-text-primary hover:bg-black/5 transition-colors"
-                        >
-                          View Battle
-                        </Link>
-                      )}
-                      {canExpand && (
-                        <button
-                          onClick={() =>
-                            setExpandedId((prev) => (prev === match.id ? null : match.id))
-                          }
-                          aria-label={isExpanded ? "Hide match details" : "Show match details"}
-                          aria-expanded={isExpanded}
-                          className="text-text-muted/60 hover:text-text-primary transition-colors"
-                        >
-                          <svg
-                            className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  {isExpanded && (
-                    <div className="mt-2 ml-11 flex flex-col gap-3">
-                      {match.notes && (
-                        <p className="text-xs text-text-secondary leading-relaxed whitespace-pre-wrap">
-                          {match.notes}
-                        </p>
-                      )}
-                      {!readOnly && (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => { setEditingId(match.id); closeForm(); }}
-                            className="inline-flex items-center gap-1 rounded-full border border-black/10 px-3 py-1.5 text-xs font-semibold text-text-primary hover:bg-black/5 transition-colors"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(match.id)}
-                            className="inline-flex items-center gap-1 rounded-full border border-accent/30 px-3 py-1.5 text-xs font-semibold text-accent hover:bg-accent/5 transition-colors"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <MatchForm
+                    initial={{
+                      result: match.result,
+                      opponent_name: match.opponent_name,
+                      opponent_archetype: match.opponent_archetype,
+                      opponent_deck_list: match.opponent_deck_list,
+                      notes: match.notes,
+                      played_at: match.played_at,
+                    }}
+                    onSubmit={(data) => handleEditMatch(match.id, data)}
+                    onCancel={() => setEditingId(null)}
+                    submitLabel="Update Match"
+                  />
                 </div>
               );
             }
-
-            // verified row
-            const sm = row.verified!;
+            const hasLog = match.source === "tcg_live_log";
+            const isExpanded = expandedId === match.id;
+            const canExpand = Boolean(match.notes) || !readOnly;
             return (
-              <Link
-                key={sm.id}
-                href={`/matches/${sm.id}`}
-                className={`flex items-start gap-3 px-1 py-3 hover:bg-black/[0.02] transition-colors ${
+              <div
+                key={match.id}
+                className={`px-1 py-3 ${
                   i < arr.length - 1 ? "border-b border-border/50" : ""
                 }`}
               >
-                <span
-                  className={`flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold ${s.bg} ${s.text}`}
-                >
-                  {s.label}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="font-semibold text-text-primary truncate">
-                      vs {sm.opponent_display_name ?? "Opponent"}
-                    </span>
-                    <span className="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      Verified
-                    </span>
+                <div className="flex items-start gap-3">
+                  <span
+                    className={`flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold ${s.bg} ${s.text}`}
+                  >
+                    {s.label}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 text-sm">
+                      {match.opponent_archetype && (
+                        <span className="font-semibold text-text-primary truncate">
+                          vs {match.opponent_archetype}
+                        </span>
+                      )}
+                      {match.opponent_name && !match.opponent_archetype && (
+                        <span className="font-semibold text-text-primary truncate">
+                          vs {match.opponent_name}
+                        </span>
+                      )}
+                      {match.opponent_name && match.opponent_archetype && (
+                        <span className="text-xs text-text-muted truncate">
+                          ({match.opponent_name})
+                        </span>
+                      )}
+                      {!match.opponent_archetype && !match.opponent_name && (
+                        <span className="text-text-muted text-sm">Match logged</span>
+                      )}
+                    </div>
+                    {dateStr && (
+                      <p className="text-xs text-text-muted mt-0.5">{dateStr}</p>
+                    )}
                   </div>
-                  {sm.opponent_deck_archetype && (
-                    <p className="text-xs text-text-muted mt-0.5 truncate">
-                      {sm.opponent_deck_archetype}
-                    </p>
-                  )}
-                  {row.showJudgeNote && (
-                    <p className="text-xs text-text-secondary mt-0.5 italic">
-                      Result determined by judge ruling.
-                    </p>
-                  )}
+                  <div className="flex-shrink-0 flex items-center gap-2">
+                    {hasLog && (
+                      <Link
+                        href={`/battles/${match.id}`}
+                        className="inline-flex items-center gap-1 rounded-full border border-black/10 bg-white px-3 py-1 text-[11px] font-semibold text-text-primary hover:bg-black/5 transition-colors"
+                      >
+                        View Battle
+                      </Link>
+                    )}
+                    {canExpand && (
+                      <button
+                        onClick={() =>
+                          setExpandedId((prev) => (prev === match.id ? null : match.id))
+                        }
+                        aria-label={isExpanded ? "Hide match details" : "Show match details"}
+                        aria-expanded={isExpanded}
+                        className="text-text-muted/60 hover:text-text-primary transition-colors"
+                      >
+                        <svg
+                          className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {dateStr && (
-                    <span className="text-xs text-text-muted">{dateStr}</span>
-                  )}
-                </div>
-              </Link>
+                {isExpanded && (
+                  <div className="mt-2 ml-11 flex flex-col gap-3">
+                    {match.notes && (
+                      <p className="text-xs text-text-secondary leading-relaxed whitespace-pre-wrap">
+                        {match.notes}
+                      </p>
+                    )}
+                    {!readOnly && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => { setEditingId(match.id); closeForm(); }}
+                          className="inline-flex items-center gap-1 rounded-full border border-black/10 px-3 py-1.5 text-xs font-semibold text-text-primary hover:bg-black/5 transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(match.id)}
+                          className="inline-flex items-center gap-1 rounded-full border border-accent/30 px-3 py-1.5 text-xs font-semibold text-accent hover:bg-accent/5 transition-colors"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
