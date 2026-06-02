@@ -1,6 +1,6 @@
 import Link from "next/link";
 import DeckCardFooter from "@/app/components/DeckCardFooter";
-import SpriteIcon from "./SpriteIcon";
+import AvatarStack, { type AvatarStackItem } from "@/app/components/AvatarStack";
 import type { MetaAvatar } from "@/lib/metaPrimaryCard";
 
 interface CardCounts {
@@ -180,14 +180,20 @@ export default function MetaVariantCard({
     </div>
   );
 
+  // Unified pool: archetype primary at index 0, then top-N copy-count
+  // candidates. AvatarStack renders the first 3 whose sprite loads — when
+  // a slot 404s it auto-shifts forward through the rest of the pool.
+  const avatarItems: AvatarStackItem[] = [
+    { key: "primary", iconUrl: iconUrl ?? null, iconBg: iconBg ?? null },
+    ...secondaryAvatars.map((a) => ({
+      key: a.name,
+      iconUrl: a.iconUrl,
+      iconBg: a.iconBg,
+    })),
+  ];
   const avatarStack = (
     <div className="flex items-center shrink-0 self-stretch">
-      <Avatar iconUrl={iconUrl ?? null} iconBg={iconBg ?? null} />
-      {secondaryAvatars.map((a) => (
-        <div key={a.name} className="-ml-2">
-          <Avatar iconUrl={a.iconUrl} iconBg={a.iconBg} />
-        </div>
-      ))}
+      <AvatarStack items={avatarItems} count={3} />
     </div>
   );
 
@@ -223,16 +229,3 @@ export default function MetaVariantCard({
   );
 }
 
-function Avatar({ iconUrl, iconBg }: { iconUrl: string | null; iconBg: string | null }) {
-  return (
-    <div
-      className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden ring-2 ring-white"
-      style={{ background: iconBg ?? "#B0A89E" }}
-      aria-hidden
-    >
-      {iconUrl ? (
-        <SpriteIcon src={iconUrl} className="w-7 h-7 object-contain" />
-      ) : null}
-    </div>
-  );
-}

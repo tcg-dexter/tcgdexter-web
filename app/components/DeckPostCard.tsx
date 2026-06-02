@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import DeckCardFooter from "./DeckCardFooter";
+import AvatarStack, { type AvatarStackItem } from "./AvatarStack";
 import { deckAvatarInfo } from "@/lib/primaryCardImage";
-import { metaTopPokemonByCount, type MetaAvatar } from "@/lib/metaPrimaryCard";
+import { metaTopPokemonByCount } from "@/lib/metaPrimaryCard";
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
@@ -241,11 +242,18 @@ export function UserDeckCard({
   const imageUrl = initialImageUrl ?? null;
   const coverImageUrl = initialCoverImageUrl ?? null;
 
-  // Avatar 1 = the existing primary sprite. Avatars 2 & 3 = next two
-  // Pokémon by total copy count, deduped against avatar 1's evolution
-  // line (same logic as MetaVariantCard).
-  const secondaryAvatars = useMemo<MetaAvatar[]>(() => {
-    if (!cards || cards.length === 0) return [];
+  // Avatar 1 = the existing primary sprite. Slots 2 & 3 are picked from a
+  // larger candidate pool (next Pokémon by total copy count, deduped
+  // against avatar 1's evolution line — same logic as MetaVariantCard).
+  // We over-fetch the pool so AvatarStack can shift forward when a sprite
+  // 404s on the limitless host (some forms / regionals aren't covered).
+  const avatarItems = useMemo<AvatarStackItem[]>(() => {
+    const primaryItem: AvatarStackItem = {
+      key: "primary",
+      iconUrl: iconUrl ?? null,
+      iconBg: iconBg ?? null,
+    };
+    if (!cards || cards.length === 0) return [primaryItem];
     const primary = deckAvatarInfo(cards, coverImageUrl);
     const adapted = cards.map((c) => ({
       qty: c.qty,
@@ -254,8 +262,16 @@ export function UserDeckCard({
       setCode: c.setCode,
       category: c.section,
     }));
-    return metaTopPokemonByCount(adapted, 2, primary ? [primary.name] : []);
-  }, [cards, coverImageUrl]);
+    const pool = metaTopPokemonByCount(
+      adapted,
+      5,
+      primary ? [primary.name] : [],
+    );
+    return [
+      primaryItem,
+      ...pool.map((a) => ({ key: a.name, iconUrl: a.iconUrl, iconBg: a.iconBg })),
+    ];
+  }, [cards, coverImageUrl, iconUrl, iconBg]);
 
   return (
     <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
@@ -272,12 +288,7 @@ export function UserDeckCard({
           aria-label={`Open ${name}`}
           className="shrink-0 flex items-center"
         >
-          <Avatar iconUrl={iconUrl ?? null} iconBg={iconBg ?? null} />
-          {secondaryAvatars.map((a) => (
-            <div key={a.name} className="-ml-2">
-              <Avatar iconUrl={a.iconUrl} iconBg={a.iconBg} />
-            </div>
-          ))}
+          <AvatarStack items={avatarItems} count={3} />
         </Link>
       </div>
 
@@ -307,24 +318,3 @@ export function UserDeckCard({
   );
 }
 
-function Avatar({ iconUrl, iconBg }: { iconUrl: string | null; iconBg: string | null }) {
-  return (
-    <div
-      className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden ring-2 ring-white"
-      style={{ background: iconBg ?? "#B0A89E" }}
-      aria-hidden
-    >
-      {iconUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={iconUrl}
-          alt=""
-          className="w-7 h-7 object-contain"
-          onError={(e) => {
-            (e.currentTarget as HTMLImageElement).style.visibility = "hidden";
-          }}
-        />
-      ) : null}
-    </div>
-  );
-}

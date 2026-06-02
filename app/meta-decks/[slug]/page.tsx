@@ -228,9 +228,11 @@ export default async function MetaDeckDetailPage({
     const datePart = dashIdx >= 0 ? rawDate.slice(0, dashIdx) : rawDate;
     const competitionName = dashIdx >= 0 ? rawDate.slice(dashIdx + 3).trim() : null;
     const dateLine = formatMetaVariantDate(datePart || null);
+    // Ask for extras so the AvatarStack can shift forward when a sprite
+    // URL 404s on the limitless host (some forms / regionals aren't there).
     const secondaryAvatars = metaTopPokemonByCount(
       v.cards,
-      2,
+      5,
       archetypePrimary ? [archetypePrimary.name] : [],
     );
     return {
