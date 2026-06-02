@@ -293,7 +293,7 @@ export function UserDeckCard({
         {iconUrl ? (
           <Link href={href} aria-label={`Open ${name}`} className="shrink-0">
             <div
-              className="w-7 h-7 rounded-full flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
+              className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
               style={{ background: iconBg ?? "#B0A89E" }}
               aria-hidden
             >
@@ -301,7 +301,7 @@ export function UserDeckCard({
               <img
                 src={iconUrl}
                 alt=""
-                className="w-[22px] h-[22px] object-contain"
+                className="w-7 h-7 object-contain"
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).style.visibility = "hidden";
                 }}
