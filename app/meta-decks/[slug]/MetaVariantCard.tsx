@@ -129,23 +129,11 @@ export default function MetaVariantCard({
   const headerName = (variantName ?? "").trim() || fallbackName;
   const displayCreator = creator || "Trainer";
 
-  const avatarStack = (
-    <div className="flex">
-      <Avatar iconUrl={iconUrl ?? null} iconBg={iconBg ?? null} />
-      {secondaryAvatars.map((a) => (
-        <div key={a.name} className="-ml-2">
-          <Avatar iconUrl={a.iconUrl} iconBg={a.iconBg} />
-        </div>
-      ))}
-    </div>
-  );
-
   const body = (
     <div className="flex gap-3.5 p-3.5 pt-3">
       <CardArt url={cardImageUrl} name={headerName} />
       <div className="flex-1 min-w-0 flex flex-col">
         <TypeCounts counts={counts} />
-        <div className="mb-2">{avatarStack}</div>
         {contextLabel && (
           <p className="mt-auto text-[11px] text-text-muted truncate">
             {contextLabel}
@@ -166,19 +154,28 @@ export default function MetaVariantCard({
     </div>
   );
 
+  const avatarStack = (
+    <div className="flex items-center shrink-0 self-stretch">
+      <Avatar iconUrl={iconUrl ?? null} iconBg={iconBg ?? null} />
+      {secondaryAvatars.map((a) => (
+        <div key={a.name} className="-ml-2">
+          <Avatar iconUrl={a.iconUrl} iconBg={a.iconBg} />
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-      <div className="px-3.5 pt-3">
+      <div className="flex items-stretch gap-3 px-3.5 pt-3">
         {href ? (
-          <Link
-            href={href}
-            className="block hover:[&_h2]:underline underline-offset-2"
-          >
+          <Link href={href} className="flex-1 min-w-0 block">
             {headerTitle}
           </Link>
         ) : (
           headerTitle
         )}
+        {avatarStack}
       </div>
 
       {href ? (
@@ -203,12 +200,12 @@ export default function MetaVariantCard({
 function Avatar({ iconUrl, iconBg }: { iconUrl: string | null; iconBg: string | null }) {
   return (
     <div
-      className="w-7 h-7 rounded-full flex items-center justify-center overflow-hidden ring-2 ring-white"
+      className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden ring-2 ring-white"
       style={{ background: iconBg ?? "#B0A89E" }}
       aria-hidden
     >
       {iconUrl ? (
-        <SpriteIcon src={iconUrl} className="w-[22px] h-[22px] object-contain" />
+        <SpriteIcon src={iconUrl} className="w-7 h-7 object-contain" />
       ) : null}
     </div>
   );

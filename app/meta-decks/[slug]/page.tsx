@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import archetypesRaw from "@/data/meta-archetypes.json";
 import metaDecksRaw from "@/data/meta-decks.json";
-import { metaPrimaryCard, metaTopPokemonByHp, typeColor } from "@/lib/metaPrimaryCard";
+import { metaPrimaryCard, metaTopPokemonByCount, typeColor } from "@/lib/metaPrimaryCard";
 import { cardImageUrlFor } from "@/lib/primaryCardImage";
 import ThemeColor from "@/app/components/ThemeColor";
 import BackButton from "@/app/components/ui/BackButton";
@@ -223,7 +223,7 @@ export default async function MetaDeckDetailPage({
       placing && date
         ? `${placing} · ${date}`
         : placing ?? (date || null);
-    const secondaryAvatars = metaTopPokemonByHp(
+    const secondaryAvatars = metaTopPokemonByCount(
       v.cards,
       2,
       archetypePrimary ? [archetypePrimary.name] : [],
