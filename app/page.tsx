@@ -3,7 +3,9 @@ import {
   primaryCardImageUrl,
   cardImageUrlForName,
   primaryPokemonCard,
+  cardTypesForName,
 } from "@/lib/primaryCardImage";
+import { typeColor } from "@/lib/metaPrimaryCard";
 import HomeClient, { type RecentMatch } from "./HomeClient";
 
 // Revalidate the home page (and its stat counts) at most once per minute.
@@ -191,6 +193,14 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
       const topAttacker = topAttackerByMatch.get(m.id as string) ?? null;
       const opponentImageUrl = topAttacker ? cardImageUrlForName(topAttacker) : null;
 
+      // Accent colors mirror the battle banner: typeColor() of each side's
+      // primary Pokémon. Falls back to Colorless when types aren't resolvable.
+      const playerPrimary = analysis?.cards ? primaryPokemonCard(analysis.cards) : null;
+      const playerColor = typeColor(playerPrimary?.types);
+      const opponentColor = typeColor(
+        topAttacker ? cardTypesForName(topAttacker) : undefined,
+      );
+
       return [{
         id: m.id as string,
         result: m.result as "win" | "loss" | "draw",
@@ -203,6 +213,8 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
         deckImageUrl: deckImageUrl ?? null,
         opponentImageUrl,
         opponentAttackerName: topAttacker,
+        playerColor,
+        opponentColor,
       }];
     });
   } catch (err) {
