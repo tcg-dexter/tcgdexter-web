@@ -10,6 +10,17 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Gradient border on focus — works with any border-radius.
+     Uses the padding-box / border-box background layering trick
+     so the white fill stays opaque while the brand gradient shows
+     through only in the border area. */
+  .focus-gradient-border:focus {
+    border-color: transparent;
+    background:
+      linear-gradient(#fff, #fff) padding-box,
+      var(--gradient-brand) border-box;
+  }
 }
 
 /* ─── Design tokens ───────────────────────────────────────────── */
