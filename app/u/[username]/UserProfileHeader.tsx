@@ -139,36 +139,23 @@ export default function UserProfileHeader({
       {/* Bio section. Avatar overlaps the banner via negative margin. */}
       <div className="mx-auto max-w-2xl px-6">
         <div className="flex items-end justify-between gap-3 -mt-16 sm:-mt-20">
-          {/* Avatar + TCG Live group. TCG Live sits at items-end so
-              its baseline lands at the avatar's foot — visually just
-              below the banner edge, to the right of the avatar. */}
-          <div className="flex items-end gap-3 min-w-0">
-            <div
-              className="relative z-10 rounded-full ring-4 ring-bg flex items-center justify-center overflow-hidden shrink-0"
-              style={{
-                background: gradient,
-                width: "128px",
-                height: "128px",
-              }}
-            >
-              {avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={avatarUrl}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-5xl font-bold text-white">{initial}</span>
-              )}
-            </div>
-            {tcgLiveHandle && (
-              <p className="pb-2 text-sm text-text-muted truncate min-w-0">
-                TCG Live:{" "}
-                <span className="font-semibold text-text-primary">
-                  {tcgLiveHandle}
-                </span>
-              </p>
+          <div
+            className="relative z-10 rounded-full ring-4 ring-bg flex items-center justify-center overflow-hidden shrink-0"
+            style={{
+              background: gradient,
+              width: "128px",
+              height: "128px",
+            }}
+          >
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarUrl}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-5xl font-bold text-white">{initial}</span>
             )}
           </div>
           {actions && (
@@ -176,11 +163,23 @@ export default function UserProfileHeader({
           )}
         </div>
 
-        <div className="mt-3">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-text-primary leading-tight">
-            {displayName}
-          </h1>
-          <p className="text-sm text-text-muted mt-0.5">@{username}</p>
+        {/* Name / @handle on the left, TCG Live (label over handle)
+            right-aligned with its baseline pinned to the @handle line. */}
+        <div className="mt-3 flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-text-primary leading-tight truncate">
+              {displayName}
+            </h1>
+            <p className="text-sm text-text-muted mt-0.5">@{username}</p>
+          </div>
+          {tcgLiveHandle && (
+            <div className="text-right text-sm leading-tight shrink-0">
+              <p className="text-text-muted">TCG Live</p>
+              <p className="font-semibold text-text-primary mt-0.5 truncate max-w-[10rem] sm:max-w-[14rem]">
+                {tcgLiveHandle}
+              </p>
+            </div>
+          )}
         </div>
 
         {bio && (
