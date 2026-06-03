@@ -3,7 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { UserDeckCard } from "@/app/components/DeckPostCard";
-import { primaryCardImageUrl, deckAvatarInfo } from "@/lib/primaryCardImage";
+import {
+  primaryCardImageUrl,
+  deckAvatarInfo,
+  pokemonSlug,
+} from "@/lib/primaryCardImage";
+import { typeColor } from "@/lib/metaPrimaryCard";
 import metaArchetypesRaw from "@/data/meta-archetypes.json";
 import MatchHeatMap from "@/app/profile/MatchHeatMap";
 import {
@@ -46,6 +51,7 @@ interface DeckRow {
     cards?: Array<{ qty: number; name: string; number: string; setCode: string; section: "pokemon" | "trainer" | "energy" }>;
   } | null;
   updated_at: string;
+  created_at: string;
   like_count: number;
   is_public: boolean;
   cover_image_url: string | null;
@@ -130,12 +136,12 @@ export default async function ProfilePage({
   const { data: decksRaw } = isOwner
     ? await supabase
         .from("saved_decks")
-        .select("id, name, analysis, updated_at, like_count, is_public, cover_image_url")
+        .select("id, name, analysis, updated_at, created_at, like_count, is_public, cover_image_url")
         .eq("user_id", profile.id)
         .order("updated_at", { ascending: false })
     : await supabase
         .from("saved_decks")
-        .select("id, name, analysis, updated_at, like_count, is_public, cover_image_url")
+        .select("id, name, analysis, updated_at, created_at, like_count, is_public, cover_image_url")
         .eq("user_id", profile.id)
         .eq("is_public", true)
         .order("like_count", { ascending: false })
@@ -423,12 +429,9 @@ export default async function ProfilePage({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {decks.map((deck) => {
-              const price = deck.analysis?.deckPrice ?? null;
-              const sections = deck.analysis?.sections ?? null;
-              const wl = deckWL.get(deck.id) ?? null;
-              const imageUrl =
-                deck.cover_image_url ??
-                primaryCardImageUrl(deck.analysis?.cards ?? []);
+              const cards = deck.analysis?.cards ?? [];
+              const avatar = deckAvatarInfo(cards, deck.cover_image_url);
+              const slug = avatar ? pokemonSlug(avatar.name) : "";
               return (
                 <UserDeckCard
                   key={deck.id}
@@ -437,13 +440,24 @@ export default async function ProfilePage({
                   href={`/u/${profile.username}/${deck.id}`}
                   username={profile.username}
                   displayName={profile.display_name}
-                  price={price}
-                  counts={sections}
-                  wl={wl}
+                  price={deck.analysis?.deckPrice ?? null}
+                  counts={deck.analysis?.sections ?? null}
+                  wl={deckWL.get(deck.id) ?? null}
                   likeCount={deck.like_count}
                   isPrivate={isOwner && !deck.is_public}
-                  imageUrl={imageUrl}
+                  imageUrl={
+                    deck.cover_image_url ?? primaryCardImageUrl(cards)
+                  }
                   ownerUserId={profile.id}
+                  createdAt={deck.created_at}
+                  iconUrl={
+                    slug
+                      ? `https://r2.limitlesstcg.net/pokemon/gen9/${slug}.png`
+                      : null
+                  }
+                  iconBg={avatar ? typeColor(avatar.types) : null}
+                  cards={cards}
+                  coverImageUrl={deck.cover_image_url}
                 />
               );
             })}
