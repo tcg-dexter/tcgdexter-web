@@ -368,7 +368,7 @@ export default async function ProfilePage({
             <Link
               href="/settings"
               aria-label="Settings"
-              className="text-text-muted hover:text-text-primary transition-colors"
+              className="flex items-center justify-center w-8 h-8 text-text-muted hover:text-text-primary transition-colors"
             >
                 <svg
                   className="w-5 h-5"
