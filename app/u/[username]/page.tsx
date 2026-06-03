@@ -393,13 +393,12 @@ export default async function ProfilePage({
         }
       />
 
-      {/* Deck feed. Wrapper drops horizontal padding on mobile so each
-          deck card in the single-column grid spans the full viewport
-          (a feed-style edge-to-edge layout). The heading and the
-          empty-state card add their own mobile insets so they don't
-          read as flush-to-edge alongside the card body. */}
-      <div className="mx-auto max-w-6xl sm:px-6 mt-6">
-        <h2 className="text-lg font-semibold text-text-primary mb-3 px-6 sm:px-1">
+      {/* Deck feed — matches the page-wide `max-w-6xl px-6` container
+          the rest of the profile uses, so cards sit at viewport - 48
+          on mobile (same as the heatmap / achievements above) instead
+          of being flush to the device edge. */}
+      <div className="mx-auto max-w-6xl px-6 mt-6">
+        <h2 className="text-lg font-semibold text-text-primary mb-3 px-1">
           Decks
           {decks.length > 0 && (
             <span className="ml-2 text-sm font-normal text-text-muted">({decks.length})</span>
@@ -407,7 +406,7 @@ export default async function ProfilePage({
         </h2>
 
         {decks.length === 0 ? (
-          <div className="mx-6 sm:mx-0 rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
+          <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
             <p className="text-sm text-text-secondary">
               {isOwner ? (
                 <>
