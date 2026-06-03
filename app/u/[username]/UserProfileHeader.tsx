@@ -159,11 +159,11 @@ export default function UserProfileHeader({
             )}
           </div>
           {actions && (
-            // self-start + mt that matches the row's negative top
-            // margin (mt-16 mobile / mt-20 sm:+) tucks the gear just
-            // below the banner edge instead of letting items-end drop
-            // it all the way to the avatar's foot.
-            <div className="self-start mt-16 sm:mt-20 flex items-center gap-2">
+            // self-start + mt slightly larger than the row's negative
+            // top margin (mt-16/mt-20) leaves ~16px of breathing room
+            // between the gear and the banner's bottom edge, rather
+            // than sitting flush against it.
+            <div className="self-start mt-20 sm:mt-24 flex items-center gap-2">
               {actions}
             </div>
           )}
