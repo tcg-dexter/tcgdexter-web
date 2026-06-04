@@ -194,7 +194,7 @@ function CardViewerModal({
               button); width is derived from the image's natural ratio.
               `rounded-3xl` matches the printed card's corner radius
               better than rounded-xl at this display size. */}
-          <div className="relative inline-block rounded-3xl overflow-hidden">
+          <div className="relative inline-block rounded-[22px] sm:rounded-3xl overflow-hidden">
             <CardImage
               src={tile.largeImageUrl}
               alt={alt}
