@@ -1,7 +1,7 @@
-import Link from "next/link";
-import CardImage from "@/app/cards/CardImage";
-import DeckTileFooter from "@/app/components/DeckTileFooter";
-import { cardImageSmall } from "@/lib/cardImages";
+import DeckCardGridClient, {
+  type ResolvedTile,
+} from "@/app/components/DeckCardGridClient";
+import { cardImageLarge, cardImageSmall } from "@/lib/cardImages";
 import { getAllCards, type CardIndexEntry } from "@/lib/cardsIndex";
 
 interface AnalysisCard {
@@ -270,55 +270,26 @@ export default function DeckCardGrid({ cards }: { cards: AnalysisCard[] }) {
 
   if (tiles.length === 0) return null;
 
-  return (
-    <div
-      className="grid grid-cols-5 md:grid-cols-10 gap-3"
-      aria-label="Deck cards"
-    >
-      {tiles.map((t) => {
-        const entry = t.entry;
-        const setId = entry?.setId ?? "";
-        const number = entry?.number ?? t.fallbackNumber;
-        const setName = entry?.setName ?? "";
-        const src = setId ? cardImageSmall(setId, number) : "";
-        const alt = setName
-          ? `${t.name} — ${setName} ${number}`
-          : `${t.name} ${number}`;
-        const key = `${t.section}:${t.name.toLowerCase()}`;
-        const tileClass =
-          "relative w-full rounded overflow-hidden bg-surface";
-        const aspectStyle = { aspectRatio: "245 / 342" };
-        const body = (
-          <>
-            <CardImage
-              src={src}
-              alt={alt}
-              name={t.name}
-              setName={setName}
-              number={number}
-              className="w-full h-full object-contain"
-            />
-            <DeckTileFooter copyCount={t.copyCount} />
-          </>
-        );
-        // Unresolved cards (no entry) have no detail page to link to — stay
-        // as a plain non-interactive tile so the placeholder isn't a dead
-        // click target.
-        return entry ? (
-          <Link
-            key={key}
-            href={`/cards/${encodeURIComponent(entry.id)}`}
-            className={`${tileClass} block transition-shadow hover:shadow-md`}
-            style={aspectStyle}
-          >
-            {body}
-          </Link>
-        ) : (
-          <div key={key} className={tileClass} style={aspectStyle}>
-            {body}
-          </div>
-        );
-      })}
-    </div>
-  );
+  // Serialize the resolved tiles for the client component. Picking only the
+  // fields the UI needs keeps the payload small — the full CardIndexEntry
+  // has ~20 properties we don't render.
+  const resolved: ResolvedTile[] = tiles.map((t) => {
+    const entry = t.entry;
+    const setId = entry?.setId ?? "";
+    const number = entry?.number ?? t.fallbackNumber;
+    const setName = entry?.setName ?? "";
+    return {
+      key: `${t.section}:${t.name.toLowerCase()}`,
+      name: t.name,
+      copyCount: t.copyCount,
+      section: t.section,
+      entryId: entry?.id ?? null,
+      setName,
+      number,
+      smallImageUrl: setId ? cardImageSmall(setId, number) : "",
+      largeImageUrl: setId ? cardImageLarge(setId, number) : "",
+    };
+  });
+
+  return <DeckCardGridClient tiles={resolved} />;
 }
