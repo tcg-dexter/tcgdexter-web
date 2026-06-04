@@ -111,9 +111,11 @@
 
 /* When the deck-profile card viewer is open, hide the page's
    shared BackButton so it doesn't compete with the modal's own
-   close button. Toggled by DeckCardGridClient's modal effect. */
+   close button. `visibility: hidden` (rather than `display: none`)
+   preserves the layout slot so surrounding spacing doesn't jump.
+   Toggled by DeckCardGridClient's modal effect. */
 body.card-viewer-open [data-back-button] {
-  display: none !important;
+  visibility: hidden !important;
 }
 
 @keyframes fadeToast {
