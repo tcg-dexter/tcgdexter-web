@@ -43,7 +43,7 @@ interface Props {
 // via `shadow-[inset_0_0_0_1px_black]` (inset box-shadow doesn't grow the
 // box the way a real `border` does, so the three chips still render at
 // identical pixel dimensions). Mirrored in app/components/MatchForm.tsx
-// and app/meta-decks/[slug]/page.tsx — keep them in sync.
+// and app/meta-archetypes/[slug]/page.tsx — keep them in sync.
 const RESULT_STYLE = {
   win:  { label: "W", bg: "bg-gradient-brand",                       text: "text-white"        },
   loss: { label: "L", bg: "bg-black",                                text: "text-white"        },

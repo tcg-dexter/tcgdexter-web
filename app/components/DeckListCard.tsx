@@ -5,7 +5,7 @@ import CopyDeckListButton from "@/app/components/CopyDeckListButton";
 /**
  * Shared "Deck List" module — renders a raw deck-list string as grouped
  * Pokémon / Trainer / Energy sections. Used by both the saved-deck view
- * (/my-decks/[id]) and the meta-deck profile (/meta-decks/[slug]).
+ * (/my-decks/[id]) and the meta-deck profile (/meta-archetypes/[slug]).
  */
 
 interface ParsedCard {

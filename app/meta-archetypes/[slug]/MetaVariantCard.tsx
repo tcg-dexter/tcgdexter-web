@@ -47,7 +47,7 @@ interface Props {
   secondaryAvatars: MetaAvatar[];
   /**
    * Optional click-through. When omitted the card is visual-only.
-   * (TODO: wire to a `/meta-decks/[slug]/[variantIndex]` sub-route or a
+   * (TODO: wire to a `/meta-archetypes/[slug]/[variantIndex]` sub-route or a
    * limitless decklist URL once `listId` is preserved by the scraper.)
    */
   href?: string;
@@ -221,7 +221,7 @@ export default function MetaVariantCard({
       <DeckCardFooter
         metaArchetypeId={archetypeId}
         initialLikes={0}
-        saveHref={href ?? `/meta-decks/${archetypeId}`}
+        saveHref={href ?? `/meta-archetypes/${archetypeId}`}
         deckName={headerName}
         hideLikes
       />

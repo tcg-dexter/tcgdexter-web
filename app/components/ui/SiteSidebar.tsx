@@ -54,13 +54,13 @@ export default function SiteSidebar({
   const INTERNAL_LINKS = [
     { href: "/cards", label: "Card Catalog", Icon: CardsIcon },
     { href: "/my-decks", label: "Deck Collection", Icon: BookmarkIcon },
-    { href: "/meta-decks", label: "Top 30 Meta Decks", Icon: ChartBarIcon },
+    { href: "/meta-archetypes", label: "Top Meta Archetypes", Icon: ChartBarIcon },
     // { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
     { href: "/learn", label: "Learn to Play", Icon: BookOpenIcon },
   ];
 
   // "/" gets exact match so it doesn't light up on every page; others match
-  // by prefix so nested routes (e.g. /meta-decks/[slug]) still highlight.
+  // by prefix so nested routes (e.g. /meta-archetypes/[slug]) still highlight.
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 

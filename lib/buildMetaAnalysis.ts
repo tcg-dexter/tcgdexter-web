@@ -2,7 +2,7 @@
  * buildMetaAnalysis
  *
  * Pure function that produces a full AnalysisResult from a meta-deck card list
- * and archetype metadata. Used by /meta-decks/[slug] so the page can render
+ * and archetype metadata. Used by /meta-archetypes/[slug] so the page can render
  * DeckProfileView (with the composition matrix, collapsibles, etc.) without an
  * HTTP round-trip to /api/analyze at static-generation time.
  *

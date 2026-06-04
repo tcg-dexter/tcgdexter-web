@@ -280,7 +280,7 @@ export default function UnifiedSearch({ dropdownPosition = "below" }: Props = {}
                   {results.archetypes.map((a) => (
                     <Link
                       key={a.id}
-                      href={`/meta-decks/${a.id}`}
+                      href={`/meta-archetypes/${a.id}`}
                       className="flex items-center gap-3 px-4 py-2.5 hover:bg-black/[0.03] transition-colors"
                     >
                       <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center flex-shrink-0">

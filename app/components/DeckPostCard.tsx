@@ -126,7 +126,7 @@ export function MetaDeckCard({
   creators,
 }: MetaDeckCardProps) {
   const creatorList = (creators && creators.length > 0 ? creators : ["Trainer"]).slice(0, 5);
-  const href = `/meta-decks/${id}`;
+  const href = `/meta-archetypes/${id}`;
   return (
     <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
       <Link href={href} className="block">

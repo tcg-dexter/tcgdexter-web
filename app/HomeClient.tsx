@@ -241,7 +241,7 @@ interface MetaDeckEntry {
 }
 
 // Pre-compute the top-3 preview cards using the same prep loop that drives
-// /meta-decks: pick the face Pokémon card from each archetype's deck list,
+// /meta-archetypes: pick the face Pokémon card from each archetype's deck list,
 // pull its energy-type color, and surface up to five creators.
 const top3Cards = (() => {
   const top3 = (archetypesRaw as Archetype[])
@@ -450,10 +450,10 @@ export default function HomeClient({
                 <h2 className="text-4xl font-semibold tracking-tight">This week&apos;s top archetypes.</h2>
               </div>
               <Link
-                href="/meta-decks"
+                href="/meta-archetypes"
                 className="text-sm text-text-secondary hover:text-text-primary transition self-start md:self-auto whitespace-nowrap"
               >
-                View Top 30 Meta Decks →
+                View Top Meta Archetypes →
               </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -511,7 +511,7 @@ export default function HomeClient({
                     Profile a deck now
                   </Link>
                   <Link
-                    href="/meta-decks"
+                    href="/meta-archetypes"
                     className="rounded-full border border-black/15 bg-white/80 backdrop-blur-sm text-text-primary font-semibold px-6 py-3 hover:bg-white transition"
                   >
                     Browse the meta →

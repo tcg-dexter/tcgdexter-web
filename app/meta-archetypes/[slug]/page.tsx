@@ -154,7 +154,7 @@ function arrangeBannerByCategory(
 /**
  * Archetype landing page. Pure Twitter-style profile: banner + avatar +
  * bio + "posts feed" of the top-5 deck list preview cards. Each card
- * deep-links to /meta-decks/[slug]/[variantIndex] which renders the
+ * deep-links to /meta-archetypes/[slug]/[variantIndex] which renders the
  * full deck profile for that specific list.
  *
  * No deck profile content (Overview, accordions, deck-list module, shop
@@ -173,7 +173,7 @@ export default async function MetaDeckDetailPage({
   const deckData = (metaDecksRaw as MetaDeck[]).find((d) => d.id === arch.id);
 
   // Parse archetype icons (e.g. `["dragapult"]`) for the avatar + primary
-  // card detection. Mirrors the logic in app/meta-decks/page.tsx so the
+  // card detection. Mirrors the logic in app/meta-archetypes/page.tsx so the
   // landing page and index page agree on which card to feature.
   let iconList: string[] = [];
   try {
@@ -237,7 +237,7 @@ export default async function MetaDeckDetailPage({
     );
     return {
       id: `${arch.id}-v${i}`,
-      href: `/meta-decks/${arch.id}/${i + 1}`,
+      href: `/meta-archetypes/${arch.id}/${i + 1}`,
       placingLine,
       competitionName,
       dateLine,
@@ -284,7 +284,7 @@ export default async function MetaDeckDetailPage({
         ties={arch.ties}
         totalEntries={arch.total_entries}
         preBanner={
-          <BackButton href="/meta-decks" ariaLabel="Back to Top 30 Meta Decks" />
+          <BackButton href="/meta-archetypes" ariaLabel="Back to Top Meta Archetypes" />
         }
       >
         {variantCards.length > 0 ? (
