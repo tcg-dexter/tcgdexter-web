@@ -37,7 +37,7 @@ export function StackIcon({ className }: IconProps) {
   );
 }
 
-/** Trophy — "Top Meta Archetypes". */
+/** Trophy — "Meta Archetypes". */
 export function TrophyIcon({ className }: IconProps) {
   return (
     <svg {...outlineProps} className={className}>

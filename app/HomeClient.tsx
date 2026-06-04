@@ -453,7 +453,7 @@ export default function HomeClient({
                 href="/meta-archetypes"
                 className="text-sm text-text-secondary hover:text-text-primary transition self-start md:self-auto whitespace-nowrap"
               >
-                View Top Meta Archetypes →
+                View Meta Archetypes →
               </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

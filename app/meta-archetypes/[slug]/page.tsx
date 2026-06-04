@@ -284,7 +284,7 @@ export default async function MetaDeckDetailPage({
         ties={arch.ties}
         totalEntries={arch.total_entries}
         preBanner={
-          <BackButton href="/meta-archetypes" ariaLabel="Back to Top Meta Archetypes" />
+          <BackButton href="/meta-archetypes" ariaLabel="Back to Meta Archetypes" />
         }
       >
         {variantCards.length > 0 ? (

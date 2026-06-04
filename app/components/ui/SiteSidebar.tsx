@@ -54,7 +54,7 @@ export default function SiteSidebar({
   const INTERNAL_LINKS = [
     { href: "/cards", label: "Card Catalog", Icon: CardsIcon },
     { href: "/my-decks", label: "Deck Collection", Icon: BookmarkIcon },
-    { href: "/meta-archetypes", label: "Top Meta Archetypes", Icon: ChartBarIcon },
+    { href: "/meta-archetypes", label: "Meta Archetypes", Icon: ChartBarIcon },
     // { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
     { href: "/learn", label: "Learn to Play", Icon: BookOpenIcon },
   ];
