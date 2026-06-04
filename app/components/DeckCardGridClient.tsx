@@ -184,18 +184,14 @@ function CardViewerModal({
             </svg>
           </button>
 
-          {/* Card box. Aspect ratio alone gives no intrinsic size inside a
-              flex row, so we set an explicit height (clamped against the
-              viewport width so the box doesn't overflow past the chevrons
-              on narrow screens). Width is derived from aspect-ratio.
-              65vh leaves headroom below for the Details button. */}
-          <div
-            className="relative rounded-xl overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6)] bg-[var(--surface)]"
-            style={{
-              height: "min(65vh, calc((100vw - 8rem) * 342 / 245))",
-              aspectRatio: "245 / 342",
-            }}
-          >
+          {/* Card box hugs the image so there's no surface letterbox above
+              or below when the image's intrinsic aspect doesn't exactly
+              match 245/342. Height clamp keeps the card inside the
+              viewport (and leaves headroom below for the Details
+              button); width is derived from the image's natural ratio.
+              `rounded-3xl` matches the printed card's corner radius
+              better than rounded-xl at this display size. */}
+          <div className="relative inline-block rounded-3xl overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6)]">
             <CardImage
               src={tile.largeImageUrl}
               alt={alt}
@@ -205,7 +201,12 @@ function CardViewerModal({
               loading="eager"
               decoding="sync"
               fetchPriority="high"
-              className="w-full h-full object-contain"
+              className="block object-contain"
+              style={{
+                height: "min(65vh, calc((100vw - 8rem) * 342 / 245))",
+                width: "auto",
+                maxWidth: "100%",
+              }}
             />
           </div>
 
