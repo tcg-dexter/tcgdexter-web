@@ -121,109 +121,124 @@ function CardViewerModal({
     : `${tile.name} ${tile.number}`;
 
   return createPortal(
+    // Outer wrapper is transparent and full-viewport — captures clicks
+    // outside the centered column so backdrop-dismiss still works in the
+    // side gutters on desktop.
     <div
       role="dialog"
       aria-modal="true"
       aria-label={`${tile.name} preview`}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-50 flex justify-center"
       onClick={onClose}
     >
-      {/* Close — top-left circle. Matches BackButton's translucent style. */}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose();
-        }}
-        aria-label="Close card viewer"
-        className="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/70 transition"
-      >
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={1.75}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-
-      {/* Card + chevrons row. stopPropagation so taps on the card or
-          chevrons don't bubble to the backdrop and dismiss. */}
-      <div
-        className="relative flex items-center justify-center gap-3 sm:gap-6 w-full max-w-5xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+      {/* Dim layer — constrained to the site's main content width on
+          desktop, full width on mobile. The surrounding desktop chrome
+          stays visible (and static) behind. */}
+      <div className="relative w-full md:max-w-6xl bg-black/60 flex flex-col items-center justify-center p-4">
+        {/* Close — top-left circle. Matches BackButton's translucent style. */}
         <button
           type="button"
-          onClick={onPrev}
-          aria-label="Previous card"
-          className="shrink-0 w-11 h-11 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/70 transition"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          aria-label="Close card viewer"
+          className="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/70 transition"
         >
           <svg
-            className="w-6 h-6"
+            className="w-5 h-5"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
             strokeWidth={1.75}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
 
+        {/* Card + chevrons row. stopPropagation so taps on the card or
+            chevrons don't bubble to the backdrop and dismiss. */}
         <div
-          className="relative rounded-xl overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6)] bg-[var(--surface)]"
-          style={{ aspectRatio: "245 / 342", maxHeight: "78vh" }}
+          className="relative flex items-center justify-center gap-3 sm:gap-6 w-full"
+          onClick={(e) => e.stopPropagation()}
         >
-          <CardImage
-            src={tile.largeImageUrl}
-            alt={alt}
-            name={tile.name}
-            setName={tile.setName}
-            number={tile.number}
-            loading="eager"
-            decoding="sync"
-            fetchPriority="high"
-            className="h-full w-auto object-contain"
-          />
+          <button
+            type="button"
+            onClick={onPrev}
+            aria-label="Previous card"
+            className="shrink-0 w-11 h-11 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/70 transition"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.75}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          {/* Card box. Aspect ratio alone gives no intrinsic size inside a
+              flex row, so we set an explicit height (clamped against
+              available width so the box doesn't overflow horizontally past
+              the chevrons). Width is derived from aspect-ratio. */}
+          <div
+            className="relative rounded-xl overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6)] bg-[var(--surface)]"
+            style={{
+              height: "min(75vh, calc((100% - 7rem) * 342 / 245))",
+              aspectRatio: "245 / 342",
+            }}
+          >
+            <CardImage
+              src={tile.largeImageUrl}
+              alt={alt}
+              name={tile.name}
+              setName={tile.setName}
+              number={tile.number}
+              loading="eager"
+              decoding="sync"
+              fetchPriority="high"
+              className="w-full h-full object-contain"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={onNext}
+            aria-label="Next card"
+            className="shrink-0 w-11 h-11 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/70 transition"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.75}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
         </div>
 
-        <button
-          type="button"
-          onClick={onNext}
-          aria-label="Next card"
-          className="shrink-0 w-11 h-11 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/70 transition"
+        {/* Details button — links to the card's detail page. Suppressed when
+            the card is unresolved (no entry in the index), since there's no
+            page to send the user to. */}
+        <div
+          className="mt-5 flex items-center justify-center"
+          onClick={(e) => e.stopPropagation()}
         >
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1.75}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Details button — links to the card's detail page. Suppressed when
-          the card is unresolved (no entry in the index), since there's no
-          page to send the user to. */}
-      <div
-        className="mt-5 flex items-center justify-center"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {tile.entryId ? (
-          <Link
-            href={`/cards/${encodeURIComponent(tile.entryId)}`}
-            className="inline-flex items-center gap-1.5 rounded-full bg-white/95 text-text-primary text-sm font-semibold px-5 py-2 shadow-md hover:bg-white transition"
-          >
-            Details
-          </Link>
-        ) : (
-          <span className="text-xs text-white/70">No details available</span>
-        )}
+          {tile.entryId ? (
+            <Link
+              href={`/cards/${encodeURIComponent(tile.entryId)}`}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/95 text-text-primary text-sm font-semibold px-5 py-2 shadow-md hover:bg-white transition"
+            >
+              Details
+            </Link>
+          ) : (
+            <span className="text-xs text-white/70">No details available</span>
+          )}
+        </div>
       </div>
     </div>,
     document.body,
