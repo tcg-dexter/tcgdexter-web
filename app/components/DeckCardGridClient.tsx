@@ -108,9 +108,13 @@ function CardViewerModal({
     window.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    // Hide the page's shared BackButton while the viewer is up — handled
+    // by a CSS rule on `body.card-viewer-open` in globals.css.
+    document.body.classList.add("card-viewer-open");
     return () => {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
+      document.body.classList.remove("card-viewer-open");
     };
   }, [onClose, onPrev, onNext]);
 
@@ -130,7 +134,7 @@ function CardViewerModal({
       aria-modal="true"
       aria-label={`${tile.name} preview`}
       className="fixed inset-y-0 left-0 right-0 xl:left-[230px] xl:right-[230px] z-50 flex flex-col items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(242, 242, 242, 0.6)" }}
+      style={{ backgroundColor: "rgba(242, 242, 242, 0.7)" }}
       onClick={onClose}
     >
       {/* Close — top-left of the dim layer. z-10 keeps it above the
@@ -233,7 +237,7 @@ function CardViewerModal({
           {tile.entryId ? (
             <Link
               href={`/cards/${encodeURIComponent(tile.entryId)}`}
-              className="inline-flex items-center gap-1.5 rounded-full bg-white/95 text-text-primary text-sm font-semibold px-5 py-2 shadow-md hover:bg-white transition"
+              className="inline-flex items-center gap-1.5 rounded-full bg-black text-white text-sm font-semibold px-5 py-2 shadow-md hover:bg-black/85 transition"
             >
               Details
             </Link>
