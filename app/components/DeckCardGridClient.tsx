@@ -134,7 +134,7 @@ function CardViewerModal({
       aria-modal="true"
       aria-label={`${tile.name} preview`}
       className="fixed inset-y-0 left-0 right-0 xl:left-[230px] xl:right-[230px] z-50 flex flex-col items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(242, 242, 242, 0.7)" }}
+      style={{ backgroundColor: "rgba(242, 242, 242, 0.8)" }}
       onClick={onClose}
     >
       {/* Close — top-left of the dim layer. z-10 keeps it above the
