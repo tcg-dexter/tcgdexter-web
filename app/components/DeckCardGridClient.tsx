@@ -121,41 +121,41 @@ function CardViewerModal({
     : `${tile.name} ${tile.number}`;
 
   return createPortal(
-    // Outer wrapper is transparent and full-viewport — captures clicks
-    // outside the centered column so backdrop-dismiss still works in the
-    // side gutters on desktop.
+    // Dim layer positioned to exactly span the main content column:
+    // full width on mobile/tablet, and inset by the 230px sidebars on
+    // xl+ desktop (matches `xl:pl-[230px] xl:pr-[230px]` on the root
+    // layout). The sidebars themselves stay uncovered and interactive.
     <div
       role="dialog"
       aria-modal="true"
       aria-label={`${tile.name} preview`}
-      className="fixed inset-0 z-50 flex justify-center"
+      className="fixed inset-y-0 left-0 right-0 xl:left-[230px] xl:right-[230px] z-50 bg-black/60 flex flex-col items-center justify-center p-4"
       onClick={onClose}
     >
-      {/* Dim layer — constrained to the site's main content width on
-          desktop, full width on mobile. The surrounding desktop chrome
-          stays visible (and static) behind. */}
-      <div className="relative w-full md:max-w-6xl bg-black/60 flex flex-col items-center justify-center p-4">
-        {/* Close — top-left circle. Matches BackButton's translucent style. */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose();
-          }}
-          aria-label="Close card viewer"
-          className="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/70 transition"
+      {/* Close — top-left of the dim layer. Lives outside the centered
+          content block so it anchors to the overlay corner, not the
+          flex-centered children. */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+        aria-label="Close card viewer"
+        className="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/70 transition"
+      >
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.75}
         >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1.75}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
 
+      <div className="w-full flex flex-col items-center justify-center">
         {/* Card + chevrons row. stopPropagation so taps on the card or
             chevrons don't bubble to the backdrop and dismiss. */}
         <div
