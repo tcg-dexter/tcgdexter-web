@@ -129,12 +129,13 @@ function CardViewerModal({
       role="dialog"
       aria-modal="true"
       aria-label={`${tile.name} preview`}
-      className="fixed inset-y-0 left-0 right-0 xl:left-[230px] xl:right-[230px] z-50 bg-black/60 flex flex-col items-center justify-center p-4"
+      className="fixed inset-y-0 left-0 right-0 xl:left-[230px] xl:right-[230px] z-50 flex flex-col items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(242, 242, 242, 0.6)" }}
       onClick={onClose}
     >
-      {/* Close — top-left of the dim layer. Lives outside the centered
-          content block so it anchors to the overlay corner, not the
-          flex-centered children. */}
+      {/* Close — top-left of the dim layer. z-10 keeps it above the
+          flex-centered content div (which is static and would otherwise
+          paint after this absolutely-positioned sibling). */}
       <button
         type="button"
         onClick={(e) => {
@@ -142,7 +143,7 @@ function CardViewerModal({
           onClose();
         }}
         aria-label="Close card viewer"
-        className="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/70 transition"
+        className="absolute top-4 left-4 z-10 w-10 h-10 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/70 transition"
       >
         <svg
           className="w-5 h-5"
@@ -155,7 +156,7 @@ function CardViewerModal({
         </svg>
       </button>
 
-      <div className="w-full flex flex-col items-center justify-center">
+      <div className="w-full flex flex-col items-center justify-center gap-5">
         {/* Card + chevrons row. stopPropagation so taps on the card or
             chevrons don't bubble to the backdrop and dismiss. */}
         <div
@@ -180,13 +181,14 @@ function CardViewerModal({
           </button>
 
           {/* Card box. Aspect ratio alone gives no intrinsic size inside a
-              flex row, so we set an explicit height (clamped against
-              available width so the box doesn't overflow horizontally past
-              the chevrons). Width is derived from aspect-ratio. */}
+              flex row, so we set an explicit height (clamped against the
+              viewport width so the box doesn't overflow past the chevrons
+              on narrow screens). Width is derived from aspect-ratio.
+              65vh leaves headroom below for the Details button. */}
           <div
             className="relative rounded-xl overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6)] bg-[var(--surface)]"
             style={{
-              height: "min(75vh, calc((100% - 7rem) * 342 / 245))",
+              height: "min(65vh, calc((100vw - 8rem) * 342 / 245))",
               aspectRatio: "245 / 342",
             }}
           >
@@ -225,7 +227,7 @@ function CardViewerModal({
             the card is unresolved (no entry in the index), since there's no
             page to send the user to. */}
         <div
-          className="mt-5 flex items-center justify-center"
+          className="flex items-center justify-center"
           onClick={(e) => e.stopPropagation()}
         >
           {tile.entryId ? (
