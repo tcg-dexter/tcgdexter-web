@@ -174,10 +174,10 @@ function CardViewerModal({
             type="button"
             onClick={onPrev}
             aria-label="Previous card"
-            className="shrink-0 w-11 h-11 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/70 transition"
+            className="shrink-0 w-[33px] h-[33px] sm:w-11 sm:h-11 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/70 transition"
           >
             <svg
-              className="w-6 h-6"
+              className="w-[18px] h-[18px] sm:w-6 sm:h-6"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -217,10 +217,10 @@ function CardViewerModal({
             type="button"
             onClick={onNext}
             aria-label="Next card"
-            className="shrink-0 w-11 h-11 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/70 transition"
+            className="shrink-0 w-[33px] h-[33px] sm:w-11 sm:h-11 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/70 transition"
           >
             <svg
-              className="w-6 h-6"
+              className="w-[18px] h-[18px] sm:w-6 sm:h-6"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
