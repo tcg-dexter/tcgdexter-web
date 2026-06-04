@@ -102,7 +102,7 @@ function orderTiles(tiles: Tile[]): Tile[] {
   const trainer = tiles.filter((t) => t.section === "trainer");
   const energy = tiles.filter((t) => t.section === "energy");
 
-  return [...orderPokemonByLine(pokemon), ...byQtyName(trainer), ...byQtyName(energy)];
+  return [...orderPokemonByLine(pokemon), ...orderTrainersBySubtype(trainer), ...byQtyName(energy)];
 }
 
 function byQtyName(tiles: Tile[]): Tile[] {
@@ -110,6 +110,41 @@ function byQtyName(tiles: Tile[]): Tile[] {
     (a, b) =>
       b.copyCount - a.copyCount || a.name.localeCompare(b.name),
   );
+}
+
+/**
+ * Group trainers by subtype in the conventional play-order: Supporters →
+ * Items → Tools → Stadiums. Within each group the existing qty-desc,
+ * name-asc sort is preserved. Anything we can't classify (unresolved
+ * entries, or subtypes we don't recognize) lands in a trailing "other"
+ * bucket so nothing silently disappears from the grid.
+ */
+const TRAINER_SUBTYPE_ORDER = ["Supporter", "Item", "Pokémon Tool", "Stadium"] as const;
+
+function trainerSubtypeOf(tile: Tile): string {
+  const subtypes = tile.entry?.subtypes ?? [];
+  for (const s of TRAINER_SUBTYPE_ORDER) {
+    if (subtypes.includes(s)) return s;
+  }
+  return "Other";
+}
+
+function orderTrainersBySubtype(tiles: Tile[]): Tile[] {
+  const buckets = new Map<string, Tile[]>();
+  for (const t of tiles) {
+    const key = trainerSubtypeOf(t);
+    const arr = buckets.get(key) ?? [];
+    arr.push(t);
+    buckets.set(key, arr);
+  }
+  const ordered: Tile[] = [];
+  for (const subtype of TRAINER_SUBTYPE_ORDER) {
+    const bucket = buckets.get(subtype);
+    if (bucket) ordered.push(...byQtyName(bucket));
+  }
+  const other = buckets.get("Other");
+  if (other) ordered.push(...byQtyName(other));
+  return ordered;
 }
 
 function orderPokemonByLine(tiles: Tile[]): Tile[] {
