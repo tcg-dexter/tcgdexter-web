@@ -113,13 +113,13 @@ function byQtyName(tiles: Tile[]): Tile[] {
 }
 
 /**
- * Group trainers by subtype in the conventional play-order: Supporters →
- * Items → Tools → Stadiums. Within each group the existing qty-desc,
- * name-asc sort is preserved. Anything we can't classify (unresolved
- * entries, or subtypes we don't recognize) lands in a trailing "other"
- * bucket so nothing silently disappears from the grid.
+ * Group trainers by subtype to match TCG Live's deck view:
+ * Items → Stadiums → Supporters → Tools. Within each group, sort A–Z by
+ * name (no special treatment for ACE SPEC). Anything we can't classify
+ * (unresolved entries, or subtypes we don't recognize) lands in a
+ * trailing "other" bucket so nothing silently disappears from the grid.
  */
-const TRAINER_SUBTYPE_ORDER = ["Supporter", "Item", "Pokémon Tool", "Stadium"] as const;
+const TRAINER_SUBTYPE_ORDER = ["Item", "Stadium", "Supporter", "Pokémon Tool"] as const;
 
 function trainerSubtypeOf(tile: Tile): string {
   const subtypes = tile.entry?.subtypes ?? [];
@@ -127,6 +127,10 @@ function trainerSubtypeOf(tile: Tile): string {
     if (subtypes.includes(s)) return s;
   }
   return "Other";
+}
+
+function byName(tiles: Tile[]): Tile[] {
+  return [...tiles].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function orderTrainersBySubtype(tiles: Tile[]): Tile[] {
@@ -140,10 +144,10 @@ function orderTrainersBySubtype(tiles: Tile[]): Tile[] {
   const ordered: Tile[] = [];
   for (const subtype of TRAINER_SUBTYPE_ORDER) {
     const bucket = buckets.get(subtype);
-    if (bucket) ordered.push(...byQtyName(bucket));
+    if (bucket) ordered.push(...byName(bucket));
   }
   const other = buckets.get("Other");
-  if (other) ordered.push(...byQtyName(other));
+  if (other) ordered.push(...byName(other));
   return ordered;
 }
 
