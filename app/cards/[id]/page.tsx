@@ -118,7 +118,7 @@ export default function CardDetailPage({ params }: Props) {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-black/8 bg-white p-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+          <div className="rounded-2xl border border-black/8 bg-white p-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-base">
             <Stat
               label="Type"
               value={
@@ -170,9 +170,9 @@ export default function CardDetailPage({ params }: Props) {
                 <div key={i} className="space-y-1">
                   <div className="text-base font-semibold text-text-primary">
                     {a.name}
-                    <span className="ml-2 text-xs font-normal text-text-muted">{a.type}</span>
+                    <span className="ml-2 text-sm font-normal text-text-muted">{a.type}</span>
                   </div>
-                  <p className="text-sm text-text-secondary leading-relaxed">{a.text}</p>
+                  <p className="text-base text-text-secondary leading-relaxed">{a.text}</p>
                 </div>
               ))}
             </Section>
@@ -191,7 +191,7 @@ export default function CardDetailPage({ params }: Props) {
                           ))}
                         </span>
                       ) : (
-                        <span className="text-xs font-normal text-text-muted">
+                        <span className="text-sm font-normal text-text-muted">
                           No cost
                         </span>
                       )}
@@ -200,7 +200,7 @@ export default function CardDetailPage({ params }: Props) {
                     {a.damage && <span className="text-text-primary">{a.damage}</span>}
                   </div>
                   {a.text && (
-                    <p className="text-sm text-text-secondary leading-relaxed">{a.text}</p>
+                    <p className="text-base text-text-secondary leading-relaxed">{a.text}</p>
                   )}
                 </div>
               ))}
@@ -210,7 +210,7 @@ export default function CardDetailPage({ params }: Props) {
           {raw.rules && raw.rules.length > 0 && (
             <Section title="Rules">
               {raw.rules.map((r, i) => (
-                <p key={i} className="text-sm text-text-secondary leading-relaxed">
+                <p key={i} className="text-base text-text-secondary leading-relaxed">
                   {r}
                 </p>
               ))}
@@ -290,7 +290,7 @@ function Stat({
       <div className="text-xs uppercase tracking-wide font-semibold text-text-muted">
         {label}
       </div>
-      <div className="text-text-primary">{value}</div>
+      <div className="text-text-primary font-semibold">{value}</div>
     </div>
   );
 }
