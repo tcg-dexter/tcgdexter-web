@@ -7,6 +7,7 @@ import { cardImageSmall } from "@/lib/cardImages";
 import type { CardIndexEntry } from "@/lib/cardsIndex";
 import type { SortKey, SortDir, OwnershipFilter } from "@/lib/cardSearch";
 import { COLLECTION_VARIANTS } from "@/lib/inventory";
+import { normalizeForSearch } from "@/lib/searchNormalize";
 import CardImage from "./CardImage";
 import CardFooterOverlay from "./CardFooterOverlay";
 import InventoryProvider, { useInventory } from "./InventoryContext";
@@ -479,10 +480,12 @@ function SetFacet({
 }) {
   const [filter, setFilter] = useState("");
   const filtered = useMemo(() => {
-    const f = filter.trim().toLowerCase();
+    const f = normalizeForSearch(filter.trim());
     if (!f) return sets;
     return sets.filter(
-      (s) => s.name.toLowerCase().includes(f) || s.ptcgoCode?.toLowerCase().includes(f)
+      (s) =>
+        normalizeForSearch(s.name).includes(f) ||
+        (s.ptcgoCode ? normalizeForSearch(s.ptcgoCode).includes(f) : false)
     );
   }, [sets, filter]);
 

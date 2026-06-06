@@ -1,4 +1,5 @@
 import { getAllCards, getSets, type CardIndexEntry } from "@/lib/cardsIndex";
+import { normalizeForSearch } from "@/lib/searchNormalize";
 
 export type SortKey = "released" | "name" | "number" | "hp" | "price" | "rarity";
 export type SortDir = "asc" | "desc";
@@ -97,7 +98,7 @@ export interface CardSearchResult {
 }
 
 function parseQueryTokens(q: string): { numeric: string[]; words: string[] } {
-  const tokens = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const tokens = normalizeForSearch(q.trim()).split(/\s+/).filter(Boolean);
   const numeric: string[] = [];
   const words: string[] = [];
   for (const t of tokens) {

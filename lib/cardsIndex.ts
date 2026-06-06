@@ -1,5 +1,6 @@
 import cardData from "@/data/cards-standard.json";
 import { setReleaseDate } from "@/lib/setReleaseDates";
+import { normalizeForSearch } from "@/lib/searchNormalize";
 
 /**
  * PTCGO / set abbreviation overrides. Takes precedence over the raw
@@ -101,22 +102,19 @@ let CARDS: CardIndexEntry[] | null = null;
 let SETS: Array<{ id: string; name: string; ptcgoCode: string | null }> | null = null;
 
 function tokenizeName(name: string): string[] {
-  return name
-    .toLowerCase()
+  return normalizeForSearch(name)
     .split(/[\s\-’'.:,&()\/]+/)
     .filter(Boolean);
 }
 
 function tokenizeArtist(name: string): string[] {
-  return name
-    .toLowerCase()
+  return normalizeForSearch(name)
     .split(/[\s\-’'.:,&()\/]+/)
     .filter(Boolean);
 }
 
 function tokenizeEffect(text: string): string[] {
-  return text
-    .toLowerCase()
+  return normalizeForSearch(text)
     .split(/[\s\-’'.:,&()\/!?]+/)
     .filter(Boolean);
 }
@@ -147,22 +145,22 @@ function buildIndex(): CardIndexEntry[] {
       const effectTextParts: string[] = [];
       for (const a of abilities) {
         if (a.name) {
-          effectNames.push(a.name.toLowerCase());
+          effectNames.push(normalizeForSearch(a.name));
           effectNameTokens.push(...tokenizeEffect(a.name));
         }
-        if (a.text) effectTextParts.push(a.text.toLowerCase());
+        if (a.text) effectTextParts.push(normalizeForSearch(a.text));
       }
       for (const a of attacks) {
         if (a.name) {
-          effectNames.push(a.name.toLowerCase());
+          effectNames.push(normalizeForSearch(a.name));
           effectNameTokens.push(...tokenizeEffect(a.name));
         }
-        if (a.text) effectTextParts.push(a.text.toLowerCase());
+        if (a.text) effectTextParts.push(normalizeForSearch(a.text));
       }
       out.push({
         id: `${c.set_id}-${c.number}`,
         name: c.name,
-        nameLower: c.name.toLowerCase(),
+        nameLower: normalizeForSearch(c.name),
         nameTokens: tokenizeName(c.name),
         setId: c.set_id,
         setName: c.set_name,
@@ -181,7 +179,7 @@ function buildIndex(): CardIndexEntry[] {
         marketPrice: c.market_price ?? 0,
         rarity: c.rarity ?? null,
         artist: c.artist ?? null,
-        artistLower: c.artist ? c.artist.toLowerCase() : null,
+        artistLower: c.artist ? normalizeForSearch(c.artist) : null,
         artistTokens: c.artist ? tokenizeArtist(c.artist) : [],
         evolvesFrom: c.evolves_from ?? null,
         effectNames,
@@ -215,14 +213,14 @@ export function getCardById(id: string): CardIndexEntry | null {
 }
 
 export function getCardsByName(name: string): CardIndexEntry[] {
-  const lower = name.toLowerCase();
+  const lower = normalizeForSearch(name);
   return getAllCards().filter((c) => c.nameLower === lower);
 }
 
 export function getCardsByArtist(artist: string): CardIndexEntry[] {
-  const lower = artist.trim().toLowerCase();
+  const lower = normalizeForSearch(artist.trim());
   if (!lower) return [];
-  return getAllCards().filter((c) => c.artist?.toLowerCase() === lower);
+  return getAllCards().filter((c) => c.artistLower === lower);
 }
 
 export function getRawCard(id: string): RawCard | null {

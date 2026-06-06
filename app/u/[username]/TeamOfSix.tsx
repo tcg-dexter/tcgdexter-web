@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { pokemonSlug } from "@/lib/primaryCardImage";
+import { normalizeForSearch } from "@/lib/searchNormalize";
 
 interface Props {
   initial: (string | null)[];
@@ -160,11 +161,11 @@ export default function TeamOfSix({
   const results = useMemo(() => {
     if (!trimmedQuery) return defaultSuggestions;
     if (!names) return [];
-    const q = trimmedQuery.toLowerCase();
+    const q = normalizeForSearch(trimmedQuery);
     const prefix: string[] = [];
     const sub: string[] = [];
     for (const n of names) {
-      const lower = n.toLowerCase();
+      const lower = normalizeForSearch(n);
       if (lower.startsWith(q)) prefix.push(n);
       else if (lower.includes(q)) sub.push(n);
       if (prefix.length + sub.length >= RESULT_LIMIT * 2) break;
