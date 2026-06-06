@@ -34,12 +34,31 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text-primary)]">
       <header className="border-b border-black/8 bg-white/80 backdrop-blur">
-        <div className="mx-auto max-w-6xl px-6 py-3 flex items-center justify-between">
+        <div className="mx-auto max-w-6xl px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold">Dexter Dashboard</span>
             <span className="text-xs text-[var(--text-muted)]">internal</span>
           </div>
-          <span className="text-xs text-[var(--text-secondary)]">{email}</span>
+          <nav className="flex items-center gap-4 text-xs text-[var(--text-secondary)]">
+            <a
+              href="https://tcgdexter.com"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-[var(--text-primary)] hover:underline underline-offset-4"
+            >
+              prod ↗
+            </a>
+            <a
+              href="https://preview.tcgdexter.com"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-[var(--text-primary)] hover:underline underline-offset-4"
+            >
+              preview ↗
+            </a>
+            <span className="text-[var(--text-muted)]">·</span>
+            <span>{email}</span>
+          </nav>
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-6 py-6">{children}</main>
