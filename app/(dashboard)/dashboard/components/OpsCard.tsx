@@ -1,12 +1,19 @@
 import type { OpsData } from "../lib/ops";
-import { Card, ErrorBox, Sparkline, Stat, relTime } from "./Card";
+import { links } from "../lib/links";
+import { Card, ErrorBox, Sparkline, relTime } from "./Card";
 
 type Props = { data: OpsData | { error: string } };
 
 const STATUS_TONE: Record<string, string> = {
-  ok: "bg-emerald-100 text-emerald-700",
-  partial: "bg-amber-100 text-amber-700",
-  failed: "bg-rose-100 text-rose-700",
+  ok: "bg-emerald-100 text-emerald-700 ring-emerald-200",
+  partial: "bg-amber-100 text-amber-700 ring-amber-200",
+  failed: "bg-rose-100 text-rose-700 ring-rose-200",
+};
+
+const STATUS_DOT: Record<string, string> = {
+  ok: "bg-emerald-500",
+  partial: "bg-amber-500",
+  failed: "bg-rose-500",
 };
 
 export default function OpsCard({ data }: Props) {
@@ -21,12 +28,12 @@ export default function OpsCard({ data }: Props) {
         <div className="flex items-center gap-3">
           {latest ? (
             <span
-              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${STATUS_TONE[latest.status] ?? "bg-gray-100 text-gray-700"}`}
+              className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ring-1 ${STATUS_TONE[latest.status] ?? "bg-gray-100 text-gray-700 ring-gray-200"}`}
             >
               {latest.status}
             </span>
           ) : (
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-gray-700">
+            <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-gray-700 ring-1 ring-gray-200">
               no runs
             </span>
           )}
@@ -41,13 +48,31 @@ export default function OpsCard({ data }: Props) {
             </div>
           </div>
         </div>
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1">
-            Last 14 days · duration
+        <div className="flex items-center gap-4">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1">
+              Duration · last 14 days
+            </div>
+            <Sparkline values={durations} width={200} height={36} />
           </div>
-          <Sparkline values={durations} width={200} height={36} />
         </div>
       </div>
+
+      {/* 14-day status dots */}
+      {data.history.length > 0 && (
+        <div className="mt-4 flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
+          <span>14d:</span>
+          <div className="flex flex-wrap gap-1">
+            {data.history.map((h, i) => (
+              <span
+                key={`${h.run_date}-${i}`}
+                title={`${h.run_date} · ${h.status} · ${Math.round(Number(h.total_seconds))}s`}
+                className={`h-2.5 w-2.5 rounded-sm ${STATUS_DOT[h.status] ?? "bg-gray-300"}`}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {latest && (
         <div className="mt-5">
@@ -59,6 +84,7 @@ export default function OpsCard({ data }: Props) {
               <tr className="text-left">
                 <th className="font-medium py-1">#</th>
                 <th className="font-medium py-1">Name</th>
+                <th className="font-medium py-1">Note</th>
                 <th className="font-medium py-1 text-right">Time</th>
                 <th className="font-medium py-1 text-right">Status</th>
               </tr>
@@ -68,6 +94,9 @@ export default function OpsCard({ data }: Props) {
                 <tr key={s.n}>
                   <td className="py-1 text-[var(--text-muted)] tabular-nums">{s.n}</td>
                   <td className="py-1 font-mono">{s.name}</td>
+                  <td className="py-1 text-[var(--text-secondary)] truncate max-w-[20ch]">
+                    {s.note ?? ""}
+                  </td>
                   <td className="py-1 text-right tabular-nums">{s.seconds.toFixed(1)}s</td>
                   <td className="py-1 text-right">
                     {s.ok ? (
@@ -80,13 +109,39 @@ export default function OpsCard({ data }: Props) {
               ))}
             </tbody>
           </table>
-          {latest.log_path && (
-            <div className="mt-2 text-[11px] text-[var(--text-muted)] font-mono truncate">
-              {latest.log_path}
-            </div>
-          )}
         </div>
       )}
+
+      <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-black/5 pt-3 text-xs">
+        <a
+          href={links.supabase.table("ops_runs")}
+          target="_blank"
+          rel="noreferrer"
+          className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
+        >
+          ops_runs table ↗
+        </a>
+        <span className="text-[var(--text-muted)]">·</span>
+        <a
+          href={links.github.repo("dexter-ops")}
+          target="_blank"
+          rel="noreferrer"
+          className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
+        >
+          dexter-ops repo ↗
+        </a>
+        {latest?.log_path && (
+          <>
+            <span className="text-[var(--text-muted)]">·</span>
+            <span
+              className="font-mono text-[11px] text-[var(--text-muted)] truncate"
+              title={latest.log_path}
+            >
+              log: {latest.log_path}
+            </span>
+          </>
+        )}
+      </div>
     </Card>
   );
 }
