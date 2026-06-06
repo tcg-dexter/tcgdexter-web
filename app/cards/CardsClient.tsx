@@ -185,6 +185,10 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
             value={searchInput}
             onChange={(e) => handleSearchInput(e.target.value)}
             placeholder="Search cards"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
             className="w-full pl-10 pr-4 py-2 rounded-full border border-black/10 bg-white text-[16px] sm:text-sm focus:outline-none focus-gradient-border transition-colors"
           />
         </div>

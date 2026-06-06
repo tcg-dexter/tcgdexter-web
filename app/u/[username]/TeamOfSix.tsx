@@ -204,6 +204,10 @@ export default function TeamOfSix({
             value={query}
             onChange={(e) => handleQueryChange(e.target.value)}
             placeholder="Search Pokémon…"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
             className="w-full rounded-lg bg-bg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent/30 [font-size:16px] sm:text-sm"
           />
           <div className="mt-2 max-h-72 overflow-y-auto">

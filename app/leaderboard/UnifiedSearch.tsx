@@ -163,6 +163,10 @@ export default function UnifiedSearch({ dropdownPosition = "below" }: Props = {}
           // hotkey wired up by GlobalSearchHotkey at the layout level.
           data-global-search-input
           placeholder="Search [ / ]"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
           className="w-full rounded-full border border-black/10 bg-white px-4 py-3 pl-10 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus-gradient-border [font-size:16px] sm:text-sm"
         />
       </div>
