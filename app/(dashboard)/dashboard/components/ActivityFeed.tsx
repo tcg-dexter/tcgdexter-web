@@ -30,11 +30,11 @@ export default function ActivityFeed({ data }: Props) {
 
   return (
     <Card>
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
           Recent activity · {data.events.length}
         </div>
-        <div className="flex items-center gap-3 text-[11px]">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
           <a
             href={links.supabase.auth}
             target="_blank"
