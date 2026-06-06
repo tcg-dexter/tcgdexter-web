@@ -41,7 +41,7 @@ function Tile({
       href={href}
       target={href.startsWith("http") ? "_blank" : undefined}
       rel="noreferrer"
-      className="group relative flex flex-col justify-between rounded-xl border border-black/8 bg-white p-3 shadow-sm transition hover:border-black/25 hover:shadow"
+      className="group relative flex flex-col justify-between rounded-xl border border-black/8 bg-white p-2.5 shadow-sm transition hover:border-black/25 hover:shadow sm:p-3"
     >
       <div className="flex items-center justify-between">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
@@ -51,7 +51,7 @@ function Tile({
       </div>
       <div className="mt-1.5 flex items-end justify-between gap-2">
         <div className="min-w-0">
-          <div className="truncate text-xl font-semibold tabular-nums leading-none text-[var(--text-primary)]">
+          <div className="truncate text-lg font-semibold tabular-nums leading-none text-[var(--text-primary)] sm:text-xl">
             {value}
           </div>
           {hint ? (

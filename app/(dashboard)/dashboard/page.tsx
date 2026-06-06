@@ -26,7 +26,7 @@ function SectionHeader({
   hint?: React.ReactNode;
 }) {
   return (
-    <div className="mb-2 flex items-baseline justify-between">
+    <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
       <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
         {title}
       </h2>

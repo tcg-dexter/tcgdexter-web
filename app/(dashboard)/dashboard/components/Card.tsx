@@ -1,6 +1,6 @@
 export function Card({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-black/8 bg-white p-5 shadow-sm">
+    <div className="rounded-xl border border-black/8 bg-white p-4 shadow-sm sm:p-5">
       {children}
     </div>
   );
@@ -45,11 +45,22 @@ export function Sparkline({
   width = 220,
   height = 36,
   stroke = "#d95555",
+  className,
+  responsive = false,
 }: {
   values: number[];
+  /** Used as the SVG viewBox width — the intrinsic aspect target. */
   width?: number;
   height?: number;
   stroke?: string;
+  /** Extra Tailwind classes (use w-full to stretch to the container). */
+  className?: string;
+  /**
+   * When true, the SVG drops its explicit width/height and stretches to fill
+   * its parent (default class becomes `w-full h-auto`). Use for sparklines
+   * inside flexible cards that need to scale down on mobile.
+   */
+  responsive?: boolean;
 }) {
   if (!values.length) return null;
   const max = Math.max(...values, 1);
@@ -63,12 +74,17 @@ export function Sparkline({
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join(" ");
+  const sizeProps = responsive
+    ? ({ preserveAspectRatio: "none" } as const)
+    : { width, height };
+  const klass = responsive
+    ? `block w-full h-auto ${className ?? ""}`
+    : `block ${className ?? ""}`;
   return (
     <svg
-      width={width}
-      height={height}
+      {...sizeProps}
       viewBox={`0 0 ${width} ${height}`}
-      className="block"
+      className={klass.trim()}
     >
       <polyline
         fill="none"

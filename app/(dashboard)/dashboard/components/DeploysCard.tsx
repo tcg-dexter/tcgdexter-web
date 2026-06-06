@@ -40,19 +40,24 @@ function DeployRow({ d }: { d: Deploy }) {
           href={d.inspectorUrl}
           target="_blank"
           rel="noreferrer"
-          className="truncate text-[var(--text-primary)] hover:underline"
+          className="min-w-0 flex-1 truncate text-[var(--text-primary)] hover:underline"
           title={d.commitMessage ?? d.url}
         >
           {d.commitMessage ?? d.url}
         </a>
-        <span className="ml-auto flex shrink-0 items-center gap-2 text-[var(--text-muted)] tabular-nums">
-          {d.durationSec != null ? <span>{d.durationSec}s</span> : null}
-          <span>· {relTime(new Date(d.createdAt).toISOString())}</span>
+        <span className="shrink-0 text-[var(--text-muted)] tabular-nums">
+          {relTime(new Date(d.createdAt).toISOString())}
         </span>
       </div>
-      <div className="mt-0.5 flex items-center gap-2 pl-1 text-[11px] text-[var(--text-muted)]">
+      <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 pl-1 text-[11px] text-[var(--text-muted)]">
+        {d.durationSec != null ? (
+          <>
+            <span className="tabular-nums">{d.durationSec}s</span>
+            <span>·</span>
+          </>
+        ) : null}
         {d.branch ? (
-          <span className="font-mono">{d.branch}</span>
+          <span className="font-mono truncate max-w-[12ch]">{d.branch}</span>
         ) : null}
         {d.commitSha && d.commitUrl ? (
           <>
@@ -70,7 +75,7 @@ function DeployRow({ d }: { d: Deploy }) {
         {d.creator ? (
           <>
             <span>·</span>
-            <span>{d.creator}</span>
+            <span className="truncate max-w-[14ch]">{d.creator}</span>
           </>
         ) : null}
       </div>

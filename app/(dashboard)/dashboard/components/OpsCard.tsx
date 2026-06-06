@@ -48,13 +48,11 @@ export default function OpsCard({ data }: Props) {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1">
-              Duration · last 14 days
-            </div>
-            <Sparkline values={durations} width={200} height={36} />
+        <div className="w-full sm:w-auto sm:max-w-[260px] sm:flex-1">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1">
+            Duration · last 14 days
           </div>
+          <Sparkline values={durations} width={200} height={36} responsive />
         </div>
       </div>
 
@@ -79,36 +77,40 @@ export default function OpsCard({ data }: Props) {
           <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
             Steps
           </div>
-          <table className="w-full text-xs">
-            <thead className="text-[var(--text-muted)]">
-              <tr className="text-left">
-                <th className="font-medium py-1">#</th>
-                <th className="font-medium py-1">Name</th>
-                <th className="font-medium py-1">Note</th>
-                <th className="font-medium py-1 text-right">Time</th>
-                <th className="font-medium py-1 text-right">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-black/5">
-              {latest.steps.map((s) => (
-                <tr key={s.n}>
-                  <td className="py-1 text-[var(--text-muted)] tabular-nums">{s.n}</td>
-                  <td className="py-1 font-mono">{s.name}</td>
-                  <td className="py-1 text-[var(--text-secondary)] truncate max-w-[20ch]">
-                    {s.note ?? ""}
-                  </td>
-                  <td className="py-1 text-right tabular-nums">{s.seconds.toFixed(1)}s</td>
-                  <td className="py-1 text-right">
-                    {s.ok ? (
-                      <span className="text-emerald-600">✓</span>
-                    ) : (
-                      <span className="text-rose-600">✗</span>
-                    )}
-                  </td>
+          {/* Horizontal scroll fallback for ultra-narrow screens; Note column
+              hides under md so the visible columns still fit without scrolling. */}
+          <div className="-mx-1 overflow-x-auto px-1">
+            <table className="w-full min-w-[340px] text-xs">
+              <thead className="text-[var(--text-muted)]">
+                <tr className="text-left">
+                  <th className="font-medium py-1">#</th>
+                  <th className="font-medium py-1">Name</th>
+                  <th className="font-medium py-1 hidden md:table-cell">Note</th>
+                  <th className="font-medium py-1 text-right">Time</th>
+                  <th className="font-medium py-1 text-right">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-black/5">
+                {latest.steps.map((s) => (
+                  <tr key={s.n}>
+                    <td className="py-1 text-[var(--text-muted)] tabular-nums">{s.n}</td>
+                    <td className="py-1 font-mono">{s.name}</td>
+                    <td className="py-1 hidden md:table-cell text-[var(--text-secondary)] truncate max-w-[20ch]">
+                      {s.note ?? ""}
+                    </td>
+                    <td className="py-1 text-right tabular-nums">{s.seconds.toFixed(1)}s</td>
+                    <td className="py-1 text-right">
+                      {s.ok ? (
+                        <span className="text-emerald-600">✓</span>
+                      ) : (
+                        <span className="text-rose-600">✗</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -132,9 +134,9 @@ export default function OpsCard({ data }: Props) {
         </a>
         {latest?.log_path && (
           <>
-            <span className="text-[var(--text-muted)]">·</span>
+            <span className="hidden text-[var(--text-muted)] sm:inline">·</span>
             <span
-              className="font-mono text-[11px] text-[var(--text-muted)] truncate"
+              className="hidden sm:inline-block max-w-full truncate font-mono text-[11px] text-[var(--text-muted)]"
               title={latest.log_path}
             >
               log: {latest.log_path}

@@ -17,11 +17,11 @@ export default function ProductCard({ data }: Props) {
   return (
     <div className="flex flex-col gap-4">
       <Card>
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
             Supabase · users & content
           </div>
-          <div className="flex items-center gap-3 text-[11px]">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
             <a
               href={links.supabase.auth}
               target="_blank"
@@ -64,7 +64,7 @@ export default function ProductCard({ data }: Props) {
         </div>
 
         <div className="mt-5">
-          <div className="mb-1.5 flex items-center justify-between">
+          <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
             <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
               Signups · last 30 days
             </div>
@@ -73,12 +73,12 @@ export default function ProductCard({ data }: Props) {
               {signupDelta} vs prior 7d
             </div>
           </div>
-          <Sparkline values={signupSeries} width={620} height={48} />
+          <Sparkline values={signupSeries} width={620} height={48} responsive />
         </div>
       </Card>
 
       <Card>
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
             Vercel Web Analytics
           </div>
