@@ -168,7 +168,7 @@ export default function CardDetailPage({ params }: Props) {
             <Section title="Abilities">
               {raw.abilities.map((a, i) => (
                 <div key={i} className="space-y-1">
-                  <div className="text-sm font-semibold text-text-primary">
+                  <div className="text-base font-semibold text-text-primary">
                     {a.name}
                     <span className="ml-2 text-xs font-normal text-text-muted">{a.type}</span>
                   </div>
@@ -182,7 +182,7 @@ export default function CardDetailPage({ params }: Props) {
             <Section title="Attacks">
               {raw.attacks.map((a, i) => (
                 <div key={i} className="space-y-1">
-                  <div className="text-sm font-semibold text-text-primary flex items-center justify-between gap-2">
+                  <div className="text-base font-semibold text-text-primary flex items-center justify-between gap-2">
                     <span className="inline-flex items-center gap-2">
                       {a.cost.length > 0 ? (
                         <span className="inline-flex items-center gap-0.5">
@@ -287,7 +287,7 @@ function Stat({
 }) {
   return (
     <div>
-      <div className="text-[11px] uppercase tracking-wide font-semibold text-text-muted">
+      <div className="text-xs uppercase tracking-wide font-semibold text-text-muted">
         {label}
       </div>
       <div className="text-text-primary">{value}</div>
@@ -313,7 +313,7 @@ function TypeIcon({ type, size = 16 }: { type: string; size?: number }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-black/8 bg-white p-4 space-y-3">
-      <h2 className="text-sm font-semibold text-text-primary">{title}</h2>
+      <h2 className="text-base font-semibold text-text-primary">{title}</h2>
       {children}
     </div>
   );
