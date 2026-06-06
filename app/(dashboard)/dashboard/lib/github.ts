@@ -1,3 +1,5 @@
+import { PINNED_REPOS } from "./links";
+
 const ORG = "tcg-dexter";
 const PROJECT_NUMBERS = [4, 5] as const;
 const REVALIDATE = 300;
@@ -7,7 +9,10 @@ export type RepoSummary = {
   pushedAt: string | null;
   openIssues: number;
   htmlUrl: string;
+  pinned: boolean;
 };
+
+export type IssueLabel = { name: string; color: string };
 
 export type IssueSummary = {
   title: string;
@@ -15,6 +20,7 @@ export type IssueSummary = {
   repo: string;
   url: string;
   updatedAt: string;
+  labels: IssueLabel[];
 };
 
 export type ProjectSummary = {
@@ -85,6 +91,7 @@ type GhSearchIssue = {
     html_url: string;
     repository_url: string;
     updated_at: string;
+    labels: { name: string; color: string }[];
   }[];
 };
 
@@ -168,6 +175,7 @@ export async function fetchDev(): Promise<DevData> {
     ),
   ]);
 
+  const pinned = new Set<string>(PINNED_REPOS);
   const repoSummaries: RepoSummary[] = repos
     .filter((r) => !r.archived)
     .map((r) => ({
@@ -175,7 +183,15 @@ export async function fetchDev(): Promise<DevData> {
       pushedAt: r.pushed_at,
       openIssues: r.open_issues_count,
       htmlUrl: r.html_url,
-    }));
+      pinned: pinned.has(r.name),
+    }))
+    // pinned repos first, then by push recency
+    .sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      const at = a.pushedAt ? Date.parse(a.pushedAt) : 0;
+      const bt = b.pushedAt ? Date.parse(b.pushedAt) : 0;
+      return bt - at;
+    });
 
   const mapIssue = (it: GhSearchIssue["items"][number]): IssueSummary => ({
     title: it.title,
@@ -183,6 +199,7 @@ export async function fetchDev(): Promise<DevData> {
     repo: repoNameFromApiUrl(it.repository_url),
     url: it.html_url,
     updatedAt: it.updated_at,
+    labels: (it.labels ?? []).map((l) => ({ name: l.name, color: l.color })),
   });
 
   const projects: ProjectSummary[] = projectResults

@@ -1,49 +1,121 @@
-import type { DevData } from "../lib/github";
-import { Card, ErrorBox, Stat, relTime } from "./Card";
+import type { DevData, IssueLabel, IssueSummary } from "../lib/github";
+import { links } from "../lib/links";
+import { Card, ErrorBox, relTime } from "./Card";
 
 type Props = { data: DevData | { error: string } };
+
+function contrastText(hex: string): string {
+  // GitHub label color is a 6-digit hex without "#"
+  if (!/^[0-9a-fA-F]{6}$/.test(hex)) return "#1a1a1a";
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  // perceived luminance
+  const l = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return l > 0.6 ? "#1a1a1a" : "#ffffff";
+}
+
+function LabelChips({ labels }: { labels: IssueLabel[] }) {
+  if (!labels.length) return null;
+  return (
+    <span className="ml-1 inline-flex flex-wrap gap-1 align-middle">
+      {labels.slice(0, 3).map((l) => (
+        <span
+          key={l.name}
+          className="rounded-full px-1.5 py-[1px] text-[10px] font-medium leading-tight"
+          style={{ backgroundColor: `#${l.color}`, color: contrastText(l.color) }}
+        >
+          {l.name}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function IssueRow({ item }: { item: IssueSummary }) {
+  return (
+    <li className="py-1.5">
+      <a
+        href={item.url}
+        target="_blank"
+        rel="noreferrer"
+        className="group flex items-baseline gap-2"
+      >
+        <span className="shrink-0 font-mono text-[11px] text-[var(--text-muted)]">
+          {item.repo}#{item.number}
+        </span>
+        <span className="truncate text-[var(--text-primary)] group-hover:underline">
+          {item.title}
+        </span>
+        <LabelChips labels={item.labels} />
+        <span className="ml-auto shrink-0 text-[11px] text-[var(--text-muted)] tabular-nums">
+          {relTime(item.updatedAt)}
+        </span>
+      </a>
+    </li>
+  );
+}
 
 export default function DevCard({ data }: Props) {
   if ("error" in data) return <ErrorBox error={data.error} />;
 
-  return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <Card>
-        <div className="grid grid-cols-3 gap-4">
-          <Stat label="Open issues" value={data.openIssueCount} />
-          <Stat label="Open PRs" value={data.openPrCount} />
-          <Stat label="Active repos" value={data.repos.length} />
-        </div>
+  const pinnedRepos = data.repos.filter((r) => r.pinned);
 
-        <div className="mt-5">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
-            Repos by last push
-          </div>
-          <ul className="text-xs divide-y divide-black/5">
-            {data.repos.slice(0, 6).map((r) => (
-              <li key={r.name} className="flex justify-between py-1.5">
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Repos rail */}
+      <Card>
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+          Repos
+        </div>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {pinnedRepos.map((r) => (
+            <div
+              key={r.name}
+              className="rounded-lg border border-black/8 bg-[var(--surface)]/40 p-3"
+            >
+              <div className="flex items-center justify-between">
                 <a
                   href={r.htmlUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="font-medium text-[var(--text-primary)] hover:underline"
+                  className="font-mono text-sm font-semibold hover:underline"
                 >
                   {r.name}
                 </a>
-                <span className="text-[var(--text-muted)] tabular-nums">
-                  {relTime(r.pushedAt)} · {r.openIssues} open
-                </span>
-              </li>
-            ))}
-          </ul>
+              </div>
+              <div className="mt-1 text-[11px] text-[var(--text-muted)]">
+                pushed {relTime(r.pushedAt)}
+              </div>
+              <div className="mt-1.5 flex items-center gap-3 text-[11px]">
+                <a
+                  href={links.github.repoIssues(r.name)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[var(--text-secondary)] hover:underline"
+                >
+                  {r.openIssues} open
+                </a>
+                <a
+                  href={links.github.repoPulls(r.name)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[var(--text-secondary)] hover:underline"
+                >
+                  PRs
+                </a>
+              </div>
+            </div>
+          ))}
         </div>
       </Card>
 
+      {/* Project boards */}
       <Card>
         <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
           Project boards
         </div>
-        <div className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           {data.projects.map((p) => (
             <div key={p.number}>
               <a
@@ -73,31 +145,58 @@ export default function DevCard({ data }: Props) {
             <div className="text-xs text-[var(--text-muted)]">No projects found.</div>
           )}
         </div>
+      </Card>
 
-        <div className="mt-5">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
-            Recent open issues
+      {/* Open PRs + Open Issues side-by-side */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <div className="mb-2 flex items-center justify-between">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              Open PRs · {data.openPrCount}
+            </div>
+            <a
+              href={links.github.prs}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[11px] text-[var(--text-secondary)] hover:underline"
+            >
+              all ↗
+            </a>
           </div>
-          <ul className="text-xs space-y-1">
-            {data.recentIssues.slice(0, 5).map((i) => (
-              <li key={`${i.repo}-${i.number}`} className="truncate">
-                <a
-                  href={i.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hover:underline"
-                >
-                  <span className="text-[var(--text-muted)]">{i.repo}#{i.number}</span>{" "}
-                  {i.title}
-                </a>
-              </li>
+          <ul className="divide-y divide-black/5 text-xs">
+            {data.recentPrs.slice(0, 8).map((i) => (
+              <IssueRow key={`${i.repo}-${i.number}`} item={i} />
             ))}
-            {data.recentIssues.length === 0 && (
-              <li className="text-[var(--text-muted)]">No open issues.</li>
+            {data.recentPrs.length === 0 && (
+              <li className="py-2 text-[var(--text-muted)]">No open PRs.</li>
             )}
           </ul>
-        </div>
-      </Card>
+        </Card>
+
+        <Card>
+          <div className="mb-2 flex items-center justify-between">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              Open issues · {data.openIssueCount}
+            </div>
+            <a
+              href={links.github.issues}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[11px] text-[var(--text-secondary)] hover:underline"
+            >
+              all ↗
+            </a>
+          </div>
+          <ul className="divide-y divide-black/5 text-xs">
+            {data.recentIssues.slice(0, 10).map((i) => (
+              <IssueRow key={`${i.repo}-${i.number}`} item={i} />
+            ))}
+            {data.recentIssues.length === 0 && (
+              <li className="py-2 text-[var(--text-muted)]">No open issues.</li>
+            )}
+          </ul>
+        </Card>
+      </div>
     </div>
   );
 }
