@@ -123,9 +123,12 @@ export default function CardDetailPage({ params }: Props) {
               label="Type"
               value={
                 card.types.length > 0 ? (
-                  <span className="inline-flex items-center gap-1.5">
+                  <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
                     {card.types.map((t) => (
-                      <TypeIcon key={t} type={t} />
+                      <span key={t} className="inline-flex items-center gap-1.5">
+                        <TypeIcon type={t} />
+                        <span>{t}</span>
+                      </span>
                     ))}
                   </span>
                 ) : (
@@ -138,11 +141,13 @@ export default function CardDetailPage({ params }: Props) {
               label="Weakness"
               value={
                 raw.weaknesses && raw.weaknesses.length > 0 ? (
-                  <span className="inline-flex items-center gap-1.5">
+                  <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
                     {raw.weaknesses.map((w, i) => (
-                      <span key={i} className="inline-flex items-center gap-1">
+                      <span key={i} className="inline-flex items-center gap-1.5">
                         <TypeIcon type={w.type} />
-                        <span>{w.value}</span>
+                        <span>
+                          {w.type} {w.value}
+                        </span>
                       </span>
                     ))}
                   </span>
