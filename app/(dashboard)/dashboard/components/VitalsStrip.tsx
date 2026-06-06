@@ -1,6 +1,7 @@
 import type { DevData } from "../lib/github";
 import type { OpsData } from "../lib/ops";
 import type { ProductData } from "../lib/product";
+import type { DeploysData } from "../lib/vercel-deploys";
 import { links } from "../lib/links";
 import { Sparkline, relTime } from "./Card";
 
@@ -10,6 +11,14 @@ const STATUS_TONE: Record<string, string> = {
   ok: "bg-emerald-500",
   partial: "bg-amber-500",
   failed: "bg-rose-500",
+};
+
+const DEPLOY_TONE: Record<string, string> = {
+  READY: "bg-emerald-500",
+  ERROR: "bg-rose-500",
+  BUILDING: "bg-sky-500",
+  QUEUED: "bg-amber-500",
+  CANCELED: "bg-gray-400",
 };
 
 function Tile({
@@ -32,26 +41,28 @@ function Tile({
       href={href}
       target={href.startsWith("http") ? "_blank" : undefined}
       rel="noreferrer"
-      className="group relative flex flex-col justify-between rounded-xl border border-black/8 bg-white p-4 shadow-sm transition hover:border-black/20 hover:shadow"
+      className="group relative flex flex-col justify-between rounded-xl border border-black/8 bg-white p-3 shadow-sm transition hover:border-black/25 hover:shadow"
     >
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
           {label}
         </span>
         {accent}
       </div>
-      <div className="mt-2 flex items-end justify-between gap-3">
-        <div>
-          <div className="text-2xl font-semibold tabular-nums leading-none text-[var(--text-primary)]">
+      <div className="mt-1.5 flex items-end justify-between gap-2">
+        <div className="min-w-0">
+          <div className="truncate text-xl font-semibold tabular-nums leading-none text-[var(--text-primary)]">
             {value}
           </div>
           {hint ? (
-            <div className="mt-1 text-[11px] text-[var(--text-secondary)]">{hint}</div>
+            <div className="mt-1 truncate text-[11px] text-[var(--text-secondary)]">
+              {hint}
+            </div>
           ) : null}
         </div>
         {children}
       </div>
-      <span className="pointer-events-none absolute right-3 top-3 text-[10px] text-[var(--text-muted)] opacity-0 transition group-hover:opacity-100">
+      <span className="pointer-events-none absolute right-2.5 top-2.5 text-[10px] text-[var(--text-muted)] opacity-0 transition group-hover:opacity-100">
         ↗
       </span>
     </a>
@@ -62,10 +73,12 @@ export default function VitalsStrip({
   ops,
   dev,
   product,
+  deploys,
 }: {
   ops: Maybe<OpsData>;
   dev: Maybe<DevData>;
   product: Maybe<ProductData>;
+  deploys: DeploysData;
 }) {
   // --- Ops vital
   const opsTile = (() => {
@@ -89,12 +102,58 @@ export default function VitalsStrip({
         value={
           <span className="capitalize">
             {l.status}
-            <span className="ml-2 text-sm font-normal text-[var(--text-secondary)] tabular-nums">
+            <span className="ml-1.5 text-sm font-normal text-[var(--text-secondary)] tabular-nums">
               {l.passed}/{l.passed + l.failed}
             </span>
           </span>
         }
         hint={`${relTime(l.finished_at)} · ${Math.round(Number(l.total_seconds))}s`}
+        accent={<span className={`h-2 w-2 rounded-full ${tone}`} />}
+      />
+    );
+  })();
+
+  // --- Deploys vital
+  const deploysTile = (() => {
+    if (!deploys.available) {
+      return (
+        <Tile
+          href={links.vercel.deployments()}
+          label="Last deploy"
+          value="—"
+          hint={deploys.reason}
+          accent={<span className="h-2 w-2 rounded-full bg-gray-300" />}
+        />
+      );
+    }
+    const latest = deploys.deploys[0];
+    if (!latest) {
+      return (
+        <Tile
+          href={links.vercel.deployments()}
+          label="Last deploy"
+          value="—"
+          hint="No deploys"
+        />
+      );
+    }
+    const tone = DEPLOY_TONE[latest.state] ?? "bg-gray-400";
+    const branch = latest.branch ?? "—";
+    return (
+      <Tile
+        href={latest.inspectorUrl}
+        label="Last deploy"
+        value={
+          <span className="capitalize">
+            {latest.state.toLowerCase()}
+            {latest.durationSec != null ? (
+              <span className="ml-1.5 text-sm font-normal text-[var(--text-secondary)] tabular-nums">
+                {latest.durationSec}s
+              </span>
+            ) : null}
+          </span>
+        }
+        hint={`${branch} · ${relTime(new Date(latest.createdAt).toISOString())}`}
         accent={<span className={`h-2 w-2 rounded-full ${tone}`} />}
       />
     );
@@ -154,9 +213,9 @@ export default function VitalsStrip({
         href={links.supabase.auth}
         label="Signups · 7d"
         value={product.users.newLast7d}
-        hint={`${product.users.total} total users`}
+        hint={`${product.users.total} total`}
       >
-        <Sparkline values={series} width={80} height={28} />
+        <Sparkline values={series} width={64} height={24} />
       </Tile>
     );
   })();
@@ -190,8 +249,9 @@ export default function VitalsStrip({
   })();
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
       {opsTile}
+      {deploysTile}
       {issuesTile}
       {prsTile}
       {signupsTile}
