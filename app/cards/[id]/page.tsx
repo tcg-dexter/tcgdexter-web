@@ -9,6 +9,9 @@ import {
 import { cardImageLarge, cardImageSmall } from "@/lib/cardImages";
 import BackButton from "@/app/components/ui/BackButton";
 import CardImage from "../CardImage";
+import { pokemonSlug } from "@/lib/primaryCardImage";
+import { typeColor } from "@/lib/metaPrimaryCard";
+import { shade } from "@/lib/color";
 
 interface Props {
   params: { id: string };
@@ -28,6 +31,14 @@ export default function CardDetailPage({ params }: Props) {
   const card = getCardById(id);
   const raw = getRawCard(id);
   if (!card || !raw) notFound();
+
+  const isPokemon = card.supertype === "Pokémon";
+  const avatarSlug = isPokemon ? pokemonSlug(card.name) : null;
+  const avatarUrl = avatarSlug
+    ? `https://r2.limitlesstcg.net/pokemon/gen9/${avatarSlug}.png`
+    : null;
+  const avatarColor = typeColor(card.types);
+  const avatarBg = `linear-gradient(180deg, ${avatarColor} 0%, ${shade(avatarColor, -22)} 100%)`;
 
   const otherPrintings = getCardsByName(card.name).filter((c) => c.id !== card.id);
   // Pull other cards illustrated by the same artist. Cap to ~3 rows at lg
@@ -51,12 +62,25 @@ export default function CardDetailPage({ params }: Props) {
 
       <div className="grid grid-cols-1 md:grid-cols-[minmax(0,400px)_1fr] gap-6">
         <div className="flex flex-col gap-3">
-          <div className="md:hidden">
-            <h1 className="text-2xl font-semibold text-text-primary">{card.name}</h1>
-            <p className="text-sm text-text-secondary mt-1">
-              {card.setName}
-              {card.ptcgoCode ? ` · ${card.ptcgoCode}` : ""} · {card.number}
-            </p>
+          <div className="md:hidden flex items-center gap-3">
+            {isPokemon && (
+              <span
+                className="w-14 h-14 rounded-full shrink-0 inline-flex items-center justify-center overflow-hidden shadow-md"
+                style={{ background: avatarBg }}
+                aria-hidden
+              >
+                {avatarUrl && (
+                  <img src={avatarUrl} alt="" className="w-11 h-11 object-contain" />
+                )}
+              </span>
+            )}
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold text-text-primary">{card.name}</h1>
+              <p className="text-sm text-text-secondary mt-1">
+                {card.setName}
+                {card.ptcgoCode ? ` · ${card.ptcgoCode}` : ""} · {card.number}
+              </p>
+            </div>
           </div>
           <CardImage
             src={cardImageLarge(card.setId, card.number)}
@@ -72,12 +96,25 @@ export default function CardDetailPage({ params }: Props) {
         </div>
 
         <div className="flex flex-col gap-4">
-          <div className="hidden md:block">
-            <h1 className="text-2xl font-semibold text-text-primary">{card.name}</h1>
-            <p className="text-sm text-text-secondary mt-1">
-              {card.setName}
-              {card.ptcgoCode ? ` · ${card.ptcgoCode}` : ""} · {card.number}
-            </p>
+          <div className="hidden md:flex items-center gap-3">
+            {isPokemon && (
+              <span
+                className="w-14 h-14 rounded-full shrink-0 inline-flex items-center justify-center overflow-hidden shadow-md"
+                style={{ background: avatarBg }}
+                aria-hidden
+              >
+                {avatarUrl && (
+                  <img src={avatarUrl} alt="" className="w-11 h-11 object-contain" />
+                )}
+              </span>
+            )}
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold text-text-primary">{card.name}</h1>
+              <p className="text-sm text-text-secondary mt-1">
+                {card.setName}
+                {card.ptcgoCode ? ` · ${card.ptcgoCode}` : ""} · {card.number}
+              </p>
+            </div>
           </div>
 
           <div className="rounded-2xl border border-black/8 bg-white p-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
