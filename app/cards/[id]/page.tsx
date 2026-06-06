@@ -12,6 +12,7 @@ import CardImage from "../CardImage";
 import { pokemonSlug } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
 import { shade } from "@/lib/color";
+import { typeIconUrl } from "@/lib/typeIcon";
 
 interface Props {
   params: { id: string };
@@ -118,14 +119,36 @@ export default function CardDetailPage({ params }: Props) {
           </div>
 
           <div className="rounded-2xl border border-black/8 bg-white p-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-            <Stat label="Type" value={card.types.join(", ") || "—"} />
+            <Stat
+              label="Type"
+              value={
+                card.types.length > 0 ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    {card.types.map((t) => (
+                      <TypeIcon key={t} type={t} />
+                    ))}
+                  </span>
+                ) : (
+                  "—"
+                )
+              }
+            />
             <Stat label="HP" value={card.hp != null ? String(card.hp) : "—"} />
             <Stat
               label="Weakness"
               value={
-                raw.weaknesses && raw.weaknesses.length > 0
-                  ? raw.weaknesses.map((w) => `${w.type} ${w.value}`).join(", ")
-                  : "—"
+                raw.weaknesses && raw.weaknesses.length > 0 ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    {raw.weaknesses.map((w, i) => (
+                      <span key={i} className="inline-flex items-center gap-1">
+                        <TypeIcon type={w.type} />
+                        <span>{w.value}</span>
+                      </span>
+                    ))}
+                  </span>
+                ) : (
+                  "—"
+                )
               }
             />
             <Stat label="Retreat" value={String(card.retreatCost)} />
@@ -155,11 +178,19 @@ export default function CardDetailPage({ params }: Props) {
               {raw.attacks.map((a, i) => (
                 <div key={i} className="space-y-1">
                   <div className="text-sm font-semibold text-text-primary flex items-center justify-between gap-2">
-                    <span>
-                      {a.name}
-                      <span className="ml-2 text-xs font-normal text-text-muted">
-                        {a.cost.join(", ") || "No cost"}
-                      </span>
+                    <span className="inline-flex items-center gap-2">
+                      {a.cost.length > 0 ? (
+                        <span className="inline-flex items-center gap-0.5">
+                          {a.cost.map((c, j) => (
+                            <TypeIcon key={j} type={c} size={18} />
+                          ))}
+                        </span>
+                      ) : (
+                        <span className="text-xs font-normal text-text-muted">
+                          No cost
+                        </span>
+                      )}
+                      <span>{a.name}</span>
                     </span>
                     {a.damage && <span className="text-text-primary">{a.damage}</span>}
                   </div>
@@ -242,7 +273,13 @@ export default function CardDetailPage({ params }: Props) {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
   return (
     <div>
       <div className="text-[11px] uppercase tracking-wide font-semibold text-text-muted">
@@ -250,6 +287,21 @@ function Stat({ label, value }: { label: string; value: string }) {
       </div>
       <div className="text-text-primary">{value}</div>
     </div>
+  );
+}
+
+function TypeIcon({ type, size = 16 }: { type: string; size?: number }) {
+  const url = typeIconUrl(type);
+  if (!url) return <span>{type}</span>;
+  return (
+    <img
+      src={url}
+      alt={type}
+      title={type}
+      width={size}
+      height={size}
+      className="inline-block align-[-3px]"
+    />
   );
 }
 
