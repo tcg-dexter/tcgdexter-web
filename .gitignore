@@ -36,3 +36,9 @@ next-env.d.ts
 
 # packaged plugin/skill bundles
 *.skill
+
+# git worktrees — dashboard development lives in .worktrees/dashboard;
+# main checkout stays pinned to preview so the mac mini's daily_ops cron
+# can `git pull --rebase origin preview` against tcgdexter-web without
+# tripping on dashboard-branch WIP.
+.worktrees/

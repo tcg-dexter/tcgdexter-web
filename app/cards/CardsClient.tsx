@@ -7,6 +7,7 @@ import { cardImageSmall } from "@/lib/cardImages";
 import type { CardIndexEntry } from "@/lib/cardsIndex";
 import type { SortKey, SortDir, OwnershipFilter } from "@/lib/cardSearch";
 import { COLLECTION_VARIANTS } from "@/lib/inventory";
+import { normalizeForSearch } from "@/lib/searchNormalize";
 import CardImage from "./CardImage";
 import CardFooterOverlay from "./CardFooterOverlay";
 import InventoryProvider, { useInventory } from "./InventoryContext";
@@ -185,6 +186,10 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
             value={searchInput}
             onChange={(e) => handleSearchInput(e.target.value)}
             placeholder="Search cards"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
             className="w-full pl-10 pr-4 py-2 rounded-full border border-black/10 bg-white text-[16px] sm:text-sm focus:outline-none focus-gradient-border transition-colors"
           />
         </div>
@@ -475,10 +480,12 @@ function SetFacet({
 }) {
   const [filter, setFilter] = useState("");
   const filtered = useMemo(() => {
-    const f = filter.trim().toLowerCase();
+    const f = normalizeForSearch(filter.trim());
     if (!f) return sets;
     return sets.filter(
-      (s) => s.name.toLowerCase().includes(f) || s.ptcgoCode?.toLowerCase().includes(f)
+      (s) =>
+        normalizeForSearch(s.name).includes(f) ||
+        (s.ptcgoCode ? normalizeForSearch(s.ptcgoCode).includes(f) : false)
     );
   }, [sets, filter]);
 

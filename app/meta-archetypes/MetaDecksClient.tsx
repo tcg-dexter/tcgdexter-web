@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import PillSelect from "@/app/components/ui/PillSelect";
 import { MetaDeckCard, type MetaDeckCardProps } from "@/app/components/DeckPostCard";
+import { normalizeForSearch } from "@/lib/searchNormalize";
 
 export interface MetaDeckItem extends MetaDeckCardProps {
   counts: { pokemon: number; trainer: number; energy: number };
@@ -44,8 +45,8 @@ export default function MetaDecksClient({ items }: Props) {
   const [dir, setDir] = useState<SortDir>("desc");
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const base = q ? items.filter((d) => d.name.toLowerCase().includes(q)) : items;
+    const q = normalizeForSearch(query.trim());
+    const base = q ? items.filter((d) => normalizeForSearch(d.name).includes(q)) : items;
     const sorted = [...base].sort((a, b) => {
       const av = sortValue(a, sort);
       const bv = sortValue(b, sort);
@@ -78,6 +79,10 @@ export default function MetaDecksClient({ items }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search decks"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
             className="w-full pl-10 pr-4 py-2 rounded-full border border-black/10 bg-white text-[16px] sm:text-sm focus:outline-none focus-gradient-border transition-colors"
           />
         </div>

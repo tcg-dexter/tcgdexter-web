@@ -1,11 +1,14 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import {
   COLLECTION_VARIANTS,
   allowedAddVariants,
   type CollectionVariantKey,
 } from "@/lib/inventory";
 import { useInventory } from "./InventoryContext";
+
+const ADD_CELEBRATION_MS = 2000;
 
 type Mode = "add" | "remove";
 
@@ -114,8 +117,21 @@ export function InventoryOverlay({
   const variantQty = collection[key] ?? {};
   const addable = new Set<CollectionVariantKey>(allowedAddVariants(rarity));
 
+  const [celebrating, setCelebrating] = useState<CollectionVariantKey | null>(null);
+  const celebrateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (celebrateTimer.current) clearTimeout(celebrateTimer.current);
+    };
+  }, []);
+
   function handleAdjust(variant: CollectionVariantKey, delta: number) {
     void adjust(setId, number, variant, delta);
+    if (mode === "add" && display === "card" && delta > 0) {
+      setCelebrating(variant);
+      if (celebrateTimer.current) clearTimeout(celebrateTimer.current);
+      celebrateTimer.current = setTimeout(() => setCelebrating(null), ADD_CELEBRATION_MS);
+    }
   }
 
   const title = mode === "add" ? "Add variant" : "Remove variant";
@@ -228,20 +244,51 @@ export function InventoryOverlay({
                 {r.qty} owned
               </div>
             </div>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleAdjust(r.key, mode === "add" ? 1 : -1);
-              }}
-              aria-label={`${mode === "add" ? "Add" : "Remove"} ${r.label}`}
-              className="h-6 w-6 flex items-center justify-center rounded-full bg-white text-black text-xs font-semibold hover:bg-white/90 transition-colors flex-shrink-0"
-            >
-              <span aria-hidden="true" className="leading-none">
-                {mode === "add" ? "+" : "−"}
-              </span>
-            </button>
+            {(() => {
+              const isCelebrating = celebrating === r.key;
+              return (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleAdjust(r.key, mode === "add" ? 1 : -1);
+                  }}
+                  disabled={isCelebrating}
+                  aria-label={`${mode === "add" ? "Add" : "Remove"} ${r.label}`}
+                  className="relative h-6 w-6 flex items-center justify-center rounded-full bg-white text-black text-xs font-semibold hover:bg-white/90 transition-colors flex-shrink-0 overflow-hidden disabled:cursor-default"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`absolute inset-0 rounded-full bg-gradient-brand transition-opacity duration-300 ${
+                      isCelebrating ? "opacity-100" : "opacity-0"
+                    }`}
+                  />
+                  <span
+                    aria-hidden="true"
+                    className={`relative leading-none transition-transform duration-300 ${
+                      isCelebrating ? "[transform:rotateY(180deg)] text-white" : ""
+                    }`}
+                  >
+                    {isCelebrating ? (
+                      <svg
+                        viewBox="0 0 16 16"
+                        className="h-3 w-3 [transform:rotateY(180deg)]"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M3 8.5l3 3 7-7" />
+                      </svg>
+                    ) : (
+                      mode === "add" ? "+" : "−"
+                    )}
+                  </span>
+                </button>
+              );
+            })()}
           </li>
         ))}
       </ul>

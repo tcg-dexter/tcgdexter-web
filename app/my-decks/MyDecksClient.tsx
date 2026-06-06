@@ -5,6 +5,7 @@ import Link from "next/link";
 import SectionHeader from "@/app/components/ui/SectionHeader";
 import PillSelect from "@/app/components/ui/PillSelect";
 import { UserDeckCard, type UserDeckCardProps } from "@/app/components/DeckPostCard";
+import { normalizeForSearch } from "@/lib/searchNormalize";
 
 interface Props {
   decks: UserDeckCardProps[];
@@ -45,8 +46,8 @@ export default function MyDecksClient({ decks }: Props) {
   const [dir, setDir] = useState<SortDir>("desc");
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const base = q ? decks.filter((d) => d.name.toLowerCase().includes(q)) : decks;
+    const q = normalizeForSearch(query.trim());
+    const base = q ? decks.filter((d) => normalizeForSearch(d.name).includes(q)) : decks;
     const sorted = [...base].sort((a, b) => {
       const av = sortValue(a, sort);
       const bv = sortValue(b, sort);
@@ -84,6 +85,10 @@ export default function MyDecksClient({ decks }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search decks"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
             className="w-full pl-10 pr-4 py-2 rounded-full border border-black/10 bg-white text-[16px] sm:text-sm focus:outline-none focus-gradient-border transition-colors"
           />
         </div>
