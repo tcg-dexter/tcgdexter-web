@@ -95,6 +95,7 @@ export interface RawCard {
   attacks?: CardAttack[];
   abilities?: CardAbility[];
   rules?: string[];
+  weaknesses?: Array<{ type: string; value: string }>;
   evolves_from?: string | null;
 }
 

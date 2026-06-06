@@ -120,6 +120,14 @@ export default function CardDetailPage({ params }: Props) {
           <div className="rounded-2xl border border-black/8 bg-white p-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
             <Stat label="Type" value={card.types.join(", ") || "—"} />
             <Stat label="HP" value={card.hp != null ? String(card.hp) : "—"} />
+            <Stat
+              label="Weakness"
+              value={
+                raw.weaknesses && raw.weaknesses.length > 0
+                  ? raw.weaknesses.map((w) => `${w.type} ${w.value}`).join(", ")
+                  : "—"
+              }
+            />
             <Stat label="Retreat" value={String(card.retreatCost)} />
             <Stat label="Regulation" value={card.regulationMark ?? "—"} />
             <Stat
