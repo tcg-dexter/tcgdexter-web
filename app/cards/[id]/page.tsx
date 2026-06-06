@@ -118,8 +118,6 @@ export default function CardDetailPage({ params }: Props) {
           </div>
 
           <div className="rounded-2xl border border-black/8 bg-white p-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-            <Stat label="Supertype" value={card.supertype} />
-            <Stat label="Subtypes" value={card.subtypes.join(", ") || "—"} />
             <Stat label="Type" value={card.types.join(", ") || "—"} />
             <Stat label="HP" value={card.hp != null ? String(card.hp) : "—"} />
             <Stat label="Retreat" value={String(card.retreatCost)} />
