@@ -13,6 +13,7 @@ import archetypesRaw from "@/data/meta-archetypes.json";
 import metaDecksRaw from "@/data/meta-decks.json";
 import { MetaDeckCard } from "@/app/components/DeckPostCard";
 import { metaPrimaryCard, typeColor } from "@/lib/metaPrimaryCard";
+import { shade } from "@/lib/color";
 
 export type RecentMatch = {
   id: string;
@@ -26,6 +27,8 @@ export type RecentMatch = {
   deckImageUrl: string | null;
   opponentImageUrl: string | null;
   opponentAttackerName: string | null;
+  playerColor: string;
+  opponentColor: string;
 };
 
 function relativeTime(iso: string): string {
@@ -44,47 +47,95 @@ function MatchCard({ match }: { match: RecentMatch }) {
     match.opponentArchetype ?? match.opponentAttackerName ?? "Unknown deck";
   const opponentHandleLabel = match.opponentHandle ?? "Opponent";
 
+  // This section is identity-agnostic: winner card always renders on the
+  // left, loser on the right. On a draw, fall back to the site-standard
+  // gradient and keep the natural player/opponent order.
+  const isDraw = match.result === "draw";
+  const playerWon = match.result === "win";
+  const leftSide = playerWon
+    ? {
+        imageUrl: match.deckImageUrl,
+        imageAlt: match.deckName,
+        handleLabel: match.username,
+        deckLabel: match.deckName,
+        color: match.playerColor,
+      }
+    : {
+        imageUrl: match.opponentImageUrl,
+        imageAlt: match.opponentAttackerName ?? "Opponent",
+        handleLabel: opponentHandleLabel,
+        deckLabel: opponentDeckLabel,
+        color: match.opponentColor,
+      };
+  const rightSide = playerWon
+    ? {
+        imageUrl: match.opponentImageUrl,
+        imageAlt: match.opponentAttackerName ?? "Opponent",
+        handleLabel: opponentHandleLabel,
+        deckLabel: opponentDeckLabel,
+        color: match.opponentColor,
+      }
+    : {
+        imageUrl: match.deckImageUrl,
+        imageAlt: match.deckName,
+        handleLabel: match.username,
+        deckLabel: match.deckName,
+        color: match.playerColor,
+      };
+
+  const gradientStyle: React.CSSProperties | undefined = isDraw
+    ? undefined
+    : {
+        background:
+          leftSide.color === rightSide.color
+            ? `linear-gradient(90deg, ${leftSide.color} 0%, ${shade(leftSide.color, -18)} 100%)`
+            : `linear-gradient(90deg, ${leftSide.color} 0%, ${rightSide.color} 100%)`,
+      };
+  const gradientClass = isDraw
+    ? "absolute inset-0 bg-gradient-brand opacity-80"
+    : "absolute inset-0 opacity-80";
+
   const footer = (
     <div className="grid grid-cols-2 gap-3 px-3.5 pt-3 pb-3.5 border-t border-black/[0.06]">
       <div className="min-w-0">
         <p className="text-[11px] font-medium text-text-muted truncate">
-          {match.username}&rsquo;s
+          {leftSide.handleLabel}&rsquo;s
         </p>
         <p className="text-[13px] font-semibold text-text-primary truncate">
-          {match.deckName}
+          {leftSide.deckLabel}
         </p>
       </div>
       <div className="min-w-0 text-right">
         <p className="text-[11px] font-medium text-text-muted truncate">
-          {opponentHandleLabel}&rsquo;s
+          {rightSide.handleLabel}&rsquo;s
         </p>
         <p className="text-[13px] font-semibold text-text-primary truncate">
-          {opponentDeckLabel}
+          {rightSide.deckLabel}
         </p>
       </div>
     </div>
   );
 
   // Versus layout — battle log match with both card images
-  if (match.deckImageUrl && match.opponentImageUrl) {
+  if (leftSide.imageUrl && rightSide.imageUrl) {
     return (
       <Link
         href={`/battles/${match.id}`}
         className="block rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       >
         <div className="relative">
-          <div className="absolute inset-0 bg-gradient-brand opacity-80" />
+          <div className={gradientClass} style={gradientStyle} />
           <div className="relative flex items-end justify-center gap-8 px-4 pt-5 pb-3">
             <div style={{ transform: "rotate(-6deg)", transformOrigin: "bottom center" }}>
               <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={match.deckImageUrl} alt={match.deckName} className="w-full h-full object-contain" />
+                <img src={leftSide.imageUrl} alt={leftSide.imageAlt} className="w-full h-full object-contain" />
               </div>
             </div>
             <div style={{ transform: "rotate(6deg)", transformOrigin: "bottom center" }}>
               <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={match.opponentImageUrl} alt={match.opponentAttackerName ?? "Opponent"} className="w-full h-full object-contain" />
+                <img src={rightSide.imageUrl} alt={rightSide.imageAlt} className="w-full h-full object-contain" />
               </div>
             </div>
           </div>
@@ -100,21 +151,26 @@ function MatchCard({ match }: { match: RecentMatch }) {
     );
   }
 
-  // Simple layout — deck image (if available) + info side by side
+  // Simple layout — leading image (whichever side has one) + info
+  const leadImage = leftSide.imageUrl
+    ? { url: leftSide.imageUrl, alt: leftSide.imageAlt }
+    : rightSide.imageUrl
+    ? { url: rightSide.imageUrl, alt: rightSide.imageAlt }
+    : null;
   return (
     <Link
       href={`/battles/${match.id}`}
       className="block rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
     >
       <div className="relative flex gap-3.5 p-3.5">
-        <div className="absolute inset-0 bg-gradient-brand opacity-80" />
-        {match.deckImageUrl && (
+        <div className={gradientClass} style={gradientStyle} />
+        {leadImage && (
           <div
             className="relative shrink-0 rounded-lg overflow-hidden border border-black/[0.07] bg-[var(--surface)]"
             style={{ width: 72, height: 101 }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={match.deckImageUrl} alt={match.deckName} className="w-full h-full object-contain" />
+            <img src={leadImage.url} alt={leadImage.alt} className="w-full h-full object-contain" />
           </div>
         )}
         <div className="relative flex-1 min-w-0 flex items-center justify-end gap-2">
@@ -185,7 +241,7 @@ interface MetaDeckEntry {
 }
 
 // Pre-compute the top-3 preview cards using the same prep loop that drives
-// /meta-decks: pick the face Pokémon card from each archetype's deck list,
+// /meta-archetypes: pick the face Pokémon card from each archetype's deck list,
 // pull its energy-type color, and surface up to five creators.
 const top3Cards = (() => {
   const top3 = (archetypesRaw as Archetype[])
@@ -394,10 +450,10 @@ export default function HomeClient({
                 <h2 className="text-4xl font-semibold tracking-tight">This week&apos;s top archetypes.</h2>
               </div>
               <Link
-                href="/meta-decks"
+                href="/meta-archetypes"
                 className="text-sm text-text-secondary hover:text-text-primary transition self-start md:self-auto whitespace-nowrap"
               >
-                View Top 30 Meta Decks →
+                View Meta Archetypes →
               </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -455,7 +511,7 @@ export default function HomeClient({
                     Profile a deck now
                   </Link>
                   <Link
-                    href="/meta-decks"
+                    href="/meta-archetypes"
                     className="rounded-full border border-black/15 bg-white/80 backdrop-blur-sm text-text-primary font-semibold px-6 py-3 hover:bg-white transition"
                   >
                     Browse the meta →

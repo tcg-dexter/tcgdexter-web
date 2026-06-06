@@ -1,7 +1,7 @@
-import Link from "next/link";
-import CardImage from "@/app/cards/CardImage";
-import DeckTileFooter from "@/app/components/DeckTileFooter";
-import { cardImageSmall } from "@/lib/cardImages";
+import DeckCardGridClient, {
+  type ResolvedTile,
+} from "@/app/components/DeckCardGridClient";
+import { cardImageLarge, cardImageSmall } from "@/lib/cardImages";
 import { getAllCards, type CardIndexEntry } from "@/lib/cardsIndex";
 
 interface AnalysisCard {
@@ -102,7 +102,7 @@ function orderTiles(tiles: Tile[]): Tile[] {
   const trainer = tiles.filter((t) => t.section === "trainer");
   const energy = tiles.filter((t) => t.section === "energy");
 
-  return [...orderPokemonByLine(pokemon), ...byQtyName(trainer), ...byQtyName(energy)];
+  return [...orderPokemonByLine(pokemon), ...orderTrainersBySubtype(trainer), ...byQtyName(energy)];
 }
 
 function byQtyName(tiles: Tile[]): Tile[] {
@@ -110,6 +110,45 @@ function byQtyName(tiles: Tile[]): Tile[] {
     (a, b) =>
       b.copyCount - a.copyCount || a.name.localeCompare(b.name),
   );
+}
+
+/**
+ * Group trainers by subtype to match TCG Live's deck view:
+ * Items → Stadiums → Supporters → Tools. Within each group, sort A–Z by
+ * name (no special treatment for ACE SPEC). Anything we can't classify
+ * (unresolved entries, or subtypes we don't recognize) lands in a
+ * trailing "other" bucket so nothing silently disappears from the grid.
+ */
+const TRAINER_SUBTYPE_ORDER = ["Item", "Stadium", "Supporter", "Pokémon Tool"] as const;
+
+function trainerSubtypeOf(tile: Tile): string {
+  const subtypes = tile.entry?.subtypes ?? [];
+  for (const s of TRAINER_SUBTYPE_ORDER) {
+    if (subtypes.includes(s)) return s;
+  }
+  return "Other";
+}
+
+function byName(tiles: Tile[]): Tile[] {
+  return [...tiles].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function orderTrainersBySubtype(tiles: Tile[]): Tile[] {
+  const buckets = new Map<string, Tile[]>();
+  for (const t of tiles) {
+    const key = trainerSubtypeOf(t);
+    const arr = buckets.get(key) ?? [];
+    arr.push(t);
+    buckets.set(key, arr);
+  }
+  const ordered: Tile[] = [];
+  for (const subtype of TRAINER_SUBTYPE_ORDER) {
+    const bucket = buckets.get(subtype);
+    if (bucket) ordered.push(...byName(bucket));
+  }
+  const other = buckets.get("Other");
+  if (other) ordered.push(...byName(other));
+  return ordered;
 }
 
 function orderPokemonByLine(tiles: Tile[]): Tile[] {
@@ -231,55 +270,26 @@ export default function DeckCardGrid({ cards }: { cards: AnalysisCard[] }) {
 
   if (tiles.length === 0) return null;
 
-  return (
-    <div
-      className="grid grid-cols-5 md:grid-cols-10 gap-3"
-      aria-label="Deck cards"
-    >
-      {tiles.map((t) => {
-        const entry = t.entry;
-        const setId = entry?.setId ?? "";
-        const number = entry?.number ?? t.fallbackNumber;
-        const setName = entry?.setName ?? "";
-        const src = setId ? cardImageSmall(setId, number) : "";
-        const alt = setName
-          ? `${t.name} — ${setName} ${number}`
-          : `${t.name} ${number}`;
-        const key = `${t.section}:${t.name.toLowerCase()}`;
-        const tileClass =
-          "relative w-full rounded overflow-hidden bg-surface";
-        const aspectStyle = { aspectRatio: "245 / 342" };
-        const body = (
-          <>
-            <CardImage
-              src={src}
-              alt={alt}
-              name={t.name}
-              setName={setName}
-              number={number}
-              className="w-full h-full object-contain"
-            />
-            <DeckTileFooter copyCount={t.copyCount} />
-          </>
-        );
-        // Unresolved cards (no entry) have no detail page to link to — stay
-        // as a plain non-interactive tile so the placeholder isn't a dead
-        // click target.
-        return entry ? (
-          <Link
-            key={key}
-            href={`/cards/${encodeURIComponent(entry.id)}`}
-            className={`${tileClass} block transition-shadow hover:shadow-md`}
-            style={aspectStyle}
-          >
-            {body}
-          </Link>
-        ) : (
-          <div key={key} className={tileClass} style={aspectStyle}>
-            {body}
-          </div>
-        );
-      })}
-    </div>
-  );
+  // Serialize the resolved tiles for the client component. Picking only the
+  // fields the UI needs keeps the payload small — the full CardIndexEntry
+  // has ~20 properties we don't render.
+  const resolved: ResolvedTile[] = tiles.map((t) => {
+    const entry = t.entry;
+    const setId = entry?.setId ?? "";
+    const number = entry?.number ?? t.fallbackNumber;
+    const setName = entry?.setName ?? "";
+    return {
+      key: `${t.section}:${t.name.toLowerCase()}`,
+      name: t.name,
+      copyCount: t.copyCount,
+      section: t.section,
+      entryId: entry?.id ?? null,
+      setName,
+      number,
+      smallImageUrl: setId ? cardImageSmall(setId, number) : "",
+      largeImageUrl: setId ? cardImageLarge(setId, number) : "",
+    };
+  });
+
+  return <DeckCardGridClient tiles={resolved} />;
 }

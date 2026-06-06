@@ -267,7 +267,7 @@ interface Props {
   /**
    * Content injected above the price module.
    * Used by /my-decks/[id] to slot in the match log + notes,
-   * and by /meta-decks/[slug] for stat cards + scouting note.
+   * and by /meta-archetypes/[slug] for stat cards + scouting note.
    */
   topSlot?: React.ReactNode;
   /**
@@ -279,7 +279,7 @@ interface Props {
   preOverviewSlot?: React.ReactNode;
   /**
    * Content injected directly below the Save/Share button row.
-   * Used by /meta-decks/[slug] to place the Scouting Note after the CTAs.
+   * Used by /meta-archetypes/[slug] to place the Scouting Note after the CTAs.
    */
   postCtaSlot?: React.ReactNode;
   /**

@@ -100,7 +100,8 @@ export default function BackButton({ href, ariaLabel, className = "" }: Props) {
         href={href}
         onClick={handleClick}
         aria-label={ariaLabel}
-        className={`hidden xl:inline-flex ${baseClass} ${className}`}
+        data-back-button=""
+            className={`hidden xl:inline-flex ${baseClass} ${className}`}
       >
         {icon}
       </Link>
@@ -114,6 +115,7 @@ export default function BackButton({ href, ariaLabel, className = "" }: Props) {
             href={href}
             onClick={handleClick}
             aria-label={ariaLabel}
+            data-back-button=""
             className={`inline-flex ${baseClass} ${className}`}
           >
             {icon}

@@ -68,6 +68,8 @@ export async function PATCH(req: Request) {
     is_public?: boolean;
     avatar_url?: string | null;
     bio?: string | null;
+    banner_accent?: string | null;
+    team_of_6?: (string | null)[] | null;
   };
   try {
     body = await req.json();
@@ -157,6 +159,65 @@ export async function PATCH(req: Request) {
   // policy already restricts who can write into the avatars bucket.
   if (body.avatar_url === null || typeof body.avatar_url === "string") {
     updates.avatar_url = body.avatar_url;
+  }
+
+  // ── banner_accent ─────────────────────────────────────────────
+  // Per-user banner color. Null clears (falls back to brand gradient);
+  // a string must be one of the 11 energy keys mirrored in the
+  // profiles_banner_accent_check constraint.
+  if (body.banner_accent === null) {
+    updates.banner_accent = null;
+  } else if (typeof body.banner_accent === "string") {
+    const ACCENT_KEYS = new Set([
+      "Fire",
+      "Water",
+      "Grass",
+      "Lightning",
+      "Psychic",
+      "Fighting",
+      "Darkness",
+      "Metal",
+      "Dragon",
+      "Fairy",
+      "Colorless",
+    ]);
+    if (!ACCENT_KEYS.has(body.banner_accent)) {
+      return NextResponse.json(
+        { error: "Invalid banner color." },
+        { status: 400 }
+      );
+    }
+    updates.banner_accent = body.banner_accent;
+  }
+
+  // ── team_of_6 ─────────────────────────────────────────────────
+  // 6-slot Pokémon roster for the banner. Each entry is a short
+  // display name (e.g. "Pikachu") or null for an empty slot. We don't
+  // validate against the names list — that's a build-time artifact and
+  // the column check constraint already caps array length at 6.
+  if (body.team_of_6 === null) {
+    updates.team_of_6 = null;
+  } else if (Array.isArray(body.team_of_6)) {
+    if (body.team_of_6.length > 6) {
+      return NextResponse.json(
+        { error: "Team of 6 cannot exceed 6 slots." },
+        { status: 400 }
+      );
+    }
+    const cleaned: (string | null)[] = [];
+    for (const slot of body.team_of_6) {
+      if (slot === null || slot === undefined || slot === "") {
+        cleaned.push(null);
+      } else if (typeof slot === "string" && slot.length <= 60) {
+        cleaned.push(slot);
+      } else {
+        return NextResponse.json(
+          { error: "Invalid team slot." },
+          { status: 400 }
+        );
+      }
+    }
+    updates.team_of_6 = cleaned;
   }
 
   // ── bio ───────────────────────────────────────────────────────

@@ -14,7 +14,7 @@ import { usePathname } from "next/navigation";
  *
  * Where it shows up:
  *  - The four "front door" pages the nav menu links to (Card Catalog,
- *    Deck Collection, Top 30 Meta Decks, Learn to Play).
+ *    Deck Collection, Meta Archetypes, Learn to Play).
  *  - Every page inside the Learn UX (`/learn/*`) — lessons, quiz, etc.
  *    Lesson pages don't render a `BackButton` portaled into the mobile
  *    back-slot, so the logo sits in the same leftmost position as on
@@ -33,7 +33,7 @@ import { usePathname } from "next/navigation";
 const TOP_LEVEL_EXACT = new Set<string>([
   "/cards",
   "/my-decks",
-  "/meta-decks",
+  "/meta-archetypes",
   "/learn",
 ]);
 

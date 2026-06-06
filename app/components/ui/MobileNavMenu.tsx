@@ -217,7 +217,7 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
   const INTERNAL_LINKS = [
     { href: "/cards", label: "Card Catalog", Icon: CardsIcon },
     { href: "/my-decks", label: "Deck Collection", Icon: BookmarkIcon },
-    { href: "/meta-decks", label: "Top 30 Meta Decks", Icon: ChartBarIcon },
+    { href: "/meta-archetypes", label: "Meta Archetypes", Icon: ChartBarIcon },
     // { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
     { href: "/learn", label: "Learn to Play", Icon: BookOpenIcon },
   ];

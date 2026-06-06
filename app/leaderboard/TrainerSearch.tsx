@@ -65,7 +65,7 @@ export default function TrainerSearch() {
           value={query}
           onChange={handleChange}
           placeholder="Search trainers by username…"
-          className="w-full rounded-xl border border-black/10 bg-white pl-10 pr-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-black/20 focus:ring-2 focus:ring-black/5 [font-size:16px] sm:text-sm"
+          className="w-full rounded-xl border border-black/10 bg-white pl-10 pr-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus-gradient-border [font-size:16px] sm:text-sm"
         />
       </div>
 

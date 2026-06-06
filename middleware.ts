@@ -1,13 +1,24 @@
-import { type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
+const DASHBOARD_HOST = "dashboard.tcgdexter.com";
+
 /**
- * Root middleware — runs on every request matching the config below.
- *
- * Currently just refreshes the Supabase session cookie. Does not gate routes.
- * Route-level protection is handled by individual server components via redirect().
+ * Root middleware. Two jobs:
+ *   1. Host-route `dashboard.tcgdexter.com/*` → `/dashboard/*` (internal admin dashboard)
+ *   2. Refresh the Supabase session cookie on every other request.
  */
 export async function middleware(request: NextRequest) {
+  const host = request.headers.get("host") ?? "";
+
+  if (host === DASHBOARD_HOST) {
+    const url = request.nextUrl.clone();
+    if (!url.pathname.startsWith("/dashboard")) {
+      url.pathname = `/dashboard${url.pathname === "/" ? "" : url.pathname}`;
+      return NextResponse.rewrite(url);
+    }
+  }
+
   return await updateSession(request);
 }
 
@@ -19,8 +30,6 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico
-     * The remaining paths (pages, /d/, /account, /sign-in, etc.) will run
-     * the middleware and get session refresh.
      */
     "/((?!api|_next/static|_next/image|favicon.ico).*)",
   ],

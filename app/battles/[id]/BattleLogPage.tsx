@@ -269,7 +269,7 @@ export default function BattleLogPage({
 
 /** Headline tile matching the meta archetype StatCard tones so the
  *  result panel reads as one consistent design language across the
- *  site. Tones mirror the W/L/T tiles on /meta-decks/[slug]. The
+ *  site. Tones mirror the W/L/T tiles on /meta-archetypes/[slug]. The
  *  value auto-shrinks to fit the tile width so long handles like
  *  "MoonSheikah" don't truncate. */
 function StatCard({

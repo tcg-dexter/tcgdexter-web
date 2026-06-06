@@ -50,7 +50,7 @@ const archetypes = (archetypesRaw as Archetype[]).sort(
 const top30 = archetypes.slice(0, 30);
 
 /** Pre-render every (archetype, variant) pair. variantIndex is 1-based
- *  in the URL so links like /meta-decks/dragapult-ex/1 read naturally
+ *  in the URL so links like /meta-archetypes/dragapult-ex/1 read naturally
  *  to a human eye. */
 export function generateStaticParams() {
   const out: { slug: string; variantIndex: string }[] = [];
@@ -159,7 +159,7 @@ export default async function MetaVariantPage({
       pageTitle={archetypeFullName}
       preTitle={
         <BackButton
-          href={`/meta-decks/${arch.id}`}
+          href={`/meta-archetypes/${arch.id}`}
           ariaLabel={`Back to ${archetypeFullName}`}
         />
       }
