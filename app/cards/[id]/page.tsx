@@ -51,6 +51,13 @@ export default function CardDetailPage({ params }: Props) {
 
       <div className="grid grid-cols-1 md:grid-cols-[minmax(0,400px)_1fr] gap-6">
         <div className="flex flex-col gap-3">
+          <div className="md:hidden">
+            <h1 className="text-2xl font-semibold text-text-primary">{card.name}</h1>
+            <p className="text-sm text-text-secondary mt-1">
+              {card.setName}
+              {card.ptcgoCode ? ` · ${card.ptcgoCode}` : ""} · {card.number}
+            </p>
+          </div>
           <CardImage
             src={cardImageLarge(card.setId, card.number)}
             alt={`${card.name} — ${card.setName} ${card.number}`}
@@ -65,7 +72,7 @@ export default function CardDetailPage({ params }: Props) {
         </div>
 
         <div className="flex flex-col gap-4">
-          <div>
+          <div className="hidden md:block">
             <h1 className="text-2xl font-semibold text-text-primary">{card.name}</h1>
             <p className="text-sm text-text-secondary mt-1">
               {card.setName}
