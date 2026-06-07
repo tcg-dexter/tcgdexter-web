@@ -13,6 +13,8 @@ import { pokemonSlug } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
 import { shade } from "@/lib/color";
 import { typeIconUrl } from "@/lib/typeIcon";
+import { findCardAppearances } from "@/lib/cardAppearances";
+import AppearsInCarousel from "./AppearsInCarousel";
 
 interface Props {
   params: { id: string };
@@ -40,6 +42,16 @@ export default function CardDetailPage({ params }: Props) {
     : null;
   const avatarColor = typeColor(card.types);
   const avatarBg = `linear-gradient(180deg, ${avatarColor} 0%, ${shade(avatarColor, -22)} 100%)`;
+
+  // First "Appears in" batch (top meta variants containing this exact
+  // printing). Server-render the first 10 so the section paints with the
+  // page; the client carousel pulls the next batches on scroll.
+  const appearancesInitial = findCardAppearances(
+    card.ptcgoCode ?? "",
+    card.number,
+    0,
+    10,
+  );
 
   const otherPrintings = getCardsByName(card.name).filter((c) => c.id !== card.id);
   // Pull other cards illustrated by the same artist. Cap to ~3 rows at lg
@@ -231,6 +243,15 @@ export default function CardDetailPage({ params }: Props) {
           )}
         </div>
       </div>
+
+      {appearancesInitial.items.length > 0 && (
+        <AppearsInCarousel
+          setCode={card.ptcgoCode ?? ""}
+          number={card.number}
+          initialItems={appearancesInitial.items}
+          initialHasMore={appearancesInitial.hasMore}
+        />
+      )}
 
       {otherPrintings.length > 0 && (
         <div className="mt-10">
