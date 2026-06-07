@@ -5,8 +5,11 @@ import { useRouter } from "next/navigation";
 import type {
   TrainerSpotlightRow,
   SpotlightCardRef,
+  SpotlightPokemonRef,
   SpotlightQA,
 } from "@/app/spotlight/types";
+import PokemonNamePicker from "./PokemonNamePicker";
+import CardSearchPicker from "./CardSearchPicker";
 
 interface DeckOption {
   id: string;
@@ -18,23 +21,16 @@ interface Props {
   deckOptions: DeckOption[];
 }
 
-function emptyCard(): SpotlightCardRef {
-  return { set_id: "", number: "", name: "" };
-}
-
 export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
   const router = useRouter();
   const [slug, setSlug] = useState(spotlight.slug);
   const [headline, setHeadline] = useState(spotlight.headline ?? "");
-  const [favoritePokemon, setFavoritePokemon] = useState<SpotlightCardRef>(
-    spotlight.favorite_pokemon ?? emptyCard()
-  );
-  const [favoriteCollection, setFavoriteCollection] = useState<SpotlightCardRef>(
-    spotlight.favorite_collection_card ?? emptyCard()
-  );
-  const [favoriteFormat, setFavoriteFormat] = useState<SpotlightCardRef>(
-    spotlight.favorite_format_card ?? emptyCard()
-  );
+  const [favoritePokemon, setFavoritePokemon] =
+    useState<SpotlightPokemonRef | null>(spotlight.favorite_pokemon ?? null);
+  const [favoriteCollection, setFavoriteCollection] =
+    useState<SpotlightCardRef | null>(spotlight.favorite_collection_card ?? null);
+  const [favoriteFormat, setFavoriteFormat] =
+    useState<SpotlightCardRef | null>(spotlight.favorite_format_card ?? null);
   const [deckIds, setDeckIds] = useState<string[]>(() => {
     const padded = [...spotlight.featured_deck_ids];
     while (padded.length < 3) padded.push("");
@@ -48,11 +44,6 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
-  function nullIfEmpty(c: SpotlightCardRef): SpotlightCardRef | null {
-    if (!c.set_id && !c.number && !c.name) return null;
-    return c;
-  }
-
   async function onSave() {
     setSaving(true);
     setError(null);
@@ -60,9 +51,9 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
       const body = {
         slug: slug.trim().toLowerCase(),
         headline: headline.trim() || null,
-        favorite_pokemon: nullIfEmpty(favoritePokemon),
-        favorite_collection_card: nullIfEmpty(favoriteCollection),
-        favorite_format_card: nullIfEmpty(favoriteFormat),
+        favorite_pokemon: favoritePokemon,
+        favorite_collection_card: favoriteCollection,
+        favorite_format_card: favoriteFormat,
         featured_deck_ids: deckIds.filter(Boolean),
         qa: qa.filter((item) => item.q.trim() || item.a.trim()),
         is_published: isPublished,
@@ -119,28 +110,48 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
         </Field>
       </section>
 
-      {/* Favorite cards */}
-      <section className="rounded-2xl bg-white border border-black/8 shadow-sm p-5 space-y-4">
-        <h3 className="text-sm font-semibold text-text-primary">Favorite cards</h3>
-        <CardEditor
-          label="Favorite Pokémon"
+      {/* Favorite Pokémon — sprite picker (TeamOfSix-style). */}
+      <section className="rounded-2xl bg-white border border-black/8 shadow-sm p-5 space-y-3">
+        <div>
+          <h3 className="text-sm font-semibold text-text-primary">
+            Favorite Pokémon
+          </h3>
+          <p className="text-xs text-text-muted mt-0.5">
+            A Pokémon, rendered as a sprite — independent of any specific card.
+          </p>
+        </div>
+        <PokemonNamePicker
           value={favoritePokemon}
           onChange={setFavoritePokemon}
         />
-        <CardEditor
-          label="Favorite in Collection"
-          value={favoriteCollection}
-          onChange={setFavoriteCollection}
+      </section>
+
+      {/* Favorite cards — shared search drives both slots. */}
+      <section className="rounded-2xl bg-white border border-black/8 shadow-sm p-5 space-y-4">
+        <div>
+          <h3 className="text-sm font-semibold text-text-primary">
+            Favorite cards
+          </h3>
+          <p className="text-xs text-text-muted mt-0.5">
+            Search once; each result has buttons to assign it to either slot.
+          </p>
+        </div>
+        <CardSearchPicker
+          slots={[
+            {
+              key: "collection",
+              label: "Collection",
+              value: favoriteCollection,
+              onChange: setFavoriteCollection,
+            },
+            {
+              key: "play",
+              label: "Play",
+              value: favoriteFormat,
+              onChange: setFavoriteFormat,
+            },
+          ]}
         />
-        <CardEditor
-          label="Favorite to Play"
-          value={favoriteFormat}
-          onChange={setFavoriteFormat}
-        />
-        <p className="text-xs text-text-muted">
-          Use the card&apos;s set ID (e.g. <code>sv9</code>) and number (e.g.{" "}
-          <code>175</code>) as listed on pokemontcg.io.
-        </p>
       </section>
 
       {/* Featured decks */}
@@ -277,43 +288,5 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       </span>
       {children}
     </label>
-  );
-}
-
-function CardEditor({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: SpotlightCardRef;
-  onChange: (v: SpotlightCardRef) => void;
-}) {
-  return (
-    <div>
-      <div className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
-        {label}
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        <input
-          value={value.set_id}
-          onChange={(e) => onChange({ ...value, set_id: e.target.value })}
-          placeholder="set_id"
-          className="input"
-        />
-        <input
-          value={value.number}
-          onChange={(e) => onChange({ ...value, number: e.target.value })}
-          placeholder="number"
-          className="input"
-        />
-        <input
-          value={value.name}
-          onChange={(e) => onChange({ ...value, name: e.target.value })}
-          placeholder="name"
-          className="input"
-        />
-      </div>
-    </div>
   );
 }

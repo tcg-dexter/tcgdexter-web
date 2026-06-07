@@ -4,6 +4,13 @@ export interface SpotlightCardRef {
   name: string;
 }
 
+/** Favorite Pokémon is just a Pokémon name — rendered as a sprite, not a
+ *  specific card. Stored as jsonb so we can extend later (e.g. preferred
+ *  form / shiny / regional variant) without a migration. */
+export interface SpotlightPokemonRef {
+  name: string;
+}
+
 export interface SpotlightQA {
   q: string;
   a: string;
@@ -14,7 +21,7 @@ export interface TrainerSpotlightRow {
   profile_id: string;
   slug: string;
   headline: string | null;
-  favorite_pokemon: SpotlightCardRef | null;
+  favorite_pokemon: SpotlightPokemonRef | null;
   favorite_collection_card: SpotlightCardRef | null;
   favorite_format_card: SpotlightCardRef | null;
   featured_deck_ids: string[];

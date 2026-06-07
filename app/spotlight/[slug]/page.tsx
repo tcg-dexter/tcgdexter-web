@@ -10,6 +10,7 @@ import {
 } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
 import SpotlightCardTile from "../components/SpotlightCardTile";
+import SpotlightPokemonTile from "../components/SpotlightPokemonTile";
 import type { TrainerSpotlightRow } from "../types";
 
 interface ProfileRow {
@@ -148,9 +149,9 @@ export default async function SpotlightPage({
             Favorites
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <SpotlightCardTile
+            <SpotlightPokemonTile
               label="Favorite Pokémon"
-              card={spotlight.favorite_pokemon}
+              pokemon={spotlight.favorite_pokemon}
             />
             <SpotlightCardTile
               label="Favorite in Collection"
