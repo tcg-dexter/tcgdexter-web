@@ -144,7 +144,9 @@ export default function CardDetailPage({ params }: Props) {
                     {raw.weaknesses.map((w, i) => (
                       <span key={i} className="inline-flex items-center gap-1.5">
                         <TypeIcon type={w.type} />
-                        <span>{w.type}</span>
+                        <span>
+                          {w.type} {w.value}
+                        </span>
                       </span>
                     ))}
                   </span>
