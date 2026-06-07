@@ -157,7 +157,7 @@ export default function AppearsInCarousel({
       </div>
       <div
         ref={scrollerRef}
-        className="overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar -mx-4 sm:-mx-6 px-4 sm:px-6"
+        className="overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar -mx-4 sm:-mx-6 px-4 sm:px-6 scroll-pl-4 sm:scroll-pl-6"
         aria-label="Deck lists that include this card"
       >
         <ul
