@@ -155,7 +155,20 @@ export default function CardDetailPage({ params }: Props) {
                 )
               }
             />
-            <Stat label="Retreat" value={String(card.retreatCost)} />
+            <Stat
+              label="Retreat"
+              value={
+                card.retreatCost > 0 ? (
+                  <span className="inline-flex items-center gap-0.5">
+                    {Array.from({ length: card.retreatCost }).map((_, i) => (
+                      <TypeIcon key={i} type="Colorless" />
+                    ))}
+                  </span>
+                ) : (
+                  "—"
+                )
+              }
+            />
             <Stat label="HP" value={card.hp != null ? String(card.hp) : "—"} />
             <Stat label="Regulation" value={card.regulationMark ?? "—"} />
             <Stat
