@@ -18,7 +18,7 @@ interface Props {
   displayName: string | null;
   /** User's username handle; used to build the profile link. */
   username: string | null;
-  /** Whether the user has admin/judge privileges. (Reserved for future use.) */
+  /** Whether the user has admin/judge privileges. */
   isAdmin?: boolean;
 }
 
@@ -43,6 +43,7 @@ export default function SiteSidebar({
   isAuthed,
   displayName,
   username,
+  isAdmin,
 }: Props) {
   const pathname = usePathname();
 
@@ -114,8 +115,20 @@ export default function SiteSidebar({
           ))}
         </ul>
 
-        {/* Auth row — anchored to the bottom of the rail. */}
+        {/* Admin row — anchored to the bottom, just above the auth row.
+            Only rendered when the signed-in user has profiles.is_admin. */}
         <ul className="mt-auto flex flex-col gap-0.5 pt-4">
+          {isAdmin && (
+            <li>
+              <Link
+                href="/admin/spotlight"
+                className={`${linkBase} ${isActive("/admin/spotlight") ? linkActive : linkInactive}`}
+              >
+                <TrophyIcon />
+                <span>Spotlight Admin</span>
+              </Link>
+            </li>
+          )}
           <li>
             {isAuthed ? (
               <Link
