@@ -168,7 +168,7 @@ export default function AppearsInCarousel({
             <li
               key={v.id}
               ref={i === 0 ? itemRef : undefined}
-              className="shrink-0 basis-full md:basis-[calc((100%-1.5rem)/3)] snap-start flex"
+              className="shrink-0 basis-[90%] md:basis-[calc((100%-1.5rem)/3)] snap-start flex"
             >
               <div className="w-full">
                 <MetaVariantCard
