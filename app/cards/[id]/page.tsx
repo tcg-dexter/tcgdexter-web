@@ -136,7 +136,6 @@ export default function CardDetailPage({ params }: Props) {
                 )
               }
             />
-            <Stat label="HP" value={card.hp != null ? String(card.hp) : "—"} />
             <Stat
               label="Weakness"
               value={
@@ -157,6 +156,7 @@ export default function CardDetailPage({ params }: Props) {
               }
             />
             <Stat label="Retreat" value={String(card.retreatCost)} />
+            <Stat label="HP" value={card.hp != null ? String(card.hp) : "—"} />
             <Stat label="Regulation" value={card.regulationMark ?? "—"} />
             <Stat
               label="Market price"
