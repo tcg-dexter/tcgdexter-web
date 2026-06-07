@@ -341,6 +341,20 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
 
             <li role="separator" className="my-4" />
 
+            {/* Admin item — only for users with profiles.is_admin. */}
+            {isAdmin && (
+              <li>
+                <Link
+                  href="/admin/spotlight"
+                  className={linkClass}
+                  onClick={closeMenu}
+                >
+                  <TrophyIcon />
+                  <span>Spotlight Admin</span>
+                </Link>
+              </li>
+            )}
+
             {/* Auth item — anchored at the bottom of the link list, above
                 the search bar. */}
             <li>
