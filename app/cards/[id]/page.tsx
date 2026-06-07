@@ -184,17 +184,17 @@ export default function CardDetailPage({ params }: Props) {
                 <div key={i} className="space-y-1">
                   <div className="text-base font-semibold text-text-primary flex items-center justify-between gap-2">
                     <span className="inline-flex items-center gap-2">
-                      {a.cost.length > 0 ? (
-                        <span className="inline-flex items-center gap-0.5">
-                          {a.cost.map((c, j) => (
-                            <TypeIcon key={j} type={c} size={18} />
-                          ))}
-                        </span>
-                      ) : (
-                        <span className="text-sm font-normal text-text-muted">
-                          No cost
-                        </span>
-                      )}
+                      <span className="inline-flex items-center gap-0.5 shrink-0 w-[124px]">
+                        {a.cost.length > 0 ? (
+                          a.cost.map((c, j) => (
+                            <TypeIcon key={j} type={c} size={23} />
+                          ))
+                        ) : (
+                          <span className="text-sm font-normal text-text-muted">
+                            No cost
+                          </span>
+                        )}
+                      </span>
                       <span>{a.name}</span>
                     </span>
                     {a.damage && <span className="text-text-primary">{a.damage}</span>}
@@ -295,7 +295,7 @@ function Stat({
   );
 }
 
-function TypeIcon({ type, size = 16 }: { type: string; size?: number }) {
+function TypeIcon({ type, size = 20 }: { type: string; size?: number }) {
   const url = typeIconUrl(type);
   if (!url) return <span>{type}</span>;
   return (
