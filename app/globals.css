@@ -21,6 +21,27 @@
       linear-gradient(#fff, #fff) padding-box,
       var(--gradient-brand) border-box;
   }
+
+  /* Gradient-fill component (button, badge, card) with a matched
+     gradient border. SOP for any element using --gradient-brand as
+     a fill: a transparent `border` over a non-gradient surface lets
+     the page bg bleed through at the 1px border ring, making the
+     element look like it has a halo. Layering the same gradient in
+     both the padding-box and border-box keeps the edge clean while
+     still reserving the 1px border so adjacent layout doesn't
+     shift if a sibling is bordered.
+
+     Usage: <button class="bg-gradient-brand border border-transparent">
+            becomes
+            <button class="gradient-brand">
+     The class sets background, border, and color in one shot. */
+  .gradient-brand {
+    background:
+      var(--gradient-brand) padding-box,
+      var(--gradient-brand) border-box;
+    border: 1px solid transparent;
+    color: #fff;
+  }
 }
 
 /* ─── Design tokens ───────────────────────────────────────────── */

@@ -276,7 +276,7 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
             type="button"
             onClick={onPreview}
             disabled={saving || previewing}
-            className="text-sm font-semibold px-4 py-2 rounded-full text-white bg-gradient-brand border border-transparent shadow-sm hover:opacity-95 disabled:opacity-50"
+            className="text-sm font-semibold px-4 py-2 rounded-full gradient-brand shadow-sm hover:opacity-95 disabled:opacity-50"
           >
             {previewing ? "Opening…" : "Preview"}
           </button>
