@@ -39,13 +39,14 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
   const [qa, setQa] = useState<SpotlightQA[]>(
     spotlight.qa.length > 0 ? spotlight.qa : [{ q: "", a: "" }]
   );
-  const [isPublished, setIsPublished] = useState(spotlight.is_published);
   const [saving, setSaving] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
-  async function onSave() {
-    setSaving(true);
+  /** Persist current form state. Returns true on success so callers can
+   *  chain navigation (e.g. Preview saves then navigates). */
+  async function persist(): Promise<boolean> {
     setError(null);
     try {
       const body = {
@@ -56,7 +57,6 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
         favorite_format_card: favoriteFormat,
         featured_deck_ids: deckIds.filter(Boolean),
         qa: qa.filter((item) => item.q.trim() || item.a.trim()),
-        is_published: isPublished,
       };
       const res = await fetch(`/api/admin/spotlight/${spotlight.id}`, {
         method: "PATCH",
@@ -65,12 +65,30 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Save failed");
-      setSavedAt(new Date().toLocaleTimeString());
-      router.refresh();
+      return true;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Save failed");
-    } finally {
-      setSaving(false);
+      return false;
+    }
+  }
+
+  async function onSave() {
+    setSaving(true);
+    const ok = await persist();
+    if (ok) {
+      setSavedAt(new Date().toLocaleTimeString());
+      router.refresh();
+    }
+    setSaving(false);
+  }
+
+  async function onPreview() {
+    setPreviewing(true);
+    const ok = await persist();
+    if (ok) {
+      router.push(`/spotlight/${slug.trim().toLowerCase()}?preview=1`);
+    } else {
+      setPreviewing(false);
     }
   }
 
@@ -229,28 +247,19 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
         </button>
       </section>
 
-      {/* Publish */}
-      <section className="rounded-2xl bg-white border border-black/8 shadow-sm p-5">
-        <label className="flex items-center gap-2 text-sm font-semibold text-text-primary">
-          <input
-            type="checkbox"
-            checked={isPublished}
-            onChange={(e) => setIsPublished(e.target.checked)}
-          />
-          Published
-        </label>
-      </section>
-
-      <div className="flex items-center justify-between gap-2">
+      {/* Action bar — capsules: Delete (red outline), Save (black), Preview
+          (site gradient). Publish moves to the Preview page so the admin
+          always sees the live look before going live. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <button
           type="button"
           onClick={onDelete}
-          disabled={saving}
-          className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-accent text-accent hover:bg-accent hover:text-white disabled:opacity-50"
+          disabled={saving || previewing}
+          className="text-sm font-semibold px-4 py-2 rounded-full border border-accent text-accent hover:bg-accent hover:text-white disabled:opacity-50 transition-colors"
         >
           Delete
         </button>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 ml-auto">
           {error && <span className="text-xs text-accent">{error}</span>}
           {savedAt && !error && (
             <span className="text-xs text-text-muted">Saved {savedAt}</span>
@@ -258,10 +267,18 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
           <button
             type="button"
             onClick={onSave}
-            disabled={saving}
-            className="text-xs font-semibold px-4 py-2 rounded-lg bg-black text-white border border-transparent disabled:opacity-50"
+            disabled={saving || previewing}
+            className="text-sm font-semibold px-4 py-2 rounded-full bg-black text-white border border-transparent disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save"}
+          </button>
+          <button
+            type="button"
+            onClick={onPreview}
+            disabled={saving || previewing}
+            className="text-sm font-semibold px-4 py-2 rounded-full text-white bg-gradient-brand border border-transparent shadow-sm hover:opacity-95 disabled:opacity-50"
+          >
+            {previewing ? "Opening…" : "Preview"}
           </button>
         </div>
       </div>

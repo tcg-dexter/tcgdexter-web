@@ -11,6 +11,7 @@ import {
 import { typeColor } from "@/lib/metaPrimaryCard";
 import SpotlightCardTile from "../components/SpotlightCardTile";
 import SpotlightPokemonTile from "../components/SpotlightPokemonTile";
+import SpotlightAdminBar from "../components/SpotlightAdminBar";
 import type { TrainerSpotlightRow } from "../types";
 
 interface ProfileRow {
@@ -105,9 +106,35 @@ export default async function SpotlightPage({
   if (!data) notFound();
   const { spotlight, profile, decks } = data;
 
+  // Is the viewer an admin? Drives the floating admin action bar
+  // (Edit + Publish). Anon visitors never see drafts at all — RLS on
+  // trainer_spotlights blocks the select unless is_published = true or
+  // the viewer is admin — so reaching this branch with an unpublished
+  // row implies the viewer is admin.
+  const supabase = await createClient();
+  const {
+    data: { user: viewer },
+  } = await supabase.auth.getUser();
+  let isAdmin = false;
+  if (viewer) {
+    const { data: me } = await supabase
+      .from("profiles")
+      .select("is_admin")
+      .eq("id", viewer.id)
+      .maybeSingle<{ is_admin: boolean }>();
+    isAdmin = !!me?.is_admin;
+  }
+
   return (
     <main className="min-h-dvh bg-bg pb-24">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 pt-8">
+        {isAdmin && (
+          <SpotlightAdminBar
+            spotlightId={spotlight.id}
+            slug={spotlight.slug}
+            isPublished={spotlight.is_published}
+          />
+        )}
         {/* Header */}
         <header className="rounded-2xl bg-white border border-black/8 shadow-sm p-6 flex items-center gap-4">
           {profile.avatar_url ? (
