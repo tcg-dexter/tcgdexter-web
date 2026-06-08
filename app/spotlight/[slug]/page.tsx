@@ -12,6 +12,7 @@ import { typeColor } from "@/lib/metaPrimaryCard";
 import SpotlightCardTile from "../components/SpotlightCardTile";
 import SpotlightPokemonTile from "../components/SpotlightPokemonTile";
 import SpotlightAdminBar from "../components/SpotlightAdminBar";
+import SpotlightQAThread from "../components/SpotlightQAThread";
 import type { TrainerSpotlightRow } from "../types";
 
 interface ProfileRow {
@@ -233,24 +234,21 @@ export default async function SpotlightPage({
           </section>
         )}
 
-        {/* Q&A */}
+        {/* Q&A — rendered as a series of two-post conversation threads
+            (Dexter asks, the featured trainer answers) so the section
+            reads as a real interview rather than a flat FAQ. */}
         {spotlight.qa.length > 0 && (
           <section className="mt-8">
             <h2 className="text-lg font-semibold text-text-primary mb-3 px-1">
               Q&amp;A
             </h2>
-            <div className="rounded-2xl bg-white border border-black/8 shadow-sm divide-y divide-black/8">
-              {spotlight.qa.map((item, i) => (
-                <div key={i} className="p-5">
-                  <dt className="text-sm font-semibold text-text-primary mb-1">
-                    {item.q}
-                  </dt>
-                  <dd className="text-sm text-text-secondary whitespace-pre-line">
-                    {item.a}
-                  </dd>
-                </div>
-              ))}
-            </div>
+            <SpotlightQAThread
+              qa={spotlight.qa}
+              trainer={{
+                displayName: profile.display_name,
+                username: profile.username,
+              }}
+            />
           </section>
         )}
       </div>
