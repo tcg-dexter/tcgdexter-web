@@ -10,8 +10,6 @@ import {
   cardTypesForSetIdNumber,
 } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
-import SpotlightCardTile from "../components/SpotlightCardTile";
-import SpotlightPokemonTile from "../components/SpotlightPokemonTile";
 import SpotlightAdminBar from "../components/SpotlightAdminBar";
 import SpotlightQAThread from "../components/SpotlightQAThread";
 import SpotlightHeader from "../components/SpotlightHeader";
@@ -168,20 +166,16 @@ export default async function SpotlightPage({
         avatarUrl={profile.avatar_url}
         headline={spotlight.headline}
         accentColors={accentColors}
-        bannerImage={
-          spotlight.avatar_image_url
-            ? {
-                spotlightId: spotlight.id,
-                url: spotlight.avatar_image_url,
-                position: spotlight.avatar_image_position,
-                scale: spotlight.avatar_image_scale,
-                // Draggable + resizable only when an admin loads the
-                // preview surface. Public readers (and admins on the
-                // canonical published page) see a static image.
-                editable: isAdmin && previewMode,
-              }
-            : undefined
-        }
+        layout={spotlight.banner_layout}
+        // All four items become draggable + resizable only when an
+        // admin loads the preview surface. Public readers (and admins
+        // on the canonical published page) see a static composition.
+        editable={isAdmin && previewMode}
+        spotlightId={spotlight.id}
+        favoritePokemon={spotlight.favorite_pokemon}
+        favoriteCollectionCard={spotlight.favorite_collection_card}
+        favoriteFormatCard={spotlight.favorite_format_card}
+        userImageUrl={spotlight.avatar_image_url}
       />
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6 mt-6">
@@ -190,30 +184,20 @@ export default async function SpotlightPage({
             spotlightId={spotlight.id}
             slug={spotlight.slug}
             isPublished={spotlight.is_published}
-            showDragHint={previewMode && !!spotlight.avatar_image_url}
+            // In preview mode, banner items are interactive whenever
+            // any of the four are present — the drag hint applies to
+            // the whole banner now, not just the uploaded image.
+            showDragHint={
+              previewMode &&
+              !!(
+                spotlight.avatar_image_url ||
+                spotlight.favorite_pokemon ||
+                spotlight.favorite_collection_card ||
+                spotlight.favorite_format_card
+              )
+            }
           />
         )}
-
-        {/* Favorites */}
-        <section className="mt-6">
-          <h2 className="text-lg font-semibold text-text-primary mb-3 px-1">
-            Favorites
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <SpotlightPokemonTile
-              label="Favorite Pokémon"
-              pokemon={spotlight.favorite_pokemon}
-            />
-            <SpotlightCardTile
-              label="Favorite in Collection"
-              card={spotlight.favorite_collection_card}
-            />
-            <SpotlightCardTile
-              label="Favorite to Play"
-              card={spotlight.favorite_format_card}
-            />
-          </div>
-        </section>
 
         {/* Featured decks */}
         {decks.length > 0 && (

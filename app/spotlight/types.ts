@@ -23,6 +23,35 @@ export interface SpotlightAvatarPosition {
   y: number;
 }
 
+/** Per-item placement inside the programmatic banner. */
+export interface SpotlightBannerItem {
+  x: number;
+  y: number;
+  scale: number;
+}
+
+export type SpotlightBannerItemKey =
+  | "collection_card"
+  | "pokemon"
+  | "user_image"
+  | "format_card";
+
+export type SpotlightBannerLayout = Record<
+  SpotlightBannerItemKey,
+  SpotlightBannerItem
+>;
+
+/** Editorial preset for the four banner items — the Reset button
+ *  restores these and the DB column defaults to this shape. Mirrored in
+ *  the SQL migration's jsonb_build_object call so the row reads the
+ *  same on first save whether the client or the DB filled it in. */
+export const DEFAULT_BANNER_LAYOUT: SpotlightBannerLayout = {
+  collection_card: { x: 15, y: 55, scale: 1.0 },
+  pokemon: { x: 38, y: 55, scale: 1.0 },
+  user_image: { x: 58, y: 55, scale: 1.0 },
+  format_card: { x: 85, y: 55, scale: 1.0 },
+};
+
 export interface TrainerSpotlightRow {
   id: string;
   profile_id: string;
@@ -34,10 +63,13 @@ export interface TrainerSpotlightRow {
   featured_deck_ids: string[];
   qa: SpotlightQA[];
   avatar_image_url: string | null;
+  /** Legacy — superseded by banner_layout.user_image. Kept in the row
+   *  for backward compat; the page reads banner_layout instead. */
   avatar_image_position: SpotlightAvatarPosition;
-  /** Aspect-preserving scale multiplier vs the base image width (32% of
-   *  banner). 1.0 is the fit-to-default value; clamped 0.1–4 elsewhere. */
+  /** Legacy — superseded by banner_layout.user_image.scale. */
   avatar_image_scale: number;
+  /** Per-item placement of the four banner elements. */
+  banner_layout: SpotlightBannerLayout;
   is_published: boolean;
   published_at: string | null;
   created_at: string;

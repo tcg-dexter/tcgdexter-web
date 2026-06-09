@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { DEFAULT_BANNER_LAYOUT } from "../types";
 
 interface Props {
   spotlightId: string;
@@ -28,28 +29,29 @@ export default function SpotlightAdminBar({
 }: Props) {
   const router = useRouter();
   const [publishing, setPublishing] = useState(false);
-  const [fitting, setFitting] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function onFit() {
-    setFitting(true);
+  async function onReset() {
+    setResetting(true);
     setError(null);
     try {
       const res = await fetch(`/api/admin/spotlight/${spotlightId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          avatar_image_scale: 1.0,
-          avatar_image_position: { x: 50, y: 50 },
+          // Send the full preset for all four items so any prior
+          // drag/resize gets cleanly reverted.
+          banner_layout: DEFAULT_BANNER_LAYOUT,
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Fit failed");
+      if (!res.ok) throw new Error(json.error ?? "Reset failed");
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Fit failed");
+      setError(err instanceof Error ? err.message : "Reset failed");
     } finally {
-      setFitting(false);
+      setResetting(false);
     }
   }
 
@@ -83,7 +85,7 @@ export default function SpotlightAdminBar({
       )}
       <p className="text-xs text-text-secondary flex-1 min-w-0">
         {showDragHint
-          ? "Drag to reposition; scroll or drag the handle to resize. Tap Fit to reset."
+          ? "Drag items to reposition; scroll or drag the handle to resize. Tap Reset to restore the preset."
           : isPublished
             ? "This spotlight is live."
             : "Visible only to admins. Publish to make it public."}
@@ -93,11 +95,11 @@ export default function SpotlightAdminBar({
         {showDragHint && (
           <button
             type="button"
-            onClick={onFit}
-            disabled={fitting}
+            onClick={onReset}
+            disabled={resetting}
             className="text-sm font-semibold px-4 py-2 rounded-full border border-black/15 text-text-primary hover:bg-[var(--surface)] disabled:opacity-50"
           >
-            {fitting ? "Resetting…" : "Fit"}
+            {resetting ? "Resetting…" : "Reset"}
           </button>
         )}
         <Link

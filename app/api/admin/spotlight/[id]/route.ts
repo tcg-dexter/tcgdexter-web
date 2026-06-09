@@ -81,6 +81,49 @@ export async function PATCH(
       a: typeof item.a === "string" ? item.a : "",
     }));
   }
+  if (body.banner_layout && typeof body.banner_layout === "object") {
+    // Read current layout and merge so a partial update (one item at
+    // a time, the common case for drag/resize) doesn't clobber the
+    // other items. Each item is validated and clamped to safe ranges.
+    const { data: current } = await supabase
+      .from("trainer_spotlights")
+      .select("banner_layout")
+      .eq("id", id)
+      .maybeSingle<{ banner_layout: Record<string, unknown> }>();
+    const merged = { ...(current?.banner_layout ?? {}) } as Record<string, {
+      x: number;
+      y: number;
+      scale: number;
+    }>;
+    const VALID_KEYS = new Set([
+      "collection_card",
+      "pokemon",
+      "user_image",
+      "format_card",
+    ]);
+    const clampPct = (v: unknown) => {
+      const n = typeof v === "number" ? v : Number(v);
+      if (!Number.isFinite(n)) return 50;
+      return Math.max(0, Math.min(100, n));
+    };
+    const clampScale = (v: unknown) => {
+      const n = typeof v === "number" ? v : Number(v);
+      if (!Number.isFinite(n)) return 1;
+      return Math.max(0.1, Math.min(4, n));
+    };
+    for (const [key, raw] of Object.entries(
+      body.banner_layout as Record<string, unknown>,
+    )) {
+      if (!VALID_KEYS.has(key) || !raw || typeof raw !== "object") continue;
+      const r = raw as { x?: unknown; y?: unknown; scale?: unknown };
+      merged[key] = {
+        x: clampPct(r.x),
+        y: clampPct(r.y),
+        scale: clampScale(r.scale),
+      };
+    }
+    update.banner_layout = merged;
+  }
   if (
     body.avatar_image_scale !== undefined &&
     body.avatar_image_scale !== null
