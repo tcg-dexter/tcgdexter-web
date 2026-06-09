@@ -41,16 +41,28 @@ export type SpotlightBannerLayout = Record<
   SpotlightBannerItem
 >;
 
-/** Editorial preset for the four banner items — the Reset button
- *  restores these and the DB column defaults to this shape. Mirrored in
- *  the SQL migration's jsonb_build_object call so the row reads the
- *  same on first save whether the client or the DB filled it in. */
+/** Editorial preset for the banner items. The favorite-Pokémon sprite
+ *  is rendered separately, pinned to the bottom-right corner — its
+ *  entry in this map is retained for schema continuity (the DB column
+ *  defaults still include it) but the page does not read it.
+ *
+ *  The Reset button restores the three interactive items below to
+ *  their preset evenly across the horizontal middle. */
 export const DEFAULT_BANNER_LAYOUT: SpotlightBannerLayout = {
-  collection_card: { x: 15, y: 55, scale: 1.0 },
-  pokemon: { x: 38, y: 55, scale: 1.0 },
-  user_image: { x: 58, y: 55, scale: 1.0 },
-  format_card: { x: 85, y: 55, scale: 1.0 },
+  collection_card: { x: 20, y: 55, scale: 1.0 },
+  user_image: { x: 50, y: 55, scale: 1.0 },
+  format_card: { x: 80, y: 55, scale: 1.0 },
+  // Unused by the page — pokemon is pinned via CSS, not layout state.
+  pokemon: { x: 92, y: 88, scale: 1.0 },
 };
+
+/** Item keys whose position + scale are user-editable. Excludes
+ *  `pokemon`, which the page pins to the bottom-right corner. */
+export const INTERACTIVE_BANNER_KEYS: SpotlightBannerItemKey[] = [
+  "collection_card",
+  "user_image",
+  "format_card",
+];
 
 export interface TrainerSpotlightRow {
   id: string;

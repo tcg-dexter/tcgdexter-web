@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { DEFAULT_BANNER_LAYOUT } from "../types";
+import { DEFAULT_BANNER_LAYOUT, INTERACTIVE_BANNER_KEYS } from "../types";
 
 interface Props {
   spotlightId: string;
@@ -40,9 +40,13 @@ export default function SpotlightAdminBar({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          // Send the full preset for all four items so any prior
-          // drag/resize gets cleanly reverted.
-          banner_layout: DEFAULT_BANNER_LAYOUT,
+          // Only reset the interactive items — the favorite-Pokémon
+          // sprite is pinned to the bottom-right corner by CSS and
+          // isn't user-positionable. Sending its layout entry would
+          // overwrite the schema default with no effect.
+          banner_layout: Object.fromEntries(
+            INTERACTIVE_BANNER_KEYS.map((k) => [k, DEFAULT_BANNER_LAYOUT[k]]),
+          ),
         }),
       });
       const json = await res.json();

@@ -36,14 +36,18 @@ const COLORLESS = "#B0A89E";
 const SPRITE_BASE = "https://r2.limitlesstcg.net/pokemon/gen9";
 
 // Base width as a fraction of banner width per item type, at scale=1.0.
-// Tuned so the four items read at roughly equal visual weight even
-// though cards are tall (5:7) and the sprite is compact.
+// Tuned so the items read at roughly equal visual weight even though
+// cards are tall (5:7) and the sprite is compact.
 const BASE_WIDTHS = {
-  collection_card: 16,
-  pokemon: 14,
-  user_image: 26,
-  format_card: 16,
+  collection_card: 18,
+  user_image: 28,
+  format_card: 18,
 };
+
+// Favorite-Pokémon sprite — pinned to the bottom-right corner instead
+// of joining the horizontal stack. Sized as a fraction of banner width
+// so it scales naturally with the viewport.
+const POKEMON_CORNER_WIDTH_PCT = 16;
 
 export default function SpotlightHeader({
   displayName,
@@ -95,17 +99,6 @@ export default function SpotlightHeader({
             <CardArt card={favoriteCollectionCard} />
           </SpotlightBannerItem>
         )}
-        {favoritePokemon && (
-          <SpotlightBannerItem
-            spotlightId={spotlightId}
-            itemKey="pokemon"
-            initial={layout.pokemon}
-            baseWidthPct={BASE_WIDTHS.pokemon}
-            editable={editable}
-          >
-            <PokemonSprite pokemon={favoritePokemon} />
-          </SpotlightBannerItem>
-        )}
         {userImageUrl && (
           <SpotlightBannerItem
             spotlightId={spotlightId}
@@ -133,6 +126,22 @@ export default function SpotlightHeader({
           >
             <CardArt card={favoriteFormatCard} />
           </SpotlightBannerItem>
+        )}
+
+        {/* Favorite-Pokémon sprite — pinned to the bottom-right corner,
+            non-interactive. Sized as a fraction of the banner width so
+            it scales with the viewport like the stack items above. */}
+        {favoritePokemon && (
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              right: "1.5%",
+              bottom: "4%",
+              width: `${POKEMON_CORNER_WIDTH_PCT}%`,
+            }}
+          >
+            <PokemonSprite pokemon={favoritePokemon} />
+          </div>
         )}
       </div>
 
