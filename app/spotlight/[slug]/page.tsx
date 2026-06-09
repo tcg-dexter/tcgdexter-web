@@ -1,5 +1,4 @@
 import { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { UserDeckCard } from "@/app/components/DeckPostCard";
@@ -7,12 +6,15 @@ import {
   primaryCardImageUrl,
   deckAvatarInfo,
   pokemonSlug,
+  cardTypesForName,
+  cardTypesForSetIdNumber,
 } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
 import SpotlightCardTile from "../components/SpotlightCardTile";
 import SpotlightPokemonTile from "../components/SpotlightPokemonTile";
 import SpotlightAdminBar from "../components/SpotlightAdminBar";
 import SpotlightQAThread from "../components/SpotlightQAThread";
+import SpotlightHeader from "../components/SpotlightHeader";
 import type { TrainerSpotlightRow } from "../types";
 
 interface ProfileRow {
@@ -126,9 +128,45 @@ export default async function SpotlightPage({
     isAdmin = !!me?.is_admin;
   }
 
+  // Banner accent colors — one per favorite slot, ordered Pokémon →
+  // collection → play. Resolved from the energy type of the underlying
+  // card (or Pokémon-by-name for the sprite slot). When a slot is empty
+  // we pass null and SpotlightHeader gracefully collapses the gradient.
+  const accentColors: (string | null)[] = [
+    spotlight.favorite_pokemon
+      ? typeColor(cardTypesForName(spotlight.favorite_pokemon.name))
+      : null,
+    spotlight.favorite_collection_card
+      ? typeColor(
+          cardTypesForSetIdNumber(
+            spotlight.favorite_collection_card.set_id,
+            spotlight.favorite_collection_card.number,
+            spotlight.favorite_collection_card.name,
+          ),
+        )
+      : null,
+    spotlight.favorite_format_card
+      ? typeColor(
+          cardTypesForSetIdNumber(
+            spotlight.favorite_format_card.set_id,
+            spotlight.favorite_format_card.number,
+            spotlight.favorite_format_card.name,
+          ),
+        )
+      : null,
+  ];
+
   return (
     <main className="min-h-dvh bg-bg pb-24">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 pt-8">
+      <SpotlightHeader
+        displayName={profile.display_name}
+        username={profile.username}
+        avatarUrl={profile.avatar_url}
+        headline={spotlight.headline}
+        accentColors={accentColors}
+      />
+
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 mt-6">
         {isAdmin && (
           <SpotlightAdminBar
             spotlightId={spotlight.id}
@@ -136,40 +174,6 @@ export default async function SpotlightPage({
             isPublished={spotlight.is_published}
           />
         )}
-        {/* Header */}
-        <header className="rounded-2xl bg-white border border-black/8 shadow-sm p-6 flex items-center gap-4">
-          {profile.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={profile.avatar_url}
-              alt={profile.display_name}
-              className="w-16 h-16 rounded-full object-cover border border-black/8"
-            />
-          ) : (
-            <div className="w-16 h-16 rounded-full bg-[var(--surface)] flex items-center justify-center text-xl font-semibold text-text-secondary">
-              {profile.display_name.charAt(0).toUpperCase()}
-            </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-accent mb-1">
-              Trainer Spotlight
-            </div>
-            <h1 className="text-2xl font-bold text-text-primary leading-tight">
-              {profile.display_name}{" "}
-              <Link
-                href={`/u/${profile.username}`}
-                className="text-base font-normal text-text-muted hover:text-accent"
-              >
-                @{profile.username}
-              </Link>
-            </h1>
-            {spotlight.headline && (
-              <p className="text-sm text-text-secondary mt-1">
-                {spotlight.headline}
-              </p>
-            )}
-          </div>
-        </header>
 
         {/* Favorites */}
         <section className="mt-6">
