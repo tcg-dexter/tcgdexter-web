@@ -81,6 +81,15 @@ export async function PATCH(
       a: typeof item.a === "string" ? item.a : "",
     }));
   }
+  if (body.avatar_image_position && typeof body.avatar_image_position === "object") {
+    const pos = body.avatar_image_position as { x?: unknown; y?: unknown };
+    const clamp = (v: unknown) => {
+      const n = typeof v === "number" ? v : Number(v);
+      if (!Number.isFinite(n)) return 50;
+      return Math.max(0, Math.min(100, n));
+    };
+    update.avatar_image_position = { x: clamp(pos.x), y: clamp(pos.y) };
+  }
   if (typeof body.is_published === "boolean") {
     update.is_published = body.is_published;
     // First publish sets published_at; subsequent toggles preserve it.

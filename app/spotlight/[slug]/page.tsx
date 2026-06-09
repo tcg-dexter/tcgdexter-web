@@ -101,10 +101,14 @@ export async function generateMetadata({
 
 export default async function SpotlightPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { slug } = await params;
+  const sp = await searchParams;
+  const previewMode = sp.preview === "1";
   const data = await loadSpotlight(slug);
   if (!data) notFound();
   const { spotlight, profile, decks } = data;
@@ -164,6 +168,19 @@ export default async function SpotlightPage({
         avatarUrl={profile.avatar_url}
         headline={spotlight.headline}
         accentColors={accentColors}
+        bannerImage={
+          spotlight.avatar_image_url
+            ? {
+                spotlightId: spotlight.id,
+                url: spotlight.avatar_image_url,
+                position: spotlight.avatar_image_position,
+                // Draggable only when an admin loads the preview surface.
+                // Public readers (and admins on the canonical published
+                // page) see a static, non-interactive image.
+                editable: isAdmin && previewMode,
+              }
+            : undefined
+        }
       />
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6 mt-6">
@@ -172,6 +189,7 @@ export default async function SpotlightPage({
             spotlightId={spotlight.id}
             slug={spotlight.slug}
             isPublished={spotlight.is_published}
+            showDragHint={previewMode && !!spotlight.avatar_image_url}
           />
         )}
 

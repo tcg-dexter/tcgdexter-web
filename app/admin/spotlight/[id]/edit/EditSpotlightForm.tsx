@@ -10,6 +10,7 @@ import type {
 } from "@/app/spotlight/types";
 import PokemonNamePicker from "./PokemonNamePicker";
 import CardSearchPicker from "./CardSearchPicker";
+import AvatarImageUploader from "./AvatarImageUploader";
 
 interface DeckOption {
   id: string;
@@ -126,6 +127,24 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
             className="input"
           />
         </Field>
+      </section>
+
+      {/* Banner avatar image — uploaded foreground (e.g. TCG Live avatar)
+          that overlays the banner gradient. Position is set later on the
+          preview page via interactive drag. */}
+      <section className="rounded-2xl bg-white border border-black/8 shadow-sm p-5 space-y-3">
+        <div>
+          <h3 className="text-sm font-semibold text-text-primary">
+            Banner image
+          </h3>
+          <p className="text-xs text-text-muted mt-0.5">
+            Optional. Sits over the banner gradient on the published page.
+          </p>
+        </div>
+        <AvatarImageUploader
+          spotlightId={spotlight.id}
+          initialUrl={spotlight.avatar_image_url}
+        />
       </section>
 
       {/* Favorite Pokémon — sprite picker (TeamOfSix-style). */}

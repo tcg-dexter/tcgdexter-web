@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { shade } from "@/lib/color";
+import SpotlightBannerImage from "./SpotlightBannerImage";
+import type { SpotlightAvatarPosition } from "../types";
 
 interface Props {
   displayName: string;
@@ -10,6 +12,16 @@ interface Props {
    *  collection, favorite to play. Nulls collapse out — the gradient
    *  shows however many we have. */
   accentColors: (string | null)[];
+  /** Optional foreground image overlaid on the banner gradient
+   *  (typically the trainer's TCG Live avatar). */
+  bannerImage?: {
+    spotlightId: string;
+    url: string;
+    position: SpotlightAvatarPosition;
+    /** When true, the image is draggable and PATCHes new x/y on drop.
+     *  Only enabled for admins viewing the preview surface. */
+    editable: boolean;
+  };
 }
 
 const COLORLESS = "#B0A89E";
@@ -30,6 +42,7 @@ export default function SpotlightHeader({
   avatarUrl,
   headline,
   accentColors,
+  bannerImage,
 }: Props) {
   // Drop nulls; if we have nothing, fall back to Colorless so the banner
   // still paints rather than collapsing to white.
@@ -59,11 +72,21 @@ export default function SpotlightHeader({
     <header className="flex-shrink-0">
       {/* Banner — 3:1 on desktop, ~33vh on mobile. Mirrors meta archetype
           and battle banner sizing so cross-surface page tops read at the
-          same weight. */}
+          same weight. The optional uploaded image floats over the
+          gradient and (when editable) drags to reposition. */}
       <div
         className="relative w-full overflow-hidden h-[calc(34vw-12px)] sm:h-auto sm:aspect-[3/1]"
         style={{ background: bannerGradient }}
-      />
+      >
+        {bannerImage && (
+          <SpotlightBannerImage
+            spotlightId={bannerImage.spotlightId}
+            url={bannerImage.url}
+            initialPosition={bannerImage.position}
+            editable={bannerImage.editable}
+          />
+        )}
+      </div>
 
       {/* Bio block. The avatar overlaps the banner via negative margin. */}
       <div className="mx-auto max-w-2xl px-6">

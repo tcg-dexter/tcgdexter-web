@@ -8,6 +8,10 @@ interface Props {
   spotlightId: string;
   slug: string;
   isPublished: boolean;
+  /** When true, hint the admin that the banner image can be dragged
+   *  to reposition. Driven by the spotlight page when ?preview=1 is
+   *  set and a banner image is present. */
+  showDragHint?: boolean;
 }
 
 /**
@@ -20,6 +24,7 @@ export default function SpotlightAdminBar({
   spotlightId,
   slug,
   isPublished,
+  showDragHint,
 }: Props) {
   const router = useRouter();
   const [publishing, setPublishing] = useState(false);
@@ -54,9 +59,11 @@ export default function SpotlightAdminBar({
         </span>
       )}
       <p className="text-xs text-text-secondary flex-1 min-w-0">
-        {isPublished
-          ? "This spotlight is live."
-          : "Visible only to admins. Publish to make it public."}
+        {showDragHint
+          ? "Drag the banner image to reposition it."
+          : isPublished
+            ? "This spotlight is live."
+            : "Visible only to admins. Publish to make it public."}
       </p>
       {error && <span className="text-xs text-accent">{error}</span>}
       <div className="flex items-center gap-2 ml-auto">
