@@ -18,36 +18,38 @@ interface Props {
    *  collection, favorite to play. Nulls collapse out — the gradient
    *  shows however many we have. */
   accentColors: (string | null)[];
-  /** Per-item placement for the four banner elements. */
   layout: SpotlightBannerLayout;
-  /** When true, items in the banner can be dragged + resized. Driven
-   *  by the page when ?preview=1 is set and the viewer is admin. */
+  /** When true, items in the banner that support it can be dragged +
+   *  resized. The card fans and the pinned Pokémon sprite are always
+   *  static; only the uploaded user image responds to editable. */
   editable: boolean;
-  /** Used by SpotlightBannerItem to PATCH layout updates. */
   spotlightId: string;
-  /** The four media references. Each renders only when present. */
   favoritePokemon: SpotlightPokemonRef | null;
-  favoriteCollectionCard: SpotlightCardRef | null;
-  favoriteFormatCard: SpotlightCardRef | null;
+  /** Up to 3 cards per side; rendered as fans on the left (collection)
+   *  and right (play) of the banner. */
+  favoriteCollectionCards: SpotlightCardRef[];
+  favoriteFormatCards: SpotlightCardRef[];
   userImageUrl: string | null;
 }
 
 const COLORLESS = "#B0A89E";
 const SPRITE_BASE = "https://r2.limitlesstcg.net/pokemon/gen9";
 
-// Base width as a fraction of banner width per item type, at scale=1.0.
-// Tuned so the items read at roughly equal visual weight even though
-// cards are tall (5:7) and the sprite is compact.
-const BASE_WIDTHS = {
-  collection_card: 18,
-  user_image: 28,
-  format_card: 18,
-};
+// Base footprint as a fraction of banner width.
+const USER_IMAGE_BASE_WIDTH_PCT = 28;
+const CARD_FAN_WIDTH_PCT = 18; // each card's width within a fan
+const POKEMON_CORNER_WIDTH_PCT = 8; // half the prior 16 — per request
 
-// Favorite-Pokémon sprite — pinned to the bottom-right corner instead
-// of joining the horizontal stack. Sized as a fraction of banner width
-// so it scales naturally with the viewport.
-const POKEMON_CORNER_WIDTH_PCT = 16;
+// Card fan geometry. The front card (i=0) sits vertical at the side's
+// anchor point; subsequent cards shift outward (away from center) and
+// rotate outward in increasing increments to read as a hand-fan.
+// Negative dx values shift left, positive shift right; rotations
+// mirror the side via sign.
+const FAN_ANCHOR_X_PCT = 20; // left side; right side mirrors to 80
+const FAN_ANCHOR_Y_PCT = 55;
+const FAN_DX_STEPS_PCT = [0, -7, -13]; // applied to left side; right uses positive
+const FAN_DY_STEPS_PCT = [0, 1.5, 3];
+const FAN_ROTATION_DEG = [0, -10, -18]; // left side; right negates
 
 export default function SpotlightHeader({
   displayName,
@@ -59,8 +61,8 @@ export default function SpotlightHeader({
   editable,
   spotlightId,
   favoritePokemon,
-  favoriteCollectionCard,
-  favoriteFormatCard,
+  favoriteCollectionCards,
+  favoriteFormatCards,
   userImageUrl,
 }: Props) {
   const stops = accentColors.filter((c): c is string => !!c);
@@ -83,28 +85,22 @@ export default function SpotlightHeader({
 
   return (
     <header className="flex-shrink-0">
-      {/* Banner — gradient background plus four positioned media items. */}
       <div
         className="relative w-full overflow-hidden h-[calc(34vw-12px)] sm:h-auto sm:aspect-[3/1]"
         style={{ background: bannerGradient }}
       >
-        {favoriteCollectionCard && (
-          <SpotlightBannerItem
-            spotlightId={spotlightId}
-            itemKey="collection_card"
-            initial={layout.collection_card}
-            baseWidthPct={BASE_WIDTHS.collection_card}
-            editable={editable}
-          >
-            <CardArt card={favoriteCollectionCard} />
-          </SpotlightBannerItem>
-        )}
+        {/* Card fans — left (collection) and right (play). Painted
+            back-to-front so the i=0 front card lands on top. */}
+        <CardFan cards={favoriteCollectionCards} side="left" />
+        <CardFan cards={favoriteFormatCards} side="right" />
+
+        {/* User image — only interactive item in the banner. */}
         {userImageUrl && (
           <SpotlightBannerItem
             spotlightId={spotlightId}
             itemKey="user_image"
             initial={layout.user_image}
-            baseWidthPct={BASE_WIDTHS.user_image}
+            baseWidthPct={USER_IMAGE_BASE_WIDTH_PCT}
             editable={editable}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -116,21 +112,9 @@ export default function SpotlightHeader({
             />
           </SpotlightBannerItem>
         )}
-        {favoriteFormatCard && (
-          <SpotlightBannerItem
-            spotlightId={spotlightId}
-            itemKey="format_card"
-            initial={layout.format_card}
-            baseWidthPct={BASE_WIDTHS.format_card}
-            editable={editable}
-          >
-            <CardArt card={favoriteFormatCard} />
-          </SpotlightBannerItem>
-        )}
 
-        {/* Favorite-Pokémon sprite — pinned to the bottom-right corner,
-            non-interactive. Sized as a fraction of the banner width so
-            it scales with the viewport like the stack items above. */}
+        {/* Favorite-Pokémon sprite — pinned to the bottom-right
+            corner, 50% smaller than the earlier preset. */}
         {favoritePokemon && (
           <div
             className="absolute pointer-events-none"
@@ -145,8 +129,7 @@ export default function SpotlightHeader({
         )}
       </div>
 
-      {/* Bio block. The trainer avatar overlaps the banner via negative
-          margin and stays distinct from the items inside the banner. */}
+      {/* Bio block — trainer avatar overlaps banner via negative margin. */}
       <div className="mx-auto max-w-2xl px-6">
         <div className="flex items-end justify-between gap-3 -mt-16 sm:-mt-20">
           <div
@@ -196,6 +179,59 @@ export default function SpotlightHeader({
   );
 }
 
+/**
+ * Hand-fan stack of up to 3 cards. Front card is vertical at the side's
+ * anchor; trailing cards shift outward and rotate outward in
+ * increasing increments. The right side mirrors the left's offsets so
+ * both stacks read as opposing hands of cards.
+ */
+function CardFan({
+  cards,
+  side,
+}: {
+  cards: SpotlightCardRef[];
+  side: "left" | "right";
+}) {
+  if (cards.length === 0) return null;
+  const sign = side === "left" ? -1 : 1;
+  const anchorX = side === "left" ? FAN_ANCHOR_X_PCT : 100 - FAN_ANCHOR_X_PCT;
+  const limited = cards.slice(0, 3);
+
+  // Render order: deepest card first so the front (i=0) paints last
+  // and lands on top — the natural hand-fan stacking.
+  const ordered = limited
+    .map((card, i) => ({ card, i }))
+    .sort((a, b) => b.i - a.i);
+
+  return (
+    <>
+      {ordered.map(({ card, i }) => {
+        const dx = sign * (FAN_DX_STEPS_PCT[i] ?? 0);
+        const dy = FAN_DY_STEPS_PCT[i] ?? 0;
+        const rot = sign * (FAN_ROTATION_DEG[i] ?? 0);
+        return (
+          <div
+            key={`${card.set_id}-${card.number}-${i}`}
+            className="absolute pointer-events-none"
+            style={{
+              left: `${anchorX + dx}%`,
+              top: `${FAN_ANCHOR_Y_PCT + dy}%`,
+              width: `${CARD_FAN_WIDTH_PCT}%`,
+              transform: `translate(-50%, -50%) rotate(${rot}deg)`,
+              // Trailing cards sit visually behind via z-index; the
+              // sort above also ensures correct paint order so the
+              // drop shadow doesn't cross over the front card.
+              zIndex: 10 - i,
+            }}
+          >
+            <CardArt card={card} />
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 function CardArt({ card }: { card: SpotlightCardRef }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
@@ -203,7 +239,7 @@ function CardArt({ card }: { card: SpotlightCardRef }) {
       src={cardImageLarge(card.set_id, card.number)}
       alt={card.name}
       draggable={false}
-      className="w-full h-auto block rounded-md"
+      className="w-full h-auto block rounded-md drop-shadow-lg"
     />
   );
 }

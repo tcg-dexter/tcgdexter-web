@@ -89,7 +89,7 @@ export default function SpotlightAdminBar({
       )}
       <p className="text-xs text-text-secondary flex-1 min-w-0">
         {showDragHint
-          ? "Drag items to reposition; scroll or drag the handle to resize. Tap Reset to restore the preset."
+          ? "Drag the user image to reposition; scroll or drag the handle to resize. Tap Reset to recenter."
           : isPublished
             ? "This spotlight is live."
             : "Visible only to admins. Publish to make it public."}

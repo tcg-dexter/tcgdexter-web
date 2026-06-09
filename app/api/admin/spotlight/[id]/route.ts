@@ -49,6 +49,38 @@ export async function PATCH(
   ] as const) {
     if (key in body) update[key] = body[key];
   }
+  for (const key of [
+    "favorite_collection_cards",
+    "favorite_format_cards",
+  ] as const) {
+    if (key in body) {
+      const arr = body[key];
+      if (!Array.isArray(arr)) {
+        return NextResponse.json(
+          { error: `${key} must be an array` },
+          { status: 400 },
+        );
+      }
+      if (arr.length > 3) {
+        return NextResponse.json(
+          { error: `${key}: max 3 cards` },
+          { status: 400 },
+        );
+      }
+      // Whitelist shape — defends against an admin pasting an unrelated
+      // object into one of these slots. Each entry must look like
+      // SpotlightCardRef.
+      const cleaned = (arr as unknown[]).map((raw) => {
+        const r = raw as { set_id?: unknown; number?: unknown; name?: unknown };
+        return {
+          set_id: typeof r.set_id === "string" ? r.set_id : "",
+          number: typeof r.number === "string" ? r.number : "",
+          name: typeof r.name === "string" ? r.name : "",
+        };
+      });
+      update[key] = cleaned;
+    }
+  }
   if (Array.isArray(body.featured_deck_ids)) {
     const ids = (body.featured_deck_ids as unknown[]).filter(
       (v): v is string => typeof v === "string" && v.length > 0

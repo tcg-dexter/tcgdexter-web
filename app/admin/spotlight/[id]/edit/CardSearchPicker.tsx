@@ -17,8 +17,10 @@ interface CardResult {
 interface SlotDef {
   key: string;
   label: string;
-  value: SpotlightCardRef | null;
-  onChange: (v: SpotlightCardRef | null) => void;
+  cards: SpotlightCardRef[];
+  setCards: (cards: SpotlightCardRef[]) => void;
+  /** Max cards this slot accepts. */
+  max: number;
 }
 
 interface Props {
@@ -26,10 +28,11 @@ interface Props {
 }
 
 /**
- * Shared card search that drives multiple slot assignments. The admin types
- * once; each result has an inline button per slot ("Set as <label>") that
- * assigns it to that slot. Selected cards display above the search as
- * removable chips per slot.
+ * Shared card search backing multiple multi-card slots. The admin types
+ * once; each result row carries an inline "Add to <slot>" button per
+ * slot. Buttons go disabled when the slot is full or already contains
+ * that exact (set_id, number). Selected cards display above the search
+ * as small chips with per-card remove.
  */
 export default function CardSearchPicker({ slots }: Props) {
   const [query, setQuery] = useState("");
@@ -51,7 +54,7 @@ export default function CardSearchPicker({ slots }: Props) {
     debounceRef.current = setTimeout(async () => {
       try {
         const res = await fetch(
-          `/api/admin/spotlight/card-search?q=${encodeURIComponent(val)}`
+          `/api/admin/spotlight/card-search?q=${encodeURIComponent(val)}`,
         );
         const json = await res.json();
         if (!res.ok) throw new Error(json.error ?? "Search failed");
@@ -69,12 +72,23 @@ export default function CardSearchPicker({ slots }: Props) {
     };
   }, [query]);
 
-  function assign(slot: SlotDef, card: CardResult) {
-    slot.onChange({
-      name: card.name,
-      set_id: card.set_id,
-      number: card.number,
-    });
+  function addToSlot(slot: SlotDef, card: CardResult) {
+    if (slot.cards.length >= slot.max) return;
+    if (
+      slot.cards.some(
+        (c) => c.set_id === card.set_id && c.number === card.number,
+      )
+    ) {
+      return;
+    }
+    slot.setCards([
+      ...slot.cards,
+      { name: card.name, set_id: card.set_id, number: card.number },
+    ]);
+  }
+
+  function removeFromSlot(slot: SlotDef, index: number) {
+    slot.setCards(slot.cards.filter((_, i) => i !== index));
   }
 
   return (
@@ -82,7 +96,11 @@ export default function CardSearchPicker({ slots }: Props) {
       {/* Selected chips per slot */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {slots.map((slot) => (
-          <SlotChip key={slot.key} slot={slot} />
+          <SlotPanel
+            key={slot.key}
+            slot={slot}
+            onRemove={(i) => removeFromSlot(slot, i)}
+          />
         ))}
       </div>
 
@@ -98,7 +116,6 @@ export default function CardSearchPicker({ slots }: Props) {
         />
       </div>
 
-      {/* Results */}
       {query.trim().length >= 2 && (
         <div className="rounded-lg border border-black/10 bg-white max-h-96 overflow-y-auto">
           {searching ? (
@@ -116,7 +133,7 @@ export default function CardSearchPicker({ slots }: Props) {
                   key={`${c.set_id}-${c.number}`}
                   card={c}
                   slots={slots}
-                  onAssign={assign}
+                  onAdd={addToSlot}
                 />
               ))}
             </ul>
@@ -127,39 +144,58 @@ export default function CardSearchPicker({ slots }: Props) {
   );
 }
 
-function SlotChip({ slot }: { slot: SlotDef }) {
+function SlotPanel({
+  slot,
+  onRemove,
+}: {
+  slot: SlotDef;
+  onRemove: (index: number) => void;
+}) {
   return (
     <div className="rounded-xl border border-black/10 bg-white p-3">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-text-muted mb-2">
-        {slot.label}
-      </div>
-      {slot.value ? (
-        <div className="flex items-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={cardImageSmall(slot.value.set_id, slot.value.number)}
-            alt={slot.value.name}
-            className="w-12 h-[68px] object-contain rounded bg-[var(--surface)] shrink-0"
-            loading="lazy"
-          />
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold text-text-primary truncate">
-              {slot.value.name}
-            </div>
-            <div className="text-[11px] text-text-muted">
-              {slot.value.set_id.toUpperCase()} · {slot.value.number}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => slot.onChange(null)}
-            className="text-xs text-text-muted hover:text-accent shrink-0"
-          >
-            Clear
-          </button>
+      <div className="flex items-baseline justify-between mb-2">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+          {slot.label}
         </div>
+        <div className="text-[11px] text-text-muted">
+          {slot.cards.length} / {slot.max}
+        </div>
+      </div>
+      {slot.cards.length === 0 ? (
+        <p className="text-xs text-text-muted">No cards selected.</p>
       ) : (
-        <p className="text-xs text-text-muted">No card selected.</p>
+        <ul className="space-y-1.5">
+          {slot.cards.map((card, i) => (
+            <li
+              key={`${card.set_id}-${card.number}-${i}`}
+              className="flex items-center gap-2"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={cardImageSmall(card.set_id, card.number)}
+                alt={card.name}
+                className="w-8 h-[44px] object-contain rounded bg-[var(--surface)] shrink-0"
+                loading="lazy"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-semibold text-text-primary truncate">
+                  {card.name}
+                </div>
+                <div className="text-[10px] text-text-muted">
+                  {card.set_id.toUpperCase()} · {card.number}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onRemove(i)}
+                className="text-xs text-text-muted hover:text-accent shrink-0"
+                aria-label={`Remove ${card.name}`}
+              >
+                ✕
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
@@ -168,16 +204,22 @@ function SlotChip({ slot }: { slot: SlotDef }) {
 function ResultRow({
   card,
   slots,
-  onAssign,
+  onAdd,
 }: {
   card: CardResult;
   slots: SlotDef[];
-  onAssign: (slot: SlotDef, card: CardResult) => void;
+  onAdd: (slot: SlotDef, card: CardResult) => void;
 }) {
-  function isSelected(slot: SlotDef) {
-    return (
-      slot.value?.set_id === card.set_id && slot.value?.number === card.number
-    );
+  function status(slot: SlotDef): "added" | "full" | "available" {
+    if (
+      slot.cards.some(
+        (c) => c.set_id === card.set_id && c.number === card.number,
+      )
+    ) {
+      return "added";
+    }
+    if (slot.cards.length >= slot.max) return "full";
+    return "available";
   }
   return (
     <li className="flex items-start gap-3 px-3 py-2">
@@ -199,20 +241,27 @@ function ResultRow({
       </div>
       <div className="flex flex-col gap-1 shrink-0">
         {slots.map((slot) => {
-          const selected = isSelected(slot);
+          const st = status(slot);
+          const disabled = st !== "available";
           return (
             <button
               key={slot.key}
               type="button"
-              onClick={() => onAssign(slot, card)}
-              disabled={selected}
+              onClick={() => onAdd(slot, card)}
+              disabled={disabled}
               className={`text-[11px] font-semibold px-2 py-1 rounded-md border whitespace-nowrap ${
-                selected
+                st === "added"
                   ? "border-emerald-500 text-emerald-600 bg-emerald-50 cursor-default"
-                  : "border-black/15 text-text-primary hover:border-accent hover:text-accent"
+                  : st === "full"
+                    ? "border-black/10 text-text-muted bg-white cursor-not-allowed"
+                    : "border-black/15 text-text-primary hover:border-accent hover:text-accent"
               }`}
             >
-              {selected ? `✓ ${slot.label}` : `Set as ${slot.label}`}
+              {st === "added"
+                ? `✓ ${slot.label}`
+                : st === "full"
+                  ? `${slot.label} full`
+                  : `Add to ${slot.label}`}
             </button>
           );
         })}

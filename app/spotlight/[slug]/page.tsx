@@ -131,28 +131,31 @@ export default async function SpotlightPage({
   }
 
   // Banner accent colors — one per favorite slot, ordered Pokémon →
-  // collection → play. Resolved from the energy type of the underlying
-  // card (or Pokémon-by-name for the sprite slot). When a slot is empty
-  // we pass null and SpotlightHeader gracefully collapses the gradient.
+  // collection (first card) → play (first card). Resolved from the
+  // energy type of the underlying card (or Pokémon-by-name for the
+  // sprite slot). When a slot is empty we pass null and SpotlightHeader
+  // gracefully collapses the gradient.
+  const firstCollection = spotlight.favorite_collection_cards[0] ?? null;
+  const firstPlay = spotlight.favorite_format_cards[0] ?? null;
   const accentColors: (string | null)[] = [
     spotlight.favorite_pokemon
       ? typeColor(cardTypesForName(spotlight.favorite_pokemon.name))
       : null,
-    spotlight.favorite_collection_card
+    firstCollection
       ? typeColor(
           cardTypesForSetIdNumber(
-            spotlight.favorite_collection_card.set_id,
-            spotlight.favorite_collection_card.number,
-            spotlight.favorite_collection_card.name,
+            firstCollection.set_id,
+            firstCollection.number,
+            firstCollection.name,
           ),
         )
       : null,
-    spotlight.favorite_format_card
+    firstPlay
       ? typeColor(
           cardTypesForSetIdNumber(
-            spotlight.favorite_format_card.set_id,
-            spotlight.favorite_format_card.number,
-            spotlight.favorite_format_card.name,
+            firstPlay.set_id,
+            firstPlay.number,
+            firstPlay.name,
           ),
         )
       : null,
@@ -173,8 +176,8 @@ export default async function SpotlightPage({
         editable={isAdmin && previewMode}
         spotlightId={spotlight.id}
         favoritePokemon={spotlight.favorite_pokemon}
-        favoriteCollectionCard={spotlight.favorite_collection_card}
-        favoriteFormatCard={spotlight.favorite_format_card}
+        favoriteCollectionCards={spotlight.favorite_collection_cards ?? []}
+        favoriteFormatCards={spotlight.favorite_format_cards ?? []}
         userImageUrl={spotlight.avatar_image_url}
       />
 
@@ -184,18 +187,10 @@ export default async function SpotlightPage({
             spotlightId={spotlight.id}
             slug={spotlight.slug}
             isPublished={spotlight.is_published}
-            // In preview mode, banner items are interactive whenever
-            // any of the four are present — the drag hint applies to
-            // the whole banner now, not just the uploaded image.
-            showDragHint={
-              previewMode &&
-              !!(
-                spotlight.avatar_image_url ||
-                spotlight.favorite_pokemon ||
-                spotlight.favorite_collection_card ||
-                spotlight.favorite_format_card
-              )
-            }
+            // The fanned cards + corner Pokémon are now static; only
+            // the uploaded user image is interactive, so the drag hint
+            // is gated on its presence alone.
+            showDragHint={previewMode && !!spotlight.avatar_image_url}
           />
         )}
 

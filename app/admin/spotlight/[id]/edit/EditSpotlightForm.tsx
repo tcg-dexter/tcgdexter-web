@@ -28,10 +28,12 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
   const [headline, setHeadline] = useState(spotlight.headline ?? "");
   const [favoritePokemon, setFavoritePokemon] =
     useState<SpotlightPokemonRef | null>(spotlight.favorite_pokemon ?? null);
-  const [favoriteCollection, setFavoriteCollection] =
-    useState<SpotlightCardRef | null>(spotlight.favorite_collection_card ?? null);
-  const [favoriteFormat, setFavoriteFormat] =
-    useState<SpotlightCardRef | null>(spotlight.favorite_format_card ?? null);
+  const [favoriteCollection, setFavoriteCollection] = useState<
+    SpotlightCardRef[]
+  >(spotlight.favorite_collection_cards ?? []);
+  const [favoriteFormat, setFavoriteFormat] = useState<SpotlightCardRef[]>(
+    spotlight.favorite_format_cards ?? [],
+  );
   const [deckIds, setDeckIds] = useState<string[]>(() => {
     const padded = [...spotlight.featured_deck_ids];
     while (padded.length < 3) padded.push("");
@@ -54,8 +56,8 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
         slug: slug.trim().toLowerCase(),
         headline: headline.trim() || null,
         favorite_pokemon: favoritePokemon,
-        favorite_collection_card: favoriteCollection,
-        favorite_format_card: favoriteFormat,
+        favorite_collection_cards: favoriteCollection,
+        favorite_format_cards: favoriteFormat,
         featured_deck_ids: deckIds.filter(Boolean),
         qa: qa.filter((item) => item.q.trim() || item.a.trim()),
       };
@@ -170,7 +172,7 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
             Favorite cards
           </h3>
           <p className="text-xs text-text-muted mt-0.5">
-            Search once; each result has buttons to assign it to either slot.
+            Up to 3 per side — they fan out on the left (Collection) and right (Play) of the banner.
           </p>
         </div>
         <CardSearchPicker
@@ -178,14 +180,16 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
             {
               key: "collection",
               label: "Collection",
-              value: favoriteCollection,
-              onChange: setFavoriteCollection,
+              cards: favoriteCollection,
+              setCards: setFavoriteCollection,
+              max: 3,
             },
             {
               key: "play",
               label: "Play",
-              value: favoriteFormat,
-              onChange: setFavoriteFormat,
+              cards: favoriteFormat,
+              setCards: setFavoriteFormat,
+              max: 3,
             },
           ]}
         />

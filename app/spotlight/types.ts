@@ -56,12 +56,12 @@ export const DEFAULT_BANNER_LAYOUT: SpotlightBannerLayout = {
   pokemon: { x: 92, y: 88, scale: 1.0 },
 };
 
-/** Item keys whose position + scale are user-editable. Excludes
- *  `pokemon`, which the page pins to the bottom-right corner. */
+/** Item keys whose position + scale are user-editable. Cards now
+ *  render as fixed fans on either side of the banner and the Pokémon
+ *  sprite is pinned to the bottom-right corner, so only the uploaded
+ *  user image stays interactive. */
 export const INTERACTIVE_BANNER_KEYS: SpotlightBannerItemKey[] = [
-  "collection_card",
   "user_image",
-  "format_card",
 ];
 
 export interface TrainerSpotlightRow {
@@ -80,7 +80,12 @@ export interface TrainerSpotlightRow {
   avatar_image_position: SpotlightAvatarPosition;
   /** Legacy — superseded by banner_layout.user_image.scale. */
   avatar_image_scale: number;
-  /** Per-item placement of the four banner elements. */
+  /** Up to 3 cards each. Rendered as fanned stacks on either side of
+   *  the banner; non-interactive. */
+  favorite_collection_cards: SpotlightCardRef[];
+  favorite_format_cards: SpotlightCardRef[];
+  /** Per-item placement of the user image (and legacy entries for
+   *  pokemon / card slots that the page no longer reads). */
   banner_layout: SpotlightBannerLayout;
   is_published: boolean;
   published_at: string | null;
