@@ -174,9 +174,10 @@ export default async function SpotlightPage({
                 spotlightId: spotlight.id,
                 url: spotlight.avatar_image_url,
                 position: spotlight.avatar_image_position,
-                // Draggable only when an admin loads the preview surface.
-                // Public readers (and admins on the canonical published
-                // page) see a static, non-interactive image.
+                scale: spotlight.avatar_image_scale,
+                // Draggable + resizable only when an admin loads the
+                // preview surface. Public readers (and admins on the
+                // canonical published page) see a static image.
                 editable: isAdmin && previewMode,
               }
             : undefined

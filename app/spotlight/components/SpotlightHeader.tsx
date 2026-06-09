@@ -18,8 +18,10 @@ interface Props {
     spotlightId: string;
     url: string;
     position: SpotlightAvatarPosition;
-    /** When true, the image is draggable and PATCHes new x/y on drop.
-     *  Only enabled for admins viewing the preview surface. */
+    scale: number;
+    /** When true, the image is draggable + resizable and persists new
+     *  values on settle. Only enabled for admins viewing the preview
+     *  surface. */
     editable: boolean;
   };
 }
@@ -83,6 +85,7 @@ export default function SpotlightHeader({
             spotlightId={bannerImage.spotlightId}
             url={bannerImage.url}
             initialPosition={bannerImage.position}
+            initialScale={bannerImage.scale}
             editable={bannerImage.editable}
           />
         )}

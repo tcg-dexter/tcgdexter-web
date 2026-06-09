@@ -81,6 +81,21 @@ export async function PATCH(
       a: typeof item.a === "string" ? item.a : "",
     }));
   }
+  if (
+    body.avatar_image_scale !== undefined &&
+    body.avatar_image_scale !== null
+  ) {
+    const n =
+      typeof body.avatar_image_scale === "number"
+        ? body.avatar_image_scale
+        : Number(body.avatar_image_scale);
+    if (Number.isFinite(n)) {
+      // Match the DB check constraint (> 0 and <= 4); clamp to the same
+      // soft floor the UI uses so we don't accidentally persist a near-
+      // zero value that would render the image invisible.
+      update.avatar_image_scale = Math.max(0.1, Math.min(4, n));
+    }
+  }
   if (body.avatar_image_position && typeof body.avatar_image_position === "object") {
     const pos = body.avatar_image_position as { x?: unknown; y?: unknown };
     const clamp = (v: unknown) => {

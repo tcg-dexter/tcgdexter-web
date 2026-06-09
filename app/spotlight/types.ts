@@ -35,6 +35,9 @@ export interface TrainerSpotlightRow {
   qa: SpotlightQA[];
   avatar_image_url: string | null;
   avatar_image_position: SpotlightAvatarPosition;
+  /** Aspect-preserving scale multiplier vs the base image width (32% of
+   *  banner). 1.0 is the fit-to-default value; clamped 0.1–4 elsewhere. */
+  avatar_image_scale: number;
   is_published: boolean;
   published_at: string | null;
   created_at: string;

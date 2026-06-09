@@ -28,7 +28,30 @@ export default function SpotlightAdminBar({
 }: Props) {
   const router = useRouter();
   const [publishing, setPublishing] = useState(false);
+  const [fitting, setFitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function onFit() {
+    setFitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/spotlight/${spotlightId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          avatar_image_scale: 1.0,
+          avatar_image_position: { x: 50, y: 50 },
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Fit failed");
+      router.refresh();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Fit failed");
+    } finally {
+      setFitting(false);
+    }
+  }
 
   async function onPublish() {
     setPublishing(true);
@@ -60,13 +83,23 @@ export default function SpotlightAdminBar({
       )}
       <p className="text-xs text-text-secondary flex-1 min-w-0">
         {showDragHint
-          ? "Drag the banner image to reposition it."
+          ? "Drag to reposition; scroll or drag the handle to resize. Tap Fit to reset."
           : isPublished
             ? "This spotlight is live."
             : "Visible only to admins. Publish to make it public."}
       </p>
       {error && <span className="text-xs text-accent">{error}</span>}
       <div className="flex items-center gap-2 ml-auto">
+        {showDragHint && (
+          <button
+            type="button"
+            onClick={onFit}
+            disabled={fitting}
+            className="text-sm font-semibold px-4 py-2 rounded-full border border-black/15 text-text-primary hover:bg-[var(--surface)] disabled:opacity-50"
+          >
+            {fitting ? "Resetting…" : "Fit"}
+          </button>
+        )}
         <Link
           href={`/admin/spotlight/${spotlightId}/edit`}
           className="text-sm font-semibold px-4 py-2 rounded-full border border-black text-text-primary hover:bg-[var(--surface)]"
