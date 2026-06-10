@@ -46,13 +46,13 @@ const POKEMON_CORNER_WIDTH_PCT = 8; // half the prior 16 — per request
 // Steps are unsigned magnitudes; the per-side `sign` multiplier
 // (+1 right, −1 left) directs them outward on each side.
 //
-// Anchors brought in from 20→28% so each fan sits closer to the
-// banner center, and rotation magnitudes flipped (mirrored along the
-// vertical axis) so the tops of trailing cards now lean inward
-// instead of outward.
-const FAN_ANCHOR_X_PCT = 28; // left side; right side mirrors to 72
+// Anchors pulled further in (28 → 35%) so each fan's front card sits
+// closer to the banner center, layering subtly over the user image
+// edges. dx steps bumped 10% (5 → 5.5, 10 → 11) for slightly looser
+// inter-card spacing within each fan.
+const FAN_ANCHOR_X_PCT = 35; // left side; right side mirrors to 65
 const FAN_ANCHOR_Y_PCT = 55;
-const FAN_DX_STEPS_PCT = [0, 5, 10];
+const FAN_DX_STEPS_PCT = [0, 5.5, 11];
 const FAN_DY_STEPS_PCT = [0, 1.5, 3];
 const FAN_ROTATION_DEG = [0, 10, 18];
 
