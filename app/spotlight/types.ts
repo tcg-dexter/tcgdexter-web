@@ -69,6 +69,10 @@ export interface TrainerSpotlightRow {
   profile_id: string;
   slug: string;
   headline: string | null;
+  /** Long-form body text shown above the featured decks on the
+   *  published page. Plain text; renders with whitespace-pre-line
+   *  so line breaks are preserved. */
+  bio: string | null;
   favorite_pokemon: SpotlightPokemonRef | null;
   favorite_collection_card: SpotlightCardRef | null;
   favorite_format_card: SpotlightCardRef | null;

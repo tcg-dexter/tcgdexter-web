@@ -42,6 +42,9 @@ export async function PATCH(
   if (body.headline === null || typeof body.headline === "string") {
     update.headline = body.headline;
   }
+  if (body.bio === null || typeof body.bio === "string") {
+    update.bio = body.bio;
+  }
   for (const key of [
     "favorite_pokemon",
     "favorite_collection_card",

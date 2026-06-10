@@ -194,6 +194,18 @@ export default async function SpotlightPage({
           />
         )}
 
+        {/* Bio — long-form intro. Rendered as a single article card so
+            it sits visually distinct from the deck grid below. */}
+        {spotlight.bio && (
+          <section className="mt-8">
+            <article className="rounded-2xl bg-white border border-black/8 shadow-sm p-6">
+              <p className="text-sm sm:text-base text-text-primary whitespace-pre-line leading-relaxed">
+                {spotlight.bio}
+              </p>
+            </article>
+          </section>
+        )}
+
         {/* Featured decks */}
         {decks.length > 0 && (
           <section className="mt-8">

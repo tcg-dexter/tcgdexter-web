@@ -26,6 +26,7 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
   const router = useRouter();
   const [slug, setSlug] = useState(spotlight.slug);
   const [headline, setHeadline] = useState(spotlight.headline ?? "");
+  const [bio, setBio] = useState(spotlight.bio ?? "");
   const [favoritePokemon, setFavoritePokemon] =
     useState<SpotlightPokemonRef | null>(spotlight.favorite_pokemon ?? null);
   const [favoriteCollection, setFavoriteCollection] = useState<
@@ -55,6 +56,7 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
       const body = {
         slug: slug.trim().toLowerCase(),
         headline: headline.trim() || null,
+        bio: bio.trim() || null,
         favorite_pokemon: favoritePokemon,
         favorite_collection_cards: favoriteCollection,
         favorite_format_cards: favoriteFormat,
@@ -126,6 +128,15 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
             value={headline}
             onChange={(e) => setHeadline(e.target.value)}
             placeholder="One-line tagline shown under the name"
+            className="input"
+          />
+        </Field>
+        <Field label="Bio">
+          <textarea
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            placeholder="Long-form intro shown above the featured decks. Use blank lines for paragraphs."
+            rows={6}
             className="input"
           />
         </Field>
