@@ -54,7 +54,7 @@ const FAN_ANCHOR_X_PCT = 35; // left side; right side mirrors to 65
 const FAN_ANCHOR_Y_PCT = 50; // vertically center the front card in the banner
 const FAN_DX_STEPS_PCT = [0, 8.4, 16.8];
 const FAN_DY_STEPS_PCT = [0, 1.5, 3];
-const FAN_ROTATION_DEG = [4, 8, 14]; // slight tilt on the front card too
+const FAN_ROTATION_DEG = [4, 8, 12];
 
 export default function SpotlightHeader({
   displayName,
