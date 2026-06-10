@@ -9,17 +9,22 @@ interface Props {
   spotlightId: string;
   slug: string;
   isPublished: boolean;
-  /** When true, hint the admin that the banner image can be dragged
-   *  to reposition. Driven by the spotlight page when ?preview=1 is
-   *  set and a banner image is present. */
+  /** When true, the Reset button is included. Driven by the spotlight
+   *  page when ?preview=1 is set and the user image is present. */
   showDragHint?: boolean;
 }
 
 /**
- * Floating admin action bar shown on the spotlight page for users with
- * profiles.is_admin. While the spotlight is a draft, the bar carries a
- * "Draft preview" pill plus Edit + Publish. After publish, the bar drops
- * the publish action and stays as a quick path back to the editor.
+ * Condensed admin pill anchored top-right just below the banner.
+ *
+ * Layout:
+ *   ┌─────────────────────────────────────────┐
+ *   │ • Draft  [Reset] [Edit] [Publish]      │
+ *   └─────────────────────────────────────────┘
+ *
+ * Replaces an earlier full-width informational bar — the controls are
+ * the same (Reset / Edit / Publish), but the whole module is compact
+ * enough to sit alongside the page content rather than above it.
  */
 export default function SpotlightAdminBar({
   spotlightId,
@@ -40,10 +45,6 @@ export default function SpotlightAdminBar({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          // Only reset the interactive items — the favorite-Pokémon
-          // sprite is pinned to the bottom-right corner by CSS and
-          // isn't user-positionable. Sending its layout entry would
-          // overwrite the schema default with no effect.
           banner_layout: Object.fromEntries(
             INTERACTIVE_BANNER_KEYS.map((k) => [k, DEFAULT_BANNER_LAYOUT[k]]),
           ),
@@ -70,7 +71,6 @@ export default function SpotlightAdminBar({
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Publish failed");
-      // Land on the canonical published URL with no `?preview=1`.
       router.push(`/spotlight/${slug}`);
       router.refresh();
     } catch (err: unknown) {
@@ -80,35 +80,39 @@ export default function SpotlightAdminBar({
   }
 
   return (
-    <div className="rounded-2xl border border-black/8 bg-white shadow-sm p-4 mb-6 flex flex-wrap items-center gap-3">
-      {!isPublished && (
-        <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-accent px-3 py-1 rounded-full border border-accent/40 bg-accent/5">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-          Draft preview
-        </span>
-      )}
-      <p className="text-xs text-text-secondary flex-1 min-w-0">
-        {showDragHint
-          ? "Drag the user image to reposition; scroll or drag the handle to resize. Tap Reset to recenter."
-          : isPublished
-            ? "This spotlight is live."
-            : "Visible only to admins. Publish to make it public."}
-      </p>
-      {error && <span className="text-xs text-accent">{error}</span>}
-      <div className="flex items-center gap-2 ml-auto">
+    <div className="flex justify-end">
+      <div
+        className="inline-flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-sm border border-black/10 shadow-sm px-2 py-1.5"
+        role="toolbar"
+        aria-label="Spotlight admin actions"
+      >
+        {!isPublished && (
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-accent px-2 py-0.5 rounded-full border border-accent/40 bg-accent/5">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+            Draft
+          </span>
+        )}
+        {error && (
+          <span
+            className="text-[11px] text-accent px-1 truncate max-w-[10rem]"
+            title={error}
+          >
+            {error}
+          </span>
+        )}
         {showDragHint && (
           <button
             type="button"
             onClick={onReset}
             disabled={resetting}
-            className="text-sm font-semibold px-4 py-2 rounded-full border border-black/15 text-text-primary hover:bg-[var(--surface)] disabled:opacity-50"
+            className="text-xs font-semibold px-3 py-1 rounded-full border border-black/15 text-text-primary hover:bg-[var(--surface)] disabled:opacity-50"
           >
-            {resetting ? "Resetting…" : "Reset"}
+            {resetting ? "…" : "Reset"}
           </button>
         )}
         <Link
           href={`/admin/spotlight/${spotlightId}/edit`}
-          className="text-sm font-semibold px-4 py-2 rounded-full border border-black text-text-primary hover:bg-[var(--surface)]"
+          className="text-xs font-semibold px-3 py-1 rounded-full border border-black text-text-primary hover:bg-[var(--surface)]"
         >
           Edit
         </Link>
@@ -117,7 +121,7 @@ export default function SpotlightAdminBar({
             type="button"
             onClick={onPublish}
             disabled={publishing}
-            className="text-sm font-semibold px-4 py-2 rounded-full gradient-brand shadow-sm hover:opacity-95 disabled:opacity-50"
+            className="text-xs font-semibold px-3 py-1 rounded-full gradient-brand shadow-sm hover:opacity-95 disabled:opacity-50"
           >
             {publishing ? "Publishing…" : "Publish"}
           </button>
