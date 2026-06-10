@@ -51,10 +51,10 @@ const POKEMON_CORNER_WIDTH_PCT = 8; // half the prior 16 — per request
 // edges. dx steps bumped 10% (5 → 5.5, 10 → 11) for slightly looser
 // inter-card spacing within each fan.
 const FAN_ANCHOR_X_PCT = 35; // left side; right side mirrors to 65
-const FAN_ANCHOR_Y_PCT = 55;
+const FAN_ANCHOR_Y_PCT = 50; // vertically center the front card in the banner
 const FAN_DX_STEPS_PCT = [0, 8.4, 16.8];
 const FAN_DY_STEPS_PCT = [0, 1.5, 3];
-const FAN_ROTATION_DEG = [0, 8, 14];
+const FAN_ROTATION_DEG = [4, 8, 14]; // slight tilt on the front card too
 
 export default function SpotlightHeader({
   displayName,
