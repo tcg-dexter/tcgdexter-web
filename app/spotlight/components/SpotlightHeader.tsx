@@ -52,7 +52,7 @@ const POKEMON_CORNER_WIDTH_PCT = 8; // half the prior 16 — per request
 // inter-card spacing within each fan.
 const FAN_ANCHOR_X_PCT = 35; // left side; right side mirrors to 65
 const FAN_ANCHOR_Y_PCT = 55;
-const FAN_DX_STEPS_PCT = [0, 7, 14];
+const FAN_DX_STEPS_PCT = [0, 8.4, 16.8];
 const FAN_DY_STEPS_PCT = [0, 1.5, 3];
 const FAN_ROTATION_DEG = [0, 8, 14];
 
