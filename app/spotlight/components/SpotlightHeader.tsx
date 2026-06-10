@@ -41,15 +41,16 @@ const CARD_FAN_WIDTH_PCT = 18; // each card's width within a fan
 const POKEMON_CORNER_WIDTH_PCT = 8; // half the prior 16 — per request
 
 // Card fan geometry. The front card (i=0) sits vertical at the side's
-// anchor point; subsequent cards shift outward (away from center) and
-// rotate outward in increasing increments to read as a hand-fan.
-// Negative dx values shift left, positive shift right; rotations
-// mirror the side via sign.
+// anchor point — closest to the center of the banner. Trailing cards
+// shift outward (toward the banner edge) and rotate in increasing
+// increments to read as a hand-fan. Steps are unsigned magnitudes;
+// the per-side `sign` multiplier (+1 right, −1 left) directs them
+// outward on each side.
 const FAN_ANCHOR_X_PCT = 20; // left side; right side mirrors to 80
 const FAN_ANCHOR_Y_PCT = 55;
-const FAN_DX_STEPS_PCT = [0, -7, -13]; // applied to left side; right uses positive
+const FAN_DX_STEPS_PCT = [0, 7, 13];
 const FAN_DY_STEPS_PCT = [0, 1.5, 3];
-const FAN_ROTATION_DEG = [0, -10, -18]; // left side; right negates
+const FAN_ROTATION_DEG = [0, -10, -18]; // unchanged; rotation mirrors via sign
 
 export default function SpotlightHeader({
   displayName,
