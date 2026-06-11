@@ -259,11 +259,15 @@ export default function FeaturedMatchTemplate({ subject, copy }: Props) {
         </span>
       </div>
 
-      {/* Site mark — pinned bottom-center. */}
+      {/* Site mark — vertically centered between the prize digits and
+          the canvas bottom edge. Prize digits sit at top=STACK_BOTTOM+200
+          with a 200px line-height, so their visual bottom is roughly
+          y=STACK_BOTTOM+400. Midpoint between that and CANVAS_H. */}
       <div
         style={{
           position: "absolute",
-          bottom: 80,
+          top: (STACK_BOTTOM + 400 + CANVAS_H) / 2,
+          transform: "translateY(-50%)",
           left: 0,
           right: 0,
           textAlign: "center",
