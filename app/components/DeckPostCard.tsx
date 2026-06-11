@@ -132,15 +132,17 @@ export function MetaDeckCard({
   const accentDeep = shade(accentBg, -22);
   return (
     <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-      {/* Energy-type accent gradient — sits over the bottom half of the
-          card, fading from the avatar's type color at 0 opacity (midpoint)
-          through the full type color to the banner's deeper bottom stop
-          (shade -22) at the card's bottom edge. */}
+      {/* Energy-type accent gradient — mirrors the recent-battles preview
+          treatment (horizontal accent gradient at opacity-80) but uses the
+          card's own type color + banner-deep stop, masked along the
+          vertical axis so the top edge still fades in cleanly. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 opacity-80"
         style={{
-          background: `linear-gradient(to bottom, ${accentBg}00 0%, ${accentBg} 50%, ${accentDeep} 100%)`,
+          background: `linear-gradient(90deg, ${accentBg} 0%, ${accentDeep} 100%)`,
+          maskImage: "linear-gradient(to bottom, transparent 0%, black 100%)",
+          WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 100%)",
         }}
       />
       <Link href={href} className="relative block">
