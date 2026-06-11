@@ -80,7 +80,7 @@ export default function SpotlightAdminBar({
   }
 
   return (
-    <div className="flex justify-end">
+    <div className="flex justify-start">
       <div
         className="inline-flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-sm border border-black/10 shadow-sm px-2 py-1.5"
         role="toolbar"
