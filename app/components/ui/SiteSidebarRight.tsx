@@ -21,9 +21,9 @@ import {
  */
 export default function SiteSidebarRight() {
   const EXTERNAL_LINKS = [
+    { href: "https://www.ebay.com/usr/tcgdexter", label: "Card Shop", Icon: ShoppingBagIcon },
     { href: "https://discord.gg/G3VfEzfmJF", label: "Discord", Icon: DiscordIcon },
     { href: "https://www.tiktok.com/@tcgdexter", label: "TikTok", Icon: TikTokIcon },
-    { href: "https://www.ebay.com/usr/tcgdexter", label: "Card Shop", Icon: ShoppingBagIcon },
   ];
 
   // Rows match SiteSidebar's geometry: gap-3 between icon and label,

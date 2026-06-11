@@ -227,9 +227,9 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
   ];
 
   const EXTERNAL_LINKS = [
+    { href: "https://www.ebay.com/usr/tcgdexter", label: "Card Shop", Icon: ShoppingBagIcon },
     { href: "https://discord.gg/G3VfEzfmJF", label: "Discord", Icon: DiscordIcon },
     { href: "https://www.tiktok.com/@tcgdexter", label: "TikTok", Icon: TikTokIcon },
-    { href: "https://www.ebay.com/usr/tcgdexter", label: "Card Shop", Icon: ShoppingBagIcon },
   ];
 
   const linkClass =
