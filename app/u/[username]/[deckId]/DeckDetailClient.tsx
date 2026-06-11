@@ -25,6 +25,7 @@ interface Match {
   notes: string | null;
   played_at: string;
   source?: "manual" | "tcg_live_log";
+  game_results?: string | null;
 }
 
 interface ParsedCard {

@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  normalizeGameResults,
+  isValidGameResults,
+  deriveResultFromGames,
+} from "@/lib/bo3";
 
 /**
  * PATCH /api/matches/[id]
  *
  * Edits a match record. RLS enforces owner-only access.
  * Accepts any combination of: result, opponent_name, opponent_archetype,
- * opponent_deck_list, notes, played_at.
+ * opponent_deck_list, notes, played_at, game_results.
  */
 export async function PATCH(
   req: Request,
@@ -30,6 +35,7 @@ export async function PATCH(
     opponent_deck_list?: string | null;
     notes?: string | null;
     played_at?: string | null;
+    game_results?: string | null;
   };
   try {
     body = await req.json();
@@ -53,6 +59,20 @@ export async function PATCH(
   if (body.opponent_deck_list !== undefined) updates.opponent_deck_list = body.opponent_deck_list?.trim() || null;
   if (body.notes !== undefined) updates.notes = body.notes?.trim() || null;
   if (body.played_at !== undefined) updates.played_at = body.played_at || null;
+
+  // Best-of-3: a non-null sequence is validated and drives the result; null
+  // clears the games (round reverts to a single-game edit).
+  if (body.game_results !== undefined) {
+    const seq = normalizeGameResults(body.game_results);
+    if (seq !== null && !isValidGameResults(seq)) {
+      return NextResponse.json(
+        { error: 'game_results must be 2–5 of W/L (e.g. "WLW").' },
+        { status: 400 }
+      );
+    }
+    updates.game_results = seq;
+    if (seq !== null) updates.result = deriveResultFromGames(seq);
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "Nothing to update." }, { status: 400 });

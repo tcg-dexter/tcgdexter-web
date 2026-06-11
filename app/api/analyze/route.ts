@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import cardData from "@/data/cards-standard.json";
 import shopListingsData from "@/data/shop-listings.json";
 import metaArchetypesData from "@/data/meta-archetypes.json";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import {
+  type Card,
+  parseDeckListCards,
+  pickPrinting,
+  pickPrintingForCard,
+} from "@/lib/cardPrinting";
 
 /* ─── Shop Listings ──────────────────────────────────────────── */
 
@@ -20,48 +25,10 @@ interface ShopListing {
 
 const SHOP_LISTINGS = shopListingsData as Record<string, ShopListing[]>;
 
-/* ─── Card DB ────────────────────────────────────────────────── */
-
-interface CardDataEntry {
-  name: string;
-  set_id: string;
-  set_name: string;
-  /** ptcgo set code as it appears in deck lists (e.g. "POR" for Perfect Order). */
-  ptcgo_code?: string;
-  number: string;
-  supertype: string;
-  subtypes: string[];
-  /** Elemental types on Pokémon cards (e.g. ["Darkness"]). Empty/absent on Trainer/Energy. */
-  types?: string[];
-  hp: string | null;
-  abilities: Array<{ name: string; text: string; type: string }>;
-  attacks: Array<{
-    name: string;
-    cost: string[];
-    damage: string;
-    text: string;
-    convertedEnergyCost: number;
-  }>;
-  rules: string[];
-  regulation_mark: string | null;
-  retreat_cost: number | null;
-  market_price: number | null;
-}
-
-const CARD_DB = cardData as unknown as Record<string, CardDataEntry[]>;
-const CARD_DB_LOWER = new Map(
-  Object.entries(CARD_DB).map(([k, v]) => [k.toLowerCase(), v])
-);
-
 /* ─── Types ──────────────────────────────────────────────────── */
-
-interface Card {
-  qty: number;
-  name: string;
-  number: string;  // card number from deck list (e.g. "284")
-  setCode: string; // ptcgo set code from deck list (e.g. "POR"); "" if absent
-  section: "pokemon" | "trainer" | "energy";
-}
+/* Card DB, the deck-list parser, and printing resolution live in
+ * @/lib/cardPrinting so this route and lib/reprice-deck.ts resolve the
+ * same printing for legality + price. */
 
 interface PokemonAbility {
   pokemonName: string;
@@ -153,54 +120,6 @@ interface MetaArchetype {
   conversion_rate?: number;
 }
 
-/* ─── Parser ─────────────────────────────────────────────────── */
-
-function parseDeckList(raw: string): Card[] {
-  const lines = raw.split("\n").map((l) => l.trim());
-  const cards: Card[] = [];
-  let currentSection: Card["section"] | null = null;
-
-  for (const line of lines) {
-    if (!line) continue;
-
-    const headerMatch = line.match(/^(Pok[eé]mon|Trainer|Energy)\s*:/i);
-    if (headerMatch) {
-      const h = headerMatch[1].toLowerCase();
-      if (h.startsWith("pok")) currentSection = "pokemon";
-      else if (h === "trainer") currentSection = "trainer";
-      else currentSection = "energy";
-      continue;
-    }
-
-    if (/^total\s+cards?\s*:/i.test(line)) continue;
-
-    const cardMatch = line.match(/^(\d+)\s+(.+?)\s+([A-Z0-9-]{2,10})\s+(\d+)$/);
-    if (cardMatch && currentSection) {
-      cards.push({
-        qty: parseInt(cardMatch[1], 10),
-        name: cardMatch[2],
-        number: cardMatch[4],
-        setCode: cardMatch[3],
-        section: currentSection,
-      });
-      continue;
-    }
-
-    const simpleMatch = line.match(/^(\d+)\s+(.+)$/);
-    if (simpleMatch && currentSection) {
-      cards.push({
-        qty: parseInt(simpleMatch[1], 10),
-        name: simpleMatch[2].trim(),
-        number: "",
-        setCode: "",
-        section: currentSection,
-      });
-    }
-  }
-
-  return cards;
-}
-
 /* ─── Archetype Detection ────────────────────────────────────── */
 
 interface ArchetypeRule {
@@ -245,46 +164,6 @@ function detectArchetypeName(cards: Card[]): string | null {
   return null;
 }
 
-/* ─── Static Card Lookup ─────────────────────────────────────── */
-
-/**
- * Pick the right printing for a card given the optional set code and
- * collector number from the deck list. Falls back to number-only match,
- * then to the first printing, mirroring how decklists are typed:
- *   "4 Charizard ex POR 247" → match by ptcgo_code + number
- *   "4 Charizard ex"         → first printing (best-effort)
- */
-function pickPrinting(
-  name: string,
-  number = "",
-  setCode = ""
-): CardDataEntry | null {
-  const entries = CARD_DB_LOWER.get(name.toLowerCase());
-  if (!entries || entries.length === 0) return null;
-  if (setCode) {
-    const codeUpper = setCode.toUpperCase();
-    const bySetAndNum = entries.find(
-      (e) =>
-        e.ptcgo_code?.toUpperCase() === codeUpper &&
-        (!number || e.number === number)
-    );
-    if (bySetAndNum) return bySetAndNum;
-    const bySet = entries.find(
-      (e) => e.ptcgo_code?.toUpperCase() === codeUpper
-    );
-    if (bySet) return bySet;
-  }
-  if (number) {
-    const byNum = entries.find((e) => e.number === number);
-    if (byNum) return byNum;
-  }
-  return entries[0];
-}
-
-function pickPrintingForCard(c: Card): CardDataEntry | null {
-  return pickPrinting(c.name, c.number, c.setCode);
-}
-
 /* ─── Meta Archetypes (static, bundled at build time) ────────── */
 
 const STATIC_META_ARCHETYPES: MetaArchetype[] = metaArchetypesData as MetaArchetype[];
@@ -302,7 +181,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const cards = parseDeckList(deckList);
+    const cards = parseDeckListCards(deckList);
 
     if (cards.length === 0) {
       return NextResponse.json(

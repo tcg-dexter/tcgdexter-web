@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  normalizeGameResults,
+  isValidGameResults,
+  deriveResultFromGames,
+} from "@/lib/bo3";
 
 /**
  * POST /api/matches
@@ -13,7 +18,8 @@ import { createClient } from "@/lib/supabase/server";
  *   opponent_archetype?: string,
  *   opponent_deck_list?: string,
  *   notes?: string,
- *   played_at?: string (ISO timestamp, defaults to now)
+ *   played_at?: string (ISO timestamp, defaults to now),
+ *   game_results?: string (Best-of-3 sequence, e.g. "WLW"; derives result)
  * }
  */
 export async function POST(req: Request) {
@@ -38,6 +44,7 @@ export async function POST(req: Request) {
     opponent_deck_list?: string;
     notes?: string;
     played_at?: string;
+    game_results?: string | null;
   };
   try {
     body = await req.json();
@@ -51,7 +58,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "saved_deck_id is required." }, { status: 400 });
   }
 
-  if (!result || !["win", "loss", "draw"].includes(result)) {
+  // Best-of-3: validate the sequence and derive the authoritative result from
+  // it (so result + game_results can't disagree). Single games leave it null.
+  const gameResults = normalizeGameResults(body.game_results);
+  if (gameResults !== null && !isValidGameResults(gameResults)) {
+    return NextResponse.json(
+      { error: 'game_results must be 2–5 of W/L (e.g. "WLW").' },
+      { status: 400 }
+    );
+  }
+  const finalResult = gameResults !== null ? deriveResultFromGames(gameResults) : result;
+
+  if (!finalResult || !["win", "loss", "draw"].includes(finalResult)) {
     return NextResponse.json(
       { error: "result must be win, loss, or draw." },
       { status: 400 }
@@ -70,19 +88,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Deck not found." }, { status: 404 });
   }
 
+  const insertRow: Record<string, unknown> = {
+    user_id: user.id,
+    saved_deck_id,
+    result: finalResult,
+    opponent_name: opponent_name?.trim() || null,
+    opponent_archetype: opponent_archetype?.trim() || null,
+    opponent_deck_list: opponent_deck_list?.trim() || null,
+    notes: notes?.trim() || null,
+    // played_at is optional — null means the user chose not to record a date.
+    played_at: played_at || null,
+  };
+  // Only attach game_results for Best-of-3 rounds so single-game inserts stay
+  // unaffected (and keep working even if the migration hasn't landed yet).
+  if (gameResults !== null) insertRow.game_results = gameResults;
+
   const { data, error } = await supabase
     .from("matches")
-    .insert({
-      user_id: user.id,
-      saved_deck_id,
-      result,
-      opponent_name: opponent_name?.trim() || null,
-      opponent_archetype: opponent_archetype?.trim() || null,
-      opponent_deck_list: opponent_deck_list?.trim() || null,
-      notes: notes?.trim() || null,
-      // played_at is optional — null means the user chose not to record a date.
-      played_at: played_at || null,
-    })
+    .insert(insertRow)
     .select("id, result, opponent_archetype, played_at, created_at")
     .single();
 

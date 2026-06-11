@@ -36,6 +36,7 @@ interface MatchRecord {
   notes: string | null;
   played_at: string;
   source: "manual" | "tcg_live_log";
+  game_results: string | null;
 }
 
 export async function generateMetadata({
@@ -136,7 +137,7 @@ export default async function DeckPage({
   if (isOwner) {
     const { data: matches } = await supabase
       .from("matches")
-      .select("id, result, opponent_name, opponent_archetype, opponent_deck_list, notes, played_at, source")
+      .select("id, result, opponent_name, opponent_archetype, opponent_deck_list, notes, played_at, source, game_results")
       .eq("saved_deck_id", deck.id)
       .order("played_at", { ascending: false });
     initialMatches = (matches ?? []) as MatchRecord[];

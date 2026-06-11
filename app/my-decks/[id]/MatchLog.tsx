@@ -17,6 +17,8 @@ interface Match {
   notes: string | null;
   played_at: string | null;
   source?: "manual" | "tcg_live_log";
+  /** Best-of-3 ordered per-game sequence (e.g. "WLW"); null for single games. */
+  game_results?: string | null;
 }
 
 interface Props {
@@ -123,6 +125,7 @@ export default function MatchLog({
       opponent_deck_list: data.opponent_deck_list ?? null,
       notes: data.notes ?? null,
       played_at: data.played_at ?? null,
+      game_results: data.game_results ?? null,
     };
     setMatches((prev) => [newMatch, ...prev]);
     closeForm();
@@ -150,6 +153,7 @@ export default function MatchLog({
               opponent_deck_list: data.opponent_deck_list ?? null,
               notes: data.notes ?? null,
               played_at: data.played_at ?? null,
+              game_results: data.game_results ?? null,
             }
           : m
       )
@@ -270,6 +274,7 @@ export default function MatchLog({
                       opponent_deck_list: match.opponent_deck_list,
                       notes: match.notes,
                       played_at: match.played_at,
+                      game_results: match.game_results,
                     }}
                     onSubmit={(data) => handleEditMatch(match.id, data)}
                     onCancel={() => setEditingId(null)}
@@ -313,6 +318,14 @@ export default function MatchLog({
                       )}
                       {!match.opponent_archetype && !match.opponent_name && (
                         <span className="text-text-muted text-sm">Match logged</span>
+                      )}
+                      {match.game_results && match.game_results.length >= 2 && (
+                        <span
+                          title="Best of 3"
+                          className="flex-shrink-0 rounded bg-bg px-1.5 py-0.5 font-mono text-[11px] font-bold tracking-wider text-text-secondary shadow-[inset_0_0_0_1px_var(--border)]"
+                        >
+                          {match.game_results}
+                        </span>
                       )}
                     </div>
                     {dateStr && (

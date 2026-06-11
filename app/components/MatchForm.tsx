@@ -35,6 +35,43 @@ export interface MatchFormData {
   opponent_deck_list: string | null;
   notes: string | null;
   played_at: string | null;
+  /** Ordered per-game outcomes for a Best-of-3 round (e.g. "WW", "WLW"). Null for single games. */
+  game_results: string | null;
+}
+
+/* ─── Best-of-3 helpers ──────────────────────────────────────── */
+
+type GameLetter = "W" | "L";
+
+/** Derive the round result + sequence string from per-game outcomes. */
+function deriveRound(games: (GameLetter | null)[]): {
+  result: "win" | "loss" | "draw" | null;
+  sequence: string;
+} {
+  const played = games.filter((g): g is GameLetter => g === "W" || g === "L");
+  const wins = played.filter((g) => g === "W").length;
+  const losses = played.length - wins;
+  const result =
+    played.length >= 2
+      ? wins > losses
+        ? "win"
+        : losses > wins
+        ? "loss"
+        : "draw"
+      : null;
+  return { result, sequence: played.join("") };
+}
+
+/** Parse a stored "WLW" sequence into the 3-slot game array the form drives. */
+function parseGames(seq: string | null | undefined): (GameLetter | null)[] {
+  const slots: (GameLetter | null)[] = [null, null, null];
+  if (seq) {
+    for (let i = 0; i < Math.min(seq.length, 3); i++) {
+      const ch = seq[i].toUpperCase();
+      if (ch === "W" || ch === "L") slots[i] = ch;
+    }
+  }
+  return slots;
 }
 
 interface Props {
@@ -82,6 +119,11 @@ export default function MatchForm({
     }
     return new Date().toISOString().slice(0, 10);
   });
+  // Best-of-3 game tracking — starts on when editing a match that has games.
+  const [bestOf3, setBestOf3] = useState(!!initial?.game_results);
+  const [games, setGames] = useState<(GameLetter | null)[]>(
+    parseGames(initial?.game_results)
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -120,16 +162,29 @@ export default function MatchForm({
     }
   }
 
+  function setGame(i: number, letter: GameLetter) {
+    setGames((prev) => {
+      const next: (GameLetter | null)[] = [...prev];
+      next[i] = prev[i] === letter ? null : letter; // tap again to clear
+      // Game 3 only matters at 1-1; drop it if the first two aren't split.
+      const split = next[0] && next[1] && next[0] !== next[1];
+      if (!split) next[2] = null;
+      return next;
+    });
+  }
+
   async function handleSubmit() {
-    if (!result) {
-      setError("Select a result.");
+    const { result: derivedResult, sequence } = deriveRound(games);
+    const finalResult = bestOf3 ? derivedResult : result;
+    if (!finalResult) {
+      setError(bestOf3 ? "Enter at least 2 games." : "Select a result.");
       return;
     }
     setSubmitting(true);
     setError(null);
     try {
       await onSubmit({
-        result,
+        result: finalResult,
         opponent_name: opponentName.trim() || null,
         opponent_archetype: opponentArchetype.trim() || null,
         opponent_deck_list:
@@ -138,6 +193,7 @@ export default function MatchForm({
         played_at: showDateField
           ? new Date(matchDate + "T12:00:00").toISOString()
           : null,
+        game_results: bestOf3 ? sequence : null,
       });
     } catch (err) {
       setError(
@@ -148,33 +204,128 @@ export default function MatchForm({
     }
   }
 
+  const { result: derivedResult, sequence } = deriveRound(games);
+  const canSubmit = bestOf3 ? !!derivedResult : !!result;
+
   return (
     <div className="pt-2">
-      {/* Result buttons */}
-      <div className="flex gap-2 mb-3">
-        {(["win", "loss", "draw"] as const).map((r) => {
-          const s = RESULT_STYLE[r];
-          const selected = result === r;
-          return (
+      {/* Result — single game (Win/Loss/Draw) or Best-of-3 game tracker */}
+      {!bestOf3 ? (
+        <div className="mb-3">
+          <div className="flex gap-2">
+            {(["win", "loss", "draw"] as const).map((r) => {
+              const s = RESULT_STYLE[r];
+              const selected = result === r;
+              return (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setResult(r)}
+                  // Unselected uses an inset shadow for its 1 px outline so it
+                  // stays dimensionally identical to the selected variants
+                  // (which carry no real `border`). A real `border-border` here
+                  // would push the button out by 2 px and shift the row's
+                  // baseline whenever the selection changes.
+                  className={`flex-1 rounded-full py-2.5 text-sm font-bold transition-all ${
+                    selected
+                      ? `${s.bg} ${s.text}`
+                      : "bg-bg text-text-secondary shadow-[inset_0_0_0_1px_var(--border)] hover:bg-surface-2"
+                  }`}
+                >
+                  {r === "win" ? "Win" : r === "loss" ? "Loss" : "Draw"}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            onClick={() => setBestOf3(true)}
+            className="mt-1.5 text-xs text-accent hover:text-accent-light transition-colors"
+          >
+            + Track as Best of 3
+          </button>
+        </div>
+      ) : (
+        <div className="mb-3 rounded-lg bg-bg p-3 shadow-[inset_0_0_0_1px_var(--border)]">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-text-secondary">
+              Best of 3
+            </span>
             <button
-              key={r}
-              onClick={() => setResult(r)}
-              // Unselected uses an inset shadow for its 1 px outline so it
-              // stays dimensionally identical to the selected variants
-              // (which carry no real `border`). A real `border-border` here
-              // would push the button out by 2 px and shift the row's
-              // baseline whenever the selection changes.
-              className={`flex-1 rounded-full py-2.5 text-sm font-bold transition-all ${
-                selected
-                  ? `${s.bg} ${s.text}`
-                  : "bg-bg text-text-secondary shadow-[inset_0_0_0_1px_var(--border)] hover:bg-surface-2"
-              }`}
+              type="button"
+              onClick={() => {
+                setBestOf3(false);
+                setGames([null, null, null]);
+              }}
+              className="text-xs text-text-muted hover:text-text-secondary transition-colors"
             >
-              {r === "win" ? "Win" : r === "loss" ? "Loss" : "Draw"}
+              Single game
             </button>
-          );
-        })}
-      </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            {[0, 1, 2].map((i) => {
+              // Game 3 is only meaningful once the first two are split 1-1.
+              const g3Disabled =
+                i === 2 && !(games[0] && games[1] && games[0] !== games[1]);
+              return (
+                <div
+                  key={i}
+                  className={`flex items-center gap-2 ${
+                    g3Disabled ? "opacity-40" : ""
+                  }`}
+                >
+                  <span className="w-14 flex-shrink-0 text-xs text-text-muted">
+                    Game {i + 1}
+                  </span>
+                  {(["W", "L"] as const).map((letter) => {
+                    const selected = games[i] === letter;
+                    const s = letter === "W" ? RESULT_STYLE.win : RESULT_STYLE.loss;
+                    return (
+                      <button
+                        key={letter}
+                        type="button"
+                        disabled={g3Disabled}
+                        onClick={() => setGame(i, letter)}
+                        className={`flex-1 rounded-full py-1.5 text-xs font-bold transition-all disabled:cursor-not-allowed ${
+                          selected
+                            ? `${s.bg} ${s.text}`
+                            : "bg-surface text-text-secondary shadow-[inset_0_0_0_1px_var(--border)] hover:bg-surface-2"
+                        }`}
+                      >
+                        {letter === "W" ? "Win" : "Loss"}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Live derived summary — the "WW" payoff */}
+          <div className="mt-2 flex items-center gap-2 text-xs">
+            {sequence ? (
+              <>
+                <span className="font-mono font-bold tracking-wider text-text-primary">
+                  {sequence}
+                </span>
+                {derivedResult && (
+                  <span className="text-text-muted">
+                    ·{" "}
+                    {derivedResult === "win"
+                      ? "Win"
+                      : derivedResult === "loss"
+                      ? "Loss"
+                      : "Draw"}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-text-muted">Tap each game&apos;s result</span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Opponent name */}
       <input
@@ -297,7 +448,7 @@ export default function MatchForm({
       <div className="flex gap-2">
         <button
           onClick={handleSubmit}
-          disabled={submitting || !result}
+          disabled={submitting || !canSubmit}
           className="flex-1 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-light disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
           {submitting ? "Saving..." : submitLabel}
