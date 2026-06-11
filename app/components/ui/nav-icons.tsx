@@ -85,17 +85,6 @@ export function UserIcon({ className }: IconProps) {
   );
 }
 
-/** Newspaper — "TCG News". */
-export function NewspaperIcon({ className }: IconProps) {
-  return (
-    <svg {...outlineProps} className={className}>
-      <path d="M4 5h12v15H4z" />
-      <path d="M16 9h3a1 1 0 011 1v9a1 1 0 01-1 1h-3" />
-      <path d="M7 9h6M7 13h6M7 17h6" />
-    </svg>
-  );
-}
-
 /** Shopping bag — "Card Shop". */
 export function ShoppingBagIcon({ className }: IconProps) {
   return (
