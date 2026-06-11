@@ -41,6 +41,20 @@ export default async function SiteNav() {
     isAdmin = data?.is_admin ?? false;
   }
 
+  // Latest published spotlight slug — drives the nav menu's
+  // "Spotlight" link target. Falls back to the index page when no
+  // spotlight is published yet (or for any anon-read RLS reason).
+  const { data: latestSpotlight } = await supabase
+    .from("trainer_spotlights")
+    .select("slug")
+    .eq("is_published", true)
+    .order("published_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ slug: string }>();
+  const spotlightHref = latestSpotlight?.slug
+    ? `/spotlight/${latestSpotlight.slug}`
+    : "/spotlight";
+
   return (
     <>
       {/* Mobile / portrait-tablet: sticky top toolbar.
@@ -67,6 +81,7 @@ export default async function SiteNav() {
             displayName={displayName}
             username={username}
             isAdmin={isAdmin}
+            spotlightHref={spotlightHref}
           />
         </div>
       </nav>
@@ -77,6 +92,7 @@ export default async function SiteNav() {
         displayName={displayName}
         username={username}
         isAdmin={isAdmin}
+        spotlightHref={spotlightHref}
       />
       <SiteSidebarRight />
     </>

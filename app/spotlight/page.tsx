@@ -4,8 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import type { TrainerSpotlightRow } from "./types";
 
 export const metadata: Metadata = {
-  title: "Trainer Spotlight — TCG Dexter",
-  description: "Featured players from the TCG Dexter community.",
+  title: "Spotlight History — TCG Dexter",
+  description:
+    "Every Trainer Spotlight TCG Dexter has published — browse the archive.",
 };
 
 interface Row extends TrainerSpotlightRow {
@@ -36,10 +37,10 @@ export default async function SpotlightIndex() {
             Community
           </div>
           <h1 className="text-2xl font-bold text-text-primary">
-            Trainer Spotlight
+            Spotlight History
           </h1>
           <p className="text-sm text-text-secondary mt-1">
-            Featured players, their favorite cards, and the decks they love.
+            Every featured trainer, in reverse-chronological order.
           </p>
         </header>
 

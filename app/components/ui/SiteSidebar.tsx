@@ -20,6 +20,9 @@ interface Props {
   username: string | null;
   /** Whether the user has admin/judge privileges. */
   isAdmin?: boolean;
+  /** Resolved by SiteNav to the latest published spotlight's URL
+   *  (or /spotlight when none are published yet). */
+  spotlightHref: string;
 }
 
 /**
@@ -44,6 +47,7 @@ export default function SiteSidebar({
   displayName,
   username,
   isAdmin,
+  spotlightHref,
 }: Props) {
   const pathname = usePathname();
 
@@ -56,6 +60,7 @@ export default function SiteSidebar({
     { href: "/cards", label: "Card Catalog", Icon: CardsIcon },
     { href: "/my-decks", label: "Deck Collection", Icon: BookmarkIcon },
     { href: "/meta-archetypes", label: "Meta Archetypes", Icon: ChartBarIcon },
+    { href: spotlightHref, label: "Spotlight", Icon: TrophyIcon },
     // { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
     { href: "/learn", label: "Learn to Play", Icon: BookOpenIcon },
   ];

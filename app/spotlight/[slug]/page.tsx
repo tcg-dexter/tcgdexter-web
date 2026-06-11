@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { UserDeckCard } from "@/app/components/DeckPostCard";
@@ -310,6 +311,31 @@ export default async function SpotlightPage({
                   accentColors.find((c): c is string => !!c) ?? "#B0A89E",
               }}
             />
+          </section>
+        )}
+
+        {/* Spotlight History — only on published pages; drafts don't
+            need a public archive link. */}
+        {spotlight.is_published && (
+          <section className="mt-10 text-center">
+            <Link
+              href="/spotlight"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-text-secondary hover:text-accent transition-colors"
+            >
+              Spotlight History
+              <svg
+                className="w-4 h-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </Link>
           </section>
         )}
       </div>
