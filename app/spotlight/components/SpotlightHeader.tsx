@@ -174,7 +174,7 @@ export default function SpotlightHeader({
             @{username}
           </Link>
           {headline && (
-            <p className="text-sm sm:text-base text-text-secondary mt-3 leading-relaxed">
+            <p className="text-sm sm:text-base font-semibold italic text-text-secondary mt-3 leading-relaxed">
               {headline}
             </p>
           )}
