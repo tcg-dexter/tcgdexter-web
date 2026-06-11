@@ -204,11 +204,12 @@ export default async function SpotlightPage({
         favoriteFormatCards={spotlight.favorite_format_cards ?? []}
         userImageUrl={spotlight.avatar_image_url}
         // Admin pill slots into the header bio block, just below the
-        // headline. Cleaner than a free-floating module under the
-        // banner — sits at the natural visual column where the
-        // trainer's identity already lives.
+        // headline. Hidden on published spotlights so the public-facing
+        // page reads cleanly even for admins — edits to live spotlights
+        // happen from the /admin/spotlight UI instead. The pill stays
+        // on drafts where Reset / Edit / Publish are still relevant.
         headerAction={
-          isAdmin ? (
+          isAdmin && !spotlight.is_published ? (
             <SpotlightAdminBar
               spotlightId={spotlight.id}
               slug={spotlight.slug}
