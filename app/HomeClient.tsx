@@ -471,13 +471,13 @@ export default function HomeClient({
                   </span>
                   Live meta
                 </div>
-                <h2 className="text-4xl font-semibold tracking-tight">This week&apos;s top archetypes.</h2>
+                <h2 className="text-4xl font-semibold tracking-tight">Top Meta Archetypes</h2>
               </div>
               <Link
                 href="/meta-archetypes"
                 className="text-sm text-text-secondary hover:text-text-primary transition self-start md:self-auto whitespace-nowrap"
               >
-                View Meta Archetypes →
+                View all →
               </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
