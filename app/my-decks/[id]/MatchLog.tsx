@@ -321,10 +321,24 @@ export default function MatchLog({
                       )}
                       {match.game_results && match.game_results.length >= 2 && (
                         <span
-                          title="Best of 3"
-                          className="flex-shrink-0 rounded bg-bg px-1.5 py-0.5 font-mono text-[11px] font-bold tracking-wider text-text-secondary shadow-[inset_0_0_0_1px_var(--border)]"
+                          className="flex flex-shrink-0 items-center"
+                          title={`Best of 3 — ${match.game_results}`}
+                          aria-label={`Best of 3 result: ${match.game_results}`}
                         >
-                          {match.game_results}
+                          {/* Overlapping W/L pills — mirrors the avatar stack
+                              on deck preview cards (ring-2 ring-white + -ml). */}
+                          {match.game_results.split("").map((g, i) => {
+                            const s = g === "W" ? RESULT_STYLE.win : RESULT_STYLE.loss;
+                            return (
+                              <span
+                                key={i}
+                                aria-hidden
+                                className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ring-2 ring-white ${s.bg} ${s.text} ${i === 0 ? "" : "-ml-2"}`}
+                              >
+                                {g}
+                              </span>
+                            );
+                          })}
                         </span>
                       )}
                     </div>
