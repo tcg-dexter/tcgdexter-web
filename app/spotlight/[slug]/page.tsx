@@ -10,6 +10,7 @@ import {
   cardTypesForSetIdNumber,
 } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
+import ThemeColor from "@/app/components/ThemeColor";
 import SpotlightAdminBar from "../components/SpotlightAdminBar";
 import SpotlightQAThread from "../components/SpotlightQAThread";
 import SpotlightHeader from "../components/SpotlightHeader";
@@ -162,7 +163,29 @@ export default async function SpotlightPage({
   ];
 
   return (
-    <main className="min-h-dvh bg-bg pb-24">
+    <main className="min-h-dvh bg-bg pb-24 -mt-14 xl:mt-0">
+      {/* Overlay the mobile/tablet sticky toolbar onto the banner: clear
+          its background + blur so the banner shows through to the top
+          of the viewport, and force the hamburger icon white so it
+          stays legible over the gradient. Scoped below xl since the
+          desktop sidebars replace the toolbar at xl+. */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `@media (max-width: 1279px){
+            [data-site-toolbar]{
+              background:transparent !important;
+              backdrop-filter:none !important;
+              -webkit-backdrop-filter:none !important;
+              border-color:transparent !important;
+            }
+            [data-site-toolbar] button[aria-label="Toggle navigation menu"]{color:#fff;}
+          }`,
+        }}
+      />
+      {/* Paint the iOS/Android status bar to the banner's leftmost
+          accent so the gradient reads as continuing up into the
+          device chrome instead of butting against a system color. */}
+      <ThemeColor color={accentColors.find((c): c is string => !!c) ?? "#B0A89E"} />
       <SpotlightHeader
         displayName={profile.display_name}
         username={profile.username}
