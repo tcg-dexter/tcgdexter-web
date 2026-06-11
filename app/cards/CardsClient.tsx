@@ -248,21 +248,32 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
       {/* Filter panel */}
       {showFilters && (
         <div className="rounded-2xl border border-black/8 bg-white p-4 mb-4 space-y-4">
+          <SetFacet
+            sets={facets.sets}
+            selected={params.setId}
+            onToggle={(v) => toggleArrayValue("setId", v)}
+          />
           <FacetGroup
-            label="Supertype"
+            label="Rarity"
+            options={facets.rarities}
+            selected={params.rarity}
+            onToggle={(v) => toggleArrayValue("rarity", v)}
+          />
+          <FacetGroup
+            label="Card Type"
             options={facets.supertypes}
             selected={params.supertype}
             onToggle={(v) => toggleArrayValue("supertype", v)}
           />
           <FacetGroup
-            label="Type"
+            label="Energy"
             options={facets.types}
             selected={params.type}
             onToggle={(v) => toggleArrayValue("type", v)}
           />
           {params.ownership === "owned" && (
             <FacetGroup
-              label="Variant Type"
+              label="Variant"
               options={COLLECTION_VARIANTS.map((v) => v.label)}
               selected={params.variant}
               onToggle={(v) => toggleArrayValue("variant", v)}
@@ -273,12 +284,6 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
             options={facets.regulations}
             selected={params.regulation}
             onToggle={(v) => toggleArrayValue("regulation", v)}
-          />
-          <FacetGroup
-            label="Rarity"
-            options={facets.rarities}
-            selected={params.rarity}
-            onToggle={(v) => toggleArrayValue("rarity", v)}
           />
           <FacetGroup
             label="Retreat Cost"
@@ -293,11 +298,6 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
               });
             }}
           />
-          <SetFacet
-            sets={facets.sets}
-            selected={params.setId}
-            onToggle={(v) => toggleArrayValue("setId", v)}
-          />
           <RangeFacet
             label="HP"
             min={params.hpMin}
@@ -305,7 +305,7 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
             onChange={(min, max) => updateParams({ hpMin: min, hpMax: max })}
           />
           <RangeFacet
-            label="Price ($)"
+            label="Market Price"
             min={params.priceMin}
             max={params.priceMax}
             step={0.5}
