@@ -30,6 +30,10 @@ interface Props {
   favoriteCollectionCards: SpotlightCardRef[];
   favoriteFormatCards: SpotlightCardRef[];
   userImageUrl: string | null;
+  /** Slot rendered inside the bio column, immediately under the
+   *  headline. The spotlight page uses this for the admin pill
+   *  (Draft / Reset / Edit / Publish) when the viewer is an admin. */
+  headerAction?: React.ReactNode;
 }
 
 const COLORLESS = "#B0A89E";
@@ -69,6 +73,7 @@ export default function SpotlightHeader({
   favoriteCollectionCards,
   favoriteFormatCards,
   userImageUrl,
+  headerAction,
 }: Props) {
   const stops = accentColors.filter((c): c is string => !!c);
   const usable = stops.length > 0 ? stops : [COLORLESS, COLORLESS, COLORLESS];
@@ -185,6 +190,7 @@ export default function SpotlightHeader({
               {headline}
             </p>
           )}
+          {headerAction && <div className="mt-4">{headerAction}</div>}
         </div>
       </div>
     </header>

@@ -179,21 +179,24 @@ export default async function SpotlightPage({
         favoriteCollectionCards={spotlight.favorite_collection_cards ?? []}
         favoriteFormatCards={spotlight.favorite_format_cards ?? []}
         userImageUrl={spotlight.avatar_image_url}
+        // Admin pill slots into the header bio block, just below the
+        // headline. Cleaner than a free-floating module under the
+        // banner — sits at the natural visual column where the
+        // trainer's identity already lives.
+        headerAction={
+          isAdmin ? (
+            <SpotlightAdminBar
+              spotlightId={spotlight.id}
+              slug={spotlight.slug}
+              isPublished={spotlight.is_published}
+              // The fanned cards + corner Pokémon are now static; only
+              // the uploaded user image is interactive, so the drag hint
+              // is gated on its presence alone.
+              showDragHint={previewMode && !!spotlight.avatar_image_url}
+            />
+          ) : undefined
+        }
       />
-
-      {isAdmin && (
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 mt-6">
-          <SpotlightAdminBar
-            spotlightId={spotlight.id}
-            slug={spotlight.slug}
-            isPublished={spotlight.is_published}
-            // The fanned cards + corner Pokémon are now static; only
-            // the uploaded user image is interactive, so the drag hint
-            // is gated on its presence alone.
-            showDragHint={previewMode && !!spotlight.avatar_image_url}
-          />
-        </div>
-      )}
 
       {/* Bio — long-form intro. The first sentence is painted with the
           site brand gradient via bg-clip-text so the opening hook
