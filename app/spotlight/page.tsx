@@ -170,7 +170,7 @@ export default async function SpotlightIndex() {
                         style={{
                           right: "4%",
                           bottom: "6%",
-                          width: "22%",
+                          width: "16.5%",
                         }}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
