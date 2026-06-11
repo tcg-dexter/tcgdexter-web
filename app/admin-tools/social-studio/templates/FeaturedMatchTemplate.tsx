@@ -6,13 +6,31 @@ interface Props {
   copy: TemplateCopy;
 }
 
+// Card stack geometry. Cards are ~card-aspect tall (≈ width * 1.4),
+// so the stack is centered around the canvas vertical midpoint.
+const CARD_WIDTH = 380;
+const CARD_HEIGHT = 532;
+const CANVAS_MID_Y = CANVAS_H / 2;
+const STACK_TOP = CANVAS_MID_Y - CARD_HEIGHT / 2;
+const STACK_BOTTOM = STACK_TOP + CARD_HEIGHT;
+
+// Shared "section label" style — used by both the "TCG LIVE" subtitle
+// and the "PRIZES TAKEN" label so the two read as a matched pair.
+const SECTION_LABEL_STYLE: React.CSSProperties = {
+  fontSize: 56,
+  fontWeight: 800,
+  letterSpacing: "0.32em",
+  textTransform: "uppercase",
+  textShadow: "0 4px 16px rgba(0,0,0,0.4)",
+  textAlign: "center",
+};
+
 export default function FeaturedMatchTemplate({ subject, copy }: Props) {
   // Split gradient: player-side type color on the left, opponent's on
   // the right. Each side darkens vertically so the bottom reads denser
   // (good for big white prize digits + handle labels).
   const playerTop = subject.playerAccentColor || "#B0A89E";
   const opponentTop = subject.opponentAccentColor || "#B0A89E";
-  const background = `linear-gradient(90deg, ${playerTop} 0%, ${playerTop} 50%, ${opponentTop} 50%, ${opponentTop} 100%)`;
   const overlay = `linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.35) 100%)`;
 
   // Faint side-tint gradients so the seam reads softer than a hard 50/50.
@@ -28,7 +46,6 @@ export default function FeaturedMatchTemplate({ subject, copy }: Props) {
         overflow: "hidden",
         fontFamily: "var(--font-sans, system-ui)",
         color: "#fff",
-        background,
       }}
     >
       {/* Per-side vertical wash */}
@@ -37,7 +54,7 @@ export default function FeaturedMatchTemplate({ subject, copy }: Props) {
       {/* Bottom darken overlay for legibility */}
       <div style={{ position: "absolute", inset: 0, background: overlay }} />
 
-      {/* Eyebrow */}
+      {/* Eyebrow — "Featured Match" */}
       <div
         style={{
           position: "absolute",
@@ -56,57 +73,81 @@ export default function FeaturedMatchTemplate({ subject, copy }: Props) {
         {copy.eyebrow}
       </div>
 
-      {/* Prize counts — large flanking digits */}
-      <span
+      {/* "TCG LIVE" subtitle — single big label below the eyebrow,
+          serves as the framing for both handles below. */}
+      <div
         style={{
+          ...SECTION_LABEL_STYLE,
           position: "absolute",
-          left: 60,
-          top: 980,
-          transform: "translateY(-50%)",
-          fontSize: 240,
-          fontWeight: 900,
-          fontVariantNumeric: "tabular-nums",
-          lineHeight: 1,
-          textShadow: "0 8px 28px rgba(0,0,0,0.45)",
+          top: 190,
+          left: 0,
+          right: 0,
         }}
       >
-        {subject.playerPrizes}
-      </span>
-      <span
-        style={{
-          position: "absolute",
-          right: 60,
-          top: 980,
-          transform: "translateY(-50%)",
-          fontSize: 240,
-          fontWeight: 900,
-          fontVariantNumeric: "tabular-nums",
-          lineHeight: 1,
-          textShadow: "0 8px 28px rgba(0,0,0,0.45)",
-        }}
-      >
-        {subject.opponentPrizes}
-      </span>
+        TCG Live
+      </div>
 
-      {/* Versus cards — player tilts in from the left, opponent from the
-          right, meeting at center. Mirrors the /battles versus layout. */}
+      {/* Player handles — sit above the card stack, one per side */}
       <div
         style={{
           position: "absolute",
-          top: 720,
+          top: STACK_TOP - 140,
+          left: 0,
+          right: 0,
+          display: "flex",
+          justifyContent: "space-between",
+          padding: "0 80px",
+        }}
+      >
+        <div
+          style={{
+            width: "45%",
+            textAlign: "center",
+            fontSize: 56,
+            fontWeight: 800,
+            letterSpacing: "-0.01em",
+            lineHeight: 1.1,
+            textShadow: "0 4px 16px rgba(0,0,0,0.35)",
+            wordBreak: "break-word",
+          }}
+        >
+          {subject.playerHandle ?? "—"}
+        </div>
+        <div
+          style={{
+            width: "45%",
+            textAlign: "center",
+            fontSize: 56,
+            fontWeight: 800,
+            letterSpacing: "-0.01em",
+            lineHeight: 1.1,
+            textShadow: "0 4px 16px rgba(0,0,0,0.35)",
+            wordBreak: "break-word",
+          }}
+        >
+          {subject.opponentHandle ?? "—"}
+        </div>
+      </div>
+
+      {/* Versus cards — centered vertically in the canvas. */}
+      <div
+        style={{
+          position: "absolute",
+          top: STACK_TOP,
           left: "50%",
           transform: "translateX(-50%)",
           display: "flex",
-          alignItems: "flex-end",
+          alignItems: "center",
           justifyContent: "center",
           gap: 40,
+          height: CARD_HEIGHT,
         }}
       >
         <div
           style={{
             transform: "rotate(-8deg)",
-            transformOrigin: "bottom center",
-            width: 380,
+            transformOrigin: "center center",
+            width: CARD_WIDTH,
             borderRadius: 18,
             overflow: "hidden",
             background: "rgba(0,0,0,0.15)",
@@ -125,8 +166,8 @@ export default function FeaturedMatchTemplate({ subject, copy }: Props) {
         <div
           style={{
             transform: "rotate(8deg)",
-            transformOrigin: "bottom center",
-            width: 380,
+            transformOrigin: "center center",
+            width: CARD_WIDTH,
             borderRadius: 18,
             overflow: "hidden",
             background: "rgba(0,0,0,0.15)",
@@ -144,12 +185,12 @@ export default function FeaturedMatchTemplate({ subject, copy }: Props) {
         </div>
       </div>
 
-      {/* VS glyph between cards */}
+      {/* VS glyph — pinned to the canvas vertical midpoint. */}
       <span
         style={{
           position: "absolute",
           left: "50%",
-          top: 1180,
+          top: CANVAS_MID_Y,
           transform: "translate(-50%, -50%)",
           fontSize: 64,
           fontWeight: 900,
@@ -161,74 +202,61 @@ export default function FeaturedMatchTemplate({ subject, copy }: Props) {
         VS
       </span>
 
-      {/* TCG Live handles — labelled, one per side, anchored below cards */}
+      {/* "PRIZES TAKEN" — matches TCG LIVE subtitle styling. */}
+      <div
+        style={{
+          ...SECTION_LABEL_STYLE,
+          position: "absolute",
+          top: STACK_BOTTOM + 110,
+          left: 0,
+          right: 0,
+        }}
+      >
+        Prizes Taken
+      </div>
+
+      {/* Prize counts — big flanking digits placed below the label. */}
       <div
         style={{
           position: "absolute",
-          top: 1380,
+          top: STACK_BOTTOM + 200,
           left: 0,
           right: 0,
           display: "flex",
           justifyContent: "space-between",
-          padding: "0 80px",
+          padding: "0 120px",
           alignItems: "flex-start",
         }}
       >
-        <div style={{ width: "45%", textAlign: "center" }}>
-          <div
-            style={{
-              fontSize: 24,
-              fontWeight: 600,
-              letterSpacing: "0.25em",
-              textTransform: "uppercase",
-              color: "rgba(255,255,255,0.7)",
-              marginBottom: 12,
-            }}
-          >
-            TCG Live
-          </div>
-          <div
-            style={{
-              fontSize: 56,
-              fontWeight: 800,
-              letterSpacing: "-0.01em",
-              lineHeight: 1.1,
-              textShadow: "0 4px 16px rgba(0,0,0,0.35)",
-              wordBreak: "break-word",
-            }}
-          >
-            {subject.playerHandle ?? "—"}
-          </div>
-        </div>
-        <div style={{ width: "45%", textAlign: "center" }}>
-          <div
-            style={{
-              fontSize: 24,
-              fontWeight: 600,
-              letterSpacing: "0.25em",
-              textTransform: "uppercase",
-              color: "rgba(255,255,255,0.7)",
-              marginBottom: 12,
-            }}
-          >
-            TCG Live
-          </div>
-          <div
-            style={{
-              fontSize: 56,
-              fontWeight: 800,
-              letterSpacing: "-0.01em",
-              lineHeight: 1.1,
-              textShadow: "0 4px 16px rgba(0,0,0,0.35)",
-              wordBreak: "break-word",
-            }}
-          >
-            {subject.opponentHandle ?? "—"}
-          </div>
-        </div>
+        <span
+          style={{
+            width: "40%",
+            textAlign: "center",
+            fontSize: 200,
+            fontWeight: 900,
+            fontVariantNumeric: "tabular-nums",
+            lineHeight: 1,
+            textShadow: "0 8px 28px rgba(0,0,0,0.45)",
+          }}
+        >
+          {subject.playerPrizes}
+        </span>
+        <span
+          style={{
+            width: "40%",
+            textAlign: "center",
+            fontSize: 200,
+            fontWeight: 900,
+            fontVariantNumeric: "tabular-nums",
+            lineHeight: 1,
+            textShadow: "0 8px 28px rgba(0,0,0,0.45)",
+          }}
+        >
+          {subject.opponentPrizes}
+        </span>
       </div>
 
-      {/* Site mark — pinned bottom-center; replaces the prior CTA chip */}
+      {/* Site mark — pinned bottom-center. */}
       <div
         style={{
           position: "absolute",
