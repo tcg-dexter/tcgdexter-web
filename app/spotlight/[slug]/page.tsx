@@ -315,12 +315,13 @@ export default async function SpotlightPage({
         )}
 
         {/* Spotlight History — only on published pages; drafts don't
-            need a public archive link. */}
+            need a public archive link. Rendered as a black capsule to
+            match the site's other primary actions. */}
         {spotlight.is_published && (
           <section className="mt-10 text-center">
             <Link
               href="/spotlight"
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-text-secondary hover:text-accent transition-colors"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-full bg-black text-white border border-transparent hover:opacity-90 transition-opacity"
             >
               Spotlight History
               <svg
