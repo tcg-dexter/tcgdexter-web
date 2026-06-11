@@ -181,8 +181,8 @@ export default async function SpotlightPage({
         userImageUrl={spotlight.avatar_image_url}
       />
 
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 mt-6">
-        {isAdmin && (
+      {isAdmin && (
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 mt-6">
           <SpotlightAdminBar
             spotlightId={spotlight.id}
             slug={spotlight.slug}
@@ -192,20 +192,24 @@ export default async function SpotlightPage({
             // is gated on its presence alone.
             showDragHint={previewMode && !!spotlight.avatar_image_url}
           />
-        )}
+        </div>
+      )}
 
-        {/* Bio — long-form intro. No surface card; constrained to the
-            same max-w-2xl px-6 column the meta-archetype stat grid uses
-            so the body text holds a comfortable reading measure
-            instead of stretching across the full deck-grid container. */}
-        {spotlight.bio && (
-          <section className="mx-auto max-w-2xl px-6 mt-8">
-            <p className="text-sm sm:text-base text-text-primary whitespace-pre-line leading-relaxed">
-              {spotlight.bio}
-            </p>
-          </section>
-        )}
+      {/* Bio — long-form intro. No surface card; lives directly inside
+          <main> (not the wider deck-grid container above) so its
+          mx-auto max-w-2xl px-6 measure exactly matches the header's
+          bio block. Nesting it inside the wider container layered the
+          parent's px-4 onto the bio's px-6, indenting it 16px further
+          than the header on mobile. */}
+      {spotlight.bio && (
+        <section className="mx-auto max-w-2xl px-6 mt-8">
+          <p className="text-sm sm:text-base text-text-primary whitespace-pre-line leading-relaxed">
+            {spotlight.bio}
+          </p>
+        </section>
+      )}
 
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 mt-8">
         {/* Featured decks */}
         {decks.length > 0 && (
           <section className="mt-8">
