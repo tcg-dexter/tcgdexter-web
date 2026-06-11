@@ -93,15 +93,9 @@ export default async function SpotlightIndex() {
     <main className="min-h-dvh bg-bg pb-24">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 pt-8">
         <header className="mb-6">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-accent mb-1">
-            Community
-          </div>
           <h1 className="text-2xl font-bold text-text-primary">
             Spotlight History
           </h1>
-          <p className="text-sm text-text-secondary mt-1">
-            Every featured trainer, in reverse-chronological order.
-          </p>
         </header>
 
         {spotlights.length === 0 ? (
