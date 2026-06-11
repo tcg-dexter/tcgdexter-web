@@ -195,17 +195,20 @@ export default function FeaturedMatchTemplate({ subject, copy }: Props) {
           fontSize: 64,
           fontWeight: 900,
           letterSpacing: "0.2em",
-          color: "rgba(255,255,255,0.9)",
-          textShadow: "0 4px 16px rgba(0,0,0,0.45)",
+          color: "#fff",
+          textShadow:
+            "0 0 24px rgba(0,0,0,0.55), 0 8px 28px rgba(0,0,0,0.65), 0 2px 4px rgba(0,0,0,0.7)",
         }}
       >
         VS
       </span>
 
-      {/* "PRIZES TAKEN" — matches TCG LIVE subtitle styling. */}
+      {/* "PRIZES TAKEN" — same family as TCG Live, but 25% smaller so
+          the two labels read as primary / secondary rather than equal. */}
       <div
         style={{
           ...SECTION_LABEL_STYLE,
+          fontSize: 42,
           position: "absolute",
           top: STACK_BOTTOM + 110,
           left: 0,
