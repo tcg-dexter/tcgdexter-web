@@ -11,7 +11,7 @@ interface Props {
 // has room, and the Prizes Taken block + URL below it stack cleanly.
 const CARD_WIDTH = 380;
 const CARD_HEIGHT = 532;
-const STACK_CENTER_Y = CANVAS_H * 0.4;
+const STACK_CENTER_Y = CANVAS_H * 0.45;
 const STACK_TOP = STACK_CENTER_Y - CARD_HEIGHT / 2;
 const STACK_BOTTOM = STACK_TOP + CARD_HEIGHT;
 
