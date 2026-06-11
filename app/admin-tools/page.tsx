@@ -19,6 +19,12 @@ const TOOLS: Tool[] = [
     title: "Spotlight Admin",
     description: "Curate Trainer Spotlight features.",
   },
+  {
+    href: "/admin-tools/social-studio",
+    title: "Social Studio",
+    description:
+      "Browse 9:16 social-ready cards built from published content.",
+  },
 ];
 
 export default async function AdminToolsPage() {
