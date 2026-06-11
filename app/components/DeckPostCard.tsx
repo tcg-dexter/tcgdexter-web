@@ -132,13 +132,13 @@ export function MetaDeckCard({
   const accentDeep = shade(accentBg, -22);
   return (
     <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-      {/* Energy-type accent gradient — sits over the bottom third of the
-          card, fading from the avatar's type color at 0 opacity (top of
-          band) through the full type color to the banner's deeper bottom
-          stop (shade -22) at the card's bottom edge. */}
+      {/* Energy-type accent gradient — sits over the bottom half of the
+          card, fading from the avatar's type color at 0 opacity (midpoint)
+          through the full type color to the banner's deeper bottom stop
+          (shade -22) at the card's bottom edge. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2"
         style={{
           background: `linear-gradient(to bottom, ${accentBg}00 0%, ${accentBg} 50%, ${accentDeep} 100%)`,
         }}
