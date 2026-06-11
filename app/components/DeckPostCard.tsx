@@ -297,7 +297,7 @@ export function UserDeckCard({
       className="rounded-2xl p-px shadow-sm"
       style={{ background: borderGradient }}
     >
-      <div className="rounded-[15px] bg-white/90 backdrop-blur-xl overflow-hidden hover:shadow-md transition-shadow">
+      <div className="rounded-[15px] bg-white overflow-hidden hover:shadow-md transition-shadow">
       {/* Header — deck name + 3-avatar stack (primary + top-2 by copy count). */}
       <div className="flex items-center gap-3 px-3.5 pt-3">
         <Link

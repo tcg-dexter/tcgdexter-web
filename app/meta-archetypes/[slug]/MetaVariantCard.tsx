@@ -208,7 +208,7 @@ export default function MetaVariantCard({
       className="rounded-2xl p-px shadow-sm"
       style={{ background: borderGradient }}
     >
-      <div className="rounded-[15px] bg-white/90 backdrop-blur-xl overflow-hidden hover:shadow-md transition-shadow">
+      <div className="rounded-[15px] bg-white overflow-hidden hover:shadow-md transition-shadow">
       <div className="flex items-stretch gap-3 px-3.5 pt-3">
         {href ? (
           <Link href={href} className="flex-1 min-w-0 block">
