@@ -286,8 +286,20 @@ export function UserDeckCard({
     ];
   }, [cards, coverImageUrl, iconUrl, iconBg]);
 
+  // Glow halo built from the first three avatar colors — mirrors the
+  // home-page deck-input glow (bg-gradient-brand + blur) but in a smaller
+  // radius and using the deck's own typing.
+  const glowStops = [0, 1, 2].map((i) => avatarItems[i]?.iconBg ?? "#B0A89E");
+  const glowGradient = `linear-gradient(90deg, ${glowStops[0]} 0%, ${glowStops[1]} 50%, ${glowStops[2]} 100%)`;
+
   return (
-    <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+    <div className="relative group">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -inset-px rounded-2xl opacity-40 group-hover:opacity-60 blur-lg transition-opacity"
+        style={{ background: glowGradient }}
+      />
+      <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
       {/* Header — deck name + 3-avatar stack (primary + top-2 by copy count). */}
       <div className="flex items-center gap-3 px-3.5 pt-3">
         <Link
@@ -327,6 +339,7 @@ export function UserDeckCard({
         hideSave
       />
 
+      </div>
     </div>
   );
 }
