@@ -195,19 +195,28 @@ export default async function SpotlightPage({
         </div>
       )}
 
-      {/* Bio — long-form intro. No surface card; lives directly inside
-          <main> (not the wider deck-grid container above) so its
-          mx-auto max-w-2xl px-6 measure exactly matches the header's
-          bio block. Nesting it inside the wider container layered the
-          parent's px-4 onto the bio's px-6, indenting it 16px further
-          than the header on mobile. */}
-      {spotlight.bio && (
-        <section className="mx-auto max-w-2xl px-6 mt-8">
-          <p className="text-sm sm:text-base text-text-primary whitespace-pre-line leading-relaxed">
-            {spotlight.bio}
-          </p>
-        </section>
-      )}
+      {/* Bio — long-form intro. The first sentence is painted with the
+          site brand gradient via bg-clip-text so the opening hook
+          announces itself before the body text takes over. */}
+      {spotlight.bio &&
+        (() => {
+          // Match through the first sentence terminator (. ! ?) that's
+          // followed by whitespace or end-of-string. Falls back to the
+          // whole bio if no terminator is found (e.g. a one-liner).
+          const m = spotlight.bio.match(/^[\s\S]*?[.!?](?=\s|$)/);
+          const first = m ? m[0] : spotlight.bio;
+          const rest = m ? spotlight.bio.slice(first.length) : "";
+          return (
+            <section className="mx-auto max-w-2xl px-6 mt-8">
+              <p className="text-sm sm:text-base text-text-primary whitespace-pre-line leading-relaxed">
+                <span className="bg-gradient-brand bg-clip-text text-transparent font-semibold">
+                  {first}
+                </span>
+                {rest}
+              </p>
+            </section>
+          );
+        })()}
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6 mt-8">
         {/* Featured decks */}
