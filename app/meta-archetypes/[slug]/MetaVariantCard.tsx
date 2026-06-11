@@ -197,18 +197,8 @@ export default function MetaVariantCard({
     </div>
   );
 
-  // 1px gradient border built from the first three avatar colors —
-  // padding-box trick: outer wrapper paints the gradient, inner card is
-  // inset by 1px with its own background.
-  const borderStops = [0, 1, 2].map((i) => avatarItems[i]?.iconBg ?? "#B0A89E");
-  const borderGradient = `linear-gradient(135deg, ${borderStops[0]} 0%, ${borderStops[1]} 50%, ${borderStops[2]} 100%)`;
-
   return (
-    <div
-      className="rounded-2xl p-px shadow-sm"
-      style={{ background: borderGradient }}
-    >
-      <div className="rounded-[15px] bg-white overflow-hidden hover:shadow-md transition-shadow">
+    <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
       <div className="flex items-stretch gap-3 px-3.5 pt-3">
         {href ? (
           <Link href={href} className="flex-1 min-w-0 block">
@@ -235,7 +225,6 @@ export default function MetaVariantCard({
         deckName={headerName}
         hideLikes
       />
-      </div>
     </div>
   );
 }
