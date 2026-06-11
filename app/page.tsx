@@ -268,6 +268,13 @@ async function loadCurrentSpotlight(): Promise<CurrentSpotlight | null> {
       .maybeSingle<TrainerSpotlightRow>();
     if (!data) return null;
 
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", data.profile_id)
+      .maybeSingle<{ username: string }>();
+    if (!profile?.username) return null;
+
     // Mirrors app/spotlight/[slug]/page.tsx — favorite Pokémon, first
     // collection card, first format card drive the three banner accents.
     const firstCollection = data.favorite_collection_cards?.[0] ?? null;
@@ -299,6 +306,7 @@ async function loadCurrentSpotlight(): Promise<CurrentSpotlight | null> {
     return {
       id: data.id,
       slug: data.slug,
+      username: profile.username,
       layout: data.banner_layout,
       favoritePokemon: data.favorite_pokemon,
       favoriteCollectionCards: data.favorite_collection_cards ?? [],

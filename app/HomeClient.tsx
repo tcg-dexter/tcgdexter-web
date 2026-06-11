@@ -24,6 +24,7 @@ import type {
 export type CurrentSpotlight = {
   id: string;
   slug: string;
+  username: string;
   layout: SpotlightBannerLayout;
   favoritePokemon: SpotlightPokemonRef | null;
   favoriteCollectionCards: SpotlightCardRef[];
@@ -561,7 +562,12 @@ export default function HomeClient({
                 />
               </Link>
               <div className="mt-10 max-w-4xl mx-auto text-center text-3xl md:text-4xl font-semibold tracking-tight leading-tight text-text-primary">
-                Having just started playing at local tournaments at the end of last year, I put a lot of focus on one deck at a time, making small iterations after each batch of matchups.
+                &ldquo;Having just started playing at local tournaments at the end of last year, I put a lot of focus on one deck at a time, making small iterations after each batch of matchups.&rdquo;
+              </div>
+              <div className="mt-4 text-center text-lg md:text-xl font-semibold tracking-tight">
+                <span className="bg-gradient-brand bg-clip-text text-transparent">
+                  @{currentSpotlight.username}
+                </span>
               </div>
               <div className="mt-10 flex justify-center">
                 <Link
