@@ -515,8 +515,10 @@ function SetFacet({
               }`}
               title={s.id}
             >
+              {s.ptcgoCode && (
+                <span className="font-bold mr-1">{s.ptcgoCode}</span>
+              )}
               {s.name}
-              {s.ptcgoCode ? ` (${s.ptcgoCode})` : ""}
             </button>
           );
         })}
