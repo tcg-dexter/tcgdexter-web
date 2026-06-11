@@ -6,6 +6,7 @@ import DeckCardFooter from "./DeckCardFooter";
 import AvatarStack, { type AvatarStackItem } from "./AvatarStack";
 import { deckAvatarInfo } from "@/lib/primaryCardImage";
 import { metaTopPokemonByCount } from "@/lib/metaPrimaryCard";
+import { shade } from "@/lib/color";
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
@@ -128,16 +129,18 @@ export function MetaDeckCard({
   const creatorList = (creators && creators.length > 0 ? creators : ["Trainer"]).slice(0, 5);
   const href = `/meta-archetypes/${id}`;
   const accentBg = icon_bg ?? "#B0A89E";
+  const accentDeep = shade(accentBg, -22);
   return (
     <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
       {/* Energy-type accent gradient — sits over the bottom third of the
           card, fading from the avatar's type color at 0 opacity (top of
-          band) to full opacity (bottom edge). */}
+          band) through the full type color to the banner's deeper bottom
+          stop (shade -22) at the card's bottom edge. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3"
         style={{
-          background: `linear-gradient(to bottom, ${accentBg}00 0%, ${accentBg} 100%)`,
+          background: `linear-gradient(to bottom, ${accentBg}00 0%, ${accentBg} 50%, ${accentDeep} 100%)`,
         }}
       />
       <Link href={href} className="relative block">
