@@ -194,15 +194,15 @@ export default async function SpotlightPage({
           />
         )}
 
-        {/* Bio — long-form intro. Rendered as a single article card so
-            it sits visually distinct from the deck grid below. */}
+        {/* Bio — long-form intro. No surface card; constrained to the
+            same max-w-2xl px-6 column the meta-archetype stat grid uses
+            so the body text holds a comfortable reading measure
+            instead of stretching across the full deck-grid container. */}
         {spotlight.bio && (
-          <section className="mt-8">
-            <article className="rounded-2xl bg-white border border-black/8 shadow-sm p-6">
-              <p className="text-sm sm:text-base text-text-primary whitespace-pre-line leading-relaxed">
-                {spotlight.bio}
-              </p>
-            </article>
+          <section className="mx-auto max-w-2xl px-6 mt-8">
+            <p className="text-sm sm:text-base text-text-primary whitespace-pre-line leading-relaxed">
+              {spotlight.bio}
+            </p>
           </section>
         )}
 
