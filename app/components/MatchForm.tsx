@@ -84,6 +84,14 @@ interface Props {
   submitLabel?: string;
   /** If true, show a compact form (no opponent deck list toggle). */
   compact?: boolean;
+  /**
+   * Controlled Best-of-3 mode. When provided, the parent owns the toggle
+   * (e.g. the capsule in MatchEntry's tab row) and the form hides its own
+   * inline toggle. Omit for the standalone edit / quick-log forms, which keep
+   * their internal toggle.
+   */
+  bestOf3?: boolean;
+  onBestOf3Change?: (value: boolean) => void;
 }
 
 /**
@@ -97,6 +105,8 @@ export default function MatchForm({
   initial,
   submitLabel = "Save Match",
   compact = false,
+  bestOf3: bestOf3Prop,
+  onBestOf3Change,
 }: Props) {
   const [result, setResult] = useState<"win" | "loss" | "draw" | null>(
     initial?.result ?? null
@@ -120,12 +130,26 @@ export default function MatchForm({
     return new Date().toISOString().slice(0, 10);
   });
   // Best-of-3 game tracking — starts on when editing a match that has games.
-  const [bestOf3, setBestOf3] = useState(!!initial?.game_results);
+  // Controlled by the parent when bestOf3Prop is set (MatchEntry's capsule
+  // toggle); otherwise self-managed for the standalone edit / quick-log forms.
+  const [internalBestOf3, setInternalBestOf3] = useState(!!initial?.game_results);
+  const bestOf3Controlled = bestOf3Prop !== undefined;
+  const bestOf3 = bestOf3Prop ?? internalBestOf3;
+  const setBestOf3 = (value: boolean) => {
+    if (onBestOf3Change) onBestOf3Change(value);
+    else setInternalBestOf3(value);
+  };
   const [games, setGames] = useState<(GameLetter | null)[]>(
     parseGames(initial?.game_results)
   );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Drop any entered games when the round flips back to a single match, so a
+  // stale sequence can't linger (covers both the capsule and inline toggles).
+  useEffect(() => {
+    if (!bestOf3) setGames([null, null, null]);
+  }, [bestOf3]);
 
   // Archetype autocomplete
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -237,31 +261,32 @@ export default function MatchForm({
               );
             })}
           </div>
-          <button
-            type="button"
-            onClick={() => setBestOf3(true)}
-            className="mt-1.5 text-xs text-accent hover:text-accent-light transition-colors"
-          >
-            + Track as Best of 3
-          </button>
+          {!bestOf3Controlled && (
+            <button
+              type="button"
+              onClick={() => setBestOf3(true)}
+              className="mt-1.5 text-xs text-accent hover:text-accent-light transition-colors"
+            >
+              + Track as Best of 3
+            </button>
+          )}
         </div>
       ) : (
         <div className="mb-3 rounded-lg bg-bg p-3 shadow-[inset_0_0_0_1px_var(--border)]">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-text-secondary">
-              Best of 3
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                setBestOf3(false);
-                setGames([null, null, null]);
-              }}
-              className="text-xs text-text-muted hover:text-text-secondary transition-colors"
-            >
-              Single game
-            </button>
-          </div>
+          {!bestOf3Controlled && (
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-text-secondary">
+                Best of 3
+              </span>
+              <button
+                type="button"
+                onClick={() => setBestOf3(false)}
+                className="text-xs text-text-muted hover:text-text-secondary transition-colors"
+              >
+                Single game
+              </button>
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             {[0, 1, 2].map((i) => {
