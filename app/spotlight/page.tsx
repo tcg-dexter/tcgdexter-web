@@ -169,7 +169,8 @@ export default async function SpotlightIndex() {
                         className="absolute pointer-events-none"
                         style={{
                           right: "4%",
-                          bottom: "6%",
+                          top: "50%",
+                          transform: "translateY(-50%)",
                           width: "16.5%",
                         }}
                       >
