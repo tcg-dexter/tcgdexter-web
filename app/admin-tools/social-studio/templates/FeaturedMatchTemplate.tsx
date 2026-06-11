@@ -6,12 +6,13 @@ interface Props {
   copy: TemplateCopy;
 }
 
-// Card stack geometry. Cards are ~card-aspect tall (≈ width * 1.4),
-// so the stack is centered around the canvas vertical midpoint.
+// Card stack geometry. Cards are ~card-aspect tall (≈ width * 1.4).
+// The stack is centered at 40% down the canvas so the handle row above
+// has room, and the Prizes Taken block + URL below it stack cleanly.
 const CARD_WIDTH = 380;
 const CARD_HEIGHT = 532;
-const CANVAS_MID_Y = CANVAS_H / 2;
-const STACK_TOP = CANVAS_MID_Y - CARD_HEIGHT / 2;
+const STACK_CENTER_Y = CANVAS_H * 0.4;
+const STACK_TOP = STACK_CENTER_Y - CARD_HEIGHT / 2;
 const STACK_BOTTOM = STACK_TOP + CARD_HEIGHT;
 
 // Shared "section label" style — used by both the "TCG LIVE" subtitle
@@ -185,12 +186,12 @@ export default function FeaturedMatchTemplate({ subject, copy }: Props) {
         </div>
       </div>
 
-      {/* VS glyph — pinned to the canvas vertical midpoint. */}
+      {/* VS glyph — pinned to the stack's vertical midpoint. */}
       <span
         style={{
           position: "absolute",
           left: "50%",
-          top: CANVAS_MID_Y,
+          top: STACK_CENTER_Y,
           transform: "translate(-50%, -50%)",
           fontSize: 64,
           fontWeight: 900,
