@@ -248,6 +248,16 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
       {/* Filter panel */}
       {showFilters && (
         <div className="rounded-2xl border border-black/8 bg-white p-4 mb-4 space-y-4">
+          {activeFilterCount > 0 && (
+            <div className="pb-3 border-b border-black/8">
+              <button
+                onClick={clearFilters}
+                className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white hover:bg-surface transition-colors"
+              >
+                Clear all filters
+              </button>
+            </div>
+          )}
           <SetFacet
             sets={facets.sets}
             selected={params.setId}
@@ -311,16 +321,6 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
             step={0.5}
             onChange={(min, max) => updateParams({ priceMin: min, priceMax: max })}
           />
-          {activeFilterCount > 0 && (
-            <div className="pt-2 border-t border-black/8">
-              <button
-                onClick={clearFilters}
-                className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white hover:bg-surface transition-colors"
-              >
-                Clear all filters
-              </button>
-            </div>
-          )}
         </div>
       )}
 
