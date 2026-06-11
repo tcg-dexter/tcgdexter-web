@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import UnifiedSearch from "@/app/leaderboard/UnifiedSearch";
 import {
   TrophyIcon,
+  WrenchIcon,
   ChartBarIcon,
   BookOpenIcon,
   BookmarkIcon,
@@ -349,12 +350,12 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
             {isAdmin && (
               <li>
                 <Link
-                  href="/admin/spotlight"
+                  href="/admin-tools"
                   className={linkClass}
                   onClick={closeMenu}
                 >
-                  <TrophyIcon />
-                  <span>Spotlight Admin</span>
+                  <WrenchIcon />
+                  <span>Admin Tools</span>
                 </Link>
               </li>
             )}

@@ -37,6 +37,15 @@ export function StackIcon({ className }: IconProps) {
   );
 }
 
+/** Wrench — "Admin Tools". */
+export function WrenchIcon({ className }: IconProps) {
+  return (
+    <svg {...outlineProps} className={className}>
+      <path d="M14.7 6.3a4 4 0 105.0 5.0L20 11l-7.6 7.6a2.5 2.5 0 11-3.5-3.5L16.5 7.5l-.8-1.2z" />
+    </svg>
+  );
+}
+
 /** Trophy — "Meta Archetypes". */
 export function TrophyIcon({ className }: IconProps) {
   return (
