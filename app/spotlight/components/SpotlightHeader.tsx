@@ -104,7 +104,7 @@ export default function SpotlightHeader({
   return (
     <header className="flex-shrink-0">
       <div
-        className="relative w-full overflow-hidden h-[calc(34vw-12px)] sm:h-auto sm:aspect-[3/1]"
+        className="relative w-full overflow-hidden h-[calc(40.8vw-12px)] sm:h-auto sm:aspect-[3/1]"
         style={{ background: bannerGradient }}
       >
         {/* Card fans — left (collection) and right (play). Painted
