@@ -127,9 +127,20 @@ export function MetaDeckCard({
 }: MetaDeckCardProps) {
   const creatorList = (creators && creators.length > 0 ? creators : ["Trainer"]).slice(0, 5);
   const href = `/meta-archetypes/${id}`;
+  const accentBg = icon_bg ?? "#B0A89E";
   return (
-    <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-      <Link href={href} className="block">
+    <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+      {/* Energy-type accent gradient — sits over the bottom half of the
+          card, fading from the avatar's type color at 0 opacity (midpoint)
+          to full opacity (bottom edge). */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2"
+        style={{
+          background: `linear-gradient(to bottom, ${accentBg}00 0%, ${accentBg} 100%)`,
+        }}
+      />
+      <Link href={href} className="relative block">
         {/* Header — pokémon avatar + deck name + rank */}
         <div className="flex items-center gap-2 px-3.5 pt-3">
           {icon_url ? (
@@ -175,14 +186,16 @@ export function MetaDeckCard({
         </div>
       </Link>
 
-      <DeckCardFooter
-        metaArchetypeId={id}
-        initialLikes={like_count}
-        saveHref={href}
-        deckName={name}
-        hideSave
-        hideShare
-      />
+      <div className="relative">
+        <DeckCardFooter
+          metaArchetypeId={id}
+          initialLikes={like_count}
+          saveHref={href}
+          deckName={name}
+          hideSave
+          hideShare
+        />
+      </div>
     </div>
   );
 }
