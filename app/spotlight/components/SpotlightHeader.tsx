@@ -134,16 +134,15 @@ export default function SpotlightHeader({
         )}
       </div>
 
-      {/* Bio block — trainer avatar overlaps banner via negative margin. */}
+      {/* Bio block — trainer avatar overlaps banner via negative margin.
+          Mobile size is 30% smaller than desktop (128 → ~90 px) and the
+          negative top margin scales with it so the avatar continues to
+          overlap roughly half over the banner at both breakpoints. */}
       <div className="mx-auto max-w-2xl px-6">
-        <div className="flex items-end justify-between gap-3 -mt-16 sm:-mt-20">
+        <div className="flex items-end justify-between gap-3 -mt-11 sm:-mt-20">
           <div
-            className="relative z-10 rounded-full ring-4 ring-bg flex items-center justify-center overflow-hidden shrink-0"
-            style={{
-              background: avatarGradient,
-              width: "128px",
-              height: "128px",
-            }}
+            className="relative z-10 rounded-full ring-4 ring-bg flex items-center justify-center overflow-hidden shrink-0 w-[90px] h-[90px] sm:w-32 sm:h-32"
+            style={{ background: avatarGradient }}
           >
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -153,7 +152,7 @@ export default function SpotlightHeader({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span className="text-5xl font-black text-white drop-shadow-sm">
+              <span className="text-4xl sm:text-5xl font-black text-white drop-shadow-sm">
                 {initial}
               </span>
             )}
