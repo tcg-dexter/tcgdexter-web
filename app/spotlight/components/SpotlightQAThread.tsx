@@ -1,30 +1,58 @@
+import { shade } from "@/lib/color";
 import type { SpotlightQA } from "../types";
 
 interface Props {
   qa: SpotlightQA[];
-  /** The featured trainer's display name + @handle. Drives the second
-   *  post in each Q/A thread (the answer). */
+  /** The featured trainer powering the answer side of each thread. */
   trainer: {
     displayName: string;
     username: string;
+    /** When set, rendered in place of the monogram in the answer
+     *  avatar so the Q&A reads with the trainer's actual portrait. */
+    avatarUrl: string | null;
+    /** First accent color (typically favorite-Pokémon energy color).
+     *  Drives the vertical-fade gradient used as the monogram
+     *  background, matching the main header avatar. */
+    accentColor: string;
   };
 }
 
 /**
- * Q&A rendered as a series of two-post conversation threads — Dexter
- * asks, the featured trainer answers — mirroring the visual language of
- * the battle log detail page: small round avatar, name + @handle row,
- * a thin connector between the question and its answer, and breathing
- * room between Q/A pairs.
+ * Two-letter monogram from the first two whitespace-separated words
+ * of `name`. "Eevee Echo" → "EE"; single-word → first letter; empty
+ * → "?". Shared shape with the main header avatar so both renderings
+ * agree.
+ */
+function monogramFor(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "?";
+  if (words.length === 1) return words[0].charAt(0).toUpperCase();
+  return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
+}
+
+/**
+ * Q&A rendered as a series of two-post conversation threads — TCG
+ * Dexter asks, the featured trainer answers — mirroring the visual
+ * language of the battle log detail page: round avatar, name + @handle
+ * row, a thin connector between the question and its answer.
  *
- * Avatars: Dexter is a flat black circle with a white "D" monogram (the
- * interviewer voice). The featured trainer is a site-gradient circle
- * with the first letter of their display name. The contrast tells the
- * reader at a glance who's speaking.
+ * Avatars:
+ *   - TCG Dexter (interviewer) — site brand gradient circle, "TD"
+ *     monogram in white. The gradient ties the section back to the
+ *     brand without leaning on the test profile that happens to share
+ *     the @dexter handle.
+ *   - Featured trainer — mirrors the main header avatar: either the
+ *     uploaded avatar image, or a vertical-fade-of-first-accent
+ *     gradient circle with the trainer's two-letter monogram.
  */
 export default function SpotlightQAThread({ qa, trainer }: Props) {
   if (qa.length === 0) return null;
-  const trainerInitial = trainer.displayName.trim().charAt(0).toUpperCase() || "?";
+
+  const trainerMonogram = monogramFor(trainer.displayName);
+  const trainerGradient = `linear-gradient(180deg, ${trainer.accentColor} 0%, ${shade(
+    trainer.accentColor,
+    -22,
+  )} 100%)`;
 
   return (
     <div className="rounded-2xl border border-black/8 bg-white shadow-sm overflow-hidden">
@@ -34,23 +62,36 @@ export default function SpotlightQAThread({ qa, trainer }: Props) {
             key={i}
             className={i < qa.length - 1 ? "border-b border-black/8" : ""}
           >
-            {/* Question — Dexter, the interviewer voice. */}
+            {/* Question — TCG Dexter, the interviewer voice. */}
             <Post
               avatar={
-                <div className="h-9 w-9 rounded-full bg-black text-white flex items-center justify-center text-sm font-bold">
-                  D
+                <div className="h-9 w-9 rounded-full gradient-brand flex items-center justify-center text-[11px] font-black tracking-tight">
+                  TD
                 </div>
               }
-              displayName="Dexter"
-              handle="dexter"
+              displayName="TCG Dexter"
+              handle="tcgdexter"
               body={item.q}
               showConnector
             />
-            {/* Answer — the featured trainer. */}
+            {/* Answer — the featured trainer, mirroring the main
+                header avatar's identity treatment. */}
             <Post
               avatar={
-                <div className="h-9 w-9 rounded-full gradient-brand flex items-center justify-center text-sm font-bold">
-                  {trainerInitial}
+                <div
+                  className="h-9 w-9 rounded-full overflow-hidden flex items-center justify-center text-sm font-black text-white"
+                  style={trainer.avatarUrl ? undefined : { background: trainerGradient }}
+                >
+                  {trainer.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={trainer.avatarUrl}
+                      alt={trainer.displayName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    trainerMonogram
+                  )}
                 </div>
               }
               displayName={trainer.displayName}

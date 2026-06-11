@@ -274,6 +274,14 @@ export default async function SpotlightPage({
               trainer={{
                 displayName: profile.display_name,
                 username: profile.username,
+                avatarUrl: profile.avatar_url,
+                // First non-null accent (favorite Pokémon when set,
+                // else next available) drives the vertical-fade
+                // gradient on the trainer's monogram fallback — same
+                // logic the main header avatar uses, so the two
+                // surfaces agree.
+                accentColor:
+                  accentColors.find((c): c is string => !!c) ?? "#B0A89E",
               }}
             />
           </section>
