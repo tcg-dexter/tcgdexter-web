@@ -145,7 +145,7 @@ export function MetaDeckCard({
         <div className="flex items-center gap-2 px-3.5 pt-3">
           {icon_url ? (
             <div
-              className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
+              className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06] shadow-sm"
               style={{ background: icon_bg ?? "#B0A89E" }}
               aria-hidden
             >
