@@ -201,7 +201,7 @@ export default function MetaVariantCard({
   // padding-box trick: outer wrapper paints the gradient, inner card is
   // inset by 1px with its own background.
   const borderStops = [0, 1, 2].map((i) => avatarItems[i]?.iconBg ?? "#B0A89E");
-  const borderGradient = `linear-gradient(90deg, ${borderStops[0]} 0%, ${borderStops[1]} 50%, ${borderStops[2]} 100%)`;
+  const borderGradient = `linear-gradient(135deg, ${borderStops[0]} 0%, ${borderStops[1]} 50%, ${borderStops[2]} 100%)`;
 
   return (
     <div
