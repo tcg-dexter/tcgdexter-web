@@ -45,16 +45,26 @@ export interface FeaturedDeckSubject {
 export interface FeaturedMatchSubject {
   kind: "featured_match";
   id: string;
-  displayName: string;
+  /** TCG Dexter handles retained for the subject dropdown label; the
+   *  template itself renders the TCG Live handles below. */
   username: string;
+  displayName: string;
   deckName: string;
+  /** Player's deck cover (the player-side hero card on the banner). */
   deckCoverUrl: string | null;
-  opponentArchetype: string | null;
+  /** Opponent's top-attacker card image (mirrors /battles resolution). */
+  opponentImageUrl: string | null;
+  /** Type-color accents per side, used to paint the split gradient. */
+  playerAccentColor: string;
+  opponentAccentColor: string;
+  /** TCG Live in-game handles, pulled from matches.player_handle /
+   *  opponent_handle. Fall back to placeholders when missing. */
+  playerHandle: string | null;
   opponentHandle: string | null;
+  opponentArchetype: string | null;
   result: "win" | "loss" | "tie";
   playerPrizes: number;
   opponentPrizes: number;
-  accentColor: string;
 }
 
 export type TemplateSubject =

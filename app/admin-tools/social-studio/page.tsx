@@ -5,6 +5,7 @@ import archetypesRaw from "@/data/meta-archetypes.json";
 import metaDecksRaw from "@/data/meta-decks.json";
 import { metaPrimaryCard, typeColor } from "@/lib/metaPrimaryCard";
 import {
+  cardImageUrlForName,
   cardTypesForName,
   cardTypesForSetIdNumber,
   primaryPokemonCard,
@@ -74,6 +75,7 @@ interface MatchRow {
   result: "win" | "loss" | "tie";
   opponent_archetype: string | null;
   opponent_handle: string | null;
+  player_handle: string | null;
   saved_deck_id: string;
 }
 
@@ -227,7 +229,9 @@ export default async function SocialStudioPage() {
   // (source = 'tcg_live_log' matches the home page heuristic).
   const { data: matchRowsData } = await supabase
     .from("matches")
-    .select("id, result, opponent_archetype, opponent_handle, saved_deck_id, source")
+    .select(
+      "id, result, opponent_archetype, opponent_handle, player_handle, saved_deck_id, source",
+    )
     .eq("source", "tcg_live_log")
     .order("created_at", { ascending: false })
     .limit(30);
@@ -255,13 +259,35 @@ export default async function SocialStudioPage() {
     ]),
   );
 
-  // Prize counts per match
+  // Prize counts + opponent attacker (for the opponent-side card image)
+  // pulled in parallel. Mirrors /battles/[id]'s resolution: top opponent
+  // attacker by damage; fall back to highest-rank played/evolved Pokémon
+  // when the opponent never swings (concede, KO'd before attacking).
   const matchIds = matchRowsRaw.map((m) => m.id);
-  const { data: prizeRows } = await supabase
-    .from("match_actions")
-    .select("match_id, actor, payload")
-    .in("match_id", matchIds.length ? matchIds : ["00000000-0000-0000-0000-000000000000"])
-    .eq("action_type", "prize_taken");
+  const matchIdsSafe = matchIds.length
+    ? matchIds
+    : ["00000000-0000-0000-0000-000000000000"];
+  const [{ data: prizeRows }, { data: attackRows }, { data: playRows }] =
+    await Promise.all([
+      supabase
+        .from("match_actions")
+        .select("match_id, actor, payload")
+        .in("match_id", matchIdsSafe)
+        .eq("action_type", "prize_taken"),
+      supabase
+        .from("match_actions")
+        .select("match_id, payload")
+        .in("match_id", matchIdsSafe)
+        .eq("action_type", "attack")
+        .eq("actor", "opponent"),
+      supabase
+        .from("match_actions")
+        .select("match_id, action_type, payload")
+        .in("match_id", matchIdsSafe)
+        .eq("actor", "opponent")
+        .in("action_type", ["play_to_active", "play_to_bench", "evolve"]),
+    ]);
+
   const prizesByMatch = new Map<string, { player: number; opponent: number }>();
   for (const row of prizeRows ?? []) {
     const matchId = row.match_id as string;
@@ -275,6 +301,65 @@ export default async function SocialStudioPage() {
     else if (actor === "opponent") cur.opponent += count;
     prizesByMatch.set(matchId, cur);
   }
+
+  // Aggregate opponent attack damage per match → top attacker name
+  const opponentDmgByMatch = new Map<string, Map<string, number>>();
+  for (const row of attackRows ?? []) {
+    const payload = row.payload as Record<string, unknown> | null;
+    const attacker = typeof payload?.attacker === "string" ? payload.attacker : null;
+    const damage = typeof payload?.damage === "number" ? payload.damage : 0;
+    if (!attacker || !damage) continue;
+    const matchId = row.match_id as string;
+    if (!opponentDmgByMatch.has(matchId)) opponentDmgByMatch.set(matchId, new Map());
+    const m = opponentDmgByMatch.get(matchId)!;
+    m.set(attacker, (m.get(attacker) ?? 0) + damage);
+  }
+  const topAttackerByMatch = new Map<string, string>();
+  opponentDmgByMatch.forEach((attackerMap, matchId) => {
+    let topName = "";
+    let topDmg = 0;
+    attackerMap.forEach((dmg, name) => {
+      if (dmg > topDmg) {
+        topDmg = dmg;
+        topName = name;
+      }
+    });
+    if (topName) topAttackerByMatch.set(matchId, topName);
+  });
+
+  // Fallback: highest-rank played/evolved Pokémon per match
+  const playsByMatch = new Map<string, Map<string, number>>();
+  for (const row of playRows ?? []) {
+    const payload = row.payload as Record<string, unknown> | null;
+    const name =
+      row.action_type === "evolve"
+        ? typeof payload?.to === "string"
+          ? (payload.to as string)
+          : null
+        : typeof payload?.card === "string"
+        ? (payload.card as string)
+        : null;
+    if (!name) continue;
+    const matchId = row.match_id as string;
+    if (!playsByMatch.has(matchId)) playsByMatch.set(matchId, new Map());
+    const m = playsByMatch.get(matchId)!;
+    m.set(name, (m.get(name) ?? 0) + 1);
+  }
+  playsByMatch.forEach((plays, matchId) => {
+    if (topAttackerByMatch.has(matchId)) return;
+    const synthetic: Array<{
+      name: string;
+      qty: number;
+      number: string;
+      setCode: string;
+      section: "pokemon";
+    }> = [];
+    plays.forEach((qty, name) => {
+      synthetic.push({ name, qty, number: "", setCode: "", section: "pokemon" });
+    });
+    const primary = primaryPokemonCard(synthetic);
+    if (primary) topAttackerByMatch.set(matchId, primary.card.name);
+  });
 
   const featuredMatches: FeaturedMatchSubject[] = matchRowsRaw
     .filter((m) => matchDeckById.has(m.saved_deck_id))
@@ -293,6 +378,13 @@ export default async function SocialStudioPage() {
         })),
       );
       const prizes = prizesByMatch.get(m.id) ?? { player: 0, opponent: 0 };
+      const opponentAttacker = topAttackerByMatch.get(m.id) ?? null;
+      const opponentImageUrl = opponentAttacker
+        ? cardImageUrlForName(opponentAttacker)
+        : null;
+      const opponentAccentColor = typeColor(
+        opponentAttacker ? cardTypesForName(opponentAttacker) : undefined,
+      );
       return {
         kind: "featured_match",
         id: m.id,
@@ -304,12 +396,15 @@ export default async function SocialStudioPage() {
           (primary?.set_id
             ? `https://images.pokemontcg.io/${primary.set_id}/${primary.card.number}.png`
             : null),
-        opponentArchetype: m.opponent_archetype,
+        opponentImageUrl,
+        playerAccentColor: typeColor(primary?.types),
+        opponentAccentColor,
+        playerHandle: m.player_handle,
         opponentHandle: m.opponent_handle,
+        opponentArchetype: m.opponent_archetype,
         result: m.result,
         playerPrizes: prizes.player,
         opponentPrizes: prizes.opponent,
-        accentColor: typeColor(primary?.types),
       };
     });
 

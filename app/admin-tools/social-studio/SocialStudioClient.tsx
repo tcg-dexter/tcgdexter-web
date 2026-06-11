@@ -54,19 +54,22 @@ function defaultCopy(subject: TemplateSubject): TemplateCopy {
     case "featured_match":
       return {
         eyebrow: "Featured Match",
-        headline:
-          subject.result === "win"
-            ? `@${subject.username} takes the win`
-            : subject.result === "loss"
-            ? `Tough loss for @${subject.username}`
-            : `Hard-fought tie`,
-        subhead: subject.opponentArchetype
-          ? `vs ${subject.opponentArchetype}`
-          : "Logged on TCG Dexter",
-        cta: "See the Recap",
+        headline: "",
+        subhead: "",
+        cta: "",
       };
   }
 }
+
+/** Which copy fields the inspector should expose for a given template.
+ *  Featured Match only renders the eyebrow on-canvas, so we hide the
+ *  unused fields rather than letting the user edit dead values. */
+const COPY_FIELDS_BY_KIND: Record<TemplateKind, (keyof TemplateCopy)[]> = {
+  spotlight: ["eyebrow", "headline", "subhead", "cta"],
+  meta_archetype: ["eyebrow", "headline", "subhead", "cta"],
+  featured_deck: ["eyebrow", "headline", "subhead", "cta"],
+  featured_match: ["eyebrow"],
+};
 
 function renderTemplate(subject: TemplateSubject, copy: TemplateCopy) {
   switch (subject.kind) {
@@ -90,8 +93,11 @@ function subjectLabel(s: TemplateSubject): string {
       return s.name;
     case "featured_deck":
       return `${s.name} — @${s.username}`;
-    case "featured_match":
-      return `@${s.username} ${s.result === "win" ? "W" : s.result === "loss" ? "L" : "T"} vs ${s.opponentArchetype ?? s.opponentHandle ?? "Opponent"}`;
+    case "featured_match": {
+      const left = s.playerHandle ?? `@${s.username}`;
+      const right = s.opponentHandle ?? s.opponentArchetype ?? "Opponent";
+      return `${left} vs ${right}`;
+    }
   }
 }
 
@@ -213,7 +219,7 @@ export default function SocialStudioClient({
                 </select>
               </div>
 
-              {(["eyebrow", "headline", "subhead", "cta"] as const).map((field) => (
+              {COPY_FIELDS_BY_KIND[active.kind].map((field) => (
                 <div key={field}>
                   <label className="block text-[11px] font-semibold uppercase tracking-wider text-text-muted mb-1">
                     {field}
