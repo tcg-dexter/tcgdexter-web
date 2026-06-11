@@ -86,7 +86,15 @@ export default function SpotlightHeader({
     -22,
   )} 100%)`;
 
-  const initial = displayName.trim().charAt(0).toUpperCase() || "?";
+  // First letter of each of the first two whitespace-separated words.
+  // "Eevee Echo" → "EE"; "Dexter" → "D"; empty → "?". Falling back to
+  // initials lets the avatar carry more identity for two-name players.
+  const monogram = (() => {
+    const words = displayName.trim().split(/\s+/).filter(Boolean);
+    if (words.length === 0) return "?";
+    if (words.length === 1) return words[0].charAt(0).toUpperCase();
+    return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
+  })();
 
   return (
     <header className="flex-shrink-0">
@@ -153,7 +161,7 @@ export default function SpotlightHeader({
               />
             ) : (
               <span className="text-4xl sm:text-5xl font-black text-white drop-shadow-sm">
-                {initial}
+                {monogram}
               </span>
             )}
           </div>
