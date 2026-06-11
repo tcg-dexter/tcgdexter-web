@@ -18,8 +18,11 @@ interface Props {
   displayName: string | null;
   /** User's username handle; used to build the profile link. */
   username: string | null;
-  /** Whether the user has admin/judge privileges. (Reserved for future use.) */
+  /** Whether the user has admin/judge privileges. */
   isAdmin?: boolean;
+  /** Resolved by SiteNav to the latest published spotlight's URL
+   *  (or /spotlight when none are published yet). */
+  spotlightHref: string;
 }
 
 /**
@@ -43,6 +46,8 @@ export default function SiteSidebar({
   isAuthed,
   displayName,
   username,
+  isAdmin,
+  spotlightHref,
 }: Props) {
   const pathname = usePathname();
 
@@ -55,6 +60,7 @@ export default function SiteSidebar({
     { href: "/cards", label: "Card Catalog", Icon: CardsIcon },
     { href: "/my-decks", label: "Deck Collection", Icon: BookmarkIcon },
     { href: "/meta-archetypes", label: "Meta Archetypes", Icon: ChartBarIcon },
+    { href: spotlightHref, label: "Spotlight", Icon: TrophyIcon },
     // { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
     { href: "/learn", label: "Learn to Play", Icon: BookOpenIcon },
   ];
@@ -114,8 +120,20 @@ export default function SiteSidebar({
           ))}
         </ul>
 
-        {/* Auth row — anchored to the bottom of the rail. */}
+        {/* Admin row — anchored to the bottom, just above the auth row.
+            Only rendered when the signed-in user has profiles.is_admin. */}
         <ul className="mt-auto flex flex-col gap-0.5 pt-4">
+          {isAdmin && (
+            <li>
+              <Link
+                href="/admin/spotlight"
+                className={`${linkBase} ${isActive("/admin/spotlight") ? linkActive : linkInactive}`}
+              >
+                <TrophyIcon />
+                <span>Spotlight Admin</span>
+              </Link>
+            </li>
+          )}
           <li>
             {isAuthed ? (
               <Link

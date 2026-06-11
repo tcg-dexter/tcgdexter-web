@@ -97,29 +97,41 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
     const matchDeckIds = Array.from(new Set(matchRows.map((m) => m.saved_deck_id as string)));
     const matchIds = matchRows.map((m) => m.id as string);
 
-    const [{ data: deckDetailRows }, { data: attackRows }, { data: playRows }] =
-      await Promise.all([
-        admin
-          .from("saved_decks")
-          .select("id, cover_image_url, analysis")
-          .in("id", matchDeckIds),
-        admin
-          .from("match_actions")
-          .select("match_id, payload")
-          .in("match_id", matchIds)
-          .eq("action_type", "attack")
-          .eq("actor", "opponent"),
-        // Fallback inputs: opponent's played/evolved Pokémon. Used when
-        // the opponent never attacked (concede, KO'd before swinging),
-        // mirroring the /battles/[id] page's opponent-card resolution
-        // so home-page previews and the battle banner stay in sync.
-        admin
-          .from("match_actions")
-          .select("match_id, action_type, payload")
-          .in("match_id", matchIds)
-          .eq("actor", "opponent")
-          .in("action_type", ["play_to_active", "play_to_bench", "evolve"]),
-      ]);
+    const [
+      { data: deckDetailRows },
+      { data: attackRows },
+      { data: playRows },
+      { data: prizeRows },
+    ] = await Promise.all([
+      admin
+        .from("saved_decks")
+        .select("id, cover_image_url, analysis")
+        .in("id", matchDeckIds),
+      admin
+        .from("match_actions")
+        .select("match_id, payload")
+        .in("match_id", matchIds)
+        .eq("action_type", "attack")
+        .eq("actor", "opponent"),
+      // Fallback inputs: opponent's played/evolved Pokémon. Used when
+      // the opponent never attacked (concede, KO'd before swinging),
+      // mirroring the /battles/[id] page's opponent-card resolution
+      // so home-page previews and the battle banner stay in sync.
+      admin
+        .from("match_actions")
+        .select("match_id, action_type, payload")
+        .in("match_id", matchIds)
+        .eq("actor", "opponent")
+        .in("action_type", ["play_to_active", "play_to_bench", "evolve"]),
+      // Prize counts per side per match. Sum payload.count grouped by
+      // actor; matches the lib/battle-log/summarize.ts logic so home
+      // previews report the same totals as the /battles detail page.
+      admin
+        .from("match_actions")
+        .select("match_id, actor, payload")
+        .in("match_id", matchIds)
+        .eq("action_type", "prize_taken"),
+    ]);
 
     // Build lookups
     const deckById = new Map(pubDecks.map((d) => [d.id as string, d]));
@@ -168,6 +180,22 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
       const m = opponentPlaysByMatch.get(matchId)!;
       m.set(name, (m.get(name) ?? 0) + 1);
     }
+    // Prizes taken per side per match. Each prize_taken row carries a
+    // payload.count (1 or 2 — the latter for ex/V/etc. multi-prize KOs).
+    const playerPrizesByMatch = new Map<string, number>();
+    const opponentPrizesByMatch = new Map<string, number>();
+    for (const row of prizeRows ?? []) {
+      const payload = row.payload as Record<string, unknown> | null;
+      const count =
+        typeof payload?.count === "number" && payload.count > 0
+          ? payload.count
+          : 1;
+      const matchId = row.match_id as string;
+      const map =
+        row.actor === "player" ? playerPrizesByMatch : opponentPrizesByMatch;
+      map.set(matchId, (map.get(matchId) ?? 0) + count);
+    }
+
     opponentPlaysByMatch.forEach((countByName, matchId) => {
       if (topAttackerByMatch.has(matchId)) return;
       const synthetic: AnalysisCard[] = Array.from(countByName.entries()).map(
@@ -215,6 +243,8 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
         opponentAttackerName: topAttacker,
         playerColor,
         opponentColor,
+        playerPrizes: playerPrizesByMatch.get(m.id as string) ?? 0,
+        opponentPrizes: opponentPrizesByMatch.get(m.id as string) ?? 0,
       }];
     });
   } catch (err) {

@@ -154,6 +154,21 @@ export function cardTypesForName(name: string): string[] {
   return entries.find((e) => e.types?.length)?.types ?? [];
 }
 
+/** Resolve types for a card identified by the pokemontcg.io set_id +
+ *  number (not ptcgo_code). Used by surfaces like Trainer Spotlight that
+ *  store the canonical set_id rather than the deck-list ptcgo_code. Falls
+ *  back to any entry sharing the name, then to []. */
+export function cardTypesForSetIdNumber(
+  setId: string,
+  number: string,
+  name: string,
+): string[] {
+  const entries = CARD_DB[name] ?? CARD_DB_LOWER.get(name.toLowerCase()) ?? [];
+  const exact = entries.find((e) => e.set_id === setId && e.number === number);
+  if (exact?.types?.length) return exact.types;
+  return entries.find((e) => e.types?.length)?.types ?? [];
+}
+
 export interface DeckAvatarInfo {
   /** The card name used to derive the sprite slug. */
   name: string;

@@ -29,6 +29,10 @@ export type RecentMatch = {
   opponentAttackerName: string | null;
   playerColor: string;
   opponentColor: string;
+  /** Prize cards taken in this match. Sourced from match_actions
+   *  prize_taken rows; 0 when the battle log has no prize events. */
+  playerPrizes: number;
+  opponentPrizes: number;
 };
 
 function relativeTime(iso: string): string {
@@ -59,6 +63,7 @@ function MatchCard({ match }: { match: RecentMatch }) {
         handleLabel: match.username,
         deckLabel: match.deckName,
         color: match.playerColor,
+        prizes: match.playerPrizes,
       }
     : {
         imageUrl: match.opponentImageUrl,
@@ -66,6 +71,7 @@ function MatchCard({ match }: { match: RecentMatch }) {
         handleLabel: opponentHandleLabel,
         deckLabel: opponentDeckLabel,
         color: match.opponentColor,
+        prizes: match.opponentPrizes,
       };
   const rightSide = playerWon
     ? {
@@ -74,6 +80,7 @@ function MatchCard({ match }: { match: RecentMatch }) {
         handleLabel: opponentHandleLabel,
         deckLabel: opponentDeckLabel,
         color: match.opponentColor,
+        prizes: match.opponentPrizes,
       }
     : {
         imageUrl: match.deckImageUrl,
@@ -81,6 +88,7 @@ function MatchCard({ match }: { match: RecentMatch }) {
         handleLabel: match.username,
         deckLabel: match.deckName,
         color: match.playerColor,
+        prizes: match.playerPrizes,
       };
 
   const gradientStyle: React.CSSProperties | undefined = isDraw
@@ -125,6 +133,22 @@ function MatchCard({ match }: { match: RecentMatch }) {
       >
         <div className="relative">
           <div className={gradientClass} style={gradientStyle} />
+          {/* Prize counts — large white digits flanking the card pair,
+              vertically centered within the gradient zone. Use absolute
+              positioning so the centered cards stay perfectly centered
+              regardless of digit width. */}
+          <span
+            aria-label={`${leftSide.handleLabel} prizes taken`}
+            className="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-white text-5xl font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
+          >
+            {leftSide.prizes}
+          </span>
+          <span
+            aria-label={`${rightSide.handleLabel} prizes taken`}
+            className="absolute right-3 top-1/2 -translate-y-1/2 z-10 text-white text-5xl font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
+          >
+            {rightSide.prizes}
+          </span>
           <div className="relative flex items-end justify-center gap-8 px-4 pt-5 pb-3">
             <div style={{ transform: "rotate(-6deg)", transformOrigin: "bottom center" }}>
               <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>

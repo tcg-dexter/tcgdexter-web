@@ -199,13 +199,28 @@ export function getAllCards(): CardIndexEntry[] {
 
 export function getSets(): Array<{ id: string; name: string; ptcgoCode: string | null }> {
   if (SETS) return SETS;
-  const seen = new Map<string, { id: string; name: string; ptcgoCode: string | null }>();
+  const seen = new Map<
+    string,
+    { id: string; name: string; ptcgoCode: string | null; releaseDate: string | null }
+  >();
   for (const c of getAllCards()) {
     if (!seen.has(c.setId)) {
-      seen.set(c.setId, { id: c.setId, name: c.setName, ptcgoCode: c.ptcgoCode });
+      seen.set(c.setId, {
+        id: c.setId,
+        name: c.setName,
+        ptcgoCode: c.ptcgoCode,
+        releaseDate: c.setReleaseDate ?? null,
+      });
     }
   }
-  SETS = Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name));
+  SETS = Array.from(seen.values())
+    .sort((a, b) => {
+      const ad = a.releaseDate ?? "";
+      const bd = b.releaseDate ?? "";
+      if (ad !== bd) return bd.localeCompare(ad);
+      return a.name.localeCompare(b.name);
+    })
+    .map(({ id, name, ptcgoCode }) => ({ id, name, ptcgoCode }));
   return SETS;
 }
 

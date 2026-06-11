@@ -192,7 +192,10 @@ function applyFilters(card: CardIndexEntry, p: CardSearchParams): boolean {
   if (p.priceMin != null && card.marketPrice < p.priceMin) return false;
   if (p.priceMax != null && card.marketPrice > p.priceMax) return false;
   if (p.rarity?.length && !p.rarity.includes(card.rarity ?? "")) return false;
-  if (p.retreatCost?.length && card.supertype === "Pokémon" && !p.retreatCost.includes(card.retreatCost)) return false;
+  if (p.retreatCost?.length) {
+    if (card.supertype !== "Pokémon") return false;
+    if (!p.retreatCost.includes(card.retreatCost)) return false;
+  }
   if (p.ownership === "owned" || p.ownership === "unowned") {
     const owned = p.ownedKeys?.has(card.id) ?? false;
     if (p.ownership === "owned" && !owned) return false;

@@ -30,6 +30,9 @@ interface Props {
   username: string | null;
   /** Whether the user has admin/judge privileges. */
   isAdmin?: boolean;
+  /** Resolved by SiteNav to the latest published spotlight's URL
+   *  (or /spotlight when none are published yet). */
+  spotlightHref: string;
 }
 
 /**
@@ -51,7 +54,7 @@ interface Props {
  * so there is zero layout shift on open or close. scrollLockedRef guards
  * against double-lock/unlock so unlockScroll() is safe from any code path.
  */
-export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin }: Props) {
+export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin, spotlightHref }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -218,6 +221,7 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
     { href: "/cards", label: "Card Catalog", Icon: CardsIcon },
     { href: "/my-decks", label: "Deck Collection", Icon: BookmarkIcon },
     { href: "/meta-archetypes", label: "Meta Archetypes", Icon: ChartBarIcon },
+    { href: spotlightHref, label: "Spotlight", Icon: TrophyIcon },
     // { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
     { href: "/learn", label: "Learn to Play", Icon: BookOpenIcon },
   ];
@@ -340,6 +344,20 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
             ))}
 
             <li role="separator" className="my-4" />
+
+            {/* Admin item — only for users with profiles.is_admin. */}
+            {isAdmin && (
+              <li>
+                <Link
+                  href="/admin/spotlight"
+                  className={linkClass}
+                  onClick={closeMenu}
+                >
+                  <TrophyIcon />
+                  <span>Spotlight Admin</span>
+                </Link>
+              </li>
+            )}
 
             {/* Auth item — anchored at the bottom of the link list, above
                 the search bar. */}
