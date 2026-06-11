@@ -14,6 +14,24 @@ import metaDecksRaw from "@/data/meta-decks.json";
 import { MetaDeckCard } from "@/app/components/DeckPostCard";
 import { metaPrimaryCard, typeColor } from "@/lib/metaPrimaryCard";
 import { shade } from "@/lib/color";
+import SpotlightBanner from "@/app/spotlight/components/SpotlightBanner";
+import type {
+  SpotlightBannerLayout,
+  SpotlightCardRef,
+  SpotlightPokemonRef,
+} from "@/app/spotlight/types";
+
+export type CurrentSpotlight = {
+  id: string;
+  slug: string;
+  username: string;
+  layout: SpotlightBannerLayout;
+  favoritePokemon: SpotlightPokemonRef | null;
+  favoriteCollectionCards: SpotlightCardRef[];
+  favoriteFormatCards: SpotlightCardRef[];
+  userImageUrl: string | null;
+  accentColors: (string | null)[];
+};
 
 export type RecentMatch = {
   id: string;
@@ -308,9 +326,11 @@ const top3Cards = (() => {
 export default function HomeClient({
   stats,
   recentMatches = [],
+  currentSpotlight = null,
 }: {
   stats: Array<{ label: string; value: string }>;
   recentMatches?: RecentMatch[];
+  currentSpotlight?: CurrentSpotlight | null;
 }) {
   const [deckList, setDeckList] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -471,13 +491,13 @@ export default function HomeClient({
                   </span>
                   Live meta
                 </div>
-                <h2 className="text-4xl font-semibold tracking-tight">This week&apos;s top archetypes.</h2>
+                <h2 className="text-4xl font-semibold tracking-tight">Top Meta Archetypes</h2>
               </div>
               <Link
                 href="/meta-archetypes"
                 className="text-sm text-text-secondary hover:text-text-primary transition self-start md:self-auto whitespace-nowrap"
               >
-                View Meta Archetypes →
+                View all →
               </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -515,6 +535,47 @@ export default function HomeClient({
                 {recentMatches.map((m) => (
                   <MatchCard key={m.id} match={m} />
                 ))}
+              </div>
+            </section>
+          )}
+
+          {/* Trainer Spotlight preview */}
+          {currentSpotlight && (
+            <section className="mx-auto max-w-6xl px-6 pb-24">
+              <div className="mb-8">
+                <h2 className="text-4xl font-semibold tracking-tight">Trainer Spotlight</h2>
+              </div>
+              <Link
+                href={`/spotlight/${currentSpotlight.slug}`}
+                className="block rounded-2xl overflow-hidden border border-black/8 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <SpotlightBanner
+                  accentColors={currentSpotlight.accentColors}
+                  layout={currentSpotlight.layout}
+                  editable={false}
+                  spotlightId={currentSpotlight.id}
+                  favoritePokemon={currentSpotlight.favoritePokemon}
+                  favoriteCollectionCards={currentSpotlight.favoriteCollectionCards}
+                  favoriteFormatCards={currentSpotlight.favoriteFormatCards}
+                  userImageUrl={currentSpotlight.userImageUrl}
+                  className="relative w-full overflow-hidden aspect-[3/1]"
+                />
+              </Link>
+              <div className="mt-10 max-w-4xl mx-auto text-center text-3xl md:text-4xl font-semibold tracking-tight leading-tight text-text-primary">
+                &ldquo;Having just started playing at local tournaments at the end of last year, I put a lot of focus on one deck at a time, making small iterations after each batch of matchups.&rdquo;
+              </div>
+              <div className="mt-4 text-center text-lg md:text-xl font-semibold tracking-tight">
+                <span className="bg-gradient-brand bg-clip-text text-transparent">
+                  @{currentSpotlight.username}
+                </span>
+              </div>
+              <div className="mt-10 flex justify-center">
+                <Link
+                  href={`/spotlight/${currentSpotlight.slug}`}
+                  className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition shadow-lg"
+                >
+                  View Trainer Spotlight
+                </Link>
               </div>
             </section>
           )}

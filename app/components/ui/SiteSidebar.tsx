@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   TrophyIcon,
+  WrenchIcon,
   ChartBarIcon,
   BookOpenIcon,
   BookmarkIcon,
@@ -126,11 +127,11 @@ export default function SiteSidebar({
           {isAdmin && (
             <li>
               <Link
-                href="/admin/spotlight"
-                className={`${linkBase} ${isActive("/admin/spotlight") ? linkActive : linkInactive}`}
+                href="/admin-tools"
+                className={`${linkBase} ${isActive("/admin-tools") ? linkActive : linkInactive}`}
               >
-                <TrophyIcon />
-                <span>Spotlight Admin</span>
+                <WrenchIcon />
+                <span>Admin Tools</span>
               </Link>
             </li>
           )}

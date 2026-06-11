@@ -6,6 +6,7 @@ import DeckCardFooter from "./DeckCardFooter";
 import AvatarStack, { type AvatarStackItem } from "./AvatarStack";
 import { deckAvatarInfo } from "@/lib/primaryCardImage";
 import { metaTopPokemonByCount } from "@/lib/metaPrimaryCard";
+import { shade } from "@/lib/color";
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
@@ -127,14 +128,29 @@ export function MetaDeckCard({
 }: MetaDeckCardProps) {
   const creatorList = (creators && creators.length > 0 ? creators : ["Trainer"]).slice(0, 5);
   const href = `/meta-archetypes/${id}`;
+  const accentBg = icon_bg ?? "#B0A89E";
+  const accentDeep = shade(accentBg, -22);
   return (
-    <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-      <Link href={href} className="block">
+    <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+      {/* Energy-type accent gradient — mirrors the recent-battles preview
+          treatment (horizontal accent gradient at opacity-80) but uses the
+          card's own type color + banner-deep stop, masked along the
+          vertical axis so the top edge still fades in cleanly. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 opacity-80"
+        style={{
+          background: `linear-gradient(90deg, ${accentBg} 0%, ${accentDeep} 100%)`,
+          maskImage: "linear-gradient(to bottom, transparent 0%, black 100%)",
+          WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 100%)",
+        }}
+      />
+      <Link href={href} className="relative block">
         {/* Header — pokémon avatar + deck name + rank */}
         <div className="flex items-center gap-2 px-3.5 pt-3">
           {icon_url ? (
             <div
-              className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
+              className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06] shadow-sm"
               style={{ background: icon_bg ?? "#B0A89E" }}
               aria-hidden
             >
@@ -175,14 +191,16 @@ export function MetaDeckCard({
         </div>
       </Link>
 
-      <DeckCardFooter
-        metaArchetypeId={id}
-        initialLikes={like_count}
-        saveHref={href}
-        deckName={name}
-        hideSave
-        hideShare
-      />
+      <div className="relative">
+        <DeckCardFooter
+          metaArchetypeId={id}
+          initialLikes={like_count}
+          saveHref={href}
+          deckName={name}
+          hideSave
+          hideShare
+        />
+      </div>
     </div>
   );
 }

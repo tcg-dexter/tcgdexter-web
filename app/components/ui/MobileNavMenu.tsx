@@ -7,12 +7,12 @@ import { usePathname } from "next/navigation";
 import UnifiedSearch from "@/app/leaderboard/UnifiedSearch";
 import {
   TrophyIcon,
+  WrenchIcon,
   ChartBarIcon,
   BookOpenIcon,
   BookmarkIcon,
   CardsIcon,
   UserIcon,
-  NewspaperIcon,
   DiscordIcon,
   TikTokIcon,
   ShoppingBagIcon,
@@ -227,10 +227,9 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
   ];
 
   const EXTERNAL_LINKS = [
-    { href: "https://tcgdexter.beehiiv.com/", label: "TCG News", Icon: NewspaperIcon },
+    { href: "https://www.ebay.com/usr/tcgdexter", label: "Card Shop", Icon: ShoppingBagIcon },
     { href: "https://discord.gg/G3VfEzfmJF", label: "Discord", Icon: DiscordIcon },
     { href: "https://www.tiktok.com/@tcgdexter", label: "TikTok", Icon: TikTokIcon },
-    { href: "https://www.ebay.com/usr/tcgdexter", label: "Card Shop", Icon: ShoppingBagIcon },
   ];
 
   const linkClass =
@@ -349,12 +348,12 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
             {isAdmin && (
               <li>
                 <Link
-                  href="/admin/spotlight"
+                  href="/admin-tools"
                   className={linkClass}
                   onClick={closeMenu}
                 >
-                  <TrophyIcon />
-                  <span>Spotlight Admin</span>
+                  <WrenchIcon />
+                  <span>Admin Tools</span>
                 </Link>
               </li>
             )}

@@ -37,6 +37,15 @@ export function StackIcon({ className }: IconProps) {
   );
 }
 
+/** Wrench — "Admin Tools". */
+export function WrenchIcon({ className }: IconProps) {
+  return (
+    <svg {...outlineProps} className={className}>
+      <path d="M14.7 6.3a4 4 0 105.0 5.0L20 11l-7.6 7.6a2.5 2.5 0 11-3.5-3.5L16.5 7.5l-.8-1.2z" />
+    </svg>
+  );
+}
+
 /** Trophy — "Meta Archetypes". */
 export function TrophyIcon({ className }: IconProps) {
   return (
@@ -72,17 +81,6 @@ export function UserIcon({ className }: IconProps) {
     <svg {...outlineProps} className={className}>
       <circle cx="12" cy="8" r="4" />
       <path d="M4 20.5c0-4 3.5-6.5 8-6.5s8 2.5 8 6.5" />
-    </svg>
-  );
-}
-
-/** Newspaper — "TCG News". */
-export function NewspaperIcon({ className }: IconProps) {
-  return (
-    <svg {...outlineProps} className={className}>
-      <path d="M4 5h12v15H4z" />
-      <path d="M16 9h3a1 1 0 011 1v9a1 1 0 01-1 1h-3" />
-      <path d="M7 9h6M7 13h6M7 17h6" />
     </svg>
   );
 }
