@@ -161,7 +161,11 @@ export default function MatchForm({
     !!initial?.opponent_deck_list
   );
   const [matchNotes, setMatchNotes] = useState(initial?.notes ?? "");
-  const [showDateField, setShowDateField] = useState(!!initial?.played_at);
+  const [showNotesField, setShowNotesField] = useState(!!initial?.notes);
+  // New matches default the date to today; edits respect the stored value.
+  const [showDateField, setShowDateField] = useState(
+    initial ? initial.played_at != null : true
+  );
   const [matchDate, setMatchDate] = useState(() => {
     if (initial?.played_at) {
       return new Date(initial.played_at).toISOString().slice(0, 10);
@@ -296,7 +300,7 @@ export default function MatchForm({
         opponent_archetype: opponentArchetype.trim() || null,
         opponent_deck_list:
           showDeckListField ? opponentDeckList.trim() || null : null,
-        notes: matchNotes.trim() || null,
+        notes: showNotesField ? matchNotes.trim() || null : null,
         played_at: showDateField
           ? new Date(matchDate + "T12:00:00").toISOString()
           : null,
@@ -522,8 +526,8 @@ export default function MatchForm({
         type="text"
         value={opponentName}
         onChange={(e) => setOpponentName(e.target.value)}
-        placeholder="Opponent name (optional)"
-        className="w-full mb-2 rounded-lg bg-bg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+        placeholder="Opponent name"
+        className="w-full mb-2 rounded-full bg-bg px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
       />
 
       {/* Opponent archetype with autocomplete */}
@@ -538,8 +542,8 @@ export default function MatchForm({
             }
             setShowSuggestions(true);
           }}
-          placeholder="Opponent deck / archetype (optional)"
-          className="w-full rounded-lg bg-bg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+          placeholder="Opponent deck / archetype"
+          className="w-full rounded-full bg-bg px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
         />
         {showSuggestions && suggestions.length > 0 && (
           <div className="absolute left-0 right-0 top-full mt-1 z-30 rounded-lg border border-border bg-surface shadow-lg max-h-48 overflow-auto">
@@ -561,17 +565,39 @@ export default function MatchForm({
         )}
       </div>
 
-      {/* Match notes */}
-      <input
-        type="text"
-        value={matchNotes}
-        onChange={(e) => setMatchNotes(e.target.value)}
-        placeholder="Notes (optional)"
-        className="w-full mb-2 rounded-lg bg-bg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
-      />
-
       {/* Optional toggles — left-aligned */}
       <div className="flex flex-col items-start gap-1 mb-3">
+        {/* Notes — optional, like the deck list */}
+        {!showNotesField ? (
+          <button
+            type="button"
+            onClick={() => setShowNotesField(true)}
+            className="text-xs text-accent hover:text-accent-light transition-colors"
+          >
+            + Add notes
+          </button>
+        ) : (
+          <div className="w-full">
+            <input
+              type="text"
+              value={matchNotes}
+              onChange={(e) => setMatchNotes(e.target.value)}
+              placeholder="Notes"
+              className="w-full mb-1 rounded-full bg-bg px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setShowNotesField(false);
+                setMatchNotes("");
+              }}
+              className="text-xs text-text-muted hover:text-text-secondary transition-colors"
+            >
+              Remove notes
+            </button>
+          </div>
+        )}
+
         {!compact && (
           <>
             {!showDeckListField ? (
@@ -587,7 +613,7 @@ export default function MatchForm({
                 <textarea
                   value={opponentDeckList}
                   onChange={(e) => setOpponentDeckList(e.target.value)}
-                  placeholder="Paste opponent's deck list (optional)"
+                  placeholder="Paste opponent's deck list"
                   rows={4}
                   className="w-full mb-1 rounded-lg bg-bg px-3 py-2 text-xs font-mono text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 resize-y [font-size:16px] sm:text-xs"
                 />
@@ -620,7 +646,7 @@ export default function MatchForm({
               type="date"
               value={matchDate}
               onChange={(e) => setMatchDate(e.target.value)}
-              className="flex-1 rounded-lg bg-bg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+              className="flex-1 rounded-full bg-bg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
             />
             <button
               type="button"
