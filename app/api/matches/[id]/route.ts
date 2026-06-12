@@ -6,6 +6,14 @@ import {
   deriveResultFromGames,
 } from "@/lib/bo3";
 
+/** Clamp a prize count to an integer 0–6, or null when absent/invalid. */
+function sanitizePrize(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const n = typeof value === "number" ? value : parseInt(String(value), 10);
+  if (Number.isNaN(n)) return null;
+  return Math.max(0, Math.min(6, Math.trunc(n)));
+}
+
 /**
  * PATCH /api/matches/[id]
  *
@@ -36,6 +44,8 @@ export async function PATCH(
     notes?: string | null;
     played_at?: string | null;
     game_results?: string | null;
+    prizes_taken_player?: number | null;
+    prizes_taken_opponent?: number | null;
   };
   try {
     body = await req.json();
@@ -73,6 +83,11 @@ export async function PATCH(
     updates.game_results = seq;
     if (seq !== null) updates.result = deriveResultFromGames(seq);
   }
+
+  if (body.prizes_taken_player !== undefined)
+    updates.prizes_taken_player = sanitizePrize(body.prizes_taken_player);
+  if (body.prizes_taken_opponent !== undefined)
+    updates.prizes_taken_opponent = sanitizePrize(body.prizes_taken_opponent);
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "Nothing to update." }, { status: 400 });

@@ -26,6 +26,8 @@ interface Match {
   played_at: string;
   source?: "manual" | "tcg_live_log";
   game_results?: string | null;
+  prizes_taken_player?: number | null;
+  prizes_taken_opponent?: number | null;
 }
 
 interface ParsedCard {

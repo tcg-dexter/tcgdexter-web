@@ -37,6 +37,10 @@ export interface MatchFormData {
   played_at: string | null;
   /** Ordered per-game outcomes for a Best-of-3 round (e.g. "WW", "WLW"). Null for single games. */
   game_results: string | null;
+  /** Prizes taken by the player (0–6), or null if not recorded. */
+  prizes_taken_player: number | null;
+  /** Prizes taken by the opponent (0–6), or null if not recorded. */
+  prizes_taken_opponent: number | null;
 }
 
 /* ─── Best-of-3 helpers ──────────────────────────────────────── */
@@ -72,6 +76,14 @@ function parseGames(seq: string | null | undefined): (GameLetter | null)[] {
     }
   }
   return slots;
+}
+
+/** Clamp a prize-count input to 0–6, or null when blank/invalid. */
+function parsePrize(value: string): number | null {
+  if (value.trim() === "") return null;
+  const n = parseInt(value, 10);
+  if (Number.isNaN(n)) return null;
+  return Math.max(0, Math.min(6, n));
 }
 
 interface Props {
@@ -141,6 +153,12 @@ export default function MatchForm({
   };
   const [games, setGames] = useState<(GameLetter | null)[]>(
     parseGames(initial?.game_results)
+  );
+  const [playerPrizes, setPlayerPrizes] = useState(
+    initial?.prizes_taken_player != null ? String(initial.prizes_taken_player) : ""
+  );
+  const [opponentPrizes, setOpponentPrizes] = useState(
+    initial?.prizes_taken_opponent != null ? String(initial.prizes_taken_opponent) : ""
   );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -218,6 +236,8 @@ export default function MatchForm({
           ? new Date(matchDate + "T12:00:00").toISOString()
           : null,
         game_results: bestOf3 ? sequence : null,
+        prizes_taken_player: parsePrize(playerPrizes),
+        prizes_taken_opponent: parsePrize(opponentPrizes),
       });
     } catch (err) {
       setError(
@@ -351,6 +371,36 @@ export default function MatchForm({
           </div>
         </div>
       )}
+
+      {/* Prizes taken (optional) — applies to single and best-of-3 alike */}
+      <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="text-xs font-medium text-text-muted">Prizes taken</span>
+        <div className="flex items-center gap-1.5">
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={6}
+            value={playerPrizes}
+            onChange={(e) => setPlayerPrizes(e.target.value)}
+            placeholder="You"
+            aria-label="Your prizes taken"
+            className="w-16 rounded-lg bg-bg px-2 py-2 text-center text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+          />
+          <span className="text-sm text-text-muted">–</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={6}
+            value={opponentPrizes}
+            onChange={(e) => setOpponentPrizes(e.target.value)}
+            placeholder="Opp"
+            aria-label="Opponent prizes taken"
+            className="w-16 rounded-lg bg-bg px-2 py-2 text-center text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+          />
+        </div>
+      </div>
 
       {/* Opponent name */}
       <input
