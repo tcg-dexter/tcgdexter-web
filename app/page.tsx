@@ -56,6 +56,32 @@ type AnalysisCard = {
   section: "pokemon" | "trainer" | "energy";
 };
 
+/**
+ * Manually-entered prize totals for a match: single games via
+ * prizes_taken_player/_opponent, or best-of-3 sets via summing game_prizes.
+ * Returns null when neither was recorded (battle-log matches derive prizes
+ * from match_actions instead — see playerPrizesByMatch/opponentPrizesByMatch).
+ */
+function manualPrizeTotals(m: {
+  prizes_taken_player: number | null;
+  prizes_taken_opponent: number | null;
+  game_prizes: { p: number | null; o: number | null }[] | null;
+}): { player: number; opponent: number } | null {
+  if (Array.isArray(m.game_prizes) && m.game_prizes.length) {
+    let player = 0;
+    let opponent = 0;
+    for (const g of m.game_prizes) {
+      player += g?.p ?? 0;
+      opponent += g?.o ?? 0;
+    }
+    return { player, opponent };
+  }
+  if (m.prizes_taken_player != null && m.prizes_taken_opponent != null) {
+    return { player: m.prizes_taken_player, opponent: m.prizes_taken_opponent };
+  }
+  return null;
+}
+
 async function loadRecentMatches(): Promise<RecentMatch[]> {
   try {
     const admin = createAdminClient();
@@ -92,7 +118,7 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
     // and trim to 6 after that filter.
     const { data: matchRows, error: matchErr } = await admin
       .from("matches")
-      .select("id, result, opponent_archetype, opponent_handle, created_at, saved_deck_id, source")
+      .select("id, result, opponent_archetype, opponent_handle, created_at, saved_deck_id, source, prizes_taken_player, prizes_taken_opponent, game_prizes")
       .or(
         "source.eq.tcg_live_log,and(prizes_taken_player.not.is.null,prizes_taken_opponent.not.is.null),game_prizes.not.is.null"
       )
@@ -255,6 +281,15 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
         opponentColor = typeColor(archetypeCard.types);
       }
 
+      // Prefer prizes derived from parsed battle-log actions; fall back to
+      // the manually-entered totals (single match or summed BO3 games) so
+      // manual matches don't show a misleading 0-0.
+      const manualPrizes = manualPrizeTotals({
+        prizes_taken_player: m.prizes_taken_player as number | null,
+        prizes_taken_opponent: m.prizes_taken_opponent as number | null,
+        game_prizes: m.game_prizes as { p: number | null; o: number | null }[] | null,
+      });
+
       return [{
         id: m.id as string,
         result: m.result as "win" | "loss" | "draw",
@@ -269,8 +304,8 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
         opponentAttackerName: topAttacker,
         playerColor,
         opponentColor,
-        playerPrizes: playerPrizesByMatch.get(m.id as string) ?? 0,
-        opponentPrizes: opponentPrizesByMatch.get(m.id as string) ?? 0,
+        playerPrizes: playerPrizesByMatch.get(m.id as string) ?? manualPrizes?.player ?? 0,
+        opponentPrizes: opponentPrizesByMatch.get(m.id as string) ?? manualPrizes?.opponent ?? 0,
       }];
     });
 
