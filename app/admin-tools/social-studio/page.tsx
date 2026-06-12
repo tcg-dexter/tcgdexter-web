@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import archetypesRaw from "@/data/meta-archetypes.json";
 import metaDecksRaw from "@/data/meta-decks.json";
+import cardDataRaw from "@/data/cards-standard.json";
+import { cardImageLarge } from "@/lib/cardImages";
 import { metaPrimaryCard, typeColor } from "@/lib/metaPrimaryCard";
 import {
   cardImageUrlForName,
@@ -13,6 +15,7 @@ import {
 import type { TrainerSpotlightRow } from "@/app/spotlight/types";
 import SocialStudioClient from "./SocialStudioClient";
 import type {
+  CardSpotlightSubject,
   FeaturedDeckSubject,
   FeaturedMatchSubject,
   MetaArchetypeSubject,
@@ -68,6 +71,18 @@ interface DeckRow {
       section: "pokemon" | "trainer" | "energy";
     }>;
   } | null;
+}
+
+interface CatalogEntry {
+  name?: string;
+  set_id: string;
+  set_name?: string;
+  number: string;
+  supertype?: string;
+  types?: string[];
+  rarity?: string;
+  artist?: string | null;
+  market_price?: number | null;
 }
 
 interface MatchRow {
@@ -162,6 +177,7 @@ export default async function SocialStudioPage() {
       id: arch.id,
       name: arch.name,
       representationPct: arch.representation_pct,
+      totalEntries: arch.total_entries,
       iconUrl: iconList[0]
         ? `https://r2.limitlesstcg.net/pokemon/gen9/${iconList[0]}.png`
         : null,
@@ -169,6 +185,43 @@ export default async function SocialStudioPage() {
       accentColor: typeColor(primary?.types),
     };
   });
+
+  // ── Card spotlights ───────────────────────────────────────────
+  // Chase cards: the priciest Standard-legal Pokémon printings, one per
+  // Pokémon name, ranked by market price from the local catalog.
+  const cardCatalog = cardDataRaw as unknown as Record<string, CatalogEntry[]>;
+  const seenCardNames = new Set<string>();
+  const cardSpotlights: CardSpotlightSubject[] = Object.entries(cardCatalog)
+    .flatMap(([name, entries]) =>
+      entries.map((e) => ({ ...e, name: e.name ?? name })),
+    )
+    .filter(
+      (e): e is CatalogEntry & { name: string; market_price: number } =>
+        e.supertype === "Pokémon" &&
+        !!e.set_id &&
+        typeof e.market_price === "number" &&
+        e.market_price > 0,
+    )
+    .sort((a, b) => b.market_price - a.market_price)
+    .filter((e) => {
+      if (seenCardNames.has(e.name)) return false;
+      seenCardNames.add(e.name);
+      return true;
+    })
+    .slice(0, 10)
+    .map((e) => ({
+      kind: "card_spotlight",
+      id: `${e.set_id}-${e.number}`,
+      name: e.name,
+      setName: e.set_name ?? e.set_id,
+      number: e.number,
+      rarity: e.rarity ?? null,
+      artist: e.artist ?? null,
+      types: e.types ?? [],
+      marketPrice: e.market_price,
+      imageUrl: cardImageLarge(e.set_id, e.number),
+      accentColor: typeColor(e.types),
+    }));
 
   // ── Featured decks ────────────────────────────────────────────
   const { data: deckRowsData } = await supabase
@@ -412,6 +465,7 @@ export default async function SocialStudioPage() {
     <SocialStudioClient
       spotlights={spotlights}
       metaArchetypes={metaArchetypes}
+      cardSpotlights={cardSpotlights}
       featuredDecks={featuredDecks}
       featuredMatches={featuredMatches}
     />
