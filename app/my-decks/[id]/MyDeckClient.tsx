@@ -7,7 +7,6 @@ import DeckProfileView, {
   type AnalysisResult,
 } from "@/app/components/DeckProfileView";
 import QRCodeButton from "@/app/components/QRCodeButton";
-import DeckListCard from "@/app/components/DeckListCard";
 import MatchLog from "./MatchLog";
 import DeckNotes from "./DeckNotes";
 
@@ -348,10 +347,7 @@ export default function MyDeckClient({
         </>
       }
       topSlot={
-        <>
-          <DeckNotes savedDeckId={savedDeckId} initialNotes={initialNotes} />
-          <DeckListCard deckList={deckList} />
-        </>
+        <DeckNotes savedDeckId={savedDeckId} initialNotes={initialNotes} />
       }
       footerCta={
         <Link

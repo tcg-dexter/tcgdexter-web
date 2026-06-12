@@ -9,7 +9,6 @@ import DeckProfileView, {
 } from "@/app/components/DeckProfileView";
 import QRCodeButton from "@/app/components/QRCodeButton";
 import CopyDeckListButton from "@/app/components/CopyDeckListButton";
-import DeckListCard from "@/app/components/DeckListCard";
 import LikeButton from "@/app/components/LikeButton";
 import EditDeckDialog from "@/app/components/EditDeckDialog";
 import MatchLog from "@/app/my-decks/[id]/MatchLog";
@@ -433,11 +432,7 @@ export default function DeckDetailClient({
         </>
       }
       topSlot={
-        <>
-          <DeckNotes savedDeckId={savedDeckId} initialNotes={initialNotes} />
-
-          <DeckListCard deckList={deckList} />
-        </>
+        <DeckNotes savedDeckId={savedDeckId} initialNotes={initialNotes} />
       }
     />
   );

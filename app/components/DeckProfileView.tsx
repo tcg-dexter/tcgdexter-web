@@ -1,8 +1,8 @@
 import Link from "next/link";
 import DeckCardGrid from "@/app/components/DeckCardGrid";
+import DeckListCard from "@/app/components/DeckListCard";
 import DeckMulliganModule from "@/app/components/DeckMulliganModule";
 import DeckPriceModule from "@/app/components/DeckPriceModule";
-import DeckListCard from "@/app/components/DeckListCard";
 import MetaDeckListCarousel from "@/app/components/MetaDeckListCarousel";
 import SaveDeckButton from "@/app/components/SaveDeckButton";
 import ShareButton from "@/app/components/ShareButton";
@@ -415,17 +415,28 @@ export default function DeckProfileView({
           {/* ── Overview — always at the top across all variants ── */}
           {overviewNode}
 
-          {/* ── Top slot: deck notes + list (saved); stat cards + record (meta) ── */}
-          {topSlot}
+          {/* Deck List — meta variant with multiple variants gets the carousel,
+              all other variants get the standard collapsible card. */}
+          {variant === "meta" && deckLists && deckLists.length > 1 ? (
+            <MetaDeckListCarousel
+              deckLists={deckLists}
+              creators={deckListCreators}
+            />
+          ) : (
+            <DeckListCard deckList={deckList} />
+          )}
 
           {/* Estimated Deck Price */}
           <DeckPriceModule deckPrice={result.deckPrice} />
 
-          {/* Mulligan Likelihood */}
+          {/* Mulligan Rate */}
           <DeckMulliganModule
             deckSize={result.deckSize}
             basicCount={result.pokemon.basicCount}
           />
+
+          {/* ── Top slot: deck notes (saved/public); stat cards + record (meta) ── */}
+          {topSlot}
 
           {/* Save + Share buttons — layout depends on variant */}
           {variant === "saved" ? (
@@ -541,18 +552,6 @@ export default function DeckProfileView({
             </div>
           )}
 
-
-          {/* Meta variant shows the live Deck List in this position so
-              visitors see the actual sample list Limitless is showing. */}
-          {variant === "meta" &&
-            (deckLists && deckLists.length > 1 ? (
-              <MetaDeckListCarousel
-                deckLists={deckLists}
-                creators={deckListCreators}
-              />
-            ) : (
-              <DeckListCard deckList={deckList} />
-            ))}
 
           {/* Pokemon */}
           <CollapsibleSection
