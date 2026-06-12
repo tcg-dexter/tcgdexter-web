@@ -406,13 +406,13 @@ export default function MatchForm({
                         disabled={g3Disabled}
                         onClick={() => setGame(i, letter)}
                         aria-label={`Match ${i + 1} ${letter === "W" ? "win" : "loss"}`}
-                        className={`w-9 rounded-full py-1.5 text-xs font-bold transition-all disabled:cursor-not-allowed ${
+                        className={`w-11 rounded-full py-1.5 text-xs font-bold transition-all disabled:cursor-not-allowed ${
                           selected
                             ? `${s.bg} ${s.text}`
                             : "bg-surface text-text-secondary shadow-[inset_0_0_0_1px_var(--border)] hover:bg-surface-2"
                         }`}
                       >
-                        {letter}
+                        {letter === "W" ? "Win" : "Loss"}
                       </button>
                     );
                   })}
@@ -427,7 +427,7 @@ export default function MatchForm({
                       value={gamePrizes[i].p}
                       onChange={(e) => setGamePrize(i, "p", e.target.value)}
                       aria-label={`Match ${i + 1} your prizes`}
-                      className="w-9 rounded-md bg-white px-1 py-1 text-center text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-xs"
+                      className="no-spinner w-9 rounded-md bg-white px-1 py-1 text-center text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-xs"
                     />
                     <input
                       type="number"
@@ -438,7 +438,7 @@ export default function MatchForm({
                       value={gamePrizes[i].o}
                       onChange={(e) => setGamePrize(i, "o", e.target.value)}
                       aria-label={`Match ${i + 1} opponent prizes`}
-                      className="w-9 rounded-md bg-white px-1 py-1 text-center text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-xs"
+                      className="no-spinner w-9 rounded-md bg-white px-1 py-1 text-center text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-xs"
                     />
                   </div>
                 </div>
@@ -487,7 +487,7 @@ export default function MatchForm({
             onChange={(e) => setPlayerPrizes(e.target.value)}
             placeholder="You"
             aria-label="Your prizes taken"
-            className="w-20 rounded-full bg-bg py-2.5 text-center text-sm font-bold text-text-primary placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 [font-size:16px] sm:text-sm"
+            className="no-spinner w-20 rounded-full bg-bg py-2.5 text-center text-sm font-bold text-text-primary placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 [font-size:16px] sm:text-sm"
           />
           <input
             type="number"
@@ -498,7 +498,7 @@ export default function MatchForm({
             onChange={(e) => setOpponentPrizes(e.target.value)}
             placeholder="Opp"
             aria-label="Opponent prizes taken"
-            className="w-20 rounded-full bg-bg py-2.5 text-center text-sm font-bold text-text-primary placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 [font-size:16px] sm:text-sm"
+            className="no-spinner w-20 rounded-full bg-bg py-2.5 text-center text-sm font-bold text-text-primary placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 [font-size:16px] sm:text-sm"
           />
         </div>
       )}
