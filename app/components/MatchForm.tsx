@@ -464,27 +464,23 @@ export default function MatchForm({
           </div>
 
           {/* Live derived summary — the "WW" payoff */}
-          <div className="mt-2 flex items-center gap-2 text-xs">
-            {sequence ? (
-              <>
-                <span className="font-mono font-bold tracking-wider text-text-primary">
-                  {sequence}
+          {sequence && (
+            <div className="mt-2 flex items-center gap-2 text-xs">
+              <span className="font-mono font-bold tracking-wider text-text-primary">
+                {sequence}
+              </span>
+              {derivedResult && (
+                <span className="text-text-muted">
+                  ·{" "}
+                  {derivedResult === "win"
+                    ? "Win"
+                    : derivedResult === "loss"
+                    ? "Loss"
+                    : "Draw"}
                 </span>
-                {derivedResult && (
-                  <span className="text-text-muted">
-                    ·{" "}
-                    {derivedResult === "win"
-                      ? "Win"
-                      : derivedResult === "loss"
-                      ? "Loss"
-                      : "Draw"}
-                  </span>
-                )}
-              </>
-            ) : (
-              <span className="text-text-muted">Tap each game&apos;s result</span>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
