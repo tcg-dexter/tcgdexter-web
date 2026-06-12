@@ -30,8 +30,14 @@ interface Props {
   currentCoverUrl: string | null;
   /** Resolved auto-pick URL, shown as the "Auto-pick" preview. */
   defaultCoverUrl: string | null;
-  /** Persist both changes in one go. Throws on failure. */
-  onSave: (next: { name: string; coverUrl: string | null }) => Promise<void>;
+  /** Current deck list, shown in the editable textarea. */
+  initialDeckList: string;
+  /** Persist all changes in one go. Throws on failure. */
+  onSave: (next: {
+    name: string;
+    coverUrl: string | null;
+    deckList: string;
+  }) => Promise<void>;
 }
 
 const SECTION_LABEL: Record<DeckCard["section"], string> = {
@@ -48,10 +54,12 @@ export default function EditDeckDialog({
   cards,
   currentCoverUrl,
   defaultCoverUrl,
+  initialDeckList,
   onSave,
 }: Props) {
   const [nameInput, setNameInput] = useState(initialName);
   const [pendingCoverUrl, setPendingCoverUrl] = useState<string | null>(currentCoverUrl);
+  const [deckListInput, setDeckListInput] = useState(initialDeckList);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,9 +69,10 @@ export default function EditDeckDialog({
     if (open) {
       setNameInput(initialName);
       setPendingCoverUrl(currentCoverUrl);
+      setDeckListInput(initialDeckList);
       setError(null);
     }
-  }, [open, initialName, currentCoverUrl]);
+  }, [open, initialName, currentCoverUrl, initialDeckList]);
 
   const grouped = useMemo(() => {
     const seen = new Map<string, PickableCard>();
@@ -93,16 +102,26 @@ export default function EditDeckDialog({
   if (!open) return null;
 
   const trimmedName = nameInput.trim();
+  const trimmedDeckList = deckListInput.trim();
   const nameChanged = trimmedName.length > 0 && trimmedName !== initialName;
   const coverChanged = pendingCoverUrl !== currentCoverUrl;
-  const canSave = !busy && trimmedName.length > 0 && (nameChanged || coverChanged);
+  const deckListChanged =
+    trimmedDeckList.length > 0 && trimmedDeckList !== initialDeckList.trim();
+  const canSave =
+    !busy &&
+    trimmedName.length > 0 &&
+    (nameChanged || coverChanged || deckListChanged);
 
   async function handleSave() {
     if (!canSave) return;
     setBusy(true);
     setError(null);
     try {
-      await onSave({ name: trimmedName, coverUrl: pendingCoverUrl });
+      await onSave({
+        name: trimmedName,
+        coverUrl: pendingCoverUrl,
+        deckList: trimmedDeckList,
+      });
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save changes.");
@@ -175,6 +194,32 @@ export default function EditDeckDialog({
             disabled={busy}
             className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 disabled:opacity-50 [font-size:16px] sm:text-sm"
           />
+        </div>
+
+        {/* Deck list */}
+        <div className="px-5 pt-4 pb-3 border-b border-black/5">
+          <label
+            htmlFor="edit-deck-list"
+            className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5"
+          >
+            Deck list
+          </label>
+          <textarea
+            id="edit-deck-list"
+            value={deckListInput}
+            onChange={(e) => setDeckListInput(e.target.value)}
+            disabled={busy}
+            rows={5}
+            spellCheck={false}
+            placeholder="Paste a deck list to replace the current one…"
+            className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-xs font-mono text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 resize-y disabled:opacity-50 [font-size:16px] sm:text-xs"
+          />
+          {deckListChanged && (
+            <p className="mt-1.5 text-[11px] text-text-secondary">
+              Saving re-analyzes the deck and refreshes the profile. Pick a new
+              cover below after it updates if needed.
+            </p>
+          )}
         </div>
 
         {/* Cover image */}
