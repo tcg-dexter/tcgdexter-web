@@ -378,7 +378,7 @@ export default function MatchForm({
           {/* Prizes title (top-right) + You / Opp column headers over the inputs */}
           <div className="mb-1 flex items-center">
             <div className="ml-auto flex flex-col gap-0.5">
-              <span className="text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">
+              <span className="text-center text-[10px] font-bold uppercase tracking-wide text-text-primary">
                 Prizes
               </span>
               <div className="flex gap-1">
@@ -444,7 +444,7 @@ export default function MatchForm({
                       value={gamePrizes[i].p}
                       onChange={(e) => setGamePrize(i, "p", e.target.value)}
                       aria-label={`Match ${i + 1} your prizes`}
-                      className="no-spinner w-9 rounded-md bg-white px-1 py-1 text-center text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-xs"
+                      className="no-spinner w-9 rounded-full bg-surface py-1.5 text-center text-xs font-bold text-text-primary shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-xs"
                     />
                     <input
                       type="number"
@@ -455,7 +455,7 @@ export default function MatchForm({
                       value={gamePrizes[i].o}
                       onChange={(e) => setGamePrize(i, "o", e.target.value)}
                       aria-label={`Match ${i + 1} opponent prizes`}
-                      className="no-spinner w-9 rounded-md bg-white px-1 py-1 text-center text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-xs"
+                      className="no-spinner w-9 rounded-full bg-surface py-1.5 text-center text-xs font-bold text-text-primary shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-xs"
                     />
                   </div>
                 </div>
