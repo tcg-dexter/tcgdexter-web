@@ -47,11 +47,6 @@ export default function DeckMulliganModule({ deckSize, basicCount }: Props) {
         <h2 className="text-lg font-semibold">Mulligan Likelihood</h2>
         <span className={`text-lg font-bold ${tone}`}>{label}</span>
       </div>
-      <p className="mt-1 text-xs text-text-muted leading-relaxed">
-        Odds your opening 7 cards contain no Basic Pokémon — based on{" "}
-        <span className="font-semibold text-text-secondary">{basicCount}</span>{" "}
-        Basic{basicCount === 1 ? "" : "s"} in a {deckSize}-card deck.
-      </p>
     </div>
   );
 }
