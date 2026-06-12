@@ -4,15 +4,9 @@ import {
   normalizeGameResults,
   isValidGameResults,
   deriveResultFromGames,
+  sanitizePrize,
+  sanitizeGamePrizes,
 } from "@/lib/bo3";
-
-/** Clamp a prize count to an integer 0–6, or null when absent/invalid. */
-function sanitizePrize(value: unknown): number | null {
-  if (value === null || value === undefined || value === "") return null;
-  const n = typeof value === "number" ? value : parseInt(String(value), 10);
-  if (Number.isNaN(n)) return null;
-  return Math.max(0, Math.min(6, Math.trunc(n)));
-}
 
 /**
  * POST /api/matches
@@ -55,6 +49,7 @@ export async function POST(req: Request) {
     game_results?: string | null;
     prizes_taken_player?: number | null;
     prizes_taken_opponent?: number | null;
+    game_prizes?: unknown;
   };
   try {
     body = await req.json();
@@ -110,6 +105,7 @@ export async function POST(req: Request) {
     played_at: played_at || null,
     prizes_taken_player: sanitizePrize(body.prizes_taken_player),
     prizes_taken_opponent: sanitizePrize(body.prizes_taken_opponent),
+    game_prizes: sanitizeGamePrizes(body.game_prizes),
   };
   // Only attach game_results for Best-of-3 rounds so single-game inserts stay
   // unaffected (and keep working even if the migration hasn't landed yet).

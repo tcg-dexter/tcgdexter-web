@@ -13,6 +13,7 @@ import LikeButton from "@/app/components/LikeButton";
 import EditDeckDialog from "@/app/components/EditDeckDialog";
 import MatchLog from "@/app/my-decks/[id]/MatchLog";
 import DeckNotes from "@/app/my-decks/[id]/DeckNotes";
+import type { GamePrize } from "@/lib/bo3";
 import { primaryCardImageUrl, deckAvatarInfo, pokemonSlug } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
 
@@ -28,6 +29,7 @@ interface Match {
   game_results?: string | null;
   prizes_taken_player?: number | null;
   prizes_taken_opponent?: number | null;
+  game_prizes?: GamePrize[] | null;
 }
 
 interface ParsedCard {

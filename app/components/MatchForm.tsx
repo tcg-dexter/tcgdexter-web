@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import type { GamePrize } from "@/lib/bo3";
 
 /* ─── Meta archetype names for autocomplete ─────────────────── */
 const META_ARCHETYPES = [
@@ -37,10 +38,12 @@ export interface MatchFormData {
   played_at: string | null;
   /** Ordered per-game outcomes for a Best-of-3 round (e.g. "WW", "WLW"). Null for single games. */
   game_results: string | null;
-  /** Prizes taken by the player (0–6), or null if not recorded. */
+  /** Prizes taken by the player (0–6), or null if not recorded. Single matches only. */
   prizes_taken_player: number | null;
-  /** Prizes taken by the opponent (0–6), or null if not recorded. */
+  /** Prizes taken by the opponent (0–6), or null if not recorded. Single matches only. */
   prizes_taken_opponent: number | null;
+  /** Per-game prizes for a Best-of-3 round, aligned to game_results. Null for single matches. */
+  game_prizes: GamePrize[] | null;
 }
 
 /* ─── Best-of-3 helpers ──────────────────────────────────────── */
@@ -84,6 +87,27 @@ function parsePrize(value: string): number | null {
   const n = parseInt(value, 10);
   if (Number.isNaN(n)) return null;
   return Math.max(0, Math.min(6, n));
+}
+
+/** A per-game prize slot as edited in the form (string inputs). */
+type PrizeSlot = { p: string; o: string };
+
+/** Seed the 3 per-game prize slots from a stored game_prizes array. */
+function parseGamePrizes(gp: GamePrize[] | null | undefined): PrizeSlot[] {
+  const slots: PrizeSlot[] = [
+    { p: "", o: "" },
+    { p: "", o: "" },
+    { p: "", o: "" },
+  ];
+  if (Array.isArray(gp)) {
+    gp.slice(0, 3).forEach((g, i) => {
+      slots[i] = {
+        p: g?.p != null ? String(g.p) : "",
+        o: g?.o != null ? String(g.o) : "",
+      };
+    });
+  }
+  return slots;
 }
 
 interface Props {
@@ -160,13 +184,24 @@ export default function MatchForm({
   const [opponentPrizes, setOpponentPrizes] = useState(
     initial?.prizes_taken_opponent != null ? String(initial.prizes_taken_opponent) : ""
   );
+  // Per-game prizes for Best of 3 (one {p,o} slot per game).
+  const [gamePrizes, setGamePrizes] = useState<PrizeSlot[]>(
+    parseGamePrizes(initial?.game_prizes)
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Drop any entered games when the round flips back to a single match, so a
-  // stale sequence can't linger (covers both the capsule and inline toggles).
+  // Drop any entered games + per-game prizes when the round flips back to a
+  // single match, so stale data can't linger (covers both toggles).
   useEffect(() => {
-    if (!bestOf3) setGames([null, null, null]);
+    if (!bestOf3) {
+      setGames([null, null, null]);
+      setGamePrizes([
+        { p: "", o: "" },
+        { p: "", o: "" },
+        { p: "", o: "" },
+      ]);
+    }
   }, [bestOf3]);
 
   // Archetype autocomplete
@@ -205,13 +240,26 @@ export default function MatchForm({
   }
 
   function setGame(i: number, letter: GameLetter) {
-    setGames((prev) => {
-      const next: (GameLetter | null)[] = [...prev];
-      next[i] = prev[i] === letter ? null : letter; // tap again to clear
-      // Game 3 only matters at 1-1; drop it if the first two aren't split.
-      const split = next[0] && next[1] && next[0] !== next[1];
-      if (!split) next[2] = null;
-      return next;
+    const next: (GameLetter | null)[] = [...games];
+    next[i] = games[i] === letter ? null : letter; // tap again to clear
+    // Game 3 only matters at 1-1; drop it (and its prizes) if not split.
+    const split = next[0] && next[1] && next[0] !== next[1];
+    if (!split) next[2] = null;
+    setGames(next);
+    if (!split && (gamePrizes[2].p !== "" || gamePrizes[2].o !== "")) {
+      setGamePrizes((prev) => {
+        const np = [...prev];
+        np[2] = { p: "", o: "" };
+        return np;
+      });
+    }
+  }
+
+  function setGamePrize(i: number, side: "p" | "o", value: string) {
+    setGamePrizes((prev) => {
+      const np = [...prev];
+      np[i] = { ...np[i], [side]: value };
+      return np;
     });
   }
 
@@ -222,6 +270,16 @@ export default function MatchForm({
       setError(bestOf3 ? "Enter at least 2 games." : "Select a result.");
       return;
     }
+    // Per-game prizes align with the played games (same order as the sequence).
+    const playedIdx = games
+      .map((g, i) => (g === "W" || g === "L" ? i : -1))
+      .filter((i) => i >= 0);
+    const gamePrizesOut: GamePrize[] = playedIdx.map((i) => ({
+      p: parsePrize(gamePrizes[i].p),
+      o: parsePrize(gamePrizes[i].o),
+    }));
+    const anyGamePrize = gamePrizesOut.some((g) => g.p !== null || g.o !== null);
+
     setSubmitting(true);
     setError(null);
     try {
@@ -236,8 +294,10 @@ export default function MatchForm({
           ? new Date(matchDate + "T12:00:00").toISOString()
           : null,
         game_results: bestOf3 ? sequence : null,
-        prizes_taken_player: parsePrize(playerPrizes),
-        prizes_taken_opponent: parsePrize(opponentPrizes),
+        // Single match → match-level prizes; Best of 3 → per-game prizes.
+        prizes_taken_player: bestOf3 ? null : parsePrize(playerPrizes),
+        prizes_taken_opponent: bestOf3 ? null : parsePrize(opponentPrizes),
+        game_prizes: bestOf3 && anyGamePrize ? gamePrizesOut : null,
       });
     } catch (err) {
       setError(
@@ -316,12 +376,12 @@ export default function MatchForm({
               return (
                 <div
                   key={i}
-                  className={`flex items-center gap-2 ${
+                  className={`flex items-center gap-1.5 ${
                     g3Disabled ? "opacity-40" : ""
                   }`}
                 >
-                  <span className="w-14 flex-shrink-0 text-xs text-text-muted">
-                    Game {i + 1}
+                  <span className="w-7 flex-shrink-0 text-xs text-text-muted">
+                    G{i + 1}
                   </span>
                   {(["W", "L"] as const).map((letter) => {
                     const selected = games[i] === letter;
@@ -332,20 +392,52 @@ export default function MatchForm({
                         type="button"
                         disabled={g3Disabled}
                         onClick={() => setGame(i, letter)}
-                        className={`flex-1 rounded-full py-1.5 text-xs font-bold transition-all disabled:cursor-not-allowed ${
+                        aria-label={`Game ${i + 1} ${letter === "W" ? "win" : "loss"}`}
+                        className={`w-9 rounded-full py-1.5 text-xs font-bold transition-all disabled:cursor-not-allowed ${
                           selected
                             ? `${s.bg} ${s.text}`
                             : "bg-surface text-text-secondary shadow-[inset_0_0_0_1px_var(--border)] hover:bg-surface-2"
                         }`}
                       >
-                        {letter === "W" ? "Win" : "Loss"}
+                        {letter}
                       </button>
                     );
                   })}
+                  {/* Per-game prizes — you – opponent */}
+                  <div className="ml-auto flex items-center gap-1">
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={6}
+                      disabled={g3Disabled}
+                      value={gamePrizes[i].p}
+                      onChange={(e) => setGamePrize(i, "p", e.target.value)}
+                      placeholder="–"
+                      aria-label={`Game ${i + 1} your prizes`}
+                      className="w-9 rounded-md bg-white px-1 py-1 text-center text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-xs"
+                    />
+                    <span className="text-xs text-text-muted">–</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={6}
+                      disabled={g3Disabled}
+                      value={gamePrizes[i].o}
+                      onChange={(e) => setGamePrize(i, "o", e.target.value)}
+                      placeholder="–"
+                      aria-label={`Game ${i + 1} opponent prizes`}
+                      className="w-9 rounded-md bg-white px-1 py-1 text-center text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-xs"
+                    />
+                  </div>
                 </div>
               );
             })}
           </div>
+          <p className="mt-1 text-right text-[10px] text-text-muted">
+            prizes&nbsp;·&nbsp;you&nbsp;–&nbsp;opp
+          </p>
 
           {/* Live derived summary — the "WW" payoff */}
           <div className="mt-2 flex items-center gap-2 text-xs">
@@ -372,35 +464,37 @@ export default function MatchForm({
         </div>
       )}
 
-      {/* Prizes taken (optional) — applies to single and best-of-3 alike */}
-      <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="text-xs font-medium text-text-muted">Prizes taken</span>
-        <div className="flex items-center gap-1.5">
-          <input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={6}
-            value={playerPrizes}
-            onChange={(e) => setPlayerPrizes(e.target.value)}
-            placeholder="You"
-            aria-label="Your prizes taken"
-            className="w-16 rounded-lg bg-bg px-2 py-2 text-center text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
-          />
-          <span className="text-sm text-text-muted">–</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={6}
-            value={opponentPrizes}
-            onChange={(e) => setOpponentPrizes(e.target.value)}
-            placeholder="Opp"
-            aria-label="Opponent prizes taken"
-            className="w-16 rounded-lg bg-bg px-2 py-2 text-center text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
-          />
+      {/* Prizes taken — single matches only; Best of 3 records prizes per game */}
+      {!bestOf3 && (
+        <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="text-xs font-medium text-text-muted">Prizes taken</span>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={6}
+              value={playerPrizes}
+              onChange={(e) => setPlayerPrizes(e.target.value)}
+              placeholder="You"
+              aria-label="Your prizes taken"
+              className="w-16 rounded-lg bg-bg px-2 py-2 text-center text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+            />
+            <span className="text-sm text-text-muted">–</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={6}
+              value={opponentPrizes}
+              onChange={(e) => setOpponentPrizes(e.target.value)}
+              placeholder="Opp"
+              aria-label="Opponent prizes taken"
+              className="w-16 rounded-lg bg-bg px-2 py-2 text-center text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Opponent name */}
       <input

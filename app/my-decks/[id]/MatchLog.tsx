@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import MatchForm, { type MatchFormData } from "@/app/components/MatchForm";
 import MatchEntry from "@/app/components/MatchEntry";
+import type { GamePrize } from "@/lib/bo3";
 
 /* ─── Types ──────────────────────────────────────────────────── */
 
@@ -21,6 +22,7 @@ interface Match {
   game_results?: string | null;
   prizes_taken_player?: number | null;
   prizes_taken_opponent?: number | null;
+  game_prizes?: GamePrize[] | null;
 }
 
 interface Props {
@@ -130,6 +132,7 @@ export default function MatchLog({
       game_results: data.game_results ?? null,
       prizes_taken_player: data.prizes_taken_player ?? null,
       prizes_taken_opponent: data.prizes_taken_opponent ?? null,
+      game_prizes: data.game_prizes ?? null,
     };
     setMatches((prev) => [newMatch, ...prev]);
     closeForm();
@@ -160,6 +163,7 @@ export default function MatchLog({
               game_results: data.game_results ?? null,
               prizes_taken_player: data.prizes_taken_player ?? null,
               prizes_taken_opponent: data.prizes_taken_opponent ?? null,
+              game_prizes: data.game_prizes ?? null,
             }
           : m
       )
@@ -283,6 +287,7 @@ export default function MatchLog({
                       game_results: match.game_results,
                       prizes_taken_player: match.prizes_taken_player,
                       prizes_taken_opponent: match.prizes_taken_opponent,
+                      game_prizes: match.game_prizes,
                     }}
                     onSubmit={(data) => handleEditMatch(match.id, data)}
                     onCancel={() => setEditingId(null)}
