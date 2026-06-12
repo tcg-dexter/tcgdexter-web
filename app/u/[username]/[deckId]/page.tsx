@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { type AnalysisResult, type DeckCreator } from "@/app/components/DeckProfileView";
 import { repriceDeck } from "@/lib/reprice-deck";
+import type { GamePrize } from "@/lib/bo3";
 import DeckDetailClient from "./DeckDetailClient";
 
 interface DeckRecord {
@@ -37,6 +38,9 @@ interface MatchRecord {
   played_at: string;
   source: "manual" | "tcg_live_log";
   game_results: string | null;
+  prizes_taken_player: number | null;
+  prizes_taken_opponent: number | null;
+  game_prizes: GamePrize[] | null;
 }
 
 export async function generateMetadata({
@@ -137,7 +141,7 @@ export default async function DeckPage({
   if (isOwner) {
     const { data: matches } = await supabase
       .from("matches")
-      .select("id, result, opponent_name, opponent_archetype, opponent_deck_list, notes, played_at, source, game_results")
+      .select("id, result, opponent_name, opponent_archetype, opponent_deck_list, notes, played_at, source, game_results, prizes_taken_player, prizes_taken_opponent, game_prizes")
       .eq("saved_deck_id", deck.id)
       .order("played_at", { ascending: false });
     initialMatches = (matches ?? []) as MatchRecord[];

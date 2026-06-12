@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import MatchForm, { type MatchFormData } from "@/app/components/MatchForm";
 import MatchEntry from "@/app/components/MatchEntry";
+import type { GamePrize } from "@/lib/bo3";
 
 /* ─── Types ──────────────────────────────────────────────────── */
 
@@ -19,6 +20,9 @@ interface Match {
   source?: "manual" | "tcg_live_log";
   /** Best-of-3 ordered per-game sequence (e.g. "WLW"); null for single games. */
   game_results?: string | null;
+  prizes_taken_player?: number | null;
+  prizes_taken_opponent?: number | null;
+  game_prizes?: GamePrize[] | null;
 }
 
 interface Props {
@@ -126,6 +130,9 @@ export default function MatchLog({
       notes: data.notes ?? null,
       played_at: data.played_at ?? null,
       game_results: data.game_results ?? null,
+      prizes_taken_player: data.prizes_taken_player ?? null,
+      prizes_taken_opponent: data.prizes_taken_opponent ?? null,
+      game_prizes: data.game_prizes ?? null,
     };
     setMatches((prev) => [newMatch, ...prev]);
     closeForm();
@@ -154,6 +161,9 @@ export default function MatchLog({
               notes: data.notes ?? null,
               played_at: data.played_at ?? null,
               game_results: data.game_results ?? null,
+              prizes_taken_player: data.prizes_taken_player ?? null,
+              prizes_taken_opponent: data.prizes_taken_opponent ?? null,
+              game_prizes: data.game_prizes ?? null,
             }
           : m
       )
@@ -275,6 +285,9 @@ export default function MatchLog({
                       notes: match.notes,
                       played_at: match.played_at,
                       game_results: match.game_results,
+                      prizes_taken_player: match.prizes_taken_player,
+                      prizes_taken_opponent: match.prizes_taken_opponent,
+                      game_prizes: match.game_prizes,
                     }}
                     onSubmit={(data) => handleEditMatch(match.id, data)}
                     onCancel={() => setEditingId(null)}
@@ -319,6 +332,15 @@ export default function MatchLog({
                       {!match.opponent_archetype && !match.opponent_name && (
                         <span className="text-text-muted text-sm">Match logged</span>
                       )}
+                      {(match.prizes_taken_player != null ||
+                        match.prizes_taken_opponent != null) && (
+                        <span
+                          className="flex-shrink-0 text-xs font-medium text-text-muted tabular-nums"
+                          title="Prizes taken (you – opponent)"
+                        >
+                          {match.prizes_taken_player ?? 0}–{match.prizes_taken_opponent ?? 0}
+                        </span>
+                      )}
                       {match.game_results && match.game_results.length >= 2 && (
                         <span
                           className="flex flex-shrink-0 items-center"
@@ -328,7 +350,12 @@ export default function MatchLog({
                           {/* Overlapping W/L pills — mirrors the avatar stack
                               on deck preview cards (ring-2 ring-white + -ml). */}
                           {match.game_results.split("").map((g, i) => {
-                            const s = g === "W" ? RESULT_STYLE.win : RESULT_STYLE.loss;
+                            const s =
+                              g === "W"
+                                ? RESULT_STYLE.win
+                                : g === "L"
+                                ? RESULT_STYLE.loss
+                                : RESULT_STYLE.draw;
                             return (
                               <span
                                 key={i}

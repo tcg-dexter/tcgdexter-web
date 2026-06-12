@@ -4,6 +4,8 @@ import {
   normalizeGameResults,
   isValidGameResults,
   deriveResultFromGames,
+  sanitizePrize,
+  sanitizeGamePrizes,
 } from "@/lib/bo3";
 
 /**
@@ -45,6 +47,9 @@ export async function POST(req: Request) {
     notes?: string;
     played_at?: string;
     game_results?: string | null;
+    prizes_taken_player?: number | null;
+    prizes_taken_opponent?: number | null;
+    game_prizes?: unknown;
   };
   try {
     body = await req.json();
@@ -63,7 +68,7 @@ export async function POST(req: Request) {
   const gameResults = normalizeGameResults(body.game_results);
   if (gameResults !== null && !isValidGameResults(gameResults)) {
     return NextResponse.json(
-      { error: 'game_results must be 2–5 of W/L (e.g. "WLW").' },
+      { error: 'game_results must be 2–5 of W/L/D (e.g. "WLW").' },
       { status: 400 }
     );
   }
@@ -98,6 +103,9 @@ export async function POST(req: Request) {
     notes: notes?.trim() || null,
     // played_at is optional — null means the user chose not to record a date.
     played_at: played_at || null,
+    prizes_taken_player: sanitizePrize(body.prizes_taken_player),
+    prizes_taken_opponent: sanitizePrize(body.prizes_taken_opponent),
+    game_prizes: sanitizeGamePrizes(body.game_prizes),
   };
   // Only attach game_results for Best-of-3 rounds so single-game inserts stay
   // unaffected (and keep working even if the migration hasn't landed yet).

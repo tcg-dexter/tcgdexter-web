@@ -4,6 +4,8 @@ import {
   normalizeGameResults,
   isValidGameResults,
   deriveResultFromGames,
+  sanitizePrize,
+  sanitizeGamePrizes,
 } from "@/lib/bo3";
 
 /**
@@ -36,6 +38,9 @@ export async function PATCH(
     notes?: string | null;
     played_at?: string | null;
     game_results?: string | null;
+    prizes_taken_player?: number | null;
+    prizes_taken_opponent?: number | null;
+    game_prizes?: unknown;
   };
   try {
     body = await req.json();
@@ -66,13 +71,20 @@ export async function PATCH(
     const seq = normalizeGameResults(body.game_results);
     if (seq !== null && !isValidGameResults(seq)) {
       return NextResponse.json(
-        { error: 'game_results must be 2–5 of W/L (e.g. "WLW").' },
+        { error: 'game_results must be 2–5 of W/L/D (e.g. "WLW").' },
         { status: 400 }
       );
     }
     updates.game_results = seq;
     if (seq !== null) updates.result = deriveResultFromGames(seq);
   }
+
+  if (body.prizes_taken_player !== undefined)
+    updates.prizes_taken_player = sanitizePrize(body.prizes_taken_player);
+  if (body.prizes_taken_opponent !== undefined)
+    updates.prizes_taken_opponent = sanitizePrize(body.prizes_taken_opponent);
+  if (body.game_prizes !== undefined)
+    updates.game_prizes = sanitizeGamePrizes(body.game_prizes);
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "Nothing to update." }, { status: 400 });

@@ -11,6 +11,18 @@
     scrollbar-width: none;
   }
 
+  /* Hide the up/down stepper on <input type="number"> (desktop only —
+     mobile keyboards never render it). */
+  .no-spinner::-webkit-outer-spin-button,
+  .no-spinner::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .no-spinner {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
   /* Gradient border on focus — works with any border-radius.
      Uses the padding-box / border-box background layering trick
      so the white fill stays opaque while the brand gradient shows
