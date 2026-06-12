@@ -521,6 +521,25 @@ export default function MatchForm({
         </div>
       )}
 
+      {/* Match date — shown above the opponent when set (defaults to today) */}
+      {showDateField && (
+        <div className="mb-2 flex w-full items-center gap-2">
+          <input
+            type="date"
+            value={matchDate}
+            onChange={(e) => setMatchDate(e.target.value)}
+            className="flex-1 rounded-full bg-bg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+          />
+          <button
+            type="button"
+            onClick={() => setShowDateField(false)}
+            className="text-xs text-text-muted hover:text-text-secondary transition-colors"
+          >
+            Remove
+          </button>
+        </div>
+      )}
+
       {/* Opponent name */}
       <input
         type="text"
@@ -632,7 +651,9 @@ export default function MatchForm({
           </>
         )}
 
-        {!showDateField ? (
+        {/* The date field itself renders above the opponent (see below);
+            here we only offer to re-add it once removed. */}
+        {!showDateField && (
           <button
             type="button"
             onClick={() => setShowDateField(true)}
@@ -640,22 +661,6 @@ export default function MatchForm({
           >
             + Add match date
           </button>
-        ) : (
-          <div className="flex items-center gap-2 w-full">
-            <input
-              type="date"
-              value={matchDate}
-              onChange={(e) => setMatchDate(e.target.value)}
-              className="flex-1 rounded-full bg-bg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
-            />
-            <button
-              type="button"
-              onClick={() => setShowDateField(false)}
-              className="text-xs text-text-muted hover:text-text-secondary transition-colors"
-            >
-              Remove
-            </button>
-          </div>
         )}
       </div>
 
