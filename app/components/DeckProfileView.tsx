@@ -415,6 +415,36 @@ export default function DeckProfileView({
           {/* ── Overview — always at the top across all variants ── */}
           {overviewNode}
 
+          {/* Save + Share buttons — sit right under the overview so the
+              primary action is always within thumb reach. Layout depends
+              on variant (saved hides Save). */}
+          {variant === "saved" ? (
+            <ShareButton
+              deckList={deckList}
+              analysis={result}
+              shareUrl={shareUrl}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-gradient-brand px-5 py-2.5 text-sm font-semibold text-white shadow-brand hover:shadow-brand-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+          ) : (
+            <div className="flex gap-3">
+              <SaveDeckButton
+                deckList={deckList}
+                analysis={result}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-black/85 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              <ShareButton
+                deckList={deckList}
+                analysis={result}
+                shareUrl={shareUrl}
+                publishMode={variant === "fresh"}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-brand px-5 py-2.5 text-sm font-semibold text-white shadow-brand hover:shadow-brand-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+          )}
+
+          {/* Post-CTA slot (meta variant uses this for the Scouting Note) */}
+          {postCtaSlot}
+
           {/* Deck List — meta variant with multiple variants gets the carousel,
               all other variants get the standard collapsible card. */}
           {variant === "meta" && deckLists && deckLists.length > 1 ? (
@@ -437,36 +467,6 @@ export default function DeckProfileView({
 
           {/* ── Top slot: deck notes (saved/public); stat cards + record (meta) ── */}
           {topSlot}
-
-          {/* Save + Share buttons — layout depends on variant */}
-          {variant === "saved" ? (
-            /* Saved variant: share fills the full row; no save button */
-            <ShareButton
-              deckList={deckList}
-              analysis={result}
-              shareUrl={shareUrl}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-gradient-brand px-5 py-2.5 text-sm font-semibold text-white shadow-brand hover:shadow-brand-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-            />
-          ) : (
-            /* All other variants: Save (black) + Share side by side */
-            <div className="flex gap-3">
-              <SaveDeckButton
-                deckList={deckList}
-                analysis={result}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-black/85 disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-              <ShareButton
-                deckList={deckList}
-                analysis={result}
-                shareUrl={shareUrl}
-                publishMode={variant === "fresh"}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-brand px-5 py-2.5 text-sm font-semibold text-white shadow-brand hover:shadow-brand-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-            </div>
-          )}
-
-          {/* Post-CTA slot (meta variant uses this for the Scouting Note) */}
-          {postCtaSlot}
 
           {/* Standard Format legality warning (only when not legal) */}
           {!result.rotation.ready && (
