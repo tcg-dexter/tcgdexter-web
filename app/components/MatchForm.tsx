@@ -323,17 +323,11 @@ export default function MatchForm({
       {/* Result — single game (Win/Loss/Draw) or Best-of-3 game tracker */}
       {!bestOf3 ? (
         <div className="mb-3">
-          {/* Prizes title + You/Opp headers, right-aligned over the inputs */}
+          {/* Prizes title, centered over the You/Opp capsules below */}
           <div className="mb-1 flex items-center">
-            <div className="ml-auto flex flex-col gap-0.5">
-              <span className="text-center text-[10px] font-bold uppercase tracking-wide text-text-primary">
-                Prizes
-              </span>
-              <div className="flex gap-1">
-                <span className="w-12 text-center text-[10px] text-text-muted">You</span>
-                <span className="w-12 text-center text-[10px] text-text-muted">Opp</span>
-              </div>
-            </div>
+            <span className="ml-auto w-[6.25rem] text-center text-[10px] font-bold uppercase tracking-wide text-text-primary">
+              Prizes
+            </span>
           </div>
 
           {/* Win/Loss/Draw fill the width; prize capsules sit on the right */}
@@ -369,8 +363,9 @@ export default function MatchForm({
                 max={6}
                 value={playerPrizes}
                 onChange={(e) => setPlayerPrizes(e.target.value)}
+                placeholder="You"
                 aria-label="Your prizes taken"
-                className="no-spinner w-12 rounded-full bg-bg py-2.5 text-center text-sm font-bold text-text-primary shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 [font-size:16px] sm:text-sm"
+                className="no-spinner w-12 rounded-full bg-bg py-2.5 text-center text-sm font-bold text-text-primary placeholder:font-normal placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 [font-size:16px] sm:text-sm"
               />
               <input
                 type="number"
@@ -379,8 +374,9 @@ export default function MatchForm({
                 max={6}
                 value={opponentPrizes}
                 onChange={(e) => setOpponentPrizes(e.target.value)}
+                placeholder="Opp"
                 aria-label="Opponent prizes taken"
-                className="no-spinner w-12 rounded-full bg-bg py-2.5 text-center text-sm font-bold text-text-primary shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 [font-size:16px] sm:text-sm"
+                className="no-spinner w-12 rounded-full bg-bg py-2.5 text-center text-sm font-bold text-text-primary placeholder:font-normal placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 [font-size:16px] sm:text-sm"
               />
             </div>
           </div>
