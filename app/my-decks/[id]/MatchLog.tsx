@@ -350,7 +350,12 @@ export default function MatchLog({
                           {/* Overlapping W/L pills — mirrors the avatar stack
                               on deck preview cards (ring-2 ring-white + -ml). */}
                           {match.game_results.split("").map((g, i) => {
-                            const s = g === "W" ? RESULT_STYLE.win : RESULT_STYLE.loss;
+                            const s =
+                              g === "W"
+                                ? RESULT_STYLE.win
+                                : g === "L"
+                                ? RESULT_STYLE.loss
+                                : RESULT_STYLE.draw;
                             return (
                               <span
                                 key={i}

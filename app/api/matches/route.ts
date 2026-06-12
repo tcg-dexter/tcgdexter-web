@@ -68,7 +68,7 @@ export async function POST(req: Request) {
   const gameResults = normalizeGameResults(body.game_results);
   if (gameResults !== null && !isValidGameResults(gameResults)) {
     return NextResponse.json(
-      { error: 'game_results must be 2–5 of W/L (e.g. "WLW").' },
+      { error: 'game_results must be 2–5 of W/L/D (e.g. "WLW").' },
       { status: 400 }
     );
   }

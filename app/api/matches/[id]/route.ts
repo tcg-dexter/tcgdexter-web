@@ -71,7 +71,7 @@ export async function PATCH(
     const seq = normalizeGameResults(body.game_results);
     if (seq !== null && !isValidGameResults(seq)) {
       return NextResponse.json(
-        { error: 'game_results must be 2–5 of W/L (e.g. "WLW").' },
+        { error: 'game_results must be 2–5 of W/L/D (e.g. "WLW").' },
         { status: 400 }
       );
     }

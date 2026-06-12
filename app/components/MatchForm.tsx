@@ -48,16 +48,19 @@ export interface MatchFormData {
 
 /* ─── Best-of-3 helpers ──────────────────────────────────────── */
 
-type GameLetter = "W" | "L";
+type GameLetter = "W" | "L" | "D";
 
-/** Derive the round result + sequence string from per-game outcomes. */
+/** Derive the round result + sequence string from per-game outcomes.
+ *  Draws count toward neither side. */
 function deriveRound(games: (GameLetter | null)[]): {
   result: "win" | "loss" | "draw" | null;
   sequence: string;
 } {
-  const played = games.filter((g): g is GameLetter => g === "W" || g === "L");
+  const played = games.filter(
+    (g): g is GameLetter => g === "W" || g === "L" || g === "D"
+  );
   const wins = played.filter((g) => g === "W").length;
-  const losses = played.length - wins;
+  const losses = played.filter((g) => g === "L").length;
   const result =
     played.length >= 2
       ? wins > losses
@@ -75,7 +78,7 @@ function parseGames(seq: string | null | undefined): (GameLetter | null)[] {
   if (seq) {
     for (let i = 0; i < Math.min(seq.length, 3); i++) {
       const ch = seq[i].toUpperCase();
-      if (ch === "W" || ch === "L") slots[i] = ch;
+      if (ch === "W" || ch === "L" || ch === "D") slots[i] = ch;
     }
   }
   return slots;
@@ -242,11 +245,15 @@ export default function MatchForm({
   function setGame(i: number, letter: GameLetter) {
     const next: (GameLetter | null)[] = [...games];
     next[i] = games[i] === letter ? null : letter; // tap again to clear
-    // Game 3 only matters at 1-1; drop it (and its prizes) if not split.
-    const split = next[0] && next[1] && next[0] !== next[1];
-    if (!split) next[2] = null;
+    // Match 3 is in play only once the first two are both set and neither
+    // side already has 2 wins (draws don't decide). Otherwise drop it.
+    const firstTwoSet = next[0] != null && next[1] != null;
+    const w = [next[0], next[1]].filter((g) => g === "W").length;
+    const l = [next[0], next[1]].filter((g) => g === "L").length;
+    const game3InPlay = firstTwoSet && w < 2 && l < 2;
+    if (!game3InPlay) next[2] = null;
     setGames(next);
-    if (!split && (gamePrizes[2].p !== "" || gamePrizes[2].o !== "")) {
+    if (!game3InPlay && (gamePrizes[2].p !== "" || gamePrizes[2].o !== "")) {
       setGamePrizes((prev) => {
         const np = [...prev];
         np[2] = { p: "", o: "" };
@@ -383,9 +390,12 @@ export default function MatchForm({
 
           <div className="flex flex-col gap-1.5">
             {[0, 1, 2].map((i) => {
-              // Match 3 is only meaningful once the first two are split 1-1.
-              const g3Disabled =
-                i === 2 && !(games[0] && games[1] && games[0] !== games[1]);
+              // Match 3 is in play only when the first two are both set and
+              // neither side already has 2 wins (draws don't decide).
+              const firstTwoSet = games[0] != null && games[1] != null;
+              const w01 = [games[0], games[1]].filter((g) => g === "W").length;
+              const l01 = [games[0], games[1]].filter((g) => g === "L").length;
+              const g3Disabled = i === 2 && (!firstTwoSet || w01 >= 2 || l01 >= 2);
               return (
                 <div
                   key={i}
@@ -396,28 +406,35 @@ export default function MatchForm({
                   <span className="w-12 flex-shrink-0 whitespace-nowrap text-xs text-text-muted">
                     Match {i + 1}
                   </span>
-                  {(["W", "L"] as const).map((letter) => {
+                  {(["W", "L", "D"] as const).map((letter) => {
                     const selected = games[i] === letter;
-                    const s = letter === "W" ? RESULT_STYLE.win : RESULT_STYLE.loss;
+                    const s =
+                      letter === "W"
+                        ? RESULT_STYLE.win
+                        : letter === "L"
+                        ? RESULT_STYLE.loss
+                        : RESULT_STYLE.draw;
+                    const label =
+                      letter === "W" ? "Win" : letter === "L" ? "Loss" : "Draw";
                     return (
                       <button
                         key={letter}
                         type="button"
                         disabled={g3Disabled}
                         onClick={() => setGame(i, letter)}
-                        aria-label={`Match ${i + 1} ${letter === "W" ? "win" : "loss"}`}
-                        className={`w-11 rounded-full py-1.5 text-xs font-bold transition-all disabled:cursor-not-allowed ${
+                        aria-label={`Match ${i + 1} ${label.toLowerCase()}`}
+                        className={`flex-1 rounded-full py-1.5 text-xs font-bold transition-all disabled:cursor-not-allowed ${
                           selected
                             ? `${s.bg} ${s.text}`
                             : "bg-surface text-text-secondary shadow-[inset_0_0_0_1px_var(--border)] hover:bg-surface-2"
                         }`}
                       >
-                        {letter === "W" ? "Win" : "Loss"}
+                        {label}
                       </button>
                     );
                   })}
                   {/* Per-match prizes — aligned under the You / Opp headers */}
-                  <div className="ml-auto flex items-center gap-1">
+                  <div className="flex flex-shrink-0 items-center gap-1">
                     <input
                       type="number"
                       inputMode="numeric"

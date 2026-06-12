@@ -1,12 +1,13 @@
 /**
  * bo3.ts — Best-of-3 game-sequence helpers for the matches API.
  *
- * game_results is an ordered string of per-game outcomes (W/L), e.g. "WW" or
- * "WLW". The round-level `result` is derived from it server-side so the stored
- * result and the sequence can never disagree.
+ * game_results is an ordered string of per-game outcomes (W/L/D), e.g. "WW",
+ * "WLW", or "WD". The round-level `result` is derived from it server-side (win
+ * vs loss count; draws count toward neither) so the stored result and the
+ * sequence can never disagree.
  */
 
-const GAME_RESULTS_RE = /^[WL]{2,5}$/;
+const GAME_RESULTS_RE = /^[WLD]{2,5}$/;
 
 /** Coerce arbitrary input into a normalized sequence string, or null. */
 export function normalizeGameResults(input: unknown): string | null {
