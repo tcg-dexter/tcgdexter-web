@@ -1,5 +1,6 @@
 import Link from "next/link";
 import DeckCardGrid from "@/app/components/DeckCardGrid";
+import DeckMulliganModule from "@/app/components/DeckMulliganModule";
 import DeckPriceModule from "@/app/components/DeckPriceModule";
 import DeckListCard from "@/app/components/DeckListCard";
 import MetaDeckListCarousel from "@/app/components/MetaDeckListCarousel";
@@ -419,6 +420,12 @@ export default function DeckProfileView({
 
           {/* Estimated Deck Price */}
           <DeckPriceModule deckPrice={result.deckPrice} />
+
+          {/* Mulligan Likelihood */}
+          <DeckMulliganModule
+            deckSize={result.deckSize}
+            basicCount={result.pokemon.basicCount}
+          />
 
           {/* Save + Share buttons — layout depends on variant */}
           {variant === "saved" ? (
