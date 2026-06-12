@@ -8,6 +8,7 @@ import {
   cardTypesForSetIdNumber,
 } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
+import { metaArchetypeCard } from "@/lib/metaArchetypeCards";
 import HomeClient, { type CurrentSpotlight, type RecentMatch } from "./HomeClient";
 import type { TrainerSpotlightRow } from "./spotlight/types";
 
@@ -81,21 +82,23 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
     const pubDecks = deckRows.filter((d) => pubProfileIds.has(d.user_id as string));
     if (!pubDecks.length) return [];
 
-    // Step 2: 6 most recent matches on those decks. Surface matches with a
+    // Step 2: most recent matches on those decks. Surface matches with a
     // parsed battle log (source = 'tcg_live_log') — the /battles detail
     // page has a story to tell when there's a log to render — or any match
     // (manual single games via prizes_taken_player/_opponent, or best-of-3
-    // sets via game_prizes) where the player recorded prize counts, which
-    // is enough to call the result legitimate without a full log.
+    // sets via game_prizes) where the player recorded prize counts. For the
+    // latter, an opponent image can only be shown once we also know a
+    // recognized meta archetype (checked below), so over-fetch candidates
+    // and trim to 6 after that filter.
     const { data: matchRows, error: matchErr } = await admin
       .from("matches")
-      .select("id, result, opponent_archetype, opponent_handle, created_at, saved_deck_id")
+      .select("id, result, opponent_archetype, opponent_handle, created_at, saved_deck_id, source")
       .or(
         "source.eq.tcg_live_log,and(prizes_taken_player.not.is.null,prizes_taken_opponent.not.is.null),game_prizes.not.is.null"
       )
       .in("saved_deck_id", pubDecks.map((d) => d.id))
       .order("created_at", { ascending: false })
-      .limit(6);
+      .limit(24);
 
     if (matchErr || !matchRows?.length) return [];
 
@@ -212,7 +215,7 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
       if (primary) topAttackerByMatch.set(matchId, primary.card.name);
     });
 
-    return matchRows.flatMap((m) => {
+    const results = matchRows.flatMap((m) => {
       const deck = deckById.get(m.saved_deck_id as string);
       const profile = deck ? profileById.get(deck.user_id as string) : null;
       if (!deck || !profile?.username) return [];
@@ -224,17 +227,33 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
       const deckImageUrl: string | null =
         coverUrl ?? (analysis?.cards ? primaryCardImageUrl(analysis.cards) : null);
 
-      // Derive opponent image from top attacker name (battle log matches only)
-      const topAttacker = topAttackerByMatch.get(m.id as string) ?? null;
-      const opponentImageUrl = topAttacker ? cardImageUrlForName(topAttacker) : null;
-
       // Accent colors mirror the battle banner: typeColor() of each side's
       // primary Pokémon. Falls back to Colorless when types aren't resolvable.
       const playerPrimary = analysis?.cards ? primaryPokemonCard(analysis.cards) : null;
       const playerColor = typeColor(playerPrimary?.types);
-      const opponentColor = typeColor(
-        topAttacker ? cardTypesForName(topAttacker) : undefined,
-      );
+
+      const topAttacker = topAttackerByMatch.get(m.id as string) ?? null;
+      let opponentImageUrl: string | null;
+      let opponentColor: string;
+
+      if (m.source === "tcg_live_log") {
+        // Derive opponent image from top attacker name (battle log matches)
+        opponentImageUrl = topAttacker ? cardImageUrlForName(topAttacker) : null;
+        opponentColor = typeColor(
+          topAttacker ? cardTypesForName(topAttacker) : undefined,
+        );
+      } else {
+        // Manual / prize-only matches have no battle-log actions to derive an
+        // opponent card from, so they additionally require a recognized
+        // top-30 meta archetype with a resolvable primary card — anything
+        // else, skip the match rather than show a blank opponent slot.
+        const archetypeCard = m.opponent_archetype
+          ? metaArchetypeCard(m.opponent_archetype as string)
+          : null;
+        if (!archetypeCard) return [];
+        opponentImageUrl = archetypeCard.imageUrl;
+        opponentColor = typeColor(archetypeCard.types);
+      }
 
       return [{
         id: m.id as string,
@@ -254,6 +273,8 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
         opponentPrizes: opponentPrizesByMatch.get(m.id as string) ?? 0,
       }];
     });
+
+    return results.slice(0, 6);
   } catch (err) {
     console.error("[home/recent-matches] failed:", err);
     return [];

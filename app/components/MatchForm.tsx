@@ -2,18 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import type { GamePrize } from "@/lib/bo3";
-
-/* ─── Meta archetype names for autocomplete ─────────────────── */
-const META_ARCHETYPES = [
-  "Alakazam Dudunsparce", "Ceruledge", "Clefairy Ogerpon", "Crustle",
-  "Cynthia's Garchomp", "Dragapult", "Dragapult Blaziken", "Dragapult Dusknoir",
-  "Festival Lead", "Flareon Noctowl", "Froslass Munkidori", "Greninja",
-  "Grimmsnarl Froslass", "Hop's Trevenant", "Lucario Hariyama", "Mega Absol Box",
-  "Mega Kangaskhan", "Mega Lucario", "Mega Starmie", "Mega Venusaur",
-  "N's Zoroark", "Ogerpon Meganium", "Okidogi", "Raging Bolt Ogerpon",
-  "Rocket's Honchkrow", "Rocket's Mewtwo", "Slowking", "Starmie Froslass",
-  "Steven's Metagross", "Tera Box",
-];
+import { META_ARCHETYPE_NAMES } from "@/lib/metaArchetypes";
 
 // Mirrors the logged-match result pills in app/my-decks/[id]/MatchLog.tsx
 // so the form's selected state previews exactly how the row will eventually
@@ -234,14 +223,14 @@ export default function MatchForm({
     if (val.trim().length > 0) {
       const lower = val.toLowerCase();
       setSuggestions(
-        META_ARCHETYPES.filter((a) => a.toLowerCase().includes(lower)).slice(
+        META_ARCHETYPE_NAMES.filter((a) => a.toLowerCase().includes(lower)).slice(
           0,
           6
         )
       );
       setShowSuggestions(true);
     } else {
-      setSuggestions(META_ARCHETYPES.slice(0, 8));
+      setSuggestions(META_ARCHETYPE_NAMES.slice(0, 8));
       setShowSuggestions(false);
     }
   }
@@ -557,7 +546,7 @@ export default function MatchForm({
           onChange={(e) => handleArchetypeChange(e.target.value)}
           onFocus={() => {
             if (opponentArchetype.trim() === "") {
-              setSuggestions(META_ARCHETYPES.slice(0, 8));
+              setSuggestions(META_ARCHETYPE_NAMES.slice(0, 8));
             }
             setShowSuggestions(true);
           }}
