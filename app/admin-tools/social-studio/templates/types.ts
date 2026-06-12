@@ -1,9 +1,36 @@
+import type { ReactNode } from "react";
+
 /** Shared types for Social Studio templates. Each template renders at a
- *  fixed 1080×1920 canvas (9:16) so a single browser screenshot at 100%
- *  zoom captures the exact asset. */
+ *  fixed 1080×1920 canvas (9:16) and is composed of named layers so the
+ *  editor can toggle, isolate, and export each one as its own PNG. */
 
 export const CANVAS_W = 1080;
 export const CANVAS_H = 1920;
+
+/** One compositing layer of a template. `node` is absolutely positioned
+ *  content for the 1080×1920 canvas; LayerCanvas stacks layers in array
+ *  order (first = bottom). */
+export interface StudioLayer {
+  /** Stable per-template id, doubles as the export filename suffix. */
+  id: string;
+  /** Human label shown in the editor's layers panel. */
+  name: string;
+  /** When set, this layer renders the given copy field — the editor uses
+   *  it to show "editable text" affordances in the layers panel. */
+  copyField?: keyof TemplateCopy;
+  node: ReactNode;
+}
+
+/** Route external image URLs through the admin-only proxy so html-to-image
+ *  can fetch them same-origin during PNG export (the upstream CDNs don't
+ *  all send CORS headers). Relative URLs pass through untouched. */
+export function proxied(url: string): string;
+export function proxied(url: string | null): string | null;
+export function proxied(url: string | null): string | null {
+  if (!url) return null;
+  if (url.startsWith("/")) return url;
+  return `/api/admin/social-studio/proxy-image?url=${encodeURIComponent(url)}`;
+}
 
 export interface SpotlightSubject {
   kind: "spotlight";
@@ -24,7 +51,22 @@ export interface MetaArchetypeSubject {
   id: string;
   name: string;
   representationPct: number;
+  totalEntries: number;
   iconUrl: string | null;
+  imageUrl: string | null;
+  accentColor: string;
+}
+
+export interface CardSpotlightSubject {
+  kind: "card_spotlight";
+  id: string;
+  name: string;
+  setName: string;
+  number: string;
+  rarity: string | null;
+  artist: string | null;
+  types: string[];
+  marketPrice: number | null;
   imageUrl: string | null;
   accentColor: string;
 }
@@ -70,6 +112,7 @@ export interface FeaturedMatchSubject {
 export type TemplateSubject =
   | SpotlightSubject
   | MetaArchetypeSubject
+  | CardSpotlightSubject
   | FeaturedDeckSubject
   | FeaturedMatchSubject;
 
@@ -84,7 +127,16 @@ export interface TemplateCopy {
 
 export const TEMPLATE_LABELS: Record<TemplateKind, string> = {
   spotlight: "Trainer Spotlight",
-  meta_archetype: "Meta Archetype",
+  meta_archetype: "Meta Archetype Spotlight",
+  card_spotlight: "Card Spotlight",
   featured_deck: "Featured Deck",
   featured_match: "Featured Match",
+};
+
+export const TEMPLATE_DESCRIPTIONS: Record<TemplateKind, string> = {
+  spotlight: "Published trainer spotlights — avatar, headline, and partner Pokémon.",
+  meta_archetype: "Top archetypes from the live meta, with their share as the hero stat.",
+  card_spotlight: "Chase cards from the Standard catalog, ranked by market price.",
+  featured_deck: "Most-liked public decks from the community library.",
+  featured_match: "Verified TCG Live battles with the head-to-head card stack.",
 };

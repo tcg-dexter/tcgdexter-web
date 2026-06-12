@@ -8,6 +8,7 @@ import {
   cardTypesForSetIdNumber,
 } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
+import { metaArchetypeCard } from "@/lib/metaArchetypeCards";
 import HomeClient, { type CurrentSpotlight, type RecentMatch } from "./HomeClient";
 import type { TrainerSpotlightRow } from "./spotlight/types";
 
@@ -55,6 +56,32 @@ type AnalysisCard = {
   section: "pokemon" | "trainer" | "energy";
 };
 
+/**
+ * Manually-entered prize totals for a match: single games via
+ * prizes_taken_player/_opponent, or best-of-3 sets via summing game_prizes.
+ * Returns null when neither was recorded (battle-log matches derive prizes
+ * from match_actions instead — see playerPrizesByMatch/opponentPrizesByMatch).
+ */
+function manualPrizeTotals(m: {
+  prizes_taken_player: number | null;
+  prizes_taken_opponent: number | null;
+  game_prizes: { p: number | null; o: number | null }[] | null;
+}): { player: number; opponent: number } | null {
+  if (Array.isArray(m.game_prizes) && m.game_prizes.length) {
+    let player = 0;
+    let opponent = 0;
+    for (const g of m.game_prizes) {
+      player += g?.p ?? 0;
+      opponent += g?.o ?? 0;
+    }
+    return { player, opponent };
+  }
+  if (m.prizes_taken_player != null && m.prizes_taken_opponent != null) {
+    return { player: m.prizes_taken_player, opponent: m.prizes_taken_opponent };
+  }
+  return null;
+}
+
 async function loadRecentMatches(): Promise<RecentMatch[]> {
   try {
     const admin = createAdminClient();
@@ -81,17 +108,23 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
     const pubDecks = deckRows.filter((d) => pubProfileIds.has(d.user_id as string));
     if (!pubDecks.length) return [];
 
-    // Step 2: 6 most recent matches on those decks. Restrict to matches
-    // with a parsed battle log (source = 'tcg_live_log') — the /battles
-    // detail page only has a story to tell when there's a log to render,
-    // so non-log matches aren't promote-worthy on the home feed.
+    // Step 2: most recent matches on those decks. Surface matches with a
+    // parsed battle log (source = 'tcg_live_log') — the /battles detail
+    // page has a story to tell when there's a log to render — or any match
+    // (manual single games via prizes_taken_player/_opponent, or best-of-3
+    // sets via game_prizes) where the player recorded prize counts. For the
+    // latter, an opponent image can only be shown once we also know a
+    // recognized meta archetype (checked below), so over-fetch candidates
+    // and trim to 6 after that filter.
     const { data: matchRows, error: matchErr } = await admin
       .from("matches")
-      .select("id, result, opponent_archetype, opponent_handle, created_at, saved_deck_id")
-      .eq("source", "tcg_live_log")
+      .select("id, result, opponent_archetype, opponent_handle, created_at, saved_deck_id, source, prizes_taken_player, prizes_taken_opponent, game_prizes")
+      .or(
+        "source.eq.tcg_live_log,and(prizes_taken_player.not.is.null,prizes_taken_opponent.not.is.null),game_prizes.not.is.null"
+      )
       .in("saved_deck_id", pubDecks.map((d) => d.id))
       .order("created_at", { ascending: false })
-      .limit(6);
+      .limit(24);
 
     if (matchErr || !matchRows?.length) return [];
 
@@ -208,7 +241,7 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
       if (primary) topAttackerByMatch.set(matchId, primary.card.name);
     });
 
-    return matchRows.flatMap((m) => {
+    const results = matchRows.flatMap((m) => {
       const deck = deckById.get(m.saved_deck_id as string);
       const profile = deck ? profileById.get(deck.user_id as string) : null;
       if (!deck || !profile?.username) return [];
@@ -220,17 +253,42 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
       const deckImageUrl: string | null =
         coverUrl ?? (analysis?.cards ? primaryCardImageUrl(analysis.cards) : null);
 
-      // Derive opponent image from top attacker name (battle log matches only)
-      const topAttacker = topAttackerByMatch.get(m.id as string) ?? null;
-      const opponentImageUrl = topAttacker ? cardImageUrlForName(topAttacker) : null;
-
       // Accent colors mirror the battle banner: typeColor() of each side's
       // primary Pokémon. Falls back to Colorless when types aren't resolvable.
       const playerPrimary = analysis?.cards ? primaryPokemonCard(analysis.cards) : null;
       const playerColor = typeColor(playerPrimary?.types);
-      const opponentColor = typeColor(
-        topAttacker ? cardTypesForName(topAttacker) : undefined,
-      );
+
+      const topAttacker = topAttackerByMatch.get(m.id as string) ?? null;
+      let opponentImageUrl: string | null;
+      let opponentColor: string;
+
+      if (m.source === "tcg_live_log") {
+        // Derive opponent image from top attacker name (battle log matches)
+        opponentImageUrl = topAttacker ? cardImageUrlForName(topAttacker) : null;
+        opponentColor = typeColor(
+          topAttacker ? cardTypesForName(topAttacker) : undefined,
+        );
+      } else {
+        // Manual / prize-only matches have no battle-log actions to derive an
+        // opponent card from, so they additionally require a recognized
+        // top-30 meta archetype with a resolvable primary card — anything
+        // else, skip the match rather than show a blank opponent slot.
+        const archetypeCard = m.opponent_archetype
+          ? metaArchetypeCard(m.opponent_archetype as string)
+          : null;
+        if (!archetypeCard) return [];
+        opponentImageUrl = archetypeCard.imageUrl;
+        opponentColor = typeColor(archetypeCard.types);
+      }
+
+      // Prefer prizes derived from parsed battle-log actions; fall back to
+      // the manually-entered totals (single match or summed BO3 games) so
+      // manual matches don't show a misleading 0-0.
+      const manualPrizes = manualPrizeTotals({
+        prizes_taken_player: m.prizes_taken_player as number | null,
+        prizes_taken_opponent: m.prizes_taken_opponent as number | null,
+        game_prizes: m.game_prizes as { p: number | null; o: number | null }[] | null,
+      });
 
       return [{
         id: m.id as string,
@@ -246,10 +304,12 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
         opponentAttackerName: topAttacker,
         playerColor,
         opponentColor,
-        playerPrizes: playerPrizesByMatch.get(m.id as string) ?? 0,
-        opponentPrizes: opponentPrizesByMatch.get(m.id as string) ?? 0,
+        playerPrizes: playerPrizesByMatch.get(m.id as string) ?? manualPrizes?.player ?? 0,
+        opponentPrizes: opponentPrizesByMatch.get(m.id as string) ?? manualPrizes?.opponent ?? 0,
       }];
     });
+
+    return results.slice(0, 6);
   } catch (err) {
     console.error("[home/recent-matches] failed:", err);
     return [];

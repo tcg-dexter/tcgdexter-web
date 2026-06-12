@@ -3,7 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 
 /**
  * DELETE /api/saved-decks/[id]
- * PATCH  /api/saved-decks/[id]   body: { name?: string, notes?: string }
+ * PATCH  /api/saved-decks/[id]
+ *   body: { name?, notes?, is_public?, cover_image_url?, deck_list?, analysis? }
+ *   When deck_list changes the caller also sends a freshly-computed analysis
+ *   (from POST /api/analyze) so the stored snapshot stays in sync.
  *
  * Both require authentication. RLS on public.saved_decks ensures users
  * can only modify their own rows.
@@ -63,6 +66,8 @@ export async function PATCH(
     notes?: string;
     is_public?: boolean;
     cover_image_url?: string | null;
+    deck_list?: string;
+    analysis?: unknown;
   };
   try {
     body = await req.json();
@@ -71,7 +76,7 @@ export async function PATCH(
   }
 
   // Build the update payload — only include provided fields
-  const updates: Record<string, string | boolean | null> = {};
+  const updates: Record<string, unknown> = {};
 
   if (typeof body.name === "string") {
     const name = body.name.trim();
@@ -109,6 +114,22 @@ export async function PATCH(
         { error: "cover_image_url must be a pokemontcg.io URL or null" },
         { status: 400 }
       );
+    }
+  }
+
+  // Deck list: replacing it also replaces the stored analysis snapshot, which
+  // the client recomputes via POST /api/analyze and sends alongside.
+  if (typeof body.deck_list === "string") {
+    const dl = body.deck_list.trim();
+    if (!dl) {
+      return NextResponse.json(
+        { error: "deck_list cannot be empty" },
+        { status: 400 }
+      );
+    }
+    updates.deck_list = dl;
+    if ("analysis" in body) {
+      updates.analysis = body.analysis ?? null;
     }
   }
 
