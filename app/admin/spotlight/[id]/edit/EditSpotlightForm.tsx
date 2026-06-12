@@ -7,6 +7,7 @@ import type {
   SpotlightCardRef,
   SpotlightQA,
 } from "@/app/spotlight/types";
+import CardSearchPicker from "./CardSearchPicker";
 
 interface DeckOption {
   id: string;
@@ -122,25 +123,21 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
       {/* Favorite cards */}
       <section className="rounded-2xl bg-white border border-black/8 shadow-sm p-5 space-y-4">
         <h3 className="text-sm font-semibold text-text-primary">Favorite cards</h3>
-        <CardEditor
+        <CardSearchPicker
           label="Favorite Pokémon"
           value={favoritePokemon}
           onChange={setFavoritePokemon}
         />
-        <CardEditor
+        <CardSearchPicker
           label="Favorite in Collection"
           value={favoriteCollection}
           onChange={setFavoriteCollection}
         />
-        <CardEditor
+        <CardSearchPicker
           label="Favorite to Play"
           value={favoriteFormat}
           onChange={setFavoriteFormat}
         />
-        <p className="text-xs text-text-muted">
-          Use the card&apos;s set ID (e.g. <code>sv9</code>) and number (e.g.{" "}
-          <code>175</code>) as listed on pokemontcg.io.
-        </p>
       </section>
 
       {/* Featured decks */}
@@ -277,43 +274,5 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       </span>
       {children}
     </label>
-  );
-}
-
-function CardEditor({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: SpotlightCardRef;
-  onChange: (v: SpotlightCardRef) => void;
-}) {
-  return (
-    <div>
-      <div className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-1">
-        {label}
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        <input
-          value={value.set_id}
-          onChange={(e) => onChange({ ...value, set_id: e.target.value })}
-          placeholder="set_id"
-          className="input"
-        />
-        <input
-          value={value.number}
-          onChange={(e) => onChange({ ...value, number: e.target.value })}
-          placeholder="number"
-          className="input"
-        />
-        <input
-          value={value.name}
-          onChange={(e) => onChange({ ...value, name: e.target.value })}
-          placeholder="name"
-          className="input"
-        />
-      </div>
-    </div>
   );
 }
