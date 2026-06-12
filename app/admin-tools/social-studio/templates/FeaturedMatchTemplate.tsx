@@ -1,6 +1,6 @@
 import { shade } from "@/lib/color";
 import LayerCanvas from "./LayerCanvas";
-import { Eyebrow, SECTION_LABEL_STYLE, STAT_DIGIT_STYLE } from "./chrome";
+import { SECTION_LABEL_STYLE, STAT_DIGIT_STYLE } from "./chrome";
 import {
   CANVAS_H,
   CANVAS_W,
@@ -118,14 +118,9 @@ export function buildFeaturedMatchLayers(
       ),
     },
     {
-      id: "eyebrow",
-      name: "Eyebrow",
-      copyField: "eyebrow",
-      node: <Eyebrow text={copy.eyebrow} top={SAFE_TOP + 15} />,
-    },
-    {
-      // "TCG LIVE" subtitle — single big label below the eyebrow,
-      // serves as the framing for both handles below.
+      // "TCG LIVE" subtitle — top-most label, sits in the space the
+      // eyebrow used to occupy, with extra room below before the
+      // handle row.
       id: "platform-label",
       name: "TCG Live Label",
       node: (
@@ -134,7 +129,7 @@ export function buildFeaturedMatchLayers(
             ...SECTION_LABEL_STYLE,
             fontSize: 56,
             position: "absolute",
-            top: STACK_TOP - 238,
+            top: SAFE_TOP + 55,
             left: 0,
             right: 0,
           }}
@@ -150,7 +145,7 @@ export function buildFeaturedMatchLayers(
         <div
           style={{
             position: "absolute",
-            top: STACK_TOP - 130,
+            top: STACK_TOP - 121,
             left: 0,
             right: 0,
             display: "flex",

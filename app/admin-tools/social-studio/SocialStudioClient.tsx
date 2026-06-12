@@ -69,7 +69,7 @@ function defaultCopy(subject: TemplateSubject): TemplateCopy {
       };
     case "featured_match":
       return {
-        eyebrow: "Featured Match",
+        eyebrow: "",
         headline: "",
         subhead: "",
         cta: "",
@@ -79,14 +79,14 @@ function defaultCopy(subject: TemplateSubject): TemplateCopy {
 
 /** Which copy fields the inspector should expose for a given template.
  *  Templates that don't render a field on-canvas hide it rather than
- *  letting the user edit dead values (Featured Match only shows the
- *  eyebrow; Meta Archetype renders its stat block instead of a subhead). */
+ *  letting the user edit dead values (Featured Match renders no editable
+ *  copy; Meta Archetype renders its stat block instead of a subhead). */
 const COPY_FIELDS_BY_KIND: Record<TemplateKind, (keyof TemplateCopy)[]> = {
   spotlight: ["eyebrow", "headline", "subhead", "cta"],
   meta_archetype: ["eyebrow", "headline", "cta"],
   card_spotlight: ["eyebrow", "headline", "subhead", "cta"],
   featured_deck: ["eyebrow", "headline", "subhead", "cta"],
-  featured_match: ["eyebrow"],
+  featured_match: [],
 };
 
 /** Single dispatch point: every template is a layer factory. */
