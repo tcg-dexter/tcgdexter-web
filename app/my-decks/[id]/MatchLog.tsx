@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import MatchForm, { type MatchFormData } from "@/app/components/MatchForm";
 import MatchEntry from "@/app/components/MatchEntry";
+import { WLCircles } from "@/app/components/DeckPostCard";
 import type { GamePrize } from "@/lib/bo3";
 
 /* ─── Types ──────────────────────────────────────────────────── */
@@ -192,17 +193,8 @@ export default function MatchLog({
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-semibold text-text-primary">Match Log</h2>
           {total > 0 && (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="font-semibold text-green-700">{wins}W</span>
-              <span className="text-text-muted">-</span>
-              <span className="font-semibold text-accent">{losses}L</span>
-              {draws > 0 && (
-                <>
-                  <span className="text-text-muted">-</span>
-                  <span className="font-semibold text-stone-600">{draws}D</span>
-                </>
-              )}
-
+            <div className="flex items-center gap-2">
+              <WLCircles wl={{ w: wins, l: losses, d: draws }} />
               {streak >= 3 && streakType === "win" && (
                 <span className="text-xs font-bold text-green-600 ml-1">
                   {streak}W streak

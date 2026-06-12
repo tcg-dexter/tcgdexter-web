@@ -79,7 +79,7 @@ function TypeCounts({ counts, size = "sm" }: { counts: CardCounts; size?: "sm" |
   );
 }
 
-function WLCircles({ wl }: { wl: WinLoss }) {
+export function WLCircles({ wl }: { wl: WinLoss }) {
   if (wl.w + wl.l + wl.d === 0) return null;
   return (
     <div className="flex items-center gap-2">
@@ -96,6 +96,14 @@ function WLCircles({ wl }: { wl: WinLoss }) {
         <span className="text-[11px] font-extrabold text-white">L</span>
       </div>
       <span className="text-[19px] font-bold tabular-nums text-text-primary">{wl.l}</span>
+      {wl.d > 0 && (
+        <>
+          <div className="w-6 h-6 rounded-full bg-white shadow-[inset_0_0_0_1px_black] shrink-0 flex items-center justify-center">
+            <span className="text-[11px] font-extrabold text-text-primary">D</span>
+          </div>
+          <span className="text-[19px] font-bold tabular-nums text-text-primary">{wl.d}</span>
+        </>
+      )}
     </div>
   );
 }
