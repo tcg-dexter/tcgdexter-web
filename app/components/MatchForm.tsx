@@ -368,9 +368,22 @@ export default function MatchForm({
             </div>
           )}
 
+          {/* Prizes title (top-right) + You / Opp column headers over the inputs */}
+          <div className="mb-1 flex items-center">
+            <div className="ml-auto flex flex-col gap-0.5">
+              <span className="text-center text-[10px] font-medium uppercase tracking-wide text-text-muted">
+                Prizes
+              </span>
+              <div className="flex gap-1">
+                <span className="w-9 text-center text-[10px] text-text-muted">You</span>
+                <span className="w-9 text-center text-[10px] text-text-muted">Opp</span>
+              </div>
+            </div>
+          </div>
+
           <div className="flex flex-col gap-1.5">
             {[0, 1, 2].map((i) => {
-              // Game 3 is only meaningful once the first two are split 1-1.
+              // Match 3 is only meaningful once the first two are split 1-1.
               const g3Disabled =
                 i === 2 && !(games[0] && games[1] && games[0] !== games[1]);
               return (
@@ -380,8 +393,8 @@ export default function MatchForm({
                     g3Disabled ? "opacity-40" : ""
                   }`}
                 >
-                  <span className="w-7 flex-shrink-0 text-xs text-text-muted">
-                    G{i + 1}
+                  <span className="w-12 flex-shrink-0 whitespace-nowrap text-xs text-text-muted">
+                    Match {i + 1}
                   </span>
                   {(["W", "L"] as const).map((letter) => {
                     const selected = games[i] === letter;
@@ -392,7 +405,7 @@ export default function MatchForm({
                         type="button"
                         disabled={g3Disabled}
                         onClick={() => setGame(i, letter)}
-                        aria-label={`Game ${i + 1} ${letter === "W" ? "win" : "loss"}`}
+                        aria-label={`Match ${i + 1} ${letter === "W" ? "win" : "loss"}`}
                         className={`w-9 rounded-full py-1.5 text-xs font-bold transition-all disabled:cursor-not-allowed ${
                           selected
                             ? `${s.bg} ${s.text}`
@@ -403,7 +416,7 @@ export default function MatchForm({
                       </button>
                     );
                   })}
-                  {/* Per-game prizes — you – opponent */}
+                  {/* Per-match prizes — aligned under the You / Opp headers */}
                   <div className="ml-auto flex items-center gap-1">
                     <input
                       type="number"
@@ -413,11 +426,9 @@ export default function MatchForm({
                       disabled={g3Disabled}
                       value={gamePrizes[i].p}
                       onChange={(e) => setGamePrize(i, "p", e.target.value)}
-                      placeholder="–"
-                      aria-label={`Game ${i + 1} your prizes`}
+                      aria-label={`Match ${i + 1} your prizes`}
                       className="w-9 rounded-md bg-white px-1 py-1 text-center text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-xs"
                     />
-                    <span className="text-xs text-text-muted">–</span>
                     <input
                       type="number"
                       inputMode="numeric"
@@ -426,8 +437,7 @@ export default function MatchForm({
                       disabled={g3Disabled}
                       value={gamePrizes[i].o}
                       onChange={(e) => setGamePrize(i, "o", e.target.value)}
-                      placeholder="–"
-                      aria-label={`Game ${i + 1} opponent prizes`}
+                      aria-label={`Match ${i + 1} opponent prizes`}
                       className="w-9 rounded-md bg-white px-1 py-1 text-center text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-xs"
                     />
                   </div>
@@ -435,9 +445,6 @@ export default function MatchForm({
               );
             })}
           </div>
-          <p className="mt-1 text-right text-[10px] text-text-muted">
-            prizes&nbsp;·&nbsp;you&nbsp;–&nbsp;opp
-          </p>
 
           {/* Live derived summary — the "WW" payoff */}
           <div className="mt-2 flex items-center gap-2 text-xs">
@@ -464,35 +471,35 @@ export default function MatchForm({
         </div>
       )}
 
-      {/* Prizes taken — single matches only; Best of 3 records prizes per game */}
+      {/* Prizes taken — single matches only; Best of 3 records prizes per game.
+          You / Opp cells are capsules styled like the Win/Loss/Draw buttons. */}
       {!bestOf3 && (
-        <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="text-xs font-medium text-text-muted">Prizes taken</span>
-          <div className="flex items-center gap-1.5">
-            <input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={6}
-              value={playerPrizes}
-              onChange={(e) => setPlayerPrizes(e.target.value)}
-              placeholder="You"
-              aria-label="Your prizes taken"
-              className="w-16 rounded-lg bg-bg px-2 py-2 text-center text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
-            />
-            <span className="text-sm text-text-muted">–</span>
-            <input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={6}
-              value={opponentPrizes}
-              onChange={(e) => setOpponentPrizes(e.target.value)}
-              placeholder="Opp"
-              aria-label="Opponent prizes taken"
-              className="w-16 rounded-lg bg-bg px-2 py-2 text-center text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
-            />
-          </div>
+        <div className="mb-3 flex items-center gap-2">
+          <span className="flex-shrink-0 text-xs font-medium text-text-muted">
+            Prizes taken
+          </span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={6}
+            value={playerPrizes}
+            onChange={(e) => setPlayerPrizes(e.target.value)}
+            placeholder="You"
+            aria-label="Your prizes taken"
+            className="w-20 rounded-full bg-bg py-2.5 text-center text-sm font-bold text-text-primary placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 [font-size:16px] sm:text-sm"
+          />
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={6}
+            value={opponentPrizes}
+            onChange={(e) => setOpponentPrizes(e.target.value)}
+            placeholder="Opp"
+            aria-label="Opponent prizes taken"
+            className="w-20 rounded-full bg-bg py-2.5 text-center text-sm font-bold text-text-primary placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 [font-size:16px] sm:text-sm"
+          />
         </div>
       )}
 
