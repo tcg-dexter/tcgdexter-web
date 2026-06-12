@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { parsePrizeCount } from "@/lib/matchPrizes";
 
 /**
  * POST /api/matches
@@ -13,7 +14,9 @@ import { createClient } from "@/lib/supabase/server";
  *   opponent_archetype?: string,
  *   opponent_deck_list?: string,
  *   notes?: string,
- *   played_at?: string (ISO timestamp, defaults to now)
+ *   played_at?: string (ISO timestamp, defaults to now),
+ *   prizes_taken_player?: number (0-6),
+ *   prizes_taken_opponent?: number (0-6)
  * }
  */
 export async function POST(req: Request) {
@@ -38,6 +41,8 @@ export async function POST(req: Request) {
     opponent_deck_list?: string;
     notes?: string;
     played_at?: string;
+    prizes_taken_player?: number | null;
+    prizes_taken_opponent?: number | null;
   };
   try {
     body = await req.json();
@@ -54,6 +59,15 @@ export async function POST(req: Request) {
   if (!result || !["win", "loss", "draw"].includes(result)) {
     return NextResponse.json(
       { error: "result must be win, loss, or draw." },
+      { status: 400 }
+    );
+  }
+
+  const prizesPlayer = parsePrizeCount(body.prizes_taken_player);
+  const prizesOpponent = parsePrizeCount(body.prizes_taken_opponent);
+  if (!prizesPlayer.ok || !prizesOpponent.ok) {
+    return NextResponse.json(
+      { error: "Prize counts must be integers between 0 and 6." },
       { status: 400 }
     );
   }
@@ -82,6 +96,8 @@ export async function POST(req: Request) {
       notes: notes?.trim() || null,
       // played_at is optional — null means the user chose not to record a date.
       played_at: played_at || null,
+      prizes_taken_player: prizesPlayer.value,
+      prizes_taken_opponent: prizesOpponent.value,
     })
     .select("id, result, opponent_archetype, played_at, created_at")
     .single();

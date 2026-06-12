@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { parsePrizeCount } from "@/lib/matchPrizes";
 
 /**
  * PATCH /api/matches/[id]
  *
  * Edits a match record. RLS enforces owner-only access.
  * Accepts any combination of: result, opponent_name, opponent_archetype,
- * opponent_deck_list, notes, played_at.
+ * opponent_deck_list, notes, played_at, prizes_taken_player,
+ * prizes_taken_opponent.
  */
 export async function PATCH(
   req: Request,
@@ -30,6 +32,8 @@ export async function PATCH(
     opponent_deck_list?: string | null;
     notes?: string | null;
     played_at?: string | null;
+    prizes_taken_player?: number | null;
+    prizes_taken_opponent?: number | null;
   };
   try {
     body = await req.json();
@@ -53,6 +57,27 @@ export async function PATCH(
   if (body.opponent_deck_list !== undefined) updates.opponent_deck_list = body.opponent_deck_list?.trim() || null;
   if (body.notes !== undefined) updates.notes = body.notes?.trim() || null;
   if (body.played_at !== undefined) updates.played_at = body.played_at || null;
+
+  if (body.prizes_taken_player !== undefined) {
+    const parsed = parsePrizeCount(body.prizes_taken_player);
+    if (!parsed.ok) {
+      return NextResponse.json(
+        { error: "prizes_taken_player must be an integer between 0 and 6." },
+        { status: 400 }
+      );
+    }
+    updates.prizes_taken_player = parsed.value;
+  }
+  if (body.prizes_taken_opponent !== undefined) {
+    const parsed = parsePrizeCount(body.prizes_taken_opponent);
+    if (!parsed.ok) {
+      return NextResponse.json(
+        { error: "prizes_taken_opponent must be an integer between 0 and 6." },
+        { status: 400 }
+      );
+    }
+    updates.prizes_taken_opponent = parsed.value;
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "Nothing to update." }, { status: 400 });

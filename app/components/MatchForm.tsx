@@ -35,6 +35,15 @@ export interface MatchFormData {
   opponent_deck_list: string | null;
   notes: string | null;
   played_at: string | null;
+  prizes_taken_player: number | null;
+  prizes_taken_opponent: number | null;
+}
+
+/** Clamp a prize-count input to the 0–6 range a TCG match can produce. */
+function clampPrizes(val: string): number {
+  const n = parseInt(val, 10);
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(6, Math.max(0, n));
 }
 
 interface Props {
@@ -82,6 +91,15 @@ export default function MatchForm({
     }
     return new Date().toISOString().slice(0, 10);
   });
+  const [showPrizesField, setShowPrizesField] = useState(
+    initial?.prizes_taken_player != null && initial?.prizes_taken_opponent != null
+  );
+  const [prizesPlayer, setPrizesPlayer] = useState(
+    initial?.prizes_taken_player != null ? String(initial.prizes_taken_player) : "0"
+  );
+  const [prizesOpponent, setPrizesOpponent] = useState(
+    initial?.prizes_taken_opponent != null ? String(initial.prizes_taken_opponent) : "0"
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -138,6 +156,8 @@ export default function MatchForm({
         played_at: showDateField
           ? new Date(matchDate + "T12:00:00").toISOString()
           : null,
+        prizes_taken_player: showPrizesField ? clampPrizes(prizesPlayer) : null,
+        prizes_taken_opponent: showPrizesField ? clampPrizes(prizesOpponent) : null,
       });
     } catch (err) {
       setError(
@@ -285,6 +305,50 @@ export default function MatchForm({
               type="button"
               onClick={() => setShowDateField(false)}
               className="text-xs text-text-muted hover:text-text-secondary transition-colors"
+            >
+              Remove
+            </button>
+          </div>
+        )}
+
+        {!showPrizesField ? (
+          <button
+            type="button"
+            onClick={() => setShowPrizesField(true)}
+            className="text-xs text-accent hover:text-accent-light transition-colors"
+          >
+            + Add prize count
+          </button>
+        ) : (
+          <div className="flex items-end gap-2 w-full">
+            <label className="flex-1">
+              <span className="block mb-1 text-xs text-text-muted">Prizes you took</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={6}
+                value={prizesPlayer}
+                onChange={(e) => setPrizesPlayer(e.target.value)}
+                className="w-full rounded-lg bg-bg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+              />
+            </label>
+            <label className="flex-1">
+              <span className="block mb-1 text-xs text-text-muted">Prizes opponent took</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={6}
+                value={prizesOpponent}
+                onChange={(e) => setPrizesOpponent(e.target.value)}
+                className="w-full rounded-lg bg-bg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowPrizesField(false)}
+              className="text-xs text-text-muted hover:text-text-secondary transition-colors pb-2"
             >
               Remove
             </button>
