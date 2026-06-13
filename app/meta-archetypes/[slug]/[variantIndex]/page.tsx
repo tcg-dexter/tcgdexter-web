@@ -165,7 +165,13 @@ export default async function MetaVariantPage({
 
   const credits = (
     <div className="flex flex-col items-center gap-0.5 text-center">
-      <span className="text-[17.5px] font-semibold bg-gradient-brand bg-clip-text text-transparent">
+      <span
+        className="text-[17.5px] font-semibold bg-clip-text text-transparent"
+        style={{
+          backgroundImage:
+            "linear-gradient(135deg, #F2A20C 0%, #D91E0D 50%, #A60D0D 100%)",
+        }}
+      >
         {creator}
       </span>
       {placeEvent && (
