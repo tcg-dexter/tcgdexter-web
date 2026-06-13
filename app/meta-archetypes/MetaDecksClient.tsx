@@ -117,7 +117,7 @@ export default function MetaDecksClient({ items }: Props) {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filtered.map((item) => (
+          {filtered.map((item, i) => (
             <MetaDeckCard
               key={item.id}
               id={item.id}
@@ -128,6 +128,7 @@ export default function MetaDecksClient({ items }: Props) {
               representation_pct={item.representation_pct}
               like_count={item.like_count}
               creators={item.creators}
+              index={i}
             />
           ))}
         </div>

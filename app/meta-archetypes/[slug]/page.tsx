@@ -293,7 +293,7 @@ export default async function MetaDeckDetailPage({
               Top Deck Lists
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {variantCards.map((v) => (
+              {variantCards.map((v, i) => (
                 <MetaVariantCard
                   key={v.id}
                   id={v.id}
@@ -311,6 +311,7 @@ export default async function MetaDeckDetailPage({
                   cardImageUrl={v.cardImageUrl}
                   counts={v.counts}
                   secondaryAvatars={v.secondaryAvatars}
+                  index={i}
                 />
               ))}
             </div>

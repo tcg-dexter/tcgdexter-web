@@ -7,6 +7,7 @@ import AvatarStack, { type AvatarStackItem } from "./AvatarStack";
 import { deckAvatarInfo } from "@/lib/primaryCardImage";
 import { metaTopPokemonByCount } from "@/lib/metaPrimaryCard";
 import { shade } from "@/lib/color";
+import { useFadeIn } from "@/lib/useFadeIn";
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
@@ -122,6 +123,8 @@ export interface MetaDeckCardProps {
   representation_pct: number;
   like_count?: number;
   creators?: string[];
+  /** Position in the grid — drives the entrance-animation stagger delay. */
+  index?: number;
 }
 
 export function MetaDeckCard({
@@ -133,13 +136,17 @@ export function MetaDeckCard({
   representation_pct,
   like_count = 0,
   creators,
+  index,
 }: MetaDeckCardProps) {
   const creatorList = (creators && creators.length > 0 ? creators : ["Trainer"]).slice(0, 5);
   const href = `/meta-archetypes/${id}`;
   const accentBg = icon_bg ?? "#B0A89E";
   const accentDeep = shade(accentBg, -22);
   return (
-    <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+    <div
+      className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+      style={useFadeIn(index)}
+    >
       {/* Energy-type accent gradient — mirrors the recent-battles preview
           treatment (horizontal accent gradient at opacity-80) but uses the
           card's own type color + banner-deep stop, masked along the
@@ -248,6 +255,8 @@ export interface UserDeckCardProps {
   }>;
   /** Persisted cover override (null when auto-picked). */
   coverImageUrl?: string | null;
+  /** Position in the grid — drives the entrance-animation stagger delay. */
+  index?: number;
 }
 
 export function UserDeckCard({
@@ -263,6 +272,7 @@ export function UserDeckCard({
   iconBg,
   cards,
   coverImageUrl: initialCoverImageUrl,
+  index,
 }: UserDeckCardProps) {
   const name = initialName;
   const imageUrl = initialImageUrl ?? null;
@@ -300,7 +310,10 @@ export function UserDeckCard({
   }, [cards, coverImageUrl, iconUrl, iconBg]);
 
   return (
-    <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+    <div
+      className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+      style={useFadeIn(index)}
+    >
       {/* Header — deck name + 3-avatar stack (primary + top-2 by copy count). */}
       <div className="flex items-center gap-3 px-3.5 pt-3">
         <Link

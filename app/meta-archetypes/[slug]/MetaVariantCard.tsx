@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import DeckCardFooter from "@/app/components/DeckCardFooter";
 import AvatarStack, { type AvatarStackItem } from "@/app/components/AvatarStack";
 import type { MetaAvatar } from "@/lib/metaPrimaryCard";
+import { useFadeIn } from "@/lib/useFadeIn";
 
 interface CardCounts {
   pokemon: number;
@@ -51,6 +54,8 @@ interface Props {
    * limitless decklist URL once `listId` is preserved by the scraper.)
    */
   href?: string;
+  /** Position in the grid — drives the entrance-animation stagger delay. */
+  index?: number;
 }
 
 function CardArt({ url, name }: { url?: string | null; name: string }) {
@@ -127,6 +132,7 @@ export default function MetaVariantCard({
   counts,
   secondaryAvatars,
   href,
+  index,
 }: Props) {
   const fallbackName = annotation
     ? `${archetypeName} ${annotation}`
@@ -198,7 +204,10 @@ export default function MetaVariantCard({
   );
 
   return (
-    <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+    <div
+      className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+      style={useFadeIn(index)}
+    >
       <div className="flex items-stretch gap-3 px-3.5 pt-3">
         {href ? (
           <Link href={href} className="flex-1 min-w-0 block">

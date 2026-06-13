@@ -140,8 +140,8 @@ export default function MyDecksClient({ decks }: Props) {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filtered.map((deck) => (
-            <UserDeckCard key={deck.id} {...deck} />
+          {filtered.map((deck, i) => (
+            <UserDeckCard key={deck.id} {...deck} index={i} />
           ))}
         </div>
       )}
