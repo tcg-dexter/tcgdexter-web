@@ -28,25 +28,21 @@ export const modules: Module[] = [
     description: "Cards, turns, and how a game of Pokémon TCG is won.",
     order: 1,
   },
-  {
-    id: "first-deck",
-    title: "Your First Deck",
-    description: "Profile and save your first deck on Dexter.",
-    order: 2,
-  },
 ];
 
+// "first-deck" module lessons are kept here so existing routes
+// (/learn/reading-a-deck-list, etc.) and the post-quiz CTA still work, but
+// the module itself is no longer presented on the /learn index.
 export const lessons: Lesson[] = [
-  { slug: "what-is-pokemon-tcg",     title: "Say Hello to Pokémon TCG",        module: "basics",     order: 1,  estimatedMinutes: 3 },
-  { slug: "anatomy-pokemon-card",    title: "Anatomy of a Pokémon card",       module: "basics",     order: 2,  estimatedMinutes: 4 },
-  { slug: "anatomy-trainer-card",    title: "Anatomy of a Trainer card",       module: "basics",     order: 3,  estimatedMinutes: 3 },
-  { slug: "anatomy-energy-card",     title: "Anatomy of an Energy card",       module: "basics",     order: 4,  estimatedMinutes: 3 },
-  { slug: "how-a-turn-works",        title: "How a turn works",                module: "basics",     order: 5,  estimatedMinutes: 4 },
-  { slug: "win-conditions",          title: "How you win",                     module: "basics",     order: 6,  estimatedMinutes: 2 },
-  { slug: "knockouts-prize-trading", title: "Knockout strategy",               module: "basics",     order: 7,  estimatedMinutes: 4 },
-  { slug: "reading-a-deck-list",     title: "Reading a deck list",             module: "first-deck", order: 8,  estimatedMinutes: 3 },
-  { slug: "profile-your-first-deck", title: "Profile your first deck",         module: "first-deck", order: 9,  estimatedMinutes: 3 },
-  { slug: "save-to-library",         title: "Save your deck and join the gym", module: "first-deck", order: 10, estimatedMinutes: 3 },
+  { slug: "what-is-pokemon-tcg",     title: "Say Hello to Pokémon TCG",        module: "basics",     order: 1, estimatedMinutes: 3 },
+  { slug: "anatomy-pokemon-card",    title: "Anatomy of a Pokémon card",       module: "basics",     order: 2, estimatedMinutes: 4 },
+  { slug: "anatomy-trainer-card",    title: "Anatomy of a Trainer card",       module: "basics",     order: 3, estimatedMinutes: 3 },
+  { slug: "anatomy-energy-card",     title: "Anatomy of an Energy card",       module: "basics",     order: 4, estimatedMinutes: 3 },
+  { slug: "how-a-turn-works",        title: "How a turn works",                module: "basics",     order: 5, estimatedMinutes: 4 },
+  { slug: "win-conditions",          title: "How to Win",                      module: "basics",     order: 6, estimatedMinutes: 6 },
+  { slug: "reading-a-deck-list",     title: "Reading a deck list",             module: "first-deck", order: 7, estimatedMinutes: 3 },
+  { slug: "profile-your-first-deck", title: "Profile your first deck",         module: "first-deck", order: 8, estimatedMinutes: 3 },
+  { slug: "save-to-library",         title: "Save your deck and join the gym", module: "first-deck", order: 9, estimatedMinutes: 3 },
 ];
 
 export function getLesson(slug: string): Lesson | undefined {
