@@ -253,6 +253,9 @@ export default function DeckDetailClient({
             <CopyDeckListButton deckList={deckList} />
           </div>
         }
+        // "Profile your own deck" only makes sense for an anonymous
+        // visitor — a signed-in user already has an account.
+        footerCta={isAuthenticated ? null : undefined}
       />
     );
   }
@@ -478,6 +481,9 @@ export default function DeckDetailClient({
       topSlot={
         <DeckNotes savedDeckId={savedDeckId} initialNotes={initialNotes} />
       }
+      // The owner is viewing their own saved deck — never show
+      // "Profile your own deck".
+      footerCta={null}
     />
   );
 }
