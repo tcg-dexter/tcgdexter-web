@@ -201,6 +201,13 @@ interface Props {
    */
   postOverviewSlot?: React.ReactNode;
   /**
+   * Content injected directly below the Pokémon/Trainer/Energy card-type
+   * breakdown strip and above the Save/Share button row. Used by the saved
+   * variant for the action button row (log match, public/private, QR,
+   * settings) plus the inline match log.
+   */
+  postStatsSlot?: React.ReactNode;
+  /**
    * Content injected directly below the Save/Share button row.
    * Used by /meta-archetypes/[slug] to place the Scouting Note after the CTAs.
    */
@@ -246,6 +253,7 @@ export default function DeckProfileView({
   topSlot,
   preOverviewSlot,
   postOverviewSlot,
+  postStatsSlot,
   postCtaSlot,
   shareUrl,
   headerSlot,
@@ -351,6 +359,9 @@ export default function DeckProfileView({
               { label: "Energy", value: String(result.sections.energy) },
             ]}
           />
+
+          {/* Post-stats slot: saved variant places action buttons + match log here */}
+          {postStatsSlot}
 
           {/* Save + Share buttons — sit right under the overview so the
               primary action is always within thumb reach. Layout depends

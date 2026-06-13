@@ -212,7 +212,7 @@ export default function MyDeckClient({
       titleAction={titleAction}
       subtitle={subtitle}
       shareUrl={shareUrl}
-      preOverviewSlot={
+      postStatsSlot={
         <>
           {/* Action buttons */}
           <div className="flex items-center gap-2">
