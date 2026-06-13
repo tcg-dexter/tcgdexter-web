@@ -6,19 +6,20 @@
  * and switched to raw ISO timestamps:
  *   "2026-05-24T00:30:00.000Z"
  *
- * Until the scraper restores a `tournament_name` field, we format ISO
- * strings to "May 24, 2026" so the UI doesn't surface a raw datetime.
- * Legacy human-readable strings pass through unchanged.
+ * Both shapes are normalized to "May 24, 2026" so the UI presents a
+ * single date format everywhere. Callers that need to surface the
+ * event name should split the legacy string on " - " before passing
+ * the date portion through here.
  */
 export function formatMetaVariantDate(raw: string | null | undefined): string | null {
   const value = (raw ?? "").trim();
   if (!value) return null;
-  const isoMatch = /^\d{4}-\d{2}-\d{2}T/.test(value);
-  if (!isoMatch) return value;
-  const d = new Date(value);
+  // Legacy "6th June 2026" — strip the ordinal suffix so Date() parses it.
+  const stripped = value.replace(/(\d+)(st|nd|rd|th)/i, "$1");
+  const d = new Date(stripped);
   if (Number.isNaN(d.getTime())) return value;
   return d.toLocaleDateString("en-US", {
-    month: "short",
+    month: "long",
     day: "numeric",
     year: "numeric",
   });

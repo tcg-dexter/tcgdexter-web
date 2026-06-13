@@ -194,6 +194,13 @@ interface Props {
    */
   preOverviewSlot?: React.ReactNode;
   /**
+   * Content injected directly below the Overview matrix and above the
+   * Pokémon/Trainer/Energy card-type breakdown strip. Used by the meta
+   * variant page to stack creator / place·event / date credits between
+   * the card grid and the card-type counts.
+   */
+  postOverviewSlot?: React.ReactNode;
+  /**
    * Content injected directly below the Save/Share button row.
    * Used by /meta-archetypes/[slug] to place the Scouting Note after the CTAs.
    */
@@ -238,6 +245,7 @@ export default function DeckProfileView({
   creator,
   topSlot,
   preOverviewSlot,
+  postOverviewSlot,
   postCtaSlot,
   shareUrl,
   headerSlot,
@@ -328,6 +336,9 @@ export default function DeckProfileView({
           {/* ── Overview — always at the top across all variants ── */}
           {overviewNode}
 
+          {/* ── Post-overview slot: meta variant credits (creator / event / date) ── */}
+          {postOverviewSlot}
+
           {/* Card type breakdown */}
           <StatsStrip
             stats={[
@@ -390,8 +401,11 @@ export default function DeckProfileView({
           {/* ── Top slot: deck notes (saved/public); stat cards + record (meta) ── */}
           {topSlot}
 
-          {/* Standard Format legality warning (only when not legal) */}
-          {!result.rotation.ready && (
+          {/* Standard Format legality warning (only when not legal).
+              Suppressed on meta archetype pages — those decks are sourced
+              from current Standard tournament results, so any rotation
+              banner there would be misleading. */}
+          {variant !== "meta" && !result.rotation.ready && (
             <div
               className={`${CARD_CLS} px-5 py-4`}
             >

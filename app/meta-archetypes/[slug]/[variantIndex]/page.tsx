@@ -5,6 +5,7 @@ import DeckProfileView from "@/app/components/DeckProfileView";
 import BackButton from "@/app/components/ui/BackButton";
 import { buildMetaAnalysis } from "@/lib/buildMetaAnalysis";
 import { formatMetaVariantDate } from "@/lib/formatMetaVariantDate";
+import { metaPrimaryCard, typeColor } from "@/lib/metaPrimaryCard";
 
 interface Archetype {
   id: string;
@@ -18,6 +19,7 @@ interface Archetype {
   losses: number;
   ties: number;
   last_updated: string;
+  icons?: string;
 }
 
 interface DeckCard {
@@ -133,22 +135,41 @@ export default async function MetaVariantPage({
     ? `${arch.name} ${arch.annotation}`
     : arch.name;
 
-  // Subtitle: "1st by Francisco Osorio · 16th May 2026 - Regional Campinas"
-  const subtitleParts: string[] = [];
-  if (placing) subtitleParts.push(`${placing} by ${creator}`);
-  else subtitleParts.push(`by ${creator}`);
-  const dateLabel = formatMetaVariantDate(variant.date);
-  if (dateLabel) subtitleParts.push(dateLabel);
-  const subtitleText = subtitleParts.join(" · ");
+  // Avatar — use the same primary-pokemon sprite + type-color background
+  // as the /meta-archetypes preview cells. `arch.icons` is a JSON array
+  // saved by the Limitless scraper (e.g. `["dragapult"]`); the first
+  // entry resolves to a sprite on the limitless CDN.
+  let iconList: string[] = [];
+  try {
+    iconList = arch.icons ? (JSON.parse(arch.icons) as string[]) : [];
+  } catch {
+    iconList = [];
+  }
+  const variantPrimary = metaPrimaryCard(cards, iconList);
+  const avatarSpriteUrl = iconList[0]
+    ? `https://r2.limitlesstcg.net/pokemon/gen9/${iconList[0]}.png`
+    : null;
+  const avatarBg = typeColor(variantPrimary?.types);
 
-  const initials = creator.trim().charAt(0).toUpperCase() || "T";
-  const AVATAR_PALETTE = [
-    "#3b6fd4", "#d43b9a", "#27ae60", "#e67e22", "#9b59b6", "#c0392b",
-  ];
-  const avatarBg = AVATAR_PALETTE[
-    creator.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) %
-      AVATAR_PALETTE.length
-  ];
+  // Credits stack — Limitless legacy `date` is "<date> - <event>"; newer
+  // scrapes are ISO with no event. Split when the dash is present so the
+  // place / event / date can render on their own lines.
+  const rawDate = (variant.date ?? "").trim();
+  const dashIdx = rawDate.indexOf(" - ");
+  const datePart = dashIdx >= 0 ? rawDate.slice(0, dashIdx) : rawDate;
+  const eventName = dashIdx >= 0 ? rawDate.slice(dashIdx + 3).trim() : null;
+  const dateLabel = formatMetaVariantDate(datePart || null);
+  const placeEvent = [placing ? `${placing} Place` : null, eventName]
+    .filter(Boolean)
+    .join(" - ");
+
+  const credits = (
+    <div className="flex flex-col gap-0.5 text-sm text-text-secondary">
+      <span className="font-semibold text-text-primary">{creator}</span>
+      {placeEvent && <span>{placeEvent}</span>}
+      {dateLabel && <span className="text-text-muted">{dateLabel}</span>}
+    </div>
+  );
 
   return (
     <DeckProfileView
@@ -164,17 +185,29 @@ export default async function MetaVariantPage({
         />
       }
       titleLeading={
-        <span
-          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full shrink-0 inline-flex items-center justify-center text-sm font-bold text-white"
-          style={{ background: avatarBg }}
-          aria-hidden
-        >
-          {initials}
-        </span>
+        avatarSpriteUrl ? (
+          <span
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full shrink-0 inline-flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
+            style={{ background: avatarBg }}
+            aria-hidden
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={avatarSpriteUrl}
+              alt=""
+              className="w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] object-contain"
+            />
+          </span>
+        ) : (
+          <span
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full shrink-0"
+            style={{ background: avatarBg }}
+            aria-hidden
+          />
+        )
       }
-      subtitle={
-        <span className="text-text-secondary">{subtitleText}</span>
-      }
+      subtitle={false}
+      postOverviewSlot={credits}
       footerCta={null}
     />
   );
