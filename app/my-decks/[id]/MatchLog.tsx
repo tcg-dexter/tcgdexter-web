@@ -98,20 +98,6 @@ export default function MatchLog({
   const total = wins + losses + draws;
   const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : "0.0";
 
-  // ── Streak ──────────────────────────────────────────────────
-  let streak = 0;
-  let streakType: "win" | "loss" | null = null;
-  for (const r of rows) {
-    if (streakType === null) {
-      streakType = r.result === "win" ? "win" : r.result === "loss" ? "loss" : null;
-      if (streakType) streak = 1;
-    } else if (r.result === streakType) {
-      streak++;
-    } else {
-      break;
-    }
-  }
-
   async function handleNewMatch(data: MatchFormData) {
     const res = await fetch("/api/matches", {
       method: "POST",
@@ -193,16 +179,7 @@ export default function MatchLog({
         <h2 className="text-lg font-semibold text-text-primary">Match Log</h2>
 
         <div className="flex items-center gap-3">
-          {total > 0 && (
-            <div className="flex items-center gap-2">
-              <WLCircles wl={{ w: wins, l: losses, d: draws }} />
-              {streak >= 3 && streakType === "win" && (
-                <span className="text-xs font-bold text-green-600 ml-1">
-                  {streak}W streak
-                </span>
-              )}
-            </div>
-          )}
+          {total > 0 && <WLCircles wl={{ w: wins, l: losses, d: draws }} />}
 
           {total > 3 && (
             <button
