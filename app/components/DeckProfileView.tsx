@@ -328,6 +328,15 @@ export default function DeckProfileView({
           {/* ── Overview — always at the top across all variants ── */}
           {overviewNode}
 
+          {/* Card type breakdown */}
+          <StatsStrip
+            stats={[
+              { label: "Pokémon", value: String(result.sections.pokemon) },
+              { label: "Trainer", value: String(result.sections.trainer) },
+              { label: "Energy", value: String(result.sections.energy) },
+            ]}
+          />
+
           {/* Save + Share buttons — sit right under the overview so the
               primary action is always within thumb reach. Layout depends
               on variant (saved hides Save). */}
@@ -464,17 +473,6 @@ export default function DeckProfileView({
               </ul>
             </div>
           )}
-
-          {/* Card type breakdown */}
-          <div className={`${CARD_CLS} p-5`}>
-            <StatsStrip
-              stats={[
-                { label: "Pok\u00e9mon", value: String(result.sections.pokemon) },
-                { label: "Trainer", value: String(result.sections.trainer) },
-                { label: "Energy", value: String(result.sections.energy) },
-              ]}
-            />
-          </div>
 
           {/* Shop Matches */}
           {result.shopMatches.length > 0 && (
