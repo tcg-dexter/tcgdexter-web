@@ -343,7 +343,10 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
           page={params.page}
           totalPages={totalPages}
           pageSize={params.pageSize}
-          onPage={(p) => setParams((cur) => ({ ...cur, page: p }))}
+          onPage={(p) => {
+            setParams((cur) => ({ ...cur, page: p }));
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
           onPageSize={(ps) => updateParams({ pageSize: ps })}
         />
       )}
