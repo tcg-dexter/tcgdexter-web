@@ -3,6 +3,7 @@ import DeckCardGridClient, {
 } from "@/app/components/DeckCardGridClient";
 import { cardImageLarge, cardImageSmall } from "@/lib/cardImages";
 import { getAllCards, type CardIndexEntry } from "@/lib/cardsIndex";
+import { normalizeForSearch } from "@/lib/searchNormalize";
 
 interface AnalysisCard {
   qty: number;
@@ -27,14 +28,30 @@ const ENERGY_SYMBOL_TO_TYPE: Record<string, string> = {
   Y: "Fairy", N: "Dragon", C: "Colorless",
 };
 
-/** "Basic {D} Energy" → "basic darkness energy" so the by-name index hits.
- *  Decklist exports sometimes emit the symbol form, but the card DB stores
- *  the spelled-out name. */
+const BASIC_ENERGY_TYPES = new Set([
+  "fire", "water", "grass", "lightning", "psychic",
+  "fighting", "darkness", "metal", "fairy",
+]);
+
+/** Map a decklist energy name to its "Basic {Type} Energy" index key so we
+ *  fall through to the SV-era reprints instead of the base1/BW legacy
+ *  entries. Handles two decklist conventions:
+ *    • Symbol form — "Basic {D} Energy" → "basic darkness energy"
+ *    • Bare form   — "Fire Energy"     → "basic fire energy"
+ *  Returns null for non-basic energies (e.g. "Telepathic Psychic Energy",
+ *  "Boomerang Energy"). */
 function normalizeBasicEnergyName(name: string): string | null {
-  const m = name.match(/^Basic\s+\{([A-Z])\}\s+Energy$/i);
-  if (!m) return null;
-  const type = ENERGY_SYMBOL_TO_TYPE[m[1].toUpperCase()];
-  return type ? `basic ${type.toLowerCase()} energy` : null;
+  const symbolMatch = name.match(/^Basic\s+\{([A-Z])\}\s+Energy$/i);
+  if (symbolMatch) {
+    const type = ENERGY_SYMBOL_TO_TYPE[symbolMatch[1].toUpperCase()];
+    return type ? `basic ${type.toLowerCase()} energy` : null;
+  }
+  const bareMatch = name.match(/^([A-Za-z]+)\s+Energy$/);
+  if (bareMatch) {
+    const type = bareMatch[1].toLowerCase();
+    if (BASIC_ENERGY_TYPES.has(type)) return `basic ${type} energy`;
+  }
+  return null;
 }
 
 const SECRET_RARITIES = new Set([
@@ -67,12 +84,17 @@ function resolveEntry(
   byNameIndex: Map<string, CardIndexEntry[]>,
   card: Pick<AnalysisCard, "name" | "number" | "setCode">,
 ): CardIndexEntry | null {
-  const lookupName =
-    byNameIndex.get(card.name.toLowerCase()) ??
-    (normalizeBasicEnergyName(card.name)
-      ? byNameIndex.get(normalizeBasicEnergyName(card.name)!)
-      : null);
-  if (!lookupName?.length) return null;
+  // Index keys are normalized via normalizeForSearch (strips diacritics);
+  // the lookup must do the same or names like "Poké Pad" and "Pokégear 3.0"
+  // miss the index entirely.
+  const primary = byNameIndex.get(normalizeForSearch(card.name)) ?? [];
+  const basicAlias = normalizeBasicEnergyName(card.name);
+  const aliased = basicAlias ? byNameIndex.get(basicAlias) ?? [] : [];
+  // Union both name buckets so "Fire Energy" decklists can resolve to a
+  // "Basic Fire Energy" reprint when no legacy printing matches the
+  // requested set/number (e.g. MEE, which we don't yet carry in the DB).
+  const lookupName = aliased.length ? [...primary, ...aliased] : primary;
+  if (!lookupName.length) return null;
   return (
     lookupName.find(
       (c) => c.ptcgoCode === card.setCode && c.number === card.number,
