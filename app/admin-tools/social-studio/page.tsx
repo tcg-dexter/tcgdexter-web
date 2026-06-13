@@ -6,6 +6,8 @@ import metaDecksRaw from "@/data/meta-decks.json";
 import cardDataRaw from "@/data/cards-standard.json";
 import { cardImageLarge } from "@/lib/cardImages";
 import { metaPrimaryCard, typeColor } from "@/lib/metaPrimaryCard";
+import { metaArchetypeCard } from "@/lib/metaArchetypeCards";
+import { manualPrizeTotals, type GamePrize } from "@/lib/bo3";
 import {
   cardImageUrlForName,
   cardTypesForName,
@@ -18,6 +20,7 @@ import type {
   CardSpotlightSubject,
   FeaturedDeckSubject,
   FeaturedMatchSubject,
+  FeaturedManualMatchSubject,
   MetaArchetypeSubject,
   SpotlightSubject,
 } from "./templates/types";
@@ -87,11 +90,22 @@ interface CatalogEntry {
 
 interface MatchRow {
   id: string;
-  result: "win" | "loss" | "tie";
+  result: "win" | "loss" | "draw";
   opponent_archetype: string | null;
   opponent_handle: string | null;
   player_handle: string | null;
   saved_deck_id: string;
+}
+
+interface ManualMatchRow {
+  id: string;
+  result: "win" | "loss" | "draw";
+  opponent_name: string | null;
+  opponent_archetype: string | null;
+  saved_deck_id: string;
+  prizes_taken_player: number | null;
+  prizes_taken_opponent: number | null;
+  game_prizes: GamePrize[] | null;
 }
 
 export default async function SocialStudioPage() {
@@ -458,8 +472,95 @@ export default async function SocialStudioPage() {
         result: m.result,
         playerPrizes: prizes.player,
         opponentPrizes: prizes.opponent,
+        platformLabel: "TCG Live",
       };
     });
+
+  // ── Featured matches (manual entries) ──────────────────────────
+  // Mirrors the home page's manual/prize-only preview path: matches
+  // without a parsed battle log, with a recognized top-30 meta archetype
+  // for the opponent (metaArchetypeCard supplies the opponent-side card)
+  // and recorded prize totals (single game or summed best-of-3).
+  const { data: manualMatchRowsData } = await supabase
+    .from("matches")
+    .select(
+      "id, result, opponent_name, opponent_archetype, saved_deck_id, prizes_taken_player, prizes_taken_opponent, game_prizes",
+    )
+    .neq("source", "tcg_live_log")
+    .order("created_at", { ascending: false })
+    .limit(30);
+  const manualMatchRowsRaw = (manualMatchRowsData ?? []) as ManualMatchRow[];
+
+  const manualDeckIds = Array.from(new Set(manualMatchRowsRaw.map((m) => m.saved_deck_id)));
+  const { data: manualDeckRowsData } = await supabase
+    .from("saved_decks")
+    .select("id, name, cover_image_url, user_id, analysis, is_public")
+    .in("id", manualDeckIds.length ? manualDeckIds : ["00000000-0000-0000-0000-000000000000"]);
+  const manualDeckRows = (manualDeckRowsData ?? []) as (DeckRow & { is_public: boolean })[];
+  const manualDeckById = new Map(manualDeckRows.filter((d) => d.is_public).map((d) => [d.id, d]));
+
+  const manualUserIds = Array.from(new Set(manualDeckRows.map((d) => d.user_id)));
+  const { data: manualProfilesData } = await supabase
+    .from("profiles")
+    .select("id, display_name, username")
+    .in("id", manualUserIds.length ? manualUserIds : ["00000000-0000-0000-0000-000000000000"]);
+  const manualProfById = new Map(
+    (manualProfilesData ?? []).map((p) => [
+      p.id as string,
+      p as { id: string; display_name: string; username: string },
+    ]),
+  );
+
+  const featuredManualMatches: FeaturedManualMatchSubject[] = manualMatchRowsRaw
+    .filter((m) => manualDeckById.has(m.saved_deck_id))
+    .flatMap((m) => {
+      const deck = manualDeckById.get(m.saved_deck_id)!;
+      const prof = manualProfById.get(deck.user_id);
+      if (!prof) return [];
+
+      // Manual matches have no battle-log actions to derive an opponent
+      // card from — require a recognized top-30 meta archetype with a
+      // resolvable primary card, same as the home page's manual-match
+      // preview, rather than show a blank opponent slot.
+      const archetypeCard = m.opponent_archetype ? metaArchetypeCard(m.opponent_archetype) : null;
+      if (!archetypeCard) return [];
+
+      const analysisCards = deck.analysis?.cards ?? [];
+      const primary = primaryPokemonCard(
+        analysisCards.map((c) => ({
+          qty: c.qty,
+          name: c.name,
+          number: c.number,
+          setCode: c.setCode,
+          section: c.section,
+        })),
+      );
+      const prizes = manualPrizeTotals(m) ?? { player: 0, opponent: 0 };
+
+      return [{
+        kind: "featured_match_manual" as const,
+        id: m.id,
+        displayName: prof.display_name,
+        username: prof.username,
+        deckName: deck.name,
+        deckCoverUrl:
+          deck.cover_image_url ??
+          (primary?.set_id
+            ? `https://images.pokemontcg.io/${primary.set_id}/${primary.card.number}.png`
+            : null),
+        opponentImageUrl: archetypeCard.imageUrl,
+        playerAccentColor: typeColor(primary?.types),
+        opponentAccentColor: typeColor(archetypeCard.types),
+        playerHandle: `@${prof.username}`,
+        opponentHandle: m.opponent_name,
+        opponentArchetype: m.opponent_archetype,
+        result: m.result,
+        playerPrizes: prizes.player,
+        opponentPrizes: prizes.opponent,
+        platformLabel: "Match Log",
+      }];
+    })
+    .slice(0, 10);
 
   return (
     <SocialStudioClient
@@ -468,6 +569,7 @@ export default async function SocialStudioPage() {
       cardSpotlights={cardSpotlights}
       featuredDecks={featuredDecks}
       featuredMatches={featuredMatches}
+      featuredManualMatches={featuredManualMatches}
     />
   );
 }

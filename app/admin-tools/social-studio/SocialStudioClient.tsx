@@ -17,6 +17,7 @@ import {
   type CardSpotlightSubject,
   type FeaturedDeckSubject,
   type FeaturedMatchSubject,
+  type FeaturedManualMatchSubject,
   type MetaArchetypeSubject,
   type SpotlightSubject,
   type StudioLayer,
@@ -31,6 +32,7 @@ interface Props {
   cardSpotlights: CardSpotlightSubject[];
   featuredDecks: FeaturedDeckSubject[];
   featuredMatches: FeaturedMatchSubject[];
+  featuredManualMatches: FeaturedManualMatchSubject[];
 }
 
 /** Derive a default copy block from the subject. The editor seeds these
@@ -68,6 +70,7 @@ function defaultCopy(subject: TemplateSubject): TemplateCopy {
         cta: "View the Deck",
       };
     case "featured_match":
+    case "featured_match_manual":
       return {
         eyebrow: "",
         headline: "",
@@ -87,6 +90,7 @@ const COPY_FIELDS_BY_KIND: Record<TemplateKind, (keyof TemplateCopy)[]> = {
   card_spotlight: ["eyebrow", "headline", "subhead", "cta"],
   featured_deck: ["eyebrow", "headline", "subhead", "cta"],
   featured_match: [],
+  featured_match_manual: [],
 };
 
 /** Single dispatch point: every template is a layer factory. */
@@ -101,6 +105,7 @@ function buildLayers(subject: TemplateSubject, copy: TemplateCopy): StudioLayer[
     case "featured_deck":
       return buildFeaturedDeckLayers(subject, copy);
     case "featured_match":
+    case "featured_match_manual":
       return buildFeaturedMatchLayers(subject, copy);
   }
 }
@@ -116,7 +121,8 @@ function subjectLabel(s: TemplateSubject): string {
       return `${s.name} · ${s.setName}`;
     case "featured_deck":
       return `${s.name} — @${s.username}`;
-    case "featured_match": {
+    case "featured_match":
+    case "featured_match_manual": {
       const left = s.playerHandle ?? `@${s.username}`;
       const right = s.opponentHandle ?? s.opponentArchetype ?? "Opponent";
       return `${left} vs ${right}`;
@@ -163,6 +169,7 @@ export default function SocialStudioClient({
   cardSpotlights,
   featuredDecks,
   featuredMatches,
+  featuredManualMatches,
 }: Props) {
   const subjectsByKind = useMemo(
     () => ({
@@ -171,8 +178,9 @@ export default function SocialStudioClient({
       card_spotlight: cardSpotlights,
       featured_deck: featuredDecks,
       featured_match: featuredMatches,
+      featured_match_manual: featuredManualMatches,
     }),
-    [spotlights, metaArchetypes, cardSpotlights, featuredDecks, featuredMatches],
+    [spotlights, metaArchetypes, cardSpotlights, featuredDecks, featuredMatches, featuredManualMatches],
   );
 
   const [active, setActive] = useState<TemplateSubject | null>(null);

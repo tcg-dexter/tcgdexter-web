@@ -5,13 +5,13 @@ import {
   CANVAS_H,
   CANVAS_W,
   proxied,
-  type FeaturedMatchSubject,
+  type FeaturedMatchLikeSubject,
   type StudioLayer,
   type TemplateCopy,
 } from "./types";
 
 interface Props {
-  subject: FeaturedMatchSubject;
+  subject: FeaturedMatchLikeSubject;
   copy: TemplateCopy;
 }
 
@@ -91,7 +91,7 @@ const HANDLE_STYLE: React.CSSProperties = {
 };
 
 export function buildFeaturedMatchLayers(
-  subject: FeaturedMatchSubject,
+  subject: FeaturedMatchLikeSubject,
   copy: TemplateCopy,
 ): StudioLayer[] {
   // Split gradient: player-side type color on the left, opponent's on
@@ -118,11 +118,12 @@ export function buildFeaturedMatchLayers(
       ),
     },
     {
-      // "TCG LIVE" subtitle — top-most label, sits in the space the
+      // Platform subtitle — top-most label, sits in the space the
       // eyebrow used to occupy, with extra room below before the
-      // handle row.
+      // handle row. "TCG Live" for imported logs, "Match Log" for
+      // manual entries.
       id: "platform-label",
-      name: "TCG Live Label",
+      name: "Platform Label",
       node: (
         <div
           style={{
@@ -134,7 +135,7 @@ export function buildFeaturedMatchLayers(
             right: 0,
           }}
         >
-          TCG Live
+          {subject.platformLabel}
         </div>
       ),
     },
