@@ -65,7 +65,7 @@ export default function LearnIndexPage() {
               className="relative flex flex-col h-full rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow"
               style={{
                 background: gradientFor(i),
-                aspectRatio: "5 / 6",
+                aspectRatio: "5 / 3",
               }}
             >
               <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-text-primary/60">

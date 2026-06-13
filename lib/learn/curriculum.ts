@@ -39,7 +39,7 @@ export const lessons: Lesson[] = [
   { slug: "anatomy-trainer-card",    title: "Anatomy of a Trainer card",       module: "basics",     order: 3, estimatedMinutes: 3 },
   { slug: "anatomy-energy-card",     title: "Anatomy of an Energy card",       module: "basics",     order: 4, estimatedMinutes: 3 },
   { slug: "how-a-turn-works",        title: "How a turn works",                module: "basics",     order: 5, estimatedMinutes: 4 },
-  { slug: "win-conditions",          title: "How to Win",                      module: "basics",     order: 6, estimatedMinutes: 6 },
+  { slug: "win-conditions",          title: "How to win",                      module: "basics",     order: 6, estimatedMinutes: 6 },
   { slug: "reading-a-deck-list",     title: "Reading a deck list",             module: "first-deck", order: 7, estimatedMinutes: 3 },
   { slug: "profile-your-first-deck", title: "Profile your first deck",         module: "first-deck", order: 8, estimatedMinutes: 3 },
   { slug: "save-to-library",         title: "Save your deck and join the gym", module: "first-deck", order: 9, estimatedMinutes: 3 },
