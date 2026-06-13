@@ -42,7 +42,7 @@ export default function CardImage({
   fetchPriority = "low",
   index,
 }: Props) {
-  const STAGGER_MS = 20;
+  const STAGGER_MS = 10;
   const delayMs = index != null ? index * STAGGER_MS : 0;
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -89,7 +89,7 @@ export default function CardImage({
         ...style,
         opacity: loaded ? 1 : 0,
         transform: loaded ? "translateY(0)" : "translateY(-6%)",
-        transition: "opacity 400ms ease-out, transform 400ms ease-out",
+        transition: "opacity 500ms ease-out, transform 500ms ease-out",
         transitionDelay: loaded ? `${delayMs}ms` : "0ms",
       }}
       onLoad={() => setLoaded(true)}
