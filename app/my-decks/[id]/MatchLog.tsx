@@ -173,7 +173,7 @@ export default function MatchLog({
   }
 
   return (
-    <div className="rounded-xl bg-white p-5">
+    <div>
       {/* ── Header + Stats ────────────────────────────────── */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-text-primary">Match Log</h2>
