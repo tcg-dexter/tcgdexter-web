@@ -269,7 +269,11 @@ export default function DeckProfileView({
     </Link>
   );
 
-  const overviewNode = <DeckCardGrid cards={result.cards} />;
+  const overviewNode = (
+    <div className={variant === "meta" ? "pt-4" : undefined}>
+      <DeckCardGrid cards={result.cards} />
+    </div>
+  );
 
   return (
     <div className="min-h-dvh flex flex-col bg-bg">
