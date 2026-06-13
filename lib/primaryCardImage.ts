@@ -15,6 +15,8 @@ interface CardEntry {
   number: string;
   subtypes: string[];
   types?: string[];
+  supertype?: string;
+  regulation_mark?: string | null;
 }
 
 const CARD_DB = cardData as unknown as Record<string, CardEntry[]>;
@@ -96,6 +98,50 @@ export function cardImageUrlForName(name: string): string | null {
   const entry = entries.find((e) => e.set_id) ?? null;
   if (!entry) return null;
   return cardImageSmall(entry.set_id, entry.number);
+}
+
+/** Standard-format regulation marks, oldest to newest. Higher rank = more
+ *  recently printed. Cards without a regulation mark (pre-D, older sets)
+ *  rank below all of them. */
+const REGULATION_RANK: Record<string, number> = {
+  D: 1, E: 2, F: 3, G: 4, H: 5, I: 6, J: 7,
+};
+
+/** All known Pokémon card names, longest-first so a substring search below
+ *  prefers more specific forms (e.g. "Charizard ex" over "Charizard"). */
+const POKEMON_NAMES = Object.entries(CARD_DB)
+  .filter(([, entries]) => entries.some((e) => e.supertype === "Pokémon"))
+  .map(([name]) => name)
+  .sort((a, b) => b.length - a.length);
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Find the first (longest-matching) known Pokémon name that appears as a
+ *  whole word/phrase in free text — e.g. pulling "Charizard ex" out of a
+ *  manually-typed "Charizard ex / Pidgeot ex" opponent archetype. Returns
+ *  null when no known Pokémon name is present. */
+export function findPokemonNameInText(text: string): string | null {
+  for (const name of POKEMON_NAMES) {
+    const re = new RegExp(`\\b${escapeRegExp(name)}\\b`, "i");
+    if (re.test(text)) return name;
+  }
+  return null;
+}
+
+/** Resolve a Pokémon name to its most recently printed card — the entry
+ *  with the highest regulation mark — for image + type display when only a
+ *  name is known (no set/number). Returns null on no match. */
+export function mostRecentCardForName(name: string): { imageUrl: string; types: string[] } | null {
+  const entries = (CARD_DB[name] ?? CARD_DB_LOWER.get(name.toLowerCase()) ?? []).filter(
+    (e) => e.supertype === "Pokémon" && e.set_id,
+  );
+  if (!entries.length) return null;
+  const best = entries.reduce((a, b) =>
+    (REGULATION_RANK[b.regulation_mark ?? ""] ?? 0) > (REGULATION_RANK[a.regulation_mark ?? ""] ?? 0) ? b : a,
+  );
+  return { imageUrl: cardImageSmall(best.set_id, best.number), types: best.types ?? [] };
 }
 
 /**

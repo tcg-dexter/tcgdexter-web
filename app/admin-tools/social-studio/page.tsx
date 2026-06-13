@@ -12,6 +12,8 @@ import {
   cardImageUrlForName,
   cardTypesForName,
   cardTypesForSetIdNumber,
+  findPokemonNameInText,
+  mostRecentCardForName,
   primaryPokemonCard,
 } from "@/lib/primaryCardImage";
 import type { TrainerSpotlightRow } from "@/app/spotlight/types";
@@ -519,11 +521,17 @@ export default async function SocialStudioPage() {
       if (!prof) return [];
 
       // Manual matches have no battle-log actions to derive an opponent
-      // card from — require a recognized top-30 meta archetype with a
-      // resolvable primary card, same as the home page's manual-match
-      // preview, rather than show a blank opponent slot.
+      // card from. Prefer a recognized top-30 meta archetype (same as the
+      // home page's manual-match preview); otherwise fall back to any
+      // Pokémon name mentioned in the free-typed archetype field, resolved
+      // to its most recent print. Skip the match only if neither resolves.
       const archetypeCard = m.opponent_archetype ? metaArchetypeCard(m.opponent_archetype) : null;
-      if (!archetypeCard) return [];
+      const fallbackPokemon = !archetypeCard && m.opponent_archetype
+        ? findPokemonNameInText(m.opponent_archetype)
+        : null;
+      const fallbackCard = fallbackPokemon ? mostRecentCardForName(fallbackPokemon) : null;
+      const opponentCard = archetypeCard ?? fallbackCard;
+      if (!opponentCard) return [];
 
       const analysisCards = deck.analysis?.cards ?? [];
       const primary = primaryPokemonCard(
@@ -548,9 +556,9 @@ export default async function SocialStudioPage() {
           (primary?.set_id
             ? `https://images.pokemontcg.io/${primary.set_id}/${primary.card.number}.png`
             : null),
-        opponentImageUrl: archetypeCard.imageUrl,
+        opponentImageUrl: opponentCard.imageUrl,
         playerAccentColor: typeColor(primary?.types),
-        opponentAccentColor: typeColor(archetypeCard.types),
+        opponentAccentColor: typeColor(opponentCard.types),
         playerHandle: `@${prof.username}`,
         opponentHandle: m.opponent_name,
         opponentArchetype: m.opponent_archetype,
