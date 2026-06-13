@@ -36,6 +36,7 @@ export default function CardDetailPage({ params }: Props) {
   if (!card || !raw) notFound();
 
   const isPokemon = card.supertype === "Pokémon";
+  const fullCardNumber = `${card.numberPadded}/${String(card.setSize).padStart(3, "0")}`;
   const avatarSlug = isPokemon ? pokemonSlug(card.name) : null;
   const avatarUrl = avatarSlug
     ? `https://r2.limitlesstcg.net/pokemon/gen9/${avatarSlug}.png`
@@ -91,7 +92,7 @@ export default function CardDetailPage({ params }: Props) {
               <h1 className="text-2xl font-semibold text-text-primary">{card.name}</h1>
               <p className="text-sm text-text-secondary mt-1">
                 {card.setName}
-                {card.ptcgoCode ? ` · ${card.ptcgoCode}` : ""} · {card.number}
+                {card.ptcgoCode ? ` · ${card.ptcgoCode}` : ""} · {fullCardNumber}
               </p>
             </div>
           </div>
@@ -125,7 +126,7 @@ export default function CardDetailPage({ params }: Props) {
               <h1 className="text-2xl font-semibold text-text-primary">{card.name}</h1>
               <p className="text-sm text-text-secondary mt-1">
                 {card.setName}
-                {card.ptcgoCode ? ` · ${card.ptcgoCode}` : ""} · {card.number}
+                {card.ptcgoCode ? ` · ${card.ptcgoCode}` : ""} · {fullCardNumber}
               </p>
             </div>
           </div>
