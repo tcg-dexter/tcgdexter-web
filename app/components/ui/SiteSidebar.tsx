@@ -61,9 +61,9 @@ export default function SiteSidebar({
     { href: "/cards", label: "Card Catalog", Icon: CardsIcon },
     { href: "/my-decks", label: "Deck Collection", Icon: BookmarkIcon },
     { href: "/meta-archetypes", label: "Meta Archetypes", Icon: ChartBarIcon },
-    { href: spotlightHref, label: "Spotlight", Icon: TrophyIcon },
     // { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
     { href: "/learn", label: "Learn to Play", Icon: BookOpenIcon },
+    { href: spotlightHref, label: "Spotlight", Icon: TrophyIcon },
   ];
 
   // "/" gets exact match so it doesn't light up on every page; others match
