@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import MatchForm, { type MatchFormData } from "@/app/components/MatchForm";
 import MatchEntry from "@/app/components/MatchEntry";
-import { WLCircles } from "@/app/components/DeckPostCard";
 import type { GamePrize } from "@/lib/bo3";
 
 /* ─── Types ──────────────────────────────────────────────────── */
@@ -92,11 +91,7 @@ export default function MatchLog({
   }, [matches]);
 
   // ── Stats ───────────────────────────────────────────────────
-  const wins = rows.filter((r) => r.result === "win").length;
-  const losses = rows.filter((r) => r.result === "loss").length;
-  const draws = rows.filter((r) => r.result === "draw").length;
-  const total = wins + losses + draws;
-  const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : "0.0";
+  const total = rows.length;
 
   async function handleNewMatch(data: MatchFormData) {
     const res = await fetch("/api/matches", {
@@ -179,8 +174,6 @@ export default function MatchLog({
         <h2 className="text-lg font-semibold text-text-primary">Recent Matches</h2>
 
         <div className="flex items-center gap-3">
-          {total > 0 && <WLCircles wl={{ w: wins, l: losses, d: draws }} />}
-
           {total > 3 && (
             <button
               onClick={() => setHistoryExpanded((v) => !v)}

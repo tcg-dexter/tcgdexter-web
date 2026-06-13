@@ -295,7 +295,7 @@ export default function DeckProfileView({
           <div>
             <div className="flex items-center gap-2">
               {titleLeading}
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-on-gradient">
+              <h1 className="min-w-0 truncate text-3xl sm:text-4xl font-bold tracking-tight text-on-gradient">
                 {pageTitle}
               </h1>
               {titleAction}
