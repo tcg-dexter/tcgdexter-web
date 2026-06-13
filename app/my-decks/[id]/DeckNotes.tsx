@@ -86,7 +86,7 @@ export default function DeckNotes({ savedDeckId, initialNotes }: Props) {
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className="inline-flex items-center rounded-full bg-gradient-brand border border-transparent px-3 py-1.5 text-xs font-semibold text-white shadow-brand hover:shadow-brand-lg transition disabled:opacity-50"
+              className="inline-flex items-center rounded-full gradient-brand px-3 py-1.5 text-xs font-semibold shadow-brand hover:shadow-brand-lg transition disabled:opacity-50"
             >
               {saving ? "Saving…" : "Save"}
             </button>
