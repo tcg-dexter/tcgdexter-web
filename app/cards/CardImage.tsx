@@ -42,7 +42,7 @@ export default function CardImage({
   fetchPriority = "low",
   index,
 }: Props) {
-  const STAGGER_MS = 45;
+  const STAGGER_MS = 20;
   const delayMs = index != null ? index * STAGGER_MS : 0;
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);

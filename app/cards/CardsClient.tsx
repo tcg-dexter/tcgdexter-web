@@ -344,8 +344,11 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
           totalPages={totalPages}
           pageSize={params.pageSize}
           onPage={(p) => {
+            // Snap to the top before the new page's cards mount, so their
+            // cascade animation plays in view instead of racing a smooth
+            // scroll that's still in progress while off-screen.
+            window.scrollTo(0, 0);
             setParams((cur) => ({ ...cur, page: p }));
-            window.scrollTo({ top: 0, behavior: "smooth" });
           }}
           onPageSize={(ps) => updateParams({ pageSize: ps })}
         />
