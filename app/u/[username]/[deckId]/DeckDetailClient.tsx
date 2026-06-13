@@ -238,21 +238,20 @@ export default function DeckDetailClient({
     );
   }
 
-  // Owner rendering — W-L record inline next to the deck name, plus a
-  // right-anchored gear that opens the unified edit dialog (rename, cover
-  // image / card select, and full deck-list editor).
+  // Owner rendering — settings gear inline next to the deck name (opens the
+  // unified edit dialog: rename, cover image / card select, and full
+  // deck-list editor), plus a right-anchored W-L record.
   const wins = initialMatches.filter((m) => m.result === "win").length;
   const losses = initialMatches.filter((m) => m.result === "loss").length;
   const draws = initialMatches.filter((m) => m.result === "draw").length;
 
   const titleAction = (
     <>
-      <WLCircles wl={{ w: wins, l: losses, d: draws }} />
       <button
         type="button"
         onClick={() => setEditOpen(true)}
         aria-label="Deck settings"
-        className="ml-auto flex-shrink-0 self-start text-on-gradient opacity-60 hover:opacity-100 transition-opacity"
+        className="flex-shrink-0 self-start text-on-gradient opacity-60 hover:opacity-100 transition-opacity"
       >
         <svg
           className="w-6 h-6"
@@ -273,6 +272,9 @@ export default function DeckDetailClient({
           />
         </svg>
       </button>
+      <div className="ml-auto">
+        <WLCircles wl={{ w: wins, l: losses, d: draws }} />
+      </div>
     </>
   );
 

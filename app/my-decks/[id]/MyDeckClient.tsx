@@ -137,15 +137,14 @@ export default function MyDeckClient({
   const losses = initialMatches.filter((m) => m.result === "loss").length;
   const draws = initialMatches.filter((m) => m.result === "draw").length;
 
-  // Title row action — W-L record + a right-anchored settings gear (opens
-  // inline rename, mirroring the gear on /u/[username]/[deckId]).
+  // Title row action — settings gear inline next to the deck name, plus a
+  // right-anchored W-L record (mirroring the layout on /u/[username]/[deckId]).
   const titleAction = !editingTitle ? (
     <>
-      <WLCircles wl={{ w: wins, l: losses, d: draws }} />
       <button
         onClick={() => { setEditingTitle(true); setTitleInput(deckName); }}
         aria-label="Deck settings"
-        className="ml-auto flex-shrink-0 self-start text-on-gradient opacity-50 hover:opacity-100 transition-opacity"
+        className="flex-shrink-0 self-start text-on-gradient opacity-50 hover:opacity-100 transition-opacity"
       >
         <svg
           className="w-6 h-6"
@@ -166,6 +165,9 @@ export default function MyDeckClient({
           />
         </svg>
       </button>
+      <div className="ml-auto">
+        <WLCircles wl={{ w: wins, l: losses, d: draws }} />
+      </div>
     </>
   ) : null;
 
