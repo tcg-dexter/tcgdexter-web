@@ -232,12 +232,14 @@ export default function MatchLog({
         <div className="mt-4 flex flex-col">
           {(historyExpanded ? rows : rows.slice(0, 3)).map((match, i, arr) => {
             const s = RESULT_STYLE[match.result];
-            const dateStr = match.played_at
-              ? new Date(match.played_at).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })
-              : null;
+            const score =
+              match.prizes_taken_player != null || match.prizes_taken_opponent != null
+                ? `${match.prizes_taken_player ?? 0}–${match.prizes_taken_opponent ?? 0}`
+                : null;
+            const subtitle =
+              score && match.opponent_name
+                ? `${score} v ${match.opponent_name}`
+                : score ?? match.opponent_name;
 
             const isEditing = editingId === match.id;
             if (isEditing && !readOnly) {
@@ -284,32 +286,12 @@ export default function MatchLog({
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 text-sm">
-                      {match.opponent_archetype && (
+                      {match.opponent_archetype ? (
                         <span className="font-semibold text-text-primary truncate">
-                          vs {match.opponent_archetype}
+                          {match.opponent_archetype}
                         </span>
-                      )}
-                      {match.opponent_name && !match.opponent_archetype && (
-                        <span className="font-semibold text-text-primary truncate">
-                          vs {match.opponent_name}
-                        </span>
-                      )}
-                      {match.opponent_name && match.opponent_archetype && (
-                        <span className="text-xs text-text-muted truncate">
-                          ({match.opponent_name})
-                        </span>
-                      )}
-                      {!match.opponent_archetype && !match.opponent_name && (
+                      ) : (
                         <span className="text-text-muted text-sm">Match logged</span>
-                      )}
-                      {(match.prizes_taken_player != null ||
-                        match.prizes_taken_opponent != null) && (
-                        <span
-                          className="flex-shrink-0 text-xs font-medium text-text-muted tabular-nums"
-                          title="Prizes taken (you – opponent)"
-                        >
-                          {match.prizes_taken_player ?? 0}–{match.prizes_taken_opponent ?? 0}
-                        </span>
                       )}
                       {match.game_results && match.game_results.length >= 2 && (
                         <span
@@ -339,8 +321,8 @@ export default function MatchLog({
                         </span>
                       )}
                     </div>
-                    {dateStr && (
-                      <p className="text-xs text-text-muted mt-0.5">{dateStr}</p>
+                    {subtitle && (
+                      <p className="text-xs text-text-muted mt-0.5">{subtitle}</p>
                     )}
                   </div>
                   <div className="flex-shrink-0 flex items-center gap-2">
