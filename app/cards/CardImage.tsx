@@ -13,6 +13,11 @@ interface Props {
   loading?: "lazy" | "eager";
   decoding?: "async" | "sync" | "auto";
   fetchPriority?: "high" | "low" | "auto";
+  /**
+   * Position in a sibling grid. Drives a small per-card transition
+   * delay so the fade-in cascades left-to-right, row-by-row.
+   */
+  index?: number;
 }
 
 /**
@@ -35,7 +40,10 @@ export default function CardImage({
   loading = "lazy",
   decoding = "async",
   fetchPriority = "low",
+  index,
 }: Props) {
+  const STAGGER_MS = 45;
+  const delayMs = index != null ? index * STAGGER_MS : 0;
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const imgRef = useRef<HTMLImageElement | null>(null);
@@ -82,6 +90,7 @@ export default function CardImage({
         opacity: loaded ? 1 : 0,
         transform: loaded ? "translateY(0)" : "translateY(-6%)",
         transition: "opacity 400ms ease-out, transform 400ms ease-out",
+        transitionDelay: loaded ? `${delayMs}ms` : "0ms",
       }}
       onLoad={() => setLoaded(true)}
       onError={() => setFailed(true)}

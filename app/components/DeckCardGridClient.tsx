@@ -67,6 +67,7 @@ export default function DeckCardGridClient({ tiles }: { tiles: ResolvedTile[] })
                 name={t.name}
                 setName={t.setName}
                 number={t.number}
+                index={i}
                 className="w-full h-full object-contain"
               />
               <DeckTileFooter copyCount={t.copyCount} />

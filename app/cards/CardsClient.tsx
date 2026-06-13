@@ -572,14 +572,14 @@ function RangeFacet({
 function GridView({ cards }: { cards: CardIndexEntry[] }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-      {cards.map((c) => (
-        <GridTile key={c.id} card={c} />
+      {cards.map((c, i) => (
+        <GridTile key={c.id} card={c} index={i} />
       ))}
     </div>
   );
 }
 
-function GridTile({ card: c }: { card: CardIndexEntry }) {
+function GridTile({ card: c, index }: { card: CardIndexEntry; index: number }) {
   const [mode, setMode] = useState<InventoryMenuMode | null>(null);
   return (
     <div className="flex flex-col items-center gap-2">
@@ -594,6 +594,7 @@ function GridTile({ card: c }: { card: CardIndexEntry }) {
             name={c.name}
             setName={c.setName}
             number={c.number}
+            index={index}
             className="w-full h-full object-contain transition-transform group-hover:scale-[1.02]"
           />
           <CardFooterOverlay
@@ -651,14 +652,22 @@ function ListView({ cards }: { cards: CardIndexEntry[] }) {
       </div>
       <ul>
         {cards.map((c, i) => (
-          <ListRow key={c.id} card={c} isFirst={i === 0} />
+          <ListRow key={c.id} card={c} index={i} isFirst={i === 0} />
         ))}
       </ul>
     </div>
   );
 }
 
-function ListRow({ card: c, isFirst }: { card: CardIndexEntry; isFirst: boolean }) {
+function ListRow({
+  card: c,
+  index,
+  isFirst,
+}: {
+  card: CardIndexEntry;
+  index: number;
+  isFirst: boolean;
+}) {
   const [mode, setMode] = useState<InventoryMenuMode | null>(null);
   return (
     <li className={`relative ${isFirst ? "" : "border-t border-black/8"}`}>
@@ -672,6 +681,7 @@ function ListRow({ card: c, isFirst }: { card: CardIndexEntry; isFirst: boolean 
           name={c.name}
           setName={c.setName}
           number={c.number}
+          index={index}
           className="w-12 h-[68px] md:w-14 md:h-[78px] object-cover rounded-md bg-surface text-[9px]"
         />
         <div className="md:contents">

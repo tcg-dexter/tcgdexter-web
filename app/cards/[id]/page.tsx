@@ -264,7 +264,7 @@ export default function CardDetailPage({ params }: Props) {
             More {card.name}
           </h2>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
-            {otherPrintings.map((c) => (
+            {otherPrintings.map((c, i) => (
               <Link
                 key={c.id}
                 href={`/cards/${encodeURIComponent(c.id)}`}
@@ -278,6 +278,7 @@ export default function CardDetailPage({ params }: Props) {
                   name={c.name}
                   setName={c.setName}
                   number={c.number}
+                  index={i}
                   className="w-full h-full object-contain"
                 />
               </Link>
@@ -292,7 +293,7 @@ export default function CardDetailPage({ params }: Props) {
             More by {card.artist}
           </h2>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
-            {moreByArtist.map((c) => (
+            {moreByArtist.map((c, i) => (
               <Link
                 key={c.id}
                 href={`/cards/${encodeURIComponent(c.id)}`}
@@ -306,6 +307,7 @@ export default function CardDetailPage({ params }: Props) {
                   name={c.name}
                   setName={c.setName}
                   number={c.number}
+                  index={i}
                   className="w-full h-full object-contain"
                 />
               </Link>
