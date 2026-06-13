@@ -164,7 +164,7 @@ export default async function MetaVariantPage({
     .join(" - ");
 
   const credits = (
-    <div className="flex flex-col gap-0.5 text-sm text-text-secondary">
+    <div className="flex flex-col items-center gap-0.5 text-center text-[17.5px] text-text-secondary">
       <span className="font-semibold text-text-primary">{creator}</span>
       {placeEvent && <span>{placeEvent}</span>}
       {dateLabel && <span className="text-text-muted">{dateLabel}</span>}
