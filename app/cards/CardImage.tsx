@@ -25,7 +25,7 @@ interface Props {
  * set not yet indexed by pokemontcg.io), we render a neutral placeholder
  * that still surfaces the card identity, so the grid doesn't look broken.
  *
- * Once the image finishes decoding it fades in and slides down ~6% of its
+ * Once the image finishes decoding it fades in and slides down ~5% of its
  * own height — a very subtle entrance that smooths the otherwise jarring
  * "pop" of a card grid filling in.
  */
@@ -42,7 +42,7 @@ export default function CardImage({
   fetchPriority = "low",
   index,
 }: Props) {
-  const STAGGER_MS = 10;
+  const STAGGER_MS = 15;
   const delayMs = index != null ? index * STAGGER_MS : 0;
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -88,7 +88,7 @@ export default function CardImage({
       style={{
         ...style,
         opacity: loaded ? 1 : 0,
-        transform: loaded ? "translateY(0)" : "translateY(-6%)",
+        transform: loaded ? "translateY(0)" : "translateY(-5%)",
         transition: "opacity 500ms ease-out, transform 500ms ease-out",
         transitionDelay: loaded ? `${delayMs}ms` : "0ms",
       }}
