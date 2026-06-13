@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Props {
   src: string;
@@ -19,6 +19,10 @@ interface Props {
  * Card image with a built-in fallback. If the source 404s (e.g. brand-new
  * set not yet indexed by pokemontcg.io), we render a neutral placeholder
  * that still surfaces the card identity, so the grid doesn't look broken.
+ *
+ * Once the image finishes decoding it fades in and slides down ~6% of its
+ * own height — a very subtle entrance that smooths the otherwise jarring
+ * "pop" of a card grid filling in.
  */
 export default function CardImage({
   src,
@@ -33,6 +37,16 @@ export default function CardImage({
   fetchPriority = "low",
 }: Props) {
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  // Cached images may already be complete by the time we mount, in which
+  // case the onLoad listener will never fire — surface that as "loaded"
+  // so they appear in place without animating from invisible.
+  useEffect(() => {
+    const el = imgRef.current;
+    if (el && el.complete && el.naturalWidth > 0) setLoaded(true);
+  }, []);
 
   if (failed) {
     return (
@@ -56,13 +70,20 @@ export default function CardImage({
   // eslint-disable-next-line @next/next/no-img-element
   return (
     <img
+      ref={imgRef}
       src={src}
       alt={alt}
       loading={loading}
       decoding={decoding}
       fetchPriority={fetchPriority}
       className={className}
-      style={style}
+      style={{
+        ...style,
+        opacity: loaded ? 1 : 0,
+        transform: loaded ? "translateY(0)" : "translateY(-6%)",
+        transition: "opacity 400ms ease-out, transform 400ms ease-out",
+      }}
+      onLoad={() => setLoaded(true)}
       onError={() => setFailed(true)}
     />
   );
