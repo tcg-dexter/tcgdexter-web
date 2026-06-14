@@ -261,10 +261,14 @@ function SetCompletionRow({
                 <div className="text-xs text-text-muted truncate">{released}</div>
               )}
             </div>
-            <span className="text-xs font-semibold text-text-secondary tabular-nums whitespace-nowrap pt-0.5">
-              {owned} / {set.size}
-              <span className="ml-2 text-text-muted">({pct.toFixed(0)}%)</span>
-            </span>
+            <div className="flex flex-col items-end tabular-nums whitespace-nowrap leading-tight">
+              <span className="text-sm font-semibold text-text-primary">
+                {pct.toFixed(0)}%
+              </span>
+              <span className="text-xs font-medium text-text-secondary">
+                {owned} / {set.size}
+              </span>
+            </div>
           </div>
           <div
             className="h-2 rounded-full bg-surface"
