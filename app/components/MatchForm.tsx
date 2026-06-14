@@ -550,17 +550,11 @@ export default function MatchForm({
             </div>
           )}
 
-          {/* Prizes title (top-right) + You / Opp column headers over the inputs */}
+          {/* Prizes title, centered over the You/Opp capsules below */}
           <div className="mb-1 flex items-center">
-            <div className="ml-auto flex flex-col gap-0.5">
-              <span className="text-center text-[10px] font-bold uppercase tracking-wide text-text-primary">
-                Prizes
-              </span>
-              <div className="flex gap-1">
-                <span className="w-12 text-center text-[10px] text-text-muted">You</span>
-                <span className="w-12 text-center text-[10px] text-text-muted">Opp</span>
-              </div>
-            </div>
+            <span className="ml-auto w-[6.25rem] text-center text-[10px] font-bold uppercase tracking-wide text-text-primary">
+              Prizes
+            </span>
           </div>
 
           <div className="flex flex-col gap-1.5">
