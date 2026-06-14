@@ -192,7 +192,7 @@ function MatchCard({ match }: { match: RecentMatch }) {
           <div className="relative px-3.5 pb-2 flex items-center justify-end gap-2">
             <p className="text-[11px] text-white/80">{relativeTime(match.createdAt)}</p>
           </div>
-          <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-xl font-black text-white/90 tracking-[0.2em] drop-shadow-sm">
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-xl font-black text-white/90 tracking-[0.2em] drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]">
             VS
           </span>
         </div>
