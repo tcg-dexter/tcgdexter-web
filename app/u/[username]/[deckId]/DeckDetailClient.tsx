@@ -290,7 +290,7 @@ export default function DeckDetailClient({
           ariaLabel={`Back to @${username}'s decks`}
         />
       }
-      preOverviewSlot={
+      postStatsSlot={
         <>
           <div className="flex items-center gap-2">
             <button
