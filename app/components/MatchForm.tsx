@@ -652,7 +652,10 @@ export default function MatchForm({
           {submitting ? "Saving..." : submitLabel}
         </button>
         <button
-          onClick={onCancel}
+          onClick={() => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            onCancel();
+          }}
           className="rounded-full border border-border bg-bg px-4 py-2 text-sm font-semibold text-text-secondary hover:bg-surface-2 transition-all"
         >
           Cancel
