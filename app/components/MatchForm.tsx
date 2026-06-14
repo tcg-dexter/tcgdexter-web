@@ -578,8 +578,8 @@ export default function MatchForm({
                     g3Disabled ? "opacity-40" : ""
                   }`}
                 >
-                  <span className="w-12 flex-shrink-0 whitespace-nowrap text-xs text-text-muted">
-                    Match {i + 1}
+                  <span className="w-4 flex-shrink-0 text-xs text-text-muted">
+                    {i + 1}
                   </span>
                   {(["W", "L", "D"] as const).map((letter) => {
                     const selected = games[i] === letter;
