@@ -345,7 +345,7 @@ export default function MatchForm({
       />
 
       {/* Opponent archetype with autocomplete */}
-      <div className="relative mb-2" ref={suggestionsRef}>
+      <div className="relative mb-1" ref={suggestionsRef}>
         <input
           type="text"
           value={opponentArchetype}
