@@ -57,7 +57,7 @@ export default function DeckCardGridClient({ tiles }: { tiles: ResolvedTile[] })
               key={t.key}
               type="button"
               onClick={() => setOpenIndex(i)}
-              className="relative shrink-0 w-[calc((100%-3rem)/5)] md:w-[calc((100%-6.75rem)/10)] rounded overflow-hidden bg-surface block transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-accent/50"
+              className="relative shrink-0 w-[calc((100%-3.75rem)/6)] md:w-[calc((100%-6.75rem)/10)] rounded overflow-hidden bg-surface block transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-accent/50"
               style={{ aspectRatio: "245 / 342" }}
               aria-label={`Open ${t.name}`}
             >
