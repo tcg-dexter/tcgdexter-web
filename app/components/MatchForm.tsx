@@ -320,15 +320,15 @@ export default function MatchForm({
             type="date"
             value={matchDate}
             onChange={(e) => setMatchDate(e.target.value)}
-            className="appearance-none rounded-full bg-bg pl-0 pr-4 py-1.5 text-sm text-text-primary shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+            className="appearance-none rounded-full bg-bg pl-0 pr-4 py-2.5 text-sm font-bold text-text-primary shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 [font-size:16px] sm:text-sm [&::-webkit-calendar-picker-indicator]:cursor-pointer"
           />
           <button
             type="button"
             onClick={() => setShowDateField(false)}
             aria-label="Remove match date"
-            className="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-bg text-text-muted shadow-[inset_0_0_0_1px_var(--border)] hover:text-text-secondary hover:bg-surface-2 transition-colors"
+            className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full bg-bg text-text-muted shadow-[inset_0_0_0_1px_var(--border)] hover:text-text-secondary hover:bg-surface-2 transition-colors"
           >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
