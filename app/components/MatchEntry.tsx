@@ -77,20 +77,22 @@ export default function MatchEntry({
         />
       </div>
 
-      {tab === "import" ? (
-        <BattleLogImportTab
-          savedDeckId={savedDeckId}
-          onSuccess={onImported}
-          onCancel={onCancel}
-        />
-      ) : (
-        <MatchForm
-          onSubmit={onSubmitManual}
-          onCancel={onCancel}
-          bestOf3={tab === "bo3"}
-          onBestOf3Change={(v) => setTab(v ? "bo3" : "single")}
-        />
-      )}
+      <div key={tab === "import" ? "import" : "form"} className="animate-tab-fade">
+        {tab === "import" ? (
+          <BattleLogImportTab
+            savedDeckId={savedDeckId}
+            onSuccess={onImported}
+            onCancel={onCancel}
+          />
+        ) : (
+          <MatchForm
+            onSubmit={onSubmitManual}
+            onCancel={onCancel}
+            bestOf3={tab === "bo3"}
+            onBestOf3Change={(v) => setTab(v ? "bo3" : "single")}
+          />
+        )}
+      </div>
     </div>
   );
 }
