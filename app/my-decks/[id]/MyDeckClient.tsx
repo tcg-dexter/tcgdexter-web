@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import DeckProfileView, {
@@ -55,6 +56,8 @@ export default function MyDeckClient({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
   const settingsMenuRef = useRef<HTMLDivElement>(null);
+  const settingsButtonRef = useRef<HTMLButtonElement>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
   const actionRowRef = useRef<HTMLDivElement>(null);
 
   // Bring the action row to the top of the viewport when the match log
@@ -126,10 +129,35 @@ export default function MyDeckClient({
     }
   }
 
-  // Close the settings menu on outside click / Escape. We check both the
-  // gear button's wrapper and the menu element itself because the menu is
-  // rendered as a sibling of the gear button (escaping the overflow-hidden
-  // wrapper that would otherwise clip it).
+  // Position the portalled menu against the gear button's bounding rect,
+  // then keep it pinned while open. Recompute on scroll/resize so it
+  // doesn't drift off-anchor.
+  useLayoutEffect(() => {
+    if (!settingsOpen) {
+      setMenuPos(null);
+      return;
+    }
+    function compute() {
+      const btn = settingsButtonRef.current;
+      if (!btn) return;
+      const rect = btn.getBoundingClientRect();
+      setMenuPos({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      });
+    }
+    compute();
+    window.addEventListener("scroll", compute, true);
+    window.addEventListener("resize", compute);
+    return () => {
+      window.removeEventListener("scroll", compute, true);
+      window.removeEventListener("resize", compute);
+    };
+  }, [settingsOpen]);
+
+  // Close the settings menu on outside click / Escape. The menu is
+  // portalled to the body — outside settingsRef — so we check both the
+  // gear button's wrapper and the menu element itself.
   useEffect(() => {
     if (!settingsOpen) return;
     function onPointerDown(e: PointerEvent) {
@@ -272,6 +300,7 @@ export default function MyDeckClient({
                   ancestor `overflow-hidden` doesn't clip it. */}
               <div ref={settingsRef} className="flex-1 min-w-0">
                 <button
+                  ref={settingsButtonRef}
                   type="button"
                   onClick={() => setSettingsOpen((o) => !o)}
                   aria-label="Deck settings"
@@ -300,11 +329,14 @@ export default function MyDeckClient({
                 </button>
               </div>
             </div>
-            {settingsOpen && !logOpen && (
+          </div>
+          {settingsOpen && !logOpen && menuPos !== null && typeof window !== "undefined" &&
+            createPortal(
               <div
                 ref={settingsMenuRef}
                 role="menu"
-                className="absolute right-0 top-full mt-2 w-44 rounded-xl bg-white border border-black/8 shadow-lg p-1 z-20"
+                style={{ position: "fixed", top: menuPos.top, right: menuPos.right }}
+                className="w-44 rounded-xl bg-white border border-black/8 shadow-lg p-1 z-50"
               >
                 <button
                   type="button"
@@ -343,9 +375,9 @@ export default function MyDeckClient({
                 >
                   Delete deck
                 </button>
-              </div>
+              </div>,
+              document.body
             )}
-          </div>
 
           {(initialMatches.length > 0 || logOpen) && (
             <div className="mt-2">
