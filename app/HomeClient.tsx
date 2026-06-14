@@ -51,6 +51,7 @@ export type RecentMatch = {
    *  prize_taken rows; 0 when the battle log has no prize events. */
   playerPrizes: number;
   opponentPrizes: number;
+  isBestOf3: boolean;
 };
 
 function relativeTime(iso: string): string {
@@ -181,6 +182,13 @@ function MatchCard({ match }: { match: RecentMatch }) {
               </div>
             </div>
           </div>
+          {match.isBestOf3 && (
+            <div className="relative flex justify-center pb-2">
+              <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold text-black">
+                Best of 3
+              </span>
+            </div>
+          )}
           <div className="relative px-3.5 pb-2 flex items-center justify-end gap-2">
             <p className="text-[11px] text-white/80">{relativeTime(match.createdAt)}</p>
           </div>

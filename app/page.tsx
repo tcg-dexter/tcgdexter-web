@@ -93,7 +93,7 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
     // and trim to 6 after that filter.
     const { data: matchRows, error: matchErr } = await admin
       .from("matches")
-      .select("id, result, opponent_archetype, opponent_handle, created_at, saved_deck_id, source, prizes_taken_player, prizes_taken_opponent, game_prizes")
+      .select("id, result, opponent_archetype, opponent_handle, created_at, saved_deck_id, source, prizes_taken_player, prizes_taken_opponent, game_prizes, game_results")
       .or(
         "source.eq.tcg_live_log,and(prizes_taken_player.not.is.null,prizes_taken_opponent.not.is.null),game_prizes.not.is.null"
       )
@@ -281,6 +281,7 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
         opponentColor,
         playerPrizes: playerPrizesByMatch.get(m.id as string) ?? manualPrizes?.player ?? 0,
         opponentPrizes: opponentPrizesByMatch.get(m.id as string) ?? manualPrizes?.opponent ?? 0,
+        isBestOf3: typeof m.game_results === "string" && m.game_results.length >= 2,
       }];
     });
 
