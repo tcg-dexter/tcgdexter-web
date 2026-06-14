@@ -218,7 +218,7 @@ export default function MyDeckClient({
           <div className="flex items-center gap-3">
             <button
               onClick={() => setLogOpen((o) => !o)}
-              className={`flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-2 py-2 text-sm font-semibold transition-all ${
+              className={`flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-2 py-2 text-xs font-semibold transition-all ${
                 logOpen ? "text-white" : "text-text-secondary"
               }`}
               style={{
@@ -234,7 +234,7 @@ export default function MyDeckClient({
             <QRCodeButton
               deckList={deckList}
               analysis={analysis}
-              className="flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-gradient-brand-reverse bg-origin-border px-2 py-2 text-sm font-semibold text-white shadow-brand hover:shadow-brand-lg transition disabled:opacity-50"
+              className="flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-gradient-brand-reverse bg-origin-border px-2 py-2 text-xs font-semibold text-white shadow-brand hover:shadow-brand-lg transition disabled:opacity-50"
             />
             {/* Settings — icon-only, same visual weight as QR button */}
             <div ref={settingsRef} className="relative flex-1 min-w-0">
@@ -244,7 +244,7 @@ export default function MyDeckClient({
                 aria-label="Deck settings"
                 aria-haspopup="menu"
                 aria-expanded={settingsOpen}
-                className="w-full inline-flex items-center justify-center rounded-full bg-black border border-transparent px-2 py-[11px] text-white disabled:opacity-50 transition-opacity hover:opacity-80 touch-manipulation"
+                className="w-full inline-flex items-center justify-center rounded-full bg-black border border-transparent px-2 py-[9px] text-white disabled:opacity-50 transition-opacity hover:opacity-80 touch-manipulation"
               >
                 <svg
                   className="w-3.5 h-3.5"
