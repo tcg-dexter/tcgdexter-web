@@ -602,7 +602,7 @@ export default function MatchForm({
                         className={`flex-1 rounded-full py-1.5 text-xs font-bold transition-all duration-300 disabled:cursor-not-allowed ${
                           selected
                             ? `${s.bg} ${s.text}`
-                            : "bg-surface text-text-secondary shadow-[inset_0_0_0_1px_var(--border)] hover:bg-surface-2"
+                            : "bg-bg text-text-secondary shadow-[inset_0_0_0_1px_var(--border)] hover:bg-surface-2"
                         }`}
                       >
                         {games[i] == null || selected ? label : letter}
@@ -639,24 +639,6 @@ export default function MatchForm({
             })}
           </div>
 
-          {/* Live derived summary — the "WW" payoff */}
-          {sequence && (
-            <div className="mt-2 flex items-center gap-2 text-xs">
-              <span className="font-mono font-bold tracking-wider text-text-primary">
-                {sequence}
-              </span>
-              {derivedResult && (
-                <span className="text-text-muted">
-                  ·{" "}
-                  {derivedResult === "win"
-                    ? "Win"
-                    : derivedResult === "loss"
-                    ? "Loss"
-                    : "Draw"}
-                </span>
-              )}
-            </div>
-          )}
         </div>
       )}
 
