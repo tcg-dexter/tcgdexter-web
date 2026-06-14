@@ -320,7 +320,7 @@ export default function MatchForm({
             type="date"
             value={matchDate}
             onChange={(e) => setMatchDate(e.target.value)}
-            className="rounded-full bg-bg pl-0 pr-4 py-1.5 text-sm text-text-primary shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+            className="appearance-none rounded-full bg-bg pl-0 pr-4 py-1.5 text-sm text-text-primary shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm [&::-webkit-calendar-picker-indicator]:cursor-pointer"
           />
           <button
             type="button"
