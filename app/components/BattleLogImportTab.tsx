@@ -232,7 +232,7 @@ export default function BattleLogImportTab({ savedDeckId, onSuccess, onCancel }:
 
         {error && <p className="text-xs text-accent mb-2">{error}</p>}
 
-        <div className="flex gap-2">
+        <div data-match-actions className="flex gap-2">
           <button
             onClick={handleAnalyze}
             disabled={raw.trim().length < 50}
@@ -434,7 +434,7 @@ export default function BattleLogImportTab({ savedDeckId, onSuccess, onCancel }:
 
       {error && <p className="text-xs text-accent mb-2">{error}</p>}
 
-      <div className="flex gap-2">
+      <div data-match-actions className="flex gap-2">
         <button
           onClick={handleSubmit}
           disabled={submitting || !result || !playerHandle}

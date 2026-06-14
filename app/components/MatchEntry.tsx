@@ -44,10 +44,47 @@ export default function MatchEntry({
     import: null,
   });
   const [indicator, setIndicator] = useState({ left: 0, width: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const flipFromTop = useRef<number | null>(null);
+
+  // "single"/"bo3" share one MatchForm instance and already animate their
+  // shared actions row via the bo3-row grid collapse. Crossing into/out of
+  // "import" remounts the whole content block, so capture the actions row's
+  // position before the switch and FLIP it into its new spot after.
+  function selectTab(next: Tab) {
+    const crossesBoundary = (tab === "import") !== (next === "import");
+    if (crossesBoundary) {
+      const el = containerRef.current?.querySelector<HTMLElement>("[data-match-actions]");
+      flipFromTop.current = el ? el.getBoundingClientRect().top : null;
+    }
+    setTab(next);
+  }
 
   useLayoutEffect(() => {
     const el = tabRefs.current[tab];
     if (el) setIndicator({ left: el.offsetLeft, width: el.offsetWidth });
+
+    if (flipFromTop.current !== null) {
+      const fromTop = flipFromTop.current;
+      flipFromTop.current = null;
+      const actions = containerRef.current?.querySelector<HTMLElement>("[data-match-actions]");
+      if (actions) {
+        const delta = fromTop - actions.getBoundingClientRect().top;
+        if (delta !== 0) {
+          actions.style.transition = "none";
+          actions.style.transform = `translateY(${delta}px)`;
+          requestAnimationFrame(() => {
+            actions.style.transition = "transform 300ms ease";
+            actions.style.transform = "";
+          });
+          const onDone = () => {
+            actions.style.transition = "";
+            actions.removeEventListener("transitionend", onDone);
+          };
+          actions.addEventListener("transitionend", onDone);
+        }
+      }
+    }
   }, [tab]);
 
   return (
@@ -61,7 +98,7 @@ export default function MatchEntry({
               tabRefs.current[t.id] = el;
             }}
             type="button"
-            onClick={() => setTab(t.id)}
+            onClick={() => selectTab(t.id)}
             className={`px-3 py-2 text-xs font-semibold transition-colors ${
               tab === t.id
                 ? "text-text-primary"
@@ -77,7 +114,11 @@ export default function MatchEntry({
         />
       </div>
 
-      <div key={tab === "import" ? "import" : "form"} className="animate-tab-fade">
+      <div
+        ref={containerRef}
+        key={tab === "import" ? "import" : "form"}
+        className="animate-tab-fade"
+      >
         {tab === "import" ? (
           <BattleLogImportTab
             savedDeckId={savedDeckId}

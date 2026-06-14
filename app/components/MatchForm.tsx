@@ -616,7 +616,7 @@ export default function MatchForm({
 
       {error && <p className="text-xs text-accent mb-2">{error}</p>}
 
-      <div className="flex gap-2">
+      <div data-match-actions className="flex gap-2">
         <button
           onClick={handleSubmit}
           disabled={submitting || !canSubmit}
