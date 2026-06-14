@@ -83,6 +83,15 @@ export default function DeckDetailClient({
   const [editOpen, setEditOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
+  const actionRowRef = useRef<HTMLDivElement>(null);
+
+  // Bring the action row to the top of the viewport when the match log
+  // form opens. Closing (e.g. after a save) intentionally doesn't scroll.
+  useEffect(() => {
+    if (logOpen) {
+      actionRowRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [logOpen]);
 
   // Close the settings menu on outside click / Escape.
   useEffect(() => {
@@ -292,7 +301,7 @@ export default function DeckDetailClient({
       }
       postStatsSlot={
         <>
-          <div className="flex items-center gap-3">
+          <div ref={actionRowRef} className="flex items-center gap-3">
             <button
               onClick={() => setLogOpen((o) => !o)}
               className={`flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-[1px] py-2 text-sm font-semibold transition-all ${
