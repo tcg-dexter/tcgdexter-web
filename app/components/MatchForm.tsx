@@ -315,12 +315,12 @@ export default function MatchForm({
     <div className="pt-2">
       {/* Match date — shown at the top of the form when set (defaults to today) */}
       {showDateField && (
-        <div className="mb-2 flex items-center gap-2">
+        <div className="mb-2 flex items-center justify-between gap-2">
           <input
             type="date"
             value={matchDate}
             onChange={(e) => setMatchDate(e.target.value)}
-            className="rounded-full bg-bg px-4 py-2 text-sm text-text-primary shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+            className="rounded-full bg-bg px-4 py-1.5 text-sm text-text-primary shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
           />
           <button
             type="button"
