@@ -557,8 +557,8 @@ export default function MatchForm({
                 Prizes
               </span>
               <div className="flex gap-1">
-                <span className="w-10 text-center text-[10px] text-text-muted">You</span>
-                <span className="w-10 text-center text-[10px] text-text-muted">Opp</span>
+                <span className="w-12 text-center text-[10px] text-text-muted">You</span>
+                <span className="w-12 text-center text-[10px] text-text-muted">Opp</span>
               </div>
             </div>
           </div>
@@ -574,13 +574,10 @@ export default function MatchForm({
               return (
                 <div
                   key={i}
-                  className={`flex items-center gap-1.5 ${
+                  className={`flex items-center gap-2 ${
                     g3Disabled ? "opacity-40" : ""
                   }`}
                 >
-                  <span className="w-4 flex-shrink-0 text-xs text-text-muted">
-                    {i + 1}
-                  </span>
                   {(["W", "L", "D"] as const).map((letter) => {
                     const selected = games[i] === letter;
                     const s =
@@ -599,7 +596,7 @@ export default function MatchForm({
                         onClick={() => setGame(i, letter)}
                         aria-label={`Match ${i + 1} ${label.toLowerCase()}`}
                         style={{ flexGrow: games[i] == null || selected ? 2 : 1 }}
-                        className={`flex-1 rounded-full py-1.5 text-xs font-bold transition-all duration-300 disabled:cursor-not-allowed ${
+                        className={`flex-1 rounded-full py-2.5 text-sm font-bold transition-all duration-300 disabled:cursor-not-allowed ${
                           selected
                             ? `${s.bg} ${s.text}`
                             : "bg-bg text-text-secondary shadow-[inset_0_0_0_1px_var(--border)] hover:bg-surface-2"
@@ -609,7 +606,7 @@ export default function MatchForm({
                       </button>
                     );
                   })}
-                  {/* Per-match prizes — aligned under the You / Opp headers */}
+                  {/* Per-match prizes — same shape as the single-game inputs */}
                   <div className="flex flex-shrink-0 items-center gap-1">
                     <input
                       type="number"
@@ -619,8 +616,9 @@ export default function MatchForm({
                       disabled={g3Disabled}
                       value={gamePrizes[i].p}
                       onChange={(e) => setGamePrize(i, "p", e.target.value)}
+                      placeholder="You"
                       aria-label={`Match ${i + 1} your prizes`}
-                      className="no-spinner w-10 rounded-full bg-surface py-1.5 text-center text-xs font-bold text-text-primary shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-xs"
+                      className="no-spinner w-12 rounded-full bg-bg py-2.5 text-center text-sm font-bold text-text-primary placeholder:font-normal placeholder:text-xs placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-sm"
                     />
                     <input
                       type="number"
@@ -630,8 +628,9 @@ export default function MatchForm({
                       disabled={g3Disabled}
                       value={gamePrizes[i].o}
                       onChange={(e) => setGamePrize(i, "o", e.target.value)}
+                      placeholder="Opp"
                       aria-label={`Match ${i + 1} opponent prizes`}
-                      className="no-spinner w-10 rounded-full bg-surface py-1.5 text-center text-xs font-bold text-text-primary shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-xs"
+                      className="no-spinner w-12 rounded-full bg-bg py-2.5 text-center text-sm font-bold text-text-primary placeholder:font-normal placeholder:text-xs placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-sm"
                     />
                   </div>
                 </div>
