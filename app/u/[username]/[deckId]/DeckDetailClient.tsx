@@ -83,6 +83,7 @@ export default function DeckDetailClient({
   const [editOpen, setEditOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
+  const settingsMenuRef = useRef<HTMLDivElement>(null);
   const actionRowRef = useRef<HTMLDivElement>(null);
 
   // Bring the action row to the top of the viewport when the match log
@@ -93,11 +94,20 @@ export default function DeckDetailClient({
     }
   }, [logOpen]);
 
-  // Close the settings menu on outside click / Escape.
+  // Close the settings menu on outside click / Escape. We check both the
+  // gear button's wrapper and the menu element itself because the menu is
+  // rendered as a sibling of the gear button (escaping the overflow-hidden
+  // wrapper that would otherwise clip it).
   useEffect(() => {
     if (!settingsOpen) return;
     function onPointerDown(e: PointerEvent) {
-      if (!settingsRef.current?.contains(e.target as Node)) setSettingsOpen(false);
+      const target = e.target as Node;
+      if (
+        !settingsRef.current?.contains(target) &&
+        !settingsMenuRef.current?.contains(target)
+      ) {
+        setSettingsOpen(false);
+      }
     }
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") setSettingsOpen(false);
@@ -303,7 +313,7 @@ export default function DeckDetailClient({
         <>
           <div
             ref={actionRowRef}
-            className={`flex items-center transition-all duration-300 ${
+            className={`relative flex items-center transition-all duration-300 ${
               logOpen ? "gap-0" : "gap-3"
             }`}
           >
@@ -334,8 +344,10 @@ export default function DeckDetailClient({
                 analysis={analysis}
                 className="flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-gradient-brand-reverse bg-origin-border px-[1px] py-2 text-sm font-semibold text-white shadow-brand hover:shadow-brand-lg transition disabled:opacity-50"
               />
-              {/* Settings — icon-only, same visual weight as QR button */}
-              <div ref={settingsRef} className="relative flex-1 min-w-0">
+              {/* Settings — icon-only, same visual weight as QR button.
+                  Dropdown menu lives outside this wrapper (below) so the
+                  ancestor `overflow-hidden` doesn't clip it. */}
+              <div ref={settingsRef} className="flex-1 min-w-0">
                 <button
                   type="button"
                   onClick={() => setSettingsOpen((o) => !o)}
@@ -363,51 +375,52 @@ export default function DeckDetailClient({
                     />
                   </svg>
                 </button>
-                {settingsOpen && (
-                  <div
-                    role="menu"
-                    className="absolute right-0 top-full mt-2 w-44 rounded-xl bg-white border border-black/8 shadow-lg p-1 z-20"
-                  >
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setEditOpen(true);
-                        setSettingsOpen(false);
-                      }}
-                      className="w-full text-left rounded-lg px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface-2 transition-colors"
-                    >
-                      Edit deck
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        toggleVisibility();
-                        setSettingsOpen(false);
-                      }}
-                      disabled={visibilityBusy}
-                      aria-pressed={isPublic}
-                      className="w-full text-left rounded-lg px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface-2 transition-colors disabled:opacity-50"
-                    >
-                      {isPublic ? "Make private" : "Make public"}
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setConfirmingDelete(true);
-                        setSettingsOpen(false);
-                      }}
-                      disabled={deleting}
-                      className="w-full text-left rounded-lg px-3 py-2 text-sm font-medium text-accent hover:bg-surface-2 transition-colors disabled:opacity-50"
-                    >
-                      Delete deck
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
+            {settingsOpen && !logOpen && (
+              <div
+                ref={settingsMenuRef}
+                role="menu"
+                className="absolute right-0 top-full mt-2 w-44 rounded-xl bg-white border border-black/8 shadow-lg p-1 z-20"
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setEditOpen(true);
+                    setSettingsOpen(false);
+                  }}
+                  className="w-full text-left rounded-lg px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface-2 transition-colors"
+                >
+                  Edit deck
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    toggleVisibility();
+                    setSettingsOpen(false);
+                  }}
+                  disabled={visibilityBusy}
+                  aria-pressed={isPublic}
+                  className="w-full text-left rounded-lg px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface-2 transition-colors disabled:opacity-50"
+                >
+                  {isPublic ? "Make private" : "Make public"}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setConfirmingDelete(true);
+                    setSettingsOpen(false);
+                  }}
+                  disabled={deleting}
+                  className="w-full text-left rounded-lg px-3 py-2 text-sm font-medium text-accent hover:bg-surface-2 transition-colors disabled:opacity-50"
+                >
+                  Delete deck
+                </button>
+              </div>
+            )}
           </div>
 
           {(initialMatches.length > 0 || logOpen) && (
