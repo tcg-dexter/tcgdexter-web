@@ -93,12 +93,9 @@ export default function DataView({ setStats }: { setStats: SetStats[] }) {
       )}
 
       <div>
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <h3 className="text-sm font-semibold text-text-primary">Sets</h3>
-          <span className="text-xs text-text-muted">
-            {filteredSets.length} {filteredSets.length === 1 ? "set" : "sets"} · newest first
-          </span>
-        </div>
+        <h3 className="text-xl font-semibold tracking-tight text-text-primary mb-3">
+          Sets
+        </h3>
         <SetFilterRadios value={filter} onChange={setFilter} disabled={signedIn !== true} />
         {pageSets.length === 0 ? (
           <p className="text-sm text-text-secondary py-4">No sets match this filter.</p>
