@@ -73,10 +73,12 @@ export default function MatchEntry({
         if (delta !== 0) {
           actions.style.transition = "none";
           actions.style.transform = `translateY(${delta}px)`;
-          requestAnimationFrame(() => {
-            actions.style.transition = "transform 300ms ease";
-            actions.style.transform = "";
-          });
+          // Force a layout flush so the browser registers the offset
+          // position before we animate back to rest — otherwise both
+          // style writes land in the same frame and nothing transitions.
+          actions.getBoundingClientRect();
+          actions.style.transition = "transform 300ms ease";
+          actions.style.transform = "";
           const onDone = () => {
             actions.style.transition = "";
             actions.removeEventListener("transitionend", onDone);
