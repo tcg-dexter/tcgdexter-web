@@ -399,9 +399,6 @@ export default function DeckProfileView({
             <DeckListCard deckList={deckList} />
           )}
 
-          {/* Estimated Deck Price */}
-          <DeckPriceModule deckPrice={result.deckPrice} />
-
           {/* Mulligan Rate */}
           <DeckMulliganModule
             deckSize={result.deckSize}
@@ -497,6 +494,9 @@ export default function DeckProfileView({
               </ul>
             </div>
           )}
+
+          {/* Estimated Deck Price */}
+          <DeckPriceModule deckPrice={result.deckPrice} />
 
           {/* Shop Matches */}
           {result.shopMatches.length > 0 && (
