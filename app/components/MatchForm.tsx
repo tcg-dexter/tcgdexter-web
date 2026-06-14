@@ -313,6 +313,149 @@ export default function MatchForm({
 
   return (
     <div className="pt-2">
+      {/* Opponent name */}
+      <input
+        type="text"
+        value={opponentName}
+        onChange={(e) => setOpponentName(e.target.value)}
+        placeholder="Opponent name"
+        className="w-full mb-2 rounded-full bg-bg px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+      />
+
+      {/* Opponent archetype with autocomplete */}
+      <div className="relative mb-2" ref={suggestionsRef}>
+        <input
+          type="text"
+          value={opponentArchetype}
+          onChange={(e) => handleArchetypeChange(e.target.value)}
+          onFocus={() => {
+            if (opponentArchetype.trim() === "") {
+              setSuggestions(META_ARCHETYPE_NAMES.slice(0, 8));
+            }
+            setShowSuggestions(true);
+          }}
+          placeholder="Opponent deck / archetype"
+          className="w-full rounded-full bg-bg px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+        />
+        {showSuggestions && suggestions.length > 0 && (
+          <div className="absolute left-0 right-0 top-full mt-1 z-30 rounded-lg border border-border bg-surface shadow-lg max-h-48 overflow-auto">
+            {suggestions.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  setOpponentArchetype(s);
+                  setShowSuggestions(false);
+                }}
+                className="w-full text-left px-3 py-2 text-sm text-text-primary hover:bg-surface-2 transition-colors"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Match date — shown below the opponent deck/archetype field when set (defaults to today) */}
+      {showDateField && (
+        <div className="mb-2 flex w-full items-center gap-2">
+          <input
+            type="date"
+            value={matchDate}
+            onChange={(e) => setMatchDate(e.target.value)}
+            className="flex-1 rounded-full bg-bg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+          />
+          <button
+            type="button"
+            onClick={() => setShowDateField(false)}
+            className="text-xs text-text-muted hover:text-text-secondary transition-colors"
+          >
+            Remove
+          </button>
+        </div>
+      )}
+
+      {/* Optional toggles — left-aligned */}
+      <div className="flex flex-col items-start gap-1 mb-3">
+        {/* Notes — optional, like the deck list */}
+        {!showNotesField ? (
+          <button
+            type="button"
+            onClick={() => setShowNotesField(true)}
+            className="text-xs text-accent hover:text-accent-light transition-colors"
+          >
+            + Add notes
+          </button>
+        ) : (
+          <div className="w-full">
+            <input
+              type="text"
+              value={matchNotes}
+              onChange={(e) => setMatchNotes(e.target.value)}
+              placeholder="Notes"
+              className="w-full mb-1 rounded-full bg-bg px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setShowNotesField(false);
+                setMatchNotes("");
+              }}
+              className="text-xs text-text-muted hover:text-text-secondary transition-colors"
+            >
+              Remove notes
+            </button>
+          </div>
+        )}
+
+        {!compact && (
+          <>
+            {!showDeckListField ? (
+              <button
+                type="button"
+                onClick={() => setShowDeckListField(true)}
+                className="text-xs text-accent hover:text-accent-light transition-colors"
+              >
+                + Add opponent deck list
+              </button>
+            ) : (
+              <div className="w-full">
+                <textarea
+                  value={opponentDeckList}
+                  onChange={(e) => setOpponentDeckList(e.target.value)}
+                  placeholder="Paste opponent's deck list"
+                  rows={4}
+                  className="w-full mb-1 rounded-lg bg-bg px-3 py-2 text-xs font-mono text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 resize-y [font-size:16px] sm:text-xs"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeckListField(false);
+                    setOpponentDeckList("");
+                  }}
+                  className="text-xs text-text-muted hover:text-text-secondary transition-colors"
+                >
+                  Remove deck list
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* The date field itself renders below the opponent archetype field
+            (see below); here we only offer to re-add it once removed. */}
+        {!showDateField && (
+          <button
+            type="button"
+            onClick={() => setShowDateField(true)}
+            className="text-xs text-accent hover:text-accent-light transition-colors"
+          >
+            + Add match date
+          </button>
+        )}
+      </div>
+
       {/* Result — single game (Win/Loss/Draw) or Best-of-3 game tracker */}
       {!bestOf3 ? (
         <div className="mb-3">
@@ -509,149 +652,6 @@ export default function MatchForm({
           )}
         </div>
       )}
-
-      {/* Opponent name */}
-      <input
-        type="text"
-        value={opponentName}
-        onChange={(e) => setOpponentName(e.target.value)}
-        placeholder="Opponent name"
-        className="w-full mb-2 rounded-full bg-bg px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
-      />
-
-      {/* Opponent archetype with autocomplete */}
-      <div className="relative mb-2" ref={suggestionsRef}>
-        <input
-          type="text"
-          value={opponentArchetype}
-          onChange={(e) => handleArchetypeChange(e.target.value)}
-          onFocus={() => {
-            if (opponentArchetype.trim() === "") {
-              setSuggestions(META_ARCHETYPE_NAMES.slice(0, 8));
-            }
-            setShowSuggestions(true);
-          }}
-          placeholder="Opponent deck / archetype"
-          className="w-full rounded-full bg-bg px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
-        />
-        {showSuggestions && suggestions.length > 0 && (
-          <div className="absolute left-0 right-0 top-full mt-1 z-30 rounded-lg border border-border bg-surface shadow-lg max-h-48 overflow-auto">
-            {suggestions.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => {
-                  setOpponentArchetype(s);
-                  setShowSuggestions(false);
-                }}
-                className="w-full text-left px-3 py-2 text-sm text-text-primary hover:bg-surface-2 transition-colors"
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Match date — shown below the opponent deck/archetype field when set (defaults to today) */}
-      {showDateField && (
-        <div className="mb-2 flex w-full items-center gap-2">
-          <input
-            type="date"
-            value={matchDate}
-            onChange={(e) => setMatchDate(e.target.value)}
-            className="flex-1 rounded-full bg-bg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
-          />
-          <button
-            type="button"
-            onClick={() => setShowDateField(false)}
-            className="text-xs text-text-muted hover:text-text-secondary transition-colors"
-          >
-            Remove
-          </button>
-        </div>
-      )}
-
-      {/* Optional toggles — left-aligned */}
-      <div className="flex flex-col items-start gap-1 mb-3">
-        {/* Notes — optional, like the deck list */}
-        {!showNotesField ? (
-          <button
-            type="button"
-            onClick={() => setShowNotesField(true)}
-            className="text-xs text-accent hover:text-accent-light transition-colors"
-          >
-            + Add notes
-          </button>
-        ) : (
-          <div className="w-full">
-            <input
-              type="text"
-              value={matchNotes}
-              onChange={(e) => setMatchNotes(e.target.value)}
-              placeholder="Notes"
-              className="w-full mb-1 rounded-full bg-bg px-4 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setShowNotesField(false);
-                setMatchNotes("");
-              }}
-              className="text-xs text-text-muted hover:text-text-secondary transition-colors"
-            >
-              Remove notes
-            </button>
-          </div>
-        )}
-
-        {!compact && (
-          <>
-            {!showDeckListField ? (
-              <button
-                type="button"
-                onClick={() => setShowDeckListField(true)}
-                className="text-xs text-accent hover:text-accent-light transition-colors"
-              >
-                + Add opponent deck list
-              </button>
-            ) : (
-              <div className="w-full">
-                <textarea
-                  value={opponentDeckList}
-                  onChange={(e) => setOpponentDeckList(e.target.value)}
-                  placeholder="Paste opponent's deck list"
-                  rows={4}
-                  className="w-full mb-1 rounded-lg bg-bg px-3 py-2 text-xs font-mono text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 resize-y [font-size:16px] sm:text-xs"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowDeckListField(false);
-                    setOpponentDeckList("");
-                  }}
-                  className="text-xs text-text-muted hover:text-text-secondary transition-colors"
-                >
-                  Remove deck list
-                </button>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* The date field itself renders below the opponent archetype field
-            (see below); here we only offer to re-add it once removed. */}
-        {!showDateField && (
-          <button
-            type="button"
-            onClick={() => setShowDateField(true)}
-            className="text-xs text-accent hover:text-accent-light transition-colors"
-          >
-            + Add match date
-          </button>
-        )}
-      </div>
 
       {error && <p className="text-xs text-accent mb-2">{error}</p>}
 
