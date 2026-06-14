@@ -380,7 +380,7 @@ export default function DeckProfileView({
                 analysis={result}
                 shareUrl={shareUrl}
                 publishMode={variant === "fresh"}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-brand px-5 py-2.5 text-sm font-semibold text-white shadow-brand hover:shadow-brand-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-brand px-5 py-2.5 text-sm font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
           )}
