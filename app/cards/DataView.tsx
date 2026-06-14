@@ -14,6 +14,8 @@ interface DataViewStats {
 
 const PAGE_SIZE = 20;
 
+type SetFilter = "all" | "owned" | "unowned";
+
 export default function DataView({ setStats }: { setStats: SetStats[] }) {
   const { signedIn } = useInventory();
   const [stats, setStatsState] = useState<StatsState>({
@@ -21,12 +23,17 @@ export default function DataView({ setStats }: { setStats: SetStats[] }) {
     data: null,
   });
   const [page, setPage] = useState(1);
+  const [filter, setFilter] = useState<SetFilter>("all");
 
   useEffect(() => {
     // Reset to the first page whenever the auth state flips so a fresh
     // sign-in lands on the top of the list instead of a stale offset.
     setPage(1);
   }, [signedIn]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter]);
 
   useEffect(() => {
     if (signedIn !== true) {
@@ -55,11 +62,20 @@ export default function DataView({ setStats }: { setStats: SetStats[] }) {
     return Object.keys(stats.data.uniqueOwnedBySet).length;
   }, [stats.data]);
 
-  const totalPages = Math.max(1, Math.ceil(setStats.length / PAGE_SIZE));
+  const filteredSets = useMemo(() => {
+    if (filter === "all") return setStats;
+    const owned = stats.data?.uniqueOwnedBySet ?? {};
+    if (filter === "owned") {
+      return setStats.filter((s) => (owned[s.id] ?? 0) > 0);
+    }
+    return setStats.filter((s) => (owned[s.id] ?? 0) === 0);
+  }, [setStats, filter, stats.data]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredSets.length / PAGE_SIZE));
   const pageSets = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
-    return setStats.slice(start, start + PAGE_SIZE);
-  }, [setStats, page]);
+    return filteredSets.slice(start, start + PAGE_SIZE);
+  }, [filteredSets, page]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -83,31 +99,86 @@ export default function DataView({ setStats }: { setStats: SetStats[] }) {
         </div>
       )}
 
-      <div className="rounded-2xl border border-black/8 bg-white overflow-hidden">
-        <div className="px-4 py-3 border-b border-black/8 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-text-primary">Set Completion</h3>
+      <div>
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <h3 className="text-sm font-semibold text-text-primary">Sets</h3>
           <span className="text-xs text-text-muted">
-            {setStats.length} sets · newest first
+            {filteredSets.length} {filteredSets.length === 1 ? "set" : "sets"} · newest first
           </span>
         </div>
-        <ul>
-          {pageSets.map((s, i) => {
-            const owned = stats.data?.uniqueOwnedBySet[s.id] ?? 0;
-            return (
-              <SetCompletionRow
-                key={s.id}
-                set={s}
-                owned={owned}
-                isFirst={i === 0}
-              />
-            );
-          })}
-        </ul>
+        <SetFilterRadios value={filter} onChange={setFilter} disabled={signedIn !== true} />
+        {pageSets.length === 0 ? (
+          <p className="text-sm text-text-secondary py-4">No sets match this filter.</p>
+        ) : (
+          <ul className="divide-y divide-black/8">
+            {pageSets.map((s) => {
+              const owned = stats.data?.uniqueOwnedBySet[s.id] ?? 0;
+              return <SetCompletionRow key={s.id} set={s} owned={owned} />;
+            })}
+          </ul>
+        )}
       </div>
 
       {totalPages > 1 && (
         <SetPagination page={page} totalPages={totalPages} onPage={setPage} />
       )}
+    </div>
+  );
+}
+
+function SetFilterRadios({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: SetFilter;
+  onChange: (v: SetFilter) => void;
+  disabled: boolean;
+}) {
+  const options: Array<{ key: SetFilter; label: string }> = [
+    { key: "all", label: "All Sets" },
+    { key: "owned", label: "Owned" },
+    { key: "unowned", label: "Unowned" },
+  ];
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Set ownership scope"
+      className="flex items-center gap-4 mb-3"
+    >
+      {options.map((o) => {
+        const selected = value === o.key;
+        const isDisabled = disabled && o.key !== "all";
+        return (
+          <label
+            key={o.key}
+            className={`inline-flex items-center gap-2 select-none text-xs font-medium text-text-secondary ${
+              isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+            }`}
+          >
+            <input
+              type="radio"
+              name="set-filter"
+              value={o.key}
+              checked={selected}
+              disabled={isDisabled}
+              onChange={() => onChange(o.key)}
+              className="sr-only peer"
+            />
+            <span
+              aria-hidden="true"
+              className={`relative inline-flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${
+                selected
+                  ? "border-accent bg-white"
+                  : "border-black/25 bg-white peer-hover:border-black/50"
+              }`}
+            >
+              {selected && <span className="h-2 w-2 rounded-full bg-accent" />}
+            </span>
+            <span className={selected ? "text-text-primary" : ""}>{o.label}</span>
+          </label>
+        );
+      })}
     </div>
   );
 }
@@ -162,16 +233,14 @@ function StatCard({ label, value }: { label: string; value: string }) {
 function SetCompletionRow({
   set,
   owned,
-  isFirst,
 }: {
   set: SetStats;
   owned: number;
-  isFirst: boolean;
 }) {
   const pct = set.size > 0 ? Math.min(100, (owned / set.size) * 100) : 0;
   const released = formatReleaseDate(set.releaseDate);
   return (
-    <li className={`px-4 py-3 ${isFirst ? "" : "border-t border-black/8"}`}>
+    <li className="py-3">
       <div className="flex items-center gap-3">
         <SetLogo
           src={set.logo}
