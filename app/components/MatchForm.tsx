@@ -313,6 +313,28 @@ export default function MatchForm({
 
   return (
     <div className="pt-2">
+      {/* Match date — shown at the top of the form when set (defaults to today) */}
+      {showDateField && (
+        <div className="mb-2 flex w-full items-center gap-2">
+          <input
+            type="date"
+            value={matchDate}
+            onChange={(e) => setMatchDate(e.target.value)}
+            className="flex-1 rounded-full bg-bg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+          />
+          <button
+            type="button"
+            onClick={() => setShowDateField(false)}
+            aria-label="Remove match date"
+            className="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-bg text-text-muted shadow-[inset_0_0_0_1px_var(--border)] hover:text-text-secondary hover:bg-surface-2 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Opponent name */}
       <input
         type="text"
@@ -356,25 +378,6 @@ export default function MatchForm({
           </div>
         )}
       </div>
-
-      {/* Match date — shown below the opponent deck/archetype field when set (defaults to today) */}
-      {showDateField && (
-        <div className="mb-2 flex w-full items-center gap-2">
-          <input
-            type="date"
-            value={matchDate}
-            onChange={(e) => setMatchDate(e.target.value)}
-            className="flex-1 rounded-full bg-bg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
-          />
-          <button
-            type="button"
-            onClick={() => setShowDateField(false)}
-            className="text-xs text-text-muted hover:text-text-secondary transition-colors"
-          >
-            Remove
-          </button>
-        </div>
-      )}
 
       {/* Optional toggles — left-aligned */}
       <div className="flex flex-col items-start gap-1 mb-3">
@@ -443,8 +446,8 @@ export default function MatchForm({
           </>
         )}
 
-        {/* The date field itself renders below the opponent archetype field
-            (see below); here we only offer to re-add it once removed. */}
+        {/* The date field itself renders at the top of the form (see above);
+            here we only offer to re-add it once removed. */}
         {!showDateField && (
           <button
             type="button"
