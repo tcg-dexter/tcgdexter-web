@@ -196,7 +196,13 @@ export default function CardsClient({ initialResult, facets, setStats, initialPa
       </div>
 
       {mode === "data" ? (
-        <DataView setStats={setStats} />
+        <DataView
+          setStats={setStats}
+          onSelectSet={(setId) => {
+            setParams((p) => ({ ...p, setId: [setId], page: 1 }));
+            setMode("catalog");
+          }}
+        />
       ) : (
         <CatalogBody
           initialResult={initialResult}

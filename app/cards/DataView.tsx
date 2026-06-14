@@ -16,7 +16,13 @@ const PAGE_SIZE = 20;
 
 type SetFilter = "all" | "owned" | "unowned";
 
-export default function DataView({ setStats }: { setStats: SetStats[] }) {
+export default function DataView({
+  setStats,
+  onSelectSet,
+}: {
+  setStats: SetStats[];
+  onSelectSet: (setId: string) => void;
+}) {
   const { signedIn } = useInventory();
   const [stats, setStatsState] = useState<StatsState>({
     loading: false,
@@ -109,6 +115,7 @@ export default function DataView({ setStats }: { setStats: SetStats[] }) {
                   set={s}
                   owned={owned}
                   isFirst={i === 0}
+                  onSelect={onSelectSet}
                 />
               );
             })}
@@ -223,16 +230,23 @@ function SetCompletionRow({
   set,
   owned,
   isFirst,
+  onSelect,
 }: {
   set: SetStats;
   owned: number;
   isFirst: boolean;
+  onSelect: (setId: string) => void;
 }) {
   const pct = set.size > 0 ? Math.min(100, (owned / set.size) * 100) : 0;
   const released = formatReleaseDate(set.releaseDate);
   return (
     <li className="py-3">
-      <div className="flex items-center gap-3">
+      <button
+        type="button"
+        onClick={() => onSelect(set.id)}
+        aria-label={`Filter catalog by ${set.name}`}
+        className="w-full text-left flex items-center gap-3 rounded-lg -mx-2 px-2 py-1 hover:bg-surface/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-colors"
+      >
         <SetLogo
           src={set.logo}
           ptcgoCode={set.ptcgoCode}
@@ -294,7 +308,7 @@ function SetCompletionRow({
             />
           </div>
         </div>
-      </div>
+      </button>
     </li>
   );
 }
