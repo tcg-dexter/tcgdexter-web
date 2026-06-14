@@ -37,7 +37,7 @@ const BLACK_STAR_PROMO_SETS = new Set<string>([
   "mep",    // Mega Evolution Black Star Promos
 ]);
 
-const BLACK_STAR_PROMO_LOGO = "/sets/black-star-promo.png";
+const BLACK_STAR_PROMO_LOGO = "/sets/black-star-promo.webp";
 
 /**
  * Per-set logo/symbol overrides for sets the pokemontcg.io CDN doesn't
@@ -46,11 +46,11 @@ const BLACK_STAR_PROMO_LOGO = "/sets/black-star-promo.png";
  */
 const SET_BRAND_OVERRIDES: Record<string, BrandImageOverride> = {
   // Ascended Heroes (me2pt5 / ASC)
-  me2pt5: { logo: "/sets/me2pt5.png", symbol: null },
+  me2pt5: { logo: "/sets/me2pt5.webp", symbol: null },
   // Perfect Order (me3 / POR)
-  me3: { logo: "/sets/me3.png", symbol: null },
+  me3: { logo: "/sets/me3.webp", symbol: null },
   // Chaos Rising (me4 / CRI)
-  me4: { logo: "/sets/me4.png", symbol: null },
+  me4: { logo: "/sets/me4.webp", symbol: null },
 };
 
 export function setLogo(setId: string): string | null {
