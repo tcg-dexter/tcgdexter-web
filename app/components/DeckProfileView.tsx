@@ -278,7 +278,7 @@ export default function DeckProfileView({
   );
 
   const overviewNode = (
-    <div className={variant === "meta" ? "pt-4" : undefined}>
+    <div className={`py-2 ${variant === "meta" ? "pt-4" : ""}`}>
       <DeckCardGrid cards={result.cards} />
     </div>
   );
