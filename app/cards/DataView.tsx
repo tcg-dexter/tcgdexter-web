@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { SetStats } from "@/lib/cardsIndex";
 import { useInventory } from "./InventoryContext";
+import SetLogo from "./SetLogo";
 
 interface DataViewStats {
   cardCount: number;
@@ -171,37 +172,42 @@ function SetCompletionRow({
   const released = formatReleaseDate(set.releaseDate);
   return (
     <li className={`px-4 py-3 ${isFirst ? "" : "border-t border-black/8"}`}>
-      <div className="flex items-baseline justify-between gap-3 mb-2">
-        <div className="min-w-0 flex items-baseline gap-2">
-          {set.ptcgoCode && (
-            <span className="text-[10px] font-bold tracking-wide rounded-md border border-black/15 px-1 py-0.5 text-text-secondary">
-              {set.ptcgoCode}
-            </span>
-          )}
-          <span className="text-sm font-semibold text-text-primary truncate">
-            {set.name}
-          </span>
-          {released && (
-            <span className="text-xs text-text-muted truncate">{released}</span>
-          )}
-        </div>
-        <span className="text-xs font-semibold text-text-secondary tabular-nums whitespace-nowrap">
-          {owned} / {set.size}
-          <span className="ml-2 text-text-muted">({pct.toFixed(0)}%)</span>
-        </span>
-      </div>
-      <div
-        className="h-2 rounded-full bg-surface overflow-hidden"
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(pct)}
-        aria-label={`${set.name} completion ${pct.toFixed(0)}%`}
-      >
-        <div
-          className="h-full bg-gradient-to-r from-accent to-[#f08c8c] transition-[width] duration-500"
-          style={{ width: `${pct}%` }}
+      <div className="flex items-center gap-3">
+        <SetLogo
+          src={set.logo}
+          ptcgoCode={set.ptcgoCode}
+          setName={set.name}
+          className="shrink-0 w-16 h-12"
         />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-3 mb-2">
+            <div className="min-w-0 flex items-baseline gap-2">
+              <span className="text-sm font-semibold text-text-primary truncate">
+                {set.name}
+              </span>
+              {released && (
+                <span className="text-xs text-text-muted truncate">{released}</span>
+              )}
+            </div>
+            <span className="text-xs font-semibold text-text-secondary tabular-nums whitespace-nowrap">
+              {owned} / {set.size}
+              <span className="ml-2 text-text-muted">({pct.toFixed(0)}%)</span>
+            </span>
+          </div>
+          <div
+            className="h-2 rounded-full bg-surface overflow-hidden"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(pct)}
+            aria-label={`${set.name} completion ${pct.toFixed(0)}%`}
+          >
+            <div
+              className="h-full bg-gradient-to-r from-accent to-[#f08c8c] transition-[width] duration-500"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
       </div>
     </li>
   );

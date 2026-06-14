@@ -1,5 +1,6 @@
 import cardData from "@/data/cards-standard.json";
 import { setReleaseDate } from "@/lib/setReleaseDates";
+import { setLogo, setSymbol } from "@/lib/setImages";
 import { normalizeForSearch } from "@/lib/searchNormalize";
 
 /**
@@ -108,6 +109,12 @@ export interface SetStats {
    *  and other prints past the "official" set size. Used as the
    *  denominator for completion progress in the catalog data view. */
   size: number;
+  /** Wide transparent PNG of the set's banner logo. Null for sets we
+   *  know aren't on pokemontcg.io's CDN — fall back to ptcgoCode. */
+  logo: string | null;
+  /** Small transparent PNG of the set's expansion symbol. Same null
+   *  semantics as `logo`. */
+  symbol: string | null;
 }
 
 let CARDS: CardIndexEntry[] | null = null;
@@ -250,6 +257,8 @@ export function getAllSetStats(): SetStats[] {
         ptcgoCode: c.ptcgoCode,
         releaseDate: c.setReleaseDate ?? null,
         size: 1,
+        logo: setLogo(c.setId),
+        symbol: setSymbol(c.setId),
       });
     }
   }
