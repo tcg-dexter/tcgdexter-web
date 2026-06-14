@@ -267,7 +267,7 @@ export default function MatchLog({
             return (
               <div
                 key={match.id}
-                className={`px-1 py-3 ${
+                className={`pr-1 py-3 ${
                   i < arr.length - 1 ? "border-b border-border/50" : ""
                 }`}
               >
