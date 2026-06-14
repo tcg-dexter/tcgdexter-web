@@ -20,42 +20,48 @@ interface BrandImageOverride {
 }
 
 /**
+ * Sets that share the canonical "Black Star Promo" wordmark instead of
+ * a per-series logo. Every entry in this set maps to the same image
+ * so the data view doesn't need a one-off URL per generation.
+ */
+const BLACK_STAR_PROMO_SETS = new Set<string>([
+  "basep",  // Wizards Black Star Promos
+  "np",     // Nintendo Black Star Promos
+  "dpp",    // DP Black Star Promos
+  "hsp",    // HGSS Black Star Promos
+  "bwp",    // BW Black Star Promos
+  "xyp",    // XY Black Star Promos
+  "smp",    // SM Black Star Promos
+  "swshp",  // SWSH Black Star Promos
+  "svp",    // Scarlet & Violet Black Star Promos
+  "mep",    // Mega Evolution Black Star Promos
+]);
+
+const BLACK_STAR_PROMO_LOGO = "/sets/black-star-promo.png";
+
+/**
  * Per-set logo/symbol overrides for sets the pokemontcg.io CDN doesn't
- * carry yet. The three Mega Evolution sets below pull card art from
- * Limitless's TPCI press-kit mirror (see `lib/cardImages.ts`) and
- * scrydex respectively; their press-kit logo files live alongside the
- * card art with the conventional `_LOGO_EN.png` suffix.
- *
- * If upstream changes a path (or pokemontcg.io eventually backfills
- * the set), update or remove the entry — `SetLogo` will silently fall
- * back to the PTCGO badge on a 404 in the meantime.
+ * carry yet. Files live under `public/sets/` so we control caching and
+ * uptime — no reliance on upstream CDNs for these one-offs.
  */
 const SET_BRAND_OVERRIDES: Record<string, BrandImageOverride> = {
   // Ascended Heroes (me2pt5 / ASC)
-  me2pt5: {
-    logo: "https://limitlesstcg.nyc3.digitaloceanspaces.com/tpci/ASC/ASC_LOGO_EN.png",
-    symbol: "https://limitlesstcg.nyc3.digitaloceanspaces.com/tpci/ASC/ASC_SYMBOL_EN.png",
-  },
+  me2pt5: { logo: "/sets/me2pt5.png", symbol: null },
   // Perfect Order (me3 / POR)
-  me3: {
-    logo: "https://limitlesstcg.nyc3.digitaloceanspaces.com/tpci/POR/POR_LOGO_EN.png",
-    symbol: "https://limitlesstcg.nyc3.digitaloceanspaces.com/tpci/POR/POR_SYMBOL_EN.png",
-  },
-  // Chaos Rising (me4 / CRI) — scrydex hosts brand assets at the same
-  // base path as the card images, using the set id as the slug.
-  me4: {
-    logo: "https://images.scrydex.com/pokemon/me4/logo",
-    symbol: "https://images.scrydex.com/pokemon/me4/symbol",
-  },
+  me3: { logo: "/sets/me3.png", symbol: null },
+  // Chaos Rising (me4 / CRI)
+  me4: { logo: "/sets/me4.png", symbol: null },
 };
 
 export function setLogo(setId: string): string | null {
+  if (BLACK_STAR_PROMO_SETS.has(setId)) return BLACK_STAR_PROMO_LOGO;
   const override = SET_BRAND_OVERRIDES[setId];
   if (override) return override.logo;
   return `https://images.pokemontcg.io/${setId}/logo.png`;
 }
 
 export function setSymbol(setId: string): string | null {
+  if (BLACK_STAR_PROMO_SETS.has(setId)) return BLACK_STAR_PROMO_LOGO;
   const override = SET_BRAND_OVERRIDES[setId];
   if (override) return override.symbol;
   return `https://images.pokemontcg.io/${setId}/symbol.png`;
