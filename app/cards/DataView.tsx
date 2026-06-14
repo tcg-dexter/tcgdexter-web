@@ -103,10 +103,17 @@ export default function DataView({ setStats }: { setStats: SetStats[] }) {
         {pageSets.length === 0 ? (
           <p className="text-sm text-text-secondary py-4">No sets match this filter.</p>
         ) : (
-          <ul className="divide-y divide-black/8">
-            {pageSets.map((s) => {
+          <ul>
+            {pageSets.map((s, i) => {
               const owned = stats.data?.uniqueOwnedBySet[s.id] ?? 0;
-              return <SetCompletionRow key={s.id} set={s} owned={owned} />;
+              return (
+                <SetCompletionRow
+                  key={s.id}
+                  set={s}
+                  owned={owned}
+                  isFirst={i === 0}
+                />
+              );
             })}
           </ul>
         )}
@@ -218,9 +225,11 @@ function StatCard({ label, value }: { label: string; value: string }) {
 function SetCompletionRow({
   set,
   owned,
+  isFirst,
 }: {
   set: SetStats;
   owned: number;
+  isFirst: boolean;
 }) {
   const pct = set.size > 0 ? Math.min(100, (owned / set.size) * 100) : 0;
   const released = formatReleaseDate(set.releaseDate);
@@ -233,7 +242,19 @@ function SetCompletionRow({
           setName={set.name}
           className="shrink-0 w-16 h-12"
         />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 relative">
+          {!isFirst && (
+            // The row uses items-center, so this hairline lives at the
+            // top of the text column — which equals the row's top edge,
+            // since the text column is the taller flex child. Backing
+            // up by py-3 puts the line in the visual midline between
+            // adjacent rows. It only spans the text column, leaving
+            // the logo column undivided as requested.
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -top-3 inset-x-0 h-px bg-black/8"
+            />
+          )}
           <div className="flex items-start justify-between gap-3 mb-2">
             <div className="min-w-0">
               <div className="text-sm font-semibold text-text-primary truncate">
