@@ -168,7 +168,7 @@ function MatchCard({ match }: { match: RecentMatch }) {
           >
             {rightSide.prizes}
           </span>
-          <div className="relative flex items-end justify-center gap-8 px-4 pt-5 pb-3">
+          <div className={`relative flex items-end justify-center gap-8 px-4 pt-5 ${match.isBestOf3 ? "" : "pb-3"}`}>
             <div style={{ transform: "rotate(-6deg)", transformOrigin: "bottom center" }}>
               <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -183,7 +183,7 @@ function MatchCard({ match }: { match: RecentMatch }) {
             </div>
           </div>
           {match.isBestOf3 && (
-            <div className="relative flex justify-center py-2">
+            <div className="relative flex justify-center py-3">
               <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold text-black">
                 Best of 3
               </span>
