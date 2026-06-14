@@ -510,25 +510,6 @@ export default function MatchForm({
         </div>
       )}
 
-      {/* Match date — shown above the opponent when set (defaults to today) */}
-      {showDateField && (
-        <div className="mb-2 flex w-full items-center gap-2">
-          <input
-            type="date"
-            value={matchDate}
-            onChange={(e) => setMatchDate(e.target.value)}
-            className="flex-1 rounded-full bg-bg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
-          />
-          <button
-            type="button"
-            onClick={() => setShowDateField(false)}
-            className="text-xs text-text-muted hover:text-text-secondary transition-colors"
-          >
-            Remove
-          </button>
-        </div>
-      )}
-
       {/* Opponent name */}
       <input
         type="text"
@@ -572,6 +553,25 @@ export default function MatchForm({
           </div>
         )}
       </div>
+
+      {/* Match date — shown below the opponent deck/archetype field when set (defaults to today) */}
+      {showDateField && (
+        <div className="mb-2 flex w-full items-center gap-2">
+          <input
+            type="date"
+            value={matchDate}
+            onChange={(e) => setMatchDate(e.target.value)}
+            className="flex-1 rounded-full bg-bg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+          />
+          <button
+            type="button"
+            onClick={() => setShowDateField(false)}
+            className="text-xs text-text-muted hover:text-text-secondary transition-colors"
+          >
+            Remove
+          </button>
+        </div>
+      )}
 
       {/* Optional toggles — left-aligned */}
       <div className="flex flex-col items-start gap-1 mb-3">
@@ -640,8 +640,8 @@ export default function MatchForm({
           </>
         )}
 
-        {/* The date field itself renders above the opponent (see below);
-            here we only offer to re-add it once removed. */}
+        {/* The date field itself renders below the opponent archetype field
+            (see below); here we only offer to re-add it once removed. */}
         {!showDateField && (
           <button
             type="button"
