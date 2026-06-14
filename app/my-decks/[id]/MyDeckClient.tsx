@@ -237,7 +237,7 @@ export default function MyDeckClient({
               }`}
               style={{
                 backgroundImage: logOpen
-                  ? "linear-gradient(black, black), var(--gradient-brand)"
+                  ? "linear-gradient(black, black), linear-gradient(black, black)"
                   : "linear-gradient(var(--bg), var(--bg)), var(--gradient-brand)",
                 backgroundOrigin: "border-box",
                 backgroundClip: "padding-box, border-box",
