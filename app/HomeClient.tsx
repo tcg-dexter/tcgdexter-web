@@ -158,13 +158,13 @@ function MatchCard({ match }: { match: RecentMatch }) {
               regardless of digit width. */}
           <span
             aria-label={`${leftSide.handleLabel} prizes taken`}
-            className="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-white text-5xl font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
+            className="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-white text-[2.4rem] font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
           >
             {leftSide.prizes}
           </span>
           <span
             aria-label={`${rightSide.handleLabel} prizes taken`}
-            className="absolute right-3 top-1/2 -translate-y-1/2 z-10 text-white text-5xl font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
+            className="absolute right-3 top-1/2 -translate-y-1/2 z-10 text-white text-[2.4rem] font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
           >
             {rightSide.prizes}
           </span>
