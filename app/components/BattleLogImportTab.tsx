@@ -218,7 +218,7 @@ export default function BattleLogImportTab({ savedDeckId, onSuccess, onCancel }:
 
   if (phase === "paste") {
     return (
-      <div className="pt-2">
+      <div key="paste" className="pt-2 animate-tab-fade">
         <textarea
           value={raw}
           onChange={(e) => setRaw(e.target.value)}
@@ -256,7 +256,7 @@ export default function BattleLogImportTab({ savedDeckId, onSuccess, onCancel }:
 
   // ── Review phase ──────────────────────────────────────────────
   return (
-    <div className="pt-2">
+    <div key="review" className="pt-2 animate-tab-fade">
       {/* Handle picker */}
       <div className="mb-3">
         <p className="text-xs font-semibold text-text-secondary mb-2">
