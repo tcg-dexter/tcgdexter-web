@@ -215,7 +215,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
       <div className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
         {label}
       </div>
-      <div className="mt-1 text-2xl font-semibold tracking-tight text-text-primary tabular-nums">
+      <div className="mt-1 text-2xl font-semibold tracking-tight text-text-primary tabular-nums text-right">
         {value}
       </div>
     </div>
