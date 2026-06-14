@@ -18,6 +18,21 @@ const RESULT_STYLE = {
   draw: { bg: "bg-white shadow-[inset_0_0_0_1px_black]", text: "text-text-primary" },
 };
 
+// `<input type="date">` can't be fully de-chromed across browsers (Safari in
+// particular always renders its own boxed control regardless of
+// `appearance`), so the visible "capsule" is a plain div showing this
+// formatted string. The native input stays mounted but invisible, purely to
+// drive the OS date picker via `showPicker()`.
+function formatMatchDate(value: string) {
+  const [y, m, d] = value.split("-").map(Number);
+  if (!y || !m || !d) return value;
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export interface MatchFormData {
   result: "win" | "loss" | "draw";
   opponent_name: string | null;
@@ -205,6 +220,8 @@ export default function MatchForm({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (
@@ -316,12 +333,24 @@ export default function MatchForm({
       {/* Match date — shown at the top of the form when set (defaults to today) */}
       {showDateField && (
         <div className="mb-2 flex items-center justify-between gap-2">
-          <input
-            type="date"
-            value={matchDate}
-            onChange={(e) => setMatchDate(e.target.value)}
-            className="appearance-none rounded-full bg-bg pl-0 pr-4 py-2.5 text-sm font-bold text-text-primary shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 [font-size:16px] sm:text-sm [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-datetime-edit]:bg-transparent [&::-webkit-datetime-edit-fields-wrapper]:bg-transparent [&::-webkit-date-and-time-value]:bg-transparent"
-          />
+          <div className="relative">
+            <div className="pointer-events-none flex items-center gap-2 rounded-full bg-bg px-4 py-2.5 text-sm font-bold text-text-primary shadow-[inset_0_0_0_1px_var(--border)]">
+              <span>{formatMatchDate(matchDate)}</span>
+              <svg className="w-4 h-4 flex-shrink-0 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3.75 18.75h16.5a1.5 1.5 0 001.5-1.5V6.75a1.5 1.5 0 00-1.5-1.5H3.75a1.5 1.5 0 00-1.5 1.5v10.5a1.5 1.5 0 001.5 1.5z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 9h18" />
+              </svg>
+            </div>
+            <input
+              ref={dateInputRef}
+              type="date"
+              value={matchDate}
+              onChange={(e) => setMatchDate(e.target.value)}
+              onClick={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
+              aria-label="Match date"
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0 [font-size:16px]"
+            />
+          </div>
           <button
             type="button"
             onClick={() => setShowDateField(false)}
