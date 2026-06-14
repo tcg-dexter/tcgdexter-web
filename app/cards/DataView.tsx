@@ -180,16 +180,16 @@ function SetCompletionRow({
           className="shrink-0 w-16 h-12"
         />
         <div className="min-w-0 flex-1">
-          <div className="flex items-baseline justify-between gap-3 mb-2">
-            <div className="min-w-0 flex items-baseline gap-2">
-              <span className="text-sm font-semibold text-text-primary truncate">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-text-primary truncate">
                 {set.name}
-              </span>
+              </div>
               {released && (
-                <span className="text-xs text-text-muted truncate">{released}</span>
+                <div className="text-xs text-text-muted truncate">{released}</div>
               )}
             </div>
-            <span className="text-xs font-semibold text-text-secondary tabular-nums whitespace-nowrap">
+            <span className="text-xs font-semibold text-text-secondary tabular-nums whitespace-nowrap pt-0.5">
               {owned} / {set.size}
               <span className="ml-2 text-text-muted">({pct.toFixed(0)}%)</span>
             </span>
@@ -203,7 +203,7 @@ function SetCompletionRow({
             aria-label={`${set.name} completion ${pct.toFixed(0)}%`}
           >
             <div
-              className="h-full bg-gradient-to-r from-accent to-[#f08c8c] transition-[width] duration-500"
+              className="h-full bg-gradient-brand transition-[width] duration-500"
               style={{ width: `${pct}%` }}
             />
           </div>
