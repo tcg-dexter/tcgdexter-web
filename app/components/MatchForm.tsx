@@ -507,7 +507,7 @@ export default function MatchForm({
                 onChange={(e) => setPlayerPrizes(e.target.value)}
                 placeholder="You"
                 aria-label="Your prizes taken"
-                className="no-spinner w-12 rounded-full bg-bg py-2.5 text-center text-sm font-bold text-text-primary placeholder:font-normal placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 [font-size:16px] sm:text-sm"
+                className="no-spinner w-12 rounded-full bg-bg py-2.5 text-center text-sm font-bold text-text-primary placeholder:font-normal placeholder:text-xs placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 [font-size:16px] sm:text-sm"
               />
               <input
                 type="number"
@@ -518,7 +518,7 @@ export default function MatchForm({
                 onChange={(e) => setOpponentPrizes(e.target.value)}
                 placeholder="Opp"
                 aria-label="Opponent prizes taken"
-                className="no-spinner w-12 rounded-full bg-bg py-2.5 text-center text-sm font-bold text-text-primary placeholder:font-normal placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 [font-size:16px] sm:text-sm"
+                className="no-spinner w-12 rounded-full bg-bg py-2.5 text-center text-sm font-bold text-text-primary placeholder:font-normal placeholder:text-xs placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 [font-size:16px] sm:text-sm"
               />
             </div>
           </div>
@@ -557,8 +557,8 @@ export default function MatchForm({
                 Prizes
               </span>
               <div className="flex gap-1">
-                <span className="w-9 text-center text-[10px] text-text-muted">You</span>
-                <span className="w-9 text-center text-[10px] text-text-muted">Opp</span>
+                <span className="w-10 text-center text-[10px] text-text-muted">You</span>
+                <span className="w-10 text-center text-[10px] text-text-muted">Opp</span>
               </div>
             </div>
           </div>
@@ -620,7 +620,7 @@ export default function MatchForm({
                       value={gamePrizes[i].p}
                       onChange={(e) => setGamePrize(i, "p", e.target.value)}
                       aria-label={`Match ${i + 1} your prizes`}
-                      className="no-spinner w-9 rounded-full bg-surface py-1.5 text-center text-xs font-bold text-text-primary shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-xs"
+                      className="no-spinner w-10 rounded-full bg-surface py-1.5 text-center text-xs font-bold text-text-primary shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-xs"
                     />
                     <input
                       type="number"
@@ -631,7 +631,7 @@ export default function MatchForm({
                       value={gamePrizes[i].o}
                       onChange={(e) => setGamePrize(i, "o", e.target.value)}
                       aria-label={`Match ${i + 1} opponent prizes`}
-                      className="no-spinner w-9 rounded-full bg-surface py-1.5 text-center text-xs font-bold text-text-primary shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-xs"
+                      className="no-spinner w-10 rounded-full bg-surface py-1.5 text-center text-xs font-bold text-text-primary shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-xs"
                     />
                   </div>
                 </div>
