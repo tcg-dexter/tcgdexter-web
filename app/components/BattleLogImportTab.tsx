@@ -222,7 +222,7 @@ export default function BattleLogImportTab({ savedDeckId, onSuccess, onCancel }:
         <textarea
           value={raw}
           onChange={(e) => setRaw(e.target.value)}
-          placeholder="Paste your TCG Live battle log here…"
+          placeholder="Paste here"
           rows={10}
           className="w-full mb-2 rounded-lg bg-bg px-3 py-2 text-xs font-mono text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 resize-y [font-size:16px] sm:text-xs"
         />
