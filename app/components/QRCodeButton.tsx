@@ -10,6 +10,8 @@ interface Props {
   deckList?: string;
   /** Full analysis object — passed as-is to the share API. */
   analysis?: unknown;
+  /** Extra classes appended to the trigger button (e.g. `flex-1`). */
+  className?: string;
 }
 
 /**
@@ -22,7 +24,7 @@ interface Props {
  *  - deckList + analysis props provided → calls POST /api/deck-share on first
  *    click, then caches the resulting URL for subsequent opens.
  */
-export default function QRCodeButton({ shareUrl, deckList, analysis }: Props) {
+export default function QRCodeButton({ shareUrl, deckList, analysis, className }: Props) {
   const [open, setOpen] = useState(false);
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(
     shareUrl ?? null
@@ -99,7 +101,7 @@ export default function QRCodeButton({ shareUrl, deckList, analysis }: Props) {
         onClick={handleOpen}
         disabled={loading}
         title="Share via QR code"
-        className="inline-flex items-center gap-1.5 rounded-full border border-transparent bg-gradient-brand-reverse bg-origin-border px-3 py-1.5 text-xs font-semibold text-white shadow-brand hover:shadow-brand-lg transition disabled:opacity-50"
+        className={`inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-gradient-brand-reverse bg-origin-border px-3 py-1.5 text-xs font-semibold text-white shadow-brand hover:shadow-brand-lg transition disabled:opacity-50 ${className ?? ""}`}
       >
         {loading ? (
           <>

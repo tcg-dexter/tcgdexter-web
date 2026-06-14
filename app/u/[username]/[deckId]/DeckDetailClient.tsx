@@ -295,7 +295,7 @@ export default function DeckDetailClient({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setLogOpen((o) => !o)}
-              className={`inline-flex items-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-xs font-semibold transition-all ${
+              className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-xs font-semibold transition-all ${
                 logOpen ? "text-white" : "text-text-secondary"
               }`}
               style={{
@@ -323,7 +323,7 @@ export default function DeckDetailClient({
               disabled={visibilityBusy}
               aria-pressed={isPublic}
               aria-label={isPublic ? "Make deck private" : "Make deck public"}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+              className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
                 isPublic
                   ? "border-transparent bg-accent text-white hover:bg-accent-light"
                   : "border-border bg-bg text-text-secondary hover:bg-surface-2"
@@ -352,16 +352,16 @@ export default function DeckDetailClient({
               </svg>
               {isPublic ? "Public" : "Private"}
             </button>
-            <QRCodeButton deckList={deckList} analysis={analysis} />
+            <QRCodeButton deckList={deckList} analysis={analysis} className="flex-1" />
             {/* Settings — icon-only, same visual weight as QR button */}
-            <div ref={settingsRef} className="relative">
+            <div ref={settingsRef} className="relative flex-1">
               <button
                 type="button"
                 onClick={() => setSettingsOpen((o) => !o)}
                 aria-label="Deck settings"
                 aria-haspopup="menu"
                 aria-expanded={settingsOpen}
-                className="inline-flex items-center justify-center rounded-full bg-black border border-transparent px-3 py-[7px] text-white disabled:opacity-50 transition-opacity hover:opacity-80 touch-manipulation"
+                className="w-full inline-flex items-center justify-center rounded-full bg-black border border-transparent px-3 py-[7px] text-white disabled:opacity-50 transition-opacity hover:opacity-80 touch-manipulation"
               >
                 <svg
                   className="w-3.5 h-3.5"
