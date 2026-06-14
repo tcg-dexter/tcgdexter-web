@@ -5,6 +5,7 @@ import {
   type SortDir,
   type OwnershipFilter,
 } from "@/lib/cardSearch";
+import { getAllSetStats } from "@/lib/cardsIndex";
 import { createClient } from "@/lib/supabase/server";
 import CardsClient from "./CardsClient";
 
@@ -101,11 +102,13 @@ export default async function CardsPage({
 
   const result = searchCards(params);
   const facets = getFilterFacets();
+  const setStats = getAllSetStats();
 
   return (
     <CardsClient
       initialResult={result}
       facets={facets}
+      setStats={setStats}
       initialParams={{
         q: params.q ?? "",
         supertype: params.supertype ?? [],

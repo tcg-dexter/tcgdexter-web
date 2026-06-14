@@ -99,8 +99,20 @@ export interface RawCard {
   evolves_from?: string | null;
 }
 
+export interface SetStats {
+  id: string;
+  name: string;
+  ptcgoCode: string | null;
+  releaseDate: string | null;
+  /** Actual number of distinct cards in the set — includes secret rares
+   *  and other prints past the "official" set size. Used as the
+   *  denominator for completion progress in the catalog data view. */
+  size: number;
+}
+
 let CARDS: CardIndexEntry[] | null = null;
 let SETS: Array<{ id: string; name: string; ptcgoCode: string | null }> | null = null;
+let SET_STATS: SetStats[] | null = null;
 
 function tokenizeName(name: string): string[] {
   return normalizeForSearch(name)
@@ -222,6 +234,32 @@ export function getSets(): Array<{ id: string; name: string; ptcgoCode: string |
     })
     .map(({ id, name, ptcgoCode }) => ({ id, name, ptcgoCode }));
   return SETS;
+}
+
+export function getAllSetStats(): SetStats[] {
+  if (SET_STATS) return SET_STATS;
+  const seen = new Map<string, SetStats>();
+  for (const c of getAllCards()) {
+    const existing = seen.get(c.setId);
+    if (existing) {
+      existing.size += 1;
+    } else {
+      seen.set(c.setId, {
+        id: c.setId,
+        name: c.setName,
+        ptcgoCode: c.ptcgoCode,
+        releaseDate: c.setReleaseDate ?? null,
+        size: 1,
+      });
+    }
+  }
+  SET_STATS = Array.from(seen.values()).sort((a, b) => {
+    const ad = a.releaseDate ?? "";
+    const bd = b.releaseDate ?? "";
+    if (ad !== bd) return bd.localeCompare(ad);
+    return a.name.localeCompare(b.name);
+  });
+  return SET_STATS;
 }
 
 export function getCardById(id: string): CardIndexEntry | null {

@@ -4,19 +4,19 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { cardImageSmall } from "@/lib/cardImages";
-import type { CardIndexEntry } from "@/lib/cardsIndex";
+import type { CardIndexEntry, SetStats } from "@/lib/cardsIndex";
 import type { SortKey, SortDir, OwnershipFilter } from "@/lib/cardSearch";
 import { COLLECTION_VARIANTS } from "@/lib/inventory";
 import { normalizeForSearch } from "@/lib/searchNormalize";
 import CardImage from "./CardImage";
 import CardFooterOverlay from "./CardFooterOverlay";
+import DataView from "./DataView";
 import InventoryProvider, { useInventory } from "./InventoryContext";
 import {
   InventoryCapsule,
   InventoryOverlay,
   type InventoryMenuMode,
 } from "./InventoryCapsule";
-import SectionHeader from "@/app/components/ui/SectionHeader";
 import PillSelect from "@/app/components/ui/PillSelect";
 
 interface Facets {
@@ -52,6 +52,7 @@ interface Params {
 interface Props {
   initialResult: { cards: CardIndexEntry[]; total: number; page: number; pageSize: number };
   facets: Facets;
+  setStats: SetStats[];
   initialParams: Params;
 }
 
@@ -80,7 +81,7 @@ function buildUrl(pathname: string, params: Params): string {
   return qs ? `${pathname}?${qs}` : pathname;
 }
 
-export default function CardsClient({ initialResult, facets, initialParams }: Props) {
+export default function CardsClient({ initialResult, facets, setStats, initialParams }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -89,6 +90,7 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
   const [params, setParams] = useState<Params>(initialParams);
   const [searchInput, setSearchInput] = useState(initialParams.q);
   const [showFilters, setShowFilters] = useState(false);
+  const [mode, setMode] = useState<"catalog" | "data">("catalog");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstSync = useRef(true);
 
@@ -125,8 +127,6 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
     debounceRef.current = setTimeout(() => updateParams({ q: v }), 250);
   };
 
-  const totalPages = Math.max(1, Math.ceil(initialResult.total / params.pageSize));
-
   const activeFilterCount =
     params.supertype.length +
     params.type.length +
@@ -161,10 +161,95 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
   return (
     <InventoryProvider>
     <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
-      <div className="mb-6">
-        <SectionHeader title="Card Catalog" />
+      <div className="mb-6 flex items-end justify-between gap-3">
+        <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-text-primary">
+          Card Catalog
+        </h2>
+        <button
+          type="button"
+          onClick={() => setMode((m) => (m === "catalog" ? "data" : "catalog"))}
+          aria-pressed={mode === "data"}
+          aria-label={mode === "data" ? "Switch to catalog view" : "Switch to data view"}
+          title={mode === "data" ? "Switch to catalog view" : "Switch to data view"}
+          className={`inline-flex items-center justify-center h-[38px] w-[38px] rounded-full border transition-colors shrink-0 ${
+            mode === "data"
+              ? "border-transparent bg-black text-white"
+              : "border-black/10 bg-white text-text-primary hover:bg-surface"
+          }`}
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-4 h-4"
+          >
+            <path d="M3 16.5h14" />
+            <path d="M6 16.5V11" />
+            <path d="M10 16.5V6" />
+            <path d="M14 16.5v-7.5" />
+          </svg>
+        </button>
       </div>
 
+      {mode === "data" ? (
+        <DataView setStats={setStats} />
+      ) : (
+        <CatalogBody
+          initialResult={initialResult}
+          facets={facets}
+          params={params}
+          setParams={setParams}
+          searchInput={searchInput}
+          handleSearchInput={handleSearchInput}
+          showFilters={showFilters}
+          setShowFilters={setShowFilters}
+          updateParams={updateParams}
+          toggleArrayValue={toggleArrayValue}
+          clearFilters={clearFilters}
+          activeFilterCount={activeFilterCount}
+        />
+      )}
+    </main>
+    </InventoryProvider>
+  );
+}
+
+interface CatalogBodyProps {
+  initialResult: Props["initialResult"];
+  facets: Facets;
+  params: Params;
+  setParams: React.Dispatch<React.SetStateAction<Params>>;
+  searchInput: string;
+  handleSearchInput: (v: string) => void;
+  showFilters: boolean;
+  setShowFilters: React.Dispatch<React.SetStateAction<boolean>>;
+  updateParams: (patch: Partial<Params>) => void;
+  toggleArrayValue: (key: keyof Params, value: string) => void;
+  clearFilters: () => void;
+  activeFilterCount: number;
+}
+
+function CatalogBody({
+  initialResult,
+  facets,
+  params,
+  setParams,
+  searchInput,
+  handleSearchInput,
+  showFilters,
+  setShowFilters,
+  updateParams,
+  toggleArrayValue,
+  clearFilters,
+  activeFilterCount,
+}: CatalogBodyProps) {
+  const totalPages = Math.max(1, Math.ceil(initialResult.total / params.pageSize));
+  return (
+    <>
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
         <div className="flex-1 relative">
@@ -353,8 +438,7 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
           onPageSize={(ps) => updateParams({ pageSize: ps })}
         />
       )}
-    </main>
-    </InventoryProvider>
+    </>
   );
 }
 

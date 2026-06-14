@@ -31,6 +31,12 @@ export interface CollectionStats {
   marketValue: number;
 }
 
+export interface CollectionDataViewStats extends CollectionStats {
+  /** Distinct (set_id, number) cards owned in each set. Keyed by set_id;
+   *  variant rows for the same printing collapse to a single entry. */
+  uniqueOwnedBySet: Record<string, number>;
+}
+
 const PAGE = 1000;
 
 export async function computeCollectionStats(
@@ -58,4 +64,46 @@ export async function computeCollectionStats(
     from += PAGE;
   }
   return { cardCount, marketValue: Math.round(marketValue * 100) / 100 };
+}
+
+export async function computeCollectionDataViewStats(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<CollectionDataViewStats> {
+  const prices = priceIndex();
+  let cardCount = 0;
+  let marketValue = 0;
+  const uniquePerSet = new Map<string, Set<string>>();
+  let from = 0;
+  for (;;) {
+    const { data, error } = await supabase
+      .from("user_card_collection")
+      .select("set_id, number, quantity")
+      .eq("user_id", userId)
+      .gt("quantity", 0)
+      .range(from, from + PAGE - 1);
+    if (error || !data) break;
+    for (const row of data as Array<{ set_id: string; number: string; quantity: number }>) {
+      cardCount += row.quantity;
+      const price = prices.get(`${row.set_id}|${row.number}`);
+      if (price) marketValue += price * row.quantity;
+      let bucket = uniquePerSet.get(row.set_id);
+      if (!bucket) {
+        bucket = new Set<string>();
+        uniquePerSet.set(row.set_id, bucket);
+      }
+      bucket.add(row.number);
+    }
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  const uniqueOwnedBySet: Record<string, number> = {};
+  uniquePerSet.forEach((nums, setId) => {
+    uniqueOwnedBySet[setId] = nums.size;
+  });
+  return {
+    cardCount,
+    marketValue: Math.round(marketValue * 100) / 100,
+    uniqueOwnedBySet,
+  };
 }
