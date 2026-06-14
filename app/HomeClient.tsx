@@ -183,7 +183,7 @@ function MatchCard({ match }: { match: RecentMatch }) {
             </div>
           </div>
           {match.isBestOf3 && (
-            <div className="relative flex justify-center pb-2">
+            <div className="relative flex justify-center py-2">
               <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold text-black">
                 Best of 3
               </span>
