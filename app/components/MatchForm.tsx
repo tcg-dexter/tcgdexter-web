@@ -385,7 +385,7 @@ export default function MatchForm({
           )}
         </div>
       ) : (
-        <div className="mb-3 rounded-lg bg-bg p-3 shadow-[inset_0_0_0_1px_var(--border)]">
+        <div className="mb-3">
           {!bestOf3Controlled && (
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-text-secondary">
