@@ -195,7 +195,7 @@ function SetCompletionRow({
             </span>
           </div>
           <div
-            className="h-2 rounded-full bg-surface overflow-hidden"
+            className="h-2 rounded-full bg-surface"
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={100}
@@ -203,8 +203,18 @@ function SetCompletionRow({
             aria-label={`${set.name} completion ${pct.toFixed(0)}%`}
           >
             <div
-              className="h-full bg-gradient-brand transition-[width] duration-500"
-              style={{ width: `${pct}%` }}
+              className="h-full rounded-full bg-gradient-brand transition-[width] duration-500"
+              style={{
+                width: `${pct}%`,
+                // Stretch the gradient so its full extent always spans the
+                // entire track. The fill div only paints the leftmost
+                // `pct%` of it, so the colour at the leading edge
+                // progresses smoothly from orange toward dark red as the
+                // bar grows — the visible gradient is the proportional
+                // metaphor, not a uniformly-coloured chunk.
+                backgroundSize: pct > 0 ? `${10000 / pct}% 100%` : "100% 100%",
+                backgroundPosition: "left center",
+              }}
             />
           </div>
         </div>
