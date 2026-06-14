@@ -123,6 +123,11 @@
     animation: fadeToast 2s ease forwards;
   }
 
+  /* Tab content fade/slide-in on switch */
+  .animate-tab-fade {
+    animation: fadeInTab 0.2s ease;
+  }
+
   /* Subtle upward fade on surface cells */
   .cell-gradient {
     background: linear-gradient(
@@ -156,4 +161,9 @@ body.card-viewer-open [data-back-button] {
   10%  { opacity: 1; transform: translateX(-50%) translateY(0); }
   80%  { opacity: 1; transform: translateX(-50%) translateY(0); }
   100% { opacity: 0; transform: translateX(-50%) translateY(8px); }
+}
+
+@keyframes fadeInTab {
+  0%   { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
 }

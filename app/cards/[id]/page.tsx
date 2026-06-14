@@ -36,6 +36,7 @@ export default function CardDetailPage({ params }: Props) {
   if (!card || !raw) notFound();
 
   const isPokemon = card.supertype === "Pokémon";
+  const fullCardNumber = `${card.numberPadded}/${String(card.setSize).padStart(3, "0")}`;
   const avatarSlug = isPokemon ? pokemonSlug(card.name) : null;
   const avatarUrl = avatarSlug
     ? `https://r2.limitlesstcg.net/pokemon/gen9/${avatarSlug}.png`
@@ -91,7 +92,7 @@ export default function CardDetailPage({ params }: Props) {
               <h1 className="text-2xl font-semibold text-text-primary">{card.name}</h1>
               <p className="text-sm text-text-secondary mt-1">
                 {card.setName}
-                {card.ptcgoCode ? ` · ${card.ptcgoCode}` : ""} · {card.number}
+                {card.ptcgoCode ? ` · ${card.ptcgoCode}` : ""} · {fullCardNumber}
               </p>
             </div>
           </div>
@@ -125,7 +126,7 @@ export default function CardDetailPage({ params }: Props) {
               <h1 className="text-2xl font-semibold text-text-primary">{card.name}</h1>
               <p className="text-sm text-text-secondary mt-1">
                 {card.setName}
-                {card.ptcgoCode ? ` · ${card.ptcgoCode}` : ""} · {card.number}
+                {card.ptcgoCode ? ` · ${card.ptcgoCode}` : ""} · {fullCardNumber}
               </p>
             </div>
           </div>
@@ -209,7 +210,11 @@ export default function CardDetailPage({ params }: Props) {
                 <div key={i} className="space-y-1">
                   <div className="text-base font-semibold text-text-primary flex items-center justify-between gap-2">
                     <span className="inline-flex items-center gap-2">
-                      <span className="inline-flex items-center gap-0.5 shrink-0 w-[124px]">
+                      <span
+                        className={`inline-flex items-center gap-0.5 shrink-0 ${
+                          a.cost.length > 4 ? "w-[123px]" : "w-[98px]"
+                        }`}
+                      >
                         {a.cost.length > 0 ? (
                           a.cost.map((c, j) => (
                             <TypeIcon key={j} type={c} size={23} />
@@ -259,7 +264,7 @@ export default function CardDetailPage({ params }: Props) {
             More {card.name}
           </h2>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
-            {otherPrintings.map((c) => (
+            {otherPrintings.map((c, i) => (
               <Link
                 key={c.id}
                 href={`/cards/${encodeURIComponent(c.id)}`}
@@ -273,6 +278,7 @@ export default function CardDetailPage({ params }: Props) {
                   name={c.name}
                   setName={c.setName}
                   number={c.number}
+                  index={i}
                   className="w-full h-full object-contain"
                 />
               </Link>
@@ -287,7 +293,7 @@ export default function CardDetailPage({ params }: Props) {
             More by {card.artist}
           </h2>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
-            {moreByArtist.map((c) => (
+            {moreByArtist.map((c, i) => (
               <Link
                 key={c.id}
                 href={`/cards/${encodeURIComponent(c.id)}`}
@@ -301,6 +307,7 @@ export default function CardDetailPage({ params }: Props) {
                   name={c.name}
                   setName={c.setName}
                   number={c.number}
+                  index={i}
                   className="w-full h-full object-contain"
                 />
               </Link>

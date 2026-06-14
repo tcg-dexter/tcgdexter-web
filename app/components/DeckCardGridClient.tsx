@@ -45,7 +45,7 @@ export default function DeckCardGridClient({ tiles }: { tiles: ResolvedTile[] })
   return (
     <>
       <div
-        className="grid grid-cols-5 md:grid-cols-10 gap-3"
+        className="flex flex-wrap justify-center gap-1.5"
         aria-label="Deck cards"
       >
         {tiles.map((t, i) => {
@@ -57,7 +57,7 @@ export default function DeckCardGridClient({ tiles }: { tiles: ResolvedTile[] })
               key={t.key}
               type="button"
               onClick={() => setOpenIndex(i)}
-              className="relative w-full rounded overflow-hidden bg-surface block transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-accent/50"
+              className="relative shrink-0 w-[calc((100%-2.25rem)/7)] md:w-[calc((100%-3.375rem)/10)] rounded overflow-hidden bg-surface block transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-accent/50"
               style={{ aspectRatio: "245 / 342" }}
               aria-label={`Open ${t.name}`}
             >
@@ -67,6 +67,7 @@ export default function DeckCardGridClient({ tiles }: { tiles: ResolvedTile[] })
                 name={t.name}
                 setName={t.setName}
                 number={t.number}
+                index={i}
                 className="w-full h-full object-contain"
               />
               <DeckTileFooter copyCount={t.copyCount} />

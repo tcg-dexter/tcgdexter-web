@@ -4,19 +4,19 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { cardImageSmall } from "@/lib/cardImages";
-import type { CardIndexEntry } from "@/lib/cardsIndex";
+import type { CardIndexEntry, SetStats } from "@/lib/cardsIndex";
 import type { SortKey, SortDir, OwnershipFilter } from "@/lib/cardSearch";
 import { COLLECTION_VARIANTS } from "@/lib/inventory";
 import { normalizeForSearch } from "@/lib/searchNormalize";
 import CardImage from "./CardImage";
 import CardFooterOverlay from "./CardFooterOverlay";
+import DataView from "./DataView";
 import InventoryProvider, { useInventory } from "./InventoryContext";
 import {
   InventoryCapsule,
   InventoryOverlay,
   type InventoryMenuMode,
 } from "./InventoryCapsule";
-import SectionHeader from "@/app/components/ui/SectionHeader";
 import PillSelect from "@/app/components/ui/PillSelect";
 
 interface Facets {
@@ -52,6 +52,7 @@ interface Params {
 interface Props {
   initialResult: { cards: CardIndexEntry[]; total: number; page: number; pageSize: number };
   facets: Facets;
+  setStats: SetStats[];
   initialParams: Params;
 }
 
@@ -80,7 +81,7 @@ function buildUrl(pathname: string, params: Params): string {
   return qs ? `${pathname}?${qs}` : pathname;
 }
 
-export default function CardsClient({ initialResult, facets, initialParams }: Props) {
+export default function CardsClient({ initialResult, facets, setStats, initialParams }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -89,6 +90,7 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
   const [params, setParams] = useState<Params>(initialParams);
   const [searchInput, setSearchInput] = useState(initialParams.q);
   const [showFilters, setShowFilters] = useState(false);
+  const [mode, setMode] = useState<"catalog" | "data">("catalog");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstSync = useRef(true);
 
@@ -125,8 +127,6 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
     debounceRef.current = setTimeout(() => updateParams({ q: v }), 250);
   };
 
-  const totalPages = Math.max(1, Math.ceil(initialResult.total / params.pageSize));
-
   const activeFilterCount =
     params.supertype.length +
     params.type.length +
@@ -161,10 +161,101 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
   return (
     <InventoryProvider>
     <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
-      <div className="mb-6">
-        <SectionHeader title="Card Catalog" />
+      <div className="mb-6 flex items-end justify-between gap-3">
+        <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-text-primary">
+          Card Catalog
+        </h2>
+        <button
+          type="button"
+          onClick={() => setMode((m) => (m === "catalog" ? "data" : "catalog"))}
+          aria-pressed={mode === "data"}
+          aria-label={mode === "data" ? "Switch to catalog view" : "Switch to data view"}
+          title={mode === "data" ? "Switch to catalog view" : "Switch to data view"}
+          className={`inline-flex items-center justify-center h-[38px] w-[38px] rounded-full border transition-colors shrink-0 ${
+            mode === "data"
+              ? "border-transparent bg-black text-white"
+              : "border-black/10 bg-white text-text-primary hover:bg-surface"
+          }`}
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-4 h-4"
+          >
+            <path d="M3 16.5h14" />
+            <path d="M6 16.5V11" />
+            <path d="M10 16.5V6" />
+            <path d="M14 16.5v-7.5" />
+          </svg>
+        </button>
       </div>
 
+      {mode === "data" ? (
+        <DataView
+          setStats={setStats}
+          onSelectSet={(setId) => {
+            setParams((p) => ({ ...p, setId: [setId], page: 1 }));
+            setMode("catalog");
+          }}
+        />
+      ) : (
+        <CatalogBody
+          initialResult={initialResult}
+          facets={facets}
+          params={params}
+          setParams={setParams}
+          searchInput={searchInput}
+          handleSearchInput={handleSearchInput}
+          showFilters={showFilters}
+          setShowFilters={setShowFilters}
+          updateParams={updateParams}
+          toggleArrayValue={toggleArrayValue}
+          clearFilters={clearFilters}
+          activeFilterCount={activeFilterCount}
+        />
+      )}
+    </main>
+    </InventoryProvider>
+  );
+}
+
+interface CatalogBodyProps {
+  initialResult: Props["initialResult"];
+  facets: Facets;
+  params: Params;
+  setParams: React.Dispatch<React.SetStateAction<Params>>;
+  searchInput: string;
+  handleSearchInput: (v: string) => void;
+  showFilters: boolean;
+  setShowFilters: React.Dispatch<React.SetStateAction<boolean>>;
+  updateParams: (patch: Partial<Params>) => void;
+  toggleArrayValue: (key: keyof Params, value: string) => void;
+  clearFilters: () => void;
+  activeFilterCount: number;
+}
+
+function CatalogBody({
+  initialResult,
+  facets,
+  params,
+  setParams,
+  searchInput,
+  handleSearchInput,
+  showFilters,
+  setShowFilters,
+  updateParams,
+  toggleArrayValue,
+  clearFilters,
+  activeFilterCount,
+}: CatalogBodyProps) {
+  const totalPages = Math.max(1, Math.ceil(initialResult.total / params.pageSize));
+  return (
+    <>
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
         <div className="flex-1 relative">
@@ -343,12 +434,17 @@ export default function CardsClient({ initialResult, facets, initialParams }: Pr
           page={params.page}
           totalPages={totalPages}
           pageSize={params.pageSize}
-          onPage={(p) => setParams((cur) => ({ ...cur, page: p }))}
+          onPage={(p) => {
+            // Snap to the top before the new page's cards mount, so their
+            // cascade animation plays in view instead of racing a smooth
+            // scroll that's still in progress while off-screen.
+            window.scrollTo(0, 0);
+            setParams((cur) => ({ ...cur, page: p }));
+          }}
           onPageSize={(ps) => updateParams({ pageSize: ps })}
         />
       )}
-    </main>
-    </InventoryProvider>
+    </>
   );
 }
 
@@ -569,14 +665,14 @@ function RangeFacet({
 function GridView({ cards }: { cards: CardIndexEntry[] }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-      {cards.map((c) => (
-        <GridTile key={c.id} card={c} />
+      {cards.map((c, i) => (
+        <GridTile key={c.id} card={c} index={i} />
       ))}
     </div>
   );
 }
 
-function GridTile({ card: c }: { card: CardIndexEntry }) {
+function GridTile({ card: c, index }: { card: CardIndexEntry; index: number }) {
   const [mode, setMode] = useState<InventoryMenuMode | null>(null);
   return (
     <div className="flex flex-col items-center gap-2">
@@ -591,6 +687,7 @@ function GridTile({ card: c }: { card: CardIndexEntry }) {
             name={c.name}
             setName={c.setName}
             number={c.number}
+            index={index}
             className="w-full h-full object-contain transition-transform group-hover:scale-[1.02]"
           />
           <CardFooterOverlay
@@ -648,14 +745,22 @@ function ListView({ cards }: { cards: CardIndexEntry[] }) {
       </div>
       <ul>
         {cards.map((c, i) => (
-          <ListRow key={c.id} card={c} isFirst={i === 0} />
+          <ListRow key={c.id} card={c} index={i} isFirst={i === 0} />
         ))}
       </ul>
     </div>
   );
 }
 
-function ListRow({ card: c, isFirst }: { card: CardIndexEntry; isFirst: boolean }) {
+function ListRow({
+  card: c,
+  index,
+  isFirst,
+}: {
+  card: CardIndexEntry;
+  index: number;
+  isFirst: boolean;
+}) {
   const [mode, setMode] = useState<InventoryMenuMode | null>(null);
   return (
     <li className={`relative ${isFirst ? "" : "border-t border-black/8"}`}>
@@ -669,6 +774,7 @@ function ListRow({ card: c, isFirst }: { card: CardIndexEntry; isFirst: boolean 
           name={c.name}
           setName={c.setName}
           number={c.number}
+          index={index}
           className="w-12 h-[68px] md:w-14 md:h-[78px] object-cover rounded-md bg-surface text-[9px]"
         />
         <div className="md:contents">

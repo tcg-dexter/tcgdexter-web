@@ -101,14 +101,14 @@ export const QUESTIONS: QuizQuestion[] = [
   },
   {
     id: 9,
-    sourceLesson: "knockouts-prize-trading",
+    sourceLesson: "win-conditions",
     prompt: "How many prize cards does a Mega Pokémon give up when it's knocked out?",
     options: ["1", "2", "3", "4"],
     answerIndex: 2,
   },
   {
     id: 10,
-    sourceLesson: "knockouts-prize-trading",
+    sourceLesson: "win-conditions",
     prompt:
       "When your opponent's Active is knocked out, what happens if they have no Pokémon on the Bench to promote?",
     options: [

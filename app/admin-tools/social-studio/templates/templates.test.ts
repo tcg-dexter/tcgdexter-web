@@ -11,6 +11,7 @@ import type {
   CardSpotlightSubject,
   FeaturedDeckSubject,
   FeaturedMatchSubject,
+  FeaturedManualMatchSubject,
   MetaArchetypeSubject,
   SpotlightSubject,
   StudioLayer,
@@ -94,6 +95,26 @@ const featuredMatch: FeaturedMatchSubject = {
   result: "win",
   playerPrizes: 6,
   opponentPrizes: 4,
+  platformLabel: "TCG Live",
+};
+
+const featuredManualMatch: FeaturedManualMatchSubject = {
+  kind: "featured_match_manual",
+  id: "fm2",
+  username: "misty",
+  displayName: "Misty",
+  deckName: "Water Wave",
+  deckCoverUrl: "https://images.pokemontcg.io/sv6/110.png",
+  opponentImageUrl: "https://images.pokemontcg.io/sv6/130.png",
+  playerAccentColor: "#3F8FCC",
+  opponentAccentColor: "#B061BD",
+  playerHandle: "@misty",
+  opponentHandle: "Gary",
+  opponentArchetype: "Dragapult ex",
+  result: "loss",
+  playerPrizes: 3,
+  opponentPrizes: 6,
+  platformLabel: "Match Log",
 };
 
 function renderLayers(layers: StudioLayer[]): string {
@@ -128,7 +149,12 @@ const cases: Array<{
   {
     label: "featured match",
     layers: buildFeaturedMatchLayers(featuredMatch, copy),
-    mustContain: ["BrockTCG", "RivalKid", "Prizes Taken", "VS", "tcgdexter.com"],
+    mustContain: ["BrockTCG", "RivalKid", "TCG Live", "Prizes Taken", "VS", "tcgdexter.com"],
+  },
+  {
+    label: "featured match (manual)",
+    layers: buildFeaturedMatchLayers(featuredManualMatch, copy),
+    mustContain: ["@misty", "Gary", "Match Log", "Prizes Taken", "VS", "tcgdexter.com"],
   },
 ];
 

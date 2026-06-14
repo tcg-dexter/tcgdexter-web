@@ -9,6 +9,7 @@ import {
 } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
 import { metaArchetypeCard } from "@/lib/metaArchetypeCards";
+import { manualPrizeTotals } from "@/lib/bo3";
 import HomeClient, { type CurrentSpotlight, type RecentMatch } from "./HomeClient";
 import type { TrainerSpotlightRow } from "./spotlight/types";
 
@@ -56,32 +57,6 @@ type AnalysisCard = {
   section: "pokemon" | "trainer" | "energy";
 };
 
-/**
- * Manually-entered prize totals for a match: single games via
- * prizes_taken_player/_opponent, or best-of-3 sets via summing game_prizes.
- * Returns null when neither was recorded (battle-log matches derive prizes
- * from match_actions instead — see playerPrizesByMatch/opponentPrizesByMatch).
- */
-function manualPrizeTotals(m: {
-  prizes_taken_player: number | null;
-  prizes_taken_opponent: number | null;
-  game_prizes: { p: number | null; o: number | null }[] | null;
-}): { player: number; opponent: number } | null {
-  if (Array.isArray(m.game_prizes) && m.game_prizes.length) {
-    let player = 0;
-    let opponent = 0;
-    for (const g of m.game_prizes) {
-      player += g?.p ?? 0;
-      opponent += g?.o ?? 0;
-    }
-    return { player, opponent };
-  }
-  if (m.prizes_taken_player != null && m.prizes_taken_opponent != null) {
-    return { player: m.prizes_taken_player, opponent: m.prizes_taken_opponent };
-  }
-  return null;
-}
-
 async function loadRecentMatches(): Promise<RecentMatch[]> {
   try {
     const admin = createAdminClient();
@@ -118,7 +93,7 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
     // and trim to 6 after that filter.
     const { data: matchRows, error: matchErr } = await admin
       .from("matches")
-      .select("id, result, opponent_archetype, opponent_handle, created_at, saved_deck_id, source, prizes_taken_player, prizes_taken_opponent, game_prizes")
+      .select("id, result, opponent_archetype, opponent_handle, created_at, saved_deck_id, source, prizes_taken_player, prizes_taken_opponent, game_prizes, game_results")
       .or(
         "source.eq.tcg_live_log,and(prizes_taken_player.not.is.null,prizes_taken_opponent.not.is.null),game_prizes.not.is.null"
       )
@@ -306,6 +281,7 @@ async function loadRecentMatches(): Promise<RecentMatch[]> {
         opponentColor,
         playerPrizes: playerPrizesByMatch.get(m.id as string) ?? manualPrizes?.player ?? 0,
         opponentPrizes: opponentPrizesByMatch.get(m.id as string) ?? manualPrizes?.opponent ?? 0,
+        isBestOf3: typeof m.game_results === "string" && m.game_results.length >= 2,
       }];
     });
 

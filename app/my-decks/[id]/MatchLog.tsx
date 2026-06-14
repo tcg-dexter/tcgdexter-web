@@ -91,25 +91,7 @@ export default function MatchLog({
   }, [matches]);
 
   // ── Stats ───────────────────────────────────────────────────
-  const wins = rows.filter((r) => r.result === "win").length;
-  const losses = rows.filter((r) => r.result === "loss").length;
-  const draws = rows.filter((r) => r.result === "draw").length;
-  const total = wins + losses + draws;
-  const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : "0.0";
-
-  // ── Streak ──────────────────────────────────────────────────
-  let streak = 0;
-  let streakType: "win" | "loss" | null = null;
-  for (const r of rows) {
-    if (streakType === null) {
-      streakType = r.result === "win" ? "win" : r.result === "loss" ? "loss" : null;
-      if (streakType) streak = 1;
-    } else if (r.result === streakType) {
-      streak++;
-    } else {
-      break;
-    }
-  }
+  const total = rows.length;
 
   async function handleNewMatch(data: MatchFormData) {
     const res = await fetch("/api/matches", {
@@ -186,52 +168,35 @@ export default function MatchLog({
   }
 
   return (
-    <div className="rounded-xl bg-white p-5">
+    <div>
       {/* ── Header + Stats ────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold text-text-primary">Match Log</h2>
-          {total > 0 && (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="font-semibold text-green-700">{wins}W</span>
-              <span className="text-text-muted">-</span>
-              <span className="font-semibold text-accent">{losses}L</span>
-              {draws > 0 && (
-                <>
-                  <span className="text-text-muted">-</span>
-                  <span className="font-semibold text-stone-600">{draws}D</span>
-                </>
-              )}
+      {!formOpen && (
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-text-primary">Match History</h2>
 
-              {streak >= 3 && streakType === "win" && (
-                <span className="text-xs font-bold text-green-600 ml-1">
-                  {streak}W streak
-                </span>
-              )}
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {total > 3 && (
+              <button
+                onClick={() => setHistoryExpanded((v) => !v)}
+                aria-label={historyExpanded ? "Collapse match history" : "Expand match history"}
+                aria-expanded={historyExpanded}
+                className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-text-muted hover:text-text-primary hover:bg-black/5 transition-colors"
+              >
+                {historyExpanded ? "Less" : "More"}
+                <svg
+                  className={`w-4 h-4 transition-transform ${historyExpanded ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
-
-        {total > 3 && (
-          <button
-            onClick={() => setHistoryExpanded((v) => !v)}
-            aria-label={historyExpanded ? "Collapse match history" : "Expand match history"}
-            aria-expanded={historyExpanded}
-            className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-text-muted hover:text-text-primary hover:bg-black/5 transition-colors"
-          >
-            {historyExpanded ? "Less" : "More"}
-            <svg
-              className={`w-4 h-4 transition-transform ${historyExpanded ? "rotate-180" : ""}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-            </svg>
-          </button>
-        )}
-      </div>
+      )}
 
       {/* ── New match form (shown when formOpen) ─────────── */}
       {!readOnly && formOpen && (
@@ -262,12 +227,14 @@ export default function MatchLog({
         <div className="mt-4 flex flex-col">
           {(historyExpanded ? rows : rows.slice(0, 3)).map((match, i, arr) => {
             const s = RESULT_STYLE[match.result];
-            const dateStr = match.played_at
-              ? new Date(match.played_at).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })
-              : null;
+            const score =
+              match.prizes_taken_player != null || match.prizes_taken_opponent != null
+                ? `${match.prizes_taken_player ?? 0}–${match.prizes_taken_opponent ?? 0}`
+                : null;
+            const subtitle =
+              score && match.opponent_name
+                ? `${score} v ${match.opponent_name}`
+                : score ?? match.opponent_name;
 
             const isEditing = editingId === match.id;
             if (isEditing && !readOnly) {
@@ -302,7 +269,7 @@ export default function MatchLog({
             return (
               <div
                 key={match.id}
-                className={`px-1 py-3 ${
+                className={`pr-1 py-3 ${
                   i < arr.length - 1 ? "border-b border-border/50" : ""
                 }`}
               >
@@ -314,32 +281,12 @@ export default function MatchLog({
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 text-sm">
-                      {match.opponent_archetype && (
+                      {match.opponent_archetype ? (
                         <span className="font-semibold text-text-primary truncate">
-                          vs {match.opponent_archetype}
+                          {match.opponent_archetype}
                         </span>
-                      )}
-                      {match.opponent_name && !match.opponent_archetype && (
-                        <span className="font-semibold text-text-primary truncate">
-                          vs {match.opponent_name}
-                        </span>
-                      )}
-                      {match.opponent_name && match.opponent_archetype && (
-                        <span className="text-xs text-text-muted truncate">
-                          ({match.opponent_name})
-                        </span>
-                      )}
-                      {!match.opponent_archetype && !match.opponent_name && (
+                      ) : (
                         <span className="text-text-muted text-sm">Match logged</span>
-                      )}
-                      {(match.prizes_taken_player != null ||
-                        match.prizes_taken_opponent != null) && (
-                        <span
-                          className="flex-shrink-0 text-xs font-medium text-text-muted tabular-nums"
-                          title="Prizes taken (you – opponent)"
-                        >
-                          {match.prizes_taken_player ?? 0}–{match.prizes_taken_opponent ?? 0}
-                        </span>
                       )}
                       {match.game_results && match.game_results.length >= 2 && (
                         <span
@@ -369,8 +316,8 @@ export default function MatchLog({
                         </span>
                       )}
                     </div>
-                    {dateStr && (
-                      <p className="text-xs text-text-muted mt-0.5">{dateStr}</p>
+                    {subtitle && (
+                      <p className="text-xs text-text-muted mt-0.5">{subtitle}</p>
                     )}
                   </div>
                   <div className="flex-shrink-0 flex items-center gap-2">

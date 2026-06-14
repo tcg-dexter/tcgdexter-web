@@ -428,7 +428,7 @@ export default async function ProfilePage({
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {decks.map((deck) => {
+            {decks.map((deck, i) => {
               const cards = deck.analysis?.cards ?? [];
               const avatar = deckAvatarInfo(cards, deck.cover_image_url);
               const slug = avatar ? pokemonSlug(avatar.name) : "";
@@ -458,6 +458,7 @@ export default async function ProfilePage({
                   iconBg={avatar ? typeColor(avatar.types) : null}
                   cards={cards}
                   coverImageUrl={deck.cover_image_url}
+                  index={i}
                 />
               );
             })}

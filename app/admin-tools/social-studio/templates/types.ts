@@ -84,37 +84,58 @@ export interface FeaturedDeckSubject {
   price: number | null;
 }
 
-export interface FeaturedMatchSubject {
-  kind: "featured_match";
+interface FeaturedMatchFields {
   id: string;
   /** TCG Dexter handles retained for the subject dropdown label; the
-   *  template itself renders the TCG Live handles below. */
+   *  template itself renders the platform handles below. */
   username: string;
   displayName: string;
   deckName: string;
   /** Player's deck cover (the player-side hero card on the banner). */
   deckCoverUrl: string | null;
-  /** Opponent's top-attacker card image (mirrors /battles resolution). */
+  /** Opponent's representative card image — top attacker for imported
+   *  battle logs, recognized meta-archetype primary for manual entries. */
   opponentImageUrl: string | null;
   /** Type-color accents per side, used to paint the split gradient. */
   playerAccentColor: string;
   opponentAccentColor: string;
-  /** TCG Live in-game handles, pulled from matches.player_handle /
-   *  opponent_handle. Fall back to placeholders when missing. */
+  /** Handles shown in the banner's "Player Handles" row. For imported logs
+   *  these are the TCG Live in-game handles (matches.player_handle /
+   *  opponent_handle); for manual entries the player's TCG Dexter handle
+   *  and the opponent name as logged. Fall back to placeholders when
+   *  missing. */
   playerHandle: string | null;
   opponentHandle: string | null;
   opponentArchetype: string | null;
-  result: "win" | "loss" | "tie";
+  result: "win" | "loss" | "draw";
   playerPrizes: number;
   opponentPrizes: number;
+  /** Small label above the handle row — "TCG Live" for imported logs,
+   *  "Match Log" for manual entries. */
+  platformLabel: string;
 }
+
+export interface FeaturedMatchSubject extends FeaturedMatchFields {
+  kind: "featured_match";
+}
+
+/** Manually-logged matches (source != 'tcg_live_log') with a recognized
+ *  meta-archetype opponent. Renders through the same banner as
+ *  FeaturedMatchSubject, but piped from matches.prizes_taken_* /
+ *  opponent_name / opponent_archetype instead of a parsed battle log. */
+export interface FeaturedManualMatchSubject extends FeaturedMatchFields {
+  kind: "featured_match_manual";
+}
+
+export type FeaturedMatchLikeSubject = FeaturedMatchSubject | FeaturedManualMatchSubject;
 
 export type TemplateSubject =
   | SpotlightSubject
   | MetaArchetypeSubject
   | CardSpotlightSubject
   | FeaturedDeckSubject
-  | FeaturedMatchSubject;
+  | FeaturedMatchSubject
+  | FeaturedManualMatchSubject;
 
 export type TemplateKind = TemplateSubject["kind"];
 
@@ -131,6 +152,7 @@ export const TEMPLATE_LABELS: Record<TemplateKind, string> = {
   card_spotlight: "Card Spotlight",
   featured_deck: "Featured Deck",
   featured_match: "Featured Match",
+  featured_match_manual: "Featured Match (Manual)",
 };
 
 export const TEMPLATE_DESCRIPTIONS: Record<TemplateKind, string> = {
@@ -139,4 +161,5 @@ export const TEMPLATE_DESCRIPTIONS: Record<TemplateKind, string> = {
   card_spotlight: "Chase cards from the Standard catalog, ranked by market price.",
   featured_deck: "Most-liked public decks from the community library.",
   featured_match: "Verified TCG Live battles with the head-to-head card stack.",
+  featured_match_manual: "Manually logged matches with the head-to-head card stack.",
 };

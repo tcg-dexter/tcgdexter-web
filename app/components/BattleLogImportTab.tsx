@@ -218,11 +218,11 @@ export default function BattleLogImportTab({ savedDeckId, onSuccess, onCancel }:
 
   if (phase === "paste") {
     return (
-      <div className="pt-2">
+      <div key="paste" className="pt-2 animate-tab-fade">
         <textarea
           value={raw}
           onChange={(e) => setRaw(e.target.value)}
-          placeholder="Paste your TCG Live battle log here…"
+          placeholder="Paste here"
           rows={10}
           className="w-full mb-2 rounded-lg bg-bg px-3 py-2 text-xs font-mono text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 resize-y [font-size:16px] sm:text-xs"
         />
@@ -232,7 +232,7 @@ export default function BattleLogImportTab({ savedDeckId, onSuccess, onCancel }:
 
         {error && <p className="text-xs text-accent mb-2">{error}</p>}
 
-        <div className="flex gap-2">
+        <div data-match-actions className="flex gap-2">
           <button
             onClick={handleAnalyze}
             disabled={raw.trim().length < 50}
@@ -241,7 +241,10 @@ export default function BattleLogImportTab({ savedDeckId, onSuccess, onCancel }:
             Analyze
           </button>
           <button
-            onClick={onCancel}
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: "smooth" });
+              onCancel();
+            }}
             className="rounded-full border border-border bg-bg px-4 py-2 text-sm font-semibold text-text-secondary hover:bg-surface-2 transition-all"
           >
             Cancel
@@ -253,7 +256,7 @@ export default function BattleLogImportTab({ savedDeckId, onSuccess, onCancel }:
 
   // ── Review phase ──────────────────────────────────────────────
   return (
-    <div className="pt-2">
+    <div key="review" className="pt-2 animate-tab-fade">
       {/* Handle picker */}
       <div className="mb-3">
         <p className="text-xs font-semibold text-text-secondary mb-2">
@@ -431,7 +434,7 @@ export default function BattleLogImportTab({ savedDeckId, onSuccess, onCancel }:
 
       {error && <p className="text-xs text-accent mb-2">{error}</p>}
 
-      <div className="flex gap-2">
+      <div data-match-actions className="flex gap-2">
         <button
           onClick={handleSubmit}
           disabled={submitting || !result || !playerHandle}

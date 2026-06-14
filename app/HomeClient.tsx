@@ -51,6 +51,7 @@ export type RecentMatch = {
    *  prize_taken rows; 0 when the battle log has no prize events. */
   playerPrizes: number;
   opponentPrizes: number;
+  isBestOf3: boolean;
 };
 
 function relativeTime(iso: string): string {
@@ -157,17 +158,17 @@ function MatchCard({ match }: { match: RecentMatch }) {
               regardless of digit width. */}
           <span
             aria-label={`${leftSide.handleLabel} prizes taken`}
-            className="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-white text-5xl font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
+            className="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-white text-[2.4rem] font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
           >
             {leftSide.prizes}
           </span>
           <span
             aria-label={`${rightSide.handleLabel} prizes taken`}
-            className="absolute right-3 top-1/2 -translate-y-1/2 z-10 text-white text-5xl font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
+            className="absolute right-3 top-1/2 -translate-y-1/2 z-10 text-white text-[2.4rem] font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
           >
             {rightSide.prizes}
           </span>
-          <div className="relative flex items-end justify-center gap-8 px-4 pt-5 pb-3">
+          <div className="relative flex items-end justify-center gap-4 px-4 pt-5 pb-3">
             <div style={{ transform: "rotate(-6deg)", transformOrigin: "bottom center" }}>
               <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -181,10 +182,20 @@ function MatchCard({ match }: { match: RecentMatch }) {
               </div>
             </div>
           </div>
+          {match.isBestOf3 && (
+            <div className="absolute inset-x-0 bottom-2 z-10 flex justify-center pointer-events-none">
+              <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold text-black">
+                Best of 3
+              </span>
+            </div>
+          )}
           <div className="relative px-3.5 pb-2 flex items-center justify-end gap-2">
             <p className="text-[11px] text-white/80">{relativeTime(match.createdAt)}</p>
           </div>
-          <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-[10px] font-black text-white/90 tracking-[0.2em]">
+          <span
+            className="pointer-events-none absolute inset-0 flex items-center justify-center text-xl font-black text-white tracking-[0.2em]"
+            style={{ textShadow: "0 0 24px rgba(0,0,0,0.55), 0 8px 28px rgba(0,0,0,0.65), 0 2px 4px rgba(0,0,0,0.7)" }}
+          >
             VS
           </span>
         </div>

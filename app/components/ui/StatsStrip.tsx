@@ -20,11 +20,11 @@ export default function StatsStrip({
   return (
     <div className={`grid ${cols} divide-x divide-black/10 border-y border-black/10`}>
       {stats.map((s) => (
-        <div key={s.label} className="py-6 text-center">
-          <div className="text-3xl md:text-4xl font-semibold tracking-tight bg-gradient-to-b from-text-primary to-text-secondary bg-clip-text text-transparent">
+        <div key={s.label} className="py-[16.2px] text-center">
+          <div className="text-[19px] md:text-[23px] font-semibold tracking-tight bg-gradient-to-b from-text-primary to-text-secondary bg-clip-text text-transparent">
             {s.value}
           </div>
-          <div className="mt-1 text-xs uppercase tracking-widest text-text-muted">{s.label}</div>
+          <div className="mt-1 text-[0.6rem] uppercase tracking-widest text-text-muted">{s.label}</div>
         </div>
       ))}
     </div>

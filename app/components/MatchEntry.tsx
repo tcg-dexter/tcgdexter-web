@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import MatchForm, { type MatchFormData } from "./MatchForm";
 import BattleLogImportTab from "./BattleLogImportTab";
 
@@ -38,41 +38,104 @@ export default function MatchEntry({
   onCancel,
 }: Props) {
   const [tab, setTab] = useState<Tab>("single");
+  const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({
+    single: null,
+    bo3: null,
+    import: null,
+  });
+  const [indicator, setIndicator] = useState({ left: 0, width: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const flipFromTop = useRef<number | null>(null);
+
+  // "single"/"bo3" share one MatchForm instance and already animate their
+  // shared actions row via the bo3-row grid collapse. Crossing into/out of
+  // "import" remounts the whole content block, so capture the actions row's
+  // position before the switch and FLIP it into its new spot after.
+  function selectTab(next: Tab) {
+    const crossesBoundary = (tab === "import") !== (next === "import");
+    if (crossesBoundary) {
+      const el = containerRef.current?.querySelector<HTMLElement>("[data-match-actions]");
+      flipFromTop.current = el ? el.getBoundingClientRect().top : null;
+    }
+    setTab(next);
+  }
+
+  useLayoutEffect(() => {
+    const el = tabRefs.current[tab];
+    if (el) setIndicator({ left: el.offsetLeft, width: el.offsetWidth });
+
+    if (flipFromTop.current !== null) {
+      const fromTop = flipFromTop.current;
+      flipFromTop.current = null;
+      const actions = containerRef.current?.querySelector<HTMLElement>("[data-match-actions]");
+      if (actions) {
+        const delta = fromTop - actions.getBoundingClientRect().top;
+        if (delta !== 0) {
+          actions.style.transition = "none";
+          actions.style.transform = `translateY(${delta}px)`;
+          // Force a layout flush so the browser registers the offset
+          // position before we animate back to rest — otherwise both
+          // style writes land in the same frame and nothing transitions.
+          actions.getBoundingClientRect();
+          actions.style.transition = "transform 300ms ease";
+          actions.style.transform = "";
+          const onDone = () => {
+            actions.style.transition = "";
+            actions.removeEventListener("transitionend", onDone);
+          };
+          actions.addEventListener("transitionend", onDone);
+        }
+      }
+    }
+  }, [tab]);
 
   return (
     <div>
       {/* Tab strip */}
-      <div className="flex gap-1 border-b border-border mb-3">
+      <div className="relative flex gap-1 border-b border-border mb-3">
         {TABS.map((t) => (
           <button
             key={t.id}
+            ref={(el) => {
+              tabRefs.current[t.id] = el;
+            }}
             type="button"
-            onClick={() => setTab(t.id)}
-            className={`px-3 py-2 text-xs font-semibold transition-colors -mb-px border-b-2 ${
+            onClick={() => selectTab(t.id)}
+            className={`px-3 py-2 text-xs font-semibold transition-colors ${
               tab === t.id
-                ? "border-accent text-text-primary"
-                : "border-transparent text-text-muted hover:text-text-secondary"
+                ? "text-text-primary"
+                : "text-text-muted hover:text-text-secondary"
             }`}
           >
             {t.label}
           </button>
         ))}
+        <div
+          className="absolute bottom-0 h-0.5 bg-accent transition-all duration-300"
+          style={{ left: indicator.left, width: indicator.width }}
+        />
       </div>
 
-      {tab === "import" ? (
-        <BattleLogImportTab
-          savedDeckId={savedDeckId}
-          onSuccess={onImported}
-          onCancel={onCancel}
-        />
-      ) : (
-        <MatchForm
-          onSubmit={onSubmitManual}
-          onCancel={onCancel}
-          bestOf3={tab === "bo3"}
-          onBestOf3Change={(v) => setTab(v ? "bo3" : "single")}
-        />
-      )}
+      <div
+        ref={containerRef}
+        key={tab === "import" ? "import" : "form"}
+        className="animate-tab-fade"
+      >
+        {tab === "import" ? (
+          <BattleLogImportTab
+            savedDeckId={savedDeckId}
+            onSuccess={onImported}
+            onCancel={onCancel}
+          />
+        ) : (
+          <MatchForm
+            onSubmit={onSubmitManual}
+            onCancel={onCancel}
+            bestOf3={tab === "bo3"}
+            onBestOf3Change={(v) => setTab(v ? "bo3" : "single")}
+          />
+        )}
+      </div>
     </div>
   );
 }

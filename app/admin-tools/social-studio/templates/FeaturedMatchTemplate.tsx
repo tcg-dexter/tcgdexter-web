@@ -1,27 +1,32 @@
 import { shade } from "@/lib/color";
 import LayerCanvas from "./LayerCanvas";
-import { Eyebrow, SECTION_LABEL_STYLE, STAT_DIGIT_STYLE } from "./chrome";
+import { SECTION_LABEL_STYLE, STAT_DIGIT_STYLE } from "./chrome";
 import {
   CANVAS_H,
+  CANVAS_W,
   proxied,
-  type FeaturedMatchSubject,
+  type FeaturedMatchLikeSubject,
   type StudioLayer,
   type TemplateCopy,
 } from "./types";
 
 interface Props {
-  subject: FeaturedMatchSubject;
+  subject: FeaturedMatchLikeSubject;
   copy: TemplateCopy;
 }
 
+// Most social platforms crop a 9:16 share (1080×1920) down to 4:5
+// (1080×1350) for feed posts and grid previews, taking the vertically
+// centered band — keep every layer within [SAFE_TOP, CANVAS_H - SAFE_TOP]
+// so nothing gets clipped in those crops.
+const SAFE_TOP = (CANVAS_H - (CANVAS_W * 5) / 4) / 2;
+
 // Card stack geometry. Cards are ~card-aspect tall (≈ width * 1.4).
-// The stack is centered at 45% down the canvas so the handle row above
-// has room, and the Prizes Taken block + URL below it stack cleanly.
 const CARD_WIDTH = 380;
 const CARD_HEIGHT = 532;
-const STACK_CENTER_Y = CANVAS_H * 0.45;
-const STACK_TOP = STACK_CENTER_Y - CARD_HEIGHT / 2;
+const STACK_TOP = 608;
 const STACK_BOTTOM = STACK_TOP + CARD_HEIGHT;
+const STACK_CENTER_Y = STACK_TOP + CARD_HEIGHT / 2;
 
 /** One side of the versus stack. `side` drives the tilt + horizontal
  *  placement; geometry matches the original flex layout (two 380px cards
@@ -86,7 +91,7 @@ const HANDLE_STYLE: React.CSSProperties = {
 };
 
 export function buildFeaturedMatchLayers(
-  subject: FeaturedMatchSubject,
+  subject: FeaturedMatchLikeSubject,
   copy: TemplateCopy,
 ): StudioLayer[] {
   // Split gradient: player-side type color on the left, opponent's on
@@ -113,28 +118,24 @@ export function buildFeaturedMatchLayers(
       ),
     },
     {
-      id: "eyebrow",
-      name: "Eyebrow",
-      copyField: "eyebrow",
-      node: <Eyebrow text={copy.eyebrow} />,
-    },
-    {
-      // "TCG LIVE" subtitle — single big label below the eyebrow,
-      // serves as the framing for both handles below.
+      // Platform subtitle — top-most label, sits in the space the
+      // eyebrow used to occupy, with extra room below before the
+      // handle row. "TCG Live" for imported logs, "Match Log" for
+      // manual entries.
       id: "platform-label",
-      name: "TCG Live Label",
+      name: "Platform Label",
       node: (
         <div
           style={{
             ...SECTION_LABEL_STYLE,
             fontSize: 56,
             position: "absolute",
-            top: 190,
+            top: SAFE_TOP + 55,
             left: 0,
             right: 0,
           }}
         >
-          TCG Live
+          {subject.platformLabel}
         </div>
       ),
     },
@@ -145,7 +146,7 @@ export function buildFeaturedMatchLayers(
         <div
           style={{
             position: "absolute",
-            top: STACK_TOP - 140,
+            top: STACK_TOP - 121,
             left: 0,
             right: 0,
             display: "flex",
@@ -214,7 +215,7 @@ export function buildFeaturedMatchLayers(
               ...SECTION_LABEL_STYLE,
               fontSize: 42,
               position: "absolute",
-              top: STACK_BOTTOM + 110,
+              top: STACK_BOTTOM + 74,
               left: 0,
               right: 0,
             }}
@@ -224,7 +225,7 @@ export function buildFeaturedMatchLayers(
           <div
             style={{
               position: "absolute",
-              top: STACK_BOTTOM + 200,
+              top: STACK_BOTTOM + 159,
               left: 0,
               right: 0,
               display: "flex",
@@ -244,17 +245,15 @@ export function buildFeaturedMatchLayers(
       ),
     },
     {
-      // Site mark — vertically centered between the prize digits and
-      // the canvas bottom edge. Prize digits sit at top=STACK_BOTTOM+200
-      // with a 200px line-height, so their visual bottom is roughly
-      // y=STACK_BOTTOM+400. Midpoint between that and CANVAS_H.
+      // Site mark — sits just below the prize digits, comfortably above
+      // SAFE_BOTTOM so it survives a 4:5 crop.
       id: "site-mark",
       name: "Site Mark",
       node: (
         <div
           style={{
             position: "absolute",
-            top: (STACK_BOTTOM + 400 + CANVAS_H) / 2,
+            top: STACK_BOTTOM + 432,
             transform: "translateY(-50%)",
             left: 0,
             right: 0,
