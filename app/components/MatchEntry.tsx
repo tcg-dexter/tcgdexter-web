@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import MatchForm, { type MatchFormData } from "./MatchForm";
 import BattleLogImportTab from "./BattleLogImportTab";
 
@@ -38,25 +38,43 @@ export default function MatchEntry({
   onCancel,
 }: Props) {
   const [tab, setTab] = useState<Tab>("single");
+  const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({
+    single: null,
+    bo3: null,
+    import: null,
+  });
+  const [indicator, setIndicator] = useState({ left: 0, width: 0 });
+
+  useLayoutEffect(() => {
+    const el = tabRefs.current[tab];
+    if (el) setIndicator({ left: el.offsetLeft, width: el.offsetWidth });
+  }, [tab]);
 
   return (
     <div>
       {/* Tab strip */}
-      <div className="flex gap-1 border-b border-border mb-3">
+      <div className="relative flex gap-1 border-b border-border mb-3">
         {TABS.map((t) => (
           <button
             key={t.id}
+            ref={(el) => {
+              tabRefs.current[t.id] = el;
+            }}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`px-3 py-2 text-xs font-semibold transition-colors -mb-px border-b-2 ${
+            className={`px-3 py-2 text-xs font-semibold transition-colors ${
               tab === t.id
-                ? "border-accent text-text-primary"
-                : "border-transparent text-text-muted hover:text-text-secondary"
+                ? "text-text-primary"
+                : "text-text-muted hover:text-text-secondary"
             }`}
           >
             {t.label}
           </button>
         ))}
+        <div
+          className="absolute bottom-0 h-0.5 bg-accent transition-all duration-300"
+          style={{ left: indicator.left, width: indicator.width }}
+        />
       </div>
 
       {tab === "import" ? (
