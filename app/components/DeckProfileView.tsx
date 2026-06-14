@@ -366,16 +366,9 @@ export default function DeckProfileView({
           {postStatsSlot}
 
           {/* Save + Share buttons — sit right under the overview so the
-              primary action is always within thumb reach. Layout depends
-              on variant (saved hides Save). */}
-          {variant === "saved" ? (
-            <ShareButton
-              deckList={deckList}
-              analysis={result}
-              shareUrl={shareUrl}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-gradient-brand px-5 py-2.5 text-sm font-semibold text-white shadow-brand hover:shadow-brand-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-            />
-          ) : (
+              primary action is always within thumb reach. The saved variant
+              already has Share via the QR button in the action row above. */}
+          {variant !== "saved" && (
             <div className="flex gap-3">
               <SaveDeckButton
                 deckList={deckList}
