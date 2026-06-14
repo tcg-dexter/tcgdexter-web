@@ -168,7 +168,7 @@ function MatchCard({ match }: { match: RecentMatch }) {
           >
             {rightSide.prizes}
           </span>
-          <div className="relative flex items-end justify-center gap-8 px-4 pt-5 pb-3">
+          <div className="relative flex items-end justify-center gap-4 px-4 pt-5 pb-3">
             <div style={{ transform: "rotate(-6deg)", transformOrigin: "bottom center" }}>
               <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -192,7 +192,7 @@ function MatchCard({ match }: { match: RecentMatch }) {
           <div className="relative px-3.5 pb-2 flex items-center justify-end gap-2">
             <p className="text-[11px] text-white/80">{relativeTime(match.createdAt)}</p>
           </div>
-          <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-[10px] font-black text-white/90 tracking-[0.2em]">
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-xl font-black text-white/90 tracking-[0.2em] drop-shadow-sm">
             VS
           </span>
         </div>
