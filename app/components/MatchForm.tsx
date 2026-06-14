@@ -474,23 +474,26 @@ export default function MatchForm({
             {(["win", "loss", "draw"] as const).map((r) => {
               const s = RESULT_STYLE[r];
               const selected = result === r;
+              const letter = r === "win" ? "W" : r === "loss" ? "L" : "D";
+              const label = r === "win" ? "Win" : r === "loss" ? "Loss" : "Draw";
               return (
                 <button
                   key={r}
                   type="button"
                   onClick={() => setResult(r)}
+                  style={{ flexGrow: result === null || selected ? 2 : 1 }}
                   // Unselected uses an inset shadow for its 1 px outline so it
                   // stays dimensionally identical to the selected variants
                   // (which carry no real `border`). A real `border-border` here
                   // would push the button out by 2 px and shift the row's
                   // baseline whenever the selection changes.
-                  className={`flex-1 rounded-full py-2.5 text-sm font-bold transition-all ${
+                  className={`flex-1 rounded-full py-2.5 text-sm font-bold transition-all duration-300 ${
                     selected
                       ? `${s.bg} ${s.text}`
                       : "bg-bg text-text-secondary shadow-[inset_0_0_0_1px_var(--border)] hover:bg-surface-2"
                   }`}
                 >
-                  {r === "win" ? "Win" : r === "loss" ? "Loss" : "Draw"}
+                  {result === null || selected ? label : letter}
                 </button>
               );
             })}
@@ -595,13 +598,14 @@ export default function MatchForm({
                         disabled={g3Disabled}
                         onClick={() => setGame(i, letter)}
                         aria-label={`Match ${i + 1} ${label.toLowerCase()}`}
-                        className={`flex-1 rounded-full py-1.5 text-xs font-bold transition-all disabled:cursor-not-allowed ${
+                        style={{ flexGrow: games[i] == null || selected ? 2 : 1 }}
+                        className={`flex-1 rounded-full py-1.5 text-xs font-bold transition-all duration-300 disabled:cursor-not-allowed ${
                           selected
                             ? `${s.bg} ${s.text}`
                             : "bg-surface text-text-secondary shadow-[inset_0_0_0_1px_var(--border)] hover:bg-surface-2"
                         }`}
                       >
-                        {label}
+                        {games[i] == null || selected ? label : letter}
                       </button>
                     );
                   })}
