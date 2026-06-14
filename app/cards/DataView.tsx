@@ -57,11 +57,6 @@ export default function DataView({ setStats }: { setStats: SetStats[] }) {
     };
   }, [signedIn]);
 
-  const uniqueSetsOwned = useMemo(() => {
-    if (!stats.data) return 0;
-    return Object.keys(stats.data.uniqueOwnedBySet).length;
-  }, [stats.data]);
-
   const filteredSets = useMemo(() => {
     if (filter === "all") return setStats;
     const owned = stats.data?.uniqueOwnedBySet ?? {};
@@ -82,8 +77,6 @@ export default function DataView({ setStats }: { setStats: SetStats[] }) {
       <StatRow
         cardCount={stats.data?.cardCount ?? 0}
         marketValue={stats.data?.marketValue ?? 0}
-        uniqueSetsOwned={uniqueSetsOwned}
-        totalSets={setStats.length}
         loading={stats.loading}
         signedIn={signedIn}
       />
@@ -186,21 +179,17 @@ function SetFilterRadios({
 function StatRow({
   cardCount,
   marketValue,
-  uniqueSetsOwned,
-  totalSets,
   loading,
   signedIn,
 }: {
   cardCount: number;
   marketValue: number;
-  uniqueSetsOwned: number;
-  totalSets: number;
   loading: boolean;
   signedIn: boolean | null;
 }) {
   const showValues = signedIn === true && !loading;
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div className="grid grid-cols-2 gap-3">
       <StatCard
         label="Cards in Collection"
         value={showValues ? cardCount.toLocaleString() : "—"}
@@ -208,10 +197,6 @@ function StatRow({
       <StatCard
         label="Total Market Value"
         value={showValues ? formatCurrency(marketValue) : "—"}
-      />
-      <StatCard
-        label="Sets Represented"
-        value={showValues ? `${uniqueSetsOwned} / ${totalSets}` : `— / ${totalSets}`}
       />
     </div>
   );
