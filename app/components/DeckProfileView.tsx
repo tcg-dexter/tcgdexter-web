@@ -352,13 +352,15 @@ export default function DeckProfileView({
           {postOverviewSlot}
 
           {/* Card type breakdown */}
-          <StatsStrip
-            stats={[
-              { label: "Pokémon", value: String(result.sections.pokemon) },
-              { label: "Trainer", value: String(result.sections.trainer) },
-              { label: "Energy", value: String(result.sections.energy) },
-            ]}
-          />
+          <div className="pb-2">
+            <StatsStrip
+              stats={[
+                { label: "Pokémon", value: String(result.sections.pokemon) },
+                { label: "Trainer", value: String(result.sections.trainer) },
+                { label: "Energy", value: String(result.sections.energy) },
+              ]}
+            />
+          </div>
 
           {/* Post-stats slot: saved variant places action buttons + match log here */}
           {postStatsSlot}
