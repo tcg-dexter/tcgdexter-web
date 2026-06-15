@@ -130,7 +130,10 @@ export function InventoryOverlay({
     if (mode === "add" && display === "card" && delta > 0) {
       setCelebrating(variant);
       if (celebrateTimer.current) clearTimeout(celebrateTimer.current);
-      celebrateTimer.current = setTimeout(() => setCelebrating(null), ADD_CELEBRATION_MS);
+      celebrateTimer.current = setTimeout(() => {
+        setCelebrating(null);
+        onClose();
+      }, ADD_CELEBRATION_MS);
     }
   }
 
