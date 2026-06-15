@@ -8,7 +8,7 @@ import {
 } from "@/lib/inventory";
 import { useInventory } from "./InventoryContext";
 
-const ADD_CELEBRATION_MS = 1000;
+const ADD_CELEBRATION_MS = 1250;
 const CLOSE_FADE_MS = 200;
 
 type Mode = "add" | "remove";
