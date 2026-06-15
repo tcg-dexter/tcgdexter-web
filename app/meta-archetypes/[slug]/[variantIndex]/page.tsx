@@ -196,27 +196,16 @@ export default async function MetaVariantPage({
           ariaLabel={`Back to ${archetypeFullName}`}
         />
       }
-      titleLeading={
+      titleTrailing={
         avatarSpriteUrl ? (
-          <span
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full shrink-0 inline-flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
-            style={{ background: avatarBg }}
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatarSpriteUrl}
+            alt=""
             aria-hidden
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={avatarSpriteUrl}
-              alt=""
-              className="w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] object-contain"
-            />
-          </span>
-        ) : (
-          <span
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full shrink-0"
-            style={{ background: avatarBg }}
-            aria-hidden
+            className="shrink-0 w-[42px] h-[42px] sm:w-[48px] sm:h-[48px] object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)]"
           />
-        )
+        ) : null
       }
       subtitle={false}
       postOverviewSlot={credits}

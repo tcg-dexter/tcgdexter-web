@@ -166,8 +166,9 @@ interface Props {
   pageTitle?: string;
   /** Optional element rendered inline after the page heading (e.g. a pencil rename button). */
   titleAction?: React.ReactNode;
-  /** Optional element rendered inline before the page heading (e.g. a deck creator avatar). */
-  titleLeading?: React.ReactNode;
+  /** Optional element rendered inline at the end of the page heading
+   *  row (e.g. a deck primary-pokémon sprite anchored right). */
+  titleTrailing?: React.ReactNode;
   /** Optional element rendered above the page heading (e.g. a back navigation link). */
   preTitle?: React.ReactNode;
   /** Subtitle line below the heading; defaults to "Created on <date>". Accepts a ReactNode for custom content. */
@@ -245,7 +246,7 @@ export default function DeckProfileView({
   profiledAt,
   pageTitle = "Deck Profile",
   titleAction,
-  titleLeading,
+  titleTrailing,
   preTitle,
   subtitle,
   footerCta,
@@ -314,11 +315,11 @@ export default function DeckProfileView({
           )}
           <div>
             <div className="flex items-center gap-2">
-              {titleLeading}
-              <h1 className="min-w-0 truncate text-3xl sm:text-4xl font-bold tracking-tight text-on-gradient">
+              <h1 className="min-w-0 flex-1 truncate text-3xl sm:text-4xl font-bold tracking-tight text-on-gradient">
                 {pageTitle}
               </h1>
               {titleAction}
+              {titleTrailing}
             </div>
             {effectiveSubtitle && (
               <div className="mt-2 text-sm text-on-gradient-muted">
