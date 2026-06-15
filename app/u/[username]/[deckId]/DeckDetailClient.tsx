@@ -153,15 +153,14 @@ export default function DeckDetailClient({
     ? `https://r2.limitlesstcg.net/pokemon/gen9/${avatarSlug}.png`
     : null;
   const avatarBg = avatar ? typeColor(avatar.types) : "#B0A89E";
-  const titleLeading = avatarUrl ? (
-    <span
-      className="w-9 h-9 sm:w-10 sm:h-10 rounded-full shrink-0 inline-flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
-      style={{ background: avatarBg }}
+  const titleTrailing = avatarUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={avatarUrl}
+      alt=""
       aria-hidden
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={avatarUrl} alt="" className="w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] object-contain" />
-    </span>
+      className="shrink-0 w-[42px] h-[42px] sm:w-[48px] sm:h-[48px] object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)]"
+    />
   ) : null;
 
   async function toggleVisibility() {
@@ -279,7 +278,7 @@ export default function DeckDetailClient({
         analysis={analysis}
         profiledAt={profiledAt}
         pageTitle={pageTitle}
-        titleLeading={titleLeading}
+        titleTrailing={titleTrailing}
         creator={creator ?? undefined}
         shareUrl={canonicalShareUrl}
         preTitle={
@@ -314,7 +313,7 @@ export default function DeckDetailClient({
   const draws = initialMatches.filter((m) => m.result === "draw").length;
 
   const titleAction = (
-    <div className="ml-auto">
+    <div className="ml-auto mr-2">
       <WLCircles wl={{ w: wins, l: losses, d: draws }} />
     </div>
   );
@@ -326,7 +325,7 @@ export default function DeckDetailClient({
       analysis={analysis}
       profiledAt={profiledAt}
       pageTitle={deckName}
-      titleLeading={titleLeading}
+      titleTrailing={titleTrailing}
       titleAction={titleAction}
       subtitle={false}
       shareUrl={shareUrl}

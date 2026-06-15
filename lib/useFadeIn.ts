@@ -6,10 +6,10 @@ import type { CSSProperties } from "react";
 const STAGGER_MS = 15;
 
 /**
- * Fade-in + slide-down entrance matching CardImage's cascade, for non-image
- * content (preview cards, rows) that has no load event to key off of.
- * Triggers on mount via a double rAF so the initial opacity:0 frame paints
- * before the transition starts.
+ * Fade-in entrance matching CardImage's cascade, for non-image content
+ * (preview cards, rows) that has no load event to key off of. Triggers
+ * on mount via a double rAF so the initial opacity:0 frame paints before
+ * the transition starts.
  */
 export function useFadeIn(index?: number): CSSProperties {
   const [loaded, setLoaded] = useState(false);
@@ -28,8 +28,7 @@ export function useFadeIn(index?: number): CSSProperties {
   const delayMs = index != null ? index * STAGGER_MS : 0;
   return {
     opacity: loaded ? 1 : 0,
-    transform: loaded ? "translateY(0)" : "translateY(-5%)",
-    transition: "opacity 500ms ease-out, transform 500ms ease-out",
+    transition: "opacity 300ms ease-out",
     transitionDelay: loaded ? `${delayMs}ms` : "0ms",
   };
 }

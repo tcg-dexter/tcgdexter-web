@@ -185,6 +185,58 @@ function evolutionLineNames(name: string): string[] {
   return out;
 }
 
+/**
+ * Resolve up to two Pokémon avatars from a multi-name variant title (e.g.
+ * "Dragapult Blaziken", "Ogerpon Meganium"). Each whitespace token is
+ * matched against the deck's Pokémon by name prefix; annotation tokens
+ * like "ex" / "vmax" are skipped. Returns at most 2 avatars and only
+ * when the variant name carries 2+ resolvable pokémon names — single-
+ * pokémon variants ("Dragapult ex") return [].
+ */
+const ANNOTATION_TOKENS = new Set([
+  "ex", "v", "vmax", "vstar", "gx", "vunion",
+]);
+
+export function metaVariantAvatars(
+  cards: DeckCard[],
+  variantName: string | null | undefined,
+): MetaAvatar[] {
+  if (!variantName) return [];
+  const tokens = variantName
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .filter((t) => !ANNOTATION_TOKENS.has(t.toLowerCase()));
+  if (tokens.length < 2) return [];
+
+  const pokemon = cards.filter((c) => c.category === "pokemon");
+  const out: MetaAvatar[] = [];
+  const seen = new Set<string>();
+  for (const token of tokens) {
+    const tLower = token.toLowerCase();
+    const candidates = pokemon
+      .filter((c) => c.name.toLowerCase().startsWith(tLower))
+      .map((c) => {
+        const entry = resolve(c);
+        const hp = entry?.hp == null ? 0 : Number(entry.hp) || 0;
+        return { c, entry, hp };
+      })
+      .sort((a, b) => b.c.qty - a.c.qty || b.hp - a.hp);
+    const best = candidates[0];
+    if (!best) continue;
+    const lower = best.c.name.toLowerCase();
+    if (seen.has(lower)) continue;
+    seen.add(lower);
+    out.push({
+      iconUrl: pokemonSpriteUrl(best.c.name),
+      iconBg: typeColor(best.entry?.types),
+      name: best.c.name,
+    });
+    if (out.length >= 2) break;
+  }
+  return out.length >= 2 ? out : [];
+}
+
 function pokemonSpriteUrl(name: string): string {
   const slug = name
     .toLowerCase()

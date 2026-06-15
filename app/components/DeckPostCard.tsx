@@ -161,23 +161,9 @@ export function MetaDeckCard({
         }}
       />
       <Link href={href} className="relative block">
-        {/* Header — pokémon avatar + deck name + rank */}
+        {/* Header — deck name + rank */}
         <div className="flex items-center gap-2 px-3.5 pt-3">
-          {icon_url ? (
-            <div
-              className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06] shadow-sm"
-              style={{ background: icon_bg ?? "#B0A89E" }}
-              aria-hidden
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={icon_url}
-                alt=""
-                className="w-7 h-7 object-contain"
-              />
-            </div>
-          ) : null}
-          <p className="flex-1 min-w-0 text-[17px] font-semibold text-text-primary truncate">
+          <p className="flex-1 min-w-0 text-[19px] font-semibold text-text-primary truncate">
             {name}
           </p>
           <span className="ml-2 shrink-0 text-[13px] font-semibold text-text-muted tabular-nums">
@@ -186,7 +172,7 @@ export function MetaDeckCard({
         </div>
 
         {/* Body */}
-        <div className="flex gap-3.5 p-3.5 pt-3">
+        <div className="relative flex gap-3.5 p-3.5 pt-3">
           <CardArt url={image_url} name={name} />
           <div className="flex-1 min-w-0 flex flex-col">
             <div className="flex flex-col gap-0.5">
@@ -203,6 +189,15 @@ export function MetaDeckCard({
               ))}
             </div>
           </div>
+          {icon_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={icon_url}
+              alt=""
+              aria-hidden
+              className="pointer-events-none absolute bottom-2.5 right-2.5 w-14 h-14 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)]"
+            />
+          ) : null}
         </div>
       </Link>
 

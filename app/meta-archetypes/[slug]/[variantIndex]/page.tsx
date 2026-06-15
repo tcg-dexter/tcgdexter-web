@@ -5,7 +5,7 @@ import DeckProfileView from "@/app/components/DeckProfileView";
 import BackButton from "@/app/components/ui/BackButton";
 import { buildMetaAnalysis } from "@/lib/buildMetaAnalysis";
 import { formatMetaVariantDate } from "@/lib/formatMetaVariantDate";
-import { metaPrimaryCard, typeColor } from "@/lib/metaPrimaryCard";
+import { metaVariantAvatars } from "@/lib/metaPrimaryCard";
 
 interface Archetype {
   id: string;
@@ -145,11 +145,17 @@ export default async function MetaVariantPage({
   } catch {
     iconList = [];
   }
-  const variantPrimary = metaPrimaryCard(cards, iconList);
-  const avatarSpriteUrl = iconList[0]
+  // When the variant name carries two pokémon (e.g. "Dragapult Blaziken"),
+  // surface a sprite for each instead of just the archetype primary.
+  const variantName = (variant.variantName ?? "").trim() || null;
+  const multiAvatars = metaVariantAvatars(cards, variantName);
+  const singleAvatarUrl = iconList[0]
     ? `https://r2.limitlesstcg.net/pokemon/gen9/${iconList[0]}.png`
     : null;
-  const avatarBg = typeColor(variantPrimary?.types);
+
+  // Variant title prefers the per-variant name (e.g. "Dragapult Blaziken")
+  // over the archetype label when available.
+  const pageTitle = variantName ?? archetypeFullName;
 
   // Credits stack — Limitless legacy `date` is "<date> - <event>"; newer
   // scrapes are ISO with no event. Split when the dash is present so the
@@ -189,34 +195,36 @@ export default async function MetaVariantPage({
       deckList={deckList}
       analysis={analysis}
       profiledAt={profiledAt}
-      pageTitle={archetypeFullName}
+      pageTitle={pageTitle}
       preTitle={
         <BackButton
           href={`/meta-archetypes/${arch.id}`}
           ariaLabel={`Back to ${archetypeFullName}`}
         />
       }
-      titleLeading={
-        avatarSpriteUrl ? (
-          <span
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full shrink-0 inline-flex items-center justify-center overflow-hidden ring-1 ring-black/[0.06]"
-            style={{ background: avatarBg }}
+      titleTrailing={
+        multiAvatars.length >= 2 ? (
+          <div className="flex shrink-0 items-center gap-2">
+            {multiAvatars.map((a) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={a.name}
+                src={a.iconUrl}
+                alt=""
+                aria-hidden
+                className="w-[42px] h-[42px] sm:w-[48px] sm:h-[48px] object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)]"
+              />
+            ))}
+          </div>
+        ) : singleAvatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={singleAvatarUrl}
+            alt=""
             aria-hidden
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={avatarSpriteUrl}
-              alt=""
-              className="w-[28px] h-[28px] sm:w-[32px] sm:h-[32px] object-contain"
-            />
-          </span>
-        ) : (
-          <span
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full shrink-0"
-            style={{ background: avatarBg }}
-            aria-hidden
+            className="shrink-0 w-[42px] h-[42px] sm:w-[48px] sm:h-[48px] object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)]"
           />
-        )
+        ) : null
       }
       subtitle={false}
       postOverviewSlot={credits}
