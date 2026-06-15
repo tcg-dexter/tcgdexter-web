@@ -301,7 +301,7 @@ export default function DeckProfileView({
         <header
           className={`flex-shrink-0 px-6 pt-[calc(env(safe-area-inset-top)_+_1.75rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] ${
             preTitle ? "xl:pt-8" : ""
-          } ${effectiveSubtitle ? "pb-8" : "pb-4"}`}
+          } ${effectiveSubtitle ? "pb-4" : "pb-2"}`}
         >
           {variant === "shared" && (
             <div className="flex justify-center mb-4">
