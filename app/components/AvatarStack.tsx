@@ -80,7 +80,7 @@ function Avatar({
         src={iconUrl}
         alt=""
         aria-hidden
-        className="w-10 h-10 object-contain"
+        className="w-9 h-9 object-contain"
         onError={onFail}
       />
     );
