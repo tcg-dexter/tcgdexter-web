@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import DeckCardFooter from "@/app/components/DeckCardFooter";
 import AvatarStack, { type AvatarStackItem } from "@/app/components/AvatarStack";
 import type { MetaAvatar } from "@/lib/metaPrimaryCard";
 import { useFadeIn } from "@/lib/useFadeIn";
@@ -9,8 +8,6 @@ import { useFadeIn } from "@/lib/useFadeIn";
 interface Props {
   /** Stable key — typically `${archetypeSlug}-v${index}`. */
   id: string;
-  /** Archetype slug — drives the Save action's meta clone endpoint. */
-  archetypeId: string;
   /** Parent archetype display name — used as the header title when this
    *  variant has no specific sub-archetype tag from Limitless. */
   archetypeName: string;
@@ -78,7 +75,6 @@ function CardArt({ url, name }: { url?: string | null; name: string }) {
  * post is a known player's build of the archetype.
  */
 export default function MetaVariantCard({
-  archetypeId,
   archetypeName,
   annotation,
   variantName,
@@ -182,13 +178,6 @@ export default function MetaVariantCard({
         body
       )}
 
-      <DeckCardFooter
-        metaArchetypeId={archetypeId}
-        initialLikes={0}
-        saveHref={href ?? `/meta-archetypes/${archetypeId}`}
-        deckName={headerName}
-        hideLikes
-      />
     </div>
   );
 }

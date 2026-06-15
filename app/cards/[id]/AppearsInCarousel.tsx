@@ -174,7 +174,6 @@ export default function AppearsInCarousel({
                 <MetaVariantCard
                   id={v.id}
                   href={v.href}
-                  archetypeId={v.archetypeId}
                   archetypeName={v.archetypeName}
                   annotation={v.annotation}
                   variantName={v.variantName}
