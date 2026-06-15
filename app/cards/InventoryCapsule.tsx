@@ -8,7 +8,8 @@ import {
 } from "@/lib/inventory";
 import { useInventory } from "./InventoryContext";
 
-const ADD_CELEBRATION_MS = 2000;
+const ADD_CELEBRATION_MS = 1000;
+const CLOSE_FADE_MS = 200;
 
 type Mode = "add" | "remove";
 
@@ -118,10 +119,13 @@ export function InventoryOverlay({
   const addable = new Set<CollectionVariantKey>(allowedAddVariants(rarity));
 
   const [celebrating, setCelebrating] = useState<CollectionVariantKey | null>(null);
+  const [closing, setClosing] = useState(false);
   const celebrateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     return () => {
       if (celebrateTimer.current) clearTimeout(celebrateTimer.current);
+      if (closeTimer.current) clearTimeout(closeTimer.current);
     };
   }, []);
 
@@ -132,7 +136,9 @@ export function InventoryOverlay({
       if (celebrateTimer.current) clearTimeout(celebrateTimer.current);
       celebrateTimer.current = setTimeout(() => {
         setCelebrating(null);
-        onClose();
+        setClosing(true);
+        if (closeTimer.current) clearTimeout(closeTimer.current);
+        closeTimer.current = setTimeout(onClose, CLOSE_FADE_MS);
       }, ADD_CELEBRATION_MS);
     }
   }
@@ -220,7 +226,9 @@ export function InventoryOverlay({
 
   return (
     <div
-      className="absolute inset-0 z-10 flex flex-col rounded-xl bg-black/85 backdrop-blur-sm p-2"
+      className={`absolute inset-0 z-10 flex flex-col rounded-xl bg-black/85 backdrop-blur-sm p-2 transition-opacity duration-200 ${
+        closing ? "opacity-0 pointer-events-none" : "opacity-100"
+      }`}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
