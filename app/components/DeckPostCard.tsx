@@ -195,7 +195,7 @@ export function MetaDeckCard({
               src={icon_url}
               alt=""
               aria-hidden
-              className="pointer-events-none absolute bottom-2 right-2 w-14 h-14 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)]"
+              className="pointer-events-none absolute bottom-2.5 right-2.5 w-14 h-14 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)]"
             />
           ) : null}
         </div>
