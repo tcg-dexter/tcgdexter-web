@@ -76,12 +76,6 @@ function placingLabel(placing?: number): string | null {
   }
 }
 
-function countsFor(cards: DeckCard[]): { pokemon: number; trainer: number; energy: number } {
-  const c = { pokemon: 0, trainer: 0, energy: 0 };
-  for (const card of cards) c[card.category] += card.qty;
-  return c;
-}
-
 /**
  * Top N cards by aggregate copy count across a set of deck-list variants.
  * Sums every printing's qty across all variants, sorts most → least,
@@ -244,7 +238,6 @@ export default async function MetaDeckDetailPage({
       variantName: (v.variantName ?? "").trim() || null,
       creator: (v.creator ?? "").trim() || "Trainer",
       cardImageUrl: variantPrimary?.imageUrl ?? null,
-      counts: countsFor(v.cards),
       secondaryAvatars,
     };
   });
@@ -309,7 +302,6 @@ export default async function MetaDeckDetailPage({
                   dateLine={v.dateLine}
                   creator={v.creator}
                   cardImageUrl={v.cardImageUrl}
-                  counts={v.counts}
                   secondaryAvatars={v.secondaryAvatars}
                   index={i}
                 />

@@ -65,7 +65,6 @@ export interface CardAppearance {
   dateLine: string | null;
   creator: string;
   cardImageUrl: string | null;
-  counts: { pokemon: number; trainer: number; energy: number };
   secondaryAvatars: MetaAvatar[];
 }
 
@@ -85,16 +84,6 @@ function placingLabel(p?: number): string | null {
     case 3: return `${p}rd`;
     default: return `${p}th`;
   }
-}
-
-function countsFor(cards: DeckCard[]) {
-  let pokemon = 0, trainer = 0, energy = 0;
-  for (const c of cards) {
-    if (c.category === "pokemon") pokemon += c.qty;
-    else if (c.category === "trainer") trainer += c.qty;
-    else if (c.category === "energy") energy += c.qty;
-  }
-  return { pokemon, trainer, energy };
 }
 
 function parseIcons(arch: Archetype): string[] {
@@ -188,7 +177,6 @@ function buildAppearance(m: Match): CardAppearance {
     dateLine,
     creator: (variant.creator ?? "").trim() || "Trainer",
     cardImageUrl,
-    counts: countsFor(variant.cards),
     secondaryAvatars,
   };
 }

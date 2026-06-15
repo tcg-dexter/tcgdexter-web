@@ -6,12 +6,6 @@ import AvatarStack, { type AvatarStackItem } from "@/app/components/AvatarStack"
 import type { MetaAvatar } from "@/lib/metaPrimaryCard";
 import { useFadeIn } from "@/lib/useFadeIn";
 
-interface CardCounts {
-  pokemon: number;
-  trainer: number;
-  energy: number;
-}
-
 interface Props {
   /** Stable key — typically `${archetypeSlug}-v${index}`. */
   id: string;
@@ -42,8 +36,6 @@ interface Props {
   creator: string;
   /** Primary card image for THIS variant's deck list (pokemontcg.io). */
   cardImageUrl: string | null;
-  /** Pokémon / Trainer / Energy totals for the variant's card list. */
-  counts: CardCounts;
   /** Up to 2 additional Pokémon avatars (next-highest HP, deduped against
    *  the archetype primary) stacked next to the archetype avatar in the
    *  body. */
@@ -78,38 +70,6 @@ function CardArt({ url, name }: { url?: string | null; name: string }) {
   );
 }
 
-function TypeCounts({ counts }: { counts: CardCounts }) {
-  const rows = [
-    { label: "Pokémon", n: counts.pokemon },
-    { label: "Trainer", n: counts.trainer },
-    { label: "Energy", n: counts.energy },
-  ];
-  return (
-    <div className="flex gap-2 mb-2.5">
-      <div className="flex flex-col items-end">
-        {rows.map(({ label, n }) => (
-          <span
-            key={label}
-            className="h-6 flex items-center text-[16px] font-bold text-text-primary tabular-nums"
-          >
-            {n}
-          </span>
-        ))}
-      </div>
-      <div className="flex flex-col items-start">
-        {rows.map(({ label }) => (
-          <span
-            key={label}
-            className="h-6 flex items-center text-[12px] uppercase tracking-[0.05em] font-semibold text-text-muted"
-          >
-            {label}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /**
  * Preview card for one of the top-5 meta deck variants.
  *
@@ -129,7 +89,6 @@ export default function MetaVariantCard({
   dateLine,
   creator,
   cardImageUrl,
-  counts,
   secondaryAvatars,
   href,
   index,
@@ -140,14 +99,25 @@ export default function MetaVariantCard({
   const headerName = (variantName ?? "").trim() || fallbackName;
   const displayCreator = creator || "Trainer";
 
+  // Unified pool: archetype primary at index 0, then top-N copy-count
+  // candidates. AvatarStack renders the first 3 whose sprite loads — when
+  // a slot 404s it auto-shifts forward through the rest of the pool.
+  const avatarItems: AvatarStackItem[] = [
+    { key: "primary", iconUrl: iconUrl ?? null, iconBg: iconBg ?? null },
+    ...secondaryAvatars.map((a) => ({
+      key: a.name,
+      iconUrl: a.iconUrl,
+      iconBg: a.iconBg,
+    })),
+  ];
+
   const hasAccolade = Boolean(placingLine || competitionName || dateLine);
   const body = (
     <div className="flex gap-3.5 p-3.5 pt-3">
       <CardArt url={cardImageUrl} name={headerName} />
       <div className="flex-1 min-w-0 flex flex-col">
-        <TypeCounts counts={counts} />
         {hasAccolade && (
-          <div className="mt-auto flex flex-col items-end text-right leading-tight">
+          <div className="flex flex-col items-end text-right leading-tight">
             {placingLine && (
               <span className="text-[11px] font-semibold text-text-primary truncate">
                 {placingLine}
@@ -165,6 +135,9 @@ export default function MetaVariantCard({
             )}
           </div>
         )}
+        <div className="mt-auto flex justify-end items-end">
+          <AvatarStack items={avatarItems} count={3} bare />
+        </div>
       </div>
     </div>
   );
@@ -186,23 +159,6 @@ export default function MetaVariantCard({
     </div>
   );
 
-  // Unified pool: archetype primary at index 0, then top-N copy-count
-  // candidates. AvatarStack renders the first 3 whose sprite loads — when
-  // a slot 404s it auto-shifts forward through the rest of the pool.
-  const avatarItems: AvatarStackItem[] = [
-    { key: "primary", iconUrl: iconUrl ?? null, iconBg: iconBg ?? null },
-    ...secondaryAvatars.map((a) => ({
-      key: a.name,
-      iconUrl: a.iconUrl,
-      iconBg: a.iconBg,
-    })),
-  ];
-  const avatarStack = (
-    <div className="flex items-center shrink-0 self-stretch">
-      <AvatarStack items={avatarItems} count={3} />
-    </div>
-  );
-
   return (
     <div
       className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
@@ -216,7 +172,6 @@ export default function MetaVariantCard({
         ) : (
           headerTitle
         )}
-        {avatarStack}
       </div>
 
       {href ? (

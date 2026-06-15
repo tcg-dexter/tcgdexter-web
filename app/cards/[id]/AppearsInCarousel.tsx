@@ -185,7 +185,6 @@ export default function AppearsInCarousel({
                   dateLine={v.dateLine}
                   creator={v.creator}
                   cardImageUrl={v.cardImageUrl}
-                  counts={v.counts}
                   secondaryAvatars={v.secondaryAvatars}
                 />
               </div>
