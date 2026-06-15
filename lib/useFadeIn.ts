@@ -28,8 +28,8 @@ export function useFadeIn(index?: number): CSSProperties {
   const delayMs = index != null ? index * STAGGER_MS : 0;
   return {
     opacity: loaded ? 1 : 0,
-    transform: loaded ? "translateY(0)" : "translateY(-5%)",
-    transition: "opacity 500ms ease-out, transform 500ms ease-out",
+    transform: loaded ? "translateY(0)" : "translateY(-4%)",
+    transition: "opacity 300ms ease-out, transform 300ms ease-out",
     transitionDelay: loaded ? `${delayMs}ms` : "0ms",
   };
 }

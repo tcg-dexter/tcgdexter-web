@@ -88,8 +88,8 @@ export default function CardImage({
       style={{
         ...style,
         opacity: loaded ? 1 : 0,
-        transform: loaded ? "translateY(0)" : "translateY(-5%)",
-        transition: "opacity 500ms ease-out, transform 500ms ease-out",
+        transform: loaded ? "translateY(0)" : "translateY(-4%)",
+        transition: "opacity 300ms ease-out, transform 300ms ease-out",
         transitionDelay: loaded ? `${delayMs}ms` : "0ms",
       }}
       onLoad={() => setLoaded(true)}
