@@ -18,8 +18,8 @@ interface Props {
    * delay so the fade-in cascades left-to-right, row-by-row.
    */
   index?: number;
-  /** Opt out of the entrance fade/slide (e.g. the hero image on detail pages). */
-  noAnimate?: boolean;
+  /** Skip the slide portion of the entrance — still fades in. */
+  noSlide?: boolean;
 }
 
 /**
@@ -43,7 +43,7 @@ export default function CardImage({
   decoding = "async",
   fetchPriority = "low",
   index,
-  noAnimate = false,
+  noSlide = false,
 }: Props) {
   const STAGGER_MS = 15;
   const delayMs = index != null ? index * STAGGER_MS : 0;
@@ -88,17 +88,15 @@ export default function CardImage({
       decoding={decoding}
       fetchPriority={fetchPriority}
       className={className}
-      style={
-        noAnimate
-          ? style
-          : {
-              ...style,
-              opacity: loaded ? 1 : 0,
-              transform: loaded ? "translateY(0)" : "translateY(-4%)",
-              transition: "opacity 300ms ease-out, transform 300ms ease-out",
-              transitionDelay: loaded ? `${delayMs}ms` : "0ms",
-            }
-      }
+      style={{
+        ...style,
+        opacity: loaded ? 1 : 0,
+        transform: loaded || noSlide ? "translateY(0)" : "translateY(-4%)",
+        transition: noSlide
+          ? "opacity 300ms ease-out"
+          : "opacity 300ms ease-out, transform 300ms ease-out",
+        transitionDelay: loaded ? `${delayMs}ms` : "0ms",
+      }}
       onLoad={() => setLoaded(true)}
       onError={() => setFailed(true)}
     />
