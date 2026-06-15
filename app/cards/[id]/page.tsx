@@ -104,7 +104,6 @@ export default function CardDetailPage({ params }: Props) {
             number={card.number}
             loading="eager"
             fetchPriority="high"
-            noSlide
             className="w-full rounded-2xl shadow-md bg-surface"
             style={{ aspectRatio: "245 / 342" }}
           />

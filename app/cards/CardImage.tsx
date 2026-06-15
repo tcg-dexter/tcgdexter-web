@@ -18,8 +18,6 @@ interface Props {
    * delay so the fade-in cascades left-to-right, row-by-row.
    */
   index?: number;
-  /** Skip the slide portion of the entrance — still fades in. */
-  noSlide?: boolean;
 }
 
 /**
@@ -27,9 +25,8 @@ interface Props {
  * set not yet indexed by pokemontcg.io), we render a neutral placeholder
  * that still surfaces the card identity, so the grid doesn't look broken.
  *
- * Once the image finishes decoding it fades in and slides down ~5% of its
- * own height — a very subtle entrance that smooths the otherwise jarring
- * "pop" of a card grid filling in.
+ * Once the image finishes decoding it fades in — a very subtle entrance
+ * that smooths the otherwise jarring "pop" of a card grid filling in.
  */
 export default function CardImage({
   src,
@@ -43,7 +40,6 @@ export default function CardImage({
   decoding = "async",
   fetchPriority = "low",
   index,
-  noSlide = false,
 }: Props) {
   const STAGGER_MS = 15;
   const delayMs = index != null ? index * STAGGER_MS : 0;
@@ -91,10 +87,7 @@ export default function CardImage({
       style={{
         ...style,
         opacity: loaded ? 1 : 0,
-        transform: loaded || noSlide ? "translateY(0)" : "translateY(-4%)",
-        transition: noSlide
-          ? "opacity 300ms ease-out"
-          : "opacity 300ms ease-out, transform 300ms ease-out",
+        transition: "opacity 300ms ease-out",
         transitionDelay: loaded ? `${delayMs}ms` : "0ms",
       }}
       onLoad={() => setLoaded(true)}
