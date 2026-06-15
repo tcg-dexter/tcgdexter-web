@@ -112,26 +112,26 @@ export default function MetaVariantCard({
     <div className="flex gap-3.5 p-3.5 pt-3">
       <CardArt url={cardImageUrl} name={headerName} />
       <div className="flex-1 min-w-0 flex flex-col">
-        <div className="mt-auto flex flex-col items-end text-right leading-tight">
-          {hasAccolade && (
-            <>
-              {placingLine && (
-                <span className="text-[11px] font-semibold text-text-primary truncate">
-                  {placingLine}
-                </span>
-              )}
-              {competitionName && (
-                <span className="text-[11px] text-text-secondary truncate">
-                  {competitionName}
-                </span>
-              )}
-              {dateLine && (
-                <span className="text-[11px] text-text-muted truncate">
-                  {dateLine}
-                </span>
-              )}
-            </>
-          )}
+        {hasAccolade && (
+          <div className="flex flex-col items-end text-right leading-tight">
+            {placingLine && (
+              <span className="text-[11px] font-semibold text-text-primary truncate">
+                {placingLine}
+              </span>
+            )}
+            {competitionName && (
+              <span className="text-[11px] text-text-secondary truncate">
+                {competitionName}
+              </span>
+            )}
+            {dateLine && (
+              <span className="text-[11px] text-text-muted truncate">
+                {dateLine}
+              </span>
+            )}
+          </div>
+        )}
+        <div className="mt-auto flex items-center justify-end">
           <AvatarStack items={avatarItems} count={3} bare />
         </div>
       </div>
