@@ -113,7 +113,7 @@ export default function MetaVariantCard({
       <CardArt url={cardImageUrl} name={headerName} />
       <div className="flex-1 min-w-0 flex flex-col">
         {hasAccolade && (
-          <div className="flex flex-col items-end text-right leading-tight">
+          <div className="flex flex-col items-start text-left leading-tight">
             {placingLine && (
               <span className="text-[11px] font-semibold text-text-primary truncate">
                 {placingLine}
