@@ -399,11 +399,10 @@ export default async function ProfilePage({
         }
       />
 
-      {/* Deck feed — uses `px-4 sm:px-6` to match the gutter on the
-          /my-decks collection page, so identical UserDeckCard rows
-          present at the same width across both surfaces (16px mobile
-          gutter, 24px sm+). */}
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 mt-6">
+      {/* Deck feed — mobile uses px-2 (8px) so the cards stretch
+          edge-to-edge on small screens; sm+ matches the /my-decks
+          gutter (24px). */}
+      <div className="mx-auto max-w-6xl px-2 sm:px-6 mt-6">
         <h2 className="text-lg font-semibold text-text-primary mb-3 px-1">
           Decks
           {decks.length > 0 && (
