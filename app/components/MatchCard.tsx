@@ -11,6 +11,8 @@ export type RecentMatch = {
   deckName: string;
   username: string;
   deckImageUrl: string | null;
+  /** Unique card names from the player's decklist, for search. */
+  deckCardNames: string[];
   opponentImageUrl: string | null;
   opponentAttackerName: string | null;
   playerColor: string;

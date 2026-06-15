@@ -188,6 +188,9 @@ export async function loadRecentMatches(limit = 6): Promise<RecentMatch[]> {
       const analysis = detail?.analysis as { cards?: AnalysisCard[] } | null | undefined;
       const deckImageUrl: string | null =
         coverUrl ?? (analysis?.cards ? primaryCardImageUrl(analysis.cards) : null);
+      const deckCardNames = Array.from(
+        new Set((analysis?.cards ?? []).map((c) => c.name)),
+      );
 
       // Accent colors mirror the battle banner: typeColor() of each side's
       // primary Pokémon. Falls back to Colorless when types aren't resolvable.
@@ -236,6 +239,7 @@ export async function loadRecentMatches(limit = 6): Promise<RecentMatch[]> {
         deckName: deck.name as string,
         username: profile.username as string,
         deckImageUrl: deckImageUrl ?? null,
+        deckCardNames,
         opponentImageUrl,
         opponentAttackerName: topAttacker,
         playerColor,

@@ -20,6 +20,7 @@ function matchSearchText(m: RecentMatch): string {
     m.opponentArchetype,
     m.opponentHandle,
     m.opponentAttackerName,
+    ...m.deckCardNames,
   ]
     .filter(Boolean)
     .join(" ");
