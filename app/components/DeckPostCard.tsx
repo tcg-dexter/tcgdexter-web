@@ -309,7 +309,7 @@ export function UserDeckCard({
       className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       style={useFadeIn(index)}
     >
-      {/* Header — deck name + 3-avatar stack (primary + top-2 by copy count). */}
+      {/* Header — deck name + W-L record. */}
       <div className="flex items-center gap-3 px-3.5 pt-3">
         <Link
           href={href}
@@ -317,13 +317,11 @@ export function UserDeckCard({
         >
           {name}
         </Link>
-        <Link
-          href={href}
-          aria-label={`Open ${name}`}
-          className="shrink-0 flex items-center"
-        >
-          <AvatarStack items={avatarItems} count={3} />
-        </Link>
+        {wl ? (
+          <div className="shrink-0">
+            <WLCircles wl={wl} />
+          </div>
+        ) : null}
       </div>
 
       {/* Body */}
@@ -332,8 +330,8 @@ export function UserDeckCard({
           <CardArt url={imageUrl} name={name} />
           <div className="flex-1 min-w-0 flex flex-col">
             {counts && <TypeCounts counts={counts} size="md" />}
-            <div className="mt-auto flex justify-end">
-              {wl ? <WLCircles wl={wl} /> : null}
+            <div className="mt-auto flex justify-end items-end">
+              <AvatarStack items={avatarItems} count={3} bare />
             </div>
           </div>
         </div>
