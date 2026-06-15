@@ -132,6 +132,16 @@ export function BookmarkIcon({ className }: IconProps) {
   );
 }
 
+/** Two overlapping circles — "Matches". */
+export function VersusIcon({ className }: IconProps) {
+  return (
+    <svg {...outlineProps} className={className}>
+      <circle cx="9.5" cy="12" r="6.5" />
+      <circle cx="14.5" cy="12" r="6.5" />
+    </svg>
+  );
+}
+
 /** TikTok brand mark — filled, currentColor. */
 export function TikTokIcon({ className }: IconProps) {
   return (
