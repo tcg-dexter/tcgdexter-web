@@ -44,7 +44,7 @@ export default function DeckMulliganModule({ deckSize, basicCount }: Props) {
   return (
     <div className={cardClass}>
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Mulligan Rate</h2>
+        <h2 className="text-lg font-semibold">Mulligan Risk</h2>
         <span className={`text-lg font-bold ${tone}`}>{label}</span>
       </div>
     </div>
