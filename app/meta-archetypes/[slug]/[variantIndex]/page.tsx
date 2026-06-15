@@ -204,7 +204,7 @@ export default async function MetaVariantPage({
       }
       titleTrailing={
         multiAvatars.length >= 2 ? (
-          <div className="flex shrink-0 items-center -space-x-3">
+          <div className="flex shrink-0 items-center gap-2">
             {multiAvatars.map((a) => (
               // eslint-disable-next-line @next/next/no-img-element
               <img
