@@ -313,7 +313,7 @@ export default function DeckDetailClient({
   const draws = initialMatches.filter((m) => m.result === "draw").length;
 
   const titleAction = (
-    <div className="ml-auto">
+    <div className="ml-auto mr-2">
       <WLCircles wl={{ w: wins, l: losses, d: draws }} />
     </div>
   );
