@@ -147,7 +147,7 @@ export default function DeckMatClient() {
               {rows.map((row, i) => (
                 <div
                   key={i}
-                  className="flex"
+                  className="flex gap-x-[6px]"
                   style={{ justifyContent: i < rows.length - 1 ? "space-between" : "flex-start" }}
                 >
                   {row.map((t) => (
