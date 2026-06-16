@@ -83,23 +83,14 @@ function TypeCounts({ counts, size = "sm" }: { counts: CardCounts; size?: "sm" |
 export function WLCircles({ wl }: { wl: WinLoss }) {
   if (wl.w + wl.l + wl.d === 0) return null;
   return (
-    <div className="inline-flex items-baseline tabular-nums font-bold text-[17px] leading-none bg-black rounded-full px-3 py-1.5">
-      <span
-        style={{
-          background: "linear-gradient(135deg, #F2A20C 0%, #D91E0D 50%, #A60D0D 100%)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          backgroundClip: "text",
-        } as React.CSSProperties}
-      >
-        {wl.w}
-      </span>
-      <span className="text-white mx-1.5">-</span>
-      <span className="text-white">{wl.l}</span>
+    <div className="inline-flex items-baseline tabular-nums font-bold text-[17px] leading-none bg-black rounded-full px-3 py-1.5 text-white">
+      <span>{wl.w}</span>
+      <span className="mx-1.5">-</span>
+      <span>{wl.l}</span>
       {wl.d > 0 && (
         <>
-          <span className="text-white mx-1.5">-</span>
-          <span className="text-white">{wl.d}</span>
+          <span className="mx-1.5">-</span>
+          <span>{wl.d}</span>
         </>
       )}
     </div>
