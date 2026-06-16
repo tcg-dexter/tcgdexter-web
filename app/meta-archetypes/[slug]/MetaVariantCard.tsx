@@ -119,11 +119,19 @@ export default function MetaVariantCard({
                 {placingLine}
               </span>
             )}
-            {competitionName && (
-              <span className="text-[11px] text-text-secondary truncate">
-                {competitionName}
-              </span>
-            )}
+            {competitionName &&
+              competitionName.split(",").map((part, i) => {
+                const text = part.trim();
+                if (!text) return null;
+                return (
+                  <span
+                    key={i}
+                    className="text-[11px] text-text-secondary truncate"
+                  >
+                    {text}
+                  </span>
+                );
+              })}
             {dateLine && (
               <span className="text-[11px] text-text-muted truncate">
                 {dateLine}
