@@ -65,14 +65,14 @@ export default function SavedDeckRow({
   };
 
   const wlRecord = totalMatches > 0 && (
-    <span className="flex-shrink-0 flex items-baseline tabular-nums font-semibold text-xs leading-none">
+    <span className="flex-shrink-0 inline-flex items-baseline tabular-nums font-bold text-xs leading-none bg-black rounded-full px-2 py-[3px]">
       <span style={wlStyle}>{wins}</span>
-      <span className="text-text-muted mx-[3px]">-</span>
-      <span className="text-text-muted">{losses}</span>
+      <span className="text-white mx-[3px]">-</span>
+      <span className="text-white">{losses}</span>
       {draws > 0 && (
         <>
-          <span className="text-text-muted mx-[3px]">-</span>
-          <span className="text-text-muted">{draws}</span>
+          <span className="text-white mx-[3px]">-</span>
+          <span className="text-white">{draws}</span>
         </>
       )}
     </span>
