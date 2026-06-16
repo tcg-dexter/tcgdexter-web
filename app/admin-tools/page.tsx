@@ -25,6 +25,12 @@ const TOOLS: Tool[] = [
     description:
       "Browse 9:16 social-ready cards built from published content.",
   },
+  {
+    href: "/admin-tools/deck-mat",
+    title: "Deck Mat",
+    description:
+      "Lay out a deck list as fanned card piles, one pile per unique card.",
+  },
 ];
 
 export default async function AdminToolsPage() {
