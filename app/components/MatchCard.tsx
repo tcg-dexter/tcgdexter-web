@@ -22,6 +22,7 @@ export type RecentMatch = {
   playerPrizes: number;
   opponentPrizes: number;
   isBestOf3: boolean;
+  hasBattleLog: boolean;
 };
 
 export function relativeTime(iso: string): string {

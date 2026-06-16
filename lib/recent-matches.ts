@@ -247,6 +247,7 @@ export async function loadRecentMatches(limit = 6): Promise<RecentMatch[]> {
         playerPrizes: playerPrizesByMatch.get(m.id as string) ?? manualPrizes?.player ?? 0,
         opponentPrizes: opponentPrizesByMatch.get(m.id as string) ?? manualPrizes?.opponent ?? 0,
         isBestOf3: typeof m.game_results === "string" && m.game_results.length >= 2,
+        hasBattleLog: m.source === "tcg_live_log",
       }];
     });
 
