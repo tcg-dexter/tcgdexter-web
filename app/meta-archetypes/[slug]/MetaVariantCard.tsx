@@ -57,7 +57,7 @@ function CardArt({ url, name }: { url?: string | null; name: string }) {
         // eslint-disable-next-line @next/next/no-img-element
         <img src={url} alt={name} className="w-full h-full object-contain" />
       ) : (
-        <span className="text-[11px] text-text-muted text-center leading-relaxed px-2">
+        <span className="text-[16.5px] text-text-muted text-center leading-relaxed px-2">
           No cover
           <br />
           set
@@ -115,7 +115,7 @@ export default function MetaVariantCard({
         {hasAccolade && (
           <div className="flex flex-col items-start text-left leading-tight">
             {placingLine && (
-              <span className="text-[11px] font-semibold text-text-primary truncate">
+              <span className="text-[16.5px] font-semibold text-text-primary truncate">
                 {placingLine}
               </span>
             )}
@@ -126,14 +126,14 @@ export default function MetaVariantCard({
                 return (
                   <span
                     key={i}
-                    className="text-[11px] text-text-secondary truncate"
+                    className="text-[16.5px] text-text-secondary truncate"
                   >
                     {text}
                   </span>
                 );
               })}
             {dateLine && (
-              <span className="text-[11px] text-text-muted truncate">
+              <span className="text-[16.5px] text-text-muted truncate">
                 {dateLine}
               </span>
             )}
