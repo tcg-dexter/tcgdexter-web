@@ -103,7 +103,7 @@ export default function DeckMatClient() {
               No cards parsed from this list.
             </div>
           ) : (
-            <div className="flex flex-wrap gap-x-6 gap-y-5">
+            <div className="flex flex-wrap gap-x-[6px] gap-y-[5px]">
               {tiles.map((t) => (
                 <CardPile key={t.key} tile={t} cardWidth={cardWidth} />
               ))}
