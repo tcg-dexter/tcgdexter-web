@@ -30,7 +30,7 @@ Total Cards: 60`;
 
 // Each fanned copy is offset by FAN_OVERLAP × the card's width.
 const FAN_OVERLAP = 0.15;
-const cardWidth = 60;
+const cardWidth = 45;
 
 export default function DeckMatClient() {
   const [deckList, setDeckList] = useState(EXAMPLE_DECK);
