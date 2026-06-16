@@ -301,7 +301,7 @@ export function UserDeckCard({
       <div className="flex items-center gap-3 px-3.5 pt-3">
         <Link
           href={href}
-          className="flex-1 min-w-0 text-[17px] font-semibold text-text-primary truncate hover:underline underline-offset-2"
+          className="flex-1 min-w-0 text-[19px] font-semibold text-text-primary truncate hover:underline underline-offset-2"
         >
           {name}
         </Link>
