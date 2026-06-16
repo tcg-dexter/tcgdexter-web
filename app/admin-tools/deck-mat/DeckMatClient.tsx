@@ -28,21 +28,15 @@ Energy: 1
 
 Total Cards: 60`;
 
-const SECTION_LABEL: Record<ResolvedDeckTile["section"], string> = {
-  pokemon: "Pokémon",
-  trainer: "Trainer",
-  energy: "Energy",
-};
-
 // Each fanned copy is offset by FAN_OVERLAP × the card's width.
 const FAN_OVERLAP = 0.15;
+const cardWidth = 60;
 
 export default function DeckMatClient() {
   const [deckList, setDeckList] = useState(EXAMPLE_DECK);
   const [tiles, setTiles] = useState<ResolvedDeckTile[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cardWidth, setCardWidth] = useState(96);
 
   async function handleRender() {
     setLoading(true);
@@ -65,16 +59,6 @@ export default function DeckMatClient() {
       setLoading(false);
     }
   }
-
-  const sections: Array<ResolvedDeckTile["section"]> = ["pokemon", "trainer", "energy"];
-  const grouped = tiles
-    ? sections
-        .map((section) => ({
-          section,
-          items: tiles.filter((t) => t.section === section),
-        }))
-        .filter((g) => g.items.length > 0)
-    : [];
 
   return (
     <>
@@ -106,45 +90,22 @@ export default function DeckMatClient() {
               <span className="text-xs text-accent">{error}</span>
             )}
           </div>
-
-          <label className="mt-4 text-xs font-semibold uppercase tracking-wider text-text-muted">
-            Card size: {cardWidth}px
-          </label>
-          <input
-            type="range"
-            min={60}
-            max={180}
-            step={2}
-            value={cardWidth}
-            onChange={(e) => setCardWidth(Number(e.target.value))}
-            className="w-full"
-          />
         </div>
 
         {/* Mat column */}
-        <div className="rounded-2xl border border-black/8 bg-white p-4 min-h-[420px]">
+        <div className="min-h-[420px]">
           {!tiles ? (
-            <div className="h-full min-h-[388px] flex items-center justify-center text-sm text-text-muted">
+            <div className="h-full min-h-[420px] flex items-center justify-center text-sm text-text-muted">
               Render a deck list to lay out the mat.
             </div>
           ) : tiles.length === 0 ? (
-            <div className="h-full min-h-[388px] flex items-center justify-center text-sm text-text-muted">
+            <div className="h-full min-h-[420px] flex items-center justify-center text-sm text-text-muted">
               No cards parsed from this list.
             </div>
           ) : (
-            <div className="flex flex-col gap-6">
-              {grouped.map((g) => (
-                <section key={g.section}>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-3">
-                    {SECTION_LABEL[g.section]} —{" "}
-                    {g.items.reduce((s, t) => s + t.copyCount, 0)}
-                  </h3>
-                  <div className="flex flex-wrap gap-x-6 gap-y-5">
-                    {g.items.map((t) => (
-                      <CardPile key={t.key} tile={t} cardWidth={cardWidth} />
-                    ))}
-                  </div>
-                </section>
+            <div className="flex flex-wrap gap-x-6 gap-y-5">
+              {tiles.map((t) => (
+                <CardPile key={t.key} tile={t} cardWidth={cardWidth} />
               ))}
             </div>
           )}
