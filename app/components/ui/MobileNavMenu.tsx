@@ -224,8 +224,13 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
     { href: "/meta-archetypes", label: "Meta Archetypes", Icon: ChartBarIcon },
     { href: "/matches", label: "Matches", Icon: VersusIcon },
     // { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
-    { href: "/learn", label: "Learn to Play", Icon: BookOpenIcon },
     { href: spotlightHref, label: "Spotlight", Icon: TrophyIcon },
+  ];
+
+  // Grouped with the external links on mobile so the Learn / Shop / Social
+  // cluster matches the right rail on desktop.
+  const SECONDARY_INTERNAL_LINKS = [
+    { href: "/learn", label: "Learn to Play", Icon: BookOpenIcon },
   ];
 
   const EXTERNAL_LINKS = [
@@ -328,6 +333,15 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
             ))}
 
             <li role="separator" className="my-4" />
+
+            {SECONDARY_INTERNAL_LINKS.map(({ href, label, Icon }) => (
+              <li key={href}>
+                <Link href={href} className={linkClass} onClick={closeMenu}>
+                  <Icon />
+                  <span>{label}</span>
+                </Link>
+              </li>
+            ))}
 
             {EXTERNAL_LINKS.map(({ href, label, Icon }) => (
               <li key={href}>
