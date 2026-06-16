@@ -58,7 +58,7 @@ export default function SavedDeckRow({
   const totalMatches = wins + losses + draws;
 
   const wlRecord = totalMatches > 0 && (
-    <span className="flex-shrink-0 inline-flex items-baseline tabular-nums font-bold text-xs leading-none bg-black rounded-full px-2 py-[3px] text-white">
+    <span className="flex-shrink-0 inline-flex items-baseline tabular-nums font-bold text-[10px] leading-none bg-black rounded-full px-2 py-[3px] text-white">
       <span>{wins}</span>
       <span className="mx-[3px]">-</span>
       <span>{losses}</span>

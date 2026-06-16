@@ -83,7 +83,7 @@ function TypeCounts({ counts, size = "sm" }: { counts: CardCounts; size?: "sm" |
 export function WLCircles({ wl }: { wl: WinLoss }) {
   if (wl.w + wl.l + wl.d === 0) return null;
   return (
-    <div className="inline-flex items-baseline tabular-nums font-bold text-[17px] leading-none bg-black rounded-full px-3 py-1.5 text-white">
+    <div className="inline-flex items-baseline tabular-nums font-bold text-[15px] leading-none bg-black rounded-full px-3 py-1.5 text-white">
       <span>{wl.w}</span>
       <span className="mx-1.5">-</span>
       <span>{wl.l}</span>
