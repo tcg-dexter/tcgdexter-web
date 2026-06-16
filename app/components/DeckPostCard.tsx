@@ -83,26 +83,23 @@ function TypeCounts({ counts, size = "sm" }: { counts: CardCounts; size?: "sm" |
 export function WLCircles({ wl }: { wl: WinLoss }) {
   if (wl.w + wl.l + wl.d === 0) return null;
   return (
-    <div className="flex items-center gap-2">
-      <div
-        className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center"
+    <div className="flex items-baseline tabular-nums font-bold text-[19px] leading-none">
+      <span
         style={{
-          background: "linear-gradient(90deg,#F2A20C 0%,#D91E0D 50%,#A60D0D 100%)",
-        }}
+          background: "linear-gradient(135deg, #F2A20C 0%, #D91E0D 50%, #A60D0D 100%)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          backgroundClip: "text",
+        } as React.CSSProperties}
       >
-        <span className="text-[11px] font-extrabold text-white">W</span>
-      </div>
-      <span className="text-[19px] font-bold tabular-nums text-text-primary">{wl.w}</span>
-      <div className="w-6 h-6 rounded-full bg-black shrink-0 flex items-center justify-center">
-        <span className="text-[11px] font-extrabold text-white">L</span>
-      </div>
-      <span className="text-[19px] font-bold tabular-nums text-text-primary">{wl.l}</span>
+        {wl.w}
+      </span>
+      <span className="text-text-primary mx-1.5">-</span>
+      <span className="text-text-primary">{wl.l}</span>
       {wl.d > 0 && (
         <>
-          <div className="w-6 h-6 rounded-full bg-white shadow-[inset_0_0_0_1px_black] shrink-0 flex items-center justify-center">
-            <span className="text-[11px] font-extrabold text-text-primary">D</span>
-          </div>
-          <span className="text-[19px] font-bold tabular-nums text-text-primary">{wl.d}</span>
+          <span className="text-text-primary mx-1.5">-</span>
+          <span className="text-text-primary">{wl.d}</span>
         </>
       )}
     </div>

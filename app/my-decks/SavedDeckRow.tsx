@@ -57,9 +57,26 @@ export default function SavedDeckRow({
   const draws = matchStats?.draws ?? 0;
   const totalMatches = wins + losses + draws;
 
-  const wlRecord = draws > 0
-    ? `${wins}W - ${losses}L - ${draws}D`
-    : `${wins}W - ${losses}L`;
+  const wlStyle: React.CSSProperties = {
+    background: "linear-gradient(135deg, #F2A20C 0%, #D91E0D 50%, #A60D0D 100%)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    backgroundClip: "text",
+  };
+
+  const wlRecord = totalMatches > 0 && (
+    <span className="flex-shrink-0 flex items-baseline tabular-nums font-semibold text-xs leading-none">
+      <span style={wlStyle}>{wins}</span>
+      <span className="text-text-muted mx-[3px]">-</span>
+      <span className="text-text-muted">{losses}</span>
+      {draws > 0 && (
+        <>
+          <span className="text-text-muted mx-[3px]">-</span>
+          <span className="text-text-muted">{draws}</span>
+        </>
+      )}
+    </span>
+  );
 
   // ── Handlers ────────────────────────────────────────────────
 
@@ -96,11 +113,7 @@ export default function SavedDeckRow({
             <span className="font-semibold text-text-primary text-lg truncate min-w-0">
               {name}
             </span>
-            {totalMatches > 0 && (
-              <span className="flex-shrink-0 text-xs font-semibold text-text-muted tabular-nums">
-                {wlRecord}
-              </span>
-            )}
+            {wlRecord}
           </div>
 
           {/* Row 2: action buttons */}
