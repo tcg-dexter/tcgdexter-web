@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import CardImage from "@/app/cards/CardImage";
 import type { ResolvedDeckTile } from "@/lib/deckTiles";
 
@@ -31,12 +31,50 @@ Total Cards: 60`;
 // Each fanned copy is offset by FAN_OVERLAP × the card's width.
 const FAN_OVERLAP = 0.15;
 const cardWidth = 45;
+const ROW_GAP = 6; // px between piles horizontally
+
+function getPileWidth(tile: ResolvedDeckTile): number {
+  const count = Math.max(tile.copyCount, 1);
+  return cardWidth + (count - 1) * cardWidth * FAN_OVERLAP;
+}
+
+function computeRows(tiles: ResolvedDeckTile[], containerWidth: number): ResolvedDeckTile[][] {
+  if (!tiles.length) return [];
+  if (containerWidth === 0) return [tiles];
+  const rows: ResolvedDeckTile[][] = [];
+  let row: ResolvedDeckTile[] = [];
+  let rowWidth = 0;
+  for (const tile of tiles) {
+    const w = getPileWidth(tile);
+    const needed = row.length > 0 ? ROW_GAP + w : w;
+    if (row.length > 0 && rowWidth + needed > containerWidth) {
+      rows.push(row);
+      row = [tile];
+      rowWidth = w;
+    } else {
+      row.push(tile);
+      rowWidth += needed;
+    }
+  }
+  if (row.length) rows.push(row);
+  return rows;
+}
 
 export default function DeckMatClient() {
   const [deckList, setDeckList] = useState(EXAMPLE_DECK);
   const [tiles, setTiles] = useState<ResolvedDeckTile[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const matRef = useRef<HTMLDivElement>(null);
+  const [matWidth, setMatWidth] = useState(0);
+
+  useEffect(() => {
+    const el = matRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setMatWidth(entry.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   async function handleRender() {
     setLoading(true);
@@ -59,6 +97,8 @@ export default function DeckMatClient() {
       setLoading(false);
     }
   }
+
+  const rows = tiles ? computeRows(tiles, matWidth) : [];
 
   return (
     <>
@@ -93,7 +133,7 @@ export default function DeckMatClient() {
         </div>
 
         {/* Mat column */}
-        <div className="min-h-[420px]">
+        <div ref={matRef} className="min-h-[420px]">
           {!tiles ? (
             <div className="h-full min-h-[420px] flex items-center justify-center text-sm text-text-muted">
               Render a deck list to lay out the mat.
@@ -103,9 +143,17 @@ export default function DeckMatClient() {
               No cards parsed from this list.
             </div>
           ) : (
-            <div className="flex flex-wrap gap-x-[6px] gap-y-[5px]">
-              {tiles.map((t) => (
-                <CardPile key={t.key} tile={t} cardWidth={cardWidth} />
+            <div className="flex flex-col gap-y-[5px]">
+              {rows.map((row, i) => (
+                <div
+                  key={i}
+                  className="flex"
+                  style={{ justifyContent: i < rows.length - 1 ? "space-between" : "flex-start" }}
+                >
+                  {row.map((t) => (
+                    <CardPile key={t.key} tile={t} cardWidth={cardWidth} />
+                  ))}
+                </div>
               ))}
             </div>
           )}
@@ -124,7 +172,6 @@ function CardPile({
 }) {
   const cardHeight = Math.round((cardWidth * 342) / 245);
   const count = Math.max(tile.copyCount, 1);
-  // Pile width = base card + (count - 1) × overlap-step
   const pileWidth = cardWidth + (count - 1) * cardWidth * FAN_OVERLAP;
   const alt = tile.setName
     ? `${tile.name} — ${tile.setName} ${tile.number}`
