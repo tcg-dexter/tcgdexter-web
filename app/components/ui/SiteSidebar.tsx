@@ -6,7 +6,6 @@ import {
   TrophyIcon,
   WrenchIcon,
   ChartBarIcon,
-  BookOpenIcon,
   BookmarkIcon,
   CardsIcon,
   UserIcon,
@@ -64,7 +63,6 @@ export default function SiteSidebar({
     { href: "/meta-archetypes", label: "Meta Archetypes", Icon: ChartBarIcon },
     { href: "/matches", label: "Matches", Icon: VersusIcon },
     // { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
-    { href: "/learn", label: "Learn to Play", Icon: BookOpenIcon },
     { href: spotlightHref, label: "Spotlight", Icon: TrophyIcon },
   ];
 
