@@ -26,7 +26,7 @@ const ROW_GAP_X = 6;  // px between piles horizontally
 const MAX_PILES_PER_ROW = 7;
 const MAT_PADDING = 8;          // px, inner padding of the mat rectangle
 const MAT_ASPECT = 13.5 / 24;   // standard playmat height/width ratio
-const EXPORT_PADDING = 20;      // px, outer padding added around the exported image
+const EXPORT_PADDING = 15;      // px, outer padding added around the exported image
 
 type MatStyle = "none" | "brand" | (typeof BANNER_ACCENT_KEYS)[number];
 
