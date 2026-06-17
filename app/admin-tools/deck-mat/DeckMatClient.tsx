@@ -147,36 +147,36 @@ export default function DeckMatClient() {
 
         {/* Mat column */}
         <div className="flex flex-col gap-3">
-          <div ref={matRef}>
+          <div
+            ref={matRef}
+            className="rounded-xl"
+            style={{
+              padding: MAT_PADDING,
+              background: activeGradient ?? "transparent",
+              minHeight: 320,
+            }}
+          >
             {!tiles ? (
-              <div className="min-h-[420px] flex items-center justify-center text-sm text-text-muted">
-                Render a deck list to lay out the mat.
+              <div className="h-full min-h-[288px] flex items-center justify-center text-sm" style={{ color: activeGradient ? "rgba(255,255,255,0.5)" : undefined }}>
+                <span className={activeGradient ? "" : "text-text-muted"}>Render a deck list to lay out the mat.</span>
               </div>
             ) : tiles.length === 0 ? (
-              <div className="min-h-[420px] flex items-center justify-center text-sm text-text-muted">
-                No cards parsed from this list.
+              <div className="h-full min-h-[288px] flex items-center justify-center text-sm" style={{ color: activeGradient ? "rgba(255,255,255,0.5)" : undefined }}>
+                <span className={activeGradient ? "" : "text-text-muted"}>No cards parsed from this list.</span>
               </div>
             ) : (
-              <div
-                className="rounded-xl"
-                style={{
-                  padding: MAT_PADDING,
-                  background: activeGradient ?? "transparent",
-                }}
-              >
-                <div className="flex flex-col gap-y-[5px]">
-                  {rows.map((row, i) => (
-                    <div
-                      key={i}
-                      className="flex gap-x-[6px]"
-                      style={{ justifyContent: i < rows.length - 1 ? "space-between" : "flex-start" }}
-                    >
-                      {row.map((t) => (
-                        <CardPile key={t.key} tile={t} cardWidth={cardWidth} />
-                      ))}
-                    </div>
-                  ))}
-                </div>
+              <div className="flex flex-col gap-y-[5px]">
+                {rows.map((row, i) => (
+                  <div
+                    key={i}
+                    className="flex gap-x-[6px]"
+                    style={{ justifyContent: i < rows.length - 1 ? "space-between" : "flex-start" }}
+                  >
+                    {row.map((t) => (
+                      <CardPile key={t.key} tile={t} cardWidth={cardWidth} />
+                    ))}
+                  </div>
+                ))}
               </div>
             )}
           </div>
