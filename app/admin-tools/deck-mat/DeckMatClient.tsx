@@ -37,7 +37,7 @@ Total Cards: 60`;
 const FAN_OVERLAP = 0.20;
 const ROW_GAP = 6; // px between piles horizontally
 const MAX_PILES_PER_ROW = 7;
-const MAT_PADDING = 16; // px, inner padding of the mat rectangle
+const MAT_PADDING = 8; // px, inner padding of the mat rectangle
 
 type MatStyle = "none" | "brand" | (typeof BANNER_ACCENT_KEYS)[number];
 
