@@ -28,11 +28,13 @@ const MAT_PADDING = 8;          // px, inner padding of the mat rectangle
 const MAT_ASPECT = 13.5 / 24;   // standard playmat height/width ratio
 const EXPORT_PADDING = 15;      // px, outer padding added around the exported image
 
-type MatStyle = "none" | "brand" | (typeof BANNER_ACCENT_KEYS)[number];
+type MatStyle = "black" | "brand" | (typeof BANNER_ACCENT_KEYS)[number];
 
-const MAT_STYLES: { key: MatStyle; gradient: string | null }[] = [
-  { key: "none", gradient: null },
+const BLACK_GRADIENT = "linear-gradient(180deg, #3a3a3a 0%, #141414 100%)";
+
+const MAT_STYLES: { key: MatStyle; gradient: string }[] = [
   { key: "brand", gradient: BRAND_BANNER_GRADIENT },
+  { key: "black", gradient: BLACK_GRADIENT },
   ...BANNER_ACCENT_KEYS.map((k) => ({ key: k as MatStyle, gradient: bannerGradientFor(k) })),
 ];
 
@@ -477,14 +479,8 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                     ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
                     : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
                 }`}
-                style={gradient ? { background: gradient } : { background: "#e8e8e8" }}
-              >
-                {!gradient && (
-                  <span className="block w-full h-full flex items-center justify-center text-[10px] font-bold text-text-muted leading-none">
-                    ✕
-                  </span>
-                )}
-              </button>
+                style={{ background: gradient }}
+              />
             ))}
           </div>
 
