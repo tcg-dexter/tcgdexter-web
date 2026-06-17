@@ -69,6 +69,7 @@ function computeCardWidth(rows: ResolvedDeckTile[][], containerWidth: number): n
 export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const [selectedDeckId, setSelectedDeckId] = useState<string | null>(null);
   const [tiles, setTiles] = useState<ResolvedDeckTile[] | null>(null);
+  const [renderKey, setRenderKey] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [matStyle, setMatStyle] = useState<MatStyle>("brand");
@@ -101,6 +102,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
       }
       const body = await res.json();
       setTiles(body.tiles ?? []);
+      setRenderKey((k) => k + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to render deck.");
     } finally {
@@ -205,7 +207,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
               </div>
             ) : (
               <div
-                key={selectedDeckId ?? "empty"}
+                key={renderKey}
                 className="flex flex-col h-full"
                 style={{ justifyContent: "space-between" }}
               >
