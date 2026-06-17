@@ -280,7 +280,7 @@ function CardPile({
             width: cardWidth,
             height: cardHeight,
             zIndex: i,
-            boxShadow: i > 0 ? "-4px 0 6px rgba(0,0,0,0.25)" : undefined,
+            boxShadow: i > 0 ? "-4px 0 4px rgba(0,0,0,0.25)" : undefined,
           }}
         >
           <CardImage
