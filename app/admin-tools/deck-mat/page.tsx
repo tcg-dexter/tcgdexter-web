@@ -85,10 +85,6 @@ export default async function DeckMatPage() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-8">
         <header className="mb-6">
           <h1 className="text-2xl font-bold text-text-primary">Deck Mat</h1>
-          <p className="text-sm text-text-secondary mt-1">
-            Select a deck to see it laid out as fanned card piles —
-            one pile per unique card name, with each copy stacked left-to-right.
-          </p>
         </header>
 
         <DeckMatClient decks={deckSummaries} />
