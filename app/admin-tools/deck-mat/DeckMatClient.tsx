@@ -38,6 +38,42 @@ const MAT_STYLES: { key: MatStyle; gradient: string }[] = [
   ...BANNER_ACCENT_KEYS.map((k) => ({ key: k as MatStyle, gradient: bannerGradientFor(k) })),
 ];
 
+// Each texture is a small SVG tile that repeats seamlessly. Opacity is baked
+// into the SVG so the pattern works identically in CSS background-image (live
+// mat) and ctx.createPattern (canvas export).
+const TEXTURES: ReadonlyArray<{ key: string; w: number; h: number; svg: string }> = [
+  {
+    key: "lines",
+    w: 8, h: 8,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><line x1="0" y1="8" x2="8" y2="0" stroke="white" stroke-width="1" stroke-opacity="0.22"/></svg>`,
+  },
+  {
+    key: "dots",
+    w: 8, h: 8,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><circle cx="4" cy="4" r="1.2" fill="white" fill-opacity="0.25"/></svg>`,
+  },
+  {
+    key: "grid",
+    w: 10, h: 10,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><path d="M0 0V10M0 0H10" stroke="white" stroke-width="0.5" stroke-opacity="0.2"/></svg>`,
+  },
+  {
+    key: "crosshatch",
+    w: 8, h: 8,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><line x1="0" y1="8" x2="8" y2="0" stroke="white" stroke-width="0.75" stroke-opacity="0.15"/><line x1="0" y1="0" x2="8" y2="8" stroke="white" stroke-width="0.75" stroke-opacity="0.15"/></svg>`,
+  },
+  {
+    key: "diamonds",
+    w: 12, h: 12,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><polygon points="6,1 11,6 6,11 1,6" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.22"/></svg>`,
+  },
+  {
+    key: "chevron",
+    w: 20, h: 10,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="10"><polyline points="0,10 10,0 20,10" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.22"/></svg>`,
+  },
+] as const;
+
 function proxied(url: string): string {
   if (!url || url.startsWith("/") || url.startsWith("data:")) return url;
   return `/api/admin/social-studio/proxy-image?url=${encodeURIComponent(url)}`;
@@ -159,12 +195,14 @@ async function rasterizeMat({
   rows,
   cardWidth,
   activeGradient,
+  textureKey,
   deckName,
   matWidth,
 }: {
   rows: ResolvedDeckTile[][];
   cardWidth: number;
   activeGradient: string | null;
+  textureKey: string | null;
   deckName: string;
   matWidth: number;
 }): Promise<string> {
@@ -260,7 +298,31 @@ async function rasterizeMat({
     ctx.restore();
   }
 
-  // ── 7. Card piles ─────────────────────────────────────────────────────────
+  // ── 7. Texture overlay ────────────────────────────────────────────────────
+  if (textureKey) {
+    const texDef = TEXTURES.find((t) => t.key === textureKey);
+    if (texDef) {
+      try {
+        const patImg = await loadImg(
+          `data:image/svg+xml,${encodeURIComponent(texDef.svg)}`,
+        );
+        const pat = ctx.createPattern(patImg, "repeat");
+        if (pat) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.roundRect(matX, matY, matWidth, matHeight, 12);
+          ctx.clip();
+          ctx.fillStyle = pat;
+          ctx.fillRect(matX, matY, matWidth, matHeight);
+          ctx.restore();
+        }
+      } catch {
+        console.warn("[DeckMat] texture pattern failed:", textureKey);
+      }
+    }
+  }
+
+  // ── 8. Card piles ─────────────────────────────────────────────────────────
   const innerX = matX + MAT_PADDING;
   const innerY = matY + MAT_PADDING;
   const innerW = matWidth - MAT_PADDING * 2;
@@ -345,6 +407,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [matStyle, setMatStyle] = useState<MatStyle>("brand");
+  const [textureKey, setTextureKey] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const matColumnRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -392,7 +455,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
       const deckName = decks.find((d) => d.id === selectedDeckId)?.name ?? "";
       const fileName = `${deckName.replace(/[^a-z0-9]/gi, "-").toLowerCase() || "deck-mat"}.png`;
       const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
-      const dataUrl = await rasterizeMat({ rows, cardWidth, activeGradient, deckName, matWidth });
+      const dataUrl = await rasterizeMat({ rows, cardWidth, activeGradient, textureKey, deckName, matWidth });
       downloadDataUrl(dataUrl, fileName);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Export failed.");
@@ -404,6 +467,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const rows = tiles ? computeRows(tiles) : [];
   const cardWidth = computeCardWidth(rows, matWidth);
   const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
+  const activeTex = TEXTURES.find((t) => t.key === textureKey) ?? null;
   const emptyTextStyle = activeGradient ? { color: "rgba(255,255,255,0.5)" as const } : undefined;
   const emptyTextClass = activeGradient ? "" : "text-text-muted";
 
@@ -432,7 +496,12 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
               className="rounded-xl overflow-hidden"
               style={{
                 padding: MAT_PADDING,
-                background: activeGradient ?? "transparent",
+                backgroundImage: activeTex
+                  ? `url("data:image/svg+xml,${encodeURIComponent(activeTex.svg)}"), ${activeGradient ?? "none"}`
+                  : (activeGradient ?? "none"),
+                backgroundSize: activeTex
+                  ? `${activeTex.w}px ${activeTex.h}px, auto`
+                  : "auto",
                 height: matWidth > 0 ? matWidth * MAT_ASPECT : undefined,
               }}
             >
@@ -466,7 +535,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             </div>
           </div>
 
-          {/* Style picker */}
+          {/* Color picker */}
           <div className="flex flex-wrap gap-1.5 pt-1">
             {MAT_STYLES.map(({ key, gradient }) => (
               <button
@@ -480,6 +549,28 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                     : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
                 }`}
                 style={{ background: gradient }}
+              />
+            ))}
+          </div>
+
+          {/* Texture picker */}
+          <div className="flex flex-wrap gap-1.5">
+            {TEXTURES.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTextureKey((prev) => (prev === t.key ? null : t.key))}
+                aria-label={t.key}
+                className={`w-7 h-7 rounded-full transition-all ${
+                  textureKey === t.key
+                    ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
+                    : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                }`}
+                style={{
+                  backgroundColor: "#3a3a3a",
+                  backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(t.svg)}")`,
+                  backgroundSize: `${t.w}px ${t.h}px`,
+                }}
               />
             ))}
           </div>
