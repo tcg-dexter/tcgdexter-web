@@ -9,34 +9,19 @@ import {
   bannerGradientFor,
 } from "@/app/u/[username]/UserProfileHeader";
 
-const EXAMPLE_DECK = `Pokémon: 13
-1 Meowth ex POR 62
-3 N's Zoroark ex JTG 175
-1 Munkidori TWM 95
-1 Pecharunt ex SFA 39
-1 N's Zorua PR-SV 189
-1 Fezandipiti ex ASC 142
-3 N's Zorua ASC 136
-2 N's Reshiram ASC 154
-
-Trainer: 15
-4 N's PP Up ASC 195
-3 Lillie's Determination ASC 192
-1 Night Stretcher MEG 173
-2 Janine's Secret Art SFA 59
-2 Boss's Orders MEG 114
-4 Ultra Ball MEG 131
-2 N's Castle JTG 152
-
-Energy: 1
-8 Basic {D} Energy MEE 7
-
-Total Cards: 60`;
+export interface DeckSummary {
+  id: string;
+  name: string;
+  deckList: string;
+  avatarUrl: string | null;
+  wins: number;
+  losses: number;
+  draws: number;
+}
 
 // Each fanned copy is offset by FAN_OVERLAP × the card's width.
 const FAN_OVERLAP = 0.20;
 const ROW_GAP_X = 6;  // px between piles horizontally
-const ROW_GAP_Y = 5;  // px between rows vertically
 const MAX_PILES_PER_ROW = 5;
 const MAT_PADDING = 8;          // px, inner padding of the mat rectangle
 const MAT_ASPECT = 13.5 / 24;   // standard playmat height/width ratio
@@ -64,7 +49,7 @@ function computeCardWidth(rows: ResolvedDeckTile[][], containerWidth: number): n
 
   // Vertical constraint: all rows must fit within mat height.
   const numRows = rows.length;
-  const maxCardH = (innerH - (numRows - 1) * ROW_GAP_Y) / numRows;
+  const maxCardH = innerH / numRows;
   const maxWidthFromHeight = maxCardH * (245 / 342);
 
   // Horizontal constraint: piles must fit within mat width.
@@ -80,8 +65,8 @@ function computeCardWidth(rows: ResolvedDeckTile[][], containerWidth: number): n
   return Math.floor(minCardWidth);
 }
 
-export default function DeckMatClient() {
-  const [deckList, setDeckList] = useState(EXAMPLE_DECK);
+export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
+  const [selectedDeckId, setSelectedDeckId] = useState<string | null>(null);
   const [tiles, setTiles] = useState<ResolvedDeckTile[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -99,14 +84,15 @@ export default function DeckMatClient() {
     return () => ro.disconnect();
   }, []);
 
-  async function handleRender() {
+  async function handleSelectDeck(deck: DeckSummary) {
+    setSelectedDeckId(deck.id);
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/admin/deck-mat/resolve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deckList }),
+        body: JSON.stringify({ deckList: deck.deckList }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
@@ -124,37 +110,78 @@ export default function DeckMatClient() {
   const rows = tiles ? computeRows(tiles) : [];
   const cardWidth = computeCardWidth(rows, matWidth);
   const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
+  const emptyTextStyle = activeGradient ? { color: "rgba(255,255,255,0.5)" as const } : undefined;
+  const emptyTextClass = activeGradient ? "" : "text-text-muted";
 
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6 items-start">
-        {/* Input column */}
-        <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6 items-start">
+        {/* Deck list column */}
+        <div className="flex flex-col gap-2">
           <label className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-            Deck list
+            Your decks
           </label>
-          <textarea
-            value={deckList}
-            onChange={(e) => setDeckList(e.target.value)}
-            spellCheck={false}
-            autoCapitalize="off"
-            autoCorrect="off"
-            className="w-full h-[420px] rounded-2xl border border-black/10 bg-white p-3 font-mono text-xs leading-relaxed text-text-primary focus:outline-none focus-gradient-border transition-colors"
-            placeholder="Paste a PTCGO/PTCGL deck list…"
-          />
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={handleRender}
-              disabled={loading || !deckList.trim()}
-              className="text-sm font-semibold px-4 py-2 rounded-full border border-transparent bg-gradient-brand bg-origin-border text-white shadow-brand hover:shadow-brand-lg disabled:opacity-40 disabled:shadow-none transition"
-            >
-              {loading ? "Rendering…" : "Render mat"}
-            </button>
-            {error && (
-              <span className="text-xs text-accent">{error}</span>
-            )}
-          </div>
+
+          {decks.length === 0 ? (
+            <p className="text-sm text-text-muted py-4">No saved decks yet.</p>
+          ) : (
+            <ul className="flex flex-col gap-1 max-h-[420px] overflow-y-auto rounded-2xl bg-white border border-black/8 p-2">
+              {decks.map((deck) => {
+                const total = deck.wins + deck.losses + deck.draws;
+                const isSelected = deck.id === selectedDeckId;
+                const isLoading = isSelected && loading;
+                return (
+                  <li key={deck.id}>
+                    <button
+                      type="button"
+                      onClick={() => !isLoading && handleSelectDeck(deck)}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left transition ${
+                        isSelected
+                          ? "bg-black/5"
+                          : "hover:bg-black/4"
+                      }`}
+                    >
+                      {/* Avatar */}
+                      <div className="w-10 h-[54px] flex-shrink-0 rounded overflow-hidden bg-surface">
+                        {deck.avatarUrl ? (
+                          <img
+                            src={deck.avatarUrl}
+                            alt=""
+                            className="w-full h-full object-contain"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-surface" />
+                        )}
+                      </div>
+
+                      {/* Name */}
+                      <span className="flex-1 min-w-0 text-sm font-semibold text-text-primary truncate">
+                        {deck.name}
+                      </span>
+
+                      {/* W-L-T pill */}
+                      {total > 0 && (
+                        <span className="flex-shrink-0 inline-flex items-baseline tabular-nums font-bold text-[10px] leading-none bg-black rounded-full px-2 py-[3px] text-white">
+                          <span>{deck.wins}</span>
+                          <span className="mx-[3px]">-</span>
+                          <span>{deck.losses}</span>
+                          {deck.draws > 0 && (
+                            <>
+                              <span className="mx-[3px]">-</span>
+                              <span>{deck.draws}</span>
+                            </>
+                          )}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {error && <p className="text-xs text-accent">{error}</p>}
         </div>
 
         {/* Mat column — first on mobile, second on desktop */}
@@ -168,15 +195,18 @@ export default function DeckMatClient() {
             }}
           >
             {!tiles ? (
-              <div className="h-full flex items-center justify-center text-sm" style={{ color: activeGradient ? "rgba(255,255,255,0.5)" : undefined }}>
-                <span className={activeGradient ? "" : "text-text-muted"}>Render a deck list to lay out the mat.</span>
+              <div className="h-full flex items-center justify-center text-sm" style={emptyTextStyle}>
+                <span className={emptyTextClass}>Select a deck to lay out the mat.</span>
               </div>
             ) : tiles.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-sm" style={{ color: activeGradient ? "rgba(255,255,255,0.5)" : undefined }}>
-                <span className={activeGradient ? "" : "text-text-muted"}>No cards parsed from this list.</span>
+              <div className="h-full flex items-center justify-center text-sm" style={emptyTextStyle}>
+                <span className={emptyTextClass}>No cards parsed from this list.</span>
               </div>
             ) : (
-              <div className="flex flex-col" style={{ gap: ROW_GAP_Y }}>
+              <div
+                className="flex flex-col h-full"
+                style={{ justifyContent: "space-between" }}
+              >
                 {rows.map((row, i) => (
                   <div
                     key={i}
@@ -205,11 +235,7 @@ export default function DeckMatClient() {
                     ? "border-black scale-110"
                     : "border-transparent hover:border-black/30"
                 }`}
-                style={
-                  gradient
-                    ? { background: gradient }
-                    : { background: "#e8e8e8" }
-                }
+                style={gradient ? { background: gradient } : { background: "#e8e8e8" }}
               >
                 {!gradient && (
                   <span className="block w-full h-full flex items-center justify-center text-[10px] font-bold text-text-muted leading-none">
