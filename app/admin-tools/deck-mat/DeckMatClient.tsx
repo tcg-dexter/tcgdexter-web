@@ -73,7 +73,9 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [matStyle, setMatStyle] = useState<MatStyle>("brand");
+  const [isExporting, setIsExporting] = useState(false);
   const matColumnRef = useRef<HTMLDivElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
   const [matWidth, setMatWidth] = useState(0);
 
   useEffect(() => {
@@ -110,6 +112,36 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
     }
   }
 
+  async function handleExport() {
+    if (!exportRef.current || !tiles?.length) return;
+    setIsExporting(true);
+    try {
+      const { toPng } = await import("html-to-image");
+      const dataUrl = await toPng(exportRef.current, {
+        pixelRatio: 3,
+        backgroundColor: "#f2f2f2",
+      });
+
+      const deckName = decks.find((d) => d.id === selectedDeckId)?.name ?? "deck-mat";
+      const fileName = `${deckName.replace(/[^a-z0-9]/gi, "-").toLowerCase()}.png`;
+      const blob = await fetch(dataUrl).then((r) => r.blob());
+      const file = new File([blob], fileName, { type: "image/png" });
+
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file] });
+      } else {
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = fileName;
+        a.click();
+      }
+    } catch (e) {
+      console.error("Export failed:", e);
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
   const rows = tiles ? computeRows(tiles) : [];
   const cardWidth = computeCardWidth(rows, matWidth);
   const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
@@ -121,56 +153,59 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
       <div className="flex flex-col gap-6">
         {/* Mat */}
         <div ref={matColumnRef} className="flex flex-col gap-3">
-          {/* Mat header: deck name left, site logo right */}
-          <div className="flex items-center justify-between gap-4">
-            <span className="text-xl font-semibold text-text-primary truncate">
-              {decks.find((d) => d.id === selectedDeckId)?.name ?? ""}
-            </span>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo-wordmark.png"
-              alt="TCG Dexter"
-              width={1920}
-              height={453}
-              className="h-[30px] w-auto flex-shrink-0"
-            />
-          </div>
+          {/* Capture area: header + mat rectangle only */}
+          <div ref={exportRef} className="flex flex-col gap-3">
+            {/* Mat header: deck name left, site logo right */}
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-xl font-semibold text-text-primary truncate">
+                {decks.find((d) => d.id === selectedDeckId)?.name ?? ""}
+              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo-wordmark.png"
+                alt="TCG Dexter"
+                width={1920}
+                height={453}
+                className="h-[30px] w-auto flex-shrink-0"
+              />
+            </div>
 
-          <div
-            className="rounded-xl overflow-hidden"
-            style={{
-              padding: MAT_PADDING,
-              background: activeGradient ?? "transparent",
-              height: matWidth > 0 ? matWidth * MAT_ASPECT : undefined,
-            }}
-          >
-            {!tiles ? (
-              <div className="h-full flex items-center justify-center text-sm" style={emptyTextStyle}>
-                <span className={emptyTextClass}>Select a deck to lay out the mat.</span>
-              </div>
-            ) : tiles.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-sm" style={emptyTextStyle}>
-                <span className={emptyTextClass}>No cards parsed from this list.</span>
-              </div>
-            ) : (
-              <div
-                key={renderKey}
-                className="flex flex-col h-full"
-                style={{ justifyContent: "space-between" }}
-              >
-                {rows.map((row, rowIdx) => (
-                  <div
-                    key={rowIdx}
-                    className="flex"
-                    style={{ gap: ROW_GAP_X, justifyContent: rowIdx < rows.length - 1 ? "space-between" : "flex-start" }}
-                  >
-                    {row.map((t, colIdx) => (
-                      <CardPile key={t.key} tile={t} cardWidth={cardWidth} index={rowIdx * MAX_PILES_PER_ROW + colIdx} />
-                    ))}
-                  </div>
-                ))}
-              </div>
-            )}
+            <div
+              className="rounded-xl overflow-hidden"
+              style={{
+                padding: MAT_PADDING,
+                background: activeGradient ?? "transparent",
+                height: matWidth > 0 ? matWidth * MAT_ASPECT : undefined,
+              }}
+            >
+              {!tiles ? (
+                <div className="h-full flex items-center justify-center text-sm" style={emptyTextStyle}>
+                  <span className={emptyTextClass}>Select a deck to lay out the mat.</span>
+                </div>
+              ) : tiles.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-sm" style={emptyTextStyle}>
+                  <span className={emptyTextClass}>No cards parsed from this list.</span>
+                </div>
+              ) : (
+                <div
+                  key={renderKey}
+                  className="flex flex-col h-full"
+                  style={{ justifyContent: "space-between" }}
+                >
+                  {rows.map((row, rowIdx) => (
+                    <div
+                      key={rowIdx}
+                      className="flex"
+                      style={{ gap: ROW_GAP_X, justifyContent: rowIdx < rows.length - 1 ? "space-between" : "flex-start" }}
+                    >
+                      {row.map((t, colIdx) => (
+                        <CardPile key={t.key} tile={t} cardWidth={cardWidth} index={rowIdx * MAX_PILES_PER_ROW + colIdx} />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Style picker */}
@@ -196,6 +231,17 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
               </button>
             ))}
           </div>
+
+          {/* Export button */}
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={!tiles?.length || isExporting}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-40 transition-opacity"
+            style={{ background: BRAND_BANNER_GRADIENT }}
+          >
+            {isExporting ? "Exporting…" : "Export PNG"}
+          </button>
         </div>
 
         {/* Deck list */}
