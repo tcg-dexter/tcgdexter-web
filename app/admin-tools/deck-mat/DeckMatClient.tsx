@@ -76,9 +76,17 @@ function computeCardWidth(rows: ResolvedDeckTile[][], containerWidth: number): n
 }
 
 // ── Offscreen export render ──────────────────────────────────────────────────
-// Mirrors the live mat layout but uses proxied image URLs so html-to-image can
-// embed them without CORS issues. Rendered with createRoot/flushSync at the
-// same pixel dimensions as the live mat so the export is 1:1.
+// Mirrors the live mat layout but uses pre-fetched data URLs so html-to-image
+// never needs to fetch any external resource. When html-to-image sees a
+// data: src it calls isDataUrl() → true and skips its own fetch/cache step
+// entirely, bypassing the module-level cache that can hold stale empty strings
+// from previous failed toPng calls in the same page session.
+
+// 1×1 transparent PNG — used as a safe placeholder for images that failed
+// to pre-fetch. html-to-image sees it as a data URL and skips it, so no
+// cache poisoning or cross-origin issues occur.
+const TRANSPARENT_PNG =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
 interface MatExportViewProps {
   rows: ResolvedDeckTile[][];
@@ -98,7 +106,7 @@ function MatExportView({
   imageMap,
 }: MatExportViewProps) {
   const matHeight = Math.round(matWidth * MAT_ASPECT);
-  const logoSrc = imageMap.get("/logo-wordmark.png") ?? "/logo-wordmark.png";
+  const logoDataUrl = imageMap.get("/logo-wordmark.png");
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: EXPORT_PADDING, background: "#f2f2f2" }}>
       {/* Header */}
@@ -106,8 +114,13 @@ function MatExportView({
         <span style={{ fontSize: 20, fontWeight: 600, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
           {deckName}
         </span>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={logoSrc} alt="TCG Dexter" width={1920} height={453} style={{ height: 30, width: "auto", flexShrink: 0 }} />
+        {/* Only render logo if it was successfully pre-fetched as a data URL.
+            Falling back to the /logo-wordmark.png URL would let html-to-image
+            attempt a fetch, hit its stale module-level cache, and return blank. */}
+        {logoDataUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoDataUrl} alt="TCG Dexter" width={1920} height={453} style={{ height: 30, width: "auto", flexShrink: 0 }} />
+        )}
       </div>
       {/* Mat */}
       <div style={{
@@ -135,6 +148,9 @@ function MatExportView({
                 const count = Math.max(t.copyCount, 1);
                 const cardHeight = Math.round((cardWidth * 342) / 245);
                 const pileWidth = cardWidth + (count - 1) * cardWidth * FAN_OVERLAP;
+                // Always use a data URL — TRANSPARENT_PNG ensures html-to-image
+                // sees data: and skips its internal fetch/cache for missed images.
+                const cardSrc = imageMap.get(t.smallImageUrl) ?? TRANSPARENT_PNG;
                 return (
                   <div key={t.key} style={{ position: "relative", flexShrink: 0, width: pileWidth, height: cardHeight }}>
                     {Array.from({ length: count }).map((_, i) => (
@@ -155,7 +171,7 @@ function MatExportView({
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={imageMap.get(t.smallImageUrl) ?? ""}
+                          src={cardSrc}
                           alt={t.name}
                           style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
                         />
@@ -173,26 +189,30 @@ function MatExportView({
 }
 
 async function fetchAsDataUrl(url: string): Promise<string> {
+  const fetchUrl = proxied(url);
   try {
-    const res = await fetch(proxied(url));
-    if (!res.ok) return "";
+    const res = await fetch(fetchUrl);
+    if (!res.ok) {
+      console.warn(`[DeckMat] fetch failed ${res.status} for ${fetchUrl}`);
+      return "";
+    }
     const blob = await res.blob();
     return await new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve((reader.result as string) ?? "");
-      reader.onerror = () => resolve("");
+      reader.onerror = () => {
+        console.warn(`[DeckMat] FileReader error for ${url}`);
+        resolve("");
+      };
       reader.readAsDataURL(blob);
     });
-  } catch {
+  } catch (err) {
+    console.warn(`[DeckMat] fetch threw for ${fetchUrl}:`, err);
     return "";
   }
 }
 
 async function rasterizeMat(props: Omit<MatExportViewProps, "imageMap">): Promise<string> {
-  // Pre-fetch every image as a data URL before rendering. html-to-image
-  // recognises data: srcs and skips its own fetch/cache step, which avoids
-  // the module-level cache that can hold stale empty strings from previous
-  // failed toPng calls in the same page session.
   const uniqueCardUrls = Array.from(
     new Set(props.rows.flat().map((t) => t.smallImageUrl).filter(Boolean)),
   );
@@ -204,6 +224,12 @@ async function rasterizeMat(props: Omit<MatExportViewProps, "imageMap">): Promis
       if (dataUrl) imageMap.set(url, dataUrl);
     }),
   );
+  const failed = urls.filter((u) => !imageMap.has(u));
+  if (failed.length) {
+    console.warn(`[DeckMat] ${failed.length}/${urls.length} pre-fetches failed:`, failed);
+  } else {
+    console.log(`[DeckMat] All ${urls.length} images pre-fetched OK`);
+  }
 
   const host = document.createElement("div");
   host.style.cssText = `position:fixed;left:-100000px;top:0;width:${props.matWidth + EXPORT_PADDING * 2}px;overflow:hidden;`;
@@ -222,6 +248,10 @@ async function rasterizeMat(props: Omit<MatExportViewProps, "imageMap">): Promis
     return await toPng(host.firstElementChild as HTMLElement, {
       pixelRatio: 3,
       backgroundColor: "#f2f2f2",
+      // includeQueryParams ensures every proxy URL gets a unique cache key,
+      // preventing the strip-query-params collision in html-to-image's cache
+      // for any images that weren't captured in our pre-fetch step.
+      includeQueryParams: true,
     });
   } finally {
     root.unmount();
