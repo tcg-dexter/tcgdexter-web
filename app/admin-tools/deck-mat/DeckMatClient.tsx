@@ -1,9 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { createRoot } from "react-dom/client";
-import { flushSync } from "react-dom";
-import { toPng } from "html-to-image";
 import CardImage from "@/app/cards/CardImage";
 import type { ResolvedDeckTile } from "@/lib/deckTiles";
 import {
@@ -75,118 +72,11 @@ function computeCardWidth(rows: ResolvedDeckTile[][], containerWidth: number): n
   return Math.floor(minCardWidth);
 }
 
-// ── Offscreen export render ──────────────────────────────────────────────────
-// Mirrors the live mat layout but uses pre-fetched data URLs so html-to-image
-// never needs to fetch any external resource. When html-to-image sees a
-// data: src it calls isDataUrl() → true and skips its own fetch/cache step
-// entirely, bypassing the module-level cache that can hold stale empty strings
-// from previous failed toPng calls in the same page session.
-
-// 1×1 transparent PNG — used as a safe placeholder for images that failed
-// to pre-fetch. html-to-image sees it as a data URL and skips it, so no
-// cache poisoning or cross-origin issues occur.
-const TRANSPARENT_PNG =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
-
-interface MatExportViewProps {
-  rows: ResolvedDeckTile[][];
-  cardWidth: number;
-  activeGradient: string | null;
-  deckName: string;
-  matWidth: number;
-  imageMap: Map<string, string>; // original url → data URL (pre-fetched)
-}
-
-function MatExportView({
-  rows,
-  cardWidth,
-  activeGradient,
-  deckName,
-  matWidth,
-  imageMap,
-}: MatExportViewProps) {
-  const matHeight = Math.round(matWidth * MAT_ASPECT);
-  const logoDataUrl = imageMap.get("/logo-wordmark.png");
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: EXPORT_PADDING, background: "#f2f2f2" }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-        <span style={{ fontSize: 20, fontWeight: 600, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
-          {deckName}
-        </span>
-        {/* Only render logo if it was successfully pre-fetched as a data URL.
-            Falling back to the /logo-wordmark.png URL would let html-to-image
-            attempt a fetch, hit its stale module-level cache, and return blank. */}
-        {logoDataUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={logoDataUrl} alt="TCG Dexter" width={1920} height={453} style={{ height: 30, width: "auto", flexShrink: 0 }} />
-        )}
-      </div>
-      {/* Mat */}
-      <div style={{
-        borderRadius: 12,
-        overflow: "hidden",
-        padding: MAT_PADDING,
-        background: activeGradient ?? "transparent",
-        height: matHeight,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-      }}>
-        {rows.map((row, rowIdx) => {
-          const isLast = rowIdx === rows.length - 1;
-          return (
-            <div
-              key={rowIdx}
-              style={{
-                display: "flex",
-                gap: ROW_GAP_X,
-                justifyContent: isLast ? "flex-start" : "space-between",
-              }}
-            >
-              {row.map((t) => {
-                const count = Math.max(t.copyCount, 1);
-                const cardHeight = Math.round((cardWidth * 342) / 245);
-                const pileWidth = cardWidth + (count - 1) * cardWidth * FAN_OVERLAP;
-                // Always use a data URL — TRANSPARENT_PNG ensures html-to-image
-                // sees data: and skips its internal fetch/cache for missed images.
-                const cardSrc = imageMap.get(t.smallImageUrl) ?? TRANSPARENT_PNG;
-                return (
-                  <div key={t.key} style={{ position: "relative", flexShrink: 0, width: pileWidth, height: cardHeight }}>
-                    {Array.from({ length: count }).map((_, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          position: "absolute",
-                          top: 0,
-                          left: i * cardWidth * FAN_OVERLAP,
-                          width: cardWidth,
-                          height: cardHeight,
-                          zIndex: i,
-                          borderRadius: 4,
-                          overflow: "hidden",
-                          background: "#e8e8e8",
-                          boxShadow: i > 0 ? "-4px 0 4px rgba(0,0,0,0.25)" : undefined,
-                        }}
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={cardSrc}
-                          alt={t.name}
-                          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
+// ── Canvas export ────────────────────────────────────────────────────────────
+// Draws the mat directly onto a <canvas> — no html-to-image, no library
+// caching, no CORS intermediary. Pre-fetches every image as a data URL through
+// the same-origin proxy, decodes them into HTMLImageElement objects, then
+// draws the full layout imperatively with the Canvas 2D API.
 
 async function fetchAsDataUrl(url: string): Promise<string> {
   const fetchUrl = proxied(url);
@@ -212,51 +102,227 @@ async function fetchAsDataUrl(url: string): Promise<string> {
   }
 }
 
-async function rasterizeMat(props: Omit<MatExportViewProps, "imageMap">): Promise<string> {
+function loadImg(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("img load failed"));
+    img.src = src;
+  });
+}
+
+// Parses a CSS linear-gradient(180deg, #hex stop%, ...) string into a
+// CanvasGradient. Only handles the top-to-bottom variants used by the mat
+// style picker — not a general CSS gradient parser.
+function cssGradToCanvas(
+  ctx: CanvasRenderingContext2D,
+  css: string,
+  x: number,
+  y: number,
+  h: number,
+): CanvasGradient | null {
+  const m = css.match(/linear-gradient\(\s*180deg\s*,\s*(.+)\s*\)/);
+  if (!m) return null;
+  const stopRe = /(#[0-9a-fA-F]{6})\s+(\d+(?:\.\d+)?)%/g;
+  const stops: Array<{ color: string; pct: number }> = [];
+  let hit: RegExpExecArray | null;
+  while ((hit = stopRe.exec(m[1])) !== null) {
+    stops.push({ color: hit[1], pct: parseFloat(hit[2]) / 100 });
+  }
+  if (stops.length < 2) return null;
+  const grad = ctx.createLinearGradient(x, y, x, y + h);
+  for (const s of stops) grad.addColorStop(s.pct, s.color);
+  return grad;
+}
+
+// Draws an image scaled to contain within (w × h), centered.
+function drawContain(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+) {
+  const iw = img.naturalWidth;
+  const ih = img.naturalHeight;
+  if (!iw || !ih) return;
+  const scale = Math.min(w / iw, h / ih);
+  const sw = iw * scale;
+  const sh = ih * scale;
+  ctx.drawImage(img, x + (w - sw) / 2, y + (h - sh) / 2, sw, sh);
+}
+
+async function rasterizeMat({
+  rows,
+  cardWidth,
+  activeGradient,
+  deckName,
+  matWidth,
+}: {
+  rows: ResolvedDeckTile[][];
+  cardWidth: number;
+  activeGradient: string | null;
+  deckName: string;
+  matWidth: number;
+}): Promise<string> {
+  // ── 1. Pre-fetch all images as data URLs ──────────────────────────────────
   const uniqueCardUrls = Array.from(
-    new Set(props.rows.flat().map((t) => t.smallImageUrl).filter(Boolean)),
+    new Set(rows.flat().map((t) => t.smallImageUrl).filter(Boolean)),
   );
   const urls = ["/logo-wordmark.png", ...uniqueCardUrls];
-  const imageMap = new Map<string, string>();
+  const dataUrlMap = new Map<string, string>();
   await Promise.all(
     urls.map(async (url) => {
       const dataUrl = await fetchAsDataUrl(url);
-      if (dataUrl) imageMap.set(url, dataUrl);
+      if (dataUrl) dataUrlMap.set(url, dataUrl);
     }),
   );
-  const failed = urls.filter((u) => !imageMap.has(u));
+  const failed = urls.filter((u) => !dataUrlMap.has(u));
   if (failed.length) {
     console.warn(`[DeckMat] ${failed.length}/${urls.length} pre-fetches failed:`, failed);
-  } else {
-    console.log(`[DeckMat] All ${urls.length} images pre-fetched OK`);
   }
 
-  const host = document.createElement("div");
-  host.style.cssText = `position:fixed;left:-100000px;top:0;width:${props.matWidth + EXPORT_PADDING * 2}px;overflow:hidden;`;
-  document.body.appendChild(host);
-  const root = createRoot(host);
-  try {
-    flushSync(() => {
-      root.render(<MatExportView {...props} imageMap={imageMap} />);
-    });
-    await Promise.all(
-      Array.from(host.querySelectorAll("img")).map((img) =>
-        img.decode().catch(() => undefined),
-      ),
-    );
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-    return await toPng(host.firstElementChild as HTMLElement, {
-      pixelRatio: 3,
-      backgroundColor: "#f2f2f2",
-      // includeQueryParams ensures every proxy URL gets a unique cache key,
-      // preventing the strip-query-params collision in html-to-image's cache
-      // for any images that weren't captured in our pre-fetch step.
-      includeQueryParams: true,
-    });
-  } finally {
-    root.unmount();
-    host.remove();
+  // ── 2. Decode into HTMLImageElement objects ───────────────────────────────
+  const imageMap = new Map<string, HTMLImageElement>();
+  await Promise.all(
+    Array.from(dataUrlMap.entries()).map(async ([url, dataUrl]) => {
+      try {
+        imageMap.set(url, await loadImg(dataUrl));
+      } catch {
+        console.warn(`[DeckMat] decode failed:`, url);
+      }
+    }),
+  );
+
+  // ── 3. Canvas dimensions ──────────────────────────────────────────────────
+  const PR = 3; // pixel ratio
+  const matHeight = Math.round(matWidth * MAT_ASPECT);
+  const HEADER_H = 30; // logo height drives the header row
+  const GAP = 12;
+  const totalW = matWidth + EXPORT_PADDING * 2;
+  const totalH = EXPORT_PADDING + HEADER_H + GAP + matHeight + EXPORT_PADDING;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(totalW * PR);
+  canvas.height = Math.round(totalH * PR);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas 2D unavailable");
+  ctx.scale(PR, PR);
+
+  // ── 4. Page background ────────────────────────────────────────────────────
+  ctx.fillStyle = "#f2f2f2";
+  ctx.fillRect(0, 0, totalW, totalH);
+
+  // ── 5. Header: deck name + logo ───────────────────────────────────────────
+  const headerY = EXPORT_PADDING;
+  const logoImg = imageMap.get("/logo-wordmark.png");
+  const LOGO_H = 30;
+  const logoW = logoImg
+    ? Math.round(LOGO_H * (logoImg.naturalWidth / logoImg.naturalHeight))
+    : 0;
+  const nameMaxW =
+    totalW - EXPORT_PADDING * 2 - (logoW > 0 ? logoW + 16 : 0);
+
+  ctx.font =
+    '600 20px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif';
+  ctx.fillStyle = "#1a1a1a";
+  ctx.textBaseline = "middle";
+
+  let displayName = deckName;
+  if (ctx.measureText(displayName).width > nameMaxW) {
+    while (displayName.length > 0 && ctx.measureText(displayName + "…").width > nameMaxW) {
+      displayName = displayName.slice(0, -1);
+    }
+    displayName += "…";
   }
+  ctx.fillText(displayName, EXPORT_PADDING, headerY + HEADER_H / 2);
+
+  if (logoImg) {
+    ctx.drawImage(logoImg, totalW - EXPORT_PADDING - logoW, headerY, logoW, LOGO_H);
+  }
+
+  // ── 6. Mat background ─────────────────────────────────────────────────────
+  const matX = EXPORT_PADDING;
+  const matY = EXPORT_PADDING + HEADER_H + GAP;
+
+  if (activeGradient) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(matX, matY, matWidth, matHeight, 12);
+    ctx.closePath();
+    ctx.clip();
+    ctx.fillStyle =
+      cssGradToCanvas(ctx, activeGradient, matX, matY, matHeight) ?? "#888";
+    ctx.fillRect(matX, matY, matWidth, matHeight);
+    ctx.restore();
+  }
+
+  // ── 7. Card piles ─────────────────────────────────────────────────────────
+  const innerX = matX + MAT_PADDING;
+  const innerY = matY + MAT_PADDING;
+  const innerW = matWidth - MAT_PADDING * 2;
+  const innerH = matHeight - MAT_PADDING * 2;
+  const numRows = rows.length;
+  const cardH = Math.round((cardWidth * 342) / 245);
+
+  for (let rowIdx = 0; rowIdx < numRows; rowIdx++) {
+    const row = rows[rowIdx];
+    const isLast = rowIdx === numRows - 1;
+
+    // Row Y: flex column space-between
+    const ry =
+      numRows <= 1
+        ? innerY
+        : innerY + (rowIdx * (innerH - cardH)) / (numRows - 1);
+
+    const pileWidths = row.map(
+      (t) => cardWidth + (Math.max(t.copyCount, 1) - 1) * cardWidth * FAN_OVERLAP,
+    );
+    const totalPileW = pileWidths.reduce((a, b) => a + b, 0);
+
+    // Pile X spacing: space-between for full rows, flex-start for last
+    const spaceBetween =
+      isLast || row.length <= 1
+        ? ROW_GAP_X
+        : Math.max(ROW_GAP_X, (innerW - totalPileW) / (row.length - 1));
+
+    let pileX = innerX;
+
+    for (let colIdx = 0; colIdx < row.length; colIdx++) {
+      const t = row[colIdx];
+      const count = Math.max(t.copyCount, 1);
+      const cardImg = imageMap.get(t.smallImageUrl);
+
+      for (let i = 0; i < count; i++) {
+        const cx = pileX + i * cardWidth * FAN_OVERLAP;
+
+        // Card slot background
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(cx, ry, cardWidth, cardH, 4);
+        ctx.closePath();
+        ctx.fillStyle = "#e8e8e8";
+        ctx.fill();
+        ctx.restore();
+
+        // Card image clipped to slot
+        if (cardImg) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.roundRect(cx, ry, cardWidth, cardH, 4);
+          ctx.closePath();
+          ctx.clip();
+          drawContain(ctx, cardImg, cx, ry, cardWidth, cardH);
+          ctx.restore();
+        }
+      }
+
+      pileX += pileWidths[colIdx] + spaceBetween;
+    }
+  }
+
+  return canvas.toDataURL("image/png");
 }
 
 function downloadDataUrl(dataUrl: string, filename: string) {
