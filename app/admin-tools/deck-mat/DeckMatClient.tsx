@@ -115,7 +115,7 @@ export default function DeckMatClient() {
 
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6 items-start">
         {/* Input column */}
         <div className="flex flex-col gap-3">
           <label className="text-xs font-semibold uppercase tracking-wider text-text-muted">
@@ -143,11 +143,46 @@ export default function DeckMatClient() {
               <span className="text-xs text-accent">{error}</span>
             )}
           </div>
+        </div>
 
-          <label className="mt-2 text-xs font-semibold uppercase tracking-wider text-text-muted">
-            Mat style
-          </label>
-          <div className="flex flex-wrap gap-1.5">
+        {/* Mat column */}
+        <div className="flex flex-col gap-3">
+          <div ref={matRef}>
+            {!tiles ? (
+              <div className="min-h-[420px] flex items-center justify-center text-sm text-text-muted">
+                Render a deck list to lay out the mat.
+              </div>
+            ) : tiles.length === 0 ? (
+              <div className="min-h-[420px] flex items-center justify-center text-sm text-text-muted">
+                No cards parsed from this list.
+              </div>
+            ) : (
+              <div
+                className="rounded-2xl"
+                style={{
+                  padding: MAT_PADDING,
+                  background: activeGradient ?? "transparent",
+                }}
+              >
+                <div className="flex flex-col gap-y-[5px]">
+                  {rows.map((row, i) => (
+                    <div
+                      key={i}
+                      className="flex gap-x-[6px]"
+                      style={{ justifyContent: i < rows.length - 1 ? "space-between" : "flex-start" }}
+                    >
+                      {row.map((t) => (
+                        <CardPile key={t.key} tile={t} cardWidth={cardWidth} />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Style picker anchored below the mat */}
+          <div className="flex flex-wrap gap-1.5 pt-1">
             {MAT_STYLES.map(({ key, gradient }) => (
               <button
                 key={key}
@@ -162,7 +197,7 @@ export default function DeckMatClient() {
                 style={
                   gradient
                     ? { background: gradient }
-                    : { background: "#e8e8e8", position: "relative" }
+                    : { background: "#e8e8e8" }
                 }
               >
                 {!gradient && (
@@ -173,41 +208,6 @@ export default function DeckMatClient() {
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Mat column */}
-        <div ref={matRef} className="min-h-[420px]">
-          {!tiles ? (
-            <div className="h-full min-h-[420px] flex items-center justify-center text-sm text-text-muted">
-              Render a deck list to lay out the mat.
-            </div>
-          ) : tiles.length === 0 ? (
-            <div className="h-full min-h-[420px] flex items-center justify-center text-sm text-text-muted">
-              No cards parsed from this list.
-            </div>
-          ) : (
-            <div
-              className="rounded-2xl"
-              style={{
-                padding: MAT_PADDING,
-                background: activeGradient ?? "transparent",
-              }}
-            >
-              <div className="flex flex-col gap-y-[5px]">
-                {rows.map((row, i) => (
-                  <div
-                    key={i}
-                    className="flex gap-x-[6px]"
-                    style={{ justifyContent: i < rows.length - 1 ? "space-between" : "flex-start" }}
-                  >
-                    {row.map((t) => (
-                      <CardPile key={t.key} tile={t} cardWidth={cardWidth} />
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </>
