@@ -27,6 +27,11 @@ const MAX_PILES_PER_ROW = 7;
 const MAT_PADDING = 8;          // px, inner padding of the mat rectangle
 const MAT_ASPECT = 13.5 / 24;   // standard playmat height/width ratio
 
+// Must match useFadeIn.ts constants — used to defer export capture until
+// all card piles have finished their stagger animation.
+const FADE_STAGGER_MS = 15;
+const FADE_DURATION_MS = 300;
+
 type MatStyle = "none" | "brand" | (typeof BANNER_ACCENT_KEYS)[number];
 
 const MAT_STYLES: { key: MatStyle; gradient: string | null }[] = [
@@ -66,6 +71,14 @@ function computeCardWidth(rows: ResolvedDeckTile[][], containerWidth: number): n
   return Math.floor(minCardWidth);
 }
 
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [, base64] = dataUrl.split(",");
+  const bytes = atob(base64);
+  const arr = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+  return new Blob([arr], { type: "image/png" });
+}
+
 export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const [selectedDeckId, setSelectedDeckId] = useState<string | null>(null);
   const [tiles, setTiles] = useState<ResolvedDeckTile[] | null>(null);
@@ -73,9 +86,10 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [matStyle, setMatStyle] = useState<MatStyle>("brand");
-  const [isExporting, setIsExporting] = useState(false);
+  const [exportReady, setExportReady] = useState(false);
   const matColumnRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
+  const exportDataRef = useRef<string | null>(null);
   const [matWidth, setMatWidth] = useState(0);
 
   useEffect(() => {
@@ -87,6 +101,34 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // Pre-compute the export PNG after tiles finish animating in.
+  // Storing it in a ref means handleExport is synchronous from the
+  // button-tap perspective, which keeps the iOS user gesture alive for
+  // navigator.share (an async toPng call would expire the gesture).
+  useEffect(() => {
+    if (!tiles?.length) {
+      exportDataRef.current = null;
+      setExportReady(false);
+      return;
+    }
+    setExportReady(false);
+    const animDuration = (tiles.length - 1) * FADE_STAGGER_MS + FADE_DURATION_MS;
+    const timer = setTimeout(async () => {
+      if (!exportRef.current) return;
+      try {
+        const { toPng } = await import("html-to-image");
+        exportDataRef.current = await toPng(exportRef.current, {
+          pixelRatio: 3,
+          backgroundColor: "#f2f2f2",
+        });
+        setExportReady(true);
+      } catch {
+        // leave exportReady false; button stays in "Preparing…" state
+      }
+    }, animDuration + 200);
+    return () => clearTimeout(timer);
+  }, [tiles, matStyle]);
 
   async function handleSelectDeck(deck: DeckSummary) {
     setSelectedDeckId(deck.id);
@@ -112,33 +154,32 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
     }
   }
 
-  async function handleExport() {
-    if (!exportRef.current || !tiles?.length) return;
-    setIsExporting(true);
-    try {
-      const { toPng } = await import("html-to-image");
-      const dataUrl = await toPng(exportRef.current, {
-        pixelRatio: 3,
-        backgroundColor: "#f2f2f2",
+  // Synchronous from the tap's perspective — the expensive toPng was done
+  // in the background. This keeps navigator.share within the iOS gesture window.
+  function handleExport() {
+    const dataUrl = exportDataRef.current;
+    if (!dataUrl || !tiles?.length) return;
+
+    const deckName = decks.find((d) => d.id === selectedDeckId)?.name ?? "deck-mat";
+    const fileName = `${deckName.replace(/[^a-z0-9]/gi, "-").toLowerCase()}.png`;
+    const blob = dataUrlToBlob(dataUrl);
+    const file = new File([blob], fileName, { type: "image/png" });
+
+    if (navigator.canShare?.({ files: [file] })) {
+      navigator.share({ files: [file] }).catch((e: unknown) => {
+        if ((e as Error).name !== "AbortError") {
+          setError("Share failed. Try again.");
+        }
       });
-
-      const deckName = decks.find((d) => d.id === selectedDeckId)?.name ?? "deck-mat";
-      const fileName = `${deckName.replace(/[^a-z0-9]/gi, "-").toLowerCase()}.png`;
-      const blob = await fetch(dataUrl).then((r) => r.blob());
-      const file = new File([blob], fileName, { type: "image/png" });
-
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file] });
-      } else {
-        const a = document.createElement("a");
-        a.href = dataUrl;
-        a.download = fileName;
-        a.click();
-      }
-    } catch (e) {
-      console.error("Export failed:", e);
-    } finally {
-      setIsExporting(false);
+    } else {
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
     }
   }
 
@@ -236,11 +277,11 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           <button
             type="button"
             onClick={handleExport}
-            disabled={!tiles?.length || isExporting}
-            className="w-full py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-40 transition-opacity"
+            disabled={!exportReady}
+            className="w-full py-2.5 rounded-full text-sm font-semibold text-white disabled:opacity-40 transition-opacity"
             style={{ background: BRAND_BANNER_GRADIENT }}
           >
-            {isExporting ? "Exporting…" : "Export PNG"}
+            {tiles?.length && !exportReady ? "Preparing…" : "Export PNG"}
           </button>
         </div>
 
