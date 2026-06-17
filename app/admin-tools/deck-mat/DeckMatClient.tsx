@@ -158,7 +158,7 @@ export default function DeckMatClient() {
               </div>
             ) : (
               <div
-                className="rounded-2xl"
+                className="rounded-xl"
                 style={{
                   padding: MAT_PADDING,
                   background: activeGradient ?? "transparent",
