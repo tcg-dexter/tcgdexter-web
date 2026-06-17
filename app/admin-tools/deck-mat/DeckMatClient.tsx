@@ -30,35 +30,34 @@ Total Cards: 60`;
 
 // Each fanned copy is offset by FAN_OVERLAP × the card's width.
 const FAN_OVERLAP = 0.20;
-const cardWidth = 45;
 const ROW_GAP = 6; // px between piles horizontally
 const MAX_PILES_PER_ROW = 7;
 
-function getPileWidth(tile: ResolvedDeckTile): number {
-  const count = Math.max(tile.copyCount, 1);
-  return cardWidth + (count - 1) * cardWidth * FAN_OVERLAP;
+// Split tiles into fixed groups of MAX_PILES_PER_ROW — row composition is
+// count-based, not pixel-based, so cardWidth can be derived cleanly.
+function computeRows(tiles: ResolvedDeckTile[]): ResolvedDeckTile[][] {
+  const rows: ResolvedDeckTile[][] = [];
+  for (let i = 0; i < tiles.length; i += MAX_PILES_PER_ROW) {
+    rows.push(tiles.slice(i, i + MAX_PILES_PER_ROW));
+  }
+  return rows;
 }
 
-function computeRows(tiles: ResolvedDeckTile[], containerWidth: number): ResolvedDeckTile[][] {
-  if (!tiles.length) return [];
-  if (containerWidth === 0) return [tiles];
-  const rows: ResolvedDeckTile[][] = [];
-  let row: ResolvedDeckTile[] = [];
-  let rowWidth = 0;
-  for (const tile of tiles) {
-    const w = getPileWidth(tile);
-    const needed = row.length > 0 ? ROW_GAP + w : w;
-    if (row.length > 0 && (rowWidth + needed > containerWidth || row.length >= MAX_PILES_PER_ROW)) {
-      rows.push(row);
-      row = [tile];
-      rowWidth = w;
-    } else {
-      row.push(tile);
-      rowWidth += needed;
-    }
+// Find the single cardWidth that lets the most-constrained row fill containerWidth.
+// Each pile's width = cardWidth × (1 + (count-1) × FAN_OVERLAP), so cardWidth is
+// the only unknown once we know the pile's copy counts.
+function computeCardWidth(rows: ResolvedDeckTile[][], containerWidth: number): number {
+  if (!rows.length || containerWidth === 0) return 60;
+  let minCardWidth = Infinity;
+  for (const row of rows) {
+    const widthUnits = row.reduce(
+      (sum, t) => sum + 1 + (Math.max(t.copyCount, 1) - 1) * FAN_OVERLAP,
+      0,
+    );
+    const gaps = (row.length - 1) * ROW_GAP;
+    minCardWidth = Math.min(minCardWidth, (containerWidth - gaps) / widthUnits);
   }
-  if (row.length) rows.push(row);
-  return rows;
+  return Math.floor(minCardWidth);
 }
 
 export default function DeckMatClient() {
@@ -99,7 +98,8 @@ export default function DeckMatClient() {
     }
   }
 
-  const rows = tiles ? computeRows(tiles, matWidth) : [];
+  const rows = tiles ? computeRows(tiles) : [];
+  const cardWidth = computeCardWidth(rows, matWidth);
 
   return (
     <>
