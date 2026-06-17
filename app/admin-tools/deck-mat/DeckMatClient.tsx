@@ -145,23 +145,23 @@ export default function DeckMatClient() {
           </div>
         </div>
 
-        {/* Mat column */}
-        <div className="flex flex-col gap-3">
+        {/* Mat column — first on mobile, second on desktop */}
+        <div className="flex flex-col gap-3 order-first lg:order-2">
           <div
             ref={matRef}
             className="rounded-xl"
             style={{
               padding: MAT_PADDING,
               background: activeGradient ?? "transparent",
-              minHeight: 320,
+              minHeight: 240,
             }}
           >
             {!tiles ? (
-              <div className="h-full min-h-[288px] flex items-center justify-center text-sm" style={{ color: activeGradient ? "rgba(255,255,255,0.5)" : undefined }}>
+              <div className="h-full min-h-[216px] flex items-center justify-center text-sm" style={{ color: activeGradient ? "rgba(255,255,255,0.5)" : undefined }}>
                 <span className={activeGradient ? "" : "text-text-muted"}>Render a deck list to lay out the mat.</span>
               </div>
             ) : tiles.length === 0 ? (
-              <div className="h-full min-h-[288px] flex items-center justify-center text-sm" style={{ color: activeGradient ? "rgba(255,255,255,0.5)" : undefined }}>
+              <div className="h-full min-h-[216px] flex items-center justify-center text-sm" style={{ color: activeGradient ? "rgba(255,255,255,0.5)" : undefined }}>
                 <span className={activeGradient ? "" : "text-text-muted"}>No cards parsed from this list.</span>
               </div>
             ) : (
