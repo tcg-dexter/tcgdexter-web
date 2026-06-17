@@ -234,10 +234,10 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                 type="button"
                 onClick={() => setMatStyle(key)}
                 aria-label={key}
-                className={`w-7 h-7 rounded-full border-2 transition ${
+                className={`w-7 h-7 rounded-full transition-all ${
                   matStyle === key
-                    ? "border-black scale-110"
-                    : "border-transparent hover:border-black/30"
+                    ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
+                    : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
                 }`}
                 style={gradient ? { background: gradient } : { background: "#e8e8e8" }}
               >
