@@ -29,6 +29,7 @@ const ROW_GAP_X = 6;  // px between piles horizontally
 const MAX_PILES_PER_ROW = 7;
 const MAT_PADDING = 8;          // px, inner padding of the mat rectangle
 const MAT_ASPECT = 13.5 / 24;   // standard playmat height/width ratio
+const EXPORT_PADDING = 20;      // px, outer padding added around the exported image
 
 type MatStyle = "none" | "brand" | (typeof BANNER_ACCENT_KEYS)[number];
 
@@ -96,14 +97,14 @@ function MatExportView({
 }: MatExportViewProps) {
   const matHeight = Math.round(matWidth * MAT_ASPECT);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12, width: matWidth, background: "#f2f2f2" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: EXPORT_PADDING, background: "#f2f2f2" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
         <span style={{ fontSize: 20, fontWeight: 600, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
           {deckName}
         </span>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-wordmark.png" alt="TCG Dexter" style={{ height: 30, width: "auto", flexShrink: 0 }} />
+        <img src="/logo-wordmark.png" alt="TCG Dexter" width={1920} height={453} style={{ height: 30, width: "auto", flexShrink: 0 }} />
       </div>
       {/* Mat */}
       <div style={{
@@ -170,7 +171,7 @@ function MatExportView({
 
 async function rasterizeMat(props: MatExportViewProps): Promise<string> {
   const host = document.createElement("div");
-  host.style.cssText = `position:fixed;left:-100000px;top:0;width:${props.matWidth}px;overflow:hidden;`;
+  host.style.cssText = `position:fixed;left:-100000px;top:0;width:${props.matWidth + EXPORT_PADDING * 2}px;overflow:hidden;`;
   document.body.appendChild(host);
   const root = createRoot(host);
   try {
