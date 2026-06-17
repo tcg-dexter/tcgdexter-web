@@ -274,12 +274,13 @@ function CardPile({
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="absolute top-0 rounded overflow-hidden bg-surface shadow-sm"
+          className="absolute top-0 rounded overflow-hidden bg-surface"
           style={{
             left: i * cardWidth * FAN_OVERLAP,
             width: cardWidth,
             height: cardHeight,
             zIndex: i,
+            boxShadow: i > 0 ? "-4px 0 6px rgba(0,0,0,0.25)" : undefined,
           }}
         >
           <CardImage
