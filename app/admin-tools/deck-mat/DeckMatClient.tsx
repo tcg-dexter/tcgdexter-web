@@ -86,12 +86,14 @@ export default function DeckMatClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [matStyle, setMatStyle] = useState<MatStyle>("brand");
-  const matRef = useRef<HTMLDivElement>(null);
+  const matColumnRef = useRef<HTMLDivElement>(null);
   const [matWidth, setMatWidth] = useState(0);
 
   useEffect(() => {
-    const el = matRef.current;
+    const el = matColumnRef.current;
     if (!el) return;
+    // Observe the column, not the mat — avoids a feedback loop where
+    // rendering cards inside the mat changes the mat's measured size.
     const ro = new ResizeObserver(([entry]) => setMatWidth(entry.contentRect.width));
     ro.observe(el);
     return () => ro.disconnect();
@@ -156,14 +158,13 @@ export default function DeckMatClient() {
         </div>
 
         {/* Mat column — first on mobile, second on desktop */}
-        <div className="flex flex-col gap-3 order-first lg:order-2">
+        <div ref={matColumnRef} className="flex flex-col gap-3 order-first lg:order-2">
           <div
-            ref={matRef}
-            className="rounded-xl"
+            className="rounded-xl overflow-hidden"
             style={{
               padding: MAT_PADDING,
               background: activeGradient ?? "transparent",
-              aspectRatio: "24 / 13.5",
+              height: matWidth > 0 ? matWidth * MAT_ASPECT : undefined,
             }}
           >
             {!tiles ? (
