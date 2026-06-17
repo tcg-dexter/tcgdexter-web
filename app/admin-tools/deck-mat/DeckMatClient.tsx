@@ -32,6 +32,18 @@ const MAT_ASPECT = 13.5 / 24;   // standard playmat height/width ratio
 const FADE_STAGGER_MS = 15;
 const FADE_DURATION_MS = 300;
 
+// CDN origins used by cardImages.ts — proxied through the server during
+// export capture so html-to-image can embed them without canvas taint.
+const CARD_CDN_PREFIXES = [
+  "https://images.pokemontcg.io/",
+  "https://limitlesstcg.nyc3.digitaloceanspaces.com/tpci/",
+  "https://images.scrydex.com/pokemon/",
+];
+
+// 1×1 transparent PNG — fallback for any image html-to-image still can't load.
+const TRANSPARENT_PNG =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
 type MatStyle = "none" | "brand" | (typeof BANNER_ACCENT_KEYS)[number];
 
 const MAT_STYLES: { key: MatStyle; gradient: string | null }[] = [
@@ -106,6 +118,11 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   // Storing it in a ref means handleExport is synchronous from the
   // button-tap perspective, which keeps the iOS user gesture alive for
   // navigator.share (an async toPng call would expire the gesture).
+  //
+  // html-to-image fetches each <img> src via the global fetch. Card images
+  // come from external CDNs that don't send CORS headers, so the canvas
+  // would be tainted and toDataURL() would throw. We temporarily monkey-patch
+  // window.fetch to route those CDN URLs through our same-origin proxy.
   useEffect(() => {
     if (!tiles?.length) {
       exportDataRef.current = null;
@@ -116,15 +133,34 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
     const animDuration = (tiles.length - 1) * FADE_STAGGER_MS + FADE_DURATION_MS;
     const timer = setTimeout(async () => {
       if (!exportRef.current) return;
+      const originalFetch = window.fetch;
       try {
+        window.fetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+          const url =
+            typeof input === "string"
+              ? input
+              : input instanceof URL
+              ? input.href
+              : (input as Request).url;
+          if (CARD_CDN_PREFIXES.some((p) => url.startsWith(p))) {
+            return originalFetch(
+              `/api/admin/deck-mat/proxy-image?url=${encodeURIComponent(url)}`,
+              init,
+            );
+          }
+          return originalFetch(input, init);
+        };
         const { toPng } = await import("html-to-image");
         exportDataRef.current = await toPng(exportRef.current, {
           pixelRatio: 3,
           backgroundColor: "#f2f2f2",
+          imagePlaceholder: TRANSPARENT_PNG,
         });
         setExportReady(true);
-      } catch {
-        // leave exportReady false; button stays in "Preparing…" state
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Export preparation failed.");
+      } finally {
+        window.fetch = originalFetch;
       }
     }, animDuration + 200);
     return () => clearTimeout(timer);
