@@ -35,9 +35,11 @@ Total Cards: 60`;
 
 // Each fanned copy is offset by FAN_OVERLAP × the card's width.
 const FAN_OVERLAP = 0.20;
-const ROW_GAP = 6; // px between piles horizontally
+const ROW_GAP_X = 6;  // px between piles horizontally
+const ROW_GAP_Y = 5;  // px between rows vertically
 const MAX_PILES_PER_ROW = 7;
-const MAT_PADDING = 8; // px, inner padding of the mat rectangle
+const MAT_PADDING = 8;          // px, inner padding of the mat rectangle
+const MAT_ASPECT = 13.5 / 24;   // standard playmat height/width ratio
 
 type MatStyle = "none" | "brand" | (typeof BANNER_ACCENT_KEYS)[number];
 
@@ -57,15 +59,23 @@ function computeRows(tiles: ResolvedDeckTile[]): ResolvedDeckTile[][] {
 
 function computeCardWidth(rows: ResolvedDeckTile[][], containerWidth: number): number {
   if (!rows.length || containerWidth === 0) return 60;
-  const inner = containerWidth - MAT_PADDING * 2;
-  let minCardWidth = Infinity;
+  const innerW = containerWidth - MAT_PADDING * 2;
+  const innerH = containerWidth * MAT_ASPECT - MAT_PADDING * 2;
+
+  // Vertical constraint: all rows must fit within mat height.
+  const numRows = rows.length;
+  const maxCardH = (innerH - (numRows - 1) * ROW_GAP_Y) / numRows;
+  const maxWidthFromHeight = maxCardH * (245 / 342);
+
+  // Horizontal constraint: piles must fit within mat width.
+  let minCardWidth = maxWidthFromHeight;
   for (const row of rows) {
     const widthUnits = row.reduce(
       (sum, t) => sum + 1 + (Math.max(t.copyCount, 1) - 1) * FAN_OVERLAP,
       0,
     );
-    const gaps = (row.length - 1) * ROW_GAP;
-    minCardWidth = Math.min(minCardWidth, (inner - gaps) / widthUnits);
+    const gaps = (row.length - 1) * ROW_GAP_X;
+    minCardWidth = Math.min(minCardWidth, (innerW - gaps) / widthUnits);
   }
   return Math.floor(minCardWidth);
 }
@@ -153,24 +163,24 @@ export default function DeckMatClient() {
             style={{
               padding: MAT_PADDING,
               background: activeGradient ?? "transparent",
-              minHeight: tiles && tiles.length > 0 ? undefined : 240,
+              aspectRatio: "24 / 13.5",
             }}
           >
             {!tiles ? (
-              <div className="h-full min-h-[216px] flex items-center justify-center text-sm" style={{ color: activeGradient ? "rgba(255,255,255,0.5)" : undefined }}>
+              <div className="h-full flex items-center justify-center text-sm" style={{ color: activeGradient ? "rgba(255,255,255,0.5)" : undefined }}>
                 <span className={activeGradient ? "" : "text-text-muted"}>Render a deck list to lay out the mat.</span>
               </div>
             ) : tiles.length === 0 ? (
-              <div className="h-full min-h-[216px] flex items-center justify-center text-sm" style={{ color: activeGradient ? "rgba(255,255,255,0.5)" : undefined }}>
+              <div className="h-full flex items-center justify-center text-sm" style={{ color: activeGradient ? "rgba(255,255,255,0.5)" : undefined }}>
                 <span className={activeGradient ? "" : "text-text-muted"}>No cards parsed from this list.</span>
               </div>
             ) : (
-              <div className="flex flex-col gap-y-[5px]">
+              <div className="flex flex-col" style={{ gap: ROW_GAP_Y }}>
                 {rows.map((row, i) => (
                   <div
                     key={i}
-                    className="flex gap-x-[6px]"
-                    style={{ justifyContent: i < rows.length - 1 ? "space-between" : "flex-start" }}
+                    className="flex"
+                    style={{ gap: ROW_GAP_X, justifyContent: i < rows.length - 1 ? "space-between" : "flex-start" }}
                   >
                     {row.map((t) => (
                       <CardPile key={t.key} tile={t} cardWidth={cardWidth} />
