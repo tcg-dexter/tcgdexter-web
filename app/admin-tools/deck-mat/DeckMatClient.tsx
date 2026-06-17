@@ -29,7 +29,7 @@ Energy: 1
 Total Cards: 60`;
 
 // Each fanned copy is offset by FAN_OVERLAP × the card's width.
-const FAN_OVERLAP = 0.15;
+const FAN_OVERLAP = 0.20;
 const cardWidth = 45;
 const ROW_GAP = 6; // px between piles horizontally
 
