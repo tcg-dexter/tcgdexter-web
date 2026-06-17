@@ -153,7 +153,7 @@ export default function DeckMatClient() {
             style={{
               padding: MAT_PADDING,
               background: activeGradient ?? "transparent",
-              minHeight: 240,
+              minHeight: tiles && tiles.length > 0 ? undefined : 240,
             }}
           >
             {!tiles ? (
