@@ -37,7 +37,7 @@ Total Cards: 60`;
 const FAN_OVERLAP = 0.20;
 const ROW_GAP_X = 6;  // px between piles horizontally
 const ROW_GAP_Y = 5;  // px between rows vertically
-const MAX_PILES_PER_ROW = 7;
+const MAX_PILES_PER_ROW = 5;
 const MAT_PADDING = 8;          // px, inner padding of the mat rectangle
 const MAT_ASPECT = 13.5 / 24;   // standard playmat height/width ratio
 
