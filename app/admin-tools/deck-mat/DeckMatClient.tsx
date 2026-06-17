@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
+import { toPng } from "html-to-image";
 import CardImage from "@/app/cards/CardImage";
 import type { ResolvedDeckTile } from "@/lib/deckTiles";
 import {
@@ -27,23 +30,6 @@ const MAX_PILES_PER_ROW = 7;
 const MAT_PADDING = 8;          // px, inner padding of the mat rectangle
 const MAT_ASPECT = 13.5 / 24;   // standard playmat height/width ratio
 
-// Must match useFadeIn.ts constants — used to defer export capture until
-// all card piles have finished their stagger animation.
-const FADE_STAGGER_MS = 15;
-const FADE_DURATION_MS = 300;
-
-// CDN origins used by cardImages.ts — proxied through the server during
-// export capture so html-to-image can embed them without canvas taint.
-const CARD_CDN_PREFIXES = [
-  "https://images.pokemontcg.io/",
-  "https://limitlesstcg.nyc3.digitaloceanspaces.com/tpci/",
-  "https://images.scrydex.com/pokemon/",
-];
-
-// 1×1 transparent PNG — fallback for any image html-to-image still can't load.
-const TRANSPARENT_PNG =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
-
 type MatStyle = "none" | "brand" | (typeof BANNER_ACCENT_KEYS)[number];
 
 const MAT_STYLES: { key: MatStyle; gradient: string | null }[] = [
@@ -51,6 +37,11 @@ const MAT_STYLES: { key: MatStyle; gradient: string | null }[] = [
   { key: "brand", gradient: BRAND_BANNER_GRADIENT },
   ...BANNER_ACCENT_KEYS.map((k) => ({ key: k as MatStyle, gradient: bannerGradientFor(k) })),
 ];
+
+function proxied(url: string): string {
+  if (!url || url.startsWith("/") || url.startsWith("data:")) return url;
+  return `/api/admin/social-studio/proxy-image?url=${encodeURIComponent(url)}`;
+}
 
 function computeRows(tiles: ResolvedDeckTile[]): ResolvedDeckTile[][] {
   const rows: ResolvedDeckTile[][] = [];
@@ -83,13 +74,135 @@ function computeCardWidth(rows: ResolvedDeckTile[][], containerWidth: number): n
   return Math.floor(minCardWidth);
 }
 
-function dataUrlToBlob(dataUrl: string): Blob {
-  const [, base64] = dataUrl.split(",");
-  const bytes = atob(base64);
-  const arr = new Uint8Array(bytes.length);
-  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
-  return new Blob([arr], { type: "image/png" });
+// ── Offscreen export render ──────────────────────────────────────────────────
+// Mirrors the live mat layout but uses proxied image URLs so html-to-image can
+// embed them without CORS issues. Rendered with createRoot/flushSync at the
+// same pixel dimensions as the live mat so the export is 1:1.
+
+interface MatExportViewProps {
+  rows: ResolvedDeckTile[][];
+  cardWidth: number;
+  activeGradient: string | null;
+  deckName: string;
+  matWidth: number;
 }
+
+function MatExportView({
+  rows,
+  cardWidth,
+  activeGradient,
+  deckName,
+  matWidth,
+}: MatExportViewProps) {
+  const matHeight = Math.round(matWidth * MAT_ASPECT);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, width: matWidth, background: "#f2f2f2" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+        <span style={{ fontSize: 20, fontWeight: 600, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
+          {deckName}
+        </span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-wordmark.png" alt="TCG Dexter" style={{ height: 30, width: "auto", flexShrink: 0 }} />
+      </div>
+      {/* Mat */}
+      <div style={{
+        borderRadius: 12,
+        overflow: "hidden",
+        padding: MAT_PADDING,
+        background: activeGradient ?? "transparent",
+        height: matHeight,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+      }}>
+        {rows.map((row, rowIdx) => {
+          const isLast = rowIdx === rows.length - 1;
+          return (
+            <div
+              key={rowIdx}
+              style={{
+                display: "flex",
+                gap: ROW_GAP_X,
+                justifyContent: isLast ? "flex-start" : "space-between",
+              }}
+            >
+              {row.map((t) => {
+                const count = Math.max(t.copyCount, 1);
+                const cardHeight = Math.round((cardWidth * 342) / 245);
+                const pileWidth = cardWidth + (count - 1) * cardWidth * FAN_OVERLAP;
+                return (
+                  <div key={t.key} style={{ position: "relative", flexShrink: 0, width: pileWidth, height: cardHeight }}>
+                    {Array.from({ length: count }).map((_, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: i * cardWidth * FAN_OVERLAP,
+                          width: cardWidth,
+                          height: cardHeight,
+                          zIndex: i,
+                          borderRadius: 4,
+                          overflow: "hidden",
+                          background: "#e8e8e8",
+                          boxShadow: i > 0 ? "-4px 0 4px rgba(0,0,0,0.25)" : undefined,
+                        }}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={proxied(t.smallImageUrl)}
+                          alt={t.name}
+                          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+async function rasterizeMat(props: MatExportViewProps): Promise<string> {
+  const host = document.createElement("div");
+  host.style.cssText = `position:fixed;left:-100000px;top:0;width:${props.matWidth}px;overflow:hidden;`;
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  try {
+    flushSync(() => {
+      root.render(<MatExportView {...props} />);
+    });
+    await Promise.all(
+      Array.from(host.querySelectorAll("img")).map((img) =>
+        img.decode().catch(() => undefined),
+      ),
+    );
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    return await toPng(host.firstElementChild as HTMLElement, {
+      pixelRatio: 3,
+      backgroundColor: "#f2f2f2",
+    });
+  } finally {
+    root.unmount();
+    host.remove();
+  }
+}
+
+function downloadDataUrl(dataUrl: string, filename: string) {
+  const a = document.createElement("a");
+  a.href = dataUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 
 export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const [selectedDeckId, setSelectedDeckId] = useState<string | null>(null);
@@ -98,10 +211,9 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [matStyle, setMatStyle] = useState<MatStyle>("brand");
-  const [exportReady, setExportReady] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const matColumnRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
-  const exportDataRef = useRef<string | null>(null);
   const [matWidth, setMatWidth] = useState(0);
 
   useEffect(() => {
@@ -113,58 +225,6 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-
-  // Pre-compute the export PNG after tiles finish animating in.
-  // Storing it in a ref means handleExport is synchronous from the
-  // button-tap perspective, which keeps the iOS user gesture alive for
-  // navigator.share (an async toPng call would expire the gesture).
-  //
-  // html-to-image fetches each <img> src via the global fetch. Card images
-  // come from external CDNs that don't send CORS headers, so the canvas
-  // would be tainted and toDataURL() would throw. We temporarily monkey-patch
-  // window.fetch to route those CDN URLs through our same-origin proxy.
-  useEffect(() => {
-    if (!tiles?.length) {
-      exportDataRef.current = null;
-      setExportReady(false);
-      return;
-    }
-    setExportReady(false);
-    const animDuration = (tiles.length - 1) * FADE_STAGGER_MS + FADE_DURATION_MS;
-    const timer = setTimeout(async () => {
-      if (!exportRef.current) return;
-      const originalFetch = window.fetch;
-      try {
-        window.fetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-          const url =
-            typeof input === "string"
-              ? input
-              : input instanceof URL
-              ? input.href
-              : (input as Request).url;
-          if (CARD_CDN_PREFIXES.some((p) => url.startsWith(p))) {
-            return originalFetch(
-              `/api/admin/deck-mat/proxy-image?url=${encodeURIComponent(url)}`,
-              init,
-            );
-          }
-          return originalFetch(input, init);
-        };
-        const { toPng } = await import("html-to-image");
-        exportDataRef.current = await toPng(exportRef.current, {
-          pixelRatio: 3,
-          backgroundColor: "#f2f2f2",
-          imagePlaceholder: TRANSPARENT_PNG,
-        });
-        setExportReady(true);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Export preparation failed.");
-      } finally {
-        window.fetch = originalFetch;
-      }
-    }, animDuration + 200);
-    return () => clearTimeout(timer);
-  }, [tiles, matStyle]);
 
   async function handleSelectDeck(deck: DeckSummary) {
     setSelectedDeckId(deck.id);
@@ -190,32 +250,20 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
     }
   }
 
-  // Synchronous from the tap's perspective — the expensive toPng was done
-  // in the background. This keeps navigator.share within the iOS gesture window.
-  function handleExport() {
-    const dataUrl = exportDataRef.current;
-    if (!dataUrl || !tiles?.length) return;
-
-    const deckName = decks.find((d) => d.id === selectedDeckId)?.name ?? "deck-mat";
-    const fileName = `${deckName.replace(/[^a-z0-9]/gi, "-").toLowerCase()}.png`;
-    const blob = dataUrlToBlob(dataUrl);
-    const file = new File([blob], fileName, { type: "image/png" });
-
-    if (navigator.canShare?.({ files: [file] })) {
-      navigator.share({ files: [file] }).catch((e: unknown) => {
-        if ((e as Error).name !== "AbortError") {
-          setError("Share failed. Try again.");
-        }
-      });
-    } else {
-      const objectUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = objectUrl;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  async function handleExport() {
+    if (!tiles?.length || !matWidth) return;
+    setIsExporting(true);
+    setError(null);
+    try {
+      const deckName = decks.find((d) => d.id === selectedDeckId)?.name ?? "";
+      const fileName = `${deckName.replace(/[^a-z0-9]/gi, "-").toLowerCase() || "deck-mat"}.png`;
+      const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
+      const dataUrl = await rasterizeMat({ rows, cardWidth, activeGradient, deckName, matWidth });
+      downloadDataUrl(dataUrl, fileName);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Export failed.");
+    } finally {
+      setIsExporting(false);
     }
   }
 
@@ -230,7 +278,6 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
       <div className="flex flex-col gap-6">
         {/* Mat */}
         <div ref={matColumnRef} className="flex flex-col gap-3">
-          {/* Capture area: header + mat rectangle only */}
           <div ref={exportRef} className="flex flex-col gap-3">
             {/* Mat header: deck name left, site logo right */}
             <div className="flex items-center justify-between gap-4">
@@ -313,11 +360,11 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           <button
             type="button"
             onClick={handleExport}
-            disabled={!exportReady}
+            disabled={!tiles?.length || isExporting}
             className="w-full py-2.5 rounded-full text-sm font-semibold text-white disabled:opacity-40 transition-opacity"
             style={{ background: BRAND_BANNER_GRADIENT }}
           >
-            {tiles?.length && !exportReady ? "Preparing…" : "Export PNG"}
+            {isExporting ? "Exporting…" : "Export PNG"}
           </button>
         </div>
 
