@@ -288,8 +288,8 @@ async function rasterizeMat({
 
   // Drop shadow drawn before fill so it renders behind the mat shape.
   ctx.save();
-  ctx.shadowColor = "rgba(0,0,0,0.34)";
-  ctx.shadowBlur = 10;
+  ctx.shadowColor = "rgba(0,0,0,0.66)";
+  ctx.shadowBlur = 4;
   ctx.shadowOffsetY = 4;
   ctx.beginPath();
   ctx.roundRect(matX, matY, matWidth, matHeight, 12);
@@ -514,7 +514,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                   ? `${activeTex.w}px ${activeTex.h}px, auto`
                   : "auto",
                 height: matWidth > 0 ? matWidth * MAT_ASPECT : undefined,
-                boxShadow: "0 4px 10px rgba(0,0,0,0.30)",
+                boxShadow: "0 4px 4px rgba(0,0,0,0.66)",
               }}
             >
               {!tiles ? (
