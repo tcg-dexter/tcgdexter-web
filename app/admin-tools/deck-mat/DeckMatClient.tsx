@@ -3,6 +3,11 @@
 import { useState, useRef, useEffect } from "react";
 import CardImage from "@/app/cards/CardImage";
 import type { ResolvedDeckTile } from "@/lib/deckTiles";
+import {
+  BANNER_ACCENT_KEYS,
+  BRAND_BANNER_GRADIENT,
+  bannerGradientFor,
+} from "@/app/u/[username]/UserProfileHeader";
 
 const EXAMPLE_DECK = `Pokémon: 13
 1 Meowth ex POR 62
@@ -32,9 +37,16 @@ Total Cards: 60`;
 const FAN_OVERLAP = 0.20;
 const ROW_GAP = 6; // px between piles horizontally
 const MAX_PILES_PER_ROW = 7;
+const MAT_PADDING = 16; // px, inner padding of the mat rectangle
 
-// Split tiles into fixed groups of MAX_PILES_PER_ROW — row composition is
-// count-based, not pixel-based, so cardWidth can be derived cleanly.
+type MatStyle = "none" | "brand" | (typeof BANNER_ACCENT_KEYS)[number];
+
+const MAT_STYLES: { key: MatStyle; gradient: string | null }[] = [
+  { key: "none", gradient: null },
+  { key: "brand", gradient: BRAND_BANNER_GRADIENT },
+  ...BANNER_ACCENT_KEYS.map((k) => ({ key: k as MatStyle, gradient: bannerGradientFor(k) })),
+];
+
 function computeRows(tiles: ResolvedDeckTile[]): ResolvedDeckTile[][] {
   const rows: ResolvedDeckTile[][] = [];
   for (let i = 0; i < tiles.length; i += MAX_PILES_PER_ROW) {
@@ -43,11 +55,9 @@ function computeRows(tiles: ResolvedDeckTile[]): ResolvedDeckTile[][] {
   return rows;
 }
 
-// Find the single cardWidth that lets the most-constrained row fill containerWidth.
-// Each pile's width = cardWidth × (1 + (count-1) × FAN_OVERLAP), so cardWidth is
-// the only unknown once we know the pile's copy counts.
 function computeCardWidth(rows: ResolvedDeckTile[][], containerWidth: number): number {
   if (!rows.length || containerWidth === 0) return 60;
+  const inner = containerWidth - MAT_PADDING * 2;
   let minCardWidth = Infinity;
   for (const row of rows) {
     const widthUnits = row.reduce(
@@ -55,7 +65,7 @@ function computeCardWidth(rows: ResolvedDeckTile[][], containerWidth: number): n
       0,
     );
     const gaps = (row.length - 1) * ROW_GAP;
-    minCardWidth = Math.min(minCardWidth, (containerWidth - gaps) / widthUnits);
+    minCardWidth = Math.min(minCardWidth, (inner - gaps) / widthUnits);
   }
   return Math.floor(minCardWidth);
 }
@@ -65,6 +75,7 @@ export default function DeckMatClient() {
   const [tiles, setTiles] = useState<ResolvedDeckTile[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [matStyle, setMatStyle] = useState<MatStyle>("brand");
   const matRef = useRef<HTMLDivElement>(null);
   const [matWidth, setMatWidth] = useState(0);
 
@@ -100,6 +111,7 @@ export default function DeckMatClient() {
 
   const rows = tiles ? computeRows(tiles) : [];
   const cardWidth = computeCardWidth(rows, matWidth);
+  const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
 
   return (
     <>
@@ -131,6 +143,36 @@ export default function DeckMatClient() {
               <span className="text-xs text-accent">{error}</span>
             )}
           </div>
+
+          <label className="mt-2 text-xs font-semibold uppercase tracking-wider text-text-muted">
+            Mat style
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {MAT_STYLES.map(({ key, gradient }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setMatStyle(key)}
+                aria-label={key}
+                className={`w-7 h-7 rounded-full border-2 transition ${
+                  matStyle === key
+                    ? "border-black scale-110"
+                    : "border-transparent hover:border-black/30"
+                }`}
+                style={
+                  gradient
+                    ? { background: gradient }
+                    : { background: "#e8e8e8", position: "relative" }
+                }
+              >
+                {!gradient && (
+                  <span className="block w-full h-full flex items-center justify-center text-[10px] font-bold text-text-muted leading-none">
+                    ✕
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Mat column */}
@@ -144,18 +186,26 @@ export default function DeckMatClient() {
               No cards parsed from this list.
             </div>
           ) : (
-            <div className="flex flex-col gap-y-[5px]">
-              {rows.map((row, i) => (
-                <div
-                  key={i}
-                  className="flex gap-x-[6px]"
-                  style={{ justifyContent: i < rows.length - 1 ? "space-between" : "flex-start" }}
-                >
-                  {row.map((t) => (
-                    <CardPile key={t.key} tile={t} cardWidth={cardWidth} />
-                  ))}
-                </div>
-              ))}
+            <div
+              className="rounded-2xl"
+              style={{
+                padding: MAT_PADDING,
+                background: activeGradient ?? "transparent",
+              }}
+            >
+              <div className="flex flex-col gap-y-[5px]">
+                {rows.map((row, i) => (
+                  <div
+                    key={i}
+                    className="flex gap-x-[6px]"
+                    style={{ justifyContent: i < rows.length - 1 ? "space-between" : "flex-start" }}
+                  >
+                    {row.map((t) => (
+                      <CardPile key={t.key} tile={t} cardWidth={cardWidth} />
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
