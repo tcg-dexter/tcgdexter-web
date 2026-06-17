@@ -22,7 +22,7 @@ export interface DeckSummary {
 // Each fanned copy is offset by FAN_OVERLAP × the card's width.
 const FAN_OVERLAP = 0.20;
 const ROW_GAP_X = 6;  // px between piles horizontally
-const MAX_PILES_PER_ROW = 5;
+const MAX_PILES_PER_ROW = 7;
 const MAT_PADDING = 8;          // px, inner padding of the mat rectangle
 const MAT_ASPECT = 13.5 / 24;   // standard playmat height/width ratio
 
