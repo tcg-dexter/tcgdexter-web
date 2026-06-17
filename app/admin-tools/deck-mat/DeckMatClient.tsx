@@ -32,6 +32,7 @@ Total Cards: 60`;
 const FAN_OVERLAP = 0.20;
 const cardWidth = 45;
 const ROW_GAP = 6; // px between piles horizontally
+const MAX_PILES_PER_ROW = 7;
 
 function getPileWidth(tile: ResolvedDeckTile): number {
   const count = Math.max(tile.copyCount, 1);
@@ -47,7 +48,7 @@ function computeRows(tiles: ResolvedDeckTile[], containerWidth: number): Resolve
   for (const tile of tiles) {
     const w = getPileWidth(tile);
     const needed = row.length > 0 ? ROW_GAP + w : w;
-    if (row.length > 0 && rowWidth + needed > containerWidth) {
+    if (row.length > 0 && (rowWidth + needed > containerWidth || row.length >= MAX_PILES_PER_ROW)) {
       rows.push(row);
       row = [tile];
       rowWidth = w;
