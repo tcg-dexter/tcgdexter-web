@@ -97,7 +97,7 @@ interface Tile {
   entry: CardIndexEntry | null;
 }
 
-const TRAINER_SUBTYPE_ORDER = ["Item", "Stadium", "Supporter", "Pokémon Tool"] as const;
+const TRAINER_SUBTYPE_ORDER = ["Supporter", "Item", "Pokémon Tool", "Stadium"] as const;
 
 function trainerSubtypeOf(tile: Tile): string {
   const subtypes = tile.entry?.subtypes ?? [];
