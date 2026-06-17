@@ -494,9 +494,9 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             onClick={handleExport}
             disabled={!tiles?.length || isExporting}
             className="w-full py-2.5 rounded-full text-sm font-semibold text-white disabled:opacity-40 transition-opacity"
-            style={{ background: BRAND_BANNER_GRADIENT }}
+            style={{ background: "var(--gradient-brand)" }}
           >
-            {isExporting ? "Exporting…" : "Export PNG"}
+            {isExporting ? "Exporting…" : "Export"}
           </button>
         </div>
 
