@@ -8,6 +8,7 @@ import {
   BRAND_BANNER_GRADIENT,
   bannerGradientFor,
 } from "@/app/u/[username]/UserProfileHeader";
+import { useFadeIn } from "@/lib/useFadeIn";
 
 export interface DeckSummary {
   id: string;
@@ -204,17 +205,18 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
               </div>
             ) : (
               <div
+                key={selectedDeckId ?? "empty"}
                 className="flex flex-col h-full"
                 style={{ justifyContent: "space-between" }}
               >
-                {rows.map((row, i) => (
+                {rows.map((row, rowIdx) => (
                   <div
-                    key={i}
+                    key={rowIdx}
                     className="flex"
-                    style={{ gap: ROW_GAP_X, justifyContent: i < rows.length - 1 ? "space-between" : "flex-start" }}
+                    style={{ gap: ROW_GAP_X, justifyContent: rowIdx < rows.length - 1 ? "space-between" : "flex-start" }}
                   >
-                    {row.map((t) => (
-                      <CardPile key={t.key} tile={t} cardWidth={cardWidth} />
+                    {row.map((t, colIdx) => (
+                      <CardPile key={t.key} tile={t} cardWidth={cardWidth} index={rowIdx * MAX_PILES_PER_ROW + colIdx} />
                     ))}
                   </div>
                 ))}
@@ -254,10 +256,13 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
 function CardPile({
   tile,
   cardWidth,
+  index,
 }: {
   tile: ResolvedDeckTile;
   cardWidth: number;
+  index: number;
 }) {
+  const fadeStyle = useFadeIn(index);
   const cardHeight = Math.round((cardWidth * 342) / 245);
   const count = Math.max(tile.copyCount, 1);
   const pileWidth = cardWidth + (count - 1) * cardWidth * FAN_OVERLAP;
@@ -268,7 +273,7 @@ function CardPile({
   return (
     <div
       className="relative shrink-0"
-      style={{ width: pileWidth, height: cardHeight }}
+      style={{ width: pileWidth, height: cardHeight, ...fadeStyle }}
       aria-label={`${tile.name} ×${count}`}
     >
       {Array.from({ length: count }).map((_, i) => (
