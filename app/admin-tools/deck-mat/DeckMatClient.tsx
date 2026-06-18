@@ -126,8 +126,8 @@ const TEXTURES: ReadonlyArray<{ key: string; w: number; h: number; svg: string }
   },
   {
     key: "zigzag",
-    w: 16, h: 8,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="8"><polyline points="0,0 8,8 16,0" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.2"/></svg>`,
+    w: 8, h: 16,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="16"><polyline points="0,0 8,8 0,16" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.2"/></svg>`,
   },
 ] as const;
 
