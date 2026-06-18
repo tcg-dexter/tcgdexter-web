@@ -690,7 +690,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                           isSelected ? "bg-black/5" : "hover:bg-black/4"
                         }`}
                       >
-                        <div className="w-10 h-[54px] flex-shrink-0 rounded overflow-hidden bg-surface">
+                        <div className="w-[30px] h-[40px] flex-shrink-0 rounded overflow-hidden bg-surface">
                           {deck.avatarUrl ? (
                             <img src={deck.avatarUrl} alt="" className="w-full h-full object-contain" loading="lazy" />
                           ) : (
