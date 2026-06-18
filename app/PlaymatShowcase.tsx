@@ -12,12 +12,10 @@ import {
   MAT_ASPECT,
   MAX_PILES_PER_ROW,
   ROW_GAP_X,
+  MAT_STYLES,
+  TEXTURES,
+  type MatStyle,
 } from "./admin-tools/deck-mat/DeckMatClient";
-
-// fire-lightning: 4th-to-last gradient (shade("#d93232",-22) → shade("#f2b90c",-22))
-const GRADIENT = "linear-gradient(135deg, #a10000 0%, #ba8100 100%)";
-// lines: first texture pattern
-const TEXTURE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><line x1="0" y1="8" x2="8" y2="0" stroke="white" stroke-width="1" stroke-opacity="0.22"/></svg>`;
 
 type AuthState = "loading" | "signedOut" | "noDecks" | "hasDecks";
 
@@ -25,6 +23,8 @@ export default function PlaymatShowcase({ tiles }: { tiles: ResolvedDeckTile[] }
   const containerRef = useRef<HTMLDivElement>(null);
   const [matWidth, setMatWidth] = useState(0);
   const [authState, setAuthState] = useState<AuthState>("loading");
+  const [matStyle, setMatStyle] = useState<MatStyle>("fire-lightning");
+  const [textureKey, setTextureKey] = useState<string | null>("lines");
 
   useEffect(() => {
     const el = containerRef.current;
@@ -51,20 +51,30 @@ export default function PlaymatShowcase({ tiles }: { tiles: ResolvedDeckTile[] }
 
   const rows = computeRows(tiles);
   const cardWidth = computeCardWidth(rows, matWidth);
+  const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
+  const activeTex = TEXTURES.find((t) => t.key === textureKey) ?? null;
   const texScale = matWidth > 0 ? matWidth / 600 : 1;
 
   const ctaBtnClass =
     "inline-flex items-center justify-center rounded-full bg-gradient-brand px-6 py-3 text-sm font-semibold text-white shadow-brand hover:shadow-brand-lg transition";
 
+  const swatchBase = "w-7 h-7 md:w-[35px] md:h-[35px] rounded-full transition-all";
+  const swatchSelected = "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110";
+  const swatchHover = "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]";
+
   return (
-    <div className="flex flex-col gap-6 max-w-3xl mx-auto">
+    <div className="flex flex-col gap-4 max-w-3xl mx-auto">
       <div ref={containerRef}>
         <div
           className="rounded-xl overflow-hidden"
           style={{
             padding: MAT_PADDING,
-            backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(TEXTURE_SVG)}"), ${GRADIENT}`,
-            backgroundSize: `${8 * texScale}px ${8 * texScale}px, auto`,
+            backgroundImage: activeTex
+              ? `url("data:image/svg+xml,${encodeURIComponent(activeTex.svg)}"), ${activeGradient}`
+              : activeGradient ?? undefined,
+            backgroundSize: activeTex
+              ? `${activeTex.w * texScale}px ${activeTex.h * texScale}px, auto`
+              : undefined,
             height: matWidth > 0 ? matWidth * MAT_ASPECT : undefined,
             boxShadow: "0 4px 4px rgba(0,0,0,0.66)",
           }}
@@ -95,7 +105,39 @@ export default function PlaymatShowcase({ tiles }: { tiles: ResolvedDeckTile[] }
         </div>
       </div>
 
-      <div className="flex justify-center">
+      {/* Color picker */}
+      <div className="flex flex-wrap gap-1.5 pt-1 max-w-[368px] md:max-w-[445px] mx-auto justify-center">
+        {MAT_STYLES.map(({ key, gradient }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setMatStyle(key)}
+            aria-label={key}
+            className={`${swatchBase} ${matStyle === key ? swatchSelected : swatchHover}`}
+            style={{ background: gradient }}
+          />
+        ))}
+      </div>
+
+      {/* Texture picker */}
+      <div className="flex flex-wrap gap-1.5 max-w-[368px] md:max-w-[445px] mx-auto justify-center">
+        {TEXTURES.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setTextureKey((prev) => (prev === t.key ? null : t.key))}
+            aria-label={t.key}
+            className={`${swatchBase} ${textureKey === t.key ? swatchSelected : swatchHover}`}
+            style={{
+              backgroundColor: "#3a3a3a",
+              backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(t.svg)}")`,
+              backgroundSize: `${t.w}px ${t.h}px`,
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="flex justify-center pt-2">
         {authState === "signedOut" && (
           <Link href="/sign-in?next=/admin-tools/deck-mat" className={ctaBtnClass}>
             Sign in to create
