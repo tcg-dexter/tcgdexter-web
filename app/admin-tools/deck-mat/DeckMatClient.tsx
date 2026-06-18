@@ -59,11 +59,11 @@ const DUO_GRADIENTS: Record<(typeof DUO_STYLE_KEYS)[number], string> = {
   "water-psychic":     `linear-gradient(135deg, ${ed("Water")} 0%, ${ed("Psychic")} 100%)`,
 };
 
-type MatStyle = "black" | "brand" | (typeof BANNER_ACCENT_KEYS)[number] | (typeof DUO_STYLE_KEYS)[number];
+export type MatStyle = "black" | "brand" | (typeof BANNER_ACCENT_KEYS)[number] | (typeof DUO_STYLE_KEYS)[number];
 
 const BLACK_GRADIENT = "linear-gradient(180deg, #3a3a3a 0%, #141414 100%)";
 
-const MAT_STYLES: { key: MatStyle; gradient: string }[] = [
+export const MAT_STYLES: { key: MatStyle; gradient: string }[] = [
   { key: "brand", gradient: BRAND_BANNER_GRADIENT },
   { key: "black", gradient: BLACK_GRADIENT },
   ...BANNER_ACCENT_KEYS.map((k) => ({ key: k as MatStyle, gradient: bannerGradientFor(k) })),
@@ -73,7 +73,7 @@ const MAT_STYLES: { key: MatStyle; gradient: string }[] = [
 // Each texture is a small SVG tile that repeats seamlessly. Opacity is baked
 // into the SVG so the pattern works identically in CSS background-image (live
 // mat) and ctx.createPattern (canvas export).
-const TEXTURES: ReadonlyArray<{ key: string; w: number; h: number; svg: string }> = [
+export const TEXTURES: ReadonlyArray<{ key: string; w: number; h: number; svg: string }> = [
   {
     key: "lines",
     w: 8, h: 8,
