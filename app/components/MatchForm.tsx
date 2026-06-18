@@ -414,7 +414,7 @@ export default function MatchForm({
       />
 
       {/* Opponent archetype + "+ Deck List" pill inline */}
-      <div className="flex items-center gap-2 mb-1">
+      <div className="flex items-center gap-2 mb-2">
         <div className="relative flex-1" ref={suggestionsRef}>
           <input
             type="text"
@@ -471,7 +471,7 @@ export default function MatchForm({
           }`}
         >
           <div className="overflow-hidden min-h-0">
-            <div className="pt-1 pb-2">
+            <div className="pt-1 pb-4">
               <textarea
                 value={opponentDeckList}
                 onChange={(e) => setOpponentDeckList(e.target.value)}
@@ -537,7 +537,7 @@ export default function MatchForm({
       </div>
 
       {/* Utility row: [+ Notes pill] [spacer] [date display + X] or [+ date] */}
-      <div className="mb-1 flex items-center gap-2">
+      <div className="mb-2 flex items-center gap-2">
         <button
           type="button"
           onClick={() => setShowNotesField((v) => !v)}
@@ -599,7 +599,7 @@ export default function MatchForm({
         }`}
       >
         <div className="overflow-hidden min-h-0">
-          <div className="pt-1 pb-3">
+          <div className="pt-1 pb-6">
             <input
               type="text"
               value={matchNotes}
