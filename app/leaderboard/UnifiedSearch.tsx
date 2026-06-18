@@ -46,9 +46,10 @@ interface Props {
    * dropdown would otherwise overflow off-screen.
    */
   dropdownPosition?: "below" | "above";
+  placeholder?: string;
 }
 
-export default function UnifiedSearch({ dropdownPosition = "below" }: Props = {}) {
+export default function UnifiedSearch({ dropdownPosition = "below", placeholder = "Search [ / ]" }: Props = {}) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchState>(EMPTY);
   const [loading, setLoading] = useState(false);
@@ -163,7 +164,7 @@ export default function UnifiedSearch({ dropdownPosition = "below" }: Props = {}
           // `data-global-search-input` is the hook for the sitewide "/"
           // hotkey wired up by GlobalSearchHotkey at the layout level.
           data-global-search-input
-          placeholder="Search [ / ]"
+          placeholder={placeholder}
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"

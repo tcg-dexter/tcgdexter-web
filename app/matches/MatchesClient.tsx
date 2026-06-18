@@ -189,9 +189,9 @@ export default function MatchesClient({ matches, currentUsername = null }: Props
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           {pageItems.map((m) => (
-            <MatchCard key={m.id} match={m} />
+            <MatchCard key={m.id} match={m} compact />
           ))}
         </div>
       )}

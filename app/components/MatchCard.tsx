@@ -36,7 +36,7 @@ export function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export function MatchCard({ match }: { match: RecentMatch }) {
+export function MatchCard({ match, compact = false }: { match: RecentMatch; compact?: boolean }) {
   const opponentDeckLabel =
     match.opponentArchetype ?? match.opponentAttackerName ?? "Unknown deck";
   const opponentHandleLabel = match.opponentHandle ?? "Opponent";
@@ -94,20 +94,20 @@ export function MatchCard({ match }: { match: RecentMatch }) {
     : "absolute inset-0 opacity-80";
 
   const footer = (
-    <div className="grid grid-cols-2 gap-3 px-3.5 pt-3 pb-3.5 border-t border-black/[0.06]">
+    <div className={`grid grid-cols-2 gap-3 ${compact ? "px-2.5 pt-2 pb-2.5" : "px-3.5 pt-3 pb-3.5"} border-t border-black/[0.06]`}>
       <div className="min-w-0">
-        <p className="text-[11px] font-medium text-text-muted truncate">
+        <p className={`${compact ? "text-[10px]" : "text-[11px]"} font-medium text-text-muted truncate`}>
           {leftSide.handleLabel}&rsquo;s
         </p>
-        <p className="text-[13px] font-semibold text-text-primary truncate">
+        <p className={`${compact ? "text-[11px]" : "text-[13px]"} font-semibold text-text-primary truncate`}>
           {leftSide.deckLabel}
         </p>
       </div>
       <div className="min-w-0 text-right">
-        <p className="text-[11px] font-medium text-text-muted truncate">
+        <p className={`${compact ? "text-[10px]" : "text-[11px]"} font-medium text-text-muted truncate`}>
           {rightSide.handleLabel}&rsquo;s
         </p>
-        <p className="text-[13px] font-semibold text-text-primary truncate">
+        <p className={`${compact ? "text-[11px]" : "text-[13px]"} font-semibold text-text-primary truncate`}>
           {rightSide.deckLabel}
         </p>
       </div>
@@ -129,25 +129,25 @@ export function MatchCard({ match }: { match: RecentMatch }) {
               regardless of digit width. */}
           <span
             aria-label={`${leftSide.handleLabel} prizes taken`}
-            className="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-white text-[2.4rem] font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
+            className={`absolute left-3 top-1/2 -translate-y-1/2 z-10 text-white ${compact ? "text-[1.8rem]" : "text-[2.4rem]"} font-black tabular-nums leading-none drop-shadow-sm pointer-events-none`}
           >
             {leftSide.prizes}
           </span>
           <span
             aria-label={`${rightSide.handleLabel} prizes taken`}
-            className="absolute right-3 top-1/2 -translate-y-1/2 z-10 text-white text-[2.4rem] font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
+            className={`absolute right-3 top-1/2 -translate-y-1/2 z-10 text-white ${compact ? "text-[1.8rem]" : "text-[2.4rem]"} font-black tabular-nums leading-none drop-shadow-sm pointer-events-none`}
           >
             {rightSide.prizes}
           </span>
-          <div className="relative flex items-end justify-center gap-4 px-4 pt-5 pb-3">
+          <div className={`relative flex items-end justify-center ${compact ? "gap-3" : "gap-4"} px-4 pt-5 pb-3`}>
             <div style={{ transform: "rotate(-6deg)", transformOrigin: "bottom center" }}>
-              <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
+              <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={compact ? { width: 56, height: 78 } : { width: 80, height: 112 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={leftSide.imageUrl} alt={leftSide.imageAlt} className="w-full h-full object-contain" />
               </div>
             </div>
             <div style={{ transform: "rotate(6deg)", transformOrigin: "bottom center" }}>
-              <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
+              <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={compact ? { width: 56, height: 78 } : { width: 80, height: 112 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={rightSide.imageUrl} alt={rightSide.imageAlt} className="w-full h-full object-contain" />
               </div>
@@ -191,7 +191,7 @@ export function MatchCard({ match }: { match: RecentMatch }) {
         {leadImage && (
           <div
             className="relative shrink-0 rounded-lg overflow-hidden border border-black/[0.07] bg-[var(--surface)]"
-            style={{ width: 72, height: 101 }}
+            style={compact ? { width: 52, height: 73 } : { width: 72, height: 101 }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={leadImage.url} alt={leadImage.alt} className="w-full h-full object-contain" />

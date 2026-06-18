@@ -621,7 +621,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           </div>
 
           {/* Color picker */}
-          <div className="flex flex-wrap gap-1.5 pt-1 max-w-[368px] md:max-w-[445px] mx-auto justify-center">
+          <div className="grid gap-1.5 pt-1 mx-auto [grid-template-columns:repeat(11,1.75rem)] md:[grid-template-columns:repeat(11,2.1875rem)]">
             {MAT_STYLES.map(({ key, gradient }) => (
               <button
                 key={key}
@@ -639,7 +639,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           </div>
 
           {/* Texture picker */}
-          <div className="flex flex-wrap gap-1.5 max-w-[368px] md:max-w-[445px] mx-auto justify-center">
+          <div className="grid gap-1.5 mx-auto [grid-template-columns:repeat(11,1.75rem)] md:[grid-template-columns:repeat(11,2.1875rem)]">
             {TEXTURES.map((t) => (
               <button
                 key={t.key}
