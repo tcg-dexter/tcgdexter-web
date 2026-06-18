@@ -404,40 +404,6 @@ export default function MatchForm({
 
   return (
     <div className="pt-1">
-      {/* Match date — shown at the top of the form when set (defaults to today) */}
-      {showDateField && (
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <div className="relative">
-            <div className="pointer-events-none flex items-center gap-2 rounded-full bg-bg px-4 py-2.5 text-sm font-bold text-text-primary shadow-[inset_0_0_0_1px_var(--border)]">
-              <span>{formatMatchDate(matchDate)}</span>
-              <svg className="w-4 h-4 flex-shrink-0 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3.75 18.75h16.5a1.5 1.5 0 001.5-1.5V6.75a1.5 1.5 0 00-1.5-1.5H3.75a1.5 1.5 0 00-1.5 1.5v10.5a1.5 1.5 0 001.5 1.5z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 9h18" />
-              </svg>
-            </div>
-            <input
-              ref={dateInputRef}
-              type="date"
-              value={matchDate}
-              onChange={(e) => setMatchDate(e.target.value)}
-              onClick={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
-              aria-label="Match date"
-              className="absolute inset-0 h-full w-full cursor-pointer opacity-0 [font-size:16px]"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowDateField(false)}
-            aria-label="Remove match date"
-            className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full bg-bg text-text-muted shadow-[inset_0_0_0_1px_var(--border)] hover:text-text-secondary hover:bg-surface-2 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
-
       {/* Opponent name */}
       <input
         type="text"
@@ -447,120 +413,76 @@ export default function MatchForm({
         className="w-full mb-2 rounded-full bg-bg px-4 py-2 text-sm text-text-primary placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
       />
 
-      {/* Opponent archetype with autocomplete */}
-      <div className="relative mb-1" ref={suggestionsRef}>
-        <input
-          type="text"
-          value={opponentArchetype}
-          onChange={(e) => handleArchetypeChange(e.target.value)}
-          onFocus={() => {
-            if (opponentArchetype.trim() === "") {
-              setSuggestions(META_ARCHETYPE_NAMES.slice(0, 8));
-            }
-            setShowSuggestions(true);
-          }}
-          placeholder="Opponent deck / archetype"
-          className="w-full rounded-full bg-bg px-4 py-2 text-sm text-text-primary placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
-        />
-        {showSuggestions && suggestions.length > 0 && (
-          <div className="absolute left-0 right-0 top-full mt-1 z-30 rounded-lg border border-border bg-surface shadow-lg max-h-48 overflow-auto">
-            {suggestions.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => {
-                  setOpponentArchetype(s);
-                  setShowSuggestions(false);
-                }}
-                className="w-full text-left px-3 py-2 text-sm text-text-primary hover:bg-surface-2 transition-colors"
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Optional toggles — left-aligned */}
-      <div className="flex flex-col items-start gap-1 mb-3">
-        {/* Notes — optional, like the deck list */}
-        {!showNotesField ? (
-          <button
-            type="button"
-            onClick={() => setShowNotesField(true)}
-            className="text-xs text-accent hover:text-accent-light transition-colors"
-          >
-            + Add notes
-          </button>
-        ) : (
-          <div className="w-full">
-            <input
-              type="text"
-              value={matchNotes}
-              onChange={(e) => setMatchNotes(e.target.value)}
-              placeholder="Notes"
-              className="w-full mb-1 rounded-full bg-bg px-4 py-2 text-sm text-text-primary placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setShowNotesField(false);
-                setMatchNotes("");
-              }}
-              className="text-xs text-text-muted hover:text-text-secondary transition-colors"
-            >
-              Remove notes
-            </button>
-          </div>
-        )}
-
-        {!compact && (
-          <>
-            {!showDeckListField ? (
-              <button
-                type="button"
-                onClick={() => setShowDeckListField(true)}
-                className="text-xs text-accent hover:text-accent-light transition-colors"
-              >
-                + Add opponent deck list
-              </button>
-            ) : (
-              <div className="w-full">
-                <textarea
-                  value={opponentDeckList}
-                  onChange={(e) => setOpponentDeckList(e.target.value)}
-                  placeholder="Paste opponent's deck list"
-                  rows={4}
-                  className="w-full mb-1 rounded-lg bg-bg px-3 py-2 text-xs font-mono text-text-primary placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 resize-y [font-size:16px] sm:text-xs"
-                />
+      {/* Opponent archetype + "+ Deck List" pill inline */}
+      <div className="flex items-center gap-2 mb-1">
+        <div className="relative flex-1" ref={suggestionsRef}>
+          <input
+            type="text"
+            value={opponentArchetype}
+            onChange={(e) => handleArchetypeChange(e.target.value)}
+            onFocus={() => {
+              if (opponentArchetype.trim() === "") {
+                setSuggestions(META_ARCHETYPE_NAMES.slice(0, 8));
+              }
+              setShowSuggestions(true);
+            }}
+            placeholder="Opponent deck / archetype"
+            className="w-full rounded-full bg-bg px-4 py-2 text-sm text-text-primary placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+          />
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute left-0 right-0 top-full mt-1 z-30 rounded-lg border border-border bg-surface shadow-lg max-h-48 overflow-auto">
+              {suggestions.map((s) => (
                 <button
+                  key={s}
                   type="button"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
-                    setShowDeckListField(false);
-                    setOpponentDeckList("");
+                    setOpponentArchetype(s);
+                    setShowSuggestions(false);
                   }}
-                  className="text-xs text-text-muted hover:text-text-secondary transition-colors"
+                  className="w-full text-left px-3 py-2 text-sm text-text-primary hover:bg-surface-2 transition-colors"
                 >
-                  Remove deck list
+                  {s}
                 </button>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* The date field itself renders at the top of the form (see above);
-            here we only offer to re-add it once removed. */}
-        {!showDateField && (
+              ))}
+            </div>
+          )}
+        </div>
+        {!compact && (
           <button
             type="button"
-            onClick={() => setShowDateField(true)}
-            className="text-xs text-accent hover:text-accent-light transition-colors"
+            onClick={() => setShowDeckListField((v) => !v)}
+            className={`flex-shrink-0 rounded-full px-3 py-2 text-xs font-semibold transition-colors ${
+              showDeckListField
+                ? "bg-black/70 text-white"
+                : "bg-black text-white hover:bg-black/80"
+            }`}
           >
-            + Add match date
+            + Deck List
           </button>
         )}
       </div>
+
+      {/* Opponent deck list — slides in below archetype row */}
+      {!compact && (
+        <div
+          className={`grid transition-all duration-300 ${
+            showDeckListField ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+          }`}
+        >
+          <div className="overflow-hidden min-h-0">
+            <div className="pt-1 pb-2">
+              <textarea
+                value={opponentDeckList}
+                onChange={(e) => setOpponentDeckList(e.target.value)}
+                placeholder="Paste opponent's deck list"
+                rows={4}
+                className="w-full rounded-lg bg-bg px-3 py-2 text-xs font-mono text-text-primary placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 resize-y [font-size:16px] sm:text-xs"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Result — game 1 doubles as the single-game row; games 2 & 3 slide
           in/out when Best of 3 is toggled. */}
@@ -612,6 +534,81 @@ export default function MatchForm({
             + Track as Best of 3
           </button>
         )}
+      </div>
+
+      {/* Utility row: [+ Notes pill] [spacer] [date display + X] or [+ date] */}
+      <div className="mb-1 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setShowNotesField((v) => !v)}
+          className={`rounded-full px-3 py-2 text-xs font-semibold transition-colors ${
+            showNotesField
+              ? "bg-black/70 text-white"
+              : "bg-black text-white hover:bg-black/80"
+          }`}
+        >
+          + Notes
+        </button>
+        <div className="flex-1" />
+        {showDateField ? (
+          <>
+            <div className="relative">
+              <div className="pointer-events-none flex items-center gap-2 rounded-full bg-bg px-4 py-2.5 text-sm font-bold text-text-primary shadow-[inset_0_0_0_1px_var(--border)]">
+                <span>{formatMatchDate(matchDate)}</span>
+                <svg className="w-4 h-4 flex-shrink-0 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3.75 18.75h16.5a1.5 1.5 0 001.5-1.5V6.75a1.5 1.5 0 00-1.5-1.5H3.75a1.5 1.5 0 00-1.5 1.5v10.5a1.5 1.5 0 001.5 1.5z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9h18" />
+                </svg>
+              </div>
+              <input
+                ref={dateInputRef}
+                type="date"
+                value={matchDate}
+                onChange={(e) => setMatchDate(e.target.value)}
+                onClick={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
+                aria-label="Match date"
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0 [font-size:16px]"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowDateField(false)}
+              aria-label="Remove match date"
+              className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full bg-bg text-text-muted shadow-[inset_0_0_0_1px_var(--border)] hover:text-text-secondary hover:bg-surface-2 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowDateField(true)}
+            className="text-xs text-accent hover:text-accent-light transition-colors"
+          >
+            + Add date
+          </button>
+        )}
+      </div>
+
+      {/* Notes input — slides in below utility row */}
+      <div
+        className={`grid transition-all duration-300 ${
+          showNotesField ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+        }`}
+      >
+        <div className="overflow-hidden min-h-0">
+          <div className="pt-1 pb-3">
+            <input
+              type="text"
+              value={matchNotes}
+              onChange={(e) => setMatchNotes(e.target.value)}
+              placeholder="Notes"
+              className="w-full rounded-full bg-bg px-4 py-2 text-sm text-text-primary placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
+            />
+          </div>
+        </div>
       </div>
 
       {error && <p className="text-xs text-accent mb-2">{error}</p>}
