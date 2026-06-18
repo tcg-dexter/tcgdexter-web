@@ -668,8 +668,8 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           </div>
         </div>
 
-        {/* Left on desktop: Deck list */}
-        <div className="flex flex-col gap-2 md:gap-0 md:order-first md:min-h-0">
+        {/* Left on desktop: Deck list — sticky sidebar */}
+        <div className="flex flex-col gap-2 md:gap-0 md:order-first md:sticky md:top-16 xl:top-8 md:self-start">
           <label className="text-xs font-semibold uppercase tracking-wider text-text-muted md:h-[30px] md:flex md:items-end">
             Your decks
           </label>
@@ -677,8 +677,8 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           {decks.length === 0 ? (
             <p className="text-sm text-text-muted py-4">No saved decks yet.</p>
           ) : (
-            <div className="relative md:mt-3 md:flex-1 md:min-h-0">
-              <div className="overflow-y-auto max-h-[176px] md:max-h-[416px] md:h-full">
+            <div className="relative md:mt-3">
+              <div className="overflow-y-auto overscroll-y-contain max-h-[176px] md:max-h-[calc(100dvh-8rem)]">
                 <ul className="flex flex-col gap-1">
                 {decks.map((deck) => {
                   const total = deck.wins + deck.losses + deck.draws;
