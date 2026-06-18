@@ -8,6 +8,8 @@ import {
   BRAND_BANNER_GRADIENT,
   bannerGradientFor,
 } from "@/app/u/[username]/UserProfileHeader";
+import { ENERGY_HEX } from "@/app/components/DeckProfileView";
+import { shade } from "@/lib/color";
 import { useFadeIn } from "@/lib/useFadeIn";
 
 export interface DeckSummary {
@@ -28,7 +30,36 @@ const MAT_PADDING = 8;          // px, inner padding of the mat rectangle
 const MAT_ASPECT = 13.5 / 24;   // standard playmat height/width ratio
 const EXPORT_PADDING = 15;      // px, outer padding added around the exported image
 
-type MatStyle = "black" | "brand" | (typeof BANNER_ACCENT_KEYS)[number];
+// The "dark" stop used at the bottom of each energy gradient (shade -22%).
+function ed(key: string): string {
+  return shade(ENERGY_HEX[key] ?? "#888888", -22);
+}
+
+const DUO_STYLE_KEYS = [
+  "fire-psychic",
+  "water-dragon",
+  "lightning-grass",
+  "psychic-fairy",
+  "grass-water",
+  "fire-lightning",
+  "fighting-darkness",
+  "metal-dragon",
+  "water-psychic",
+] as const;
+
+const DUO_GRADIENTS: Record<(typeof DUO_STYLE_KEYS)[number], string> = {
+  "fire-psychic":      `linear-gradient(180deg, ${ed("Fire")} 0%, ${ed("Psychic")} 100%)`,
+  "water-dragon":      `linear-gradient(180deg, ${ed("Water")} 0%, ${ed("Dragon")} 100%)`,
+  "lightning-grass":   `linear-gradient(180deg, ${ed("Lightning")} 0%, ${ed("Grass")} 100%)`,
+  "psychic-fairy":     `linear-gradient(180deg, ${ed("Psychic")} 0%, ${ed("Fairy")} 100%)`,
+  "grass-water":       `linear-gradient(180deg, ${ed("Grass")} 0%, ${ed("Water")} 100%)`,
+  "fire-lightning":    `linear-gradient(180deg, ${ed("Fire")} 0%, ${ed("Lightning")} 100%)`,
+  "fighting-darkness": `linear-gradient(180deg, ${ed("Fighting")} 0%, ${ed("Darkness")} 100%)`,
+  "metal-dragon":      `linear-gradient(180deg, ${ed("Metal")} 0%, ${ed("Dragon")} 100%)`,
+  "water-psychic":     `linear-gradient(180deg, ${ed("Water")} 0%, ${ed("Psychic")} 100%)`,
+};
+
+type MatStyle = "black" | "brand" | (typeof BANNER_ACCENT_KEYS)[number] | (typeof DUO_STYLE_KEYS)[number];
 
 const BLACK_GRADIENT = "linear-gradient(180deg, #3a3a3a 0%, #141414 100%)";
 
@@ -36,6 +67,7 @@ const MAT_STYLES: { key: MatStyle; gradient: string }[] = [
   { key: "brand", gradient: BRAND_BANNER_GRADIENT },
   { key: "black", gradient: BLACK_GRADIENT },
   ...BANNER_ACCENT_KEYS.map((k) => ({ key: k as MatStyle, gradient: bannerGradientFor(k) })),
+  ...DUO_STYLE_KEYS.map((k) => ({ key: k as MatStyle, gradient: DUO_GRADIENTS[k] })),
 ];
 
 // Each texture is a small SVG tile that repeats seamlessly. Opacity is baked
@@ -71,6 +103,31 @@ const TEXTURES: ReadonlyArray<{ key: string; w: number; h: number; svg: string }
     key: "chevron",
     w: 20, h: 10,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="10"><polyline points="0,10 10,0 20,10" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.22"/></svg>`,
+  },
+  {
+    key: "waves",
+    w: 20, h: 10,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="10"><path d="M0,5 Q5,0 10,5 Q15,10 20,5" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.22"/></svg>`,
+  },
+  {
+    key: "stars",
+    w: 12, h: 12,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><path d="M6,1.5 L7,5 L10.5,6 L7,7 L6,10.5 L5,7 L1.5,6 L5,5 Z" fill="white" fill-opacity="0.22"/></svg>`,
+  },
+  {
+    key: "plus",
+    w: 10, h: 10,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><line x1="5" y1="2" x2="5" y2="8" stroke="white" stroke-width="0.75" stroke-opacity="0.25" stroke-linecap="round"/><line x1="2" y1="5" x2="8" y2="5" stroke="white" stroke-width="0.75" stroke-opacity="0.25" stroke-linecap="round"/></svg>`,
+  },
+  {
+    key: "rings",
+    w: 10, h: 10,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><circle cx="5" cy="5" r="2.5" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.25"/></svg>`,
+  },
+  {
+    key: "zigzag",
+    w: 16, h: 8,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="8"><polyline points="0,0 8,8 16,0" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.2"/></svg>`,
   },
 ] as const;
 
