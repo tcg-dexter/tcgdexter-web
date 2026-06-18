@@ -366,8 +366,7 @@ export default function DeckDetailClient({
               aria-hidden={logOpen}
             >
               <QRCodeButton
-                deckList={deckList}
-                analysis={analysis}
+                shareUrl={canonicalShareUrl}
                 className="flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-gradient-brand-reverse bg-origin-border px-[1px] py-2 text-sm font-semibold text-white transition disabled:opacity-50"
               />
               {/* Settings — icon-only, same visual weight as QR button.
