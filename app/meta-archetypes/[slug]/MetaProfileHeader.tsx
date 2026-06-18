@@ -261,8 +261,8 @@ export default function MetaProfileHeader({
             className="relative z-10 rounded-full ring-4 ring-bg flex items-center justify-center overflow-hidden shrink-0"
             style={{
               background: bannerGradient,
-              width: "128px",
-              height: "128px",
+              width: "115px",
+              height: "115px",
             }}
           >
             {iconUrl ? (
@@ -270,10 +270,10 @@ export default function MetaProfileHeader({
               <img
                 src={iconUrl}
                 alt=""
-                // Sprite sized to ~78% of the 128px circle so there's a
+                // Sprite sized to ~78% of the 115px circle so there's a
                 // visible ring of avatar-bg color around the artwork
                 // instead of the previous nearly-flush 116px fit.
-                className="w-[100px] h-[100px] object-contain"
+                className="w-[90px] h-[90px] object-contain"
               />
             ) : null}
           </div>
