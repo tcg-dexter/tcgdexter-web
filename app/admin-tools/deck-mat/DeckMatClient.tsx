@@ -490,7 +490,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           <div ref={exportRef} className="flex flex-col gap-3">
             {/* Mat header: deck name left, site logo right */}
             <div className="flex items-center justify-between gap-4">
-              <span className="text-xl font-semibold text-text-primary truncate">
+              <span className="text-lg sm:text-xl font-semibold text-text-primary truncate">
                 {decks.find((d) => d.id === selectedDeckId)?.name ?? ""}
               </span>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -499,7 +499,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                 alt="TCG Dexter"
                 width={1920}
                 height={453}
-                className="h-[30px] w-auto flex-shrink-0"
+                className="h-[27px] sm:h-[30px] w-auto flex-shrink-0"
               />
             </div>
 
