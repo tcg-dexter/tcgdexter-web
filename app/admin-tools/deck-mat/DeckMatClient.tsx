@@ -551,9 +551,9 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
 
   return (
     <>
-      <div className="flex flex-col gap-6 md:grid md:grid-cols-[1fr_272px]">
-        {/* Left: Mat + controls */}
-        <div ref={matColumnRef} className="flex flex-col gap-3">
+      <div className="flex flex-col gap-6 md:grid md:grid-cols-[272px_1fr]">
+        {/* Right on desktop: Mat + controls */}
+        <div ref={matColumnRef} className="flex flex-col gap-3 md:order-last">
           <div ref={exportRef} className="flex flex-col gap-3">
             {/* Mat header: deck name left, site logo right */}
             <div className="flex items-center justify-between gap-4">
@@ -654,20 +654,22 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             ))}
           </div>
 
-          {/* Export button */}
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={!tiles?.length || isExporting}
-            className="w-full py-2.5 rounded-full text-sm font-semibold text-white disabled:opacity-40 transition-opacity"
-            style={{ background: "var(--gradient-brand)" }}
-          >
-            {isExporting ? "Exporting…" : "Export"}
-          </button>
+          {/* Export button — max-width matches the 11-swatch picker row */}
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={!tiles?.length || isExporting}
+              className="w-full max-w-[368px] py-2.5 rounded-full text-sm font-semibold text-white disabled:opacity-40 transition-opacity"
+              style={{ background: "var(--gradient-brand)" }}
+            >
+              {isExporting ? "Exporting…" : "Export"}
+            </button>
+          </div>
         </div>
 
-        {/* Right: Deck list */}
-        <div className="flex flex-col gap-2 md:gap-0">
+        {/* Left on desktop: Deck list */}
+        <div className="flex flex-col gap-2 md:gap-0 md:order-first">
           <label className="text-xs font-semibold uppercase tracking-wider text-text-muted md:h-[30px] md:flex md:items-end">
             Your decks
           </label>
