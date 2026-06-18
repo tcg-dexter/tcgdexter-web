@@ -132,12 +132,29 @@ export function BookmarkIcon({ className }: IconProps) {
   );
 }
 
-/** Landscape rounded rect with center dividing line — "Playmat Studio". */
+/** Playmat with 3 rows of card zones — "Playmat Studio". */
 export function PlaymatIcon({ className }: IconProps) {
   return (
     <svg {...outlineProps} className={className}>
-      <rect x="2" y="6" width="20" height="12" rx="2" />
-      <line x1="12" y1="6" x2="12" y2="18" />
+      {/* Mat border */}
+      <rect x="1" y="5" width="22" height="14" rx="2" />
+      {/* Row 1 — 5 cards, varying width */}
+      <rect x="2.5" y="6.5" width="3"   height="3" rx="0.5" fill="currentColor" stroke="none" />
+      <rect x="6.3" y="6.5" width="3.8" height="3" rx="0.5" fill="currentColor" stroke="none" />
+      <rect x="10.9" y="6.5" width="2.5" height="3" rx="0.5" fill="currentColor" stroke="none" />
+      <rect x="14.2" y="6.5" width="2.5" height="3" rx="0.5" fill="currentColor" stroke="none" />
+      <rect x="17.5" y="6.5" width="4"   height="3" rx="0.5" fill="currentColor" stroke="none" />
+      {/* Row 2 — 5 cards */}
+      <rect x="2.5"  y="10.3" width="2.5" height="3" rx="0.5" fill="currentColor" stroke="none" />
+      <rect x="5.8"  y="10.3" width="2.5" height="3" rx="0.5" fill="currentColor" stroke="none" />
+      <rect x="9.1"  y="10.3" width="2"   height="3" rx="0.5" fill="currentColor" stroke="none" />
+      <rect x="11.9" y="10.3" width="4.5" height="3" rx="0.5" fill="currentColor" stroke="none" />
+      <rect x="17.2" y="10.3" width="4.3" height="3" rx="0.5" fill="currentColor" stroke="none" />
+      {/* Row 3 — 4 cards */}
+      <rect x="2.5"  y="14.1" width="2.5" height="3" rx="0.5" fill="currentColor" stroke="none" />
+      <rect x="5.8"  y="14.1" width="4.8" height="3" rx="0.5" fill="currentColor" stroke="none" />
+      <rect x="11.4" y="14.1" width="3.5" height="3" rx="0.5" fill="currentColor" stroke="none" />
+      <rect x="15.7" y="14.1" width="5.8" height="3" rx="0.5" fill="currentColor" stroke="none" />
     </svg>
   );
 }
