@@ -621,14 +621,14 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           </div>
 
           {/* Color picker */}
-          <div className="flex flex-wrap gap-1.5 pt-1 max-w-[368px] mx-auto justify-center">
+          <div className="flex flex-wrap gap-1.5 pt-1 max-w-[368px] md:max-w-[445px] mx-auto justify-center">
             {MAT_STYLES.map(({ key, gradient }) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => setMatStyle(key)}
                 aria-label={key}
-                className={`w-7 h-7 rounded-full transition-all ${
+                className={`w-7 h-7 md:w-[35px] md:h-[35px] rounded-full transition-all ${
                   matStyle === key
                     ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
                     : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
@@ -639,14 +639,14 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           </div>
 
           {/* Texture picker */}
-          <div className="flex flex-wrap gap-1.5 max-w-[368px] mx-auto justify-center">
+          <div className="flex flex-wrap gap-1.5 max-w-[368px] md:max-w-[445px] mx-auto justify-center">
             {TEXTURES.map((t) => (
               <button
                 key={t.key}
                 type="button"
                 onClick={() => setTextureKey((prev) => (prev === t.key ? null : t.key))}
                 aria-label={t.key}
-                className={`w-7 h-7 rounded-full transition-all ${
+                className={`w-7 h-7 md:w-[35px] md:h-[35px] rounded-full transition-all ${
                   textureKey === t.key
                     ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
                     : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
@@ -666,7 +666,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
               type="button"
               onClick={handleExport}
               disabled={!tiles?.length || isExporting}
-              className="w-full max-w-[368px] py-2.5 rounded-full text-sm font-semibold text-white disabled:opacity-40 transition-opacity"
+              className="w-full max-w-[368px] md:max-w-[445px] py-2.5 rounded-full text-sm font-semibold text-white disabled:opacity-40 transition-opacity"
               style={{ background: "var(--gradient-brand)" }}
             >
               {isExporting ? "Exporting…" : "Export"}
