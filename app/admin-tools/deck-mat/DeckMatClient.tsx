@@ -677,8 +677,9 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           {decks.length === 0 ? (
             <p className="text-sm text-text-muted py-4">No saved decks yet.</p>
           ) : (
-            <div className="overflow-y-auto max-h-60 md:max-h-none md:flex-1 md:min-h-0 md:mt-3 rounded-2xl bg-white border border-black/8">
-              <ul className="flex flex-col p-2 gap-1">
+            <div className="relative md:mt-3 md:flex-1 md:min-h-0">
+              <div className="overflow-y-auto max-h-[176px] md:max-h-[416px] md:h-full">
+                <ul className="flex flex-col gap-1">
                 {decks.map((deck) => {
                   const total = deck.wins + deck.losses + deck.draws;
                   const isSelected = deck.id === selectedDeckId;
@@ -719,7 +720,9 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                     </li>
                   );
                 })}
-              </ul>
+                </ul>
+              </div>
+              <div className="pointer-events-none absolute bottom-0 inset-x-0 h-12 bg-gradient-to-b from-[#f2f2f2]/0 to-[#f2f2f2]" />
             </div>
           )}
 
