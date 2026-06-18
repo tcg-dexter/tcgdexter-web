@@ -471,7 +471,7 @@ export default function MatchForm({
           }`}
         >
           <div className="overflow-hidden min-h-0">
-            <div className="pt-1 pb-8">
+            <div className="pt-1 pb-4">
               <textarea
                 value={opponentDeckList}
                 onChange={(e) => setOpponentDeckList(e.target.value)}
@@ -599,7 +599,7 @@ export default function MatchForm({
         }`}
       >
         <div className="overflow-hidden min-h-0">
-          <div className="pt-1 pb-12">
+          <div className="pt-1 pb-4">
             <input
               type="text"
               value={matchNotes}
