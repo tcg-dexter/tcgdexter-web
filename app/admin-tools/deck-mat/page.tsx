@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { primaryCardImageUrl } from "@/lib/primaryCardImage";
 import DeckMatClient, { type DeckSummary } from "./DeckMatClient";
@@ -30,19 +30,37 @@ interface MatchRow {
   result: string;
 }
 
+const shell = (children: React.ReactNode) => (
+  <main className="min-h-dvh bg-bg pb-24">
+    <MobilePageTitle href="/admin-tools" title="Playmat Studio" hideBack />
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-4 xl:pt-8">
+      <header className="mb-6 hidden xl:block">
+        <h1 className="text-2xl font-bold text-text-primary">Playmat Studio</h1>
+      </header>
+      {children}
+    </div>
+  </main>
+);
+
 export default async function DeckMatPage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/sign-in");
 
-  const { data: me } = await supabase
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .maybeSingle<{ is_admin: boolean }>();
-  if (!me?.is_admin) redirect("/");
+  if (!user) {
+    return shell(
+      <div className="flex flex-col items-center gap-4 py-16 text-center">
+        <p className="text-sm text-text-secondary">Sign in to access Playmat Studio.</p>
+        <Link
+          href="/sign-in?next=/admin-tools/deck-mat"
+          className="inline-flex items-center justify-center rounded-full bg-gradient-brand px-5 py-2.5 text-sm font-semibold text-white shadow-brand hover:shadow-brand-lg transition"
+        >
+          Sign in
+        </Link>
+      </div>
+    );
+  }
 
   const { data: decksRaw } = await supabase
     .from("saved_decks")
@@ -50,6 +68,22 @@ export default async function DeckMatPage() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
   const decks = (decksRaw ?? []) as DeckRow[];
+
+  if (decks.length === 0) {
+    return shell(
+      <div className="flex flex-col items-center gap-4 py-16 text-center">
+        <p className="text-sm text-text-secondary">
+          Create a Deck Profile to unlock Playmat Studio.
+        </p>
+        <Link
+          href="/"
+          className="text-xs font-semibold h-[38px] inline-flex items-center px-3 rounded-full border border-transparent bg-gradient-brand bg-origin-border text-white shadow-brand hover:shadow-brand-lg transition"
+        >
+          + New Deck
+        </Link>
+      </div>
+    );
+  }
 
   const { data: matchesRaw } = await supabase
     .from("matches")
@@ -81,16 +115,5 @@ export default async function DeckMatPage() {
     };
   });
 
-  return (
-    <main className="min-h-dvh bg-bg pb-24">
-      <MobilePageTitle href="/admin-tools" title="Playmat Studio" hideBack />
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-4 xl:pt-8">
-        <header className="mb-6 hidden xl:block">
-          <h1 className="text-2xl font-bold text-text-primary">Playmat Studio</h1>
-        </header>
-
-        <DeckMatClient decks={deckSummaries} />
-      </div>
-    </main>
-  );
+  return shell(<DeckMatClient decks={deckSummaries} />);
 }
