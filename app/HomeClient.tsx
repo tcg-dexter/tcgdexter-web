@@ -20,6 +20,9 @@ import type {
   SpotlightCardRef,
   SpotlightPokemonRef,
 } from "@/app/spotlight/types";
+import PlaymatShowcase from "./PlaymatShowcase";
+import type { ResolvedDeckTile } from "@/lib/deckTiles";
+import UnifiedSearch from "@/app/leaderboard/UnifiedSearch";
 
 export type CurrentSpotlight = {
   id: string;
@@ -136,10 +139,12 @@ export default function HomeClient({
   stats,
   recentMatches = [],
   currentSpotlight = null,
+  showcaseTiles = [],
 }: {
   stats: Array<{ label: string; value: string }>;
   recentMatches?: RecentMatch[];
   currentSpotlight?: CurrentSpotlight | null;
+  showcaseTiles?: ResolvedDeckTile[];
 }) {
   const [deckList, setDeckList] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -190,7 +195,7 @@ export default function HomeClient({
   return (
     <>
       {/* Hero */}
-      <section className="mx-auto max-w-6xl px-6 pt-[1.925rem] md:pt-14 pb-16 text-center">
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-[1.925rem] md:pt-14 pb-16 text-center">
         {/* Logo */}
         <div className="flex justify-center mb-7 md:mb-8">
           <img
@@ -285,30 +290,13 @@ export default function HomeClient({
       ) : (
         <>
           {/* Stats strip */}
-          <section className="mx-auto max-w-2xl px-6 pb-24">
+          <section className="mx-auto max-w-2xl px-4 sm:px-6 pb-12">
             <StatsStrip stats={stats} />
           </section>
 
           {/* Meta ticker */}
-          <section className="mx-auto max-w-6xl px-6 py-6">
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
-              <div>
-                <div className="text-xs uppercase tracking-widest text-accent mb-3 flex items-center gap-2">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full rounded-full bg-[#ff8a3d] opacity-75 animate-ping" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-[#ff8a3d]" />
-                  </span>
-                  Live meta
-                </div>
-                <h2 className="text-4xl font-semibold tracking-tight">Top Meta Archetypes</h2>
-              </div>
-              <Link
-                href="/meta-archetypes"
-                className="text-sm text-text-secondary hover:text-text-primary transition self-start md:self-auto whitespace-nowrap"
-              >
-                View all →
-              </Link>
-            </div>
+          <section className="mx-auto max-w-6xl px-4 sm:px-6 py-6">
+            <h2 className="text-4xl font-semibold tracking-tight mb-8">Top Meta Archetypes</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {top3Cards.map((c) => (
                 <MetaDeckCard
@@ -323,10 +311,15 @@ export default function HomeClient({
                 />
               ))}
             </div>
+            <div className="mt-6 flex justify-center">
+              <Link href="/meta-archetypes" className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition">
+                View all
+              </Link>
+            </div>
           </section>
 
           {/* Secondary CTA */}
-          <section className="mx-auto max-w-4xl px-6 py-24 text-center">
+          <section className="mx-auto max-w-4xl px-4 sm:px-6 py-24 text-center">
             <div className="text-3xl md:text-4xl font-semibold tracking-tight leading-tight text-text-primary">
               A dex for your decks. Save your own lists, share with fellow trainers, and browse the top meta archetypes. Track your progress and earn badges.
             </div>
@@ -334,29 +327,32 @@ export default function HomeClient({
 
           {/* Recent Matches */}
           {recentMatches.length > 0 && (
-            <section className="mx-auto max-w-6xl px-6 pb-16">
-              <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-8">
-                <div>
-                  <h2 className="text-4xl font-semibold tracking-tight">Recent Battles</h2>
-                </div>
-                <Link
-                  href="/matches"
-                  className="text-sm text-text-secondary hover:text-text-primary transition self-start md:self-auto whitespace-nowrap"
-                >
-                  View all →
-                </Link>
-              </div>
+            <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-16">
+              <h2 className="text-4xl font-semibold tracking-tight mb-8">Recent Battles</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {recentMatches.map((m) => (
                   <MatchCard key={m.id} match={m} />
                 ))}
               </div>
+              <div className="mt-6 flex justify-center">
+                <Link href="/matches" className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition">
+                  View all
+                </Link>
+              </div>
             </section>
           )}
 
+          {/* Playmat Studio showcase */}
+          <section className="mx-auto max-w-6xl px-4 sm:px-6 py-12">
+            <div className="mb-8">
+              <h2 className="text-4xl font-semibold tracking-tight">Playmat Studio</h2>
+            </div>
+            <PlaymatShowcase tiles={showcaseTiles} />
+          </section>
+
           {/* Trainer Spotlight preview */}
           {currentSpotlight && (
-            <section className="mx-auto max-w-6xl px-6 pb-24">
+            <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
               <div className="mb-8">
                 <h2 className="text-4xl font-semibold tracking-tight">Trainer Spotlight</h2>
               </div>
@@ -395,8 +391,18 @@ export default function HomeClient({
             </section>
           )}
 
+          {/* Global search */}
+          <section className="mx-auto max-w-xl px-4 sm:px-6 pb-16">
+            <div className="relative group">
+              <div className="absolute -inset-px rounded-full bg-gradient-brand opacity-30 group-focus-within:opacity-70 blur-xl transition-opacity" />
+              <div className="relative">
+                <UnifiedSearch placeholder="Search TCG Dexter" />
+              </div>
+            </div>
+          </section>
+
           {/* Final CTA */}
-          <section className="mx-auto max-w-5xl px-6 pb-32">
+          <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-32">
             <div className="relative rounded-3xl overflow-hidden border border-black/8 shadow-xl">
               <div className="absolute inset-0 bg-gradient-brand opacity-20" />
               <div className="relative p-12 md:p-20 text-center">

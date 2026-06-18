@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { QRCodeSVG } from "qrcode.react";
 
 interface Props {
   /** Pre-known share URL (e.g. on the public /d/[shortId] page). */
@@ -15,14 +16,17 @@ interface Props {
 }
 
 /**
- * Button that generates (or reuses) a share link and presents a QR code
- * in a modal overlay. Matches the existing modal pattern used in ShareButton
- * and SaveDeckButton.
+ * Button that presents a QR code for sharing a deck. The QR is rendered
+ * client-side from `resolvedUrl` (no external image service).
  *
  * Modes:
- *  - shareUrl prop provided → opens immediately, no API call needed.
- *  - deckList + analysis props provided → calls POST /api/deck-share on first
- *    click, then caches the resulting URL for subsequent opens.
+ *  - shareUrl prop provided → opens immediately, no network call. Used for
+ *    publicly-reachable URLs (the current /d/[shortId] page, public user
+ *    deck profiles, or saved decks already flipped public).
+ *  - deckList + analysis props provided → calls POST /api/deck-share on
+ *    first click to mint a /d/[shortId] snapshot, then caches the URL.
+ *    Only the *private saved deck* case needs this — every other surface
+ *    passes a stable shareUrl directly.
  */
 export default function QRCodeButton({ shareUrl, deckList, analysis, className }: Props) {
   const [open, setOpen] = useState(false);
@@ -88,12 +92,6 @@ export default function QRCodeButton({ shareUrl, deckList, analysis, className }
       /* silent */
     }
   }
-
-  const qrSrc = resolvedUrl
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-        resolvedUrl
-      )}&color=1a1a1a&bgcolor=ffffff&margin=1`
-    : null;
 
   const baseClasses =
     className ??
@@ -199,16 +197,14 @@ export default function QRCodeButton({ shareUrl, deckList, analysis, className }
                 {/* Gradient glow */}
                 <div className="absolute -inset-px rounded-xl bg-gradient-brand opacity-60 blur-xl pointer-events-none" />
                 <div className="relative rounded-xl border border-black/5 bg-white p-3">
-                  {qrSrc && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={qrSrc}
-                      alt="QR code for deck share link"
-                      width={180}
-                      height={180}
-                      className="rounded-md block"
-                    />
-                  )}
+                  <QRCodeSVG
+                    value={resolvedUrl}
+                    size={180}
+                    bgColor="#ffffff"
+                    fgColor="#1a1a1a"
+                    marginSize={1}
+                    className="rounded-md block"
+                  />
                 </div>
               </div>
             </div>

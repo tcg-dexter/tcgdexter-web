@@ -10,6 +10,7 @@ import {
   CardsIcon,
   UserIcon,
   VersusIcon,
+  PlaymatIcon,
 } from "./nav-icons";
 
 interface Props {
@@ -62,6 +63,7 @@ export default function SiteSidebar({
     { href: "/my-decks", label: "Deck Collection", Icon: BookmarkIcon },
     { href: "/meta-archetypes", label: "Meta Archetypes", Icon: ChartBarIcon },
     { href: "/matches", label: "Matches", Icon: VersusIcon },
+    ...(isAdmin ? [{ href: "/admin-tools/deck-mat", label: "Playmat Studio", Icon: PlaymatIcon }] : []),
     // { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
     { href: spotlightHref, label: "Spotlight", Icon: TrophyIcon },
   ];

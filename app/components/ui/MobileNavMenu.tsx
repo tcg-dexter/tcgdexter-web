@@ -17,6 +17,7 @@ import {
   TikTokIcon,
   ShoppingBagIcon,
   VersusIcon,
+  PlaymatIcon,
 } from "./nav-icons";
 
 /** Must match the CSS transition-duration on the panel div below. */
@@ -223,6 +224,7 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
     { href: "/my-decks", label: "Deck Collection", Icon: BookmarkIcon },
     { href: "/meta-archetypes", label: "Meta Archetypes", Icon: ChartBarIcon },
     { href: "/matches", label: "Matches", Icon: VersusIcon },
+    ...(isAdmin ? [{ href: "/admin-tools/deck-mat", label: "Playmat Studio", Icon: PlaymatIcon }] : []),
     // { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
     { href: spotlightHref, label: "Spotlight", Icon: TrophyIcon },
   ];
