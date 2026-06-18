@@ -551,8 +551,8 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
 
   return (
     <>
-      <div className="flex flex-col gap-6">
-        {/* Mat */}
+      <div className="flex flex-col gap-6 md:grid md:grid-cols-[1fr_272px] md:items-start">
+        {/* Left: Mat + controls */}
         <div ref={matColumnRef} className="flex flex-col gap-3">
           <div ref={exportRef} className="flex flex-col gap-3">
             {/* Mat header: deck name left, site logo right */}
@@ -666,7 +666,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           </button>
         </div>
 
-        {/* Deck list */}
+        {/* Right: Deck list */}
         <div className="flex flex-col gap-2">
           <label className="text-xs font-semibold uppercase tracking-wider text-text-muted">
             Your decks
@@ -675,64 +675,49 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           {decks.length === 0 ? (
             <p className="text-sm text-text-muted py-4">No saved decks yet.</p>
           ) : (
-            <div className="flex flex-col gap-2">
-              {[
-                decks.slice(0, Math.ceil(decks.length / 2)),
-                decks.slice(Math.ceil(decks.length / 2)),
-              ]
-                .filter((r) => r.length > 0)
-                .map((rowDecks, rowIdx) => (
-                  <div
-                    key={rowIdx}
-                    className="overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 pb-1"
-                  >
-                    <div className="flex gap-2 w-max">
-                      {rowDecks.map((deck) => {
-                        const total = deck.wins + deck.losses + deck.draws;
-                        const isSelected = deck.id === selectedDeckId;
-                        const isLoading = isSelected && loading;
-                        return (
-                          <button
-                            key={deck.id}
-                            type="button"
-                            onClick={() => !isLoading && handleSelectDeck(deck)}
-                            className={`flex items-center gap-2.5 p-3 rounded-full border text-left transition ${
-                              isSelected
-                                ? "bg-black/6 border-black/20"
-                                : "bg-white border-black/8 hover:bg-black/4"
-                            }`}
-                          >
-                            <div className="w-10 h-[54px] flex-shrink-0 rounded overflow-hidden bg-surface">
-                              {deck.avatarUrl ? (
-                                <img src={deck.avatarUrl} alt="" className="w-full h-full object-contain" loading="lazy" />
-                              ) : (
-                                <div className="w-full h-full bg-surface" />
-                              )}
-                            </div>
-                            <div className="flex flex-col gap-1.5 min-w-0 pr-1">
-                              <span className="text-xs font-semibold text-text-primary whitespace-nowrap leading-tight">
-                                {deck.name}
-                              </span>
-                              {total > 0 && (
-                                <span className="inline-flex items-baseline tabular-nums font-bold text-[10px] leading-none bg-black rounded-full px-2 py-[3px] text-white self-start whitespace-nowrap">
-                                  <span>{deck.wins}</span>
-                                  <span className="mx-[3px]">-</span>
-                                  <span>{deck.losses}</span>
-                                  {deck.draws > 0 && (
-                                    <>
-                                      <span className="mx-[3px]">-</span>
-                                      <span>{deck.draws}</span>
-                                    </>
-                                  )}
-                                </span>
-                              )}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
+            <div className="overflow-y-auto max-h-60 md:max-h-[480px] rounded-2xl bg-white border border-black/8">
+              <ul className="flex flex-col p-2 gap-1">
+                {decks.map((deck) => {
+                  const total = deck.wins + deck.losses + deck.draws;
+                  const isSelected = deck.id === selectedDeckId;
+                  const isLoading = isSelected && loading;
+                  return (
+                    <li key={deck.id}>
+                      <button
+                        type="button"
+                        onClick={() => !isLoading && handleSelectDeck(deck)}
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left transition ${
+                          isSelected ? "bg-black/5" : "hover:bg-black/4"
+                        }`}
+                      >
+                        <div className="w-10 h-[54px] flex-shrink-0 rounded overflow-hidden bg-surface">
+                          {deck.avatarUrl ? (
+                            <img src={deck.avatarUrl} alt="" className="w-full h-full object-contain" loading="lazy" />
+                          ) : (
+                            <div className="w-full h-full bg-surface" />
+                          )}
+                        </div>
+                        <span className="flex-1 min-w-0 text-sm font-semibold text-text-primary truncate">
+                          {deck.name}
+                        </span>
+                        {total > 0 && (
+                          <span className="flex-shrink-0 inline-flex items-baseline tabular-nums font-bold text-[10px] leading-none bg-black rounded-full px-2 py-[3px] text-white">
+                            <span>{deck.wins}</span>
+                            <span className="mx-[3px]">-</span>
+                            <span>{deck.losses}</span>
+                            {deck.draws > 0 && (
+                              <>
+                                <span className="mx-[3px]">-</span>
+                                <span>{deck.draws}</span>
+                              </>
+                            )}
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           )}
 
