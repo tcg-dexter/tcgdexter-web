@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { primaryCardImageUrl } from "@/lib/primaryCardImage";
 import DeckMatClient, { type DeckSummary } from "./DeckMatClient";
+import MobilePageTitle from "@/app/components/ui/MobilePageTitle";
 
 export const metadata: Metadata = {
   title: "Deck Mat · Admin Tools",
@@ -82,8 +83,9 @@ export default async function DeckMatPage() {
 
   return (
     <main className="min-h-dvh bg-bg pb-24">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-8">
-        <header className="mb-6">
+      <MobilePageTitle href="/admin-tools" title="Deck Mat" />
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-4 xl:pt-8">
+        <header className="mb-6 hidden xl:block">
           <h1 className="text-2xl font-bold text-text-primary">Deck Mat</h1>
         </header>
 
