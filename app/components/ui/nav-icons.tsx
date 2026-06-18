@@ -132,6 +132,16 @@ export function BookmarkIcon({ className }: IconProps) {
   );
 }
 
+/** Landscape rounded rect with center dividing line — "Playmat Studio". */
+export function PlaymatIcon({ className }: IconProps) {
+  return (
+    <svg {...outlineProps} className={className}>
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <line x1="12" y1="6" x2="12" y2="18" />
+    </svg>
+  );
+}
+
 /** Two overlapping circles — "Matches". */
 export function VersusIcon({ className }: IconProps) {
   return (
