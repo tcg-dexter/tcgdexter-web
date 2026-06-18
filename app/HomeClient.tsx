@@ -20,6 +20,8 @@ import type {
   SpotlightCardRef,
   SpotlightPokemonRef,
 } from "@/app/spotlight/types";
+import PlaymatShowcase from "./PlaymatShowcase";
+import type { ResolvedDeckTile } from "@/lib/deckTiles";
 
 export type CurrentSpotlight = {
   id: string;
@@ -136,10 +138,12 @@ export default function HomeClient({
   stats,
   recentMatches = [],
   currentSpotlight = null,
+  showcaseTiles = [],
 }: {
   stats: Array<{ label: string; value: string }>;
   recentMatches?: RecentMatch[];
   currentSpotlight?: CurrentSpotlight | null;
+  showcaseTiles?: ResolvedDeckTile[];
 }) {
   const [deckList, setDeckList] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -323,6 +327,14 @@ export default function HomeClient({
                 />
               ))}
             </div>
+          </section>
+
+          {/* Playmat Studio showcase */}
+          <section className="mx-auto max-w-6xl px-6 py-12">
+            <div className="mb-8">
+              <h2 className="text-4xl font-semibold tracking-tight">Playmat Studio</h2>
+            </div>
+            <PlaymatShowcase tiles={showcaseTiles} />
           </section>
 
           {/* Secondary CTA */}

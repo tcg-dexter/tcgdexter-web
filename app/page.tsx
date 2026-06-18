@@ -5,9 +5,54 @@ import { typeColor } from "@/lib/metaPrimaryCard";
 import { loadRecentMatches } from "@/lib/recent-matches";
 import HomeClient, { type CurrentSpotlight } from "./HomeClient";
 import type { TrainerSpotlightRow } from "./spotlight/types";
+import { parseDeckListCards } from "@/lib/cardPrinting";
+import { resolveDeckTiles, type ResolvedDeckTile } from "@/lib/deckTiles";
 
 // Revalidate the home page (and its stat counts) at most once per minute.
 export const revalidate = 60;
+
+const DEXTER_NZV11 = `Pokémon: 12
+1 N's Zoroark ex JTG 189
+1 N's Zorua PR-SV 189
+1 Munkidori TWM 95
+1 N's Reshiram ASC 154
+2 N's Zekrom ASC 155
+2 N's Darmanitan JTG 27
+1 Fezandipiti ex ASC 142
+1 Meowth ex POR 62
+1 Pecharunt ex SFA 39
+2 N's Darumaka ASC 32
+3 N's Zoroark ex JTG 175
+3 N's Zorua ASC 136
+
+Trainer: 16
+1 Punk Helmet PFL 92
+1 Team Rocket's Petrel DRI 176
+1 Xerosic's Machinations SFA 64
+4 Buddy-Buddy Poffin MEG 167
+2 Poké Pad ASC 198
+3 N's PP Up ASC 195
+4 Lillie's Determination ASC 192
+1 Binding Mochi SFA 55
+2 Black Belt's Training PRE 96
+1 Hyper Aroma TWM 152
+1 Night Stretcher SSP 251
+2 N's Castle JTG 152
+2 Janine's Secret Art SFA 59
+2 Ciphermaniac's Codebreaking PRE 104
+4 Ultra Ball MEG 131
+2 Boss's Orders MEG 114
+
+Energy: 1
+8 Basic {D} Energy MEE 7`;
+
+function loadShowcaseTiles(): ResolvedDeckTile[] {
+  try {
+    return resolveDeckTiles(parseDeckListCards(DEXTER_NZV11));
+  } catch {
+    return [];
+  }
+}
 
 async function loadStats(): Promise<Array<{ label: string; value: string }>> {
   const format = (n: number | null) =>
@@ -112,11 +157,13 @@ export default async function DeckProfilerPage() {
     loadRecentMatches(6),
     loadCurrentSpotlight(),
   ]);
+  const showcaseTiles = loadShowcaseTiles();
   return (
     <HomeClient
       stats={stats}
       recentMatches={recentMatches}
       currentSpotlight={currentSpotlight}
+      showcaseTiles={showcaseTiles}
     />
   );
 }

@@ -23,11 +23,11 @@ export interface DeckSummary {
 }
 
 // Each fanned copy is offset by FAN_OVERLAP × the card's width.
-const FAN_OVERLAP = 0.20;
-const ROW_GAP_X = 6;  // px between piles horizontally
-const MAX_PILES_PER_ROW = 7;
-const MAT_PADDING = 8;          // px, inner padding of the mat rectangle
-const MAT_ASPECT = 13.5 / 24;   // standard playmat height/width ratio
+export const FAN_OVERLAP = 0.20;
+export const ROW_GAP_X = 6;
+export const MAX_PILES_PER_ROW = 7;
+export const MAT_PADDING = 8;
+export const MAT_ASPECT = 13.5 / 24;
 const EXPORT_PADDING = 15;      // px, outer padding added around the exported image
 
 // The "dark" stop used at the bottom of each energy gradient (shade -22%).
@@ -136,7 +136,7 @@ function proxied(url: string): string {
   return `/api/admin/social-studio/proxy-image?url=${encodeURIComponent(url)}`;
 }
 
-function computeRows(tiles: ResolvedDeckTile[]): ResolvedDeckTile[][] {
+export function computeRows(tiles: ResolvedDeckTile[]): ResolvedDeckTile[][] {
   const rows: ResolvedDeckTile[][] = [];
   for (let i = 0; i < tiles.length; i += MAX_PILES_PER_ROW) {
     rows.push(tiles.slice(i, i + MAX_PILES_PER_ROW));
@@ -144,7 +144,7 @@ function computeRows(tiles: ResolvedDeckTile[]): ResolvedDeckTile[][] {
   return rows;
 }
 
-function computeCardWidth(rows: ResolvedDeckTile[][], containerWidth: number): number {
+export function computeCardWidth(rows: ResolvedDeckTile[][], containerWidth: number): number {
   if (!rows.length || containerWidth === 0) return 60;
   const innerW = containerWidth - MAT_PADDING * 2;
   const innerH = containerWidth * MAT_ASPECT - MAT_PADDING * 2;
@@ -739,7 +739,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   );
 }
 
-function CardPile({
+export function CardPile({
   tile,
   cardWidth,
   index,
