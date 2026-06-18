@@ -376,6 +376,8 @@ async function rasterizeMat({
         );
         const pat = ctx.createPattern(patImg, "repeat");
         if (pat) {
+          const ts = matWidth / 600;
+          pat.setTransform(new DOMMatrix([ts, 0, 0, ts, 0, 0]));
           ctx.save();
           ctx.beginPath();
           ctx.roundRect(matX, matY, matWidth, matHeight, 12);
@@ -426,13 +428,14 @@ async function rasterizeMat({
       const count = Math.max(t.copyCount, 1);
       const cardImg = imageMap.get(t.smallImageUrl);
 
+      const cardR = Math.max(2, Math.round(cardWidth * 0.05));
       for (let i = 0; i < count; i++) {
         const cx = pileX + i * cardWidth * FAN_OVERLAP;
 
         // Card slot background
         ctx.save();
         ctx.beginPath();
-        ctx.roundRect(cx, ry, cardWidth, cardH, 4);
+        ctx.roundRect(cx, ry, cardWidth, cardH, cardR);
         ctx.closePath();
         ctx.fillStyle = "#e8e8e8";
         ctx.fill();
@@ -442,7 +445,7 @@ async function rasterizeMat({
         if (cardImg) {
           ctx.save();
           ctx.beginPath();
-          ctx.roundRect(cx, ry, cardWidth, cardH, 4);
+          ctx.roundRect(cx, ry, cardWidth, cardH, cardR);
           ctx.closePath();
           ctx.clip();
           drawContain(ctx, cardImg, cx, ry, cardWidth, cardH);
@@ -536,6 +539,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const cardWidth = computeCardWidth(rows, matWidth);
   const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
   const activeTex = TEXTURES.find((t) => t.key === textureKey) ?? null;
+  const texScale = matWidth > 0 ? matWidth / 600 : 1;
   const emptyTextStyle = activeGradient ? { color: "rgba(255,255,255,0.5)" as const } : undefined;
   const emptyTextClass = activeGradient ? "" : "text-text-muted";
 
@@ -568,7 +572,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                   ? `url("data:image/svg+xml,${encodeURIComponent(activeTex.svg)}"), ${activeGradient ?? "none"}`
                   : (activeGradient ?? "none"),
                 backgroundSize: activeTex
-                  ? `${activeTex.w}px ${activeTex.h}px, auto`
+                  ? `${activeTex.w * texScale}px ${activeTex.h * texScale}px, auto`
                   : "auto",
                 height: matWidth > 0 ? matWidth * MAT_ASPECT : undefined,
                 boxShadow: "0 4px 4px rgba(0,0,0,0.66)",
@@ -742,11 +746,12 @@ function CardPile({
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="absolute top-0 rounded overflow-hidden bg-surface"
+          className="absolute top-0 overflow-hidden bg-surface"
           style={{
             left: i * cardWidth * FAN_OVERLAP,
             width: cardWidth,
             height: cardHeight,
+            borderRadius: Math.max(2, Math.round(cardWidth * 0.05)),
             zIndex: i,
             boxShadow: i > 0 ? "-2px 0 2px rgba(0,0,0,0.33)" : undefined,
           }}
