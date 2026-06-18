@@ -48,15 +48,15 @@ const DUO_STYLE_KEYS = [
 ] as const;
 
 const DUO_GRADIENTS: Record<(typeof DUO_STYLE_KEYS)[number], string> = {
-  "fire-psychic":      `linear-gradient(180deg, ${ed("Fire")} 0%, ${ed("Psychic")} 100%)`,
-  "water-dragon":      `linear-gradient(180deg, ${ed("Water")} 0%, ${ed("Dragon")} 100%)`,
-  "lightning-grass":   `linear-gradient(180deg, ${ed("Lightning")} 0%, ${ed("Grass")} 100%)`,
-  "psychic-fairy":     `linear-gradient(180deg, ${ed("Psychic")} 0%, ${ed("Fairy")} 100%)`,
-  "grass-water":       `linear-gradient(180deg, ${ed("Grass")} 0%, ${ed("Water")} 100%)`,
-  "fire-lightning":    `linear-gradient(180deg, ${ed("Fire")} 0%, ${ed("Lightning")} 100%)`,
-  "fighting-darkness": `linear-gradient(180deg, ${ed("Fighting")} 0%, ${ed("Darkness")} 100%)`,
-  "metal-dragon":      `linear-gradient(180deg, ${ed("Metal")} 0%, ${ed("Dragon")} 100%)`,
-  "water-psychic":     `linear-gradient(180deg, ${ed("Water")} 0%, ${ed("Psychic")} 100%)`,
+  "fire-psychic":      `linear-gradient(135deg, ${ed("Fire")} 0%, ${ed("Psychic")} 100%)`,
+  "water-dragon":      `linear-gradient(135deg, ${ed("Water")} 0%, ${ed("Dragon")} 100%)`,
+  "lightning-grass":   `linear-gradient(135deg, ${ed("Lightning")} 0%, ${ed("Grass")} 100%)`,
+  "psychic-fairy":     `linear-gradient(135deg, ${ed("Psychic")} 0%, ${ed("Fairy")} 100%)`,
+  "grass-water":       `linear-gradient(135deg, ${ed("Grass")} 0%, ${ed("Water")} 100%)`,
+  "fire-lightning":    `linear-gradient(135deg, ${ed("Fire")} 0%, ${ed("Lightning")} 100%)`,
+  "fighting-darkness": `linear-gradient(135deg, ${ed("Fighting")} 0%, ${ed("Darkness")} 100%)`,
+  "metal-dragon":      `linear-gradient(135deg, ${ed("Metal")} 0%, ${ed("Dragon")} 100%)`,
+  "water-psychic":     `linear-gradient(135deg, ${ed("Water")} 0%, ${ed("Psychic")} 100%)`,
 };
 
 type MatStyle = "black" | "brand" | (typeof BANNER_ACCENT_KEYS)[number] | (typeof DUO_STYLE_KEYS)[number];
@@ -206,26 +206,32 @@ function loadImg(src: string): Promise<HTMLImageElement> {
   });
 }
 
-// Parses a CSS linear-gradient(180deg, #hex stop%, ...) string into a
-// CanvasGradient. Only handles the top-to-bottom variants used by the mat
-// style picker — not a general CSS gradient parser.
+// Parses a CSS linear-gradient(Ndeg, #hex stop%, ...) string into a
+// CanvasGradient. Handles 180deg (top→bottom) and 135deg (top-left→
+// bottom-right) — the two angles used by the mat style picker.
 function cssGradToCanvas(
   ctx: CanvasRenderingContext2D,
   css: string,
   x: number,
   y: number,
+  w: number,
   h: number,
 ): CanvasGradient | null {
-  const m = css.match(/linear-gradient\(\s*180deg\s*,\s*(.+)\s*\)/);
+  const m = css.match(/linear-gradient\(\s*(\d+)deg\s*,\s*(.+)\s*\)/);
   if (!m) return null;
+  const deg = parseInt(m[1], 10);
   const stopRe = /(#[0-9a-fA-F]{6})\s+(\d+(?:\.\d+)?)%/g;
   const stops: Array<{ color: string; pct: number }> = [];
   let hit: RegExpExecArray | null;
-  while ((hit = stopRe.exec(m[1])) !== null) {
+  while ((hit = stopRe.exec(m[2])) !== null) {
     stops.push({ color: hit[1], pct: parseFloat(hit[2]) / 100 });
   }
   if (stops.length < 2) return null;
-  const grad = ctx.createLinearGradient(x, y, x, y + h);
+  // Map known angles to canvas gradient endpoints.
+  const grad =
+    deg === 135
+      ? ctx.createLinearGradient(x, y, x + w, y + h)      // top-left → bottom-right
+      : ctx.createLinearGradient(x, y, x, y + h);          // top → bottom (180deg)
   for (const s of stops) grad.addColorStop(s.pct, s.color);
   return grad;
 }
@@ -361,7 +367,7 @@ async function rasterizeMat({
     ctx.closePath();
     ctx.clip();
     ctx.fillStyle =
-      cssGradToCanvas(ctx, activeGradient, matX, matY, matHeight) ?? "#888";
+      cssGradToCanvas(ctx, activeGradient, matX, matY, matWidth, matHeight) ?? "#888";
     ctx.fillRect(matX, matY, matWidth, matHeight);
     ctx.restore();
   }
