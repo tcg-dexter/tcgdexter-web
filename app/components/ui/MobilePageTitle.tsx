@@ -59,7 +59,7 @@ export default function MobilePageTitle({ href, title, hideBack = false }: Props
 
   return createPortal(
     hideBack ? (
-      <span className="text-[21px] font-semibold text-text-primary">{title}</span>
+      <span className="text-[21px] font-semibold text-text-primary -ml-2 sm:ml-0">{title}</span>
     ) : (
       <Link
         href={href}
