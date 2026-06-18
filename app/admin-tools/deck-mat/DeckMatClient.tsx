@@ -551,7 +551,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
 
   return (
     <>
-      <div className="flex flex-col gap-6 md:grid md:grid-cols-[1fr_272px] md:items-start">
+      <div className="flex flex-col gap-6 md:grid md:grid-cols-[1fr_272px]">
         {/* Left: Mat + controls */}
         <div ref={matColumnRef} className="flex flex-col gap-3">
           <div ref={exportRef} className="flex flex-col gap-3">
@@ -666,8 +666,8 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           </button>
         </div>
 
-        {/* Right: Deck list */}
-        <div className="flex flex-col gap-2">
+        {/* Right: Deck list — md:pt-[42px] offsets past the mat header (30px logo + 12px gap-3) */}
+        <div className="flex flex-col gap-2 md:pt-[42px]">
           <label className="text-xs font-semibold uppercase tracking-wider text-text-muted">
             Your decks
           </label>
@@ -675,7 +675,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           {decks.length === 0 ? (
             <p className="text-sm text-text-muted py-4">No saved decks yet.</p>
           ) : (
-            <div className="overflow-y-auto max-h-60 md:max-h-[480px] rounded-2xl bg-white border border-black/8">
+            <div className="overflow-y-auto max-h-60 md:max-h-none md:flex-1 rounded-2xl bg-white border border-black/8">
               <ul className="flex flex-col p-2 gap-1">
                 {decks.map((deck) => {
                   const total = deck.wins + deck.losses + deck.draws;
