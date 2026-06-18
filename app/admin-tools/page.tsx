@@ -27,7 +27,7 @@ const TOOLS: Tool[] = [
   },
   {
     href: "/admin-tools/deck-mat",
-    title: "Deck Mat",
+    title: "Playmat Studio",
     description:
       "Lay out a deck list as fanned card piles, one pile per unique card.",
   },
