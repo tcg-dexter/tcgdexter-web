@@ -440,6 +440,12 @@ async function rasterizeMat({
 
         // Card slot background
         ctx.save();
+        if (i > 0) {
+          ctx.shadowOffsetX = -2;
+          ctx.shadowOffsetY = 0;
+          ctx.shadowBlur = 2;
+          ctx.shadowColor = "rgba(0,0,0,0.33)";
+        }
         ctx.beginPath();
         ctx.roundRect(cx, ry, cardWidth, cardH, cardR);
         ctx.closePath();
