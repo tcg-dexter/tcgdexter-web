@@ -7,19 +7,85 @@ import type { CrmCampaign, CrmContact } from "./lib/types";
 
 type SortKey =
   | "name"
+  | "signup_at"
   | "last_sign_in_at"
   | "deck_count"
-  | "match_count"
-  | "last_sent_at";
+  | "match_count";
 
 type Direction = "asc" | "desc";
+
+type ViewKey = "new7" | "new30" | "active" | "dormant" | "all";
+
+type ViewDef = {
+  key: ViewKey;
+  label: string;
+  hint: string;
+  // Default sort applied when this view is picked. Users can re-sort after.
+  defaultSort: SortKey;
+  defaultDirection: Direction;
+  predicate: (c: CrmContact, now: number) => boolean;
+};
+
+const DAY = 24 * 60 * 60 * 1000;
+
+// Variations on the "user heartbeat" view. Default is "new7" — the v1 use
+// case is starting an email campaign against fresh signups. Other views
+// surface the same table sliced for different communications questions:
+// who's engaged, who's slipping, the full base.
+const VIEWS: ViewDef[] = [
+  {
+    key: "new7",
+    label: "New (7d)",
+    hint: "Signed up in the last 7 days",
+    defaultSort: "signup_at",
+    defaultDirection: "desc",
+    predicate: (c, now) =>
+      !!c.signup_at && now - new Date(c.signup_at).getTime() < 7 * DAY,
+  },
+  {
+    key: "new30",
+    label: "New (30d)",
+    hint: "Signed up in the last 30 days",
+    defaultSort: "signup_at",
+    defaultDirection: "desc",
+    predicate: (c, now) =>
+      !!c.signup_at && now - new Date(c.signup_at).getTime() < 30 * DAY,
+  },
+  {
+    key: "active",
+    label: "Active",
+    hint: "Logged in within the last 14 days",
+    defaultSort: "last_sign_in_at",
+    defaultDirection: "desc",
+    predicate: (c, now) =>
+      !!c.last_sign_in_at &&
+      now - new Date(c.last_sign_in_at).getTime() < 14 * DAY,
+  },
+  {
+    key: "dormant",
+    label: "Dormant",
+    hint: "No login in 30+ days",
+    defaultSort: "last_sign_in_at",
+    defaultDirection: "asc",
+    predicate: (c, now) =>
+      !c.last_sign_in_at ||
+      now - new Date(c.last_sign_in_at).getTime() >= 30 * DAY,
+  },
+  {
+    key: "all",
+    label: "All",
+    hint: "Every signed-up user",
+    defaultSort: "last_sign_in_at",
+    defaultDirection: "desc",
+    predicate: () => true,
+  },
+];
 
 function compareNullable<T extends string | number>(
   a: T | null,
   b: T | null,
   asc: boolean,
 ): number {
-  // Null values sort last regardless of direction — they're "no signal".
   if (a === b) return 0;
   if (a === null) return 1;
   if (b === null) return -1;
@@ -35,11 +101,10 @@ function formatRelative(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);
   const diff = Date.now() - d.getTime();
-  const day = 24 * 60 * 60 * 1000;
-  if (diff < day) return "today";
-  if (diff < 2 * day) return "yesterday";
-  if (diff < 7 * day) return `${Math.floor(diff / day)}d ago`;
-  if (diff < 30 * day) return `${Math.floor(diff / (7 * day))}w ago`;
+  if (diff < DAY) return "today";
+  if (diff < 2 * DAY) return "yesterday";
+  if (diff < 7 * DAY) return `${Math.floor(diff / DAY)}d ago`;
+  if (diff < 30 * DAY) return `${Math.floor(diff / (7 * DAY))}w ago`;
   return d.toISOString().slice(0, 10);
 }
 
@@ -51,8 +116,9 @@ export default function CrmContactsClient({
   campaignTargets: CrmCampaign[];
 }) {
   const router = useRouter();
+  const [view, setView] = useState<ViewKey>("new7");
   const [query, setQuery] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("last_sign_in_at");
+  const [sortKey, setSortKey] = useState<SortKey>("signup_at");
   const [direction, setDirection] = useState<Direction>("desc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [targetCampaign, setTargetCampaign] = useState<string>(
@@ -60,37 +126,53 @@ export default function CrmContactsClient({
   );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Optimistic overrides applied to active_sends on each contact. Keyed by
+  // send_id — null means "unsent", a timestamp string means "sent at X".
+  const [sendOverrides, setSendOverrides] = useState<Map<string, string | null>>(
+    new Map(),
+  );
+  const [togglingSendId, setTogglingSendId] = useState<string | null>(null);
+
+  const activeView = VIEWS.find((v) => v.key === view) ?? VIEWS[0];
 
   const filtered = useMemo(() => {
+    const now = Date.now();
     const q = query.trim().toLowerCase();
-    const rows = q
-      ? contacts.filter(
-          (c) =>
-            c.email.toLowerCase().includes(q) ||
-            (c.username ?? "").toLowerCase().includes(q) ||
-            (c.display_name ?? "").toLowerCase().includes(q),
-        )
-      : contacts;
+    const rows = contacts.filter((c) => {
+      if (!activeView.predicate(c, now)) return false;
+      if (!q) return true;
+      return (
+        c.email.toLowerCase().includes(q) ||
+        (c.username ?? "").toLowerCase().includes(q) ||
+        (c.display_name ?? "").toLowerCase().includes(q)
+      );
+    });
     const asc = direction === "asc";
     return [...rows].sort((a, b) => {
       switch (sortKey) {
         case "name":
           return compareNullable(nameOf(a).toLowerCase(), nameOf(b).toLowerCase(), asc);
+        case "signup_at":
+          return compareNullable(a.signup_at, b.signup_at, asc);
         case "last_sign_in_at":
           return compareNullable(a.last_sign_in_at, b.last_sign_in_at, asc);
         case "deck_count":
           return compareNullable(a.deck_count, b.deck_count, asc);
         case "match_count":
           return compareNullable(a.match_count, b.match_count, asc);
-        case "last_sent_at":
-          return compareNullable(
-            a.last_send?.sent_at ?? null,
-            b.last_send?.sent_at ?? null,
-            asc,
-          );
       }
     });
-  }, [contacts, query, sortKey, direction]);
+  }, [contacts, activeView, query, sortKey, direction]);
+
+  function chooseView(next: ViewKey) {
+    setView(next);
+    setSelected(new Set());
+    const def = VIEWS.find((v) => v.key === next);
+    if (def) {
+      setSortKey(def.defaultSort);
+      setDirection(def.defaultDirection);
+    }
+  }
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -116,7 +198,6 @@ export default function CrmContactsClient({
       setDirection((d) => (d === "asc" ? "desc" : "asc"));
     } else {
       setSortKey(key);
-      // Numeric / date columns default to descending; name to ascending.
       setDirection(key === "name" ? "asc" : "desc");
     }
   }
@@ -136,10 +217,41 @@ export default function CrmContactsClient({
       );
       if (!res.ok) throw new Error(`${res.status}`);
       setSelected(new Set());
-      router.push(`/dashboard/crm/campaigns/${targetCampaign}`);
+      router.refresh();
     } catch (e) {
       setError(String(e));
+    } finally {
       setPending(false);
+    }
+  }
+
+  function effectiveSentAt(sendId: string, original: string | null): string | null {
+    return sendOverrides.has(sendId) ? sendOverrides.get(sendId)! : original;
+  }
+
+  async function toggleSend(sendId: string, currentSentAt: string | null) {
+    const nextSent = currentSentAt === null;
+    const nextValue = nextSent ? new Date().toISOString() : null;
+    setTogglingSendId(sendId);
+    // Optimistic override.
+    setSendOverrides((prev) => new Map(prev).set(sendId, nextValue));
+    try {
+      const res = await fetch(`/api/admin/crm/sends/${sendId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sent: nextSent }),
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+    } catch (e) {
+      // Revert.
+      setSendOverrides((prev) => {
+        const next = new Map(prev);
+        next.delete(sendId);
+        return next;
+      });
+      setError(String(e));
+    } finally {
+      setTogglingSendId(null);
     }
   }
 
@@ -147,37 +259,56 @@ export default function CrmContactsClient({
     filtered.length > 0 && filtered.every((c) => selected.has(c.id));
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search name, username or email"
-          className="min-w-[220px] flex-1 rounded-md border border-black/10 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-black/30"
-        />
-        <Link
-          href="/dashboard/crm/campaigns"
-          className="rounded-md border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold hover:bg-[var(--surface)]"
-        >
-          Campaigns
-        </Link>
-        <Link
-          href="/dashboard/crm/campaigns/new"
-          className="rounded-md bg-black px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
-        >
-          New campaign
-        </Link>
+    <section className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+          Users
+        </h2>
+        <span className="text-[11px] text-[var(--text-muted)]">
+          {filtered.length} of {contacts.length} · {activeView.hint}
+        </span>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1">
+        {VIEWS.map((v) => {
+          const active = v.key === view;
+          return (
+            <button
+              key={v.key}
+              type="button"
+              onClick={() => chooseView(v.key)}
+              title={v.hint}
+              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                active
+                  ? "bg-black text-white"
+                  : "border border-black/10 bg-white text-[var(--text-secondary)] hover:bg-[var(--surface)]"
+              }`}
+            >
+              {v.label}
+            </button>
+          );
+        })}
+        <div className="ml-auto flex items-center gap-2">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search name, username or email"
+            className="min-w-[220px] rounded-md border border-black/10 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-black/30"
+          />
+          <Link
+            href="/dashboard/crm/campaigns/new"
+            className="rounded-md bg-black px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+          >
+            New campaign
+          </Link>
+        </div>
       </div>
 
       {selected.size > 0 ? (
         <div className="sticky top-2 z-10 flex flex-wrap items-center gap-2 rounded-md border border-black/10 bg-white p-2 shadow-sm">
-          <span className="text-xs font-semibold">
-            {selected.size} selected
-          </span>
-          <span className="text-[11px] text-[var(--text-muted)]">
-            Add to campaign:
-          </span>
+          <span className="text-xs font-semibold">{selected.size} selected</span>
+          <span className="text-[11px] text-[var(--text-muted)]">Add to campaign:</span>
           {campaignTargets.length === 0 ? (
             <Link
               href="/dashboard/crm/campaigns/new"
@@ -234,17 +365,20 @@ export default function CrmContactsClient({
                 />
               </th>
               <SortableTh label="Contact" sortKey="name" current={sortKey} direction={direction} onSort={setSort} />
+              <SortableTh label="Signed up" sortKey="signup_at" current={sortKey} direction={direction} onSort={setSort} />
               <SortableTh label="Last login" sortKey="last_sign_in_at" current={sortKey} direction={direction} onSort={setSort} />
               <SortableTh label="Decks" sortKey="deck_count" current={sortKey} direction={direction} onSort={setSort} align="right" />
               <SortableTh label="Matches" sortKey="match_count" current={sortKey} direction={direction} onSort={setSort} align="right" />
-              <SortableTh label="Last sent" sortKey="last_sent_at" current={sortKey} direction={direction} onSort={setSort} />
+              <th className="px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wider">
+                Campaigns
+              </th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-3 py-4 text-center text-[var(--text-muted)]">
-                  No contacts match.
+                <td colSpan={7} className="px-3 py-4 text-center text-[var(--text-muted)]">
+                  No contacts match this view.
                 </td>
               </tr>
             ) : (
@@ -263,26 +397,45 @@ export default function CrmContactsClient({
                     <div className="text-[11px] text-[var(--text-muted)]">{c.email}</div>
                   </td>
                   <td className="px-2 py-2 align-top text-[var(--text-secondary)]">
+                    {formatRelative(c.signup_at)}
+                  </td>
+                  <td className="px-2 py-2 align-top text-[var(--text-secondary)]">
                     {formatRelative(c.last_sign_in_at)}
                   </td>
-                  <td className="px-2 py-2 align-top text-right tabular-nums">
-                    {c.deck_count}
-                  </td>
-                  <td className="px-2 py-2 align-top text-right tabular-nums">
-                    {c.match_count}
-                  </td>
+                  <td className="px-2 py-2 align-top text-right tabular-nums">{c.deck_count}</td>
+                  <td className="px-2 py-2 align-top text-right tabular-nums">{c.match_count}</td>
                   <td className="px-2 py-2 align-top">
-                    {c.last_send ? (
-                      <div>
-                        <div className="text-[var(--text-primary)]">
-                          {c.last_send.campaign_name}
-                        </div>
-                        <div className="text-[11px] text-[var(--text-muted)]">
-                          {formatRelative(c.last_send.sent_at)}
-                        </div>
-                      </div>
+                    {c.active_sends.length === 0 ? (
+                      <span className="text-[var(--text-muted)]">—</span>
                     ) : (
-                      <span className="text-[var(--text-muted)]">never</span>
+                      <div className="flex flex-wrap gap-1">
+                        {c.active_sends.map((s) => {
+                          const sentAt = effectiveSentAt(s.send_id, s.sent_at);
+                          const isSent = sentAt !== null;
+                          const busy = togglingSendId === s.send_id;
+                          return (
+                            <button
+                              key={s.send_id}
+                              type="button"
+                              disabled={busy}
+                              onClick={() => toggleSend(s.send_id, sentAt)}
+                              title={
+                                isSent
+                                  ? `Sent ${formatRelative(sentAt)} — click to unmark`
+                                  : "Click to mark sent"
+                              }
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] transition disabled:opacity-50 ${
+                                isSent
+                                  ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                  : "border border-black/10 bg-white text-[var(--text-secondary)] hover:bg-[var(--surface)]"
+                              }`}
+                            >
+                              <span aria-hidden>{isSent ? "✓" : "○"}</span>
+                              <span className="max-w-[14ch] truncate">{s.campaign_name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -291,7 +444,7 @@ export default function CrmContactsClient({
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   );
 }
 

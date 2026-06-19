@@ -4,19 +4,27 @@
 
 export type CampaignStatus = "draft" | "sending" | "complete";
 
+export type CrmActiveSend = {
+  send_id: string;
+  campaign_id: string;
+  campaign_name: string;
+  sent_at: string | null;
+};
+
 export type CrmContact = {
   id: string;
   email: string;
   username: string | null;
   display_name: string | null;
+  signup_at: string | null;
   last_sign_in_at: string | null;
   deck_count: number;
   match_count: number;
-  last_send: {
-    campaign_id: string;
-    campaign_name: string;
-    sent_at: string;
-  } | null;
+  // One entry per draft/sending campaign this user is a recipient of.
+  // Completed campaigns are intentionally excluded — the contact dashboard
+  // is for live communication state. Reorder by something else if you need
+  // historical send signals.
+  active_sends: CrmActiveSend[];
 };
 
 export type CrmCampaign = {

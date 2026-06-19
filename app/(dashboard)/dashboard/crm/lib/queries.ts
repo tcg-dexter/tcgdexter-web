@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type {
+  CrmActiveSend,
   CrmCampaign,
   CrmCampaignRecipient,
   CrmContact,
@@ -27,6 +28,10 @@ function tallyByUser(rows: Array<{ user_id: string | null }>): Map<string, numbe
 export async function listContacts(): Promise<CrmContact[]> {
   const admin = createAdminClient();
 
+  // Sends are pulled with the joined campaign so we can filter to non-complete
+  // campaigns and group all active sends per user — used to render the
+  // "Campaigns" column in the contact dashboard. sent_at is intentionally
+  // included even when null so the UI can show an unticked checkbox.
   const [
     { data: profiles, error: profilesErr },
     { data: deckRows, error: decksErr },
@@ -39,9 +44,10 @@ export async function listContacts(): Promise<CrmContact[]> {
     admin.from("matches").select("user_id"),
     admin
       .from("email_sends")
-      .select("recipient_user_id, sent_at, campaign_id, email_campaigns(name)")
-      .not("sent_at", "is", null)
-      .order("sent_at", { ascending: false }),
+      .select(
+        "id, recipient_user_id, sent_at, campaign_id, email_campaigns(name, status)",
+      )
+      .order("created_at", { ascending: true }),
     admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
   ]);
 
@@ -54,26 +60,34 @@ export async function listContacts(): Promise<CrmContact[]> {
   const deckCount = tallyByUser((deckRows ?? []) as Array<{ user_id: string | null }>);
   const matchCount = tallyByUser((matchRows ?? []) as Array<{ user_id: string | null }>);
 
-  // Sends were ordered DESC by sent_at, so the first hit per user is the latest.
-  const lastSendByUser = new Map<string, CrmContact["last_send"]>();
   type SendRow = {
+    id: string;
     recipient_user_id: string;
-    sent_at: string;
+    sent_at: string | null;
     campaign_id: string;
-    email_campaigns: { name: string } | { name: string }[] | null;
+    email_campaigns:
+      | { name: string; status: string }
+      | { name: string; status: string }[]
+      | null;
   };
+  const activeSendsByUser = new Map<string, CrmActiveSend[]>();
   for (const r of (sendRows ?? []) as SendRow[]) {
-    if (lastSendByUser.has(r.recipient_user_id)) continue;
-    // PostgREST returns the joined row as an object or single-element array
-    // depending on the relationship cardinality — normalize.
+    // PostgREST may return the joined row as object or single-element array
+    // depending on the inferred cardinality — normalize.
     const camp = Array.isArray(r.email_campaigns)
       ? r.email_campaigns[0]
       : r.email_campaigns;
-    lastSendByUser.set(r.recipient_user_id, {
+    if (!camp) continue;
+    if (camp.status === "complete") continue;
+    const entry: CrmActiveSend = {
+      send_id: r.id,
       campaign_id: r.campaign_id,
-      campaign_name: camp?.name ?? "(untitled)",
+      campaign_name: camp.name,
       sent_at: r.sent_at,
-    });
+    };
+    const existing = activeSendsByUser.get(r.recipient_user_id);
+    if (existing) existing.push(entry);
+    else activeSendsByUser.set(r.recipient_user_id, [entry]);
   }
 
   const authById = new Map(
@@ -81,7 +95,7 @@ export async function listContacts(): Promise<CrmContact[]> {
   );
 
   const contacts: CrmContact[] = (profiles ?? [])
-    .map((p) => {
+    .map((p): CrmContact | null => {
       const u = authById.get(p.id);
       if (!u || !u.email) return null;
       return {
@@ -89,11 +103,12 @@ export async function listContacts(): Promise<CrmContact[]> {
         email: u.email,
         username: p.username ?? null,
         display_name: p.display_name ?? null,
+        signup_at: u.created_at ?? null,
         last_sign_in_at: u.last_sign_in_at ?? null,
         deck_count: deckCount.get(p.id) ?? 0,
         match_count: matchCount.get(p.id) ?? 0,
-        last_send: lastSendByUser.get(p.id) ?? null,
-      } satisfies CrmContact;
+        active_sends: activeSendsByUser.get(p.id) ?? [],
+      };
     })
     .filter((c): c is CrmContact => c !== null);
 
