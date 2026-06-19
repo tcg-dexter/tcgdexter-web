@@ -206,6 +206,137 @@ function loadImg(src: string): Promise<HTMLImageElement> {
   });
 }
 
+// Rasterizes a texture tile to an offscreen canvas using Canvas 2D
+// primitives. We deliberately avoid the SVG-image route here because
+// iOS Safari taints a canvas the moment an SVG-sourced <img> is drawn
+// onto it (even from a data: URL) — and any later canvas.toDataURL()
+// call then throws "SecurityError: The operation is insecure". The
+// SVG strings on TEXTURES are still used for the CSS background on the
+// live preview; this duplicate just exists for the export path.
+//
+// Keep the two in sync if a texture's geometry changes.
+function drawTextureTile(key: string): HTMLCanvasElement | null {
+  const def = TEXTURES.find((t) => t.key === key);
+  if (!def) return null;
+  const cv = document.createElement("canvas");
+  cv.width = def.w;
+  cv.height = def.h;
+  const c = cv.getContext("2d");
+  if (!c) return null;
+  c.strokeStyle = "#ffffff";
+  c.fillStyle = "#ffffff";
+
+  switch (key) {
+    case "lines":
+      c.globalAlpha = 0.22;
+      c.lineWidth = 1;
+      c.beginPath();
+      c.moveTo(0, 8);
+      c.lineTo(8, 0);
+      c.stroke();
+      break;
+    case "dots":
+      c.globalAlpha = 0.25;
+      c.beginPath();
+      c.arc(4, 4, 1.2, 0, Math.PI * 2);
+      c.fill();
+      break;
+    case "grid":
+      c.globalAlpha = 0.2;
+      c.lineWidth = 0.5;
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.lineTo(0, 10);
+      c.moveTo(0, 0);
+      c.lineTo(10, 0);
+      c.stroke();
+      break;
+    case "crosshatch":
+      c.globalAlpha = 0.15;
+      c.lineWidth = 0.75;
+      c.beginPath();
+      c.moveTo(0, 8);
+      c.lineTo(8, 0);
+      c.moveTo(0, 0);
+      c.lineTo(8, 8);
+      c.stroke();
+      break;
+    case "diamonds":
+      c.globalAlpha = 0.22;
+      c.lineWidth = 0.75;
+      c.beginPath();
+      c.moveTo(6, 1);
+      c.lineTo(11, 6);
+      c.lineTo(6, 11);
+      c.lineTo(1, 6);
+      c.closePath();
+      c.stroke();
+      break;
+    case "chevron":
+      c.globalAlpha = 0.22;
+      c.lineWidth = 0.75;
+      c.beginPath();
+      c.moveTo(0, 10);
+      c.lineTo(10, 0);
+      c.lineTo(20, 10);
+      c.stroke();
+      break;
+    case "waves":
+      c.globalAlpha = 0.22;
+      c.lineWidth = 0.75;
+      c.beginPath();
+      c.moveTo(0, 5);
+      c.quadraticCurveTo(5, 0, 10, 5);
+      c.quadraticCurveTo(15, 10, 20, 5);
+      c.stroke();
+      break;
+    case "stars":
+      c.globalAlpha = 0.22;
+      c.beginPath();
+      c.moveTo(6, 1.5);
+      c.lineTo(7, 5);
+      c.lineTo(10.5, 6);
+      c.lineTo(7, 7);
+      c.lineTo(6, 10.5);
+      c.lineTo(5, 7);
+      c.lineTo(1.5, 6);
+      c.lineTo(5, 5);
+      c.closePath();
+      c.fill();
+      break;
+    case "plus":
+      c.globalAlpha = 0.25;
+      c.lineWidth = 0.75;
+      c.lineCap = "round";
+      c.beginPath();
+      c.moveTo(5, 2);
+      c.lineTo(5, 8);
+      c.moveTo(2, 5);
+      c.lineTo(8, 5);
+      c.stroke();
+      break;
+    case "rings":
+      c.globalAlpha = 0.25;
+      c.lineWidth = 0.75;
+      c.beginPath();
+      c.arc(5, 5, 2.5, 0, Math.PI * 2);
+      c.stroke();
+      break;
+    case "zigzag":
+      c.globalAlpha = 0.2;
+      c.lineWidth = 0.75;
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.lineTo(8, 8);
+      c.lineTo(0, 16);
+      c.stroke();
+      break;
+    default:
+      return null;
+  }
+  return cv;
+}
+
 // Parses a CSS linear-gradient(Ndeg, #hex stop%, ...) string into a
 // CanvasGradient. Handles 180deg (top→bottom) and 135deg (top-left→
 // bottom-right) — the two angles used by the mat style picker.
@@ -373,14 +504,14 @@ async function rasterizeMat({
   }
 
   // ── 7. Texture overlay ────────────────────────────────────────────────────
+  // Texture tiles are drawn to an offscreen canvas with Canvas 2D
+  // primitives, *not* loaded from the SVG strings — see drawTextureTile
+  // for the iOS Safari canvas-taint reasoning.
   if (textureKey) {
-    const texDef = TEXTURES.find((t) => t.key === textureKey);
-    if (texDef) {
+    const patCanvas = drawTextureTile(textureKey);
+    if (patCanvas) {
       try {
-        const patImg = await loadImg(
-          `data:image/svg+xml,${encodeURIComponent(texDef.svg)}`,
-        );
-        const pat = ctx.createPattern(patImg, "repeat");
+        const pat = ctx.createPattern(patCanvas, "repeat");
         if (pat) {
           const ts = matWidth / 600;
           pat.setTransform(new DOMMatrix([ts, 0, 0, ts, 0, 0]));
