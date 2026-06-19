@@ -393,8 +393,16 @@ export default function CrmContactsClient({
                     />
                   </td>
                   <td className="px-2 py-2 align-top">
-                    <div className="font-medium text-[var(--text-primary)]">{nameOf(c)}</div>
-                    <div className="text-[11px] text-[var(--text-muted)]">{c.email}</div>
+                    {c.display_name?.trim() ? (
+                      <>
+                        <div className="font-medium text-[var(--text-primary)]">
+                          {c.display_name.trim()}
+                        </div>
+                        <div className="text-[11px] text-[var(--text-muted)]">{c.email}</div>
+                      </>
+                    ) : (
+                      <div className="font-medium text-[var(--text-primary)]">{c.email}</div>
+                    )}
                   </td>
                   <td className="px-2 py-2 align-top text-[var(--text-secondary)]">
                     {formatRelative(c.signup_at)}
