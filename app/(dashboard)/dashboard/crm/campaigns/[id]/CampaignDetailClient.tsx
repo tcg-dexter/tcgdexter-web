@@ -1,0 +1,371 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import type {
+  CampaignStatus,
+  CrmCampaign,
+  CrmCampaignRecipient,
+} from "../../lib/types";
+
+function nameOf(r: CrmCampaignRecipient): string {
+  return r.display_name?.trim() || r.username || r.email;
+}
+
+function formatDateTime(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toISOString().replace("T", " ").slice(0, 16) + " UTC";
+}
+
+function StatusBadge({ status }: { status: CampaignStatus }) {
+  const styles: Record<CampaignStatus, string> = {
+    draft: "bg-[var(--surface)] text-[var(--text-secondary)]",
+    sending: "bg-yellow-100 text-yellow-800",
+    complete: "bg-green-100 text-green-800",
+  };
+  return (
+    <span
+      className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${styles[status]}`}
+    >
+      {status}
+    </span>
+  );
+}
+
+export default function CampaignDetailClient({
+  campaign: initialCampaign,
+  initialRecipients,
+}: {
+  campaign: CrmCampaign;
+  initialRecipients: CrmCampaignRecipient[];
+}) {
+  const router = useRouter();
+  const [campaign, setCampaign] = useState(initialCampaign);
+  const [recipients, setRecipients] = useState(initialRecipients);
+  const [name, setName] = useState(campaign.name);
+  const [subject, setSubject] = useState(campaign.subject);
+  const [body, setBody] = useState(campaign.body);
+  const [savingMeta, setSavingMeta] = useState(false);
+  const [bulkPending, setBulkPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const sentCount = useMemo(
+    () => recipients.filter((r) => r.sent_at !== null).length,
+    [recipients],
+  );
+  const totalCount = recipients.length;
+  const allSent = totalCount > 0 && sentCount === totalCount;
+
+  const dirtyMeta =
+    name !== campaign.name || subject !== campaign.subject || body !== campaign.body;
+
+  async function patchCampaign(patch: Record<string, unknown>) {
+    setError(null);
+    const res = await fetch(`/api/admin/crm/campaigns/${campaign.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j.error ?? `HTTP ${res.status}`);
+    }
+  }
+
+  async function saveMeta() {
+    setSavingMeta(true);
+    try {
+      await patchCampaign({ name, subject, body });
+      setCampaign((c) => ({ ...c, name, subject, body }));
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setSavingMeta(false);
+    }
+  }
+
+  async function changeStatus(status: CampaignStatus) {
+    try {
+      await patchCampaign({ status });
+      setCampaign((c) => ({
+        ...c,
+        status,
+        completed_at: status === "complete" ? new Date().toISOString() : null,
+      }));
+    } catch (e) {
+      setError(String(e));
+    }
+  }
+
+  async function toggleSent(sendId: string, current: string | null) {
+    const nextSent = current === null;
+    // Optimistic update.
+    setRecipients((rs) =>
+      rs.map((r) =>
+        r.send_id === sendId
+          ? { ...r, sent_at: nextSent ? new Date().toISOString() : null }
+          : r,
+      ),
+    );
+    try {
+      const res = await fetch(`/api/admin/crm/sends/${sendId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sent: nextSent }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch (e) {
+      // Revert.
+      setRecipients((rs) =>
+        rs.map((r) => (r.send_id === sendId ? { ...r, sent_at: current } : r)),
+      );
+      setError(String(e));
+    }
+  }
+
+  async function markSelectedSent() {
+    if (selected.size === 0) return;
+    setBulkPending(true);
+    const ids = Array.from(selected).filter((id) => {
+      const r = recipients.find((x) => x.send_id === id);
+      return r && r.sent_at === null;
+    });
+    try {
+      await Promise.all(
+        ids.map((sendId) =>
+          fetch(`/api/admin/crm/sends/${sendId}`, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ sent: true }),
+          }),
+        ),
+      );
+      const now = new Date().toISOString();
+      setRecipients((rs) =>
+        rs.map((r) => (ids.includes(r.send_id) ? { ...r, sent_at: now } : r)),
+      );
+      setSelected(new Set());
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBulkPending(false);
+    }
+  }
+
+  async function removeRecipient(sendId: string) {
+    const prev = recipients;
+    setRecipients((rs) => rs.filter((r) => r.send_id !== sendId));
+    try {
+      const res = await fetch(`/api/admin/crm/sends/${sendId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch (e) {
+      setRecipients(prev);
+      setError(String(e));
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-baseline gap-3">
+        <Link
+          href="/dashboard/crm/campaigns"
+          className="text-[11px] text-[var(--text-muted)] hover:underline"
+        >
+          ← Campaigns
+        </Link>
+        <StatusBadge status={campaign.status} />
+        <span className="text-[11px] text-[var(--text-muted)]">
+          {sentCount} of {totalCount} sent
+        </span>
+        {allSent && campaign.status !== "complete" ? (
+          <button
+            type="button"
+            onClick={() => changeStatus("complete")}
+            className="rounded-md bg-green-600 px-2 py-0.5 text-[11px] font-semibold text-white hover:opacity-90"
+          >
+            Mark complete
+          </button>
+        ) : null}
+        {campaign.status === "complete" ? (
+          <button
+            type="button"
+            onClick={() => changeStatus(allSent ? "sending" : "draft")}
+            className="text-[11px] text-[var(--text-muted)] hover:underline"
+          >
+            Reopen
+          </button>
+        ) : null}
+      </div>
+
+      <section className="flex flex-col gap-3 rounded-xl border border-black/8 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-2">
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              Name
+            </span>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="rounded-md border border-black/10 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-black/30"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              Subject
+            </span>
+            <input
+              type="text"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="rounded-md border border-black/10 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-black/30"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              Body
+            </span>
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={10}
+              className="rounded-md border border-black/10 bg-white px-2.5 py-1.5 text-xs font-mono outline-none focus:border-black/30"
+            />
+          </label>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={!dirtyMeta || savingMeta}
+            onClick={saveMeta}
+            className="rounded-md bg-black px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+          >
+            {savingMeta ? "Saving…" : "Save changes"}
+          </button>
+          <Link
+            href="/dashboard/crm"
+            className="text-xs text-[var(--text-muted)] hover:underline"
+          >
+            Add more recipients from Contacts →
+          </Link>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+            Recipients
+          </h2>
+          {selected.size > 0 ? (
+            <button
+              type="button"
+              disabled={bulkPending}
+              onClick={markSelectedSent}
+              className="rounded-md bg-black px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+            >
+              {bulkPending ? "Marking…" : `Mark ${selected.size} sent`}
+            </button>
+          ) : null}
+        </div>
+
+        {error ? <div className="text-[11px] text-[var(--accent)]">{error}</div> : null}
+
+        <div className="overflow-x-auto rounded-xl border border-black/8 bg-white shadow-sm">
+          {recipients.length === 0 ? (
+            <div className="p-6 text-center text-xs text-[var(--text-muted)]">
+              No recipients yet.{" "}
+              <Link href="/dashboard/crm" className="underline">
+                Add some from Contacts
+              </Link>
+              .
+            </div>
+          ) : (
+            <table className="min-w-full text-xs">
+              <thead className="bg-[var(--surface)] text-[var(--text-secondary)]">
+                <tr>
+                  <th className="w-8 px-2 py-2 text-left">
+                    <input
+                      type="checkbox"
+                      checked={recipients.every((r) => selected.has(r.send_id))}
+                      onChange={() => {
+                        if (recipients.every((r) => selected.has(r.send_id))) {
+                          setSelected(new Set());
+                        } else {
+                          setSelected(new Set(recipients.map((r) => r.send_id)));
+                        }
+                      }}
+                      aria-label="Select all recipients"
+                    />
+                  </th>
+                  <th className="px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wider">
+                    Contact
+                  </th>
+                  <th className="px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wider">
+                    Sent
+                  </th>
+                  <th className="w-24 px-2 py-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {recipients.map((r) => (
+                  <tr key={r.send_id} className="border-t border-black/5 hover:bg-[var(--surface)]/40">
+                    <td className="px-2 py-2 align-top">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(r.send_id)}
+                        onChange={() => {
+                          setSelected((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(r.send_id)) next.delete(r.send_id);
+                            else next.add(r.send_id);
+                            return next;
+                          });
+                        }}
+                        aria-label={`Select ${r.email}`}
+                      />
+                    </td>
+                    <td className="px-2 py-2 align-top">
+                      <div className="font-medium text-[var(--text-primary)]">
+                        {nameOf(r)}
+                      </div>
+                      <div className="text-[11px] text-[var(--text-muted)]">{r.email}</div>
+                    </td>
+                    <td className="px-2 py-2 align-top">
+                      <button
+                        type="button"
+                        onClick={() => toggleSent(r.send_id, r.sent_at)}
+                        className={`rounded-md px-2 py-1 text-[11px] font-semibold ${
+                          r.sent_at
+                            ? "bg-green-100 text-green-800 hover:bg-green-200"
+                            : "border border-black/10 bg-white hover:bg-[var(--surface)]"
+                        }`}
+                      >
+                        {r.sent_at ? `Sent · ${formatDateTime(r.sent_at)}` : "Mark sent"}
+                      </button>
+                    </td>
+                    <td className="px-2 py-2 align-top text-right">
+                      <button
+                        type="button"
+                        onClick={() => removeRecipient(r.send_id)}
+                        className="text-[11px] text-[var(--text-muted)] hover:text-[var(--accent)] hover:underline"
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </section>
+
+      <div className="text-[10px] text-[var(--text-muted)]">
+        Created {new Date(campaign.created_at).toISOString().slice(0, 10)}
+        {campaign.completed_at ? ` · completed ${new Date(campaign.completed_at).toISOString().slice(0, 10)}` : ""}
+      </div>
+    </div>
+  );
+}
