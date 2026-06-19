@@ -1,14 +1,15 @@
+import SectionHeader from "@/app/components/ui/SectionHeader";
 import { SkeletonBlock, SkeletonLine } from "@/app/components/skeletons/Skeleton";
 
 /**
- * My Decks shell. Title is real chrome; the deck-card grid resolves once the
- * saved_decks + matches queries return.
+ * My Decks shell. Title + outer padding mirror MyDecksClient exactly so the
+ * heading doesn't jump in size or position when the real page swaps in.
  */
 export default function MyDecksLoading() {
   return (
-    <main className="mx-auto max-w-6xl px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-text-primary">Deck Collection</h1>
+    <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
+      <div className="mb-6">
+        <SectionHeader title="Deck Collection" />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
