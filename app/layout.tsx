@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     "Collect. Compete. Level up.",
   openGraph: {
     title: "TCG Dexter",
-    description: "Pokémon cards. Competitive insight. Community.",
+    description: "Collect. Compete. Level up.",
     url: "https://tcgdexter.com",
     siteName: "TCG Dexter",
     locale: "en_US",
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "TCG Dexter",
-    description: "Pokémon cards. Competitive insight. Community.",
+    description: "Collect. Compete. Level up.",
   },
 };
 
