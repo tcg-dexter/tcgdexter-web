@@ -10,6 +10,7 @@
  */
 
 import cardData from "@/data/cards-standard.json";
+import { basicEnergyAliasKeys } from "@/lib/basicEnergyAlias";
 
 /* ─── Card DB ────────────────────────────────────────────────── */
 
@@ -121,13 +122,41 @@ export function parseDeckListCards(raw: string): Card[] {
  * match — a number match across sets can land on an older, rotating printing
  * and produce a false "not legal" for a card that's actually fine.
  */
+/**
+ * Pull every DB entry that could match `name`. For most cards that's just
+ * the single name key; for basic energies it also walks the aliased keys
+ * (see basicEnergyAlias) so legacy / gold prints like SUM, GRI, swsh7
+ * resolve instead of falling back to SVE.
+ */
+function lookupEntries(name: string): CardDataEntry[] {
+  const direct = CARD_DB_LOWER.get(name.toLowerCase()) ?? [];
+  const aliasKeys = basicEnergyAliasKeys(name);
+  if (!aliasKeys) return direct;
+
+  const seen = new Set<string>();
+  const merged: CardDataEntry[] = [];
+  const push = (e: CardDataEntry) => {
+    const k = `${e.set_id}:${e.number}`;
+    if (!seen.has(k)) {
+      seen.add(k);
+      merged.push(e);
+    }
+  };
+  for (const e of direct) push(e);
+  for (const key of aliasKeys) {
+    const pool = CARD_DB_LOWER.get(key);
+    if (pool) for (const e of pool) push(e);
+  }
+  return merged;
+}
+
 export function pickPrinting(
   name: string,
   number = "",
   setCode = ""
 ): CardDataEntry | null {
-  const entries = CARD_DB_LOWER.get(name.toLowerCase());
-  if (!entries || entries.length === 0) return null;
+  const entries = lookupEntries(name);
+  if (!entries.length) return null;
   if (setCode) {
     const codeUpper = setCode.toUpperCase();
     const bySetAndNum = entries.find(
