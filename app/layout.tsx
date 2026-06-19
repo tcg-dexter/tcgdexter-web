@@ -33,7 +33,7 @@ export const viewport = {
 export const metadata: Metadata = {
   title: "TCG Dexter",
   description:
-    "Pokémon cards. Competitive insight. Community. Shop singles, follow the meta, and profile your deck.",
+    "Collect. Compete. Level up.",
   openGraph: {
     title: "TCG Dexter",
     description: "Pokémon cards. Competitive insight. Community.",
