@@ -878,6 +878,31 @@ function categoryFor(type: string): ActionCategory {
   }
 }
 
+const ACTION_LABEL: Partial<Record<string, string>> = {
+  draw: "DRAW",
+  opening_hand: "DRAW",
+  mulligan_bonus_draw: "DRAW",
+  add_to_hand: "DRAW",
+  move_to_hand: "DRAW",
+  ability_used: "ABILITY",
+  attack: "ATTACK",
+  damage_dealt: "ATTACK",
+  damage_counter_placed: "ATTACK",
+  play_supporter: "SUPP",
+  play_item: "ITEM",
+  play_tool: "TOOL",
+  attach_energy: "TOOL",
+};
+
+function ActionTypeLabel({ type, className }: { type: string; className?: string }) {
+  const text = ACTION_LABEL[type];
+  return (
+    <span className={`shrink-0 w-[52px] text-[10px] font-bold tracking-wide leading-none pt-[3px] ${className ?? ""}`}>
+      {text ?? ""}
+    </span>
+  );
+}
+
 function ActionList({ actions }: { actions: ApiAction[] }) {
   return (
     <ul className="flex flex-col gap-1">
@@ -924,9 +949,7 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
         if (cat === "attack") {
           return (
             <li key={a.id} className="flex items-start gap-2 text-sm leading-snug">
-              <span className="mt-0.5 text-accent shrink-0">
-                <Icon type={a.action_type} className="w-4 h-4" />
-              </span>
+              <ActionTypeLabel type={a.action_type} className="text-accent" />
               <span className="flex-1 min-w-0 font-medium text-text-primary break-words">
                 {label}
               </span>
@@ -937,9 +960,7 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
         if (cat === "dim") {
           return (
             <li key={a.id} className="flex items-start gap-2 leading-snug">
-              <span className="mt-[3px] text-text-muted shrink-0">
-                <Icon type={a.action_type} className="w-3.5 h-3.5" />
-              </span>
+              <ActionTypeLabel type={a.action_type} className="text-text-muted" />
               <span className="flex-1 min-w-0 text-xs text-text-muted break-words">
                 {label}
               </span>
@@ -949,9 +970,7 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
 
         return (
           <li key={a.id} className="flex items-start gap-2 text-sm leading-snug">
-            <span className="mt-0.5 text-text-muted shrink-0">
-              <Icon type={a.action_type} className="w-4 h-4" />
-            </span>
+            <ActionTypeLabel type={a.action_type} className="text-text-muted" />
             <span className="flex-1 min-w-0 text-text-secondary break-words">
               {label}
             </span>
