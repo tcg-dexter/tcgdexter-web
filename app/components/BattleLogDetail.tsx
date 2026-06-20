@@ -959,7 +959,7 @@ const ACTION_LABEL: Partial<Record<string, string>> = {
   play_to_stadium: "PLAY",
   evolve: "EVOLVE",
   retreat: "RETREAT",
-  switch_active: "RETREAT",
+  switch_active: "PROMOTE",
   ability_used: "ABILITY",
   attack: "ATTACK",
   damage_dealt: "ATTACK",
