@@ -670,6 +670,41 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
     return { player: playerPrizeRunning, opponent: opponentPrizeRunning };
   });
 
+  // Active Pokémon tracking — updated by play_to_active, switch_active, and
+  // evolve actions. Initialize from pre-game, then snapshot after each game turn.
+  const activeState = { player: null as string | null, opponent: null as string | null };
+  function applyActives(actions: ApiAction[]) {
+    for (const a of actions) {
+      if (a.action_type === "play_to_active") {
+        const card = p<string>(a, "card");
+        if (card) {
+          if (a.actor === "player") activeState.player = card;
+          else if (a.actor === "opponent") activeState.opponent = card;
+        }
+      } else if (a.action_type === "switch_active") {
+        const pokemon = p<string>(a, "pokemon");
+        if (pokemon) {
+          if (a.actor === "player") activeState.player = pokemon;
+          else if (a.actor === "opponent") activeState.opponent = pokemon;
+        }
+      } else if (a.action_type === "evolve") {
+        const from = p<string>(a, "from");
+        const to = p<string>(a, "to");
+        if (from && to) {
+          if (a.actor === "player" && activeState.player?.toLowerCase() === from.toLowerCase())
+            activeState.player = to;
+          else if (a.actor === "opponent" && activeState.opponent?.toLowerCase() === from.toLowerCase())
+            activeState.opponent = to;
+        }
+      }
+    }
+  }
+  for (const post of pregamePosts) applyActives(post.actions);
+  const activeAtEnd = gamePosts.map((post) => {
+    applyActives(post.actions);
+    return { player: activeState.player, opponent: activeState.opponent };
+  });
+
   const resolvedPlayerColor = playerColor ?? "#d95555";
   const resolvedOpponentColor = opponentColor ?? "#1a1a1a";
 
@@ -700,6 +735,7 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
         ];
         if (hasPrizes) {
           const cum = prizeCumulative[i];
+          const actives = activeAtEnd[i];
           items.push(
             <ScoreCard
               key={`${post.key}-prize`}
@@ -709,6 +745,8 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
               opponentName={opponentHandle}
               playerColor={resolvedPlayerColor}
               opponentColor={resolvedOpponentColor}
+              playerActiveName={actives.player}
+              opponentActiveName={actives.opponent}
             />
           );
         }
@@ -828,6 +866,30 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
   );
 }
 
+function pokemonSpriteUrl(name: string): string {
+  const slug = name
+    .toLowerCase()
+    .replace(/[''.,]/g, "")
+    .replace(/\s+(ex|v|vmax|vstar|gx)\b/gi, "")
+    .trim()
+    .replace(/\s+/g, "-");
+  return `https://r2.limitlesstcg.net/pokemon/gen9/${slug}.png`;
+}
+
+function PokemonSprite({ name }: { name: string | null }) {
+  const [failed, setFailed] = useState(false);
+  if (!name || failed) return <div className="h-8 w-8 shrink-0" />;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={pokemonSpriteUrl(name)}
+      alt={name}
+      className="h-8 w-8 shrink-0 object-contain drop-shadow-sm"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 function ScoreCard({
   playerPrizes,
   opponentPrizes,
@@ -835,6 +897,8 @@ function ScoreCard({
   opponentName,
   playerColor,
   opponentColor,
+  playerActiveName,
+  opponentActiveName,
 }: {
   playerPrizes: number;
   opponentPrizes: number;
@@ -842,18 +906,24 @@ function ScoreCard({
   opponentName: string;
   playerColor: string;
   opponentColor: string;
+  playerActiveName: string | null;
+  opponentActiveName: string | null;
 }) {
   return (
     <div className="px-3 pt-2 pb-3">
       <div
-        className="rounded-xl px-4 py-2.5 grid grid-cols-3 items-center text-white opacity-80"
+        className="rounded-xl px-3 py-2 flex items-center gap-2 text-white opacity-80"
         style={{ background: `linear-gradient(to right, ${playerColor}, ${opponentColor})` }}
       >
-        <span className="text-xs font-bold truncate">{playerName}</span>
-        <span className="text-sm font-black tabular-nums text-center">
-          {playerPrizes}–{opponentPrizes}
-        </span>
-        <span className="text-xs font-bold truncate text-right">{opponentName}</span>
+        <PokemonSprite name={playerActiveName} />
+        <div className="flex-1 grid grid-cols-3 items-center">
+          <span className="text-xs font-bold truncate">{playerName}</span>
+          <span className="text-sm font-black tabular-nums text-center">
+            {playerPrizes}–{opponentPrizes}
+          </span>
+          <span className="text-xs font-bold truncate text-right">{opponentName}</span>
+        </div>
+        <PokemonSprite name={opponentActiveName} />
       </div>
     </div>
   );
