@@ -1,6 +1,7 @@
 import { cardImageLarge, cardImageSmall } from "@/lib/cardImages";
 import { getAllCards, type CardIndexEntry } from "@/lib/cardsIndex";
 import { normalizeForSearch } from "@/lib/searchNormalize";
+import { basicEnergyAliasKeys } from "@/lib/basicEnergyAlias";
 
 export interface DeckTileCard {
   qty: number;
@@ -20,31 +21,6 @@ export interface ResolvedDeckTile {
   number: string;
   smallImageUrl: string;
   largeImageUrl: string;
-}
-
-const ENERGY_SYMBOL_TO_TYPE: Record<string, string> = {
-  R: "Fire", W: "Water", G: "Grass", L: "Lightning",
-  P: "Psychic", F: "Fighting", D: "Darkness", M: "Metal",
-  Y: "Fairy", N: "Dragon", C: "Colorless",
-};
-
-const BASIC_ENERGY_TYPES = new Set([
-  "fire", "water", "grass", "lightning", "psychic",
-  "fighting", "darkness", "metal", "fairy",
-]);
-
-function normalizeBasicEnergyName(name: string): string | null {
-  const symbolMatch = name.match(/^Basic\s+\{([A-Z])\}\s+Energy$/i);
-  if (symbolMatch) {
-    const type = ENERGY_SYMBOL_TO_TYPE[symbolMatch[1].toUpperCase()];
-    return type ? `basic ${type.toLowerCase()} energy` : null;
-  }
-  const bareMatch = name.match(/^([A-Za-z]+)\s+Energy$/);
-  if (bareMatch) {
-    const type = bareMatch[1].toLowerCase();
-    if (BASIC_ENERGY_TYPES.has(type)) return `basic ${type} energy`;
-  }
-  return null;
 }
 
 const SECRET_RARITIES = new Set([
@@ -75,9 +51,20 @@ function resolveEntry(
   card: Pick<DeckTileCard, "name" | "number" | "setCode">,
 ): CardIndexEntry | null {
   const primary = byNameIndex.get(normalizeForSearch(card.name)) ?? [];
-  const basicAlias = normalizeBasicEnergyName(card.name);
-  const aliased = basicAlias ? byNameIndex.get(basicAlias) ?? [] : [];
-  const lookupName = aliased.length ? [...primary, ...aliased] : primary;
+  const aliasKeys = basicEnergyAliasKeys(card.name) ?? [];
+  // Merge primary + every basic-energy alias pool, dedupe by entry id.
+  const seen = new Set<string>();
+  const lookupName: CardIndexEntry[] = [];
+  for (const e of primary) {
+    if (!seen.has(e.id)) { seen.add(e.id); lookupName.push(e); }
+  }
+  for (const key of aliasKeys) {
+    const pool = byNameIndex.get(key);
+    if (!pool) continue;
+    for (const e of pool) {
+      if (!seen.has(e.id)) { seen.add(e.id); lookupName.push(e); }
+    }
+  }
   if (!lookupName.length) return null;
   return (
     lookupName.find(
