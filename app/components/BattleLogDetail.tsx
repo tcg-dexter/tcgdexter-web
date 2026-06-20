@@ -668,6 +668,7 @@ export default function BattleLogDetail({ matchId, apiUrl, result }: Props) {
           ))}
         </>
       )}
+      {gamePosts.length > 0 && <SectionDivider label="Start" />}
       {gamePosts.map((post, i) => (
         <ThreadPost
           key={post.key}
