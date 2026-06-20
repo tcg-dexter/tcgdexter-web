@@ -14,6 +14,8 @@ import {
   CardsIcon,
   UserIcon,
   DiscordIcon,
+  GaugeIcon,
+  MailIcon,
   TikTokIcon,
   ShoppingBagIcon,
   VersusIcon,
@@ -241,6 +243,14 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
     { href: "https://www.tiktok.com/@tcgdexter", label: "TikTok", Icon: TikTokIcon },
   ];
 
+  // Admin destinations — replace the external-links block on mobile when
+  // the signed-in user is an admin. The standalone Admin Tools row further
+  // down in the menu (see below) is preserved.
+  const ADMIN_LINKS = [
+    { href: "/dashboard", label: "Dashboard", Icon: GaugeIcon },
+    { href: "/dashboard/crm", label: "CRM", Icon: MailIcon },
+  ];
+
   const linkClass =
     "flex items-center gap-4 py-2 text-lg font-medium text-text-secondary hover:text-text-primary transition-colors";
 
@@ -345,20 +355,38 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
               </li>
             ))}
 
-            {EXTERNAL_LINKS.map(({ href, label, Icon }) => (
-              <li key={href}>
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={linkClass}
-                  onClick={closeMenu}
-                >
-                  <Icon />
-                  <span>{label}</span>
-                </a>
-              </li>
-            ))}
+            {isAdmin ? (
+              <>
+                <li role="presentation" className="pt-2 pb-1">
+                  <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-text-muted">
+                    Admin
+                  </span>
+                </li>
+                {ADMIN_LINKS.map(({ href, label, Icon }) => (
+                  <li key={href}>
+                    <Link href={href} className={linkClass} onClick={closeMenu}>
+                      <Icon />
+                      <span>{label}</span>
+                    </Link>
+                  </li>
+                ))}
+              </>
+            ) : (
+              EXTERNAL_LINKS.map(({ href, label, Icon }) => (
+                <li key={href}>
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={linkClass}
+                    onClick={closeMenu}
+                  >
+                    <Icon />
+                    <span>{label}</span>
+                  </a>
+                </li>
+              ))
+            )}
 
             <li role="separator" className="my-4" />
 
