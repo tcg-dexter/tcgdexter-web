@@ -756,7 +756,7 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
           isLast ? "" : "border-b border-[#e2e8f0]"
         }`}
       >
-        <div className="flex items-baseline gap-1.5 flex-wrap">
+        <div className="flex items-end gap-1.5 flex-wrap">
           <span className="text-sm font-bold text-text-primary truncate">
             {post.displayName}
           </span>
