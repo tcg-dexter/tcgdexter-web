@@ -1,6 +1,6 @@
 import type { OpsData } from "../lib/ops";
 import { links } from "../lib/links";
-import { Card, ErrorBox, Sparkline, relTime } from "./Card";
+import { Card, ErrorBox, relTime } from "./Card";
 
 type Props = { data: OpsData | { error: string } };
 
@@ -20,45 +20,30 @@ export default function OpsCard({ data }: Props) {
   if ("error" in data) return <ErrorBox error={data.error} />;
 
   const latest = data.latest;
-  const durations = data.history.map((h) => Number(h.total_seconds) || 0);
 
   return (
     <Card variant="elevated">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          {latest ? (
-            <span
-              className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ring-1 ${STATUS_TONE[latest.status] ?? "bg-gray-100 text-gray-700 ring-gray-200"}`}
-            >
-              {latest.status}
-            </span>
-          ) : (
-            <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-gray-700 ring-1 ring-gray-200">
-              no runs
-            </span>
-          )}
-          <div className="text-sm">
-            <div className="font-semibold tracking-tight">
-              {latest ? `Daily ops — ${latest.run_date}` : "Daily ops"}
-            </div>
-            <div className="text-[11px] text-[var(--text-muted)]">
-              {latest
-                ? `${latest.passed}/${latest.passed + latest.failed} passed · ${Math.round(Number(latest.total_seconds))}s · finished ${relTime(latest.finished_at)}`
-                : "Waiting for first run to land in Supabase."}
-            </div>
+      <div className="flex items-center gap-3">
+        {latest ? (
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ring-1 ${STATUS_TONE[latest.status] ?? "bg-gray-100 text-gray-700 ring-gray-200"}`}
+          >
+            {latest.status}
+          </span>
+        ) : (
+          <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-gray-700 ring-1 ring-gray-200">
+            no runs
+          </span>
+        )}
+        <div className="text-sm">
+          <div className="font-semibold tracking-tight">
+            {latest ? `Daily ops — ${latest.run_date}` : "Daily ops"}
           </div>
-        </div>
-        <div className="w-full sm:w-auto sm:max-w-[260px] sm:flex-1">
-          <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-            Duration · last 14 days
+          <div className="text-[11px] text-[var(--text-muted)]">
+            {latest
+              ? `${latest.passed}/${latest.passed + latest.failed} passed · ${Math.round(Number(latest.total_seconds))}s · finished ${relTime(latest.finished_at)}`
+              : "Waiting for first run to land in Supabase."}
           </div>
-          <Sparkline
-            values={durations}
-            width={200}
-            height={40}
-            stroke="#64748b"
-            responsive
-          />
         </div>
       </div>
 
