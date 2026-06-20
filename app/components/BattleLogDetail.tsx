@@ -758,23 +758,48 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
   );
 }
 
-function PostStatsRow({ stats }: { stats: PostStats }) {
-  const items: { icon: IconKey; n: number; title: string }[] = [];
-  if (stats.drew > 0) items.push({ icon: "hand", n: stats.drew, title: "Cards drawn" });
-  if (stats.damage > 0) items.push({ icon: "impact", n: stats.damage, title: "Damage dealt" });
-  if (stats.ko > 0) items.push({ icon: "skull", n: stats.ko, title: "Knock-outs" });
-  if (stats.prizes > 0) items.push({ icon: "trophy", n: stats.prizes, title: "Prizes taken" });
+function StatChip({
+  n,
+  label,
+  chipCls = "",
+  chipStyle,
+  numCls = "",
+  lblCls = "",
+}: {
+  n: number;
+  label: string;
+  chipCls?: string;
+  chipStyle?: CSSProperties;
+  numCls?: string;
+  lblCls?: string;
+}) {
   return (
-    <div className="mt-2 flex items-center gap-4 text-[11px] text-text-muted">
-      {items.map(({ icon, n, title }) => {
-        const Cmp = ICONS[icon];
-        return (
-          <span key={icon} className="flex items-center gap-1 tabular-nums" title={title}>
-            <Cmp className="w-3 h-3" />
-            {n}
-          </span>
-        );
-      })}
+    <div
+      className={`flex flex-col items-center justify-center rounded px-2.5 py-1.5 min-w-[44px] ${chipCls}`}
+      style={chipStyle}
+    >
+      <span className={`text-base font-black tabular-nums leading-none ${numCls}`}>{n}</span>
+      <span className={`text-[9px] font-bold tracking-widest uppercase mt-0.5 ${lblCls}`}>{label}</span>
+    </div>
+  );
+}
+
+function PostStatsRow({ stats }: { stats: PostStats }) {
+  if (stats.drew + stats.damage + stats.ko + stats.prizes === 0) return null;
+  return (
+    <div className="mt-2.5 flex items-stretch gap-1.5">
+      {stats.drew > 0 && (
+        <StatChip n={stats.drew} label="CARDS" chipCls="bg-[var(--surface)]" numCls="text-text-secondary" lblCls="text-text-muted" />
+      )}
+      {stats.damage > 0 && (
+        <StatChip n={stats.damage} label="DMG" chipCls="bg-accent/[0.08]" numCls="text-accent" lblCls="text-accent/60" />
+      )}
+      {stats.ko > 0 && (
+        <StatChip n={stats.ko} label="KO" chipCls="bg-accent" numCls="text-white" lblCls="text-white/70" />
+      )}
+      {stats.prizes > 0 && (
+        <StatChip n={stats.prizes} label="PRIZE" chipStyle={{ background: WIN_GRADIENT }} numCls="text-white" lblCls="text-white/70" />
+      )}
     </div>
   );
 }
@@ -832,21 +857,107 @@ function groupSetupActions(
   return order.map((k) => byKey.get(k)!);
 }
 
+type ActionCategory = "featured-ko" | "featured-prize" | "attack" | "dim" | "normal";
+
+function categoryFor(type: string): ActionCategory {
+  switch (type) {
+    case "knock_out":
+    case "game_end":
+      return "featured-ko";
+    case "prize_taken":
+      return "featured-prize";
+    case "attack":
+    case "damage_dealt":
+    case "damage_counter_placed":
+      return "attack";
+    case "coin_flip":
+    case "coin_toss_won":
+    case "chose_first":
+    case "mulligan":
+    case "mulligan_total":
+      return "dim";
+    default:
+      return "normal";
+  }
+}
+
 function ActionList({ actions }: { actions: ApiAction[] }) {
   return (
-    <ul className="flex flex-col gap-1.5">
+    <ul className="flex flex-col gap-1">
       {actions.map((a) => {
         const label = labelFor(a);
         if (!label) return null;
+        const cat = categoryFor(a.action_type);
+
+        if (cat === "featured-ko") {
+          return (
+            <li
+              key={a.id}
+              className="flex items-center gap-2 -mx-2 rounded px-2 py-1.5 bg-accent/[0.08] border-l-[3px] border-accent"
+            >
+              <span className="text-accent shrink-0">
+                <Icon type={a.action_type} className="w-4 h-4" />
+              </span>
+              <span className="flex-1 min-w-0 text-sm font-semibold text-accent break-words leading-snug">
+                {label}
+              </span>
+            </li>
+          );
+        }
+
+        if (cat === "featured-prize") {
+          return (
+            <li
+              key={a.id}
+              className="flex items-center gap-2 -mx-2 rounded px-2 py-1.5 bg-[#F2A20C]/[0.08] border-l-[3px] border-[#F2A20C]"
+            >
+              <span className="shrink-0" style={{ color: "#c98800" }}>
+                <Icon type={a.action_type} className="w-4 h-4" />
+              </span>
+              <span
+                className="flex-1 min-w-0 text-sm font-semibold break-words leading-snug"
+                style={{ color: "#a06b00" }}
+              >
+                {label}
+              </span>
+            </li>
+          );
+        }
+
+        if (cat === "attack") {
+          return (
+            <li key={a.id} className="flex items-start gap-2 text-sm leading-snug">
+              <span className="mt-0.5 text-accent shrink-0">
+                <Icon type={a.action_type} className="w-4 h-4" />
+              </span>
+              <span className="flex-1 min-w-0 font-medium text-text-primary break-words">
+                {label}
+              </span>
+            </li>
+          );
+        }
+
+        if (cat === "dim") {
+          return (
+            <li key={a.id} className="flex items-start gap-2 leading-snug">
+              <span className="mt-[3px] text-text-muted shrink-0">
+                <Icon type={a.action_type} className="w-3.5 h-3.5" />
+              </span>
+              <span className="flex-1 min-w-0 text-xs text-text-muted break-words">
+                {label}
+              </span>
+            </li>
+          );
+        }
+
         return (
-          <li
-            key={a.id}
-            className="flex items-start gap-2 text-sm text-text-secondary leading-snug"
-          >
-            <span className="mt-0.5 text-text-muted">
+          <li key={a.id} className="flex items-start gap-2 text-sm leading-snug">
+            <span className="mt-0.5 text-text-muted shrink-0">
               <Icon type={a.action_type} className="w-4 h-4" />
             </span>
-            <span className="flex-1 min-w-0 break-words">{label}</span>
+            <span className="flex-1 min-w-0 text-text-secondary break-words">
+              {label}
+            </span>
           </li>
         );
       })}
