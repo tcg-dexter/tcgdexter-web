@@ -802,7 +802,7 @@ function StatChip({
 }) {
   return (
     <div
-      className={`flex flex-col items-center justify-center rounded px-2.5 py-1.5 min-w-[44px] ${chipCls}`}
+      className={`flex flex-col items-center justify-center rounded-xl px-2.5 py-1.5 min-w-[44px] ${chipCls}`}
       style={chipStyle}
     >
       <span className={`text-base font-black tabular-nums leading-none ${numCls}`}>{n}</span>
