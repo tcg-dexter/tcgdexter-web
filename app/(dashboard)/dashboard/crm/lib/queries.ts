@@ -25,7 +25,81 @@ function tallyByUser(rows: Array<{ user_id: string | null }>): Map<string, numbe
   return out;
 }
 
+// Sync any auth.users whose created_at falls inside the campaign's window
+// into the campaign's email_sends. Completed campaigns are skipped — once
+// you mark a campaign complete, enrollment stops. The upsert relies on the
+// unique(campaign_id, recipient_user_id) constraint to ignore users that
+// are already enrolled, so this is safe to call on every page load.
+export async function syncCampaignRecipients(campaignId: string): Promise<void> {
+  const admin = createAdminClient();
+  const { data: campaign, error } = await admin
+    .from("email_campaigns")
+    .select(
+      "id, status, recipient_type, signup_window_start, signup_window_end",
+    )
+    .eq("id", campaignId)
+    .maybeSingle();
+  if (error) throw error;
+  if (
+    !campaign ||
+    campaign.status === "complete" ||
+    campaign.recipient_type !== "signup_window" ||
+    !campaign.signup_window_start ||
+    !campaign.signup_window_end
+  ) {
+    return;
+  }
+
+  // Inclusive day-window: signups recorded on the end date should match,
+  // so add one day to the upper bound when comparing UTC timestamps.
+  const startMs = new Date(campaign.signup_window_start + "T00:00:00Z").getTime();
+  const endMs =
+    new Date(campaign.signup_window_end + "T00:00:00Z").getTime() + 24 * 60 * 60 * 1000;
+
+  const authList = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  if (authList.error) throw authList.error;
+
+  const qualifyingIds = authList.data.users
+    .filter((u) => {
+      if (!u.created_at) return false;
+      const t = new Date(u.created_at).getTime();
+      return t >= startMs && t < endMs;
+    })
+    .map((u) => u.id);
+  if (qualifyingIds.length === 0) return;
+
+  const rows = qualifyingIds.map((user_id) => ({
+    campaign_id: campaignId,
+    recipient_user_id: user_id,
+  }));
+  const { error: upsertErr } = await admin
+    .from("email_sends")
+    .upsert(rows, {
+      onConflict: "campaign_id,recipient_user_id",
+      ignoreDuplicates: true,
+    });
+  if (upsertErr) throw upsertErr;
+}
+
+// Sync every active rule-based campaign. Cheaper than it sounds at our
+// scale (handful of active campaigns × handful of users), and lets the
+// CRM landing page show accurate counts the moment a new user signs up.
+export async function syncAllRuleBasedCampaigns(): Promise<void> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("email_campaigns")
+    .select("id")
+    .eq("recipient_type", "signup_window")
+    .neq("status", "complete");
+  if (error) throw error;
+  await Promise.all((data ?? []).map((c) => syncCampaignRecipients(c.id)));
+}
+
 export async function listContacts(): Promise<CrmContact[]> {
+  // Sync first so the campaign chips below reflect any auto-enrollments
+  // for rule-based campaigns. This is a no-op for manual campaigns.
+  await syncAllRuleBasedCampaigns();
+
   const admin = createAdminClient();
 
   // Sends are pulled with the joined campaign so we can filter to non-complete
@@ -121,7 +195,9 @@ export async function listCampaigns(): Promise<CrmCampaign[]> {
   const [campRes, sendsRes] = await Promise.all([
     admin
       .from("email_campaigns")
-      .select("id, name, subject, body, status, created_at, completed_at, created_by")
+      .select(
+        "id, name, subject, body, status, created_at, completed_at, created_by, recipient_type, signup_window_start, signup_window_end",
+      )
       .order("created_at", { ascending: false }),
     admin.from("email_sends").select("campaign_id, sent_at"),
   ]);
@@ -147,10 +223,16 @@ export async function listCampaigns(): Promise<CrmCampaign[]> {
 }
 
 export async function getCampaign(id: string): Promise<CrmCampaign | null> {
+  // Opportunistic sync — pulls in any users who qualified for this
+  // rule-based campaign since the last page view. No-op for manual.
+  await syncCampaignRecipients(id);
+
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("email_campaigns")
-    .select("id, name, subject, body, status, created_at, completed_at, created_by")
+    .select(
+      "id, name, subject, body, status, created_at, completed_at, created_by, recipient_type, signup_window_start, signup_window_end",
+    )
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;

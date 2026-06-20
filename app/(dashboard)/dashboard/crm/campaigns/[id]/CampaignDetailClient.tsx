@@ -7,6 +7,7 @@ import type {
   CampaignStatus,
   CrmCampaign,
   CrmCampaignRecipient,
+  RecipientType,
 } from "../../lib/types";
 
 function nameOf(r: CrmCampaignRecipient): string {
@@ -46,6 +47,11 @@ export default function CampaignDetailClient({
   const [name, setName] = useState(campaign.name);
   const [subject, setSubject] = useState(campaign.subject);
   const [body, setBody] = useState(campaign.body);
+  const [recipientType, setRecipientType] = useState<RecipientType>(
+    campaign.recipient_type,
+  );
+  const [windowStart, setWindowStart] = useState(campaign.signup_window_start ?? "");
+  const [windowEnd, setWindowEnd] = useState(campaign.signup_window_end ?? "");
   const [savingMeta, setSavingMeta] = useState(false);
   const [bulkPending, setBulkPending] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -59,8 +65,17 @@ export default function CampaignDetailClient({
   const totalCount = recipients.length;
   const allSent = totalCount > 0 && sentCount === totalCount;
 
+  const windowInvalid =
+    recipientType === "signup_window" &&
+    (!windowStart || !windowEnd || windowEnd < windowStart);
   const dirtyMeta =
-    name !== campaign.name || subject !== campaign.subject || body !== campaign.body;
+    name !== campaign.name ||
+    subject !== campaign.subject ||
+    body !== campaign.body ||
+    recipientType !== campaign.recipient_type ||
+    (recipientType === "signup_window" &&
+      (windowStart !== (campaign.signup_window_start ?? "") ||
+        windowEnd !== (campaign.signup_window_end ?? "")));
 
   async function patchCampaign(patch: Record<string, unknown>) {
     setError(null);
@@ -76,10 +91,37 @@ export default function CampaignDetailClient({
   }
 
   async function saveMeta() {
+    if (windowInvalid) return;
     setSavingMeta(true);
     try {
-      await patchCampaign({ name, subject, body });
-      setCampaign((c) => ({ ...c, name, subject, body }));
+      const patch: Record<string, unknown> = {
+        name,
+        subject,
+        body,
+        recipient_type: recipientType,
+      };
+      if (recipientType === "signup_window") {
+        patch.signup_window_start = windowStart;
+        patch.signup_window_end = windowEnd;
+      } else {
+        patch.signup_window_start = null;
+        patch.signup_window_end = null;
+      }
+      await patchCampaign(patch);
+      setCampaign((c) => ({
+        ...c,
+        name,
+        subject,
+        body,
+        recipient_type: recipientType,
+        signup_window_start:
+          recipientType === "signup_window" ? windowStart : null,
+        signup_window_end:
+          recipientType === "signup_window" ? windowEnd : null,
+      }));
+      // A rule change can pull in new recipients on the server — refresh
+      // the page-level data so the recipient table reflects the new state.
+      router.refresh();
     } catch (e) {
       setError(String(e));
     } finally {
@@ -273,22 +315,101 @@ export default function CampaignDetailClient({
               className="rounded-md border border-black/10 bg-white px-2.5 py-1.5 text-xs font-mono outline-none focus:border-black/30"
             />
           </label>
+
+          {/* Recipient rule. Editing the rule re-syncs on the server: the
+              PATCH handler calls syncCampaignRecipients() after the update,
+              and router.refresh() below pulls the new recipient set. */}
+          <fieldset className="flex flex-col gap-2 rounded-xl border border-black/8 bg-white/60 p-3">
+            <legend className="px-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              Recipients
+            </legend>
+            <div className="flex flex-col gap-1.5">
+              <label className="flex items-center gap-2 text-xs">
+                <input
+                  type="radio"
+                  name="recipient_type"
+                  value="manual"
+                  checked={recipientType === "manual"}
+                  onChange={() => setRecipientType("manual")}
+                />
+                <span className="font-medium">Manual</span>
+                <span className="text-[11px] text-[var(--text-muted)]">
+                  Pick recipients yourself from the contacts dashboard.
+                </span>
+              </label>
+              <label className="flex items-center gap-2 text-xs">
+                <input
+                  type="radio"
+                  name="recipient_type"
+                  value="signup_window"
+                  checked={recipientType === "signup_window"}
+                  onChange={() => setRecipientType("signup_window")}
+                />
+                <span className="font-medium">Signup window</span>
+                <span className="text-[11px] text-[var(--text-muted)]">
+                  Auto-enroll every user who signs up in this date range. New
+                  signups keep getting added until the campaign is marked
+                  complete.
+                </span>
+              </label>
+            </div>
+            {recipientType === "signup_window" ? (
+              <div className="flex flex-wrap items-end gap-3 pt-1">
+                <label className="flex flex-col gap-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                    From
+                  </span>
+                  <input
+                    type="date"
+                    value={windowStart}
+                    onChange={(e) => setWindowStart(e.target.value)}
+                    className="rounded-md border border-black/10 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-black/30"
+                  />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                    To
+                  </span>
+                  <input
+                    type="date"
+                    value={windowEnd}
+                    onChange={(e) => setWindowEnd(e.target.value)}
+                    className="rounded-md border border-black/10 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-black/30"
+                  />
+                </label>
+                <span className="text-[11px] text-[var(--text-muted)]">
+                  Inclusive — UTC days.
+                </span>
+                {windowInvalid ? (
+                  <span className="basis-full text-[11px] text-[var(--accent)]">
+                    End date must be on or after the start date.
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+          </fieldset>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            disabled={!dirtyMeta || savingMeta}
+            disabled={!dirtyMeta || savingMeta || windowInvalid}
             onClick={saveMeta}
             className="rounded-md bg-black px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
           >
             {savingMeta ? "Saving…" : "Save changes"}
           </button>
-          <Link
-            href="/dashboard/crm"
-            className="text-xs text-[var(--text-muted)] hover:underline"
-          >
-            Add more recipients from Contacts →
-          </Link>
+          {campaign.recipient_type === "manual" ? (
+            <Link
+              href="/dashboard/crm"
+              className="text-xs text-[var(--text-muted)] hover:underline"
+            >
+              Add more recipients from Contacts →
+            </Link>
+          ) : (
+            <span className="text-xs text-[var(--text-muted)]">
+              Recipients are managed by the rule above.
+            </span>
+          )}
         </div>
       </section>
 
@@ -314,11 +435,17 @@ export default function CampaignDetailClient({
         <div className="overflow-x-auto rounded-xl border border-black/8 bg-white shadow-sm">
           {recipients.length === 0 ? (
             <div className="p-6 text-center text-xs text-[var(--text-muted)]">
-              No recipients yet.{" "}
-              <Link href="/dashboard/crm" className="underline">
-                Add some from Contacts
-              </Link>
-              .
+              {campaign.recipient_type === "manual" ? (
+                <>
+                  No recipients yet.{" "}
+                  <Link href="/dashboard/crm" className="underline">
+                    Add some from Contacts
+                  </Link>
+                  .
+                </>
+              ) : (
+                <>No signups have qualified for this window yet.</>
+              )}
             </div>
           ) : (
             <table className="min-w-full text-xs">
@@ -385,13 +512,15 @@ export default function CampaignDetailClient({
                       </button>
                     </td>
                     <td className="px-2 py-2 align-top text-right">
-                      <button
-                        type="button"
-                        onClick={() => removeRecipient(r.send_id)}
-                        className="text-[11px] text-[var(--text-muted)] hover:text-[var(--accent)] hover:underline"
-                      >
-                        Remove
-                      </button>
+                      {campaign.recipient_type === "manual" ? (
+                        <button
+                          type="button"
+                          onClick={() => removeRecipient(r.send_id)}
+                          className="text-[11px] text-[var(--text-muted)] hover:text-[var(--accent)] hover:underline"
+                        >
+                          Remove
+                        </button>
+                      ) : null}
                     </td>
                   </tr>
                 ))}
