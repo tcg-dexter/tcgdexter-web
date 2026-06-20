@@ -35,45 +35,52 @@ function Section({
   );
 }
 
+/**
+ * Quick-link clusters for Vercel, Supabase, and GitHub. Rendered horizontally
+ * as three side-by-side columns on sm+ widths; collapses to a single stacked
+ * column on mobile so the rows stay tappable.
+ */
 export default function QuickLinks() {
   return (
-    <aside className="flex flex-col gap-5 rounded-2xl border border-black/8 bg-gradient-to-b from-white to-[var(--surface)]/40 p-4 shadow-[0_1px_2px_rgba(15,15,15,0.04),0_4px_18px_-12px_rgba(15,15,15,0.18)]">
-      <Section
-        title="Vercel"
-        items={[
-          { label: "Project", href: links.vercel.project() },
-          { label: "Deployments", href: links.vercel.deployments() },
-          { label: "Analytics", href: links.vercel.analytics() },
-          { label: "Logs", href: links.vercel.logs() },
-        ]}
-      />
-      <Section
-        title="Supabase"
-        items={[
-          { label: "Project", href: links.supabase.project },
-          { label: "Table editor", href: links.supabase.tableEditor },
-          { label: "ops_runs", href: links.supabase.table("ops_runs"), mono: true },
-          { label: "profiles", href: links.supabase.table("profiles"), mono: true },
-          { label: "SQL editor", href: links.supabase.sql },
-          { label: "Auth users", href: links.supabase.auth },
-          { label: "Logs", href: links.supabase.logs },
-        ]}
-      />
-      <Section
-        title="GitHub"
-        items={[
-          { label: "Organization", href: links.github.org },
-          { label: "All open issues", href: links.github.issues },
-          { label: "All open PRs", href: links.github.prs },
-          { label: "Project · Development", href: links.github.projectDev },
-          { label: "Project · Roadmap", href: links.github.projectRoadmap },
-          ...PINNED_REPOS.map((r) => ({
-            label: r,
-            href: links.github.repo(r),
-            mono: true,
-          })),
-        ]}
-      />
-    </aside>
+    <div className="rounded-2xl border border-black/8 bg-gradient-to-b from-white to-[var(--surface)]/40 p-4 shadow-[0_1px_2px_rgba(15,15,15,0.04),0_4px_18px_-12px_rgba(15,15,15,0.18)] sm:p-5">
+      <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-3">
+        <Section
+          title="Vercel"
+          items={[
+            { label: "Project", href: links.vercel.project() },
+            { label: "Deployments", href: links.vercel.deployments() },
+            { label: "Analytics", href: links.vercel.analytics() },
+            { label: "Logs", href: links.vercel.logs() },
+          ]}
+        />
+        <Section
+          title="Supabase"
+          items={[
+            { label: "Project", href: links.supabase.project },
+            { label: "Table editor", href: links.supabase.tableEditor },
+            { label: "ops_runs", href: links.supabase.table("ops_runs"), mono: true },
+            { label: "profiles", href: links.supabase.table("profiles"), mono: true },
+            { label: "SQL editor", href: links.supabase.sql },
+            { label: "Auth users", href: links.supabase.auth },
+            { label: "Logs", href: links.supabase.logs },
+          ]}
+        />
+        <Section
+          title="GitHub"
+          items={[
+            { label: "Organization", href: links.github.org },
+            { label: "All open issues", href: links.github.issues },
+            { label: "All open PRs", href: links.github.prs },
+            { label: "Project · Development", href: links.github.projectDev },
+            { label: "Project · Roadmap", href: links.github.projectRoadmap },
+            ...PINNED_REPOS.map((r) => ({
+              label: r,
+              href: links.github.repo(r),
+              mono: true,
+            })),
+          ]}
+        />
+      </div>
+    </div>
   );
 }

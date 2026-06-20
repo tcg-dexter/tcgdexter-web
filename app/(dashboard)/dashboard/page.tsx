@@ -75,58 +75,60 @@ export default async function DashboardPage() {
         </div>
       </Card>
 
-      {/* Main grid: content on left, quick-links rail on right (desktop) */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_240px]">
-        <div className="flex flex-col gap-6">
-          <section>
-            <SectionHeader
-              eyebrow="Operations"
-              title="Daily ops pipeline"
-              meta="6am cron · writes to ops_runs"
-            />
-            <OpsCard data={ops} />
-          </section>
+      <div className="flex flex-col gap-6">
+        <section>
+          <SectionHeader
+            eyebrow="Operations"
+            title="Daily ops pipeline"
+            meta="6am cron · writes to ops_runs"
+          />
+          <OpsCard data={ops} />
+        </section>
 
-          <section>
-            <SectionHeader
-              eyebrow="Deploys"
-              title="Recent builds"
-              meta="Vercel · last 8"
-            />
-            <DeploysCard data={deploys} />
-          </section>
-
-          <section>
-            <SectionHeader
-              eyebrow="Activity"
-              title="Real-time pulse"
-              meta="Signups · saved decks · matches"
-            />
-            <ActivityFeed data={activity} />
-          </section>
-
-          <section>
-            <SectionHeader
-              eyebrow="Product"
-              title="Users, decks & traffic"
-              meta="Supabase + Vercel Analytics"
-            />
-            <ProductCard data={product} />
-          </section>
-
-          <section>
-            <SectionHeader
-              eyebrow="Development"
-              title="Engineering throughput"
-              meta="GitHub · tcg-dexter org"
-            />
-            <DevCard data={dev} />
-          </section>
-        </div>
-
-        <div className="lg:sticky lg:top-6 lg:self-start">
+        <section>
+          <SectionHeader
+            eyebrow="Resources"
+            title="Quick links"
+            meta="Vercel · Supabase · GitHub"
+          />
           <QuickLinks />
-        </div>
+        </section>
+
+        <section>
+          <SectionHeader
+            eyebrow="Deploys"
+            title="Recent builds"
+            meta="Vercel · last 8"
+          />
+          <DeploysCard data={deploys} />
+        </section>
+
+        <section>
+          <SectionHeader
+            eyebrow="Activity"
+            title="Real-time pulse"
+            meta="Signups · saved decks · matches"
+          />
+          <ActivityFeed data={activity} />
+        </section>
+
+        <section>
+          <SectionHeader
+            eyebrow="Product"
+            title="Users, decks & traffic"
+            meta="Supabase + Vercel Analytics"
+          />
+          <ProductCard data={product} />
+        </section>
+
+        <section>
+          <SectionHeader
+            eyebrow="Development"
+            title="Engineering throughput"
+            meta="GitHub · tcg-dexter org"
+          />
+          <DevCard data={dev} />
+        </section>
       </div>
     </div>
   );
