@@ -675,26 +675,41 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
   const activeState = { player: null as string | null, opponent: null as string | null };
   function applyActives(actions: ApiAction[]) {
     for (const a of actions) {
-      if (a.action_type === "play_to_active") {
+      if (a.action_type === "knock_out") {
+        // Null out whichever side lost their active so the next
+        // switch_active / play_to_active can be attributed correctly even
+        // when its actor field points to the attacking side's turn.
+        const pokemon = p<string>(a, "pokemon");
+        if (pokemon) {
+          const lc = pokemon.toLowerCase();
+          if (activeState.player?.toLowerCase() === lc) activeState.player = null;
+          else if (activeState.opponent?.toLowerCase() === lc) activeState.opponent = null;
+        }
+      } else if (a.action_type === "play_to_active") {
         const card = p<string>(a, "card");
         if (card) {
           if (a.actor === "player") activeState.player = card;
           else if (a.actor === "opponent") activeState.opponent = card;
+          // Fallback: after a KO one side is null — assign to whichever is empty.
+          else if (activeState.player === null) activeState.player = card;
+          else if (activeState.opponent === null) activeState.opponent = card;
         }
       } else if (a.action_type === "switch_active") {
         const pokemon = p<string>(a, "pokemon");
         if (pokemon) {
           if (a.actor === "player") activeState.player = pokemon;
           else if (a.actor === "opponent") activeState.opponent = pokemon;
+          // Fallback: same null-side heuristic as play_to_active.
+          else if (activeState.player === null) activeState.player = pokemon;
+          else if (activeState.opponent === null) activeState.opponent = pokemon;
         }
       } else if (a.action_type === "evolve") {
         const from = p<string>(a, "from");
         const to = p<string>(a, "to");
         if (from && to) {
-          if (a.actor === "player" && activeState.player?.toLowerCase() === from.toLowerCase())
-            activeState.player = to;
-          else if (a.actor === "opponent" && activeState.opponent?.toLowerCase() === from.toLowerCase())
-            activeState.opponent = to;
+          const lc = from.toLowerCase();
+          if (activeState.player?.toLowerCase() === lc) activeState.player = to;
+          else if (activeState.opponent?.toLowerCase() === lc) activeState.opponent = to;
         }
       }
     }
