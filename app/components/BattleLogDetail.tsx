@@ -785,20 +785,17 @@ function StatChip({
 }
 
 function PostStatsRow({ stats }: { stats: PostStats }) {
-  if (stats.drew + stats.damage + stats.ko + stats.prizes === 0) return null;
+  if (stats.damage + stats.ko + stats.prizes === 0) return null;
   return (
     <div className="mt-2.5 flex items-stretch gap-1.5">
-      {stats.drew > 0 && (
-        <StatChip n={stats.drew} label="CARDS" chipCls="bg-[var(--surface)]" numCls="text-text-secondary" lblCls="text-text-muted" />
-      )}
       {stats.damage > 0 && (
-        <StatChip n={stats.damage} label="DMG" chipCls="bg-accent/[0.08]" numCls="text-accent" lblCls="text-accent/60" />
+        <StatChip n={stats.damage} label="DMG" chipCls="bg-transparent border border-black flex-1" numCls="text-text-primary" lblCls="text-text-muted" />
       )}
       {stats.ko > 0 && (
-        <StatChip n={stats.ko} label="KO" chipCls="bg-accent" numCls="text-white" lblCls="text-white/70" />
+        <StatChip n={stats.ko} label="KO" chipCls="bg-[#1a1a1a] flex-1" numCls="text-white" lblCls="text-white/70" />
       )}
       {stats.prizes > 0 && (
-        <StatChip n={stats.prizes} label="PRIZE" chipStyle={{ background: WIN_GRADIENT }} numCls="text-white" lblCls="text-white/70" />
+        <StatChip n={stats.prizes} label="PRIZE" chipCls="flex-1" chipStyle={{ background: WIN_GRADIENT }} numCls="text-white" lblCls="text-white/70" />
       )}
     </div>
   );
