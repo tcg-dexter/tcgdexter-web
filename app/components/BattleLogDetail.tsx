@@ -991,17 +991,10 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
           return (
             <li
               key={a.id}
-              className="flex items-center gap-2 -mx-2 rounded px-2 py-1.5 bg-[#F2A20C]/[0.08] border-l-[3px] border-[#F2A20C]"
+              className="-mx-2 rounded-xl px-3 py-1.5 text-xs font-bold text-white text-center"
+              style={{ background: WIN_GRADIENT }}
             >
-              <span className="shrink-0" style={{ color: "#c98800" }}>
-                <Icon type={a.action_type} className="w-4 h-4" />
-              </span>
-              <span
-                className="flex-1 min-w-0 text-sm font-semibold break-words leading-snug"
-                style={{ color: "#a06b00" }}
-              >
-                {label}
-              </span>
+              {label}
             </li>
           );
         }
