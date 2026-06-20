@@ -55,3 +55,19 @@ export async function PATCH(
 
   return NextResponse.json({ ok: true });
 }
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: { id: string } },
+) {
+  const auth = await assertDashboardAdmin();
+  if (!auth.ok) return NextResponse.json({ error: "forbidden" }, { status: auth.status });
+
+  // email_sends rows cascade via the FK ON DELETE CASCADE in the migration,
+  // so the per-recipient history is removed alongside the campaign.
+  const admin = createAdminClient();
+  const { error } = await admin.from("email_campaigns").delete().eq("id", params.id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ ok: true });
+}

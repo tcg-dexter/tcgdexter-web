@@ -48,6 +48,7 @@ export default function CampaignDetailClient({
   const [body, setBody] = useState(campaign.body);
   const [savingMeta, setSavingMeta] = useState(false);
   const [bulkPending, setBulkPending] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -154,6 +155,36 @@ export default function CampaignDetailClient({
     }
   }
 
+  async function deleteCampaign() {
+    const recipientWord = totalCount === 1 ? "recipient" : "recipients";
+    const tail =
+      totalCount > 0
+        ? ` and remove all ${totalCount} ${recipientWord}.`
+        : ".";
+    if (
+      !window.confirm(
+        `Delete the campaign "${campaign.name}"? This will permanently delete the campaign${tail} This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/crm/campaigns/${campaign.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error ?? `HTTP ${res.status}`);
+      }
+      router.push("/dashboard/crm/campaigns");
+    } catch (e) {
+      setError(String(e));
+      setDeleting(false);
+    }
+  }
+
   async function removeRecipient(sendId: string) {
     const prev = recipients;
     setRecipients((rs) => rs.filter((r) => r.send_id !== sendId));
@@ -168,7 +199,7 @@ export default function CampaignDetailClient({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-baseline gap-3">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <Link
           href="/dashboard/crm/campaigns"
           className="text-[11px] text-[var(--text-muted)] hover:underline"
@@ -197,6 +228,14 @@ export default function CampaignDetailClient({
             Reopen
           </button>
         ) : null}
+        <button
+          type="button"
+          disabled={deleting}
+          onClick={deleteCampaign}
+          className="ml-auto text-[11px] text-[var(--text-muted)] hover:text-[var(--accent)] hover:underline disabled:opacity-50"
+        >
+          {deleting ? "Deleting…" : "Delete campaign"}
+        </button>
       </div>
 
       <section className="flex flex-col gap-3 rounded-xl border border-black/8 bg-white p-4 shadow-sm">
