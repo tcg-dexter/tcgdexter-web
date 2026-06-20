@@ -9,7 +9,7 @@ function Section({
 }) {
   return (
     <div>
-      <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
         {title}
       </div>
       <ul className="space-y-0.5">
@@ -19,7 +19,7 @@ function Section({
               href={it.href}
               target="_blank"
               rel="noreferrer"
-              className={`group flex items-center justify-between rounded px-2 py-1 text-xs hover:bg-[var(--surface)] ${
+              className={`group flex items-center justify-between rounded-md px-2 py-1 text-xs text-[var(--text-secondary)] transition hover:bg-[var(--surface)] hover:text-[var(--text-primary)] ${
                 it.mono ? "font-mono" : ""
               }`}
             >
@@ -37,7 +37,7 @@ function Section({
 
 export default function QuickLinks() {
   return (
-    <aside className="flex flex-col gap-5 rounded-xl border border-black/8 bg-white p-4 shadow-sm">
+    <aside className="flex flex-col gap-5 rounded-2xl border border-black/8 bg-gradient-to-b from-white to-[var(--surface)]/40 p-4 shadow-[0_1px_2px_rgba(15,15,15,0.04),0_4px_18px_-12px_rgba(15,15,15,0.18)]">
       <Section
         title="Vercel"
         items={[

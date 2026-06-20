@@ -3,7 +3,7 @@ import type { OpsData } from "../lib/ops";
 import type { ProductData } from "../lib/product";
 import type { DeploysData } from "../lib/vercel-deploys";
 import { links } from "../lib/links";
-import { Sparkline, relTime } from "./Card";
+import { Delta, Sparkline, relTime } from "./Card";
 
 type Maybe<T> = T | { error: string };
 
@@ -27,40 +27,43 @@ function Tile({
   value,
   hint,
   accent,
-  children,
+  delta,
+  spark,
 }: {
   href: string;
   label: string;
   value: React.ReactNode;
   hint?: React.ReactNode;
   accent?: React.ReactNode;
-  children?: React.ReactNode;
+  delta?: React.ReactNode;
+  spark?: React.ReactNode;
 }) {
   return (
     <a
       href={href}
       target={href.startsWith("http") ? "_blank" : undefined}
       rel="noreferrer"
-      className="group relative flex flex-col justify-between rounded-xl border border-black/8 bg-white p-2.5 shadow-sm transition hover:border-black/25 hover:shadow sm:p-3"
+      className="group relative flex flex-col gap-2 overflow-hidden rounded-xl border border-black/8 bg-white/80 p-3 backdrop-blur-sm transition hover:border-black/25 hover:shadow-md sm:p-3.5"
     >
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
           {label}
         </span>
         {accent}
       </div>
-      <div className="mt-1.5 flex items-end justify-between gap-2">
+      <div className="flex items-end justify-between gap-2">
         <div className="min-w-0">
-          <div className="truncate text-lg font-semibold tabular-nums leading-none text-[var(--text-primary)] sm:text-xl">
+          <div className="truncate text-2xl font-semibold tracking-tight tabular-nums leading-none text-[var(--text-primary)] sm:text-[28px]">
             {value}
           </div>
-          {hint ? (
-            <div className="mt-1 truncate text-[11px] text-[var(--text-secondary)]">
-              {hint}
+          {hint || delta ? (
+            <div className="mt-1 flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)]">
+              {delta}
+              {hint ? <span className="truncate">{hint}</span> : null}
             </div>
           ) : null}
         </div>
-        {children}
+        {spark ? <div className="shrink-0 opacity-90">{spark}</div> : null}
       </div>
       <span className="pointer-events-none absolute right-2.5 top-2.5 text-[10px] text-[var(--text-muted)] opacity-0 transition group-hover:opacity-100">
         ↗
@@ -108,7 +111,12 @@ export default function VitalsStrip({
           </span>
         }
         hint={`${relTime(l.finished_at)} · ${Math.round(Number(l.total_seconds))}s`}
-        accent={<span className={`h-2 w-2 rounded-full ${tone}`} />}
+        accent={
+          <span className="relative flex h-2 w-2">
+            <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${tone} opacity-50`} />
+            <span className={`relative inline-flex h-2 w-2 rounded-full ${tone}`} />
+          </span>
+        }
       />
     );
   })();
@@ -154,7 +162,12 @@ export default function VitalsStrip({
           </span>
         }
         hint={`${branch} · ${relTime(new Date(latest.createdAt).toISOString())}`}
-        accent={<span className={`h-2 w-2 rounded-full ${tone}`} />}
+        accent={
+          <span className="relative flex h-2 w-2">
+            <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${tone} opacity-50`} />
+            <span className={`relative inline-flex h-2 w-2 rounded-full ${tone}`} />
+          </span>
+        }
       />
     );
   })();
@@ -184,9 +197,7 @@ export default function VitalsStrip({
   // --- Open PRs
   const prsTile = (() => {
     if ("error" in dev) {
-      return (
-        <Tile href={links.github.prs} label="Open PRs" value="—" hint="—" />
-      );
+      return <Tile href={links.github.prs} label="Open PRs" value="—" hint="—" />;
     }
     return (
       <Tile
@@ -208,15 +219,17 @@ export default function VitalsStrip({
       return <Tile href={links.supabase.auth} label="Signups · 7d" value="—" />;
     }
     const series = product.users.signups30d.slice(-7).map((p) => p.count);
+    const prev7 = product.users.signups30d.slice(-14, -7).reduce((a, b) => a + b.count, 0);
+    const deltaVal = product.users.newLast7d - prev7;
     return (
       <Tile
         href={links.supabase.auth}
         label="Signups · 7d"
         value={product.users.newLast7d}
         hint={`${product.users.total} total`}
-      >
-        <Sparkline values={series} width={64} height={24} />
-      </Tile>
+        delta={<Delta value={deltaVal} />}
+        spark={<Sparkline values={series} width={64} height={28} />}
+      />
     );
   })();
 

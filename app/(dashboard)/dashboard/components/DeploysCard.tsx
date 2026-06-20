@@ -14,11 +14,10 @@ const STATE_TONE: Record<string, string> = {
 };
 
 function StatePill({ state }: { state: string }) {
-  const tone =
-    STATE_TONE[state] ?? "bg-gray-100 text-gray-600 ring-gray-200";
+  const tone = STATE_TONE[state] ?? "bg-gray-100 text-gray-600 ring-gray-200";
   return (
     <span
-      className={`rounded-full px-1.5 py-[1px] text-[10px] font-semibold uppercase tracking-wider ring-1 ${tone}`}
+      className={`shrink-0 rounded-full px-1.5 py-[1px] text-[10px] font-semibold uppercase tracking-wider ring-1 ${tone}`}
     >
       {state.toLowerCase()}
     </span>
@@ -28,7 +27,7 @@ function StatePill({ state }: { state: string }) {
 function DeployRow({ d }: { d: Deploy }) {
   const isProd = d.target === "production";
   return (
-    <li className="py-1.5">
+    <li className="group rounded-lg px-2 py-2 transition hover:bg-[var(--surface)]/50">
       <div className="flex items-center gap-2 text-xs">
         <StatePill state={d.state} />
         {isProd ? (
@@ -40,7 +39,7 @@ function DeployRow({ d }: { d: Deploy }) {
           href={d.inspectorUrl}
           target="_blank"
           rel="noreferrer"
-          className="min-w-0 flex-1 truncate text-[var(--text-primary)] hover:underline"
+          className="min-w-0 flex-1 truncate font-medium text-[var(--text-primary)] hover:underline"
           title={d.commitMessage ?? d.url}
         >
           {d.commitMessage ?? d.url}
@@ -49,15 +48,17 @@ function DeployRow({ d }: { d: Deploy }) {
           {relTime(new Date(d.createdAt).toISOString())}
         </span>
       </div>
-      <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 pl-1 text-[11px] text-[var(--text-muted)]">
+      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 pl-1 text-[11px] text-[var(--text-muted)]">
         {d.durationSec != null ? (
-          <>
-            <span className="tabular-nums">{d.durationSec}s</span>
-            <span>·</span>
-          </>
+          <span className="tabular-nums">{d.durationSec}s</span>
         ) : null}
         {d.branch ? (
-          <span className="font-mono truncate max-w-[12ch]">{d.branch}</span>
+          <>
+            {d.durationSec != null ? <span>·</span> : null}
+            <span className="font-mono rounded bg-[var(--surface)] px-1 py-[1px] text-[10px] text-[var(--text-secondary)] max-w-[14ch] truncate">
+              {d.branch}
+            </span>
+          </>
         ) : null}
         {d.commitSha && d.commitUrl ? (
           <>
@@ -85,16 +86,16 @@ function DeployRow({ d }: { d: Deploy }) {
 
 export default function DeploysCard({ data }: Props) {
   return (
-    <Card>
+    <Card variant="elevated">
       <div className="mb-2 flex items-center justify-between">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
           Recent deploys
         </div>
         <a
           href={links.vercel.deployments()}
           target="_blank"
           rel="noreferrer"
-          className="text-[11px] text-[var(--text-secondary)] hover:underline"
+          className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
         >
           all ↗
         </a>
@@ -106,7 +107,7 @@ export default function DeploysCard({ data }: Props) {
             No recent deployments returned.
           </div>
         ) : (
-          <ul className="divide-y divide-black/5">
+          <ul className="-mx-2 divide-y divide-black/5">
             {data.deploys.map((d) => (
               <DeployRow key={d.id} d={d} />
             ))}
