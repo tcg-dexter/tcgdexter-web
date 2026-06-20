@@ -695,7 +695,7 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
           <ThreadPost
             key={post.key}
             post={post}
-            isLast={!hasPrizes && i === gamePosts.length - 1}
+            isLast={hasPrizes || i === gamePosts.length - 1}
           />,
         ];
         if (hasPrizes) {
