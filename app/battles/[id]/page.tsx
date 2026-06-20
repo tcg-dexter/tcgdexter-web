@@ -5,6 +5,7 @@ import {
   primaryPokemonCard,
   cardImageUrlForName,
   cardTypesForName,
+  highestEvolutionForName,
 } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
 import BattleLogPage from "./BattleLogPage";
@@ -152,7 +153,16 @@ export default async function BattleRoute({
       }
     }
 
-    if (opponentAttackerName) opponentImageUrl = cardImageUrlForName(opponentAttackerName);
+    // Escalate to the line's headline Pokémon — battle-log inference
+    // lands on whatever attacker dealt the most damage, but the deck is
+    // usually built around the highest evolution of that line (e.g.
+    // Kadabra → Alakazam ex). cardImageUrlForName + cardTypesForName
+    // also escalate internally, but doing it here too keeps the name we
+    // pass downstream (banner header, social card) in sync.
+    if (opponentAttackerName) {
+      opponentAttackerName = highestEvolutionForName(opponentAttackerName);
+      opponentImageUrl = cardImageUrlForName(opponentAttackerName);
+    }
   }
 
   const opponentColor: string = typeColor(
