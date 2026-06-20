@@ -14,6 +14,16 @@ type ImageVariant = "small" | "large";
  * ~736x1024 hires — we map small→`_LG` and large→unsuffixed.
  */
 const SET_IMAGE_OVERRIDES: Record<string, { small: string; large: string }> = {
+  // Mega Evolution Generations — not indexed by pokemontcg.io
+  me1: {
+    small: "https://limitlesstcg.nyc3.digitaloceanspaces.com/tpci/MEG/MEG_{nnn}_R_EN_LG.png",
+    large: "https://limitlesstcg.nyc3.digitaloceanspaces.com/tpci/MEG/MEG_{nnn}_R_EN.png",
+  },
+  // Phantom Flames — not indexed by pokemontcg.io
+  me2: {
+    small: "https://limitlesstcg.nyc3.digitaloceanspaces.com/tpci/PFL/PFL_{nnn}_R_EN_LG.png",
+    large: "https://limitlesstcg.nyc3.digitaloceanspaces.com/tpci/PFL/PFL_{nnn}_R_EN.png",
+  },
   // Ascended Heroes — not yet indexed by pokemontcg.io
   me2pt5: {
     small: "https://limitlesstcg.nyc3.digitaloceanspaces.com/tpci/ASC/ASC_{nnn}_R_EN_LG.png",
