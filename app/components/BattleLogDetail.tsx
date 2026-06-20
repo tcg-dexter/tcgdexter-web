@@ -801,29 +801,13 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
 }
 
 function PrizeThreadPost({ count }: { count: number }) {
-  const TrophyIcon = ICONS.trophy;
   return (
-    <div className="flex gap-3 px-3 pt-3">
-      <div className="flex flex-col items-center">
-        <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-          style={{ background: WIN_GRADIENT }}
-        >
-          <TrophyIcon className="w-4 h-4 text-white" />
-        </div>
-      </div>
-      <div className="flex-1 min-w-0 pb-3">
-        <div className="flex items-end justify-between gap-2">
-          <span className="text-sm font-bold text-text-primary">
-            {count === 1 ? "Prize Taken" : "Prizes Taken"}
-          </span>
-          <span
-            className="shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold text-white tabular-nums"
-            style={{ background: WIN_GRADIENT }}
-          >
-            {count}
-          </span>
-        </div>
+    <div className="px-3 pt-2 pb-3">
+      <div
+        className="rounded-xl px-4 py-2.5 text-sm font-bold text-white text-center"
+        style={{ background: WIN_GRADIENT }}
+      >
+        {count} {count === 1 ? "Prize Taken" : "Prizes Taken"}
       </div>
     </div>
   );
