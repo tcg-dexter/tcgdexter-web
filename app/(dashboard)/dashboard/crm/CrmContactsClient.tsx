@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { SectionHeader } from "../components/Card";
 import type { CrmCampaign, CrmContact } from "./lib/types";
 
 type SortKey =
@@ -260,14 +261,11 @@ export default function CrmContactsClient({
 
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-          Users
-        </h2>
-        <span className="text-[11px] text-[var(--text-muted)]">
-          {filtered.length} of {contacts.length} · {activeView.hint}
-        </span>
-      </div>
+      <SectionHeader
+        eyebrow="Users"
+        title="Contact heartbeat"
+        meta={`${filtered.length} of ${contacts.length} · ${activeView.hint}`}
+      />
 
       <div className="flex flex-wrap items-center gap-1">
         {VIEWS.map((v) => {
@@ -306,7 +304,7 @@ export default function CrmContactsClient({
       </div>
 
       {selected.size > 0 ? (
-        <div className="sticky top-2 z-10 flex flex-wrap items-center gap-2 rounded-md border border-black/10 bg-white p-2 shadow-sm">
+        <div className="sticky top-2 z-10 flex flex-wrap items-center gap-2 rounded-xl border border-black/10 bg-white/95 p-2.5 shadow-[0_2px_8px_-2px_rgba(15,15,15,0.18)] backdrop-blur-sm">
           <span className="text-xs font-semibold">{selected.size} selected</span>
           <span className="text-[11px] text-[var(--text-muted)]">Add to campaign:</span>
           {campaignTargets.length === 0 ? (
@@ -352,7 +350,7 @@ export default function CrmContactsClient({
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-xl border border-black/8 bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-2xl border border-black/8 bg-gradient-to-b from-white to-[var(--surface)]/40 shadow-[0_1px_2px_rgba(15,15,15,0.04),0_4px_18px_-12px_rgba(15,15,15,0.18)]">
         <table className="min-w-full text-xs">
           <thead className="bg-[var(--surface)] text-[var(--text-secondary)]">
             <tr>

@@ -23,45 +23,49 @@ export default function OpsCard({ data }: Props) {
 
   return (
     <Card variant="elevated">
-      <div className="flex items-center gap-3">
-        {latest ? (
-          <span
-            className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ring-1 ${STATUS_TONE[latest.status] ?? "bg-gray-100 text-gray-700 ring-gray-200"}`}
-          >
-            {latest.status}
-          </span>
-        ) : (
-          <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-gray-700 ring-1 ring-gray-200">
-            no runs
-          </span>
-        )}
-        <div className="text-sm">
-          <div className="font-semibold tracking-tight">
-            {latest ? `Daily ops — ${latest.run_date}` : "Daily ops"}
-          </div>
-          <div className="text-[11px] text-[var(--text-muted)]">
-            {latest
-              ? `${latest.passed}/${latest.passed + latest.failed} passed · ${Math.round(Number(latest.total_seconds))}s · finished ${relTime(latest.finished_at)}`
-              : "Waiting for first run to land in Supabase."}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <div className="flex items-center gap-3">
+          {latest ? (
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ring-1 ${STATUS_TONE[latest.status] ?? "bg-gray-100 text-gray-700 ring-gray-200"}`}
+            >
+              {latest.status}
+            </span>
+          ) : (
+            <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-gray-700 ring-1 ring-gray-200">
+              no runs
+            </span>
+          )}
+          <div className="text-sm">
+            <div className="font-semibold tracking-tight">
+              {latest ? `Daily ops — ${latest.run_date}` : "Daily ops"}
+            </div>
+            <div className="text-[11px] text-[var(--text-muted)]">
+              {latest
+                ? `${latest.passed}/${latest.passed + latest.failed} passed · ${Math.round(Number(latest.total_seconds))}s · finished ${relTime(latest.finished_at)}`
+                : "Waiting for first run to land in Supabase."}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* 14-day status dots */}
-      {data.history.length > 0 && (
-        <div className="mt-4 flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
-          <span className="font-semibold uppercase tracking-[0.14em] text-[10px]">14d</span>
-          <div className="flex flex-wrap gap-1">
-            {data.history.map((h, i) => (
-              <span
-                key={`${h.run_date}-${i}`}
-                title={`${h.run_date} · ${h.status} · ${Math.round(Number(h.total_seconds))}s`}
-                className={`h-2.5 w-2.5 rounded-sm ring-1 ring-white/40 ${STATUS_DOT[h.status] ?? "bg-gray-300"}`}
-              />
-            ))}
+        {/* 14-day status dots — anchored to the right of the header on
+            desktop. When the row runs out of horizontal room, flex-wrap
+            drops the dots onto the next line so the layout stays clean. */}
+        {data.history.length > 0 && (
+          <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
+            <span className="font-semibold uppercase tracking-[0.14em] text-[10px]">14d</span>
+            <div className="flex flex-wrap gap-1">
+              {data.history.map((h, i) => (
+                <span
+                  key={`${h.run_date}-${i}`}
+                  title={`${h.run_date} · ${h.status} · ${Math.round(Number(h.total_seconds))}s`}
+                  className={`h-2.5 w-2.5 rounded-sm ring-1 ring-white/40 ${STATUS_DOT[h.status] ?? "bg-gray-300"}`}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {latest && (
         <div className="mt-5 rounded-xl border border-black/5 bg-[var(--surface)]/40 p-3 sm:p-4">
