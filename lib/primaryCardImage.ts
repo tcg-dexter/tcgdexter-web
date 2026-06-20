@@ -17,6 +17,7 @@ interface CardEntry {
   types?: string[];
   supertype?: string;
   regulation_mark?: string | null;
+  evolves_from?: string | null;
 }
 
 const CARD_DB = cardData as unknown as Record<string, CardEntry[]>;
@@ -89,23 +90,100 @@ export function cardImageUrlFor(
   return cardImageSmall(match.set_id, card.number);
 }
 
-/** Derive a card image URL from a Pokémon name alone (no set/number).
- *  Used when only the attacker name is known from a battle log. Picks the
- *  first DB entry for that name — may not be the most recent printing, but
- *  is acceptable for illustrative display. Returns null on no match. */
-export function cardImageUrlForName(name: string): string | null {
-  const entries = CARD_DB[name] ?? CARD_DB_LOWER.get(name.toLowerCase()) ?? [];
-  const entry = entries.find((e) => e.set_id) ?? null;
-  if (!entry) return null;
-  return cardImageSmall(entry.set_id, entry.number);
-}
-
 /** Standard-format regulation marks, oldest to newest. Higher rank = more
  *  recently printed. Cards without a regulation mark (pre-D, older sets)
  *  rank below all of them. */
 const REGULATION_RANK: Record<string, number> = {
   D: 1, E: 2, F: 3, G: 4, H: 5, I: 6, J: 7,
 };
+
+/** Highest regulation-mark rank across all printings of `name`. Used to
+ *  score competing forward-evolution candidates when escalating from a
+ *  lower-stage attacker to the line's headline Pokémon. */
+function maxRegRankForName(name: string): number {
+  const entries = CARD_DB[name] ?? CARD_DB_LOWER.get(name.toLowerCase()) ?? [];
+  let max = 0;
+  for (const e of entries) {
+    const r = REGULATION_RANK[e.regulation_mark ?? ""] ?? 0;
+    if (r > max) max = r;
+  }
+  return max;
+}
+
+/** Real evolution-stage subtypes. Used to filter out legacy power-up
+ *  mechanic cards (Level-Up, BREAK, LEGEND, …) that list themselves as
+ *  "evolving from" their base form in the DB but aren't real forward
+ *  evolutions — Raichu LV.X is a Diamond/Pearl power-up, not a Stage 2,
+ *  and treating it as one walks the chain past where actual decks stop. */
+const REAL_STAGE_SUBTYPES = new Set(["Basic", "Stage 1", "Stage 2"]);
+
+function hasRealStage(entries: CardEntry[]): boolean {
+  for (const e of entries) {
+    for (const s of e.subtypes ?? []) {
+      if (REAL_STAGE_SUBTYPES.has(s)) return true;
+    }
+  }
+  return false;
+}
+
+/** Forward-evolution index built once at module load: lowercased parent
+ *  name → list of card names that evolve from it. Backs
+ *  `highestEvolutionForName` without scanning the whole DB per call.
+ *  Mechanic-only evolvers (LV.X / BREAK / etc.) are excluded — see
+ *  `hasRealStage`. */
+const EVOLVES_INTO_INDEX: Map<string, string[]> = (() => {
+  const out = new Map<string, string[]>();
+  for (const [evolverName, entries] of Object.entries(CARD_DB)) {
+    if (!hasRealStage(entries)) continue;
+    const parents = new Set<string>();
+    for (const e of entries) {
+      if (e.evolves_from) parents.add(e.evolves_from.toLowerCase());
+    }
+    for (const parent of Array.from(parents)) {
+      const arr = out.get(parent);
+      if (arr) arr.push(evolverName);
+      else out.set(parent, [evolverName]);
+    }
+  }
+  return out;
+})();
+
+/** Walk `evolves_from` forward from `name` until we hit a Pokémon that no
+ *  other card evolves from, then return that name. When a parent has
+ *  multiple forward evolutions (e.g. Kadabra → Alakazam *and* Alakazam ex),
+ *  prefer the one with the most recently regulation-marked print — the
+ *  modern Standard variant is almost always what an opponent's deck is
+ *  built around. Falls back to the input name when no chain exists.
+ *
+ *  This lets battle-log inference (which lands on whatever attacker dealt
+ *  the most damage) bubble up to the headline mon for the line — e.g. an
+ *  opponent's Kadabra resolves to Alakazam ex even though Kadabra is the
+ *  card that did the attacking. */
+export function highestEvolutionForName(name: string): string {
+  const visited = new Set<string>([name.toLowerCase()]);
+  let current = name;
+  while (true) {
+    const evolvers = EVOLVES_INTO_INDEX.get(current.toLowerCase()) ?? [];
+    if (!evolvers.length) break;
+    const next = [...evolvers]
+      .map((n) => ({ name: n, rank: maxRegRankForName(n) }))
+      .sort((a, b) => b.rank - a.rank)[0].name;
+    if (visited.has(next.toLowerCase())) break;
+    visited.add(next.toLowerCase());
+    current = next;
+  }
+  return current;
+}
+
+/** Derive a card image URL from a Pokémon name alone (no set/number).
+ *  Used when only the attacker name is known from a battle log. Escalates
+ *  to the line's highest evolution via `highestEvolutionForName`, then
+ *  picks the most recently regulation-marked print of that name — so a
+ *  Kadabra attacker shows the modern Alakazam ex (sv3pt5 MEW) rather
+ *  than 1999 Base Set Kadabra. Returns null on no match. */
+export function cardImageUrlForName(name: string): string | null {
+  return mostRecentCardForName(highestEvolutionForName(name))?.imageUrl ?? null;
+}
 
 /** All known Pokémon card names, longest-first so a substring search below
  *  prefers more specific forms (e.g. "Charizard ex" over "Charizard"). */
@@ -193,10 +271,16 @@ export function cardTypesFor(
 }
 
 /** Resolve types for a Pokémon by name alone. Used when the card identity
- *  comes from a battle log (no set/number known). Picks the first DB entry
- *  that has a types[] array. */
+ *  comes from a battle log (no set/number known). Escalates through the
+ *  evolution chain first so we type-color by the headline mon of the line
+ *  (e.g. an Eevee attacker resolves to whichever evolver is currently
+ *  Standard, picking up its type). Falls back to any print of the
+ *  escalated name that carries a non-empty types array. */
 export function cardTypesForName(name: string): string[] {
-  const entries = CARD_DB[name] ?? CARD_DB_LOWER.get(name.toLowerCase()) ?? [];
+  const escalated = highestEvolutionForName(name);
+  const recent = mostRecentCardForName(escalated);
+  if (recent?.types?.length) return recent.types;
+  const entries = CARD_DB[escalated] ?? CARD_DB_LOWER.get(escalated.toLowerCase()) ?? [];
   return entries.find((e) => e.types?.length)?.types ?? [];
 }
 
