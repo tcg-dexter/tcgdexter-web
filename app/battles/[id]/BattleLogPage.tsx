@@ -255,6 +255,8 @@ export default function BattleLogPage({
               matchId={matchId}
               apiUrl={`/api/battles/${matchId}/log`}
               result={result}
+              playerColor={playerColor}
+              opponentColor={opponentColor}
             />
           </>
         ) : (

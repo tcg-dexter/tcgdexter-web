@@ -455,9 +455,11 @@ interface Props {
   matchId: string;
   apiUrl: string;
   result?: "win" | "loss" | "draw" | null;
+  playerColor?: string;
+  opponentColor?: string;
 }
 
-export default function BattleLogDetail({ matchId, apiUrl, result }: Props) {
+export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, opponentColor }: Props) {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -654,6 +656,23 @@ export default function BattleLogDetail({ matchId, apiUrl, result }: Props) {
   const pregamePosts = posts.filter((p) => p.label === "Pre-game");
   const gamePosts = posts.filter((p) => p.label !== "Pre-game");
 
+  // Cumulative prize totals at the end of each game turn, keyed by index.
+  let playerPrizeRunning = 0;
+  let opponentPrizeRunning = 0;
+  const prizeCumulative = gamePosts.map((post) => {
+    for (const a of post.actions) {
+      if (a.action_type === "prize_taken") {
+        const count = p<number>(a, "count") ?? 1;
+        if (a.actor === "player") playerPrizeRunning += count;
+        else if (a.actor === "opponent") opponentPrizeRunning += count;
+      }
+    }
+    return { player: playerPrizeRunning, opponent: opponentPrizeRunning };
+  });
+
+  const resolvedPlayerColor = playerColor ?? "#d95555";
+  const resolvedOpponentColor = opponentColor ?? "#1a1a1a";
+
   return (
     <div className="mt-3 flex flex-col rounded-lg bg-bg overflow-hidden">
       {pregamePosts.length > 0 && (
@@ -680,8 +699,17 @@ export default function BattleLogDetail({ matchId, apiUrl, result }: Props) {
           />,
         ];
         if (hasPrizes) {
+          const cum = prizeCumulative[i];
           items.push(
-            <PrizeThreadPost key={`${post.key}-prize`} count={stats.prizes} playerName={post.displayName} />
+            <ScoreCard
+              key={`${post.key}-prize`}
+              playerPrizes={cum.player}
+              opponentPrizes={cum.opponent}
+              playerName={playerHandle}
+              opponentName={opponentHandle}
+              playerColor={resolvedPlayerColor}
+              opponentColor={resolvedOpponentColor}
+            />
           );
         }
         return items;
@@ -800,14 +828,32 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
   );
 }
 
-function PrizeThreadPost({ count, playerName }: { count: number; playerName: string }) {
+function ScoreCard({
+  playerPrizes,
+  opponentPrizes,
+  playerName,
+  opponentName,
+  playerColor,
+  opponentColor,
+}: {
+  playerPrizes: number;
+  opponentPrizes: number;
+  playerName: string;
+  opponentName: string;
+  playerColor: string;
+  opponentColor: string;
+}) {
   return (
     <div className="px-3 pt-2 pb-3">
       <div
-        className="rounded-xl px-4 py-2.5 text-sm font-bold text-white text-center"
-        style={{ background: WIN_GRADIENT }}
+        className="rounded-xl px-4 py-2.5 grid grid-cols-3 items-center text-white"
+        style={{ background: `linear-gradient(to right, ${playerColor}, ${opponentColor})` }}
       >
-        {playerName} took {count} prize card{count !== 1 ? "s" : ""}
+        <span className="text-xs font-bold truncate">{playerName}</span>
+        <span className="text-sm font-black tabular-nums text-center">
+          {playerPrizes}–{opponentPrizes}
+        </span>
+        <span className="text-xs font-bold truncate text-right">{opponentName}</span>
       </div>
     </div>
   );
