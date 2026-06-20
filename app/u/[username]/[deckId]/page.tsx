@@ -9,6 +9,7 @@ import DeckDetailClient from "./DeckDetailClient";
 
 interface DeckRecord {
   id: string;
+  short_id: string;
   name: string;
   deck_list: string;
   analysis: AnalysisResult;
@@ -43,6 +44,20 @@ interface MatchRecord {
   game_prizes: GamePrize[] | null;
 }
 
+/**
+ * URL params on this route accept either the deck's short_id (the new
+ * shareable form, e.g. /u/dexter/k8m2x7q9) or the deck's UUID (legacy
+ * links shared before short_ids existed). Match short_id first so the
+ * common path is one round-trip; only legacy UUID-shaped values fall
+ * through to the id lookup.
+ */
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function deckIdColumn(value: string): "id" | "short_id" {
+  return UUID_RE.test(value) ? "id" : "short_id";
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -60,7 +75,7 @@ export async function generateMetadata({
   const { data: deck } = await supabase
     .from("saved_decks")
     .select("name, analysis")
-    .eq("id", deckId)
+    .eq(deckIdColumn(deckId), deckId)
     .eq("user_id", owner.id)
     .eq("is_public", true)
     .maybeSingle();
@@ -104,29 +119,32 @@ export default async function DeckPage({
   if (!isOwner && !profile.is_public) notFound();
 
   // Owner sees their own decks regardless of is_public; visitors need is_public=true
+  const lookupCol = deckIdColumn(deckId);
   const { data: deckRaw } = isOwner
     ? await supabase
         .from("saved_decks")
-        .select("id, name, deck_list, analysis, notes, updated_at, user_id, like_count, is_public, cover_image_url")
-        .eq("id", deckId)
+        .select("id, short_id, name, deck_list, analysis, notes, updated_at, user_id, like_count, is_public, cover_image_url")
+        .eq(lookupCol, deckId)
         .eq("user_id", profile.id)
         .maybeSingle()
     : await supabase
         .from("saved_decks")
-        .select("id, name, deck_list, analysis, notes, updated_at, user_id, like_count, is_public, cover_image_url")
-        .eq("id", deckId)
+        .select("id, short_id, name, deck_list, analysis, notes, updated_at, user_id, like_count, is_public, cover_image_url")
+        .eq(lookupCol, deckId)
         .eq("user_id", profile.id)
         .eq("is_public", true)
         .maybeSingle();
   if (!deckRaw) notFound();
   const deck = deckRaw as DeckRecord;
 
-  // Build canonical URL
+  // Build canonical URL — always the short_id form so OG cards and
+  // copy-link buttons surface the friendly link, even if the visitor
+  // arrived via a legacy UUID URL.
   const headersList = await headers();
   const host =
     headersList.get("x-forwarded-host") ?? headersList.get("host") ?? "tcgdexter.com";
   const proto = headersList.get("x-forwarded-proto") ?? "https";
-  const canonicalShareUrl = `${proto}://${host}/u/${profile.username}/${deck.id}`;
+  const canonicalShareUrl = `${proto}://${host}/u/${profile.username}/${deck.short_id}`;
 
   // Live reprice
   const live = repriceDeck(deck.deck_list);

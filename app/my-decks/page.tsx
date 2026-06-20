@@ -7,6 +7,7 @@ import MyDecksClient from "./MyDecksClient";
 
 interface DeckRow {
   id: string;
+  short_id: string;
   name: string;
   analysis: {
     deckPrice?: number;
@@ -48,7 +49,7 @@ export default async function MyDecksPage() {
 
   const { data: decksRaw } = await supabase
     .from("saved_decks")
-    .select("id, name, analysis, updated_at, created_at, like_count, is_public, cover_image_url")
+    .select("id, short_id, name, analysis, updated_at, created_at, like_count, is_public, cover_image_url")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
   const decks = (decksRaw ?? []) as DeckRow[];
@@ -75,7 +76,7 @@ export default async function MyDecksPage() {
     return {
       id: deck.id,
       name: deck.name,
-      href: `/u/${profile.username}/${deck.id}`,
+      href: `/u/${profile.username}/${deck.short_id}`,
       username: profile.username,
       displayName: profile.display_name,
       price: deck.analysis?.deckPrice ?? null,
