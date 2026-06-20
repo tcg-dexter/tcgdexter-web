@@ -651,15 +651,42 @@ export default function BattleLogDetail({ matchId, apiUrl, result }: Props) {
     }
   }
 
+  const pregamePosts = posts.filter((p) => p.label === "Pre-game");
+  const gamePosts = posts.filter((p) => p.label !== "Pre-game");
+
   return (
     <div className="mt-3 flex flex-col rounded-lg bg-bg overflow-hidden">
-      {posts.map((post, i) => (
+      {pregamePosts.length > 0 && (
+        <>
+          <SectionDivider label="Pre-Game" />
+          {pregamePosts.map((post, i) => (
+            <ThreadPost
+              key={post.key}
+              post={post}
+              isLast={i === pregamePosts.length - 1}
+            />
+          ))}
+        </>
+      )}
+      {gamePosts.map((post, i) => (
         <ThreadPost
           key={post.key}
           post={post}
-          isLast={i === posts.length - 1}
+          isLast={i === gamePosts.length - 1}
         />
       ))}
+    </div>
+  );
+}
+
+/* ─── Section divider ────────────────────────────────────────── */
+
+function SectionDivider({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 px-3 py-3">
+      <div className="flex-1 h-px bg-[#e2e8f0]" />
+      <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">{label}</span>
+      <div className="flex-1 h-px bg-[#e2e8f0]" />
     </div>
   );
 }
