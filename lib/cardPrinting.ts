@@ -60,18 +60,70 @@ export interface Card {
 /**
  * Parse a raw PTCGO/PTCGL-style deck list into structured cards, preserving
  * the set code + collector number on each line so the correct printing can be
- * resolved later. Lines without a set code fall back to name-only.
+ * resolved later.
+ *
+ * Tolerant of source-wrapping mangling. When a list is copied from a narrow
+ * column (Twitter post, mobile share sheet, chat message), the original
+ * newlines often land mid-card or run multiple cards onto a single line.
+ * To handle both cases, we buffer everything within a section and globally
+ * extract `<qty> <name> <SETCODE> <number>` tokens — so a paste like
+ *   "1 Chien-Pao\nPR-SV 152 2 Lillie's Clefairy ex JTG 173"
+ * still resolves to two distinct cards. Any trailing fragment that doesn't
+ * include a set code falls back to the simple "<qty> <name>" form.
  */
 export function parseDeckListCards(raw: string): Card[] {
-  const lines = raw.split("\n").map((l) => l.trim());
+  const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
   const cards: Card[] = [];
   let currentSection: Card["section"] | null = null;
+  let buffer = "";
+
+  const flush = () => {
+    if (!currentSection || !buffer.trim()) return;
+    const text = buffer.trim();
+    // Pass 1: globally match each <qty> <name> <SETCODE> <number> token.
+    // Name is non-greedy so it stops at the first uppercase-led set code
+    // followed by digits; the lookahead ends each match at the next card
+    // boundary (whitespace + qty + whitespace + non-digit) or end-of-buffer,
+    // so we don't accidentally fold a downstream card's qty into the
+    // previous card's number.
+    const setCodeRe = /(\d+)\s+(.+?)\s+([A-Z][A-Z0-9-]+)\s+(\d+)(?=\s+\d+\s+\S|\s*$)/g;
+    let m: RegExpExecArray | null;
+    let lastEnd = 0;
+    while ((m = setCodeRe.exec(text)) !== null) {
+      cards.push({
+        qty: parseInt(m[1], 10),
+        name: m[2].trim(),
+        number: m[4],
+        setCode: m[3],
+        section: currentSection,
+      });
+      lastEnd = m.index + m[0].length;
+    }
+    // Pass 2: any tail the set-code regex didn't consume (or the whole
+    // buffer if pass 1 found nothing) gets re-scanned for set-code-less
+    // <qty> <name> tokens — same boundary lookahead so multiple name-only
+    // cards on the same line still split correctly.
+    const leftover = text.slice(lastEnd).trim();
+    if (leftover) {
+      const nameOnlyRe = /(\d+)\s+(.+?)(?=\s+\d+\s+\S|\s*$)/g;
+      let n: RegExpExecArray | null;
+      while ((n = nameOnlyRe.exec(leftover)) !== null) {
+        cards.push({
+          qty: parseInt(n[1], 10),
+          name: n[2].trim(),
+          number: "",
+          setCode: "",
+          section: currentSection,
+        });
+      }
+    }
+    buffer = "";
+  };
 
   for (const line of lines) {
-    if (!line) continue;
-
     const headerMatch = line.match(/^(Pok[eé]mon|Trainer|Energy)\s*:/i);
     if (headerMatch) {
+      flush();
       const h = headerMatch[1].toLowerCase();
       if (h.startsWith("pok")) currentSection = "pokemon";
       else if (h === "trainer") currentSection = "trainer";
@@ -79,31 +131,14 @@ export function parseDeckListCards(raw: string): Card[] {
       continue;
     }
 
-    if (/^total\s+cards?\s*:/i.test(line)) continue;
-
-    const cardMatch = line.match(/^(\d+)\s+(.+?)\s+([A-Z0-9-]{2,10})\s+(\d+)$/);
-    if (cardMatch && currentSection) {
-      cards.push({
-        qty: parseInt(cardMatch[1], 10),
-        name: cardMatch[2],
-        number: cardMatch[4],
-        setCode: cardMatch[3],
-        section: currentSection,
-      });
+    if (/^total\s+cards?\s*:/i.test(line)) {
+      flush();
       continue;
     }
 
-    const simpleMatch = line.match(/^(\d+)\s+(.+)$/);
-    if (simpleMatch && currentSection) {
-      cards.push({
-        qty: parseInt(simpleMatch[1], 10),
-        name: simpleMatch[2].trim(),
-        number: "",
-        setCode: "",
-        section: currentSection,
-      });
-    }
+    buffer += " " + line;
   }
+  flush();
 
   return cards;
 }
