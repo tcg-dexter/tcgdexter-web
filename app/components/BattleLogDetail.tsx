@@ -846,7 +846,7 @@ function ScoreCard({
   return (
     <div className="px-3 pt-2 pb-3">
       <div
-        className="rounded-xl px-4 py-2.5 grid grid-cols-3 items-center text-white"
+        className="rounded-xl px-4 py-2.5 grid grid-cols-3 items-center text-white opacity-80"
         style={{ background: `linear-gradient(to right, ${playerColor}, ${opponentColor})` }}
       >
         <span className="text-xs font-bold truncate">{playerName}</span>
