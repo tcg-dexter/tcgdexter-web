@@ -21,6 +21,7 @@ interface TrainerResult {
 
 interface DeckResult {
   id: string;
+  short_id: string;
   name: string;
   like_count: number;
   username: string;
@@ -85,7 +86,7 @@ export default function UnifiedSearch({ dropdownPosition = "below", placeholder 
         .limit(3),
       supabase
         .from("saved_decks")
-        .select("id, name, like_count, analysis, user_id")
+        .select("id, short_id, name, like_count, analysis, user_id")
         .eq("is_public", true)
         .ilike("name", `%${val}%`)
         .order("like_count", { ascending: false })
@@ -106,7 +107,7 @@ export default function UnifiedSearch({ dropdownPosition = "below", placeholder 
         .map((d) => {
           const username = profileMap.get(d.user_id);
           if (!username) return null;
-          return { id: d.id, name: d.name, like_count: d.like_count, analysis: d.analysis, username };
+          return { id: d.id, short_id: d.short_id, name: d.name, like_count: d.like_count, analysis: d.analysis, username };
         })
         .filter(Boolean) as DeckResult[];
     }
@@ -232,7 +233,7 @@ export default function UnifiedSearch({ dropdownPosition = "below", placeholder 
                     return (
                       <Link
                         key={d.id}
-                        href={`/u/${d.username}/${d.id}`}
+                        href={`/u/${d.username}/${d.short_id}`}
                         className="flex items-center gap-3 px-4 py-2.5 hover:bg-black/[0.03] transition-colors"
                       >
                         <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center flex-shrink-0">

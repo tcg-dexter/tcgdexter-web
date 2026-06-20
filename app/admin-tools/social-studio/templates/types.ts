@@ -74,6 +74,7 @@ export interface CardSpotlightSubject {
 export interface FeaturedDeckSubject {
   kind: "featured_deck";
   id: string;
+  shortId: string;
   name: string;
   username: string;
   displayName: string;

@@ -23,6 +23,7 @@ interface DeckRow {
 
 interface TopDeck {
   id: string;
+  short_id: string;
   name: string;
   like_count: number;
   user_id: string;
@@ -87,7 +88,7 @@ async function fetchTopDecks(): Promise<TopDeck[]> {
   // RLS already enforces is_public + owner profile is_public
   const { data: decks } = await supabase
     .from("saved_decks")
-    .select("id, name, like_count, user_id, analysis, cover_image_url")
+    .select("id, short_id, name, like_count, user_id, analysis, cover_image_url")
     .eq("is_public", true)
     .order("like_count", { ascending: false })
     .limit(10);
@@ -199,7 +200,7 @@ export default async function LeaderboardPage() {
                   key={deck.id}
                   id={deck.id}
                   name={deck.name}
-                  href={`/u/${deck.username}/${deck.id}`}
+                  href={`/u/${deck.username}/${deck.short_id}`}
                   username={deck.username}
                   displayName={deck.display_name}
                   price={price}
