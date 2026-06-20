@@ -686,7 +686,7 @@ function SectionDivider({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-3 px-3 py-3">
       <div className="flex-1 h-px bg-[#e2e8f0]" />
-      <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">{label}</span>
+      <span className="text-[10px] font-bold uppercase tracking-widest text-text-primary">{label}</span>
       <div className="flex-1 h-px bg-[#e2e8f0]" />
     </div>
   );
@@ -916,6 +916,8 @@ const ACTION_LABEL: Partial<Record<string, string>> = {
   mulligan_bonus_draw: "DRAW",
   add_to_hand: "DRAW",
   move_to_hand: "DRAW",
+  discard: "DISCARD",
+  discard_from_pokemon: "DISCARD",
   play_to_active: "PLAY",
   play_to_bench: "PLAY",
   play_to_stadium: "PLAY",
