@@ -81,7 +81,13 @@ export default function ProductCard({ data }: Props) {
               </span>
             </div>
           </div>
-          <Sparkline values={signupSeries} width={620} height={56} responsive />
+          <Sparkline
+            values={signupSeries}
+            width={620}
+            height={56}
+            stroke="#10b981"
+            responsive
+          />
         </div>
       </Card>
 

@@ -52,7 +52,13 @@ export default function OpsCard({ data }: Props) {
           <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
             Duration · last 14 days
           </div>
-          <Sparkline values={durations} width={200} height={40} responsive />
+          <Sparkline
+            values={durations}
+            width={200}
+            height={40}
+            stroke="#64748b"
+            responsive
+          />
         </div>
       </div>
 

@@ -228,7 +228,7 @@ export default function VitalsStrip({
         value={product.users.newLast7d}
         hint={`${product.users.total} total`}
         delta={<Delta value={deltaVal} />}
-        spark={<Sparkline values={series} width={64} height={28} />}
+        spark={<Sparkline values={series} width={64} height={28} stroke="#10b981" />}
       />
     );
   })();
