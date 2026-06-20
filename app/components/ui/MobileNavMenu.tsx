@@ -244,11 +244,12 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
   ];
 
   // Admin destinations — replace the external-links block on mobile when
-  // the signed-in user is an admin. The standalone Admin Tools row further
-  // down in the menu (see below) is preserved.
+  // the signed-in user is an admin. Admin Tools sits in the same section so
+  // every admin destination lives under a single eyebrow.
   const ADMIN_LINKS = [
     { href: "/dashboard", label: "Dashboard", Icon: GaugeIcon },
     { href: "/dashboard/crm", label: "CRM", Icon: MailIcon },
+    { href: "/admin-tools", label: "Admin Tools", Icon: WrenchIcon },
   ];
 
   const linkClass =
@@ -389,20 +390,6 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
             )}
 
             <li role="separator" className="my-4" />
-
-            {/* Admin item — only for users with profiles.is_admin. */}
-            {isAdmin && (
-              <li>
-                <Link
-                  href="/admin-tools"
-                  className={linkClass}
-                  onClick={closeMenu}
-                >
-                  <WrenchIcon />
-                  <span>Admin Tools</span>
-                </Link>
-              </li>
-            )}
 
             {/* Auth item — anchored at the bottom of the link list, above
                 the search bar. */}

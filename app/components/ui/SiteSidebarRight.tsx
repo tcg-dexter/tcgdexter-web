@@ -10,6 +10,7 @@ import {
   MailIcon,
   TikTokIcon,
   ShoppingBagIcon,
+  WrenchIcon,
 } from "./nav-icons";
 
 interface Props {
@@ -44,12 +45,14 @@ export default function SiteSidebarRight({ isAdmin = false }: Props) {
   ];
 
   // Admin destinations — only rendered when isAdmin. Dashboard targets the
-  // mission-control root; CRM targets the contacts/campaigns section. Both
-  // are internal Next routes; on dashboard.tcgdexter.com middleware
-  // rewrites them under the dashboard subdomain transparently.
+  // mission-control root; CRM targets the contacts/campaigns section;
+  // Admin Tools is the legacy tools index. Dashboard/CRM are internal Next
+  // routes; on dashboard.tcgdexter.com middleware rewrites them under the
+  // dashboard subdomain transparently.
   const ADMIN_LINKS = [
     { href: "/dashboard", label: "Dashboard", Icon: GaugeIcon, exact: true },
     { href: "/dashboard/crm", label: "CRM", Icon: MailIcon, exact: false },
+    { href: "/admin-tools", label: "Admin Tools", Icon: WrenchIcon, exact: false },
   ];
 
   const isActive = (href: string) =>
