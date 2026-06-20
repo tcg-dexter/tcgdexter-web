@@ -669,13 +669,23 @@ export default function BattleLogDetail({ matchId, apiUrl, result }: Props) {
         </>
       )}
       {gamePosts.length > 0 && <SectionDivider label="Start" />}
-      {gamePosts.map((post, i) => (
-        <ThreadPost
-          key={post.key}
-          post={post}
-          isLast={i === gamePosts.length - 1}
-        />
-      ))}
+      {gamePosts.flatMap((post, i) => {
+        const stats = statsFor(post.actions);
+        const hasPrizes = stats.prizes > 0;
+        const items = [
+          <ThreadPost
+            key={post.key}
+            post={post}
+            isLast={!hasPrizes && i === gamePosts.length - 1}
+          />,
+        ];
+        if (hasPrizes) {
+          items.push(
+            <PrizeThreadPost key={`${post.key}-prize`} count={stats.prizes} />
+          );
+        }
+        return items;
+      })}
     </div>
   );
 }
@@ -782,9 +792,38 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
           <ActionList actions={post.actions} />
         </div>
 
-        {!isResult && (stats.drew + stats.damage + stats.ko + stats.prizes > 0) && (
+        {!isResult && (stats.damage + stats.ko > 0) && (
           <PostStatsRow stats={stats} />
         )}
+      </div>
+    </div>
+  );
+}
+
+function PrizeThreadPost({ count }: { count: number }) {
+  const TrophyIcon = ICONS.trophy;
+  return (
+    <div className="flex gap-3 px-3 pt-3">
+      <div className="flex flex-col items-center">
+        <div
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+          style={{ background: WIN_GRADIENT }}
+        >
+          <TrophyIcon className="w-4 h-4 text-white" />
+        </div>
+      </div>
+      <div className="flex-1 min-w-0 pb-3">
+        <div className="flex items-end justify-between gap-2">
+          <span className="text-sm font-bold text-text-primary">
+            {count === 1 ? "Prize Taken" : "Prizes Taken"}
+          </span>
+          <span
+            className="shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold text-white tabular-nums"
+            style={{ background: WIN_GRADIENT }}
+          >
+            {count}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -817,7 +856,7 @@ function StatChip({
 }
 
 function PostStatsRow({ stats }: { stats: PostStats }) {
-  if (stats.damage + stats.ko + stats.prizes === 0) return null;
+  if (stats.damage + stats.ko === 0) return null;
   return (
     <div className="mt-2.5 flex items-stretch gap-1.5">
       {stats.damage > 0 && (
@@ -825,9 +864,6 @@ function PostStatsRow({ stats }: { stats: PostStats }) {
       )}
       {stats.ko > 0 && (
         <StatChip n={stats.ko} label="KO" chipCls="bg-[#1a1a1a] flex-1" numCls="text-white" lblCls="text-white/70" />
-      )}
-      {stats.prizes > 0 && (
-        <StatChip n={stats.prizes} label="PRIZE" chipCls="flex-1" chipStyle={{ background: WIN_GRADIENT }} numCls="text-white" lblCls="text-white/70" />
       )}
     </div>
   );
