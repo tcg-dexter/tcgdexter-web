@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   TrophyIcon,
-  WrenchIcon,
   ChartBarIcon,
   BookmarkIcon,
   CardsIcon,
@@ -123,20 +122,9 @@ export default function SiteSidebar({
           ))}
         </ul>
 
-        {/* Admin row — anchored to the bottom, just above the auth row.
-            Only rendered when the signed-in user has profiles.is_admin. */}
+        {/* Auth row — anchored to the bottom. Admin destinations live in
+            the trailing-edge sidebar's Admin section, not here. */}
         <ul className="mt-auto flex flex-col gap-0.5 pt-4">
-          {isAdmin && (
-            <li>
-              <Link
-                href="/admin-tools"
-                className={`${linkBase} ${isActive("/admin-tools") ? linkActive : linkInactive}`}
-              >
-                <WrenchIcon />
-                <span>Admin Tools</span>
-              </Link>
-            </li>
-          )}
           <li>
             {isAuthed ? (
               <Link

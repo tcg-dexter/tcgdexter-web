@@ -95,7 +95,7 @@ export async function POST(req: Request) {
       analysis: analysis ?? null,
       is_public: publish === true,
     })
-    .select("id, name, created_at")
+    .select("id, short_id, name, created_at")
     .single();
 
   if (error) {
@@ -108,10 +108,11 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     id: data.id,
+    shortId: data.short_id,
     name: data.name,
     createdAt: data.created_at,
     ...(ownerUsername
-      ? { publicUrl: `/u/${ownerUsername}/${data.id}` }
+      ? { publicUrl: `/u/${ownerUsername}/${data.short_id}` }
       : {}),
   });
 }

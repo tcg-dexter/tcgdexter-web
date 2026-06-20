@@ -7,10 +7,26 @@ import type {
   CampaignStatus,
   CrmCampaign,
   CrmCampaignRecipient,
+  RecipientType,
 } from "../../lib/types";
 
 function nameOf(r: CrmCampaignRecipient): string {
   return r.display_name?.trim() || r.username || r.email;
+}
+
+type RecipientSortKey = "unsent_first" | "name" | "sent_at_desc";
+
+// Default "Unsent first" surfaces the next action — rows that still need
+// to be marked sent — at the top of the table. Secondary sorts cover the
+// other two natural ways of looking at the same data.
+const RECIPIENT_SORTS: { key: RecipientSortKey; label: string }[] = [
+  { key: "unsent_first", label: "Unsent first" },
+  { key: "name", label: "Name (A–Z)" },
+  { key: "sent_at_desc", label: "Recently sent" },
+];
+
+function compareName(a: CrmCampaignRecipient, b: CrmCampaignRecipient): number {
+  return nameOf(a).toLowerCase().localeCompare(nameOf(b).toLowerCase());
 }
 
 function formatDateTime(iso: string | null): string {
@@ -46,10 +62,51 @@ export default function CampaignDetailClient({
   const [name, setName] = useState(campaign.name);
   const [subject, setSubject] = useState(campaign.subject);
   const [body, setBody] = useState(campaign.body);
+  const [recipientType, setRecipientType] = useState<RecipientType>(
+    campaign.recipient_type,
+  );
+  const [windowStart, setWindowStart] = useState(campaign.signup_window_start ?? "");
+  const [windowEnd, setWindowEnd] = useState(campaign.signup_window_end ?? "");
   const [savingMeta, setSavingMeta] = useState(false);
   const [bulkPending, setBulkPending] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [recipientSort, setRecipientSort] =
+    useState<RecipientSortKey>("unsent_first");
+
+  // Effective sent timestamp accounting for optimistic toggles isn't tracked
+  // in the recipients array directly (the toggleSent handler rewrites
+  // recipients in place), so we sort on r.sent_at as-is. Order updates
+  // re-derive on every render via useMemo when recipients/sort change.
+  const sortedRecipients = useMemo(() => {
+    const rows = [...recipients];
+    switch (recipientSort) {
+      case "unsent_first":
+        return rows.sort((a, b) => {
+          if ((a.sent_at === null) !== (b.sent_at === null)) {
+            return a.sent_at === null ? -1 : 1;
+          }
+          if (a.sent_at && b.sent_at) {
+            // Within the sent group, newest at the top.
+            return b.sent_at.localeCompare(a.sent_at);
+          }
+          return compareName(a, b);
+        });
+      case "name":
+        return rows.sort(compareName);
+      case "sent_at_desc":
+        return rows.sort((a, b) => {
+          if ((a.sent_at !== null) !== (b.sent_at !== null)) {
+            return a.sent_at !== null ? -1 : 1;
+          }
+          if (a.sent_at && b.sent_at) {
+            return b.sent_at.localeCompare(a.sent_at);
+          }
+          return compareName(a, b);
+        });
+    }
+  }, [recipients, recipientSort]);
 
   const sentCount = useMemo(
     () => recipients.filter((r) => r.sent_at !== null).length,
@@ -58,8 +115,17 @@ export default function CampaignDetailClient({
   const totalCount = recipients.length;
   const allSent = totalCount > 0 && sentCount === totalCount;
 
+  const windowInvalid =
+    recipientType === "signup_window" &&
+    (!windowStart || !windowEnd || windowEnd < windowStart);
   const dirtyMeta =
-    name !== campaign.name || subject !== campaign.subject || body !== campaign.body;
+    name !== campaign.name ||
+    subject !== campaign.subject ||
+    body !== campaign.body ||
+    recipientType !== campaign.recipient_type ||
+    (recipientType === "signup_window" &&
+      (windowStart !== (campaign.signup_window_start ?? "") ||
+        windowEnd !== (campaign.signup_window_end ?? "")));
 
   async function patchCampaign(patch: Record<string, unknown>) {
     setError(null);
@@ -75,10 +141,37 @@ export default function CampaignDetailClient({
   }
 
   async function saveMeta() {
+    if (windowInvalid) return;
     setSavingMeta(true);
     try {
-      await patchCampaign({ name, subject, body });
-      setCampaign((c) => ({ ...c, name, subject, body }));
+      const patch: Record<string, unknown> = {
+        name,
+        subject,
+        body,
+        recipient_type: recipientType,
+      };
+      if (recipientType === "signup_window") {
+        patch.signup_window_start = windowStart;
+        patch.signup_window_end = windowEnd;
+      } else {
+        patch.signup_window_start = null;
+        patch.signup_window_end = null;
+      }
+      await patchCampaign(patch);
+      setCampaign((c) => ({
+        ...c,
+        name,
+        subject,
+        body,
+        recipient_type: recipientType,
+        signup_window_start:
+          recipientType === "signup_window" ? windowStart : null,
+        signup_window_end:
+          recipientType === "signup_window" ? windowEnd : null,
+      }));
+      // A rule change can pull in new recipients on the server — refresh
+      // the page-level data so the recipient table reflects the new state.
+      router.refresh();
     } catch (e) {
       setError(String(e));
     } finally {
@@ -154,6 +247,36 @@ export default function CampaignDetailClient({
     }
   }
 
+  async function deleteCampaign() {
+    const recipientWord = totalCount === 1 ? "recipient" : "recipients";
+    const tail =
+      totalCount > 0
+        ? ` and remove all ${totalCount} ${recipientWord}.`
+        : ".";
+    if (
+      !window.confirm(
+        `Delete the campaign "${campaign.name}"? This will permanently delete the campaign${tail} This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/crm/campaigns/${campaign.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error ?? `HTTP ${res.status}`);
+      }
+      router.push("/dashboard/crm/campaigns");
+    } catch (e) {
+      setError(String(e));
+      setDeleting(false);
+    }
+  }
+
   async function removeRecipient(sendId: string) {
     const prev = recipients;
     setRecipients((rs) => rs.filter((r) => r.send_id !== sendId));
@@ -168,7 +291,7 @@ export default function CampaignDetailClient({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-baseline gap-3">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <Link
           href="/dashboard/crm/campaigns"
           className="text-[11px] text-[var(--text-muted)] hover:underline"
@@ -197,6 +320,14 @@ export default function CampaignDetailClient({
             Reopen
           </button>
         ) : null}
+        <button
+          type="button"
+          disabled={deleting}
+          onClick={deleteCampaign}
+          className="ml-auto text-[11px] text-[var(--text-muted)] hover:text-[var(--accent)] hover:underline disabled:opacity-50"
+        >
+          {deleting ? "Deleting…" : "Delete campaign"}
+        </button>
       </div>
 
       <section className="flex flex-col gap-3 rounded-xl border border-black/8 bg-white p-4 shadow-sm">
@@ -234,40 +365,141 @@ export default function CampaignDetailClient({
               className="rounded-md border border-black/10 bg-white px-2.5 py-1.5 text-xs font-mono outline-none focus:border-black/30"
             />
           </label>
+
+          {/* Recipient rule. Editing the rule re-syncs on the server: the
+              PATCH handler calls syncCampaignRecipients() after the update,
+              and router.refresh() below pulls the new recipient set. */}
+          <fieldset className="flex flex-col gap-2 rounded-xl border border-black/8 bg-white/60 p-3">
+            <legend className="px-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              Recipients
+            </legend>
+            <div className="flex flex-col gap-1.5">
+              <label className="flex items-center gap-2 text-xs">
+                <input
+                  type="radio"
+                  name="recipient_type"
+                  value="manual"
+                  checked={recipientType === "manual"}
+                  onChange={() => setRecipientType("manual")}
+                />
+                <span className="font-medium">Manual</span>
+                <span className="text-[11px] text-[var(--text-muted)]">
+                  Pick recipients yourself from the contacts dashboard.
+                </span>
+              </label>
+              <label className="flex items-center gap-2 text-xs">
+                <input
+                  type="radio"
+                  name="recipient_type"
+                  value="signup_window"
+                  checked={recipientType === "signup_window"}
+                  onChange={() => setRecipientType("signup_window")}
+                />
+                <span className="font-medium">Signup window</span>
+                <span className="text-[11px] text-[var(--text-muted)]">
+                  Auto-enroll every user who signs up in this date range. New
+                  signups keep getting added until the campaign is marked
+                  complete.
+                </span>
+              </label>
+            </div>
+            {recipientType === "signup_window" ? (
+              <div className="flex flex-wrap items-end gap-3 pt-1">
+                <label className="flex flex-col gap-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                    From
+                  </span>
+                  <input
+                    type="date"
+                    value={windowStart}
+                    onChange={(e) => setWindowStart(e.target.value)}
+                    className="rounded-md border border-black/10 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-black/30"
+                  />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                    To
+                  </span>
+                  <input
+                    type="date"
+                    value={windowEnd}
+                    onChange={(e) => setWindowEnd(e.target.value)}
+                    className="rounded-md border border-black/10 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-black/30"
+                  />
+                </label>
+                <span className="text-[11px] text-[var(--text-muted)]">
+                  Inclusive — UTC days.
+                </span>
+                {windowInvalid ? (
+                  <span className="basis-full text-[11px] text-[var(--accent)]">
+                    End date must be on or after the start date.
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+          </fieldset>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            disabled={!dirtyMeta || savingMeta}
+            disabled={!dirtyMeta || savingMeta || windowInvalid}
             onClick={saveMeta}
             className="rounded-md bg-black px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
           >
             {savingMeta ? "Saving…" : "Save changes"}
           </button>
-          <Link
-            href="/dashboard/crm"
-            className="text-xs text-[var(--text-muted)] hover:underline"
-          >
-            Add more recipients from Contacts →
-          </Link>
+          {campaign.recipient_type === "manual" ? (
+            <Link
+              href="/dashboard/crm"
+              className="text-xs text-[var(--text-muted)] hover:underline"
+            >
+              Add more recipients from Contacts →
+            </Link>
+          ) : (
+            <span className="text-xs text-[var(--text-muted)]">
+              Recipients are managed by the rule above.
+            </span>
+          )}
         </div>
       </section>
 
       <section className="flex flex-col gap-2">
-        <div className="flex items-baseline justify-between">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
             Recipients
           </h2>
-          {selected.size > 0 ? (
-            <button
-              type="button"
-              disabled={bulkPending}
-              onClick={markSelectedSent}
-              className="rounded-md bg-black px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="recipient-sort"
+              className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"
             >
-              {bulkPending ? "Marking…" : `Mark ${selected.size} sent`}
-            </button>
-          ) : null}
+              Sort
+            </label>
+            <select
+              id="recipient-sort"
+              value={recipientSort}
+              onChange={(e) =>
+                setRecipientSort(e.target.value as RecipientSortKey)
+              }
+              className="rounded-md border border-black/10 bg-white px-2 py-1 text-[11px]"
+            >
+              {RECIPIENT_SORTS.map((s) => (
+                <option key={s.key} value={s.key}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+            {selected.size > 0 ? (
+              <button
+                type="button"
+                disabled={bulkPending}
+                onClick={markSelectedSent}
+                className="rounded-md bg-black px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+              >
+                {bulkPending ? "Marking…" : `Mark ${selected.size} sent`}
+              </button>
+            ) : null}
+          </div>
         </div>
 
         {error ? <div className="text-[11px] text-[var(--accent)]">{error}</div> : null}
@@ -275,11 +507,17 @@ export default function CampaignDetailClient({
         <div className="overflow-x-auto rounded-xl border border-black/8 bg-white shadow-sm">
           {recipients.length === 0 ? (
             <div className="p-6 text-center text-xs text-[var(--text-muted)]">
-              No recipients yet.{" "}
-              <Link href="/dashboard/crm" className="underline">
-                Add some from Contacts
-              </Link>
-              .
+              {campaign.recipient_type === "manual" ? (
+                <>
+                  No recipients yet.{" "}
+                  <Link href="/dashboard/crm" className="underline">
+                    Add some from Contacts
+                  </Link>
+                  .
+                </>
+              ) : (
+                <>No signups have qualified for this window yet.</>
+              )}
             </div>
           ) : (
             <table className="min-w-full text-xs">
@@ -309,7 +547,7 @@ export default function CampaignDetailClient({
                 </tr>
               </thead>
               <tbody>
-                {recipients.map((r) => (
+                {sortedRecipients.map((r) => (
                   <tr key={r.send_id} className="border-t border-black/5 hover:bg-[var(--surface)]/40">
                     <td className="px-2 py-2 align-top">
                       <input
@@ -346,13 +584,15 @@ export default function CampaignDetailClient({
                       </button>
                     </td>
                     <td className="px-2 py-2 align-top text-right">
-                      <button
-                        type="button"
-                        onClick={() => removeRecipient(r.send_id)}
-                        className="text-[11px] text-[var(--text-muted)] hover:text-[var(--accent)] hover:underline"
-                      >
-                        Remove
-                      </button>
+                      {campaign.recipient_type === "manual" ? (
+                        <button
+                          type="button"
+                          onClick={() => removeRecipient(r.send_id)}
+                          className="text-[11px] text-[var(--text-muted)] hover:text-[var(--accent)] hover:underline"
+                        >
+                          Remove
+                        </button>
+                      ) : null}
                     </td>
                   </tr>
                 ))}

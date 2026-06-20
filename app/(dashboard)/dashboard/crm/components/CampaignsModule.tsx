@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { SectionHeader } from "../../components/Card";
 import type { CrmCampaign } from "../lib/types";
 
-// Compact at-a-glance summary block above the user table. Shows every
-// non-complete campaign with a progress bar so the dashboard can act as a
-// communications control center — you should be able to see what's in
-// flight without leaving the page.
+// Compact at-a-glance summary block. Shows every non-complete campaign
+// with a progress bar so the CRM landing page acts as a communications
+// control center — you should be able to see what's in flight without
+// leaving the page.
 
 function StatusDot({ status }: { status: "draft" | "sending" | "complete" }) {
   const color =
@@ -20,22 +21,23 @@ export default function CampaignsModule({ campaigns }: { campaigns: CrmCampaign[
   const active = campaigns.filter((c) => c.status !== "complete");
 
   return (
-    <section className="flex flex-col gap-2">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-          Campaigns
-        </h2>
-        <Link
-          href="/dashboard/crm/campaigns"
-          className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:underline underline-offset-4"
-        >
-          See all ↗
-        </Link>
-      </div>
+    <section>
+      <SectionHeader
+        eyebrow="Campaigns"
+        title="In flight"
+        meta={
+          <Link
+            href="/dashboard/crm/campaigns"
+            className="hover:text-[var(--text-primary)] hover:underline underline-offset-4"
+          >
+            See all ↗
+          </Link>
+        }
+      />
 
-      <div className="overflow-hidden rounded-xl border border-black/8 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-black/8 bg-gradient-to-b from-white to-[var(--surface)]/40 shadow-[0_1px_2px_rgba(15,15,15,0.04),0_4px_18px_-12px_rgba(15,15,15,0.18)]">
         {active.length === 0 ? (
-          <div className="flex items-center justify-between gap-3 p-3 text-xs text-[var(--text-muted)]">
+          <div className="flex items-center justify-between gap-3 p-4 text-xs text-[var(--text-muted)]">
             <span>No active campaigns.</span>
             <Link
               href="/dashboard/crm/campaigns/new"
@@ -54,12 +56,12 @@ export default function CampaignsModule({ campaigns }: { campaigns: CrmCampaign[
                 <li key={c.id}>
                   <Link
                     href={`/dashboard/crm/campaigns/${c.id}`}
-                    className="grid grid-cols-[1fr_auto] items-center gap-3 p-3 hover:bg-[var(--surface)]/40 sm:grid-cols-[1.4fr_2fr_auto]"
+                    className="grid grid-cols-[1fr_auto] items-center gap-3 p-3 transition hover:bg-[var(--surface)]/50 sm:grid-cols-[1.4fr_2fr_auto] sm:p-4"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <StatusDot status={c.status} />
-                        <span className="truncate text-xs font-medium text-[var(--text-primary)]">
+                        <span className="truncate text-sm font-medium tracking-tight text-[var(--text-primary)]">
                           {c.name}
                         </span>
                       </div>
@@ -80,7 +82,7 @@ export default function CampaignsModule({ campaigns }: { campaigns: CrmCampaign[
                         {sent}/{total}
                       </span>
                     </div>
-                    <span className="hidden text-[10px] uppercase tracking-wider text-[var(--text-muted)] sm:inline">
+                    <span className="hidden text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)] sm:inline">
                       {c.status}
                     </span>
                   </Link>

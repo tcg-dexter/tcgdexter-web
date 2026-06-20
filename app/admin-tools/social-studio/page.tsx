@@ -62,6 +62,7 @@ interface MetaDeck {
 
 interface DeckRow {
   id: string;
+  short_id: string;
   name: string;
   cover_image_url: string | null;
   like_count: number;
@@ -242,7 +243,7 @@ export default async function SocialStudioPage() {
   // ── Featured decks ────────────────────────────────────────────
   const { data: deckRowsData } = await supabase
     .from("saved_decks")
-    .select("id, name, cover_image_url, like_count, user_id, analysis")
+    .select("id, short_id, name, cover_image_url, like_count, user_id, analysis")
     .eq("is_public", true)
     .order("like_count", { ascending: false })
     .limit(10);
@@ -278,6 +279,7 @@ export default async function SocialStudioPage() {
       return {
         kind: "featured_deck",
         id: d.id,
+        shortId: d.short_id,
         name: d.name,
         username: prof.username,
         displayName: prof.display_name,

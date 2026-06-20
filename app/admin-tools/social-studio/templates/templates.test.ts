@@ -69,6 +69,7 @@ const cardSpotlight: CardSpotlightSubject = {
 const featuredDeck: FeaturedDeckSubject = {
   kind: "featured_deck",
   id: "d1",
+  shortId: "abc12345",
   name: "Turbo Dragapult",
   username: "misty",
   displayName: "Misty",

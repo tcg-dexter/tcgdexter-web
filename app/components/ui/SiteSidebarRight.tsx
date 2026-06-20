@@ -6,9 +6,18 @@ import UnifiedSearch from "@/app/leaderboard/UnifiedSearch";
 import {
   BookOpenIcon,
   DiscordIcon,
+  GaugeIcon,
+  MailIcon,
   TikTokIcon,
   ShoppingBagIcon,
+  WrenchIcon,
 } from "./nav-icons";
+
+interface Props {
+  /** Whether the signed-in user has profiles.is_admin. When true, an Admin
+   *  section anchored to the bottom of the rail surfaces dashboard tools. */
+  isAdmin?: boolean;
+}
 
 /**
  * Trailing-edge (right) sidebar — desktop only (xl+, 1280 px).
@@ -24,7 +33,7 @@ import {
  *
  * Keep the external-link list in sync with MobileNavMenu's EXTERNAL_LINKS.
  */
-export default function SiteSidebarRight() {
+export default function SiteSidebarRight({ isAdmin = false }: Props) {
   const pathname = usePathname();
   const INTERNAL_LINKS = [
     { href: "/learn", label: "Learn to Play", Icon: BookOpenIcon },
@@ -35,8 +44,25 @@ export default function SiteSidebarRight() {
     { href: "https://www.tiktok.com/@tcgdexter", label: "TikTok", Icon: TikTokIcon },
   ];
 
+  // Admin destinations — only rendered when isAdmin. Dashboard targets the
+  // mission-control root; CRM targets the contacts/campaigns section;
+  // Admin Tools is the legacy tools index. Dashboard/CRM are internal Next
+  // routes; on dashboard.tcgdexter.com middleware rewrites them under the
+  // dashboard subdomain transparently.
+  const ADMIN_LINKS = [
+    { href: "/dashboard", label: "Dashboard", Icon: GaugeIcon, exact: true },
+    { href: "/dashboard/crm", label: "CRM", Icon: MailIcon, exact: false },
+    { href: "/admin-tools", label: "Admin Tools", Icon: WrenchIcon, exact: false },
+  ];
+
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
+
+  // Admin "Dashboard" sits at /dashboard; CRM lives under /dashboard/crm.
+  // Without an exact check, the Dashboard row would highlight on every CRM
+  // page too — match exactly when the link explicitly opts in.
+  const isActiveExact = (href: string, exact: boolean) =>
+    exact ? pathname === href : isActive(href);
 
   // Rows match SiteSidebar's geometry: gap-3 between icon and label,
   // capsule (rounded-full) hover pill, text-base label.
@@ -62,7 +88,7 @@ export default function SiteSidebarRight() {
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 pt-4 pb-6">
+      <nav className="flex-1 flex flex-col overflow-y-auto px-3 pt-4 pb-6">
         <ul className="flex flex-col gap-0.5">
           {INTERNAL_LINKS.map(({ href, label, Icon }) => (
             <li key={href}>
@@ -89,6 +115,31 @@ export default function SiteSidebarRight() {
             </li>
           ))}
         </ul>
+
+        {/* Admin section — anchored to the bottom of the rail when the
+            signed-in user has profiles.is_admin. mt-auto pushes it down
+            while the nav flex column keeps the search and external links
+            up top. */}
+        {isAdmin && (
+          <div className="mt-auto pt-4">
+            <div className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-text-muted">
+              Admin
+            </div>
+            <ul className="flex flex-col gap-0.5">
+              {ADMIN_LINKS.map(({ href, label, Icon, exact }) => (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    className={`${linkBase} ${isActiveExact(href, exact) ? linkActive : linkInactive}`}
+                  >
+                    <Icon />
+                    <span>{label}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </nav>
     </aside>
   );

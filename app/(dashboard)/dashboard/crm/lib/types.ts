@@ -4,6 +4,18 @@
 
 export type CampaignStatus = "draft" | "sending" | "complete";
 
+export type RecipientType = "manual" | "signup_window";
+
+// Recipient rule shape mirrors the columns on email_campaigns. When the
+// type is 'manual', the window dates are null and recipients are added
+// one at a time. When 'signup_window', the dates bound auth.users.created_at
+// and the sync helper auto-enrolls matching users into email_sends.
+export type RecipientRule = {
+  type: RecipientType;
+  signup_window_start: string | null;
+  signup_window_end: string | null;
+};
+
 export type CrmActiveSend = {
   send_id: string;
   campaign_id: string;
@@ -36,6 +48,9 @@ export type CrmCampaign = {
   created_at: string;
   completed_at: string | null;
   created_by: string | null;
+  recipient_type: RecipientType;
+  signup_window_start: string | null;
+  signup_window_end: string | null;
   recipient_count: number;
   sent_count: number;
 };

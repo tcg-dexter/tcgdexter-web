@@ -56,6 +56,27 @@ export function TrophyIcon({ className }: IconProps) {
   );
 }
 
+/** Speedometer / gauge — "Mission control" / Dashboard. */
+export function GaugeIcon({ className }: IconProps) {
+  return (
+    <svg {...outlineProps} className={className}>
+      <path d="M4 17a8 8 0 0116 0" />
+      <path d="M12 17l4-5" />
+      <circle cx="12" cy="17" r="1" />
+    </svg>
+  );
+}
+
+/** Envelope — "CRM" / mail campaigns. */
+export function MailIcon({ className }: IconProps) {
+  return (
+    <svg {...outlineProps} className={className}>
+      <rect x="3" y="6" width="18" height="13" rx="2" />
+      <path d="M3.5 7l8.5 6.5L20.5 7" />
+    </svg>
+  );
+}
+
 /** Vertical bars — "Leaderboard". */
 export function ChartBarIcon({ className }: IconProps) {
   return (

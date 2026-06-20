@@ -20,5 +20,15 @@ export default async function MyDeckDetailPage({
     .maybeSingle();
 
   if (!profile?.username) redirect("/settings");
-  redirect(`/u/${profile.username}/${id}`);
+
+  // Resolve the deck's short_id so the canonical owner URL matches the
+  // shareable form. Falls back to the raw id (UUID) if the lookup misses.
+  const { data: deck } = await supabase
+    .from("saved_decks")
+    .select("short_id")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  redirect(`/u/${profile.username}/${deck?.short_id ?? id}`);
 }

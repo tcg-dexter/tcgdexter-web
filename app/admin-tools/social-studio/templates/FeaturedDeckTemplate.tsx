@@ -142,7 +142,7 @@ export function buildFeaturedDeckLayers(
       node: (
         <CtaBlock
           cta={copy.cta}
-          url={`tcgdexter.com/u/${subject.username}/${subject.id}`}
+          url={`tcgdexter.com/u/${subject.username}/${subject.shortId}`}
           bottom={100}
         />
       ),

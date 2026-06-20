@@ -27,6 +27,7 @@ interface ProfileRow {
 
 interface DeckRow {
   id: string;
+  short_id: string;
   name: string;
   analysis: {
     deckPrice?: number;
@@ -67,7 +68,7 @@ async function loadSpotlight(slug: string) {
     const { data } = await supabase
       .from("saved_decks")
       .select(
-        "id, name, analysis, created_at, like_count, is_public, cover_image_url, user_id"
+        "id, short_id, name, analysis, created_at, like_count, is_public, cover_image_url, user_id"
       )
       .in("id", spotlight.featured_deck_ids);
     const byId = new Map((data ?? []).map((d) => [d.id, d as DeckRow]));
@@ -263,7 +264,7 @@ export default async function SpotlightPage({
                     key={deck.id}
                     id={deck.id}
                     name={deck.name}
-                    href={`/u/${profile.username}/${deck.id}`}
+                    href={`/u/${profile.username}/${deck.short_id}`}
                     username={profile.username}
                     displayName={profile.display_name}
                     price={deck.analysis?.deckPrice ?? null}

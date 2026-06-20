@@ -42,6 +42,7 @@ interface ProfileRow {
 
 interface DeckRow {
   id: string;
+  short_id: string;
   name: string;
   analysis: {
     deckPrice?: number;
@@ -136,12 +137,12 @@ export default async function ProfilePage({
   const { data: decksRaw } = isOwner
     ? await supabase
         .from("saved_decks")
-        .select("id, name, analysis, updated_at, created_at, like_count, is_public, cover_image_url")
+        .select("id, short_id, name, analysis, updated_at, created_at, like_count, is_public, cover_image_url")
         .eq("user_id", profile.id)
         .order("updated_at", { ascending: false })
     : await supabase
         .from("saved_decks")
-        .select("id, name, analysis, updated_at, created_at, like_count, is_public, cover_image_url")
+        .select("id, short_id, name, analysis, updated_at, created_at, like_count, is_public, cover_image_url")
         .eq("user_id", profile.id)
         .eq("is_public", true)
         .order("like_count", { ascending: false })
@@ -436,7 +437,7 @@ export default async function ProfilePage({
                   key={deck.id}
                   id={deck.id}
                   name={deck.name}
-                  href={`/u/${profile.username}/${deck.id}`}
+                  href={`/u/${profile.username}/${deck.short_id}`}
                   username={profile.username}
                   displayName={profile.display_name}
                   price={deck.analysis?.deckPrice ?? null}

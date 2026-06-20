@@ -94,7 +94,7 @@ export default async function SiteNav() {
         isAdmin={isAdmin}
         spotlightHref={spotlightHref}
       />
-      <SiteSidebarRight />
+      <SiteSidebarRight isAdmin={isAdmin} />
     </>
   );
 }
