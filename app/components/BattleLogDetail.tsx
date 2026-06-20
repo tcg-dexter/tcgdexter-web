@@ -757,20 +757,27 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
           isLast ? "" : "border-b border-[#e2e8f0]"
         }`}
       >
-        <div className="flex items-end gap-1.5 flex-wrap">
-          <span className="text-sm font-bold text-text-primary truncate">
-            {post.displayName}
-          </span>
-          <span className="text-xs text-text-muted truncate">
-            @{post.handle}
-          </span>
-          {post.label && (
-            <>
-              <span className="text-xs text-text-muted">·</span>
-              <span className="text-xs text-text-muted tabular-nums">
-                {post.label}
-              </span>
-            </>
+        <div className="flex items-end justify-between gap-2">
+          <div className="flex items-end gap-1.5 min-w-0">
+            <span className="text-sm font-bold text-text-primary truncate">
+              {post.displayName}
+            </span>
+            <span className="text-xs text-text-muted truncate">
+              @{post.handle}
+            </span>
+            {post.label && !post.label.startsWith("Turn ") && (
+              <>
+                <span className="text-xs text-text-muted">·</span>
+                <span className="text-xs text-text-muted tabular-nums">
+                  {post.label}
+                </span>
+              </>
+            )}
+          </div>
+          {post.label.startsWith("Turn ") && (
+            <span className="shrink-0 rounded-full bg-[#1a1a1a] px-2.5 py-0.5 text-[10px] font-bold text-white tabular-nums">
+              {post.label}
+            </span>
           )}
         </div>
 
