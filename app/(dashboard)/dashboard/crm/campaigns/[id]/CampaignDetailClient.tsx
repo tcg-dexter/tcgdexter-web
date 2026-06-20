@@ -14,6 +14,21 @@ function nameOf(r: CrmCampaignRecipient): string {
   return r.display_name?.trim() || r.username || r.email;
 }
 
+type RecipientSortKey = "unsent_first" | "name" | "sent_at_desc";
+
+// Default "Unsent first" surfaces the next action — rows that still need
+// to be marked sent — at the top of the table. Secondary sorts cover the
+// other two natural ways of looking at the same data.
+const RECIPIENT_SORTS: { key: RecipientSortKey; label: string }[] = [
+  { key: "unsent_first", label: "Unsent first" },
+  { key: "name", label: "Name (A–Z)" },
+  { key: "sent_at_desc", label: "Recently sent" },
+];
+
+function compareName(a: CrmCampaignRecipient, b: CrmCampaignRecipient): number {
+  return nameOf(a).toLowerCase().localeCompare(nameOf(b).toLowerCase());
+}
+
 function formatDateTime(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toISOString().replace("T", " ").slice(0, 16) + " UTC";
@@ -57,6 +72,41 @@ export default function CampaignDetailClient({
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [recipientSort, setRecipientSort] =
+    useState<RecipientSortKey>("unsent_first");
+
+  // Effective sent timestamp accounting for optimistic toggles isn't tracked
+  // in the recipients array directly (the toggleSent handler rewrites
+  // recipients in place), so we sort on r.sent_at as-is. Order updates
+  // re-derive on every render via useMemo when recipients/sort change.
+  const sortedRecipients = useMemo(() => {
+    const rows = [...recipients];
+    switch (recipientSort) {
+      case "unsent_first":
+        return rows.sort((a, b) => {
+          if ((a.sent_at === null) !== (b.sent_at === null)) {
+            return a.sent_at === null ? -1 : 1;
+          }
+          if (a.sent_at && b.sent_at) {
+            // Within the sent group, newest at the top.
+            return b.sent_at.localeCompare(a.sent_at);
+          }
+          return compareName(a, b);
+        });
+      case "name":
+        return rows.sort(compareName);
+      case "sent_at_desc":
+        return rows.sort((a, b) => {
+          if ((a.sent_at !== null) !== (b.sent_at !== null)) {
+            return a.sent_at !== null ? -1 : 1;
+          }
+          if (a.sent_at && b.sent_at) {
+            return b.sent_at.localeCompare(a.sent_at);
+          }
+          return compareName(a, b);
+        });
+    }
+  }, [recipients, recipientSort]);
 
   const sentCount = useMemo(
     () => recipients.filter((r) => r.sent_at !== null).length,
@@ -414,20 +464,42 @@ export default function CampaignDetailClient({
       </section>
 
       <section className="flex flex-col gap-2">
-        <div className="flex items-baseline justify-between">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
             Recipients
           </h2>
-          {selected.size > 0 ? (
-            <button
-              type="button"
-              disabled={bulkPending}
-              onClick={markSelectedSent}
-              className="rounded-md bg-black px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="recipient-sort"
+              className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"
             >
-              {bulkPending ? "Marking…" : `Mark ${selected.size} sent`}
-            </button>
-          ) : null}
+              Sort
+            </label>
+            <select
+              id="recipient-sort"
+              value={recipientSort}
+              onChange={(e) =>
+                setRecipientSort(e.target.value as RecipientSortKey)
+              }
+              className="rounded-md border border-black/10 bg-white px-2 py-1 text-[11px]"
+            >
+              {RECIPIENT_SORTS.map((s) => (
+                <option key={s.key} value={s.key}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+            {selected.size > 0 ? (
+              <button
+                type="button"
+                disabled={bulkPending}
+                onClick={markSelectedSent}
+                className="rounded-md bg-black px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+              >
+                {bulkPending ? "Marking…" : `Mark ${selected.size} sent`}
+              </button>
+            ) : null}
+          </div>
         </div>
 
         {error ? <div className="text-[11px] text-[var(--accent)]">{error}</div> : null}
@@ -475,7 +547,7 @@ export default function CampaignDetailClient({
                 </tr>
               </thead>
               <tbody>
-                {recipients.map((r) => (
+                {sortedRecipients.map((r) => (
                   <tr key={r.send_id} className="border-t border-black/5 hover:bg-[var(--surface)]/40">
                     <td className="px-2 py-2 align-top">
                       <input
