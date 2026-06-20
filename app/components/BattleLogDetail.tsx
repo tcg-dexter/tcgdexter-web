@@ -681,7 +681,7 @@ export default function BattleLogDetail({ matchId, apiUrl, result }: Props) {
         ];
         if (hasPrizes) {
           items.push(
-            <PrizeThreadPost key={`${post.key}-prize`} count={stats.prizes} />
+            <PrizeThreadPost key={`${post.key}-prize`} count={stats.prizes} playerName={post.displayName} />
           );
         }
         return items;
@@ -800,14 +800,14 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
   );
 }
 
-function PrizeThreadPost({ count }: { count: number }) {
+function PrizeThreadPost({ count, playerName }: { count: number; playerName: string }) {
   return (
     <div className="px-3 pt-2 pb-3">
       <div
         className="rounded-xl px-4 py-2.5 text-sm font-bold text-white text-center"
         style={{ background: WIN_GRADIENT }}
       >
-        {count} {count === 1 ? "Prize Taken" : "Prizes Taken"}
+        {playerName} took {count} prize card{count !== 1 ? "s" : ""}
       </div>
     </div>
   );
