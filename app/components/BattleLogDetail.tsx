@@ -762,9 +762,6 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
             <span className="text-sm font-bold text-text-primary truncate">
               {post.displayName}
             </span>
-            <span className="text-xs text-text-muted truncate">
-              @{post.handle}
-            </span>
             {post.label && !post.label.startsWith("Turn ") && (
               <>
                 <span className="text-xs text-text-muted">·</span>
