@@ -1,4 +1,3 @@
-import { Card } from "../components/Card";
 import { listCampaigns, listContacts } from "./lib/queries";
 import CampaignsModule from "./components/CampaignsModule";
 import CrmContactsClient from "./CrmContactsClient";
@@ -36,25 +35,21 @@ export default async function CrmPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Card variant="hero">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-              Communications · {todayLabel()}
-            </div>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-3xl">
-              {greeting()}.
-            </h1>
-            <p className="mt-1 max-w-prose text-xs text-[var(--text-secondary)] sm:text-sm">
-              {contacts.length} signed-up user{contacts.length === 1 ? "" : "s"}
-              {activeCampaigns > 0
-                ? `, ${activeCampaigns} active campaign${activeCampaigns === 1 ? "" : "s"}`
-                : ""}
-              . Plan, track, and mark sent — all in one place.
-            </p>
-          </div>
+      <header>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+          Communications · {todayLabel()}
         </div>
-      </Card>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-3xl">
+          {greeting()}.
+        </h1>
+        <p className="mt-1 max-w-prose text-xs text-[var(--text-secondary)] sm:text-sm">
+          {contacts.length} signed-up user{contacts.length === 1 ? "" : "s"}
+          {activeCampaigns > 0
+            ? `, ${activeCampaigns} active campaign${activeCampaigns === 1 ? "" : "s"}`
+            : ""}
+          . Plan, track, and mark sent — all in one place.
+        </p>
+      </header>
 
       <CampaignsModule campaigns={campaigns} />
       <CrmContactsClient contacts={contacts} campaignTargets={targets} />

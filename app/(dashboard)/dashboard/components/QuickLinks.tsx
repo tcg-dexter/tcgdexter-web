@@ -42,7 +42,7 @@ function Section({
  */
 export default function QuickLinks() {
   return (
-    <div className="rounded-2xl border border-black/8 bg-gradient-to-b from-white to-[var(--surface)]/40 p-4 shadow-[0_1px_2px_rgba(15,15,15,0.04),0_4px_18px_-12px_rgba(15,15,15,0.18)] sm:p-5">
+    <div>
       <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-3">
         <Section
           title="Vercel"

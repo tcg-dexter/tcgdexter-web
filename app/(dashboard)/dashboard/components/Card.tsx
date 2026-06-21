@@ -1,24 +1,19 @@
+/**
+ * Dashboard "Card" is now a transparent pass-through so primary content
+ * sits directly on the page background. The variant prop is preserved for
+ * the (small handful of) call sites that still pass it; all variants render
+ * identically — no rounded border, no shadow, no background. Spacing
+ * between sections is the parent's responsibility (page.tsx uses gap-6).
+ */
 export function Card({
   children,
-  variant = "default",
   className,
 }: {
   children: React.ReactNode;
   variant?: "default" | "elevated" | "hero";
   className?: string;
 }) {
-  // Three card looks share the same rounded shell so they stack consistently:
-  //   default  — flat white, used for body content
-  //   elevated — extra shadow + subtle gradient, for the most important blocks
-  //   hero     — gradient + accent ring, for the page hero
-  const base = "rounded-2xl border border-black/8 p-4 sm:p-5";
-  const styles =
-    variant === "hero"
-      ? "bg-gradient-to-br from-white via-white to-[color:rgba(217,85,85,0.06)] shadow-[0_1px_2px_rgba(15,15,15,0.04),0_8px_24px_-12px_rgba(217,85,85,0.25)]"
-      : variant === "elevated"
-        ? "bg-gradient-to-b from-white to-[var(--surface)]/40 shadow-[0_1px_2px_rgba(15,15,15,0.04),0_4px_18px_-12px_rgba(15,15,15,0.18)]"
-        : "bg-white shadow-sm";
-  return <div className={`${base} ${styles} ${className ?? ""}`.trim()}>{children}</div>;
+  return <div className={className ?? ""}>{children}</div>;
 }
 
 export function Stat({

@@ -1,6 +1,6 @@
 import type { Deploy, DeploysData } from "../lib/vercel-deploys";
 import { links } from "../lib/links";
-import { Card, relTime } from "./Card";
+import { relTime } from "./Card";
 
 type Props = { data: DeploysData };
 
@@ -86,7 +86,7 @@ function DeployRow({ d }: { d: Deploy }) {
 
 export default function DeploysCard({ data }: Props) {
   return (
-    <Card variant="elevated">
+    <div>
       <div className="mb-2 flex items-center justify-between">
         <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
           Recent deploys
@@ -127,6 +127,6 @@ export default function DeploysCard({ data }: Props) {
           .
         </div>
       )}
-    </Card>
+    </div>
   );
 }

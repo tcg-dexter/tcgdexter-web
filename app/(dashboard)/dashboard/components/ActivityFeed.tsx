@@ -1,6 +1,6 @@
 import type { ActivityData, ActivityKind } from "../lib/activity";
 import { links } from "../lib/links";
-import { Card, ErrorBox, Initials, relTime } from "./Card";
+import { ErrorBox, Initials, relTime } from "./Card";
 
 type Props = { data: ActivityData | { error: string } };
 
@@ -29,7 +29,7 @@ export default function ActivityFeed({ data }: Props) {
   if ("error" in data) return <ErrorBox error={data.error} />;
 
   return (
-    <Card variant="elevated">
+    <div>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <div className="flex items-baseline gap-2">
           <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
@@ -109,6 +109,6 @@ export default function ActivityFeed({ data }: Props) {
           })}
         </ul>
       )}
-    </Card>
+    </div>
   );
 }

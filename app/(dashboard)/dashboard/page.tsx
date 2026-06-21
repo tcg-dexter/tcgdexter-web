@@ -6,7 +6,7 @@ import OpsCard from "./components/OpsCard";
 import ProductCard from "./components/ProductCard";
 import QuickLinks from "./components/QuickLinks";
 import VitalsStrip from "./components/VitalsStrip";
-import { Card, SectionHeader } from "./components/Card";
+import { SectionHeader } from "./components/Card";
 import { fetchActivity } from "./lib/activity";
 import { fetchDeploys } from "./lib/vercel-deploys";
 import { fetchDev } from "./lib/github";
@@ -50,8 +50,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Hero band — frames the page as a control surface, not a spreadsheet. */}
-      <Card variant="hero">
+      {/* Hero header — text + KPI strip sit directly on the page background. */}
+      <header className="flex flex-col gap-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
@@ -67,13 +67,8 @@ export default async function DashboardPage() {
           </div>
           <AutoRefresh intervalMs={60_000} />
         </div>
-
-        {/* Hero KPI strip — anchored inside the hero card so the most important
-            numbers sit prominently at the top of the page. */}
-        <div className="mt-5">
-          <VitalsStrip ops={ops} dev={dev} product={product} deploys={deploys} />
-        </div>
-      </Card>
+        <VitalsStrip ops={ops} dev={dev} product={product} deploys={deploys} />
+      </header>
 
       <div className="flex flex-col gap-6">
         <section>

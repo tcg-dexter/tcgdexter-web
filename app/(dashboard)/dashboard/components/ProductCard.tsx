@@ -1,6 +1,6 @@
 import type { ProductData } from "../lib/product";
 import { links } from "../lib/links";
-import { Card, ErrorBox, Sparkline, Stat } from "./Card";
+import { ErrorBox, Sparkline, Stat } from "./Card";
 
 type Props = { data: ProductData | { error: string } };
 
@@ -13,8 +13,8 @@ export default function ProductCard({ data }: Props) {
   const signupDelta = data.users.newLast7d - signupPrev7;
 
   return (
-    <div className="flex flex-col gap-4">
-      <Card variant="elevated">
+    <div className="flex flex-col gap-8">
+      <div>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
           <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
             Supabase · users & content
@@ -67,7 +67,7 @@ export default function ProductCard({ data }: Props) {
           />
         </div>
 
-        <div className="mt-6 rounded-xl border border-black/5 bg-gradient-to-b from-[var(--surface)]/40 to-transparent p-3 sm:p-4">
+        <div className="mt-6">
           <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
             <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
               Signups · last 30 days
@@ -89,9 +89,9 @@ export default function ProductCard({ data }: Props) {
             responsive
           />
         </div>
-      </Card>
+      </div>
 
-      <Card variant="elevated">
+      <div>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
           <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
             Vercel Web Analytics
@@ -151,7 +151,7 @@ export default function ProductCard({ data }: Props) {
             to view analytics directly.
           </div>
         )}
-      </Card>
+      </div>
     </div>
   );
 }
