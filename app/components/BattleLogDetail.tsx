@@ -673,55 +673,46 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
   // Active Pokémon tracking — updated by play_to_active, switch_active, and
   // evolve actions. Initialize from pre-game, then snapshot after each game turn.
   const activeState = { player: null as string | null, opponent: null as string | null };
-  // After a KO the defending side must immediately promote. TCG Live logs
-  // often tag that promote action with the attacker's actor (the current turn
-  // owner), so we can't trust the actor field alone. Track which side needs a
-  // promote and use it for the next switch_active / play_to_active.
-  let pendingPromoSide: "player" | "opponent" | null = null;
   function applyActives(actions: ApiAction[]) {
     for (const a of actions) {
       if (a.action_type === "knock_out") {
         const pokemon = p<string>(a, "pokemon");
         if (pokemon) {
           const lc = pokemon.toLowerCase();
-          if (activeState.player?.toLowerCase() === lc) {
-            activeState.player = null;
-            pendingPromoSide = "player";
-          } else if (activeState.opponent?.toLowerCase() === lc) {
-            activeState.opponent = null;
-            pendingPromoSide = "opponent";
-          }
+          if (activeState.player?.toLowerCase() === lc) activeState.player = null;
+          else if (activeState.opponent?.toLowerCase() === lc) activeState.opponent = null;
         }
-      } else if (a.action_type === "play_to_active") {
-        const card = p<string>(a, "card");
+      } else if (
+        a.action_type === "play_to_active" ||
+        a.action_type === "switch_active"
+      ) {
+        const card =
+          a.action_type === "play_to_active"
+            ? p<string>(a, "card")
+            : p<string>(a, "pokemon");
         if (card) {
-          if (pendingPromoSide) {
-            activeState[pendingPromoSide] = card;
-            pendingPromoSide = null;
-          } else if (a.actor === "player") {
-            activeState.player = card;
-          } else if (a.actor === "opponent") {
-            activeState.opponent = card;
+          // Determine where to route this action. TCG Live logs often attribute
+          // the defending side's mandatory post-KO promote to the attacking
+          // side's actor (the current turn owner). Additionally, the initial
+          // active placement during setup may be missing actor info.
+          //
+          // Rule: if exactly ONE side is null, always fill it — regardless of
+          // the actor field. The null side is either freshly KO'd or was never
+          // set in setup; in either case, the action belongs there. Only when
+          // both sides have an active (voluntary retreat) do we trust actor.
+          if (activeState.player === null && activeState.opponent === null) {
+            // Both empty (early setup): use actor to assign correctly.
+            if (a.actor === "player") activeState.player = card;
+            else if (a.actor === "opponent") activeState.opponent = card;
+            else activeState.player = card; // no actor — guess player first
           } else if (activeState.player === null) {
             activeState.player = card;
           } else if (activeState.opponent === null) {
             activeState.opponent = card;
-          }
-        }
-      } else if (a.action_type === "switch_active") {
-        const pokemon = p<string>(a, "pokemon");
-        if (pokemon) {
-          if (pendingPromoSide) {
-            activeState[pendingPromoSide] = pokemon;
-            pendingPromoSide = null;
-          } else if (a.actor === "player") {
-            activeState.player = pokemon;
-          } else if (a.actor === "opponent") {
-            activeState.opponent = pokemon;
-          } else if (activeState.player === null) {
-            activeState.player = pokemon;
-          } else if (activeState.opponent === null) {
-            activeState.opponent = pokemon;
+          } else {
+            // Both filled — voluntary retreat. Trust actor.
+            if (a.actor === "player") activeState.player = card;
+            else if (a.actor === "opponent") activeState.opponent = card;
           }
         }
       } else if (a.action_type === "evolve") {
