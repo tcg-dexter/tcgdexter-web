@@ -1133,7 +1133,7 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
   // knock_out and its paired prize_taken so they render above the KO capsule.
   const koHoistedAbilities = new Map<number, number[]>(); // ko idx → ability idxes
   const hoistedAbility = new Set<number>();
-  for (const [koIdx, prizeIdx] of koPrizeIndex) {
+  for (const [koIdx, prizeIdx] of Array.from(koPrizeIndex)) {
     const abilities: number[] = [];
     for (let j = koIdx + 1; j < prizeIdx; j++) {
       if (actions[j].action_type === "ability_used") {
