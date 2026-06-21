@@ -262,12 +262,12 @@ export default function MatchesClient({ matches, currentUsername = null }: Props
 function MatchSection({ title, matches }: { title: string; matches: RecentMatch[] }) {
   return (
     <section>
-      <div className="flex items-baseline gap-3 mb-3">
-        <h2 className="text-sm font-black uppercase tracking-[0.15em] text-text-primary">
+      <div className="flex items-baseline gap-3 lg:gap-6 mb-3 lg:mb-6">
+        <h2 className="text-sm lg:text-3xl font-black uppercase tracking-[0.15em] text-text-primary">
           {title}
         </h2>
         <span className="h-px flex-1 bg-text-primary/15" />
-        <span className="shrink-0 rounded-full bg-black text-white text-[11px] font-bold px-2.5 py-0.5 tabular-nums">
+        <span className="shrink-0 rounded-full bg-black text-white text-[11px] lg:text-[22px] font-bold px-2.5 lg:px-5 py-0.5 lg:py-1 tabular-nums">
           {matches.length}
         </span>
       </div>
