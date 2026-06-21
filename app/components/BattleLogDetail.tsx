@@ -937,7 +937,7 @@ function PokemonSprite({ name }: { name: string | null }) {
     <img
       src={pokemonSpriteUrl(name)}
       alt={name}
-      className="h-12 w-12 shrink-0 object-contain drop-shadow-sm"
+      className="h-12 w-12 shrink-0 object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
       onError={() => setFailed(true)}
     />
   );
@@ -969,19 +969,18 @@ function ScoreCard({
   return (
     <div className="px-3 pt-2 pb-3">
       <div
-        className="rounded-xl px-3 py-[18px] flex items-center gap-3 text-white opacity-80"
+        className="rounded-xl px-3 py-[18px] relative flex items-center text-white opacity-80"
         style={{ background: `linear-gradient(to right, ${playerColor}, ${opponentColor})` }}
       >
-        {/* Player bench — left column, left-aligned */}
-        {playerBench.length > 0 && (
-          <div className="flex flex-col gap-0.5 min-w-0 shrink">
-            {playerBench.map((name, i) => (
-              <span key={i} className="text-[10px] font-semibold leading-tight truncate">{name}</span>
-            ))}
-          </div>
-        )}
-        {/* Center: both sprites side-by-side above the score */}
-        <div className="flex-1 flex flex-col items-center gap-2 min-w-0">
+        {/* Bench columns — stretch behind the center content freely */}
+        <div className="flex-1 flex flex-col gap-0.5 min-w-0">
+          {playerBench.map((name, i) => (
+            <span key={i} className="text-[10px] font-semibold leading-tight truncate">{name}</span>
+          ))}
+        </div>
+        {/* Center — absolutely positioned so it always sits at 50% regardless
+            of bench column widths. z-10 keeps it above bench text. */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none z-10">
           <div className="flex items-end gap-2">
             <PokemonSprite name={playerActiveName} />
             <PokemonSprite name={opponentActiveName} />
@@ -990,14 +989,11 @@ function ScoreCard({
             {playerPrizes}–{opponentPrizes}
           </span>
         </div>
-        {/* Opponent bench — right column, right-aligned */}
-        {opponentBench.length > 0 && (
-          <div className="flex flex-col gap-0.5 min-w-0 shrink items-end">
-            {opponentBench.map((name, i) => (
-              <span key={i} className="text-[10px] font-semibold leading-tight truncate text-right">{name}</span>
-            ))}
-          </div>
-        )}
+        <div className="flex-1 flex flex-col gap-0.5 min-w-0 items-end">
+          {opponentBench.map((name, i) => (
+            <span key={i} className="text-[10px] font-semibold leading-tight truncate text-right">{name}</span>
+          ))}
+        </div>
       </div>
     </div>
   );
