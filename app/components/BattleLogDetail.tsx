@@ -276,13 +276,13 @@ function labelFor(action: ApiAction): string {
     case "attach_energy":
       return `Attached ${p<string>(action, "energy")} to ${p<string>(action, "target")}`;
     case "evolve":
-      return `Evolved ${p<string>(action, "from")} → ${p<string>(action, "to")}`;
+      return `${p<string>(action, "from")} → ${p<string>(action, "to")}`;
     case "retreat": {
       const energies = p<string[]>(action, "discarded_energies") ?? [];
       const tail = energies.length
         ? ` (discarded ${energies.join(", ")})`
         : "";
-      return `Retreated ${p<string>(action, "pokemon")}${tail}`;
+      return `${p<string>(action, "pokemon")}${tail}`;
     }
     case "switch_active":
       return `${p<string>(action, "pokemon")} is now Active`;
@@ -302,7 +302,7 @@ function labelFor(action: ApiAction): string {
     case "damage_dealt":
       return `${p<string>(action, "pokemon")} took ${p<number>(action, "damage")} damage`;
     case "discard_from_pokemon":
-      return `Discarded ${p<string>(action, "card")} from ${p<string>(action, "pokemon")}`;
+      return `Discarded ${p<string>(action, "card") ?? "card"}`;
     case "knock_out":
       return `${p<string>(action, "pokemon")} Knocked Out`;
     case "prize_taken": {
@@ -1128,6 +1128,24 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
     }
   }
 
+  // When an ability causes a KO during checkup, the log records knock_out
+  // before ability_used. Hoist any ability_used actions that fall between a
+  // knock_out and its paired prize_taken so they render above the KO capsule.
+  const koHoistedAbilities = new Map<number, number[]>(); // ko idx → ability idxes
+  const hoistedAbility = new Set<number>();
+  for (const [koIdx, prizeIdx] of koPrizeIndex) {
+    const abilities: number[] = [];
+    for (let j = koIdx + 1; j < prizeIdx; j++) {
+      if (actions[j].action_type === "ability_used") {
+        abilities.push(j);
+      }
+    }
+    if (abilities.length > 0) {
+      koHoistedAbilities.set(koIdx, abilities);
+      abilities.forEach((j) => hoistedAbility.add(j));
+    }
+  }
+
   return (
     <ul className="flex flex-col gap-1">
       {actions.map((a, idx) => {
@@ -1135,25 +1153,42 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
         if (!label) return null;
         const cat = categoryFor(a.action_type);
 
+        // Skip abilities that were hoisted to render before their KO capsule.
+        if (hoistedAbility.has(idx)) return null;
+
         if (a.action_type === "knock_out") {
           const prizeIdx = koPrizeIndex.get(idx);
-          if (prizeIdx !== undefined) {
-            return (
-              <li
-                key={a.id}
-                className="rounded-full px-3 py-2.5 text-xs font-bold text-white bg-[#1a1a1a] flex items-center justify-between gap-2"
-              >
-                <span>{label}</span>
-                <span>{labelFor(actions[prizeIdx])}</span>
-              </li>
-            );
-          }
-          return (
+          const hoisted = koHoistedAbilities.get(idx) ?? [];
+          const capsule = prizeIdx !== undefined ? (
+            <li
+              key={a.id}
+              className="rounded-full px-3 py-2.5 text-xs font-bold text-white bg-[#1a1a1a] flex items-center justify-between gap-2"
+            >
+              <span>{label}</span>
+              <span>{labelFor(actions[prizeIdx])}</span>
+            </li>
+          ) : (
             <li
               key={a.id}
               className="rounded-full px-3 py-2.5 text-xs font-bold text-white text-center bg-[#1a1a1a]"
             >
               {label}
+            </li>
+          );
+          if (hoisted.length === 0) return capsule;
+          return (
+            <li key={a.id} className="flex flex-col gap-1">
+              {hoisted.map((j) => {
+                const ha = actions[j];
+                const hl = labelFor(ha);
+                return (
+                  <div key={ha.id} className="flex items-baseline gap-2 text-sm leading-snug">
+                    <ActionTypeLabel type={ha.action_type} className="text-text-muted" />
+                    <span className="flex-1 min-w-0 text-text-secondary break-words">{hl}</span>
+                  </div>
+                );
+              })}
+              {capsule}
             </li>
           );
         }

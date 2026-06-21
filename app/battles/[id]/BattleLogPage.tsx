@@ -409,11 +409,13 @@ function StatChart({
         {opponentName}
       </div>
 
-      {rows.map((row) => (
+      {rows.map((row, idx) => {
+        const isFooter = idx === rows.length - 1;
+        return (
         <Fragment key={row.label}>
           {/* Full-width separator above each row — spans all three
               columns so the line reads as one continuous rule. */}
-          <div className="col-span-3 border-t border-black/[0.08]" />
+          <div className={`col-span-3 border-t ${isFooter ? "border-t-2 border-black" : "border-black/[0.08]"}`} />
           <div className="text-[11px] font-semibold uppercase tracking-widest text-text-primary py-2.5">
             {row.label}
           </div>
@@ -424,7 +426,8 @@ function StatChart({
             {row.right}
           </div>
         </Fragment>
-      ))}
+        );
+      })}
     </div>
   );
 }
