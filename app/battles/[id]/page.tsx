@@ -66,8 +66,8 @@ export default async function BattleRoute({
   let opponentAttackerName: string | null = null;
   let opponentImageUrl: string | null = null;
   const stats = {
-    player: { damage: 0, pokemon: 0, supporters: 0, items: 0, energy: 0 },
-    opponent: { damage: 0, pokemon: 0, supporters: 0, items: 0, energy: 0 },
+    player: { damage: 0, pokemon: 0, supporters: 0, items: 0, energy: 0, prizes: 0 },
+    opponent: { damage: 0, pokemon: 0, supporters: 0, items: 0, energy: 0, prizes: 0 },
   };
 
   if (hasBattleLog) {
@@ -82,6 +82,7 @@ export default async function BattleRoute({
         "play_supporter",
         "play_item",
         "attach_energy",
+        "prize_taken",
       ]);
 
     const dmgByAttacker = new Map<string, number>();
@@ -115,6 +116,9 @@ export default async function BattleRoute({
           break;
         case "attach_energy":
           bucket.energy += 1;
+          break;
+        case "prize_taken":
+          bucket.prizes += 1;
           break;
       }
     }
