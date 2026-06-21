@@ -978,7 +978,7 @@ function ScoreCard({
           <span className="text-[11px] font-bold leading-tight truncate text-right">{opponentName}</span>
         </div>
         {/* Bench columns sit below the header; center sprites+score overlay the full card */}
-        <div className="flex items-start flex-1 mt-1">
+        <div className="flex items-center flex-1 mt-1">
           <div className="flex-1 flex flex-col gap-0.5 min-w-0">
             {playerBench.map((name, i) => (
               <span key={i} className="text-[10px] font-semibold leading-tight truncate opacity-80">{name}</span>
