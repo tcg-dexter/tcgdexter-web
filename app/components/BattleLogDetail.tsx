@@ -885,7 +885,7 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
           isLast ? "" : "border-b border-[#e2e8f0]"
         }`}
       >
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 min-h-[2.25rem]">
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="text-sm font-bold text-text-primary truncate">
               {post.displayName}
