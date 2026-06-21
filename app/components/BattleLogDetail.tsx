@@ -1160,28 +1160,43 @@ function ActionTypeLabel({ type, className }: { type: string; className?: string
 function ActionList({ actions }: { actions: ApiAction[] }) {
   return (
     <ul className="flex flex-col gap-1">
-      {actions.map((a) => {
+      {actions.map((a, idx) => {
         const label = labelFor(a);
         if (!label) return null;
         const cat = categoryFor(a.action_type);
 
-        if (cat === "featured-ko") {
+        if (a.action_type === "knock_out") {
+          const next = actions[idx + 1];
+          if (next?.action_type === "prize_taken") {
+            // Combine KO + prize into one capsule: KO left, prizes right.
+            return (
+              <li
+                key={a.id}
+                className="-mx-2 rounded-full px-3 py-1.5 text-xs font-bold text-white bg-[#1a1a1a] flex items-center justify-between gap-2"
+              >
+                <span>{label}</span>
+                <span>{labelFor(next)}</span>
+              </li>
+            );
+          }
           return (
             <li
               key={a.id}
-              className="-mx-2 rounded-xl px-3 py-1.5 text-xs font-bold text-white text-center bg-[#1a1a1a]"
+              className="-mx-2 rounded-full px-3 py-1.5 text-xs font-bold text-white text-center bg-[#1a1a1a]"
             >
               {label}
             </li>
           );
         }
 
-        if (cat === "featured-prize") {
+        // prize_taken consumed above when paired — render standalone if not.
+        if (cat === "featured-ko" || cat === "featured-prize") {
+          const prevAction = actions[idx - 1];
+          if (cat === "featured-prize" && prevAction?.action_type === "knock_out") return null;
           return (
             <li
               key={a.id}
-              className="-mx-2 rounded-xl px-3 py-1.5 text-xs font-bold text-white text-center"
-              style={{ background: WIN_GRADIENT }}
+              className="-mx-2 rounded-full px-3 py-1.5 text-xs font-bold text-white text-center bg-[#1a1a1a]"
             >
               {label}
             </li>
