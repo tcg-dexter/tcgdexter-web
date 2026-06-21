@@ -813,7 +813,7 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
 
 function SectionDivider({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-3 px-3 py-3">
+    <div className="flex items-center gap-3 py-3">
       <div className="flex-1 h-px bg-[#e2e8f0]" />
       <span className="text-[10px] font-bold uppercase tracking-widest text-text-primary">{label}</span>
       <div className="flex-1 h-px bg-[#e2e8f0]" />
@@ -850,7 +850,7 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
 
   return (
     <div
-      className={`flex gap-3 px-3 pt-3 ${isResult ? "bg-accent/[0.06]" : ""}`}
+      className={`flex gap-3 pt-3 ${isResult ? "bg-accent/[0.06]" : ""}`}
     >
       <div className="flex flex-col items-center self-stretch">
         <div
@@ -967,7 +967,7 @@ function ScoreCard({
   opponentBench: string[];
 }) {
   return (
-    <div className="px-3 pt-2 pb-3">
+    <div className="pt-2 pb-3">
       <div
         className="rounded-xl px-3 py-[18px] min-h-[120px] relative flex items-center text-white opacity-80"
         style={{ background: `linear-gradient(to right, ${playerColor}, ${opponentColor})` }}

@@ -235,10 +235,10 @@ export default function BattleLogPage({
       {/* Battle log — full width. The heading sits above the thread
           as a strong section break: bold uppercase title flanked by a
           short accent rule, with a turn-count caption underneath. */}
-      <div className="px-3 pb-16">
+      <div className="px-4 pb-16">
         {hasBattleLog ? (
           <>
-            <div className="mt-8 mb-2 px-1">
+            <div className="mt-8 mb-2">
               <div className="flex items-baseline gap-3">
                 <h2 className="text-xl font-black uppercase tracking-[0.15em] text-text-primary">
                   Battle Log
