@@ -968,18 +968,15 @@ function ScoreCard({
 }) {
   return (
     <div className="pt-2 pb-3">
-      <div className="flex justify-between mb-1.5 px-1">
-        <span className="text-[11px] font-bold text-text-secondary truncate">{playerName}</span>
-        <span className="text-[11px] font-bold text-text-secondary truncate text-right">{opponentName}</span>
-      </div>
       <div
         className="rounded-xl px-3 py-[18px] min-h-[120px] relative flex items-center text-white opacity-80"
         style={{ background: `linear-gradient(to right, ${playerColor}, ${opponentColor})` }}
       >
         {/* Bench columns — stretch behind the center content freely */}
         <div className="flex-1 flex flex-col gap-0.5 min-w-0">
+          <span className="text-[11px] font-bold leading-tight truncate mb-1">{playerName}</span>
           {playerBench.map((name, i) => (
-            <span key={i} className="text-[10px] font-semibold leading-tight truncate">{name}</span>
+            <span key={i} className="text-[10px] font-semibold leading-tight truncate opacity-80">{name}</span>
           ))}
         </div>
         {/* Center — absolutely positioned so it always sits at 50% regardless
@@ -994,8 +991,9 @@ function ScoreCard({
           </span>
         </div>
         <div className="flex-1 flex flex-col gap-0.5 min-w-0 items-end">
+          <span className="text-[11px] font-bold leading-tight truncate text-right mb-1">{opponentName}</span>
           {opponentBench.map((name, i) => (
-            <span key={i} className="text-[10px] font-semibold leading-tight truncate text-right">{name}</span>
+            <span key={i} className="text-[10px] font-semibold leading-tight truncate text-right opacity-80">{name}</span>
           ))}
         </div>
       </div>
