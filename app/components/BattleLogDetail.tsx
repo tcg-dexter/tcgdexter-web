@@ -972,12 +972,13 @@ function ScoreCard({
         className="rounded-xl px-3 pt-3 pb-[18px] min-h-[120px] relative flex flex-col text-white opacity-80"
         style={{ background: `linear-gradient(to right, ${playerColor}, ${opponentColor})` }}
       >
-        {/* Name header — anchored to top of card */}
-        <div className="flex justify-between gap-2 w-full">
-          <span className="text-[11px] font-bold leading-tight truncate">{playerName}</span>
-          <span className="text-[11px] font-bold leading-tight truncate text-right">{opponentName}</span>
+        {/* Name header with score centered between player names */}
+        <div className="flex items-center gap-2 w-full">
+          <span className="flex-1 text-[11px] font-bold leading-tight truncate">{playerName}</span>
+          <span className="shrink-0 text-[22px] font-black tabular-nums leading-none">{playerPrizes}–{opponentPrizes}</span>
+          <span className="flex-1 text-[11px] font-bold leading-tight truncate text-right">{opponentName}</span>
         </div>
-        {/* Bench columns sit below the header; center sprites+score overlay the full card */}
+        {/* Bench columns sit below the header; sprites overlay the full card */}
         <div className="flex items-center flex-1 mt-1">
           <div className="flex-1 flex flex-col gap-0.5 min-w-0">
             {playerBench.map((name, i) => (
@@ -990,16 +991,12 @@ function ScoreCard({
             ))}
           </div>
         </div>
-        {/* Center — absolutely positioned so it always sits at 50% regardless
-            of bench column widths. z-10 keeps it above bench text. */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none z-10">
+        {/* Sprites — absolutely positioned and centered over the full card */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
           <div className="flex items-end gap-2">
             <PokemonSprite name={playerActiveName} />
             <PokemonSprite name={opponentActiveName} />
           </div>
-          <span className="text-[27px] font-black tabular-nums leading-none">
-            {playerPrizes}–{opponentPrizes}
-          </span>
         </div>
       </div>
     </div>
