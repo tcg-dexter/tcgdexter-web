@@ -860,8 +860,8 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
           isLast ? "" : "border-b border-[#e2e8f0]"
         }`}
       >
-        <div className="flex items-end justify-between gap-2">
-          <div className="flex items-end gap-1.5 min-w-0">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
             <span className="text-sm font-bold text-text-primary truncate">
               {post.displayName}
             </span>
@@ -947,15 +947,17 @@ function ScoreCard({
         className="rounded-xl px-3 py-3 flex items-center gap-3 text-white opacity-80"
         style={{ background: `linear-gradient(to right, ${playerColor}, ${opponentColor})` }}
       >
-        <PokemonSprite name={playerActiveName} />
-        <div className="flex-1 grid grid-cols-3 items-center">
-          <span className="text-sm font-bold truncate">{playerName}</span>
-          <span className="text-lg font-black tabular-nums text-center">
-            {playerPrizes}–{opponentPrizes}
-          </span>
-          <span className="text-sm font-bold truncate text-right">{opponentName}</span>
+        <div className="flex-1 flex flex-col items-center gap-1 min-w-0">
+          <PokemonSprite name={playerActiveName} />
+          <span className="text-sm font-bold truncate text-center w-full">{playerName}</span>
         </div>
-        <PokemonSprite name={opponentActiveName} />
+        <span className="shrink-0 text-lg font-black tabular-nums">
+          {playerPrizes}–{opponentPrizes}
+        </span>
+        <div className="flex-1 flex flex-col items-center gap-1 min-w-0">
+          <PokemonSprite name={opponentActiveName} />
+          <span className="text-sm font-bold truncate text-center w-full">{opponentName}</span>
+        </div>
       </div>
     </div>
   );
