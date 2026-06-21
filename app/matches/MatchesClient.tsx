@@ -12,6 +12,7 @@ interface Props {
 
 type SortDir = "desc" | "asc";
 type FilterKey = "myMatches" | "hasBattleLog" | "hasMeta" | "singleMatch" | "bestOf3";
+type ViewMode = "sections" | "browse";
 
 const PAGE_SIZE = 20;
 
@@ -38,7 +39,29 @@ function applyFilter(m: RecentMatch, key: FilterKey, currentUsername: string | n
   }
 }
 
+function bucketMatches(matches: RecentMatch[]) {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const weekStart = new Date(todayStart);
+  // Sunday-start week (US convention): roll back by current day-of-week.
+  weekStart.setDate(weekStart.getDate() - now.getDay());
+  const weekStartMs = weekStart.getTime();
+  const monthStartMs = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+  const today: RecentMatch[] = [];
+  const thisWeek: RecentMatch[] = [];
+  const thisMonth: RecentMatch[] = [];
+  for (const m of matches) {
+    const t = new Date(m.createdAt).getTime();
+    if (t >= todayStart) today.push(m);
+    else if (t >= weekStartMs) thisWeek.push(m);
+    else if (t >= monthStartMs) thisMonth.push(m);
+  }
+  return { today, thisWeek, thisMonth };
+}
+
 export default function MatchesClient({ matches, currentUsername = null }: Props) {
+  const [viewMode, setViewMode] = useState<ViewMode>("sections");
   const [query, setQuery] = useState("");
   const [dir, setDir] = useState<SortDir>("desc");
   const [page, setPage] = useState(1);
@@ -89,6 +112,42 @@ export default function MatchesClient({ matches, currentUsername = null }: Props
     { key: "singleMatch",   label: "Single Match" },
     { key: "bestOf3",       label: "Best of 3" },
   ];
+
+  const buckets = useMemo(() => bucketMatches(matches), [matches]);
+
+  if (viewMode === "sections") {
+    const hasAny =
+      buckets.today.length + buckets.thisWeek.length + buckets.thisMonth.length > 0;
+    return (
+      <>
+        {hasAny ? (
+          <div className="flex flex-col gap-8">
+            {buckets.today.length > 0 && (
+              <MatchSection title="Today" matches={buckets.today} />
+            )}
+            {buckets.thisWeek.length > 0 && (
+              <MatchSection title="This Week" matches={buckets.thisWeek} />
+            )}
+            {buckets.thisMonth.length > 0 && (
+              <MatchSection title="This Month" matches={buckets.thisMonth} />
+            )}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
+            <p className="text-sm text-text-secondary">No recent matches yet.</p>
+          </div>
+        )}
+        <div className="mt-8 flex justify-center">
+          <button
+            onClick={() => setViewMode("browse")}
+            className="rounded-full bg-black text-white text-sm font-semibold px-6 py-3 hover:bg-black/85 transition-colors"
+          >
+            View All
+          </button>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -200,6 +259,27 @@ export default function MatchesClient({ matches, currentUsername = null }: Props
         <Pagination page={page} totalPages={totalPages} onPage={setPage} />
       )}
     </>
+  );
+}
+
+function MatchSection({ title, matches }: { title: string; matches: RecentMatch[] }) {
+  return (
+    <section>
+      <div className="flex items-baseline gap-3 mb-3">
+        <h2 className="text-sm font-black uppercase tracking-[0.15em] text-text-primary">
+          {title}
+        </h2>
+        <span className="h-px flex-1 bg-text-primary/15" />
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-text-muted tabular-nums">
+          {matches.length}
+        </span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {matches.map((m) => (
+          <MatchCard key={m.id} match={m} />
+        ))}
+      </div>
+    </section>
   );
 }
 
