@@ -76,58 +76,58 @@ export const MAT_STYLES: { key: MatStyle; gradient: string }[] = [
 export const TEXTURES: ReadonlyArray<{ key: string; w: number; h: number; svg: string }> = [
   {
     key: "lines",
-    w: 8, h: 8,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><line x1="0" y1="8" x2="8" y2="0" stroke="white" stroke-width="1" stroke-opacity="0.22"/></svg>`,
+    w: 12, h: 12,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><line x1="0" y1="12" x2="12" y2="0" stroke="white" stroke-width="1" stroke-opacity="0.35"/></svg>`,
   },
   {
     key: "dots",
-    w: 8, h: 8,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><circle cx="4" cy="4" r="1.2" fill="white" fill-opacity="0.25"/></svg>`,
+    w: 14, h: 14,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"><circle cx="7" cy="7" r="1.2" fill="white" fill-opacity="0.4"/></svg>`,
   },
   {
     key: "grid",
-    w: 10, h: 10,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><path d="M0 0V10M0 0H10" stroke="white" stroke-width="0.5" stroke-opacity="0.2"/></svg>`,
+    w: 16, h: 16,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M0 0V16M0 0H16" stroke="white" stroke-width="0.5" stroke-opacity="0.32"/></svg>`,
   },
   {
     key: "crosshatch",
-    w: 8, h: 8,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><line x1="0" y1="8" x2="8" y2="0" stroke="white" stroke-width="0.75" stroke-opacity="0.15"/><line x1="0" y1="0" x2="8" y2="8" stroke="white" stroke-width="0.75" stroke-opacity="0.15"/></svg>`,
+    w: 12, h: 12,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><line x1="0" y1="12" x2="12" y2="0" stroke="white" stroke-width="0.75" stroke-opacity="0.25"/><line x1="0" y1="0" x2="12" y2="12" stroke="white" stroke-width="0.75" stroke-opacity="0.25"/></svg>`,
   },
   {
     key: "diamonds",
-    w: 12, h: 12,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><polygon points="6,1 11,6 6,11 1,6" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.22"/></svg>`,
+    w: 18, h: 18,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"><polygon points="9,4 14,9 9,14 4,9" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.35"/></svg>`,
   },
   {
     key: "chevron",
-    w: 20, h: 10,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="10"><polyline points="0,10 10,0 20,10" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.22"/></svg>`,
+    w: 30, h: 15,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="15"><polyline points="0,15 15,0 30,15" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.35"/></svg>`,
   },
   {
     key: "waves",
-    w: 20, h: 10,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="10"><path d="M0,5 Q5,0 10,5 Q15,10 20,5" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.22"/></svg>`,
+    w: 30, h: 15,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="15"><path d="M0,7.5 Q7.5,0 15,7.5 Q22.5,15 30,7.5" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.35"/></svg>`,
   },
   {
     key: "stars",
-    w: 12, h: 12,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><path d="M6,1.5 L7,5 L10.5,6 L7,7 L6,10.5 L5,7 L1.5,6 L5,5 Z" fill="white" fill-opacity="0.22"/></svg>`,
+    w: 18, h: 18,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"><path d="M9,4.5 L10,8 L13.5,9 L10,10 L9,13.5 L8,10 L4.5,9 L8,8 Z" fill="white" fill-opacity="0.35"/></svg>`,
   },
   {
     key: "plus",
-    w: 10, h: 10,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><line x1="5" y1="2" x2="5" y2="8" stroke="white" stroke-width="0.75" stroke-opacity="0.25" stroke-linecap="round"/><line x1="2" y1="5" x2="8" y2="5" stroke="white" stroke-width="0.75" stroke-opacity="0.25" stroke-linecap="round"/></svg>`,
+    w: 16, h: 16,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><line x1="8" y1="5" x2="8" y2="11" stroke="white" stroke-width="0.75" stroke-opacity="0.4" stroke-linecap="round"/><line x1="5" y1="8" x2="11" y2="8" stroke="white" stroke-width="0.75" stroke-opacity="0.4" stroke-linecap="round"/></svg>`,
   },
   {
     key: "rings",
-    w: 10, h: 10,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><circle cx="5" cy="5" r="2.5" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.25"/></svg>`,
+    w: 16, h: 16,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="2.5" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.4"/></svg>`,
   },
   {
     key: "zigzag",
-    w: 8, h: 16,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="8" height="16"><polyline points="0,0 8,8 0,16" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.2"/></svg>`,
+    w: 12, h: 24,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="24"><polyline points="0,0 12,12 0,24" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.32"/></svg>`,
   },
 ] as const;
 
@@ -228,107 +228,107 @@ function drawTextureTile(key: string): HTMLCanvasElement | null {
 
   switch (key) {
     case "lines":
-      c.globalAlpha = 0.22;
+      c.globalAlpha = 0.35;
       c.lineWidth = 1;
       c.beginPath();
-      c.moveTo(0, 8);
-      c.lineTo(8, 0);
+      c.moveTo(0, 12);
+      c.lineTo(12, 0);
       c.stroke();
       break;
     case "dots":
-      c.globalAlpha = 0.25;
+      c.globalAlpha = 0.4;
       c.beginPath();
-      c.arc(4, 4, 1.2, 0, Math.PI * 2);
+      c.arc(7, 7, 1.2, 0, Math.PI * 2);
       c.fill();
       break;
     case "grid":
-      c.globalAlpha = 0.2;
+      c.globalAlpha = 0.32;
       c.lineWidth = 0.5;
       c.beginPath();
       c.moveTo(0, 0);
-      c.lineTo(0, 10);
+      c.lineTo(0, 16);
       c.moveTo(0, 0);
-      c.lineTo(10, 0);
+      c.lineTo(16, 0);
       c.stroke();
       break;
     case "crosshatch":
-      c.globalAlpha = 0.15;
+      c.globalAlpha = 0.25;
       c.lineWidth = 0.75;
       c.beginPath();
-      c.moveTo(0, 8);
-      c.lineTo(8, 0);
+      c.moveTo(0, 12);
+      c.lineTo(12, 0);
       c.moveTo(0, 0);
-      c.lineTo(8, 8);
+      c.lineTo(12, 12);
       c.stroke();
       break;
     case "diamonds":
-      c.globalAlpha = 0.22;
+      c.globalAlpha = 0.35;
       c.lineWidth = 0.75;
       c.beginPath();
-      c.moveTo(6, 1);
-      c.lineTo(11, 6);
-      c.lineTo(6, 11);
-      c.lineTo(1, 6);
+      c.moveTo(9, 4);
+      c.lineTo(14, 9);
+      c.lineTo(9, 14);
+      c.lineTo(4, 9);
       c.closePath();
       c.stroke();
       break;
     case "chevron":
-      c.globalAlpha = 0.22;
+      c.globalAlpha = 0.35;
       c.lineWidth = 0.75;
       c.beginPath();
-      c.moveTo(0, 10);
-      c.lineTo(10, 0);
-      c.lineTo(20, 10);
+      c.moveTo(0, 15);
+      c.lineTo(15, 0);
+      c.lineTo(30, 15);
       c.stroke();
       break;
     case "waves":
-      c.globalAlpha = 0.22;
+      c.globalAlpha = 0.35;
       c.lineWidth = 0.75;
       c.beginPath();
-      c.moveTo(0, 5);
-      c.quadraticCurveTo(5, 0, 10, 5);
-      c.quadraticCurveTo(15, 10, 20, 5);
+      c.moveTo(0, 7.5);
+      c.quadraticCurveTo(7.5, 0, 15, 7.5);
+      c.quadraticCurveTo(22.5, 15, 30, 7.5);
       c.stroke();
       break;
     case "stars":
-      c.globalAlpha = 0.22;
+      c.globalAlpha = 0.35;
       c.beginPath();
-      c.moveTo(6, 1.5);
-      c.lineTo(7, 5);
-      c.lineTo(10.5, 6);
-      c.lineTo(7, 7);
-      c.lineTo(6, 10.5);
-      c.lineTo(5, 7);
-      c.lineTo(1.5, 6);
-      c.lineTo(5, 5);
+      c.moveTo(9, 4.5);
+      c.lineTo(10, 8);
+      c.lineTo(13.5, 9);
+      c.lineTo(10, 10);
+      c.lineTo(9, 13.5);
+      c.lineTo(8, 10);
+      c.lineTo(4.5, 9);
+      c.lineTo(8, 8);
       c.closePath();
       c.fill();
       break;
     case "plus":
-      c.globalAlpha = 0.25;
+      c.globalAlpha = 0.4;
       c.lineWidth = 0.75;
       c.lineCap = "round";
       c.beginPath();
-      c.moveTo(5, 2);
-      c.lineTo(5, 8);
-      c.moveTo(2, 5);
-      c.lineTo(8, 5);
+      c.moveTo(8, 5);
+      c.lineTo(8, 11);
+      c.moveTo(5, 8);
+      c.lineTo(11, 8);
       c.stroke();
       break;
     case "rings":
-      c.globalAlpha = 0.25;
+      c.globalAlpha = 0.4;
       c.lineWidth = 0.75;
       c.beginPath();
-      c.arc(5, 5, 2.5, 0, Math.PI * 2);
+      c.arc(8, 8, 2.5, 0, Math.PI * 2);
       c.stroke();
       break;
     case "zigzag":
-      c.globalAlpha = 0.2;
+      c.globalAlpha = 0.32;
       c.lineWidth = 0.75;
       c.beginPath();
       c.moveTo(0, 0);
-      c.lineTo(8, 8);
-      c.lineTo(0, 16);
+      c.lineTo(12, 12);
+      c.lineTo(0, 24);
       c.stroke();
       break;
     default:
