@@ -88,7 +88,7 @@ export async function PATCH(
           set_id: typeof r.set_id === "string" ? r.set_id : "",
           number: typeof r.number === "string" ? r.number : "",
           name: typeof r.name === "string" ? r.name : "",
-          caption: captionStr ? captionStr.slice(0, 140) : null,
+          caption: captionStr ? captionStr.slice(0, 280) : null,
         };
       });
       update[key] = cleaned;
