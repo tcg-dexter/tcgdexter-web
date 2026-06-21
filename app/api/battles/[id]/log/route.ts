@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { supporterNames } from "@/lib/supporterNames";
 
 /**
  * GET /api/battles/[id]/log
@@ -62,6 +63,18 @@ export async function GET(
     return NextResponse.json({ error: "Failed to load." }, { status: 500 });
   }
 
+  const supporters = supporterNames();
+  type ActionRow = { action_type: string; payload: unknown; [key: string]: unknown };
+  const taggedActions = (actions ?? []).map((a: ActionRow) => {
+    if (a.action_type === "play_item") {
+      const card = (a.payload as Record<string, unknown>)?.card;
+      if (typeof card === "string" && supporters.has(card)) {
+        return { ...a, action_type: "play_supporter" };
+      }
+    }
+    return a;
+  });
+
   return NextResponse.json({
     match: {
       id: match.id,
@@ -70,6 +83,6 @@ export async function GET(
       parser_version: match.parser_version,
     },
     turns: turns ?? [],
-    actions: actions ?? [],
+    actions: taggedActions,
   });
 }
