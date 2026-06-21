@@ -969,7 +969,7 @@ function ScoreCard({
   return (
     <div className="px-3 pt-2 pb-3">
       <div
-        className="rounded-xl px-3 py-[18px] relative flex items-center text-white opacity-80"
+        className="rounded-xl px-3 py-[18px] min-h-[120px] relative flex items-center text-white opacity-80"
         style={{ background: `linear-gradient(to right, ${playerColor}, ${opponentColor})` }}
       >
         {/* Bench columns — stretch behind the center content freely */}
