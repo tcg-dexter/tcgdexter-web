@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { shade } from "@/lib/color";
+import { pokemonSlug } from "@/lib/primaryCardImage";
 import SpotlightBanner from "./SpotlightBanner";
 import type {
   SpotlightBannerLayout,
   SpotlightCardRef,
   SpotlightPokemonRef,
 } from "../types";
+
+const SPRITE_BASE = "https://r2.limitlesstcg.net/pokemon/gen9";
 
 interface Props {
   displayName: string;
@@ -77,7 +80,6 @@ export default function SpotlightHeader({
         layout={layout}
         editable={editable}
         spotlightId={spotlightId}
-        favoritePokemon={favoritePokemon}
         favoriteCollectionCards={favoriteCollectionCards}
         favoriteFormatCards={favoriteFormatCards}
         userImageUrl={userImageUrl}
@@ -86,7 +88,10 @@ export default function SpotlightHeader({
       {/* Bio block — trainer avatar overlaps banner via negative margin.
           Mobile size is 30% smaller than desktop (128 → ~90 px) and the
           negative top margin scales with it so the avatar continues to
-          overlap roughly half over the banner at both breakpoints. */}
+          overlap roughly half over the banner at both breakpoints.
+          Fallback order inside the circle: user avatar → favorite
+          Pokémon sprite (now lives here instead of pinned to the banner
+          corner) → monogram. */}
       <div className="mx-auto max-w-2xl px-6">
         <div className="flex items-end justify-between gap-3 -mt-11 sm:-mt-20">
           <div
@@ -99,6 +104,13 @@ export default function SpotlightHeader({
                 src={avatarUrl}
                 alt={displayName}
                 className="w-full h-full object-cover"
+              />
+            ) : favoritePokemon ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={`${SPRITE_BASE}/${pokemonSlug(favoritePokemon.name)}.png`}
+                alt={favoritePokemon.name}
+                className="w-[78%] h-[78%] object-contain drop-shadow-sm"
               />
             ) : (
               <span className="text-4xl sm:text-5xl font-black text-white drop-shadow-sm">

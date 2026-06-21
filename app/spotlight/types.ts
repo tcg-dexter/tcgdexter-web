@@ -2,6 +2,11 @@ export interface SpotlightCardRef {
   set_id: string;
   number: string;
   name: string;
+  /** Optional short blurb shown under the card art in the spotlight
+   *  page's "Favorite Cards in {Play,Collection}" sections. Null /
+   *  missing → no caption rendered (existing rows that pre-date this
+   *  field round-trip cleanly as undefined). */
+  caption?: string | null;
 }
 
 /** Favorite Pokémon is just a Pokémon name — rendered as a sprite, not a
