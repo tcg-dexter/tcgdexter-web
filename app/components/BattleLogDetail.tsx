@@ -969,17 +969,17 @@ function ScoreCard({
   return (
     <div className="pt-2 pb-3">
       <div
-        className="rounded-xl px-3 pt-3 pb-[18px] min-h-[120px] relative flex flex-col text-white opacity-80"
+        className="rounded-xl px-3 pt-3 pb-4 min-h-[120px] flex flex-col text-white opacity-80"
         style={{ background: `linear-gradient(to right, ${playerColor}, ${opponentColor})` }}
       >
-        {/* Name header with score centered between player names */}
+        {/* Header */}
         <div className="flex items-center gap-2 w-full">
           <span className="flex-1 text-[11px] font-bold leading-tight truncate">{playerName}</span>
           <span className="shrink-0 text-[22px] font-black tabular-nums leading-none">{playerPrizes}–{opponentPrizes}</span>
           <span className="flex-1 text-[11px] font-bold leading-tight truncate text-right">{opponentName}</span>
         </div>
-        {/* Bench columns sit below the header; sprites overlay the full card */}
-        <div className="flex items-center flex-1 mt-1">
+        {/* Body — sprites at XY center, bench lists centered vertically */}
+        <div className="relative flex items-center flex-1 min-h-[72px] mt-2">
           <div className="flex-1 flex flex-col gap-0.5 min-w-0">
             {playerBench.map((name, i) => (
               <span key={i} className="text-[10px] font-semibold leading-tight truncate opacity-80">{name}</span>
@@ -990,12 +990,12 @@ function ScoreCard({
               <span key={i} className="text-[10px] font-semibold leading-tight truncate text-right opacity-80">{name}</span>
             ))}
           </div>
-        </div>
-        {/* Sprites — absolutely positioned and centered over the full card */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-          <div className="flex items-end gap-2">
-            <PokemonSprite name={playerActiveName} />
-            <PokemonSprite name={opponentActiveName} />
+          {/* Sprites centered at the XY midpoint of the body */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+            <div className="flex items-end gap-2">
+              <PokemonSprite name={playerActiveName} />
+              <PokemonSprite name={opponentActiveName} />
+            </div>
           </div>
         </div>
       </div>
