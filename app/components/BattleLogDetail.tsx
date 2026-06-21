@@ -896,6 +896,11 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
 function pokemonSpriteUrl(name: string): string {
   const slug = name
     .toLowerCase()
+    // Strip possessive trainer-name prefixes ("N's ", "Giovanni's ", etc.)
+    // before apostrophes are removed so the pattern still recognises them.
+    .replace(/^[a-z0-9]+[''']s\s+/i, "")
+    // Strip "Mega " prefix used for Mega Evolution card names.
+    .replace(/^mega\s+/i, "")
     .replace(/[''.,]/g, "")
     .replace(/\s+(ex|v|vmax|vstar|gx)\b/gi, "")
     .trim()
