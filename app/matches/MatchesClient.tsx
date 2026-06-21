@@ -267,7 +267,7 @@ function MatchSection({ title, matches }: { title: string; matches: RecentMatch[
           {title}
         </h2>
         <span className="h-px flex-1 bg-text-primary/15" />
-        <span className="text-[11px] font-semibold uppercase tracking-widest text-text-muted tabular-nums">
+        <span className="shrink-0 rounded-full bg-black text-white text-[11px] font-bold px-2.5 py-0.5 tabular-nums">
           {matches.length}
         </span>
       </div>
