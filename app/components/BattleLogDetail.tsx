@@ -763,7 +763,7 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
     <div className="mt-3 flex flex-col rounded-lg bg-bg overflow-hidden">
       {pregamePosts.length > 0 && (
         <>
-          <SectionDivider label="Pre-Game" />
+          <SectionDivider label="Setup" />
           {pregamePosts.map((post, i) => (
             <ThreadPost
               key={post.key}
@@ -813,7 +813,7 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
 
 function SectionDivider({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-3 py-3">
+    <div className="flex items-center gap-3 py-5">
       <div className="flex-1 h-px bg-[#e2e8f0]" />
       <span className="text-[10px] font-bold uppercase tracking-widest text-text-primary">{label}</span>
       <div className="flex-1 h-px bg-[#e2e8f0]" />
