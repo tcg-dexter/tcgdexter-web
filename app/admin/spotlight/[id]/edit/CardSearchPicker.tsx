@@ -211,7 +211,7 @@ function SlotPanel({
                 value={card.caption ?? ""}
                 onChange={(e) => onCaption(i, e.target.value)}
                 placeholder="Optional caption (shown under the card)"
-                maxLength={140}
+                maxLength={280}
                 className="w-full px-2.5 py-1.5 text-[11px] rounded-md border border-black/10 bg-white focus:outline-none focus:border-accent"
               />
             </li>
