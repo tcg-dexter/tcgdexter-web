@@ -936,13 +936,13 @@ function pokemonSpriteUrl(name: string): string {
 
 function PokemonSprite({ name }: { name: string | null }) {
   const [failed, setFailed] = useState(false);
-  if (!name || failed) return <div className="h-12 w-12 shrink-0" />;
+  if (!name || failed) return <div className="h-[72px] w-[72px] shrink-0" />;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={pokemonSpriteUrl(name)}
       alt={name}
-      className="h-12 w-12 shrink-0 object-contain drop-shadow-sm"
+      className="h-[72px] w-[72px] shrink-0 object-contain drop-shadow-sm"
       onError={() => setFailed(true)}
     />
   );
@@ -974,7 +974,7 @@ function ScoreCard({
   return (
     <div className="px-3 pt-2 pb-3">
       <div
-        className="rounded-xl px-3 py-3 flex items-center gap-3 text-white opacity-80"
+        className="rounded-xl px-3 py-[18px] flex items-center gap-3 text-white opacity-80"
         style={{ background: `linear-gradient(to right, ${playerColor}, ${opponentColor})` }}
       >
         {/* Player bench — left column, left-aligned */}
