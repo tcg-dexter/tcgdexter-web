@@ -1151,7 +1151,7 @@ const ACTION_LABEL: Partial<Record<string, string>> = {
 function ActionTypeLabel({ type, className }: { type: string; className?: string }) {
   const text = ACTION_LABEL[type];
   return (
-    <span className={`shrink-0 w-[52px] text-[10px] font-bold tracking-wide leading-none pt-[3px] ${className ?? ""}`}>
+    <span className={`shrink-0 w-[52px] text-[10px] font-bold tracking-wide leading-none ${className ?? ""}`}>
       {text ?? ""}
     </span>
   );
@@ -1190,7 +1190,7 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
 
         if (cat === "attack") {
           return (
-            <li key={a.id} className="flex items-start gap-2 text-sm leading-snug">
+            <li key={a.id} className="flex items-end gap-2 text-sm leading-snug">
               <ActionTypeLabel type={a.action_type} className="text-text-primary" />
               <span className="flex-1 min-w-0 font-medium text-text-primary break-words">
                 {label}
@@ -1201,7 +1201,7 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
 
         if (cat === "dim") {
           return (
-            <li key={a.id} className="flex items-start gap-2 leading-snug">
+            <li key={a.id} className="flex items-end gap-2 leading-snug">
               <ActionTypeLabel type={a.action_type} className="text-text-primary" />
               <span className="flex-1 min-w-0 text-xs text-text-muted break-words">
                 {label}
@@ -1211,7 +1211,7 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
         }
 
         return (
-          <li key={a.id} className="flex items-start gap-2 text-sm leading-snug">
+          <li key={a.id} className="flex items-end gap-2 text-sm leading-snug">
             <ActionTypeLabel type={a.action_type} className="text-text-primary" />
             <span className="flex-1 min-w-0 text-text-secondary break-words">
               {label}
