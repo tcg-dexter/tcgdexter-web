@@ -673,35 +673,56 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
   // Active Pokémon tracking — updated by play_to_active, switch_active, and
   // evolve actions. Initialize from pre-game, then snapshot after each game turn.
   const activeState = { player: null as string | null, opponent: null as string | null };
+  // After a KO the defending side must immediately promote. TCG Live logs
+  // often tag that promote action with the attacker's actor (the current turn
+  // owner), so we can't trust the actor field alone. Track which side needs a
+  // promote and use it for the next switch_active / play_to_active.
+  let pendingPromoSide: "player" | "opponent" | null = null;
   function applyActives(actions: ApiAction[]) {
     for (const a of actions) {
       if (a.action_type === "knock_out") {
-        // Null out whichever side lost their active so the next
-        // switch_active / play_to_active can be attributed correctly even
-        // when its actor field points to the attacking side's turn.
         const pokemon = p<string>(a, "pokemon");
         if (pokemon) {
           const lc = pokemon.toLowerCase();
-          if (activeState.player?.toLowerCase() === lc) activeState.player = null;
-          else if (activeState.opponent?.toLowerCase() === lc) activeState.opponent = null;
+          if (activeState.player?.toLowerCase() === lc) {
+            activeState.player = null;
+            pendingPromoSide = "player";
+          } else if (activeState.opponent?.toLowerCase() === lc) {
+            activeState.opponent = null;
+            pendingPromoSide = "opponent";
+          }
         }
       } else if (a.action_type === "play_to_active") {
         const card = p<string>(a, "card");
         if (card) {
-          if (a.actor === "player") activeState.player = card;
-          else if (a.actor === "opponent") activeState.opponent = card;
-          // Fallback: after a KO one side is null — assign to whichever is empty.
-          else if (activeState.player === null) activeState.player = card;
-          else if (activeState.opponent === null) activeState.opponent = card;
+          if (pendingPromoSide) {
+            activeState[pendingPromoSide] = card;
+            pendingPromoSide = null;
+          } else if (a.actor === "player") {
+            activeState.player = card;
+          } else if (a.actor === "opponent") {
+            activeState.opponent = card;
+          } else if (activeState.player === null) {
+            activeState.player = card;
+          } else if (activeState.opponent === null) {
+            activeState.opponent = card;
+          }
         }
       } else if (a.action_type === "switch_active") {
         const pokemon = p<string>(a, "pokemon");
         if (pokemon) {
-          if (a.actor === "player") activeState.player = pokemon;
-          else if (a.actor === "opponent") activeState.opponent = pokemon;
-          // Fallback: same null-side heuristic as play_to_active.
-          else if (activeState.player === null) activeState.player = pokemon;
-          else if (activeState.opponent === null) activeState.opponent = pokemon;
+          if (pendingPromoSide) {
+            activeState[pendingPromoSide] = pokemon;
+            pendingPromoSide = null;
+          } else if (a.actor === "player") {
+            activeState.player = pokemon;
+          } else if (a.actor === "opponent") {
+            activeState.opponent = pokemon;
+          } else if (activeState.player === null) {
+            activeState.player = pokemon;
+          } else if (activeState.opponent === null) {
+            activeState.opponent = pokemon;
+          }
         }
       } else if (a.action_type === "evolve") {
         const from = p<string>(a, "from");
