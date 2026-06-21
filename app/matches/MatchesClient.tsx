@@ -42,10 +42,7 @@ function applyFilter(m: RecentMatch, key: FilterKey, currentUsername: string | n
 function bucketMatches(matches: RecentMatch[]) {
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const weekStart = new Date(todayStart);
-  // Sunday-start week (US convention): roll back by current day-of-week.
-  weekStart.setDate(weekStart.getDate() - now.getDay());
-  const weekStartMs = weekStart.getTime();
+  const sevenDaysAgoStart = todayStart - 7 * 24 * 60 * 60 * 1000;
   const monthStartMs = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
   const today: RecentMatch[] = [];
@@ -54,7 +51,7 @@ function bucketMatches(matches: RecentMatch[]) {
   for (const m of matches) {
     const t = new Date(m.createdAt).getTime();
     if (t >= todayStart) today.push(m);
-    else if (t >= weekStartMs) thisWeek.push(m);
+    else if (t >= sevenDaysAgoStart) thisWeek.push(m);
     else if (t >= monthStartMs) thisMonth.push(m);
   }
   return { today, thisWeek, thisMonth };
