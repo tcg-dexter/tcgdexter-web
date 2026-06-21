@@ -91,6 +91,14 @@ export default function CardSearchPicker({ slots }: Props) {
     slot.setCards(slot.cards.filter((_, i) => i !== index));
   }
 
+  function setCaptionForSlot(slot: SlotDef, index: number, caption: string) {
+    slot.setCards(
+      slot.cards.map((c, i) =>
+        i === index ? { ...c, caption: caption || null } : c,
+      ),
+    );
+  }
+
   return (
     <div className="space-y-3">
       {/* Selected chips per slot */}
@@ -100,6 +108,7 @@ export default function CardSearchPicker({ slots }: Props) {
             key={slot.key}
             slot={slot}
             onRemove={(i) => removeFromSlot(slot, i)}
+            onCaption={(i, v) => setCaptionForSlot(slot, i, v)}
           />
         ))}
       </div>
@@ -147,9 +156,11 @@ export default function CardSearchPicker({ slots }: Props) {
 function SlotPanel({
   slot,
   onRemove,
+  onCaption,
 }: {
   slot: SlotDef;
   onRemove: (index: number) => void;
+  onCaption: (index: number, caption: string) => void;
 }) {
   return (
     <div className="rounded-xl border border-black/10 bg-white p-3">
@@ -164,35 +175,45 @@ function SlotPanel({
       {slot.cards.length === 0 ? (
         <p className="text-xs text-text-muted">No cards selected.</p>
       ) : (
-        <ul className="space-y-1.5">
+        <ul className="space-y-3">
           {slot.cards.map((card, i) => (
             <li
               key={`${card.set_id}-${card.number}-${i}`}
-              className="flex items-center gap-2"
+              className="space-y-1.5"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={cardImageSmall(card.set_id, card.number)}
-                alt={card.name}
-                className="w-8 h-[44px] object-contain rounded bg-[var(--surface)] shrink-0"
-                loading="lazy"
-              />
-              <div className="min-w-0 flex-1">
-                <div className="text-xs font-semibold text-text-primary truncate">
-                  {card.name}
+              <div className="flex items-center gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={cardImageSmall(card.set_id, card.number)}
+                  alt={card.name}
+                  className="w-8 h-[44px] object-contain rounded bg-[var(--surface)] shrink-0"
+                  loading="lazy"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-semibold text-text-primary truncate">
+                    {card.name}
+                  </div>
+                  <div className="text-[10px] text-text-muted">
+                    {card.set_id.toUpperCase()} · {card.number}
+                  </div>
                 </div>
-                <div className="text-[10px] text-text-muted">
-                  {card.set_id.toUpperCase()} · {card.number}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => onRemove(i)}
+                  className="text-xs text-text-muted hover:text-accent shrink-0"
+                  aria-label={`Remove ${card.name}`}
+                >
+                  ✕
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => onRemove(i)}
-                className="text-xs text-text-muted hover:text-accent shrink-0"
-                aria-label={`Remove ${card.name}`}
-              >
-                ✕
-              </button>
+              <input
+                type="text"
+                value={card.caption ?? ""}
+                onChange={(e) => onCaption(i, e.target.value)}
+                placeholder="Optional caption (shown under the card)"
+                maxLength={140}
+                className="w-full px-2.5 py-1.5 text-[11px] rounded-md border border-black/10 bg-white focus:outline-none focus:border-accent"
+              />
             </li>
           ))}
         </ul>

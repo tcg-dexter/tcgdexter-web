@@ -1,10 +1,8 @@
 import { cardImageLarge } from "@/lib/cardImages";
-import { pokemonSlug } from "@/lib/primaryCardImage";
 import SpotlightBannerItem from "./SpotlightBannerItem";
 import type {
   SpotlightBannerLayout,
   SpotlightCardRef,
-  SpotlightPokemonRef,
 } from "../types";
 
 interface Props {
@@ -14,7 +12,6 @@ interface Props {
   layout: SpotlightBannerLayout;
   editable: boolean;
   spotlightId: string;
-  favoritePokemon: SpotlightPokemonRef | null;
   favoriteCollectionCards: SpotlightCardRef[];
   favoriteFormatCards: SpotlightCardRef[];
   userImageUrl: string | null;
@@ -25,11 +22,9 @@ interface Props {
 }
 
 const COLORLESS = "#B0A89E";
-const SPRITE_BASE = "https://r2.limitlesstcg.net/pokemon/gen9";
 
 const USER_IMAGE_BASE_WIDTH_PCT = 28;
 const CARD_FAN_WIDTH_PCT = 18;
-const POKEMON_CORNER_WIDTH_PCT = 8;
 
 const FAN_ANCHOR_X_PCT = 35;
 const FAN_ANCHOR_Y_PCT = 50;
@@ -45,7 +40,6 @@ export default function SpotlightBanner({
   layout,
   editable,
   spotlightId,
-  favoritePokemon,
   favoriteCollectionCards,
   favoriteFormatCards,
   userImageUrl,
@@ -82,19 +76,6 @@ export default function SpotlightBanner({
             className="w-full h-auto block"
           />
         </SpotlightBannerItem>
-      )}
-
-      {favoritePokemon && (
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            right: "1.5%",
-            bottom: "4%",
-            width: `${POKEMON_CORNER_WIDTH_PCT}%`,
-          }}
-        >
-          <PokemonSprite pokemon={favoritePokemon} />
-        </div>
       )}
     </div>
   );
@@ -150,18 +131,6 @@ function CardArt({ card }: { card: SpotlightCardRef }) {
       alt={card.name}
       draggable={false}
       className="w-full h-auto block rounded-md drop-shadow-lg"
-    />
-  );
-}
-
-function PokemonSprite({ pokemon }: { pokemon: SpotlightPokemonRef }) {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={`${SPRITE_BASE}/${pokemonSlug(pokemon.name)}.png`}
-      alt={pokemon.name}
-      draggable={false}
-      className="w-full h-auto block"
     />
   );
 }

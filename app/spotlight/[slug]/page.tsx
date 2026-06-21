@@ -15,6 +15,7 @@ import ThemeColor from "@/app/components/ThemeColor";
 import SpotlightAdminBar from "../components/SpotlightAdminBar";
 import SpotlightQAThread from "../components/SpotlightQAThread";
 import SpotlightHeader from "../components/SpotlightHeader";
+import SpotlightFavoriteCards from "../components/SpotlightFavoriteCards";
 import type { TrainerSpotlightRow } from "../types";
 
 interface ProfileRow {
@@ -248,6 +249,28 @@ export default async function SpotlightPage({
         })()}
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6 mt-8">
+        {/* Favorite cards — Play first (the cards they actively run), then
+            Collection (sentimental / collector picks). Each section
+            renders up to 3 cards with the picker-provided caption below. */}
+        {spotlight.favorite_format_cards.length > 0 && (
+          <section className="mt-8">
+            <h2 className="text-lg font-semibold text-text-primary mb-3 px-1">
+              Favorite Cards in Play
+            </h2>
+            <SpotlightFavoriteCards cards={spotlight.favorite_format_cards} />
+          </section>
+        )}
+        {spotlight.favorite_collection_cards.length > 0 && (
+          <section className="mt-8">
+            <h2 className="text-lg font-semibold text-text-primary mb-3 px-1">
+              Favorite Cards in Collection
+            </h2>
+            <SpotlightFavoriteCards
+              cards={spotlight.favorite_collection_cards}
+            />
+          </section>
+        )}
+
         {/* Featured decks */}
         {decks.length > 0 && (
           <section className="mt-8">

@@ -365,7 +365,6 @@ export default function HomeClient({
                   layout={currentSpotlight.layout}
                   editable={false}
                   spotlightId={currentSpotlight.id}
-                  favoritePokemon={currentSpotlight.favoritePokemon}
                   favoriteCollectionCards={currentSpotlight.favoriteCollectionCards}
                   favoriteFormatCards={currentSpotlight.favoriteFormatCards}
                   userImageUrl={currentSpotlight.userImageUrl}
