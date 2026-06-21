@@ -937,7 +937,7 @@ function PokemonSprite({ name }: { name: string | null }) {
     <img
       src={pokemonSpriteUrl(name)}
       alt={name}
-      className="h-12 w-12 shrink-0 object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
+      className="h-12 w-12 shrink-0 object-contain"
       onError={() => setFailed(true)}
     />
   );
@@ -968,6 +968,10 @@ function ScoreCard({
 }) {
   return (
     <div className="pt-2 pb-3">
+      <div className="flex justify-between mb-1.5 px-1">
+        <span className="text-[11px] font-bold text-text-secondary truncate">{playerName}</span>
+        <span className="text-[11px] font-bold text-text-secondary truncate text-right">{opponentName}</span>
+      </div>
       <div
         className="rounded-xl px-3 py-[18px] min-h-[120px] relative flex items-center text-white opacity-80"
         style={{ background: `linear-gradient(to right, ${playerColor}, ${opponentColor})` }}
