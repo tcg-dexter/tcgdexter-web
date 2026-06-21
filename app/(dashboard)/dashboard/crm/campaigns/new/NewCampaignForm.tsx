@@ -65,7 +65,7 @@ export default function NewCampaignForm() {
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-3 rounded-2xl border border-black/8 bg-gradient-to-b from-white to-[var(--surface)]/40 p-4 shadow-[0_1px_2px_rgba(15,15,15,0.04),0_4px_18px_-12px_rgba(15,15,15,0.18)] sm:p-5">
+    <form onSubmit={submit} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
           Name <span className="text-[var(--accent)]">*</span>
@@ -113,7 +113,7 @@ export default function NewCampaignForm() {
           behavior; signup_window enrolls every user whose signup date
           falls in the chosen range, and keeps pulling in new ones as
           they qualify. */}
-      <fieldset className="flex flex-col gap-2 rounded-xl border border-black/8 bg-white/60 p-3">
+      <fieldset className="flex flex-col gap-2 border-t border-black/10 pt-3">
         <legend className="px-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
           Recipients
         </legend>

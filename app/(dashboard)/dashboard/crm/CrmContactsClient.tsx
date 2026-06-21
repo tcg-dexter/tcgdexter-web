@@ -350,7 +350,7 @@ export default function CrmContactsClient({
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-2xl border border-black/8 bg-gradient-to-b from-white to-[var(--surface)]/40 shadow-[0_1px_2px_rgba(15,15,15,0.04),0_4px_18px_-12px_rgba(15,15,15,0.18)]">
+      <div className="overflow-x-auto">
         <table className="min-w-full text-xs">
           <thead className="bg-[var(--surface)] text-[var(--text-secondary)]">
             <tr>

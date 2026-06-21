@@ -38,12 +38,15 @@ function Tile({
   delta?: React.ReactNode;
   spark?: React.ReactNode;
 }) {
+  // Flat tiles: no card background, no rounded shell. KPIs sit directly on
+  // the page bg and are separated from siblings by grid gap only. A subtle
+  // hover affordance (text colour shift) keeps them feeling clickable.
   return (
     <a
       href={href}
       target={href.startsWith("http") ? "_blank" : undefined}
       rel="noreferrer"
-      className="group relative flex flex-col gap-2 overflow-hidden rounded-xl border border-black/8 bg-white/80 p-3 backdrop-blur-sm transition hover:border-black/25 hover:shadow-md sm:p-3.5"
+      className="group relative flex flex-col gap-2"
     >
       <div className="flex items-center justify-between">
         <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
@@ -53,7 +56,7 @@ function Tile({
       </div>
       <div className="flex items-end justify-between gap-2">
         <div className="min-w-0">
-          <div className="truncate text-2xl font-semibold tracking-tight tabular-nums leading-none text-[var(--text-primary)] sm:text-[28px]">
+          <div className="truncate text-2xl font-semibold tracking-tight tabular-nums leading-none text-[var(--text-primary)] transition group-hover:text-[var(--accent)] sm:text-[28px]">
             {value}
           </div>
           {hint || delta ? (
@@ -65,7 +68,7 @@ function Tile({
         </div>
         {spark ? <div className="shrink-0 opacity-90">{spark}</div> : null}
       </div>
-      <span className="pointer-events-none absolute right-2.5 top-2.5 text-[10px] text-[var(--text-muted)] opacity-0 transition group-hover:opacity-100">
+      <span className="pointer-events-none absolute right-0 top-0 text-[10px] text-[var(--text-muted)] opacity-0 transition group-hover:opacity-100">
         ↗
       </span>
     </a>
@@ -262,7 +265,7 @@ export default function VitalsStrip({
   })();
 
   return (
-    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+    <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 lg:grid-cols-6">
       {opsTile}
       {deploysTile}
       {issuesTile}
