@@ -951,7 +951,7 @@ function ScoreCard({
           <PokemonSprite name={playerActiveName} />
           <span className="text-sm font-bold truncate text-center w-full">{playerName}</span>
         </div>
-        <span className="shrink-0 text-lg font-black tabular-nums">
+        <span className="shrink-0 text-[27px] font-black tabular-nums">
           {playerPrizes}–{opponentPrizes}
         </span>
         <div className="flex-1 flex flex-col items-center gap-1 min-w-0">
