@@ -72,13 +72,23 @@ export async function PATCH(
       }
       // Whitelist shape — defends against an admin pasting an unrelated
       // object into one of these slots. Each entry must look like
-      // SpotlightCardRef.
+      // SpotlightCardRef. Caption is optional and trimmed; empty string
+      // collapses to null so the page's "render only when present"
+      // check stays simple.
       const cleaned = (arr as unknown[]).map((raw) => {
-        const r = raw as { set_id?: unknown; number?: unknown; name?: unknown };
+        const r = raw as {
+          set_id?: unknown;
+          number?: unknown;
+          name?: unknown;
+          caption?: unknown;
+        };
+        const captionStr =
+          typeof r.caption === "string" ? r.caption.trim() : "";
         return {
           set_id: typeof r.set_id === "string" ? r.set_id : "",
           number: typeof r.number === "string" ? r.number : "",
           name: typeof r.name === "string" ? r.name : "",
+          caption: captionStr ? captionStr.slice(0, 140) : null,
         };
       });
       update[key] = cleaned;
