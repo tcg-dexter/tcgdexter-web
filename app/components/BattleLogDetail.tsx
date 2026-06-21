@@ -670,10 +670,13 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
     return { player: playerPrizeRunning, opponent: opponentPrizeRunning };
   });
 
-  // Active Pokémon tracking — updated by play_to_active, switch_active, and
-  // evolve actions. Initialize from pre-game, then snapshot after each game turn.
+  // Active + bench Pokémon tracking. Initialize from pre-game, snapshot after
+  // each game turn. benchState entries are arrays because multiple Pokémon can
+  // be benched simultaneously; we spread them on snapshot to avoid aliasing.
   const activeState = { player: null as string | null, opponent: null as string | null };
-  function applyActives(actions: ApiAction[]) {
+  const benchState = { player: [] as string[], opponent: [] as string[] };
+
+  function applyFieldState(actions: ApiAction[]) {
     for (const a of actions) {
       if (a.action_type === "knock_out") {
         const pokemon = p<string>(a, "pokemon");
@@ -681,6 +684,15 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
           const lc = pokemon.toLowerCase();
           if (activeState.player?.toLowerCase() === lc) activeState.player = null;
           else if (activeState.opponent?.toLowerCase() === lc) activeState.opponent = null;
+          // Also remove from bench (spread damage can KO benched Pokémon).
+          benchState.player = benchState.player.filter(n => n.toLowerCase() !== lc);
+          benchState.opponent = benchState.opponent.filter(n => n.toLowerCase() !== lc);
+        }
+      } else if (a.action_type === "play_to_bench") {
+        const card = p<string>(a, "card");
+        if (card) {
+          if (a.actor === "player") benchState.player.push(card);
+          else if (a.actor === "opponent") benchState.opponent.push(card);
         }
       } else if (
         a.action_type === "play_to_active" ||
@@ -691,28 +703,31 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
             ? p<string>(a, "card")
             : p<string>(a, "pokemon");
         if (card) {
-          // Determine where to route this action. TCG Live logs often attribute
-          // the defending side's mandatory post-KO promote to the attacking
-          // side's actor (the current turn owner). Additionally, the initial
-          // active placement during setup may be missing actor info.
-          //
-          // Rule: if exactly ONE side is null, always fill it — regardless of
-          // the actor field. The null side is either freshly KO'd or was never
-          // set in setup; in either case, the action belongs there. Only when
-          // both sides have an active (voluntary retreat) do we trust actor.
+          // Routing rule: if exactly ONE side is null, always fill it regardless
+          // of actor (post-KO promote or missing pre-game setup). Both filled →
+          // voluntary retreat, trust actor. Both null → use actor for setup.
+          let side: "player" | "opponent" | null = null;
           if (activeState.player === null && activeState.opponent === null) {
-            // Both empty (early setup): use actor to assign correctly.
-            if (a.actor === "player") activeState.player = card;
-            else if (a.actor === "opponent") activeState.opponent = card;
-            else activeState.player = card; // no actor — guess player first
+            if (a.actor === "player") side = "player";
+            else if (a.actor === "opponent") side = "opponent";
+            else side = "player";
           } else if (activeState.player === null) {
-            activeState.player = card;
+            side = "player";
           } else if (activeState.opponent === null) {
-            activeState.opponent = card;
+            side = "opponent";
           } else {
-            // Both filled — voluntary retreat. Trust actor.
-            if (a.actor === "player") activeState.player = card;
-            else if (a.actor === "opponent") activeState.opponent = card;
+            if (a.actor === "player") side = "player";
+            else if (a.actor === "opponent") side = "opponent";
+          }
+
+          if (side) {
+            // Voluntary retreat: old active goes to bench.
+            const old = activeState[side];
+            if (old !== null) benchState[side].push(old);
+            // New active leaves bench.
+            const lc = card.toLowerCase();
+            benchState[side] = benchState[side].filter(n => n.toLowerCase() !== lc);
+            activeState[side] = card;
           }
         }
       } else if (a.action_type === "evolve") {
@@ -722,14 +737,23 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
           const lc = from.toLowerCase();
           if (activeState.player?.toLowerCase() === lc) activeState.player = to;
           else if (activeState.opponent?.toLowerCase() === lc) activeState.opponent = to;
+          const pi = benchState.player.findIndex(n => n.toLowerCase() === lc);
+          if (pi !== -1) benchState.player[pi] = to;
+          const oi = benchState.opponent.findIndex(n => n.toLowerCase() === lc);
+          if (oi !== -1) benchState.opponent[oi] = to;
         }
       }
     }
   }
-  for (const post of pregamePosts) applyActives(post.actions);
-  const activeAtEnd = gamePosts.map((post) => {
-    applyActives(post.actions);
-    return { player: activeState.player, opponent: activeState.opponent };
+  for (const post of pregamePosts) applyFieldState(post.actions);
+  const snapshotsAtEnd = gamePosts.map((post) => {
+    applyFieldState(post.actions);
+    return {
+      player: activeState.player,
+      opponent: activeState.opponent,
+      playerBench: [...benchState.player],
+      opponentBench: [...benchState.opponent],
+    };
   });
 
   const resolvedPlayerColor = playerColor ?? "#d95555";
@@ -762,7 +786,7 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
         ];
         if (hasPrizes) {
           const cum = prizeCumulative[i];
-          const actives = activeAtEnd[i];
+          const snap = snapshotsAtEnd[i];
           items.push(
             <ScoreCard
               key={`${post.key}-prize`}
@@ -772,8 +796,10 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
               opponentName={opponentHandle}
               playerColor={resolvedPlayerColor}
               opponentColor={resolvedOpponentColor}
-              playerActiveName={actives.player}
-              opponentActiveName={actives.opponent}
+              playerActiveName={snap.player}
+              opponentActiveName={snap.opponent}
+              playerBench={snap.playerBench}
+              opponentBench={snap.opponentBench}
             />
           );
         }
@@ -931,6 +957,8 @@ function ScoreCard({
   opponentColor,
   playerActiveName,
   opponentActiveName,
+  playerBench,
+  opponentBench,
 }: {
   playerPrizes: number;
   opponentPrizes: number;
@@ -940,6 +968,8 @@ function ScoreCard({
   opponentColor: string;
   playerActiveName: string | null;
   opponentActiveName: string | null;
+  playerBench: string[];
+  opponentBench: string[];
 }) {
   return (
     <div className="px-3 pt-2 pb-3">
@@ -947,6 +977,14 @@ function ScoreCard({
         className="rounded-xl px-3 py-3 flex items-center gap-3 text-white opacity-80"
         style={{ background: `linear-gradient(to right, ${playerColor}, ${opponentColor})` }}
       >
+        {/* Player bench — left column, left-aligned */}
+        {playerBench.length > 0 && (
+          <div className="flex flex-col gap-0.5 min-w-0 shrink">
+            {playerBench.map((name, i) => (
+              <span key={i} className="text-[10px] font-semibold leading-tight truncate">{name}</span>
+            ))}
+          </div>
+        )}
         <div className="flex-1 flex flex-col items-center gap-1 min-w-0">
           <PokemonSprite name={playerActiveName} />
           <span className="text-sm font-bold truncate text-center w-full">{playerName}</span>
@@ -958,6 +996,14 @@ function ScoreCard({
           <PokemonSprite name={opponentActiveName} />
           <span className="text-sm font-bold truncate text-center w-full">{opponentName}</span>
         </div>
+        {/* Opponent bench — right column, right-aligned */}
+        {opponentBench.length > 0 && (
+          <div className="flex flex-col gap-0.5 min-w-0 shrink items-end">
+            {opponentBench.map((name, i) => (
+              <span key={i} className="text-[10px] font-semibold leading-tight truncate text-right">{name}</span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
