@@ -936,13 +936,13 @@ function pokemonSpriteUrl(name: string): string {
 
 function PokemonSprite({ name }: { name: string | null }) {
   const [failed, setFailed] = useState(false);
-  if (!name || failed) return <div className="h-[72px] w-[72px] shrink-0" />;
+  if (!name || failed) return <div className="h-12 w-12 shrink-0" />;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={pokemonSpriteUrl(name)}
       alt={name}
-      className="h-[72px] w-[72px] shrink-0 object-contain drop-shadow-sm"
+      className="h-12 w-12 shrink-0 object-contain drop-shadow-sm"
       onError={() => setFailed(true)}
     />
   );
