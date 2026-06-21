@@ -111,8 +111,8 @@ export const TEXTURES: ReadonlyArray<{ key: string; w: number; h: number; svg: s
   },
   {
     key: "stars",
-    w: 18, h: 18,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"><path d="M9,4.5 L10,8 L13.5,9 L10,10 L9,13.5 L8,10 L4.5,9 L8,8 Z" fill="white" fill-opacity="0.35"/></svg>`,
+    w: 24, h: 24,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="M12,4 L10.2,9.6 L4.4,9.5 L9.1,12.9 L7.3,18.5 L12,15 L16.7,18.5 L14.9,12.9 L19.6,9.5 L13.8,9.6 Z" fill="white" fill-opacity="0.35"/></svg>`,
   },
   {
     key: "plus",
@@ -291,16 +291,20 @@ function drawTextureTile(key: string): HTMLCanvasElement | null {
       c.stroke();
       break;
     case "stars":
+      // 5-point star, R=8, r=3, centered at (12, 12) in a 24×24 tile.
+      // Outer/inner vertices alternate, starting from the top.
       c.globalAlpha = 0.35;
       c.beginPath();
-      c.moveTo(9, 4.5);
-      c.lineTo(10, 8);
-      c.lineTo(13.5, 9);
-      c.lineTo(10, 10);
-      c.lineTo(9, 13.5);
-      c.lineTo(8, 10);
-      c.lineTo(4.5, 9);
-      c.lineTo(8, 8);
+      c.moveTo(12, 4);
+      c.lineTo(10.2, 9.6);
+      c.lineTo(4.4, 9.5);
+      c.lineTo(9.1, 12.9);
+      c.lineTo(7.3, 18.5);
+      c.lineTo(12, 15);
+      c.lineTo(16.7, 18.5);
+      c.lineTo(14.9, 12.9);
+      c.lineTo(19.6, 9.5);
+      c.lineTo(13.8, 9.6);
       c.closePath();
       c.fill();
       break;
