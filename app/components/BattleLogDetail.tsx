@@ -910,13 +910,13 @@ function pokemonSpriteUrl(name: string): string {
 
 function PokemonSprite({ name }: { name: string | null }) {
   const [failed, setFailed] = useState(false);
-  if (!name || failed) return <div className="h-8 w-8 shrink-0" />;
+  if (!name || failed) return <div className="h-12 w-12 shrink-0" />;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={pokemonSpriteUrl(name)}
       alt={name}
-      className="h-8 w-8 shrink-0 object-contain drop-shadow-sm"
+      className="h-12 w-12 shrink-0 object-contain drop-shadow-sm"
       onError={() => setFailed(true)}
     />
   );
@@ -944,16 +944,16 @@ function ScoreCard({
   return (
     <div className="px-3 pt-2 pb-3">
       <div
-        className="rounded-xl px-3 py-2 flex items-center gap-2 text-white opacity-80"
+        className="rounded-xl px-3 py-3 flex items-center gap-3 text-white opacity-80"
         style={{ background: `linear-gradient(to right, ${playerColor}, ${opponentColor})` }}
       >
         <PokemonSprite name={playerActiveName} />
         <div className="flex-1 grid grid-cols-3 items-center">
-          <span className="text-xs font-bold truncate">{playerName}</span>
-          <span className="text-sm font-black tabular-nums text-center">
+          <span className="text-sm font-bold truncate">{playerName}</span>
+          <span className="text-lg font-black tabular-nums text-center">
             {playerPrizes}–{opponentPrizes}
           </span>
-          <span className="text-xs font-bold truncate text-right">{opponentName}</span>
+          <span className="text-sm font-bold truncate text-right">{opponentName}</span>
         </div>
         <PokemonSprite name={opponentActiveName} />
       </div>
