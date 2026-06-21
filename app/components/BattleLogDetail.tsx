@@ -969,15 +969,26 @@ function ScoreCard({
   return (
     <div className="pt-2 pb-3">
       <div
-        className="rounded-xl px-3 py-[18px] min-h-[120px] relative flex items-center text-white opacity-80"
+        className="rounded-xl px-3 pt-3 pb-[18px] min-h-[120px] relative flex flex-col text-white opacity-80"
         style={{ background: `linear-gradient(to right, ${playerColor}, ${opponentColor})` }}
       >
-        {/* Bench columns — stretch behind the center content freely */}
-        <div className="flex-1 flex flex-col gap-0.5 min-w-0">
-          <span className="text-[11px] font-bold leading-tight truncate mb-1">{playerName}</span>
-          {playerBench.map((name, i) => (
-            <span key={i} className="text-[10px] font-semibold leading-tight truncate opacity-80">{name}</span>
-          ))}
+        {/* Name header — anchored to top of card */}
+        <div className="flex justify-between gap-2 w-full">
+          <span className="text-[11px] font-bold leading-tight truncate">{playerName}</span>
+          <span className="text-[11px] font-bold leading-tight truncate text-right">{opponentName}</span>
+        </div>
+        {/* Bench columns sit below the header; center sprites+score overlay the full card */}
+        <div className="flex items-start flex-1 mt-1">
+          <div className="flex-1 flex flex-col gap-0.5 min-w-0">
+            {playerBench.map((name, i) => (
+              <span key={i} className="text-[10px] font-semibold leading-tight truncate opacity-80">{name}</span>
+            ))}
+          </div>
+          <div className="flex-1 flex flex-col gap-0.5 min-w-0 items-end">
+            {opponentBench.map((name, i) => (
+              <span key={i} className="text-[10px] font-semibold leading-tight truncate text-right opacity-80">{name}</span>
+            ))}
+          </div>
         </div>
         {/* Center — absolutely positioned so it always sits at 50% regardless
             of bench column widths. z-10 keeps it above bench text. */}
@@ -989,12 +1000,6 @@ function ScoreCard({
           <span className="text-[27px] font-black tabular-nums leading-none">
             {playerPrizes}–{opponentPrizes}
           </span>
-        </div>
-        <div className="flex-1 flex flex-col gap-0.5 min-w-0 items-end">
-          <span className="text-[11px] font-bold leading-tight truncate text-right mb-1">{opponentName}</span>
-          {opponentBench.map((name, i) => (
-            <span key={i} className="text-[10px] font-semibold leading-tight truncate text-right opacity-80">{name}</span>
-          ))}
         </div>
       </div>
     </div>
