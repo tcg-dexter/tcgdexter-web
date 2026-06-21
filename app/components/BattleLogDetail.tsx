@@ -1177,7 +1177,7 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
 
         if (cat === "attack") {
           return (
-            <li key={a.id} className="flex items-end gap-2 text-sm leading-snug">
+            <li key={a.id} className="flex items-baseline gap-2 text-sm leading-snug">
               <ActionTypeLabel type={a.action_type} className="text-text-primary" />
               <span className="flex-1 min-w-0 font-medium text-text-primary break-words">
                 {label}
@@ -1188,7 +1188,7 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
 
         if (cat === "dim") {
           return (
-            <li key={a.id} className="flex items-end gap-2 leading-snug">
+            <li key={a.id} className="flex items-baseline gap-2 leading-snug">
               <ActionTypeLabel type={a.action_type} className="text-text-primary" />
               <span className="flex-1 min-w-0 text-xs text-text-muted break-words">
                 {label}
@@ -1198,7 +1198,7 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
         }
 
         return (
-          <li key={a.id} className="flex items-end gap-2 text-sm leading-snug">
+          <li key={a.id} className="flex items-baseline gap-2 text-sm leading-snug">
             <ActionTypeLabel type={a.action_type} className="text-text-primary" />
             <span className="flex-1 min-w-0 text-text-secondary break-words">
               {label}
