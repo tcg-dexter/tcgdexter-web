@@ -1144,7 +1144,7 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
             return (
               <li
                 key={a.id}
-                className="-mx-2 rounded-full px-3 py-1.5 text-xs font-bold text-white bg-[#1a1a1a] flex items-center justify-between gap-2"
+                className="-mx-2 rounded-full px-3 py-2.5 text-xs font-bold text-white bg-[#1a1a1a] flex items-center justify-between gap-2"
               >
                 <span>{label}</span>
                 <span>{labelFor(actions[prizeIdx])}</span>
@@ -1154,7 +1154,7 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
           return (
             <li
               key={a.id}
-              className="-mx-2 rounded-full px-3 py-1.5 text-xs font-bold text-white text-center bg-[#1a1a1a]"
+              className="-mx-2 rounded-full px-3 py-2.5 text-xs font-bold text-white text-center bg-[#1a1a1a]"
             >
               {label}
             </li>
@@ -1168,7 +1168,7 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
           return (
             <li
               key={a.id}
-              className="-mx-2 rounded-full px-3 py-1.5 text-xs font-bold text-white text-center bg-[#1a1a1a]"
+              className="-mx-2 rounded-full px-3 py-2.5 text-xs font-bold text-white text-center bg-[#1a1a1a]"
             >
               {label}
             </li>
