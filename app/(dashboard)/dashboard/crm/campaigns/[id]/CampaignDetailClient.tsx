@@ -330,7 +330,7 @@ export default function CampaignDetailClient({
         </button>
       </div>
 
-      <section className="flex flex-col gap-3 rounded-xl border border-black/8 bg-white p-4 shadow-sm">
+      <section className="flex flex-col gap-3">
         <div className="flex flex-col gap-2">
           <label className="flex flex-col gap-1">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
@@ -369,7 +369,7 @@ export default function CampaignDetailClient({
           {/* Recipient rule. Editing the rule re-syncs on the server: the
               PATCH handler calls syncCampaignRecipients() after the update,
               and router.refresh() below pulls the new recipient set. */}
-          <fieldset className="flex flex-col gap-2 rounded-xl border border-black/8 bg-white/60 p-3">
+          <fieldset className="flex flex-col gap-2 border-t border-black/10 pt-3">
             <legend className="px-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
               Recipients
             </legend>
@@ -504,7 +504,7 @@ export default function CampaignDetailClient({
 
         {error ? <div className="text-[11px] text-[var(--accent)]">{error}</div> : null}
 
-        <div className="overflow-x-auto rounded-xl border border-black/8 bg-white shadow-sm">
+        <div className="overflow-x-auto">
           {recipients.length === 0 ? (
             <div className="p-6 text-center text-xs text-[var(--text-muted)]">
               {campaign.recipient_type === "manual" ? (

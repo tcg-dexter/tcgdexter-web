@@ -1,6 +1,6 @@
 import type { DevData, IssueLabel, IssueSummary } from "../lib/github";
 import { links } from "../lib/links";
-import { Card, ErrorBox, relTime } from "./Card";
+import { ErrorBox, relTime } from "./Card";
 
 type Props = { data: DevData | { error: string } };
 
@@ -32,12 +32,12 @@ function LabelChips({ labels }: { labels: IssueLabel[] }) {
 
 function IssueRow({ item }: { item: IssueSummary }) {
   return (
-    <li className="group rounded-md px-1 py-1.5 transition hover:bg-[var(--surface)]/50">
+    <li className="py-1.5">
       <a
         href={item.url}
         target="_blank"
         rel="noreferrer"
-        className="flex items-baseline gap-2"
+        className="group flex items-baseline gap-2"
       >
         <span className="shrink-0 font-mono text-[11px] text-[var(--text-muted)]">
           {item.repo}#{item.number}
@@ -60,46 +60,41 @@ export default function DevCard({ data }: Props) {
   const pinnedRepos = data.repos.filter((r) => r.pinned);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-8">
       {/* Repos rail */}
-      <Card variant="elevated">
+      <div>
         <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
           Repos
         </div>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid gap-x-6 gap-y-4 sm:grid-cols-3">
           {pinnedRepos.map((r) => (
-            <div
-              key={r.name}
-              className="group relative overflow-hidden rounded-xl border border-black/8 bg-gradient-to-br from-white to-[var(--surface)]/50 p-3 transition hover:border-black/20 hover:shadow-sm"
-            >
-              <div className="flex items-center justify-between">
-                <a
-                  href={r.htmlUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-mono text-sm font-semibold tracking-tight hover:underline"
-                >
-                  {r.name}
-                </a>
-              </div>
-              <div className="mt-1 text-[11px] text-[var(--text-muted)]">
+            <div key={r.name} className="flex flex-col gap-1">
+              <a
+                href={r.htmlUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="font-mono text-sm font-semibold tracking-tight hover:underline"
+              >
+                {r.name}
+              </a>
+              <div className="text-[11px] text-[var(--text-muted)]">
                 pushed {relTime(r.pushedAt)}
               </div>
-              <div className="mt-2 flex items-center gap-2 text-[11px]">
+              <div className="mt-1 flex items-center gap-2 text-[11px]">
                 <a
                   href={links.github.repoIssues(r.name)}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1 rounded-full bg-[var(--surface)] px-2 py-0.5 font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
                 >
-                  <span className="tabular-nums">{r.openIssues}</span>
-                  <span>open</span>
+                  <span className="tabular-nums">{r.openIssues}</span> open
                 </a>
+                <span className="text-[var(--text-muted)]">·</span>
                 <a
                   href={links.github.repoPulls(r.name)}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1 rounded-full bg-[var(--surface)] px-2 py-0.5 font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
                 >
                   PRs
                 </a>
@@ -107,16 +102,16 @@ export default function DevCard({ data }: Props) {
             </div>
           ))}
         </div>
-      </Card>
+      </div>
 
       {/* Project boards */}
-      <Card variant="elevated">
+      <div>
         <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
           Project boards
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
           {data.projects.map((p) => (
-            <div key={p.number} className="rounded-xl border border-black/5 bg-[var(--surface)]/30 p-3">
+            <div key={p.number} className="flex flex-col gap-2">
               <div className="flex items-baseline gap-2">
                 <a
                   href={p.url}
@@ -130,13 +125,10 @@ export default function DevCard({ data }: Props) {
                   {p.totalItems} items
                 </span>
               </div>
-              <div className="mt-2 flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[var(--text-secondary)]">
                 {Object.entries(p.itemsByStatus).map(([status, count]) => (
-                  <span
-                    key={status}
-                    className="rounded-full bg-white px-2 py-0.5 text-[11px] ring-1 ring-black/5"
-                  >
-                    {status}: <span className="tabular-nums font-semibold">{count}</span>
+                  <span key={status}>
+                    {status}: <span className="tabular-nums font-semibold text-[var(--text-primary)]">{count}</span>
                   </span>
                 ))}
               </div>
@@ -146,11 +138,11 @@ export default function DevCard({ data }: Props) {
             <div className="text-xs text-[var(--text-muted)]">No projects found.</div>
           )}
         </div>
-      </Card>
+      </div>
 
       {/* Open PRs + Open Issues side-by-side */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card variant="elevated">
+      <div className="grid gap-x-8 gap-y-6 md:grid-cols-2">
+        <div>
           <div className="mb-2 flex items-center justify-between">
             <div className="flex items-baseline gap-2">
               <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
@@ -169,7 +161,7 @@ export default function DevCard({ data }: Props) {
               all ↗
             </a>
           </div>
-          <ul className="-mx-1 divide-y divide-black/5 text-xs">
+          <ul className="divide-y divide-black/5 text-xs">
             {data.recentPrs.slice(0, 8).map((i) => (
               <IssueRow key={`${i.repo}-${i.number}`} item={i} />
             ))}
@@ -177,9 +169,9 @@ export default function DevCard({ data }: Props) {
               <li className="py-2 text-[var(--text-muted)]">No open PRs.</li>
             )}
           </ul>
-        </Card>
+        </div>
 
-        <Card variant="elevated">
+        <div>
           <div className="mb-2 flex items-center justify-between">
             <div className="flex items-baseline gap-2">
               <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
@@ -198,7 +190,7 @@ export default function DevCard({ data }: Props) {
               all ↗
             </a>
           </div>
-          <ul className="-mx-1 divide-y divide-black/5 text-xs">
+          <ul className="divide-y divide-black/5 text-xs">
             {data.recentIssues.slice(0, 10).map((i) => (
               <IssueRow key={`${i.repo}-${i.number}`} item={i} />
             ))}
@@ -206,7 +198,7 @@ export default function DevCard({ data }: Props) {
               <li className="py-2 text-[var(--text-muted)]">No open issues.</li>
             )}
           </ul>
-        </Card>
+        </div>
       </div>
     </div>
   );

@@ -35,9 +35,9 @@ export default function CampaignsModule({ campaigns }: { campaigns: CrmCampaign[
         }
       />
 
-      <div className="overflow-hidden rounded-2xl border border-black/8 bg-gradient-to-b from-white to-[var(--surface)]/40 shadow-[0_1px_2px_rgba(15,15,15,0.04),0_4px_18px_-12px_rgba(15,15,15,0.18)]">
+      <div>
         {active.length === 0 ? (
-          <div className="flex items-center justify-between gap-3 p-4 text-xs text-[var(--text-muted)]">
+          <div className="flex items-center justify-between gap-3 py-3 text-xs text-[var(--text-muted)]">
             <span>No active campaigns.</span>
             <Link
               href="/dashboard/crm/campaigns/new"
@@ -56,7 +56,7 @@ export default function CampaignsModule({ campaigns }: { campaigns: CrmCampaign[
                 <li key={c.id}>
                   <Link
                     href={`/dashboard/crm/campaigns/${c.id}`}
-                    className="grid grid-cols-[1fr_auto] items-center gap-3 p-3 transition hover:bg-[var(--surface)]/50 sm:grid-cols-[1.4fr_2fr_auto] sm:p-4"
+                    className="grid grid-cols-[1fr_auto] items-center gap-3 py-3 transition hover:text-[var(--text-primary)] sm:grid-cols-[1.4fr_2fr_auto]"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">

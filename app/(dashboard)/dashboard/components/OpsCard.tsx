@@ -1,6 +1,6 @@
 import type { OpsData } from "../lib/ops";
 import { links } from "../lib/links";
-import { Card, ErrorBox, relTime } from "./Card";
+import { ErrorBox, relTime } from "./Card";
 
 type Props = { data: OpsData | { error: string } };
 
@@ -22,7 +22,7 @@ export default function OpsCard({ data }: Props) {
   const latest = data.latest;
 
   return (
-    <Card variant="elevated">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         <div className="flex items-center gap-3">
           {latest ? (
@@ -68,7 +68,7 @@ export default function OpsCard({ data }: Props) {
       </div>
 
       {latest && (
-        <div className="mt-5 rounded-xl border border-black/5 bg-[var(--surface)]/40 p-3 sm:p-4">
+        <div>
           <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
             Steps
           </div>
@@ -107,7 +107,7 @@ export default function OpsCard({ data }: Props) {
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-black/5 pt-3 text-xs">
+      <div className="flex flex-wrap items-center gap-3 border-t border-black/5 pt-3 text-xs">
         <a
           href={links.supabase.table("ops_runs")}
           target="_blank"
@@ -137,6 +137,6 @@ export default function OpsCard({ data }: Props) {
           </>
         )}
       </div>
-    </Card>
+    </div>
   );
 }

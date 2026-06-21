@@ -39,9 +39,9 @@ export default async function CampaignsPage() {
         </Link>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-black/8 bg-white shadow-sm">
+      <div className="overflow-x-auto">
         {campaigns.length === 0 ? (
-          <div className="p-6 text-center text-xs text-[var(--text-muted)]">
+          <div className="py-6 text-center text-xs text-[var(--text-muted)]">
             No campaigns yet.{" "}
             <Link href="/dashboard/crm/campaigns/new" className="underline">
               Create the first
