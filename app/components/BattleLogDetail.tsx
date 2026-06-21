@@ -1158,6 +1158,23 @@ function ActionTypeLabel({ type, className }: { type: string; className?: string
 }
 
 function ActionList({ actions }: { actions: ApiAction[] }) {
+  // Pre-pair each knock_out with the nearest subsequent prize_taken, skipping
+  // any intervening actions (e.g. abilities triggered mid-checkup). Each
+  // prize_taken is consumed by at most one knock_out.
+  const koPrizeIndex = new Map<number, number>(); // ko idx → prize idx
+  const consumedPrize = new Set<number>();
+  for (let i = 0; i < actions.length; i++) {
+    if (actions[i].action_type === "knock_out") {
+      for (let j = i + 1; j < actions.length; j++) {
+        if (actions[j].action_type === "prize_taken" && !consumedPrize.has(j)) {
+          koPrizeIndex.set(i, j);
+          consumedPrize.add(j);
+          break;
+        }
+      }
+    }
+  }
+
   return (
     <ul className="flex flex-col gap-1">
       {actions.map((a, idx) => {
@@ -1166,16 +1183,15 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
         const cat = categoryFor(a.action_type);
 
         if (a.action_type === "knock_out") {
-          const next = actions[idx + 1];
-          if (next?.action_type === "prize_taken") {
-            // Combine KO + prize into one capsule: KO left, prizes right.
+          const prizeIdx = koPrizeIndex.get(idx);
+          if (prizeIdx !== undefined) {
             return (
               <li
                 key={a.id}
                 className="-mx-2 rounded-full px-3 py-1.5 text-xs font-bold text-white bg-[#1a1a1a] flex items-center justify-between gap-2"
               >
                 <span>{label}</span>
-                <span>{labelFor(next)}</span>
+                <span>{labelFor(actions[prizeIdx])}</span>
               </li>
             );
           }
@@ -1189,10 +1205,10 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
           );
         }
 
-        // prize_taken consumed above when paired — render standalone if not.
+        // Skip prize_taken rows that were consumed into a KO capsule above.
+        if (cat === "featured-prize" && consumedPrize.has(idx)) return null;
+
         if (cat === "featured-ko" || cat === "featured-prize") {
-          const prevAction = actions[idx - 1];
-          if (cat === "featured-prize" && prevAction?.action_type === "knock_out") return null;
           return (
             <li
               key={a.id}
