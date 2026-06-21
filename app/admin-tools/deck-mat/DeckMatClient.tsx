@@ -82,12 +82,12 @@ export const TEXTURES: ReadonlyArray<{ key: string; w: number; h: number; svg: s
   {
     key: "dots",
     w: 14, h: 14,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"><circle cx="7" cy="7" r="1.2" fill="white" fill-opacity="0.4"/></svg>`,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"><circle cx="7" cy="7" r="2.4" fill="white" fill-opacity="0.4"/></svg>`,
   },
   {
     key: "grid",
     w: 16, h: 16,
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M0 0V16M0 0H16" stroke="white" stroke-width="0.5" stroke-opacity="0.32"/></svg>`,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M0 0V16M0 0H16" stroke="white" stroke-width="1" stroke-opacity="0.32"/></svg>`,
   },
   {
     key: "crosshatch",
@@ -238,12 +238,12 @@ function drawTextureTile(key: string): HTMLCanvasElement | null {
     case "dots":
       c.globalAlpha = 0.4;
       c.beginPath();
-      c.arc(7, 7, 1.2, 0, Math.PI * 2);
+      c.arc(7, 7, 2.4, 0, Math.PI * 2);
       c.fill();
       break;
     case "grid":
       c.globalAlpha = 0.32;
-      c.lineWidth = 0.5;
+      c.lineWidth = 1;
       c.beginPath();
       c.moveTo(0, 0);
       c.lineTo(0, 16);
