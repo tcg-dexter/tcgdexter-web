@@ -980,14 +980,15 @@ function ScoreCard({
             ))}
           </div>
         )}
-        <div className="flex-1 flex items-center justify-center min-w-0">
-          <PokemonSprite name={playerActiveName} />
-        </div>
-        <span className="shrink-0 text-[27px] font-black tabular-nums">
-          {playerPrizes}–{opponentPrizes}
-        </span>
-        <div className="flex-1 flex items-center justify-center min-w-0">
-          <PokemonSprite name={opponentActiveName} />
+        {/* Center: both sprites side-by-side above the score */}
+        <div className="flex-1 flex flex-col items-center gap-2 min-w-0">
+          <div className="flex items-end gap-2">
+            <PokemonSprite name={playerActiveName} />
+            <PokemonSprite name={opponentActiveName} />
+          </div>
+          <span className="text-[27px] font-black tabular-nums leading-none">
+            {playerPrizes}–{opponentPrizes}
+          </span>
         </div>
         {/* Opponent bench — right column, right-aligned */}
         {opponentBench.length > 0 && (
