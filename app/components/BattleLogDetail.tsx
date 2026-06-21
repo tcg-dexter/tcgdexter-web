@@ -839,7 +839,6 @@ const LOSS_COLOR = "#1a1a1a";
 function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }) {
   const isSystem = post.kind === "system";
   const isResult = post.system?.handle === "game";
-  const stats = statsFor(post.actions);
   const avatarStyle: CSSProperties = post.system
     ? { background: post.system.bg }
     : post.outcome === "win"
@@ -910,10 +909,6 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
         <div className="mt-1">
           <ActionList actions={post.actions} />
         </div>
-
-        {!isResult && (stats.damage + stats.ko > 0) && (
-          <PostStatsRow stats={stats} />
-        )}
       </div>
     </div>
   );
@@ -1007,45 +1002,6 @@ function ScoreCard({
   );
 }
 
-function StatChip({
-  n,
-  label,
-  chipCls = "",
-  chipStyle,
-  numCls = "",
-  lblCls = "",
-}: {
-  n: number;
-  label: string;
-  chipCls?: string;
-  chipStyle?: CSSProperties;
-  numCls?: string;
-  lblCls?: string;
-}) {
-  return (
-    <div
-      className={`flex flex-col items-center justify-center rounded-xl px-2.5 py-1.5 min-w-[44px] ${chipCls}`}
-      style={chipStyle}
-    >
-      <span className={`text-base font-black tabular-nums leading-none ${numCls}`}>{n}</span>
-      <span className={`text-[9px] font-bold tracking-widest uppercase mt-0.5 ${lblCls}`}>{label}</span>
-    </div>
-  );
-}
-
-function PostStatsRow({ stats }: { stats: PostStats }) {
-  if (stats.damage + stats.ko === 0) return null;
-  return (
-    <div className="mt-2.5 flex items-stretch gap-1.5">
-      {stats.damage > 0 && (
-        <StatChip n={stats.damage} label="DMG" chipCls="bg-transparent border border-black flex-1" numCls="text-text-primary" lblCls="text-text-muted" />
-      )}
-      {stats.ko > 0 && (
-        <StatChip n={stats.ko} label="KO" chipCls="bg-[#1a1a1a] flex-1" numCls="text-white" lblCls="text-white/70" />
-      )}
-    </div>
-  );
-}
 
 /* ─── Helpers ─────────────────────────────────────────────────── */
 
