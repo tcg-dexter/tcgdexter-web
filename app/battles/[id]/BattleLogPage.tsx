@@ -36,6 +36,7 @@ export interface BattleSideStats {
   supporters: number;
   items: number;
   energy: number;
+  prizes: number;
 }
 
 function formatPlayedAt(iso: string): string {
@@ -227,6 +228,7 @@ export default function BattleLogPage({
               { label: "Supporters Played", left: playerStats.supporters, right: opponentStats.supporters },
               { label: "Items Played", left: playerStats.items, right: opponentStats.items },
               { label: "Energy Attached", left: playerStats.energy, right: opponentStats.energy },
+              { label: "Prizes Taken", left: playerStats.prizes, right: opponentStats.prizes },
             ]}
           />
         </div>
