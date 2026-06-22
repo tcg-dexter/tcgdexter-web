@@ -201,24 +201,7 @@ export default function BattleLogPage({
           underneath, with no section headings so the whole block reads
           as one continuous summary. */}
       <div className="mx-auto w-full max-w-2xl px-4 mt-8">
-        <div className="grid grid-cols-3 gap-3">
-          <StatCard
-            label="W"
-            value={winnerName ?? "Draw"}
-            tone={result === "win" ? "gradient" : result === "loss" ? "dark" : "ringed"}
-          />
-          <StatCard
-            label="Turns"
-            value={totalTurns != null ? String(totalTurns) : "—"}
-          />
-          <StatCard
-            label="L"
-            value={loserName ?? "—"}
-            tone="dark"
-          />
-        </div>
-
-        <div className="mt-5 px-1">
+        <div className="px-1">
           <StatChart
             playerName={playerSideName}
             opponentName={opponentSideName}
