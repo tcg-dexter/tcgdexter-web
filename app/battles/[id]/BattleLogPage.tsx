@@ -410,19 +410,22 @@ function StatChart({
       </div>
 
       {rows.map((row, idx) => {
+        const isFirst = idx === 0;
         const isFooter = idx === rows.length - 1;
         return (
         <Fragment key={row.label}>
-          {/* Full-width separator above each row — spans all three
-              columns so the line reads as one continuous rule. */}
-          <div className={`col-span-3 border-t ${isFooter ? "border-t-2 border-black" : "border-black/[0.08]"}`} />
-          <div className="text-[11px] font-semibold uppercase tracking-widest text-text-primary py-2.5">
+          {/* Full-width separator above each row — hidden for the first row,
+              solid black double-weight for the footer. */}
+          {!isFirst && (
+            <div className={`col-span-3 border-t ${isFooter ? "border-t-2 border-black" : "border-black/[0.08]"}`} />
+          )}
+          <div className={`font-semibold uppercase tracking-widest text-text-primary py-2.5 ${isFooter ? "text-[14px]" : "text-[11px]"}`}>
             {row.label}
           </div>
-          <div className="py-2.5 text-right tabular-nums text-sm font-semibold text-text-secondary">
+          <div className={`py-2.5 text-right tabular-nums font-semibold text-text-secondary ${isFooter ? "text-[18px]" : "text-sm"}`}>
             {row.left}
           </div>
-          <div className="py-2.5 text-right tabular-nums text-sm font-semibold text-text-secondary">
+          <div className={`py-2.5 text-right tabular-nums font-semibold text-text-secondary ${isFooter ? "text-[18px]" : "text-sm"}`}>
             {row.right}
           </div>
         </Fragment>
