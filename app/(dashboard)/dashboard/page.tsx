@@ -1,4 +1,5 @@
 import ActivityFeed from "./components/ActivityFeed";
+import AnalyticsPreview from "./components/AnalyticsPreview";
 import AutoRefresh from "./components/AutoRefresh";
 import DeploysCard from "./components/DeploysCard";
 import DevCard from "./components/DevCard";
@@ -8,6 +9,7 @@ import QuickLinks from "./components/QuickLinks";
 import VitalsStrip from "./components/VitalsStrip";
 import { SectionHeader } from "./components/Card";
 import { fetchActivity } from "./lib/activity";
+import { fetchActivation, fetchBehavior } from "./lib/analytics";
 import { fetchDeploys } from "./lib/vercel-deploys";
 import { fetchDev } from "./lib/github";
 import { fetchOps } from "./lib/ops";
@@ -37,7 +39,7 @@ function todayLabel(): string {
 }
 
 export default async function DashboardPage() {
-  const [dev, product, ops, deploys, activity] = await Promise.all([
+  const [dev, product, ops, deploys, activity, activation, behavior] = await Promise.all([
     fetchDev().catch((e) => ({ error: String(e) }) as const),
     fetchProduct().catch((e) => ({ error: String(e) }) as const),
     fetchOps().catch((e) => ({ error: String(e) }) as const),
@@ -46,6 +48,10 @@ export default async function DashboardPage() {
         ({ available: false, reason: String(e) }) as const,
     ),
     fetchActivity().catch((e) => ({ error: String(e) }) as const),
+    // 7-day window matches the rolling window used by the Active KPI tile
+    // and the Signups · 7d tile so all the in-house analytics share a frame.
+    fetchActivation(7).catch((e) => ({ error: String(e) }) as const),
+    fetchBehavior(7).catch((e) => ({ error: String(e) }) as const),
   ]);
 
   return (
@@ -67,7 +73,13 @@ export default async function DashboardPage() {
           </div>
           <AutoRefresh intervalMs={60_000} />
         </div>
-        <VitalsStrip ops={ops} dev={dev} product={product} deploys={deploys} />
+        <VitalsStrip
+          ops={ops}
+          dev={dev}
+          product={product}
+          deploys={deploys}
+          behavior={behavior}
+        />
       </header>
 
       <div className="flex flex-col gap-6">
@@ -111,9 +123,18 @@ export default async function DashboardPage() {
           <SectionHeader
             eyebrow="Product"
             title="Users, decks & traffic"
-            meta="Supabase + Vercel Analytics"
+            meta="Supabase"
           />
           <ProductCard data={product} />
+        </section>
+
+        <section>
+          <SectionHeader
+            eyebrow="Analytics"
+            title="Activation & behavior"
+            meta="In-house · last 7 days"
+          />
+          <AnalyticsPreview activation={activation} behavior={behavior} />
         </section>
 
         <section>
