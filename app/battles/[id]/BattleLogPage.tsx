@@ -384,13 +384,22 @@ function StatChart({
   winnerSide: "left" | "right" | null;
   rows: { label: string; left: number; right: number }[];
 }) {
+  const leftGradient = winnerSide === "left";
+  const rightGradient = winnerSide === "right";
   return (
     <div className="grid grid-cols-[1fr_auto_auto] gap-x-6 items-baseline">
+      {/* Column headers */}
+      <div />
+      <div className={`pb-2 text-[11px] font-bold truncate text-right tabular-nums ${leftGradient ? "bg-gradient-brand bg-clip-text text-transparent" : "text-text-primary"}`}>
+        {playerName}
+      </div>
+      <div className={`pb-2 text-[11px] font-bold truncate text-right tabular-nums ${rightGradient ? "bg-gradient-brand bg-clip-text text-transparent" : "text-text-primary"}`}>
+        {opponentName}
+      </div>
+
       {rows.map((row, idx) => {
         const isFirst = idx === 0;
         const isFooter = idx === rows.length - 1;
-        const leftGradient = isFooter && winnerSide === "left";
-        const rightGradient = isFooter && winnerSide === "right";
         return (
         <Fragment key={row.label}>
           {!isFirst && (
@@ -399,23 +408,11 @@ function StatChart({
           <div className={`font-semibold uppercase tracking-widest text-text-primary py-2.5 ${isFooter ? "text-[14px]" : "text-[11px]"}`}>
             {row.label}
           </div>
-          {/* Left (player) value */}
-          <div className={`py-2.5 text-right ${isFooter ? "" : "tabular-nums font-semibold text-text-secondary text-sm"} ${leftGradient ? "bg-gradient-brand bg-clip-text text-transparent" : ""}`}>
-            {isFooter ? (
-              <div className="flex flex-col items-end gap-0.5">
-                <span className={`text-[11px] font-bold ${!leftGradient ? "text-text-primary" : ""}`}>{playerName}</span>
-                <span className={`text-[18px] font-semibold tabular-nums ${!leftGradient ? "text-text-secondary" : ""}`}>{row.left}</span>
-              </div>
-            ) : row.left}
+          <div className={`py-2.5 text-right tabular-nums font-semibold ${isFooter ? `text-[18px] ${leftGradient ? "bg-gradient-brand bg-clip-text text-transparent" : "text-text-secondary"}` : "text-text-secondary text-sm"}`}>
+            {row.left}
           </div>
-          {/* Right (opponent) value */}
-          <div className={`py-2.5 text-right ${isFooter ? "" : "tabular-nums font-semibold text-text-secondary text-sm"} ${rightGradient ? "bg-gradient-brand bg-clip-text text-transparent" : ""}`}>
-            {isFooter ? (
-              <div className="flex flex-col items-end gap-0.5">
-                <span className={`text-[11px] font-bold ${!rightGradient ? "text-text-primary" : ""}`}>{opponentName}</span>
-                <span className={`text-[18px] font-semibold tabular-nums ${!rightGradient ? "text-text-secondary" : ""}`}>{row.right}</span>
-              </div>
-            ) : row.right}
+          <div className={`py-2.5 text-right tabular-nums font-semibold ${isFooter ? `text-[18px] ${rightGradient ? "bg-gradient-brand bg-clip-text text-transparent" : "text-text-secondary"}` : "text-text-secondary text-sm"}`}>
+            {row.right}
           </div>
         </Fragment>
         );
