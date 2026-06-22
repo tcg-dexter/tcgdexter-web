@@ -263,15 +263,15 @@ function labelFor(action: ApiAction): string {
     case "mulligan_bonus_draw":
       return `${p<number>(action, "count") ?? "?"} bonus cards`;
     case "play_to_active":
-      return `Played ${p<string>(action, "card")} to Active`;
+      return `${p<string>(action, "card")} to Active`;
     case "play_to_bench":
-      return `Played ${p<string>(action, "card")} to Bench`;
+      return `${p<string>(action, "card")} to Bench`;
     case "play_to_stadium": {
       const card = p<string>(action, "card");
       const replaced = p<string[]>(action, "replaced_stadium");
       return replaced && replaced.length
-        ? `Played ${card} (replaced ${replaced.join(", ")})`
-        : `Played ${card}`;
+        ? `${card} (replaced ${replaced.join(", ")})`
+        : `${card}`;
     }
     case "attach_energy":
       return `${p<string>(action, "energy")} → ${p<string>(action, "target")}`;
