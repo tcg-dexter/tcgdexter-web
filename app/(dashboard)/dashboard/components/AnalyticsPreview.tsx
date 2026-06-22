@@ -30,7 +30,7 @@ function ActivationBlock({ data }: { data: Maybe<ActivationData> }) {
   if ("error" in data) {
     return (
       <div>
-        <Eyebrow label="Activation · 7d" href="/dashboard/activation" />
+        <Eyebrow label="Activation · 7d" href="/dashboard/analytics" />
         <ErrorBox error={data.error} />
       </div>
     );
@@ -45,7 +45,7 @@ function ActivationBlock({ data }: { data: Maybe<ActivationData> }) {
 
   return (
     <div>
-      <Eyebrow label={`Activation · ${data.cohortLabel.toLowerCase()}`} href="/dashboard/activation" />
+      <Eyebrow label={`Activation · ${data.cohortLabel.toLowerCase()}`} href="/dashboard/analytics" />
       {steps.length === 0 ? (
         <p className="text-xs text-[var(--text-muted)]">
           No funnel data yet.
@@ -75,7 +75,7 @@ function ActivationBlock({ data }: { data: Maybe<ActivationData> }) {
             </div>
           ) : null}
           <Link
-            href="/dashboard/activation"
+            href="/dashboard/analytics"
             className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline underline-offset-4"
           >
             View funnel ↗
@@ -90,7 +90,7 @@ function BehaviorBlock({ data }: { data: Maybe<BehaviorData> }) {
   if ("error" in data) {
     return (
       <div>
-        <Eyebrow label="Behavior · 7d" href="/dashboard/behavior" />
+        <Eyebrow label="Behavior · 7d" href="/dashboard/analytics" />
         <ErrorBox error={data.error} />
       </div>
     );
@@ -105,7 +105,7 @@ function BehaviorBlock({ data }: { data: Maybe<BehaviorData> }) {
     <div>
       <Eyebrow
         label={`Behavior · last ${windowDays}d`}
-        href="/dashboard/behavior"
+        href="/dashboard/analytics"
       />
       <div className="flex flex-col gap-3">
         <div className="flex items-baseline gap-3">
@@ -143,7 +143,7 @@ function BehaviorBlock({ data }: { data: Maybe<BehaviorData> }) {
           </ul>
         ) : null}
         <Link
-          href="/dashboard/behavior"
+          href="/dashboard/analytics"
           className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline underline-offset-4"
         >
           View behavior ↗

@@ -245,7 +245,7 @@ export default function VitalsStrip({
     if ("error" in behavior) {
       return (
         <Tile
-          href="/dashboard/behavior"
+          href="/dashboard/analytics?window=7"
           label="Active · 7d"
           value="—"
           hint="fetch failed"
@@ -256,7 +256,7 @@ export default function VitalsStrip({
     const returning = firstVsReturning.returningSessionUsers;
     return (
       <Tile
-        href="/dashboard/behavior"
+        href="/dashboard/analytics?window=7"
         label="Active · 7d"
         value={activeUsers}
         hint={`${returning} returning`}
