@@ -222,6 +222,7 @@ export default function BattleLogPage({
           <StatChart
             playerName={playerSideName}
             opponentName={opponentSideName}
+            winnerSide={result === "win" ? "left" : result === "loss" ? "right" : null}
             rows={[
               { label: "Damage Dealt", left: playerStats.damage, right: opponentStats.damage },
               { label: "Pokémon Played", left: playerStats.pokemon, right: opponentStats.pokemon },
@@ -392,41 +393,46 @@ function FitText({
 function StatChart({
   playerName,
   opponentName,
+  winnerSide,
   rows,
 }: {
   playerName: string;
   opponentName: string;
+  winnerSide: "left" | "right" | null;
   rows: { label: string; left: number; right: number }[];
 }) {
   return (
     <div className="grid grid-cols-[1fr_auto_auto] gap-x-6 items-baseline">
-      {/* Column headers — label column header blank, then each player. */}
-      <div />
-      <div className="pb-2 text-[11px] font-bold text-text-primary truncate text-right tabular-nums">
-        {playerName}
-      </div>
-      <div className="pb-2 text-[11px] font-bold text-text-primary truncate text-right tabular-nums">
-        {opponentName}
-      </div>
-
       {rows.map((row, idx) => {
         const isFirst = idx === 0;
         const isFooter = idx === rows.length - 1;
+        const leftGradient = isFooter && winnerSide === "left";
+        const rightGradient = isFooter && winnerSide === "right";
         return (
         <Fragment key={row.label}>
-          {/* Full-width separator above each row — hidden for the first row,
-              solid black double-weight for the footer. */}
           {!isFirst && (
             <div className={`col-span-3 border-t ${isFooter ? "border-black" : "border-black/[0.08]"}`} />
           )}
           <div className={`font-semibold uppercase tracking-widest text-text-primary py-2.5 ${isFooter ? "text-[14px]" : "text-[11px]"}`}>
             {row.label}
           </div>
-          <div className={`py-2.5 text-right tabular-nums font-semibold text-text-secondary ${isFooter ? "text-[18px]" : "text-sm"}`}>
-            {row.left}
+          {/* Left (player) value */}
+          <div className={`py-2.5 text-right ${isFooter ? "" : "tabular-nums font-semibold text-text-secondary text-sm"} ${leftGradient ? "bg-gradient-brand bg-clip-text text-transparent" : ""}`}>
+            {isFooter ? (
+              <div className="flex flex-col items-end gap-0.5">
+                <span className={`text-[11px] font-bold ${!leftGradient ? "text-text-primary" : ""}`}>{playerName}</span>
+                <span className={`text-[18px] font-semibold tabular-nums ${!leftGradient ? "text-text-secondary" : ""}`}>{row.left}</span>
+              </div>
+            ) : row.left}
           </div>
-          <div className={`py-2.5 text-right tabular-nums font-semibold text-text-secondary ${isFooter ? "text-[18px]" : "text-sm"}`}>
-            {row.right}
+          {/* Right (opponent) value */}
+          <div className={`py-2.5 text-right ${isFooter ? "" : "tabular-nums font-semibold text-text-secondary text-sm"} ${rightGradient ? "bg-gradient-brand bg-clip-text text-transparent" : ""}`}>
+            {isFooter ? (
+              <div className="flex flex-col items-end gap-0.5">
+                <span className={`text-[11px] font-bold ${!rightGradient ? "text-text-primary" : ""}`}>{opponentName}</span>
+                <span className={`text-[18px] font-semibold tabular-nums ${!rightGradient ? "text-text-secondary" : ""}`}>{row.right}</span>
+              </div>
+            ) : row.right}
           </div>
         </Fragment>
         );
