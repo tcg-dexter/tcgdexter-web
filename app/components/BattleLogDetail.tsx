@@ -244,6 +244,17 @@ function p<T = unknown>(action: ApiAction, key: string): T | undefined {
   return action.payload?.[key] as T | undefined;
 }
 
+const BASIC_ENERGY_TYPES = new Set([
+  "Fire", "Water", "Grass", "Lightning", "Psychic",
+  "Fighting", "Darkness", "Metal", "Dragon", "Fairy", "Colorless",
+]);
+
+function basicEnergyType(name: string): string | null {
+  const m = name?.match(/^Basic (\w+) Energy$/);
+  if (!m) return null;
+  return BASIC_ENERGY_TYPES.has(m[1]) ? m[1] : null;
+}
+
 function labelFor(action: ApiAction): string {
   switch (action.action_type) {
     case "coin_flip":
@@ -1298,6 +1309,24 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
               <ActionTypeLabel type={a.action_type} className="text-text-primary" />
               <span className="flex-1 min-w-0 text-xs text-text-muted break-words">
                 {label}
+              </span>
+            </li>
+          );
+        }
+
+        if (a.action_type === "attach_energy") {
+          const energyName = p<string>(a, "energy") ?? "";
+          const target = p<string>(a, "target") ?? "";
+          const type = basicEnergyType(energyName);
+          return (
+            <li key={a.id} className="flex items-center gap-2 text-sm leading-snug">
+              <ActionTypeLabel type={a.action_type} className="text-text-primary" />
+              <span className="flex-1 min-w-0 text-text-secondary flex items-center gap-1.5">
+                {type
+                  ? <img src={`/types/${type.toLowerCase()}.png`} alt={type} className="h-4 w-4 shrink-0" />
+                  : <span className="break-words">{energyName}</span>
+                }
+                <span>→ {target}</span>
               </span>
             </li>
           );
