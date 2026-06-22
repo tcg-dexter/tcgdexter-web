@@ -1149,7 +1149,7 @@ const ACTION_LABEL: Partial<Record<string, string>> = {
   play_supporter: "SUPP",
   play_item: "ITEM",
   play_tool: "TOOL",
-  attach_energy: "NRGY",
+  attach_energy: "ENERGY",
 };
 
 function ActionTypeLabel({ type, className }: { type: string; className?: string }) {
