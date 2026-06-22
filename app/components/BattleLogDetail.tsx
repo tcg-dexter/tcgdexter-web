@@ -1006,15 +1006,16 @@ function pokemonSpriteUrl(name: string): string {
   return `https://r2.limitlesstcg.net/pokemon/gen9/${slug}.png`;
 }
 
-function PokemonSprite({ name }: { name: string | null }) {
+function PokemonSprite({ name, size = 48 }: { name: string | null; size?: number }) {
   const [failed, setFailed] = useState(false);
-  if (!name || failed) return <div className="h-12 w-12 shrink-0" />;
+  if (!name || failed) return <div style={{ width: size, height: size }} className="shrink-0" />;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={pokemonSpriteUrl(name)}
       alt={name}
-      className="h-12 w-12 shrink-0 object-contain"
+      className="shrink-0 object-contain"
+      style={{ width: size, height: size }}
       onError={() => setFailed(true)}
     />
   );
@@ -1072,12 +1073,22 @@ function ScoreCard({
             ))}
           </div>
           {/* Sprites centered at the XY midpoint of the body */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-            <div className="flex items-end gap-2">
-              <PokemonSprite name={playerActiveName} />
-              <PokemonSprite name={opponentActiveName} />
-            </div>
-          </div>
+          {(() => {
+            const soloSprite = (playerActiveName != null) !== (opponentActiveName != null);
+            const soloName = soloSprite ? (playerActiveName ?? opponentActiveName) : null;
+            return (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                {soloSprite ? (
+                  <PokemonSprite name={soloName} size={53} />
+                ) : (
+                  <div className="flex items-end gap-2">
+                    <PokemonSprite name={playerActiveName} />
+                    <PokemonSprite name={opponentActiveName} />
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>
