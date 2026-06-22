@@ -90,68 +90,6 @@ export default function ProductCard({ data }: Props) {
           />
         </div>
       </div>
-
-      <div>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-            Vercel Web Analytics
-          </div>
-          <a
-            href={links.vercel.analytics()}
-            target="_blank"
-            rel="noreferrer"
-            className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
-          >
-            open analytics ↗
-          </a>
-        </div>
-        {data.vercel.available ? (
-          <>
-            <div className="grid grid-cols-2 gap-4">
-              <Stat label="Visitors 7d" value={data.vercel.visitors7d ?? "—"} size="lg" />
-              <Stat label="Visitors 30d" value={data.vercel.visitors30d ?? "—"} size="lg" />
-            </div>
-            <div className="mt-6">
-              <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                Top pages · last 7d
-              </div>
-              <ul className="-mx-2 text-xs divide-y divide-black/5">
-                {data.vercel.topPages.map((p) => (
-                  <li key={p.path} className="flex items-center justify-between px-2 py-2 transition hover:bg-[var(--surface)]/50 rounded-md">
-                    <a
-                      href={`${links.prod}${p.path}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-mono truncate pr-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
-                    >
-                      {p.path}
-                    </a>
-                    <span className="tabular-nums text-[var(--text-primary)] font-medium">
-                      {p.views}
-                    </span>
-                  </li>
-                ))}
-                {data.vercel.topPages.length === 0 && (
-                  <li className="text-[var(--text-muted)] px-2 py-1.5">No data yet.</li>
-                )}
-              </ul>
-            </div>
-          </>
-        ) : (
-          <div className="text-xs text-[var(--text-muted)]">
-            Not available — {data.vercel.reason}.{" "}
-            <a
-              href={links.vercel.analytics()}
-              target="_blank"
-              rel="noreferrer"
-              className="underline"
-            >
-              Open the Vercel dashboard
-            </a>{" "}
-            to view analytics directly.
-          </div>
-        )}
-      </div>
     </div>
   );
 }
