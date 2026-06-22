@@ -399,7 +399,7 @@ function StatChart({
   rows: { label: string; left: number; right: number }[];
 }) {
   return (
-    <div className="grid grid-cols-[1fr_auto_auto] gap-x-6">
+    <div className="grid grid-cols-[1fr_auto_auto] gap-x-6 items-baseline">
       {/* Column headers — label column header blank, then each player. */}
       <div />
       <div className="pb-2 text-[11px] font-bold text-text-primary truncate text-right tabular-nums">
