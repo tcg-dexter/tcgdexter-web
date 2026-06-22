@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { track } from "@/lib/analytics/track";
 
 /**
  * POST /api/deck-share
@@ -69,6 +70,8 @@ export async function POST(req: Request) {
   const origin = forwardedHost
     ? `${forwardedProto}://${forwardedHost}`
     : new URL(req.url).origin;
+
+  void track(req, "deck.shared", { short_id: shortId });
 
   return NextResponse.json({
     shortId,

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { EmailOtpType } from "@supabase/supabase-js";
+import { track } from "@/lib/analytics/track";
 
 /**
  * Auth callback — handles the redirect from OAuth providers and magic-link emails.
@@ -96,6 +97,24 @@ export async function GET(request: NextRequest) {
       await supabase
         .from("profiles")
         .upsert({ id: user.id }, { onConflict: "id", ignoreDuplicates: true });
+
+      // Was this a brand-new signup or a returning sign-in? Read the row
+      // age — a created_at within 5 seconds of now is a brand-new user.
+      // This is the only place we can cleanly distinguish the two server-
+      // side without a separate auth.users trigger.
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("created_at")
+        .eq("id", user.id)
+        .maybeSingle();
+      const isSignup =
+        !!profile?.created_at &&
+        Date.now() - new Date(profile.created_at).getTime() < 5_000;
+
+      void track(request, isSignup ? "auth.signed_up" : "auth.signed_in", {
+        flow,
+        provider: type ? "email" : "oauth",
+      });
     }
 
     return response;

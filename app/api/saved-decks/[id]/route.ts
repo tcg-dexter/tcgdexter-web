@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { track } from "@/lib/analytics/track";
 
 /**
  * DELETE /api/saved-decks/[id]
@@ -13,7 +14,7 @@ import { createClient } from "@/lib/supabase/server";
  */
 
 export async function DELETE(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -39,6 +40,8 @@ export async function DELETE(
       { status: 500 }
     );
   }
+
+  void track(req, "deck.deleted", { id });
 
   return NextResponse.json({ success: true });
 }
@@ -152,6 +155,22 @@ export async function PATCH(
       { status: 500 }
     );
   }
+
+  // Pick the most meaningful event name for the update. Renames are common
+  // and worth distinguishing from notes edits; deck_list replacement is the
+  // strongest signal of active iteration on a deck.
+  const updatedFields = Object.keys(updates);
+  const eventName =
+    "deck_list" in updates
+      ? "deck.edited"
+      : "name" in updates
+      ? "deck.renamed"
+      : "is_public" in updates
+      ? updates.is_public === true
+        ? "deck.published"
+        : "deck.unpublished"
+      : "deck.updated";
+  void track(req, eventName, { id, fields: updatedFields });
 
   return NextResponse.json({ success: true, ...updates });
 }
