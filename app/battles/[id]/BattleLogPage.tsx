@@ -230,12 +230,12 @@ export default function BattleLogPage({
                   Battle Log
                 </h2>
                 <span className="h-px flex-1 bg-text-primary/15" />
+                {totalTurns != null && (
+                  <span className="text-[11px] font-semibold uppercase tracking-widest text-text-muted">
+                    {totalTurns} turn{totalTurns === 1 ? "" : "s"}
+                  </span>
+                )}
               </div>
-              {totalTurns != null && (
-                <p className="mt-1 text-[11px] font-semibold uppercase tracking-widest text-text-muted">
-                  {totalTurns} turn{totalTurns === 1 ? "" : "s"}
-                </p>
-              )}
             </div>
             <BattleLogDetail
               matchId={matchId}
