@@ -1243,6 +1243,14 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
     }
   }
 
+  // Consolidate all mulligan actions in this turn into one pill.
+  const mulliganIndices: number[] = [];
+  for (let i = 0; i < actions.length; i++) {
+    if (actions[i].action_type === "mulligan") mulliganIndices.push(i);
+  }
+  const mulliganCount = mulliganIndices.length;
+  const consumedMulligan = new Set(mulliganIndices.slice(1));
+
   return (
     <ul className="flex flex-col gap-1">
       {actions.map((a, idx) => {
@@ -1293,7 +1301,20 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
         // Skip prize_taken rows that were consumed into a KO capsule above.
         if (cat === "featured-prize" && consumedPrize.has(idx)) return null;
 
-        if (cat === "featured-ko" || cat === "featured-prize" || cat === "featured-mulligan") {
+        if (cat === "featured-mulligan") {
+          if (consumedMulligan.has(idx)) return null;
+          return (
+            <li
+              key={a.id}
+              className="my-1.5 rounded-full px-3 py-2.5 text-xs font-bold text-white bg-[#1a1a1a] flex items-center justify-between gap-2"
+            >
+              <span>Mulligan</span>
+              <span>×{mulliganCount}</span>
+            </li>
+          );
+        }
+
+        if (cat === "featured-ko" || cat === "featured-prize") {
           return (
             <li
               key={a.id}
