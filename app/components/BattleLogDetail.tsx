@@ -307,7 +307,7 @@ function labelFor(action: ApiAction): string {
       return `${p<string>(action, "pokemon")} Knocked Out`;
     case "prize_taken": {
       const c = p<number>(action, "count") ?? 1;
-      return `Took ${c} Prize card${c === 1 ? "" : "s"}`;
+      return `${c} Prize${c === 1 ? "" : "s"}`;
     }
     case "condition_applied":
       return `${p<string>(action, "pokemon")} is now ${p<string>(action, "condition")}`;
@@ -1166,7 +1166,7 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
           const capsule = prizeIdx !== undefined ? (
             <li
               key={a.id}
-              className="rounded-full px-3 py-2.5 text-xs font-bold text-white bg-[#1a1a1a] flex items-center justify-between gap-2"
+              className="my-1.5 rounded-full px-3 py-2.5 text-xs font-bold text-white bg-[#1a1a1a] flex items-center justify-between gap-2"
             >
               <span>{label}</span>
               <span>{labelFor(actions[prizeIdx])}</span>
@@ -1174,7 +1174,7 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
           ) : (
             <li
               key={a.id}
-              className="rounded-full px-3 py-2.5 text-xs font-bold text-white text-center bg-[#1a1a1a]"
+              className="my-1.5 rounded-full px-3 py-2.5 text-xs font-bold text-white text-center bg-[#1a1a1a]"
             >
               {label}
             </li>
@@ -1204,7 +1204,7 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
           return (
             <li
               key={a.id}
-              className="rounded-full px-3 py-2.5 text-xs font-bold text-white text-center bg-[#1a1a1a]"
+              className="my-1.5 rounded-full px-3 py-2.5 text-xs font-bold text-white text-center bg-[#1a1a1a]"
             >
               {label}
             </li>
