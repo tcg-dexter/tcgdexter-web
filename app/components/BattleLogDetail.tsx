@@ -1138,7 +1138,7 @@ const ACTION_LABEL: Partial<Record<string, string>> = {
   discard_from_pokemon: "DISCARD",
   play_to_active: "PLAY",
   play_to_bench: "PLAY",
-  play_to_stadium: "PLAY",
+  play_to_stadium: "STAD",
   evolve: "EVOLVE",
   retreat: "RETREAT",
   switch_active: "PROMOTE",
