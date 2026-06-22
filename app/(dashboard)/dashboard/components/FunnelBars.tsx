@@ -18,13 +18,24 @@ function fmtDuration(seconds: number | null): string {
   return `${Math.round(d)}d`;
 }
 
+// Colour the funnel bars by step-to-step conversion so the chart reads as
+// "where's the bottleneck". The top step has no previous reference and so
+// stays neutral; subsequent steps shift through emerald → amber → rose as
+// their pctOfPrevious gets worse.
+function barClass(pctOfPrevious: number | null): string {
+  if (pctOfPrevious == null) return "bg-slate-400";
+  if (pctOfPrevious >= 70) return "bg-emerald-500";
+  if (pctOfPrevious >= 40) return "bg-amber-500";
+  return "bg-rose-500";
+}
+
 export default function FunnelBars({ steps }: { steps: FunnelStep[] }) {
   const top = steps[0]?.userCount ?? 0;
   if (top === 0) {
     return (
-      <div className="rounded-md border border-[var(--border)]/30 bg-[var(--surface)] p-4 text-xs text-[var(--text-muted)]">
+      <p className="text-xs text-[var(--text-muted)]">
         No users in this cohort yet.
-      </div>
+      </p>
     );
   }
   return (
@@ -59,7 +70,7 @@ export default function FunnelBars({ steps }: { steps: FunnelStep[] }) {
             </div>
             <div className="h-2 w-full rounded-full bg-[var(--surface)]">
               <div
-                className="h-full rounded-full bg-[var(--accent)]"
+                className={`h-full rounded-full ${barClass(s.pctOfPrevious)}`}
                 style={{ width: `${widthPct}%` }}
               />
             </div>

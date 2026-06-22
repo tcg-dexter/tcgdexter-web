@@ -30,12 +30,32 @@ function categoryOf(eventName: string): Category {
   return "Other";
 }
 
-const CATEGORY_TONE: Record<Category, string> = {
+// Each category gets a three-part palette: chip background, engagement-bar
+// fill, and sparkline stroke. Pinning the bar and sparkline to the chip's
+// hue gives every row a single colour identity so you can scan vertically
+// and see at a glance which surface dominates the column.
+const CATEGORY_CHIP: Record<Category, string> = {
   Analyze: "bg-violet-100 text-violet-700",
   Decks: "bg-sky-100 text-sky-700",
   Matches: "bg-amber-100 text-amber-700",
   Auth: "bg-emerald-100 text-emerald-700",
   Other: "bg-gray-100 text-gray-700",
+};
+
+const CATEGORY_BAR: Record<Category, string> = {
+  Analyze: "bg-violet-500",
+  Decks: "bg-sky-500",
+  Matches: "bg-amber-500",
+  Auth: "bg-emerald-500",
+  Other: "bg-gray-400",
+};
+
+const CATEGORY_STROKE: Record<Category, string> = {
+  Analyze: "#8b5cf6",
+  Decks: "#0ea5e9",
+  Matches: "#f59e0b",
+  Auth: "#10b981",
+  Other: "#9ca3af",
 };
 
 function formatPerUser(fires: number, users: number): string {
@@ -69,7 +89,9 @@ export default function EventAdoptionList({ rows }: { rows: FeatureRow[] }) {
       {sorted.map((r) => {
         const label = EVENT_LABELS[r.eventName] ?? r.eventName;
         const category = categoryOf(r.eventName);
-        const tone = CATEGORY_TONE[category];
+        const chip = CATEGORY_CHIP[category];
+        const barClass = CATEGORY_BAR[category];
+        const stroke = CATEGORY_STROKE[category];
         const widthPct = maxFires > 0 ? (r.fireCount / maxFires) * 100 : 0;
         return (
           <div
@@ -80,7 +102,7 @@ export default function EventAdoptionList({ rows }: { rows: FeatureRow[] }) {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span
-                  className={`shrink-0 rounded-full px-1.5 py-[1px] text-[10px] font-semibold uppercase tracking-wider ${tone}`}
+                  className={`shrink-0 rounded-full px-1.5 py-[1px] text-[10px] font-semibold uppercase tracking-wider ${chip}`}
                 >
                   {category}
                 </span>
@@ -97,11 +119,11 @@ export default function EventAdoptionList({ rows }: { rows: FeatureRow[] }) {
             <div className="col-span-2 flex items-center gap-3 sm:col-span-1">
               <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--surface)]">
                 <div
-                  className="h-full rounded-full bg-[var(--accent)]"
+                  className={`h-full rounded-full ${barClass}`}
                   style={{ width: `${widthPct}%` }}
                 />
               </div>
-              <Sparkline values={r.weekly} width={80} height={24} />
+              <Sparkline values={r.weekly} width={80} height={24} stroke={stroke} />
             </div>
 
             {/* Numbers */}
