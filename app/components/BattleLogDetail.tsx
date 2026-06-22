@@ -974,15 +974,15 @@ function ScoreCard({
       >
         {/* Header */}
         <div className="flex items-center gap-2 w-full">
-          <span className="flex-1 text-[11px] font-bold leading-tight truncate">{playerName}</span>
+          <span className="flex-1 text-[13px] font-bold leading-tight truncate">{playerName}</span>
           <span className="shrink-0 text-[22px] font-black tabular-nums leading-none">{playerPrizes}–{opponentPrizes}</span>
-          <span className="flex-1 text-[11px] font-bold leading-tight truncate text-right">{opponentName}</span>
+          <span className="flex-1 text-[13px] font-bold leading-tight truncate text-right">{opponentName}</span>
         </div>
         {/* Body — sprites at XY center, bench lists centered vertically */}
         <div className="relative flex items-center flex-1 min-h-[72px] mt-2">
           <div className="flex-1 flex flex-col gap-0.5 min-w-0">
             {playerBench.map((name, i) => (
-              <span key={i} className="text-[10px] font-semibold leading-tight truncate opacity-80">{name}</span>
+              <span key={i} className="text-[12px] font-semibold leading-tight truncate opacity-80">{name}</span>
             ))}
           </div>
           <div className="flex-1 flex flex-col gap-0.5 min-w-0 items-end">
