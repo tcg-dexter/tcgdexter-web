@@ -200,7 +200,7 @@ export default function BattleLogPage({
       {/* Battle stats — match-level tiles on top, per-side stat table
           underneath, with no section headings so the whole block reads
           as one continuous summary. */}
-      <div className="mx-auto w-full max-w-2xl px-4 mt-8">
+      <div className="mx-auto w-full max-w-2xl px-4 mt-4">
         <div className="px-1">
           <StatChart
             playerName={playerSideName}
@@ -408,10 +408,10 @@ function StatChart({
           <div className={`font-semibold uppercase tracking-widest text-text-primary py-2.5 ${isFooter ? "text-[14px]" : "text-[11px]"}`}>
             {row.label}
           </div>
-          <div className={`py-2.5 text-right tabular-nums font-semibold ${isFooter ? `text-[18px] ${leftGradient ? "bg-gradient-brand bg-clip-text text-transparent" : "text-text-secondary"}` : "text-text-secondary text-sm"}`}>
+          <div className={`py-2.5 text-right tabular-nums font-semibold text-text-secondary ${isFooter ? "text-[18px]" : "text-sm"}`}>
             {row.left}
           </div>
-          <div className={`py-2.5 text-right tabular-nums font-semibold ${isFooter ? `text-[18px] ${rightGradient ? "bg-gradient-brand bg-clip-text text-transparent" : "text-text-secondary"}` : "text-text-secondary text-sm"}`}>
+          <div className={`py-2.5 text-right tabular-nums font-semibold text-text-secondary ${isFooter ? "text-[18px]" : "text-sm"}`}>
             {row.right}
           </div>
         </Fragment>
