@@ -295,7 +295,7 @@ function labelFor(action: ApiAction): string {
       const target = p<string>(action, "defender");
       const choices = p<string[]>(action, "choices") ?? [];
       const tail = choices.length ? ` · ${choices.join(", ")}` : "";
-      return `${p<string>(action, "attacker")} used ${p<string>(action, "attack_name")} on ${target} for ${dmg}${tail}`;
+      return `${p<string>(action, "attack_name")} on ${target} for ${dmg}${tail}`;
     }
     case "ability_used":
       return `${p<string>(action, "source")} used ${p<string>(action, "ability_name")}`;
