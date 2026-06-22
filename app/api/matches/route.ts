@@ -7,6 +7,7 @@ import {
   sanitizePrize,
   sanitizeGamePrizes,
 } from "@/lib/bo3";
+import { track } from "@/lib/analytics/track";
 
 /**
  * POST /api/matches
@@ -121,6 +122,12 @@ export async function POST(req: Request) {
     console.error("[matches] insert failed:", error);
     return NextResponse.json({ error: "Failed to log match." }, { status: 500 });
   }
+
+  void track(req, "match.logged", {
+    result: finalResult,
+    opponent_archetype: opponent_archetype?.trim() || null,
+    bo3: gameResults !== null,
+  });
 
   return NextResponse.json(data);
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { track } from "@/lib/analytics/track";
 
 /**
  * POST /api/saved-decks
@@ -105,6 +106,12 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
+
+  void track(req, "deck.saved", {
+    archetype,
+    is_public: publish === true,
+    name: finalName,
+  });
 
   return NextResponse.json({
     id: data.id,

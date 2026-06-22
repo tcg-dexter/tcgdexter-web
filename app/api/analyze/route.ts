@@ -3,6 +3,7 @@ import shopListingsData from "@/data/shop-listings.json";
 import metaArchetypesData from "@/data/meta-archetypes.json";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { track } from "@/lib/analytics/track";
 import {
   type Card,
   parseDeckListCards,
@@ -575,6 +576,15 @@ export async function POST(req: NextRequest) {
       // Swallow — never fail a user request over logging.
       console.error("[analyze] admin client init failed:", err);
     }
+
+    // Behavioral event — joined into funnels/adoption views. The legacy
+    // analysis_submissions insert above stays for its richer payload; this
+    // mirrors the same fact in the unified events table.
+    void track(req, "analyze.completed", {
+      deck_size: result.deckSize,
+      archetype: result.metaMatch?.archetypeName ?? null,
+      anonymous: userId === null,
+    });
 
     return NextResponse.json(result);
   } catch {
