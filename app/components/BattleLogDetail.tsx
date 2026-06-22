@@ -1149,7 +1149,7 @@ function groupSetupActions(
   return order.map((k) => byKey.get(k)!);
 }
 
-type ActionCategory = "featured-ko" | "featured-prize" | "attack" | "dim" | "normal";
+type ActionCategory = "featured-ko" | "featured-prize" | "featured-mulligan" | "attack" | "dim" | "normal";
 
 function categoryFor(type: string): ActionCategory {
   switch (type) {
@@ -1165,9 +1165,10 @@ function categoryFor(type: string): ActionCategory {
     case "coin_flip":
     case "coin_toss_won":
     case "chose_first":
-    case "mulligan":
     case "mulligan_total":
       return "dim";
+    case "mulligan":
+      return "featured-mulligan";
     default:
       return "normal";
   }
@@ -1292,7 +1293,7 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
         // Skip prize_taken rows that were consumed into a KO capsule above.
         if (cat === "featured-prize" && consumedPrize.has(idx)) return null;
 
-        if (cat === "featured-ko" || cat === "featured-prize") {
+        if (cat === "featured-ko" || cat === "featured-prize" || cat === "featured-mulligan") {
           return (
             <li
               key={a.id}
