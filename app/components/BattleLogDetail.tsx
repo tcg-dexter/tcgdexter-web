@@ -1047,7 +1047,7 @@ function ScoreCard({
   return (
     <div className="pt-2 pb-3">
       <div
-        className="rounded-xl px-3 pt-3 pb-4 min-h-[120px] flex flex-col text-white opacity-80"
+        className="rounded-xl px-3 pt-3 pb-4 min-h-[120px] flex flex-col text-white opacity-80 shadow-md"
         style={{ background: `linear-gradient(to right, ${playerColor}, ${opponentColor})` }}
       >
         {/* Header */}
