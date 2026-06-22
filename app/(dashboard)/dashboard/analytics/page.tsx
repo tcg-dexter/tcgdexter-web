@@ -123,7 +123,7 @@ export default async function AnalyticsPage({
         <SectionHeader
           eyebrow="Activation · signed-up users"
           title="Signup → analyze → save → match"
-          meta="From analytics_events · backfilled"
+          meta="Bar colour: 🟢 ≥70% / 🟡 40–70% / 🔴 <40% of prior step"
         />
         <FunnelBars steps={activation.steps} />
       </section>
