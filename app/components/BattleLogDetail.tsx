@@ -1054,7 +1054,7 @@ function ScoreCard({
           <span className="flex-1 text-[13px] font-bold leading-tight truncate">{playerName}</span>
           <div className="shrink-0 flex items-center gap-1.5">
             <span className="text-[22px] font-black tabular-nums leading-none">{playerPrizes}</span>
-            <img src="/logo-light.png" alt="TCG Dexter" className="h-3.5 w-auto opacity-90" />
+            <img src="/logo-light.png" alt="TCG Dexter" className="h-[21px] w-auto opacity-90" />
             <span className="text-[22px] font-black tabular-nums leading-none">{opponentPrizes}</span>
           </div>
           <span className="flex-1 text-[13px] font-bold leading-tight truncate text-right">{opponentName}</span>
