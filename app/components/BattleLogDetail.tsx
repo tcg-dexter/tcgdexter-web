@@ -274,7 +274,7 @@ function labelFor(action: ApiAction): string {
         : `Played ${card}`;
     }
     case "attach_energy":
-      return `Attached ${p<string>(action, "energy")} to ${p<string>(action, "target")}`;
+      return `${p<string>(action, "energy")} → ${p<string>(action, "target")}`;
     case "evolve":
       return `${p<string>(action, "from")} → ${p<string>(action, "to")}`;
     case "retreat": {
@@ -289,7 +289,7 @@ function labelFor(action: ApiAction): string {
     case "play_item":
     case "play_supporter":
     case "play_tool":
-      return `Played ${p<string>(action, "card")}`;
+      return `${p<string>(action, "card")}`;
     case "attack": {
       const dmg = p<number>(action, "damage");
       const target = p<string>(action, "defender");
@@ -1149,7 +1149,7 @@ const ACTION_LABEL: Partial<Record<string, string>> = {
   play_supporter: "SUPP",
   play_item: "ITEM",
   play_tool: "TOOL",
-  attach_energy: "TOOL",
+  attach_energy: "NRGY",
 };
 
 function ActionTypeLabel({ type, className }: { type: string; className?: string }) {
