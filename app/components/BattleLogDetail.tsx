@@ -746,6 +746,12 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
     }
   }
   for (const post of pregamePosts) applyFieldState(post.actions);
+  const initialSnap = {
+    player: activeState.player,
+    opponent: activeState.opponent,
+    playerBench: [...benchState.player],
+    opponentBench: [...benchState.opponent],
+  };
   const snapshotsAtEnd = gamePosts.map((post) => {
     applyFieldState(post.actions);
     return {
@@ -769,12 +775,12 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
     <div className="mt-3 flex flex-col rounded-lg bg-bg overflow-hidden">
       {pregamePosts.length > 0 && (
         <>
-          <SectionDivider label="Setup" />
           <CoinTossSegment
             actions={allPregameActions}
             playerHandle={playerHandle}
             opponentHandle={opponentHandle}
           />
+          <SectionDivider label="Setup" />
           {filteredPregamePosts.map((post, i) => (
             <ThreadPost
               key={post.key}
@@ -782,6 +788,19 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
               isLast={i === filteredPregamePosts.length - 1}
             />
           ))}
+          <ScoreCard
+            key="initial-score"
+            playerPrizes={0}
+            opponentPrizes={0}
+            playerName={playerHandle}
+            opponentName={opponentHandle}
+            playerColor={resolvedPlayerColor}
+            opponentColor={resolvedOpponentColor}
+            playerActiveName={initialSnap.player}
+            opponentActiveName={initialSnap.opponent}
+            playerBench={initialSnap.playerBench}
+            opponentBench={initialSnap.opponentBench}
+          />
         </>
       )}
       {gamePosts.length > 0 && <SectionDivider label="Start" />}
@@ -1022,7 +1041,11 @@ function ScoreCard({
         {/* Header */}
         <div className="flex items-center gap-2 w-full">
           <span className="flex-1 text-[13px] font-bold leading-tight truncate">{playerName}</span>
-          <span className="shrink-0 text-[22px] font-black tabular-nums leading-none">{playerPrizes}–{opponentPrizes}</span>
+          <div className="shrink-0 flex items-center gap-1.5">
+            <span className="text-[22px] font-black tabular-nums leading-none">{playerPrizes}</span>
+            <img src="/logo-light.png" alt="TCG Dexter" className="h-3.5 w-auto opacity-90" />
+            <span className="text-[22px] font-black tabular-nums leading-none">{opponentPrizes}</span>
+          </div>
           <span className="flex-1 text-[13px] font-bold leading-tight truncate text-right">{opponentName}</span>
         </div>
         {/* Body — sprites at XY center, bench lists centered vertically */}
