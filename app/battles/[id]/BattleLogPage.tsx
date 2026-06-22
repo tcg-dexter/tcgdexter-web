@@ -417,7 +417,7 @@ function StatChart({
           {/* Full-width separator above each row — hidden for the first row,
               solid black double-weight for the footer. */}
           {!isFirst && (
-            <div className={`col-span-3 border-t ${isFooter ? "border-t-2 border-black" : "border-black/[0.08]"}`} />
+            <div className={`col-span-3 border-t ${isFooter ? "border-black" : "border-black/[0.08]"}`} />
           )}
           <div className={`font-semibold uppercase tracking-widest text-text-primary py-2.5 ${isFooter ? "text-[14px]" : "text-[11px]"}`}>
             {row.label}

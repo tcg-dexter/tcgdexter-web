@@ -759,16 +759,27 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
   const resolvedPlayerColor = playerColor ?? "#d95555";
   const resolvedOpponentColor = opponentColor ?? "#1a1a1a";
 
+  const COIN_TOSS_TYPES = new Set(["coin_flip", "coin_toss_won", "chose_first"]);
+  const allPregameActions = pregamePosts.flatMap((post) => post.actions);
+  const filteredPregamePosts = pregamePosts
+    .map((post) => ({ ...post, actions: post.actions.filter((a) => !COIN_TOSS_TYPES.has(a.action_type)) }))
+    .filter((post) => post.actions.length > 0);
+
   return (
     <div className="mt-3 flex flex-col rounded-lg bg-bg overflow-hidden">
       {pregamePosts.length > 0 && (
         <>
           <SectionDivider label="Setup" />
-          {pregamePosts.map((post, i) => (
+          <CoinTossSegment
+            actions={allPregameActions}
+            playerHandle={playerHandle}
+            opponentHandle={opponentHandle}
+          />
+          {filteredPregamePosts.map((post, i) => (
             <ThreadPost
               key={post.key}
               post={post}
-              isLast={i === pregamePosts.length - 1}
+              isLast={i === filteredPregamePosts.length - 1}
             />
           ))}
         </>
@@ -805,6 +816,42 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
         }
         return items;
       })}
+    </div>
+  );
+}
+
+/* ─── Coin toss segment ──────────────────────────────────────── */
+
+function CoinTossSegment({
+  actions,
+  playerHandle,
+  opponentHandle,
+}: {
+  actions: ApiAction[];
+  playerHandle: string;
+  opponentHandle: string;
+}) {
+  const actorName = (actor: Actor) =>
+    actor === "player" ? playerHandle : actor === "opponent" ? opponentHandle : "—";
+
+  const flip = actions.find((a) => a.action_type === "coin_flip");
+  const won = actions.find((a) => a.action_type === "coin_toss_won");
+  const chose = actions.find((a) => a.action_type === "chose_first");
+
+  const lines = [
+    flip ? `${actorName(flip.actor)} chose ${p<string>(flip, "choice") ?? "—"}` : null,
+    won ? `${actorName(won.actor)} won the coin toss` : null,
+    chose
+      ? `${actorName(chose.actor)} chose to go ${p<string>(chose, "order") === "first" ? "1st" : "2nd"}`
+      : null,
+  ].filter(Boolean) as string[];
+
+  if (lines.length === 0) return null;
+  return (
+    <div className="flex flex-col items-center gap-1 py-3 px-4">
+      {lines.map((line, i) => (
+        <span key={i} className="text-xs text-text-secondary font-medium">{line}</span>
+      ))}
     </div>
   );
 }
