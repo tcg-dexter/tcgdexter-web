@@ -266,7 +266,7 @@ function labelFor(action: ApiAction): string {
         ? "Chose to go first"
         : "Chose to go second";
     case "opening_hand":
-      return `Drew opening hand (${p<number>(action, "count") ?? 7})`;
+      return "Opening Hand";
     case "mulligan":
       return "Mulligan";
     case "mulligan_total":
