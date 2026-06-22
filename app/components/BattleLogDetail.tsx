@@ -261,7 +261,7 @@ function labelFor(action: ApiAction): string {
     case "mulligan_total":
       return `Took ${p<number>(action, "total") ?? "?"} mulligans`;
     case "mulligan_bonus_draw":
-      return `Drew ${p<number>(action, "count") ?? "?"} bonus cards`;
+      return `${p<number>(action, "count") ?? "?"} bonus cards`;
     case "play_to_active":
       return `Played ${p<string>(action, "card")} to Active`;
     case "play_to_bench":
@@ -316,8 +316,8 @@ function labelFor(action: ApiAction): string {
     case "draw": {
       const count = p<number>(action, "count") ?? 1;
       const card = p<string>(action, "card");
-      if (card) return `Drew ${card}`;
-      return `Drew ${count} card${count === 1 ? "" : "s"}`;
+      if (card) return `${card}`;
+      return `${count} card${count === 1 ? "" : "s"}`;
     }
     case "discard": {
       const card = p<string>(action, "card");
