@@ -30,6 +30,11 @@ export type FeatureRow = {
   eventName: string;
   userCount: number;
   pctOfActive: number;
+  // Total event fires inside the window. Combined with userCount, this is
+  // the closest proxy we have for "time spent in feature": a feature with
+  // a high fire count and a high fires-per-user is load-bearing; one with
+  // many users but few fires per user is shallow.
+  fireCount: number;
   weekly: number[]; // 4 weekly buckets, oldest → newest
 };
 
@@ -172,13 +177,20 @@ export async function fetchBehavior(windowDays: number = 7): Promise<BehaviorDat
     .not("user_id", "is", null)
     .limit(50_000);
 
+  // Walk trendRows once to derive both the 4-week sparkline buckets and the
+  // total fire count inside the active `windowDays` window. The window-fire
+  // count is what we sort the feature list by, since it's our proxy for
+  // "where users actually spend time" rather than just "what they tried".
   const weeklyBuckets = new Map<string, number[]>();
+  const fireCounts = new Map<string, number>();
   const now = Date.now();
+  const windowMs = windowDays * 86_400_000;
   for (const row of (trendRows ?? []) as {
     event_name: string;
     occurred_at: string;
   }[]) {
-    const ageDays = (now - new Date(row.occurred_at).getTime()) / 86_400_000;
+    const age = now - new Date(row.occurred_at).getTime();
+    const ageDays = age / 86_400_000;
     const bucket = Math.min(3, Math.max(0, 3 - Math.floor(ageDays / 7)));
     let arr = weeklyBuckets.get(row.event_name);
     if (!arr) {
@@ -186,6 +198,9 @@ export async function fetchBehavior(windowDays: number = 7): Promise<BehaviorDat
       weeklyBuckets.set(row.event_name, arr);
     }
     arr[bucket]++;
+    if (age <= windowMs) {
+      fireCounts.set(row.event_name, (fireCounts.get(row.event_name) ?? 0) + 1);
+    }
   }
 
   const features: FeatureRow[] = rows.map((r) => ({
@@ -195,6 +210,7 @@ export async function fetchBehavior(windowDays: number = 7): Promise<BehaviorDat
       activeTotal > 0
         ? Math.round((Number(r.user_count) / activeTotal) * 1000) / 10
         : 0,
+    fireCount: fireCounts.get(r.event_name) ?? 0,
     weekly: weeklyBuckets.get(r.event_name) ?? [0, 0, 0, 0],
   }));
 

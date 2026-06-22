@@ -7,9 +7,10 @@ import { fetchActivation, fetchBehavior } from "../lib/analytics";
 export const dynamic = "force-dynamic";
 export const revalidate = 60;
 
-// Combined Activation + Behavior view. A single `window` URL param drives
-// both fetches so the activation funnel and the active-user snapshot share
-// a frame.
+// Combined Activation + Behavior view, restructured around the question:
+// "where are users actually spending their time, and where should I invest
+// next?". The Feature usage block is the headline; the activation and
+// anonymous funnels sit below as supporting context.
 const WINDOWS: { value: string; days: 7 | 30; label: string }[] = [
   { value: "7", days: 7, label: "Last 7 days" },
   { value: "30", days: 30, label: "Last 30 days" },
@@ -27,9 +28,6 @@ export default async function AnalyticsPage({
   const params = await searchParams;
   const windowDays = parseWindow(params.window);
 
-  // Both fetches reuse the same window. fetchActivation accepts 7 | 30 |
-  // null (all-time); we standardise on 7/30 to match behavior. Run in
-  // parallel — neither depends on the other.
   const [activation, behavior] = await Promise.all([
     fetchActivation(windowDays),
     fetchBehavior(windowDays),
@@ -45,18 +43,21 @@ export default async function AnalyticsPage({
       ? (behavior.firstVsReturning.returningSessionUsers / behavior.activeUsers) * 100
       : 0;
 
+  const totalFires = behavior.features.reduce((s, f) => s + f.fireCount, 0);
+
   return (
     <div className="flex flex-col gap-8">
       <header>
         <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-          Analytics · {activation.cohortLabel}
+          Analytics · last {windowDays} days
         </div>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-3xl">
-          Activation and behavior.
+          Where users spend their time.
         </h1>
         <p className="mt-1 max-w-prose text-xs text-[var(--text-secondary)] sm:text-sm">
-          Where new users drop off — and what active users actually do once
-          they stick around.
+          Ranked feature usage drives where to invest next — supported by who's
+          showing up (active cohort) and how they got here (activation funnels)
+          below.
         </p>
         <nav className="mt-3 flex items-center gap-1 text-xs">
           {WINDOWS.map((w) => {
@@ -78,7 +79,46 @@ export default async function AnalyticsPage({
         </nav>
       </header>
 
-      {/* ── Activation ───────────────────────────────────────────────────── */}
+      {/* ── Headline numbers ─────────────────────────────────────────────── */}
+      <section>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4">
+          <Stat
+            label={`Active · ${windowDays}d`}
+            value={behavior.activeUsers.toLocaleString()}
+            size="lg"
+          />
+          <Stat
+            label="Returning"
+            value={behavior.firstVsReturning.returningSessionUsers.toLocaleString()}
+            hint={`${returningPct.toFixed(0)}% of active`}
+            size="lg"
+          />
+          <Stat
+            label="First session"
+            value={behavior.firstVsReturning.firstSessionUsers.toLocaleString()}
+            hint={`${firstPct.toFixed(0)}% of active`}
+            size="lg"
+          />
+          <Stat
+            label="Feature fires"
+            value={totalFires.toLocaleString()}
+            hint={`across ${behavior.features.length} events`}
+            size="lg"
+          />
+        </div>
+      </section>
+
+      {/* ── Feature usage — THE headline view ────────────────────────────── */}
+      <section>
+        <SectionHeader
+          eyebrow="Feature usage"
+          title="Where time actually goes"
+          meta="Sorted by total fires in window · bar = share of leader · trend = last 4 weeks"
+        />
+        <EventAdoptionList rows={behavior.features} />
+      </section>
+
+      {/* ── Activation, demoted ──────────────────────────────────────────── */}
       <section>
         <SectionHeader
           eyebrow="Activation · signed-up users"
@@ -119,42 +159,6 @@ export default async function AnalyticsPage({
             }
           />
         </div>
-      </section>
-
-      {/* ── Behavior ─────────────────────────────────────────────────────── */}
-      <section>
-        <SectionHeader
-          eyebrow="Behavior · active cohort"
-          title="Users with any event in window"
-          meta="From analytics_events"
-        />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Stat
-            label="Active users"
-            value={behavior.activeUsers.toLocaleString()}
-            hint={`Last ${windowDays}d`}
-            size="lg"
-          />
-          <Stat
-            label="First-time users"
-            value={behavior.firstVsReturning.firstSessionUsers.toLocaleString()}
-            hint={`${firstPct.toFixed(1)}% of active`}
-          />
-          <Stat
-            label="Returning users"
-            value={behavior.firstVsReturning.returningSessionUsers.toLocaleString()}
-            hint={`${returningPct.toFixed(1)}% of active`}
-          />
-        </div>
-      </section>
-
-      <section>
-        <SectionHeader
-          eyebrow="Behavior · feature adoption"
-          title="What active users actually fire"
-          meta="Sparkline = last 4 weeks"
-        />
-        <EventAdoptionList rows={behavior.features} />
       </section>
     </div>
   );
