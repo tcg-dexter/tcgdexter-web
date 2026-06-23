@@ -75,8 +75,55 @@ export default function ReplayClient({ options }: ReplayClientProps) {
   }, [data, frameIndex]);
 
   const frameCount = data?.frames.length ?? 0;
+
+  // Index of every frame that opens a new turn (turn number changes vs the
+  // prior frame). Drives the outer chevrons — back/forward by whole turn —
+  // without scanning the frame array on every click.
+  const turnStartIndices = useMemo(() => {
+    if (!data) return [] as number[];
+    const starts: number[] = [];
+    let prevTurn = Number.NaN;
+    data.frames.forEach((f, i) => {
+      if (f.turn !== prevTurn) {
+        starts.push(i);
+        prevTurn = f.turn;
+      }
+    });
+    return starts;
+  }, [data]);
+
   const canStepBack = frameIndex > 0;
   const canStepForward = frameIndex < frameCount - 1;
+
+  function stepTurnBack() {
+    if (turnStartIndices.length === 0) return;
+    // Find the start-of-turn for the current frame, then back up one turn.
+    let currentStart = 0;
+    for (let i = turnStartIndices.length - 1; i >= 0; i--) {
+      if (turnStartIndices[i] <= frameIndex) {
+        currentStart = turnStartIndices[i];
+        break;
+      }
+    }
+    // If already at the start of a turn, jump to the previous turn's start;
+    // otherwise jump to the current turn's start.
+    if (frameIndex === currentStart) {
+      const idx = turnStartIndices.indexOf(currentStart);
+      if (idx > 0) setFrameIndex(turnStartIndices[idx - 1]);
+    } else {
+      setFrameIndex(currentStart);
+    }
+  }
+
+  function stepTurnForward() {
+    const next = turnStartIndices.find((i) => i > frameIndex);
+    if (next != null) setFrameIndex(next);
+  }
+
+  const canTurnBack =
+    turnStartIndices.length > 0 && frameIndex > turnStartIndices[0];
+  const canTurnForward =
+    turnStartIndices.some((i) => i > frameIndex);
 
   return (
     <main className="min-h-dvh bg-bg pb-24">
@@ -102,10 +149,14 @@ export default function ReplayClient({ options }: ReplayClientProps) {
           frame={frame}
           frameIndex={frameIndex}
           frameCount={frameCount}
+          canStepBack={canStepBack}
+          canStepForward={canStepForward}
+          canTurnBack={canTurnBack}
+          canTurnForward={canTurnForward}
           onStepBack={() => canStepBack && setFrameIndex((i) => i - 1)}
           onStepForward={() => canStepForward && setFrameIndex((i) => i + 1)}
-          onJumpStart={() => setFrameIndex(0)}
-          onJumpEnd={() => setFrameIndex(Math.max(0, frameCount - 1))}
+          onTurnBack={stepTurnBack}
+          onTurnForward={stepTurnForward}
         />
 
         <MatchSelector
@@ -340,18 +391,26 @@ function TurnNavigator({
   frame,
   frameIndex,
   frameCount,
+  canStepBack,
+  canStepForward,
+  canTurnBack,
+  canTurnForward,
   onStepBack,
   onStepForward,
-  onJumpStart,
-  onJumpEnd,
+  onTurnBack,
+  onTurnForward,
 }: {
   frame: ReplayFrame | null;
   frameIndex: number;
   frameCount: number;
+  canStepBack: boolean;
+  canStepForward: boolean;
+  canTurnBack: boolean;
+  canTurnForward: boolean;
   onStepBack: () => void;
   onStepForward: () => void;
-  onJumpStart: () => void;
-  onJumpEnd: () => void;
+  onTurnBack: () => void;
+  onTurnForward: () => void;
 }) {
   const turnLabel = frame
     ? frame.phase === "setup"
@@ -367,19 +426,21 @@ function TurnNavigator({
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"
-          onClick={onJumpStart}
-          disabled={frameCount === 0 || frameIndex === 0}
+          onClick={onTurnBack}
+          disabled={!canTurnBack}
           className="rounded-md border border-black/10 px-2.5 py-1 text-xs font-semibold text-text-secondary hover:bg-surface disabled:opacity-30"
-          aria-label="Jump to start"
+          aria-label="Previous turn"
+          title="Previous turn"
         >
           ⟪
         </button>
         <button
           type="button"
           onClick={onStepBack}
-          disabled={frameIndex === 0 || frameCount === 0}
+          disabled={!canStepBack}
           className="rounded-md border border-black/10 px-3 py-1 text-xs font-semibold text-text-secondary hover:bg-surface disabled:opacity-30"
-          aria-label="Step back"
+          aria-label="Previous action"
+          title="Previous action"
         >
           ‹
         </button>
@@ -402,18 +463,20 @@ function TurnNavigator({
         <button
           type="button"
           onClick={onStepForward}
-          disabled={frameIndex >= frameCount - 1 || frameCount === 0}
+          disabled={!canStepForward}
           className="rounded-md border border-black/10 px-3 py-1 text-xs font-semibold text-text-secondary hover:bg-surface disabled:opacity-30"
-          aria-label="Step forward"
+          aria-label="Next action"
+          title="Next action"
         >
           ›
         </button>
         <button
           type="button"
-          onClick={onJumpEnd}
-          disabled={frameCount === 0 || frameIndex >= frameCount - 1}
+          onClick={onTurnForward}
+          disabled={!canTurnForward}
           className="rounded-md border border-black/10 px-2.5 py-1 text-xs font-semibold text-text-secondary hover:bg-surface disabled:opacity-30"
-          aria-label="Jump to end"
+          aria-label="Next turn"
+          title="Next turn"
         >
           ⟫
         </button>
