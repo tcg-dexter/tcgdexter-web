@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { normalizePerspective, parseBattleLog } from "@/lib/battle-log";
-import { replay } from "@/lib/engine";
+import { lookupCard, replay } from "@/lib/engine";
 import type { GameState, PokemonInPlay } from "@/lib/engine";
+import { cardImageUrlForName } from "@/lib/primaryCardImage";
 
 /**
  * GET /api/admin/replay/[matchId]
@@ -17,9 +18,13 @@ import type { GameState, PokemonInPlay } from "@/lib/engine";
 interface PokemonFrame {
   name: string;
   damage: number;
+  /** Printed HP — null when the name doesn't resolve in the catalog. */
+  hp: number | null;
   energy: string[];
   conditions: string[];
   evolutionStack: string[];
+  /** Resolved most-recent printing image URL; null on catalog miss. */
+  imageUrl: string | null;
 }
 
 interface SideFrame {
@@ -64,12 +69,15 @@ export interface ReplayPayload {
 }
 
 function mapPokemon(mon: PokemonInPlay): PokemonFrame {
+  const catalog = lookupCard(mon.card.name);
   return {
     name: mon.card.name,
     damage: mon.damage,
+    hp: catalog?.hp ?? null,
     energy: mon.attachedEnergy.map((c) => c.name),
     conditions: [...mon.conditions],
     evolutionStack: mon.stack.map((c) => c.name),
+    imageUrl: cardImageUrlForName(mon.card.name),
   };
 }
 

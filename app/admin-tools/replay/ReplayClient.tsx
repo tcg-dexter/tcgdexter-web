@@ -20,10 +20,17 @@ export interface ReplayMatchOption {
 interface PokemonFrame {
   name: string;
   damage: number;
+  hp: number | null;
   energy: string[];
   conditions: string[];
   evolutionStack: string[];
+  imageUrl: string | null;
 }
+
+// pokemontcg.io serves the standard Pokémon card-back PNG as the body of
+// a 404 — browsers render the bytes regardless of status code. Reusing
+// that gives us a card-back without bundling an asset of our own.
+const CARD_BACK_URL = "https://images.pokemontcg.io/back.png";
 
 interface ReplayClientProps {
   options: ReplayMatchOption[];
@@ -97,7 +104,6 @@ export default function ReplayClient({ options }: ReplayClientProps) {
 
   function stepTurnBack() {
     if (turnStartIndices.length === 0) return;
-    // Find the start-of-turn for the current frame, then back up one turn.
     let currentStart = 0;
     for (let i = turnStartIndices.length - 1; i >= 0; i--) {
       if (turnStartIndices[i] <= frameIndex) {
@@ -105,8 +111,6 @@ export default function ReplayClient({ options }: ReplayClientProps) {
         break;
       }
     }
-    // If already at the start of a turn, jump to the previous turn's start;
-    // otherwise jump to the current turn's start.
     if (frameIndex === currentStart) {
       const idx = turnStartIndices.indexOf(currentStart);
       if (idx > 0) setFrameIndex(turnStartIndices[idx - 1]);
@@ -211,21 +215,29 @@ function Board({
             label="P1 Draw"
             count={frame.player.deckCount}
             hint={`${frame.player.handCount} in hand`}
-          />
-          <Pile
-            label="P1 Prizes"
-            count={frame.player.prizesRemaining}
-            mini
+            useCardBack
           />
         </div>
 
-        {/* ── Center: bench + active rows ───────────────────── */}
+        {/* ── Center: bench + active rows ─────────────────────
+            The active row is a 3-up flex with a width-matching
+            spacer opposite the prize pile so the active card
+            sits centered above / below its counterpart. */}
         <div className="flex flex-col gap-3">
           <BenchRow
             label={`P1 Bench${frame.player.handle ? ` · ${frame.player.handle}` : ""}`}
             pokemon={frame.player.bench}
           />
-          <PokemonSlot label="P1 Active" pokemon={frame.player.active} />
+          <div className="flex items-stretch justify-center gap-3">
+            <div className="w-[72px] shrink-0 sm:w-[88px]" aria-hidden />
+            <PokemonSlot label="P1 Active" pokemon={frame.player.active} />
+            <Pile
+              label="P1 Prizes"
+              count={frame.player.prizesRemaining}
+              useCardBack
+              className="w-[72px] shrink-0 sm:w-[88px]"
+            />
+          </div>
           {frame.stadium && (
             <div className="self-center rounded-xl border border-amber-300/70 bg-amber-50 px-3 py-1.5 text-[11px] font-semibold text-amber-900">
               Stadium · {frame.stadium.name}
@@ -234,7 +246,16 @@ function Board({
               </span>
             </div>
           )}
-          <PokemonSlot label="P2 Active" pokemon={frame.opponent.active} />
+          <div className="flex items-stretch justify-center gap-3">
+            <Pile
+              label="P2 Prizes"
+              count={frame.opponent.prizesRemaining}
+              useCardBack
+              className="w-[72px] shrink-0 sm:w-[88px]"
+            />
+            <PokemonSlot label="P2 Active" pokemon={frame.opponent.active} />
+            <div className="w-[72px] shrink-0 sm:w-[88px]" aria-hidden />
+          </div>
           <BenchRow
             label={`P2 Bench${frame.opponent.handle ? ` · ${frame.opponent.handle}` : ""}`}
             pokemon={frame.opponent.bench}
@@ -244,14 +265,10 @@ function Board({
         {/* ── Right rail: P2 piles at bottom ────────────────── */}
         <div className="flex flex-col gap-3 justify-end">
           <Pile
-            label="P2 Prizes"
-            count={frame.opponent.prizesRemaining}
-            mini
-          />
-          <Pile
             label="P2 Draw"
             count={frame.opponent.deckCount}
             hint={`${frame.opponent.handCount} in hand`}
+            useCardBack
           />
           <Pile
             label="P2 Discard"
@@ -269,29 +286,57 @@ function Pile({
   count,
   topName,
   hint,
-  mini,
+  useCardBack,
+  className = "",
 }: {
   label: string;
   count: number;
   topName?: string | null;
   hint?: string;
-  mini?: boolean;
+  /** Render the standard card-back image as the face. */
+  useCardBack?: boolean;
+  className?: string;
 }) {
+  if (useCardBack) {
+    return (
+      <div className={`flex flex-col items-center gap-1 ${className}`}>
+        <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-muted leading-tight text-center">
+          {label}
+        </div>
+        <div
+          className="relative w-full overflow-hidden rounded-lg border border-black/12"
+          style={{ aspectRatio: "245 / 342" }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={CARD_BACK_URL}
+            alt=""
+            aria-hidden
+            className="h-full w-full object-cover"
+          />
+          <div className="absolute inset-x-1 bottom-1 flex items-center justify-center rounded bg-black/70 py-0.5 text-[10px] font-semibold tabular-nums text-white">
+            {count}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={`flex flex-col items-center justify-between rounded-xl border border-black/12 bg-surface px-1.5 text-center ${
-        mini ? "py-1.5" : "py-2"
-      }`}
-      style={{ aspectRatio: mini ? "16/9" : "3/4" }}
-    >
-      <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-muted leading-tight">
+    <div className={`flex flex-col items-center gap-1 ${className}`}>
+      <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-muted leading-tight text-center">
         {label}
       </div>
-      <div className={`font-semibold tabular-nums text-text-primary ${mini ? "text-sm" : "text-2xl"}`}>
-        {count}
-      </div>
-      <div className="text-[9px] text-text-secondary leading-tight line-clamp-2">
-        {topName ?? hint ?? " "}
+      <div
+        className="flex w-full flex-col items-center justify-between rounded-lg border border-black/12 bg-surface px-1.5 py-2 text-center"
+        style={{ aspectRatio: "245 / 342" }}
+      >
+        <div className="text-2xl font-semibold tabular-nums text-text-primary">
+          {count}
+        </div>
+        <div className="text-[9px] text-text-secondary leading-tight line-clamp-2">
+          {topName ?? hint ?? " "}
+        </div>
       </div>
     </div>
   );
@@ -307,13 +352,16 @@ function BenchRow({ label, pokemon }: { label: string; pokemon: PokemonFrame[] }
         {Array.from({ length: 5 }).map((_, i) => {
           const mon = pokemon[i];
           return (
-            <div
-              key={i}
-              className="rounded-lg border border-black/10 bg-white px-1.5 py-2 text-center"
-              style={{ minHeight: 64 }}
-            >
-              {mon ? <PokemonCard mon={mon} compact /> : (
-                <span className="block pt-3 text-[10px] text-text-muted">empty</span>
+            <div key={i} className="overflow-hidden rounded-lg bg-white">
+              {mon ? (
+                <PokemonCardImage mon={mon} />
+              ) : (
+                <div
+                  className="flex items-center justify-center rounded-lg border border-dashed border-black/15 bg-white text-[10px] text-text-muted"
+                  style={{ aspectRatio: "245 / 342" }}
+                >
+                  empty
+                </div>
               )}
             </div>
           );
@@ -331,54 +379,75 @@ function PokemonSlot({
   pokemon: PokemonFrame | null;
 }) {
   return (
-    <div className="self-center w-full max-w-[220px] rounded-xl border border-black/12 bg-white px-3 py-3 text-center">
+    <div className="flex w-[120px] flex-col items-center gap-1 sm:w-[150px]">
       <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
         {label}
       </div>
-      <div className="mt-2 min-h-[70px]">
-        {pokemon ? <PokemonCard mon={pokemon} /> : (
-          <span className="block pt-4 text-[11px] text-text-muted">empty</span>
-        )}
-      </div>
+      {pokemon ? (
+        <PokemonCardImage mon={pokemon} />
+      ) : (
+        <div
+          className="flex w-full items-center justify-center rounded-lg border border-dashed border-black/15 bg-white text-[11px] text-text-muted"
+          style={{ aspectRatio: "245 / 342" }}
+        >
+          empty
+        </div>
+      )}
     </div>
   );
 }
 
-function PokemonCard({ mon, compact }: { mon: PokemonFrame; compact?: boolean }) {
+function PokemonCardImage({ mon }: { mon: PokemonFrame }) {
+  const remainingHp = mon.hp != null ? Math.max(0, mon.hp - mon.damage) : null;
+  const hadFallback = !mon.imageUrl;
   return (
-    <div className="flex flex-col items-center gap-1">
-      <div
-        className={`font-semibold text-text-primary leading-tight ${
-          compact ? "text-[11px]" : "text-sm"
-        }`}
-      >
-        {mon.name}
-      </div>
-      {mon.evolutionStack.length > 0 && (
-        <div className="text-[9px] uppercase tracking-wider text-text-muted">
-          ← {mon.evolutionStack.join(" → ")}
+    <div
+      className="relative w-full overflow-hidden rounded-lg border border-black/10 bg-white"
+      style={{ aspectRatio: "245 / 342" }}
+      title={mon.name}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={mon.imageUrl ?? CARD_BACK_URL}
+        alt={mon.name}
+        className="h-full w-full object-cover"
+        onError={(e) => {
+          if (e.currentTarget.src !== CARD_BACK_URL) {
+            e.currentTarget.src = CARD_BACK_URL;
+          }
+        }}
+      />
+      {hadFallback && (
+        <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
+          {mon.name}
         </div>
       )}
-      <div className="flex items-center gap-1.5 text-[10px] tabular-nums text-text-secondary">
-        {mon.damage > 0 && (
-          <span className="rounded bg-accent/12 px-1 py-[1px] font-semibold text-accent">
-            {mon.damage}
+      {remainingHp != null && (
+        <span className="absolute right-1 top-1 flex items-baseline gap-0.5 rounded-full bg-black px-1.5 py-[2px] text-white shadow-sm">
+          <span className="text-[8px] font-bold uppercase leading-none">HP</span>
+          <span className="text-[12px] font-semibold tabular-nums leading-none">
+            {remainingHp}
           </span>
-        )}
-        {mon.energy.length > 0 && (
-          <span className="rounded bg-sky-100 px-1 py-[1px] font-semibold text-sky-700">
-            ⚡ {mon.energy.length}
-          </span>
-        )}
-        {mon.conditions.map((c) => (
-          <span
-            key={c}
-            className="rounded bg-violet-100 px-1 py-[1px] text-[9px] font-semibold uppercase text-violet-700"
-          >
-            {c[0]}
-          </span>
-        ))}
-      </div>
+        </span>
+      )}
+      {(mon.energy.length > 0 || mon.conditions.length > 0) && (
+        <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-black/55 py-0.5">
+          {mon.energy.length > 0 && (
+            <span className="rounded bg-sky-500/90 px-1 py-[1px] text-[9px] font-semibold tabular-nums text-white">
+              ⚡{mon.energy.length}
+            </span>
+          )}
+          {mon.conditions.map((c) => (
+            <span
+              key={c}
+              className="rounded bg-violet-500/90 px-1 py-[1px] text-[9px] font-semibold uppercase text-white"
+              title={c}
+            >
+              {c[0]}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
