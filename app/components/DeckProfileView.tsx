@@ -228,6 +228,13 @@ interface Props {
    * header in place of the centered text block.
    */
   headerSlot?: React.ReactNode;
+  /**
+   * Forwarded to SaveDeckButton + ShareButton so the API can fire a
+   * Product-specific event ("meta.deck.saved" / "meta.deck.shared") in
+   * addition to the umbrella counters. Set on /meta-archetypes/* pages.
+   */
+  ctaSource?: "meta";
+  metaArchetypeId?: string | null;
 }
 
 /**
@@ -258,6 +265,8 @@ export default function DeckProfileView({
   postCtaSlot,
   shareUrl,
   headerSlot,
+  ctaSource,
+  metaArchetypeId,
 }: Props) {
   const result = analysis;
   const CARD_CLS = "rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm";
@@ -374,6 +383,8 @@ export default function DeckProfileView({
               <SaveDeckButton
                 deckList={deckList}
                 analysis={result}
+                source={ctaSource}
+                metaArchetypeId={metaArchetypeId}
                 className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-black/85 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <ShareButton
@@ -381,6 +392,8 @@ export default function DeckProfileView({
                 analysis={result}
                 shareUrl={shareUrl}
                 publishMode={variant === "fresh"}
+                source={ctaSource}
+                metaArchetypeId={metaArchetypeId}
                 className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-brand px-5 py-2.5 text-sm font-semibold text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>

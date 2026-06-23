@@ -10,14 +10,23 @@ import { track } from "@/lib/analytics/track";
  * the public URL. Sign-in required — anonymous callers receive 401.
  */
 export async function POST(req: Request) {
-  let body: { deckList?: string; analysis?: unknown };
+  let body: {
+    deckList?: string;
+    analysis?: unknown;
+    /**
+     * Origin of the share. When "meta", we fire a parallel
+     * `meta.deck.shared` event so the Meta Archetypes Product can count it.
+     */
+    source?: "meta";
+    metaArchetypeId?: string | null;
+  };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { deckList, analysis } = body;
+  const { deckList, analysis, source, metaArchetypeId } = body;
 
   if (!deckList || typeof deckList !== "string" || !deckList.trim()) {
     return NextResponse.json(
@@ -71,7 +80,14 @@ export async function POST(req: Request) {
     ? `${forwardedProto}://${forwardedHost}`
     : new URL(req.url).origin;
 
-  void track(req, "deck.shared", { short_id: shortId });
+  void track(req, "deck.shared", { short_id: shortId, source: source ?? null });
+
+  if (source === "meta") {
+    void track(req, "meta.deck.shared", {
+      short_id: shortId,
+      meta_archetype_id: metaArchetypeId ?? null,
+    });
+  }
 
   return NextResponse.json({
     shortId,

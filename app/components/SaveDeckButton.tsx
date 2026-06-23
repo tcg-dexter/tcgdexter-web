@@ -14,6 +14,13 @@ interface Props {
    * color vs. secondary outline).
    */
   className?: string;
+  /**
+   * Origin of the save. Forwarded to /api/saved-decks so the server can
+   * fire a Product-specific event ("meta.deck.saved") in addition to the
+   * umbrella deck.saved counter.
+   */
+  source?: "meta";
+  metaArchetypeId?: string | null;
 }
 
 type SaveStatus = "idle" | "loading" | "saved" | "error";
@@ -34,6 +41,8 @@ export default function SaveDeckButton({
   deckList,
   analysis,
   className,
+  source,
+  metaArchetypeId,
 }: Props) {
   const router = useRouter();
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
@@ -85,7 +94,12 @@ export default function SaveDeckButton({
       const res = await fetch("/api/saved-decks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deckList, analysis: resolvedAnalysis }),
+        body: JSON.stringify({
+          deckList,
+          analysis: resolvedAnalysis,
+          source,
+          metaArchetypeId,
+        }),
       });
       const data = await res.json();
       if (res.ok) {

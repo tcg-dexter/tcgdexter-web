@@ -192,6 +192,8 @@ export default async function MetaVariantPage({
   return (
     <DeckProfileView
       variant="meta"
+      ctaSource="meta"
+      metaArchetypeId={arch.id}
       deckList={deckList}
       analysis={analysis}
       profiledAt={profiledAt}

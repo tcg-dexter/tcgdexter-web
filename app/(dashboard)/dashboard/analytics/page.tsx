@@ -68,11 +68,12 @@ export default async function AnalyticsPage({
           Analytics · last {windowDays} days
         </div>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-3xl">
-          What should I work on next.
+          What's happening across our Products.
         </h1>
         <p className="mt-1 max-w-prose text-xs text-[var(--text-secondary)] sm:text-sm">
-          North-star activity, what changed since last week, where time is
-          actually being spent, and whether the cohorts we're acquiring stick.
+          Headline numbers for each Product we ship — saves, value, decks,
+          shares — alongside the movers that shifted this window and how the
+          cohorts we acquire stick.
         </p>
         <nav className="mt-3 flex items-center gap-1 text-xs">
           {WINDOWS.map((w) => {
@@ -104,12 +105,22 @@ export default async function AnalyticsPage({
         goal={wauGoal()}
       />
 
+      {/* ── Products (primary lens) ─────────────────────────────────────── */}
+      <section>
+        <SectionHeader
+          eyebrow="Products"
+          title="What's happening across the surfaces we ship"
+          meta="Card Catalog · Deck Collection · Meta Archetypes · Playmat Studio · Spotlight · Learn to Play"
+        />
+        <ProductAdoptionList rows={behavior.products} />
+      </section>
+
       {/* ── What changed ────────────────────────────────────────────────── */}
       <section>
         <SectionHeader
           eyebrow="What changed"
           title="Top movers this window"
-          meta="Funnel bottleneck · biggest mover up · biggest mover down"
+          meta="Funnel bottleneck · biggest Product mover up · biggest mover down"
         />
         <InsightsStrip behavior={behavior} activation={activation} />
       </section>
@@ -142,16 +153,6 @@ export default async function AnalyticsPage({
             size="lg"
           />
         </div>
-      </section>
-
-      {/* ── Product usage ───────────────────────────────────────────────── */}
-      <section>
-        <SectionHeader
-          eyebrow="Products"
-          title="Where time actually goes"
-          meta="Card Catalog · Deck Collection · Meta Archetypes · Playmat Studio · Spotlight · Learn to Play"
-        />
-        <ProductAdoptionList rows={behavior.products} />
       </section>
 
       {/* ── Retention matrix ────────────────────────────────────────────── */}

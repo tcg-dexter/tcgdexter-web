@@ -42,7 +42,7 @@ export const PRODUCTS: ProductMeta[] = [
     key: "meta_archetypes",
     label: "Meta Archetypes",
     description: "Top decks and the current meta picture",
-    prefixes: [],
+    prefixes: ["meta"],
   },
   {
     key: "playmat_studio",
