@@ -1,4 +1,10 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  PRODUCTS,
+  isAuthEvent,
+  productOf,
+  type ProductKey,
+} from "./products";
 
 // Cohort windows used by the activation funnel. `null` = all time.
 export type Cohort = 7 | 30 | null;
@@ -45,6 +51,27 @@ export type FeatureRow = {
   weekly: number[]; // 4 weekly buckets, oldest → newest
 };
 
+// Aggregated Product-level view derived from FeatureRow[]. Each Product
+// rolls up its constituent events so the page can answer "which Product
+// is paying off?" without translating event names in your head.
+export type ProductRow = {
+  productKey: ProductKey;
+  label: string;
+  description: string;
+  // True when at least one constituent event has fires in either window.
+  // False = "not yet instrumented" placeholder.
+  instrumented: boolean;
+  userCount: number;
+  fireCount: number;
+  fireCountPrior: number;
+  fireCountDelta: number;
+  fireCountDeltaPct: number | null;
+  weekly: number[];
+  // The raw events that contributed to this Product, sorted by fireCount
+  // desc. Empty for uninstrumented Products.
+  events: FeatureRow[];
+};
+
 export type BehaviorData = {
   windowDays: number;
   activeUsers: number;
@@ -55,6 +82,7 @@ export type BehaviorData = {
   // the north-star sparkline.
   activeUsersWeekly: number[];
   features: FeatureRow[];
+  products: ProductRow[];
   firstVsReturning: {
     firstSessionUsers: number;
     returningSessionUsers: number;
@@ -311,16 +339,76 @@ export async function fetchBehavior(windowDays: number = 7): Promise<BehaviorDat
     else firstSessionUsers++;
   });
 
+  const products = aggregateProducts(features);
+
   return {
     windowDays,
     activeUsers: activeTotal,
     activeUsersPrior: priorActiveSet.size,
     activeUsersWeekly,
     features,
+    products,
     firstVsReturning: { firstSessionUsers, returningSessionUsers },
     totalFires,
     totalFiresPrior,
   };
+}
+
+// Roll FeatureRow[] into ProductRow[] in display order (matches PRODUCTS).
+// Auth events are dropped: they belong to the funnel + north-star, not to
+// any one Product. Distinct-user counts are taken across the union of
+// contributing events so a user firing two events in the same Product is
+// counted once.
+function aggregateProducts(features: FeatureRow[]): ProductRow[] {
+  // We don't have per-event distinct-user sets here (RPC returns counts,
+  // not raw user_ids), so userCount is approximated as the max across
+  // contributing events. It's a known lower bound — the true count sits
+  // between max(constituent) and sum(constituent) — and is good enough for
+  // a Product-level "scale of usage" cue.
+  const byProduct = new Map<ProductKey, FeatureRow[]>();
+  for (const f of features) {
+    if (isAuthEvent(f.eventName)) continue;
+    const key = productOf(f.eventName);
+    let arr = byProduct.get(key);
+    if (!arr) {
+      arr = [];
+      byProduct.set(key, arr);
+    }
+    arr.push(f);
+  }
+
+  const rows: ProductRow[] = [];
+  for (const meta of PRODUCTS) {
+    const evts = (byProduct.get(meta.key) ?? []).sort(
+      (a, b) => b.fireCount - a.fireCount,
+    );
+    if (meta.key === "other" && evts.length === 0) continue; // hide empty "Other"
+    const instrumented = evts.some((e) => e.fireCount > 0 || e.fireCountPrior > 0);
+    const fireCount = evts.reduce((s, e) => s + e.fireCount, 0);
+    const fireCountPrior = evts.reduce((s, e) => s + e.fireCountPrior, 0);
+    const fireCountDelta = fireCount - fireCountPrior;
+    const fireCountDeltaPct =
+      fireCountPrior > 0 ? (fireCountDelta / fireCountPrior) * 100 : null;
+    const userCount = evts.reduce((m, e) => Math.max(m, e.userCount), 0);
+    const weekly = [0, 0, 0, 0];
+    for (const e of evts) {
+      for (let i = 0; i < 4; i++) weekly[i] += e.weekly[i] ?? 0;
+    }
+    rows.push({
+      productKey: meta.key,
+      label: meta.label,
+      description: meta.description,
+      instrumented,
+      userCount,
+      fireCount,
+      fireCountPrior,
+      fireCountDelta,
+      fireCountDeltaPct,
+      weekly,
+      events: evts,
+    });
+  }
+  return rows;
 }
 
 // ── RETENTION ───────────────────────────────────────────────────────────

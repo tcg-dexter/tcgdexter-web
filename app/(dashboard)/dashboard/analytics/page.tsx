@@ -1,8 +1,8 @@
 import Link from "next/link";
-import EventAdoptionList from "../components/EventAdoptionList";
 import FunnelBars from "../components/FunnelBars";
 import InsightsStrip from "../components/InsightsStrip";
 import NorthStarHero from "../components/NorthStarHero";
+import ProductAdoptionList from "../components/ProductAdoptionList";
 import RetentionMatrix from "../components/RetentionMatrix";
 import { SectionHeader, Stat } from "../components/Card";
 import {
@@ -144,14 +144,14 @@ export default async function AnalyticsPage({
         </div>
       </section>
 
-      {/* ── Feature usage ───────────────────────────────────────────────── */}
+      {/* ── Product usage ───────────────────────────────────────────────── */}
       <section>
         <SectionHeader
-          eyebrow="Feature usage"
+          eyebrow="Products"
           title="Where time actually goes"
-          meta="Sorted by fires · ▲▼ chip = % vs prior window · trend = last 4 weeks"
+          meta="Card Catalog · Deck Collection · Meta Archetypes · Playmat Studio · Spotlight · Learn to Play"
         />
-        <EventAdoptionList rows={behavior.features} />
+        <ProductAdoptionList rows={behavior.products} />
       </section>
 
       {/* ── Retention matrix ────────────────────────────────────────────── */}

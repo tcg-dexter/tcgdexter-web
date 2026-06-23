@@ -1,18 +1,5 @@
 import type { ActivationData, BehaviorData } from "../lib/analytics";
 
-const EVENT_LABELS: Record<string, string> = {
-  "analyze.completed": "Analyzed a deck",
-  "deck.saved": "Saved a deck",
-  "deck.shared": "Shared a deck",
-  "deck.renamed": "Renamed a deck",
-  "deck.edited": "Edited a deck",
-  "deck.published": "Published a deck",
-  "deck.updated": "Updated a deck",
-  "match.logged": "Logged a match",
-  "auth.signed_in": "Signed in",
-  "auth.signed_up": "Signed up",
-};
-
 const STEP_LABELS: Record<string, string> = {
   signup: "Signed up",
   "analyze.completed": "Analyzed a deck",
@@ -65,34 +52,35 @@ function deriveInsights(
     });
   }
 
-  // 2. Biggest mover up — feature with the highest positive deltaPct,
-  //    bounded by a minimum prior fire count so a 1→3 swing on a sleepy
-  //    event doesn't dominate.
-  const eligibleUp = behavior.features
+  // 2. Biggest Product mover up — Product with the highest positive
+  //    deltaPct, bounded by a minimum prior fire count so a 1→3 swing on a
+  //    sleepy surface doesn't dominate. Uninstrumented Products are
+  //    skipped entirely.
+  const movers = behavior.products.filter((p) => p.instrumented);
+  const eligibleUp = movers
     .filter(
-      (f) =>
-        f.fireCountDeltaPct != null &&
-        f.fireCountDeltaPct > 0 &&
-        f.fireCountPrior >= MIN_PRIOR_FIRES,
+      (p) =>
+        p.fireCountDeltaPct != null &&
+        p.fireCountDeltaPct > 0 &&
+        p.fireCountPrior >= MIN_PRIOR_FIRES,
     )
     .sort((a, b) => (b.fireCountDeltaPct ?? 0) - (a.fireCountDeltaPct ?? 0));
   const topUp = eligibleUp[0];
   if (topUp && topUp.fireCountDeltaPct != null && topUp.fireCountDeltaPct >= 20) {
-    const label = EVENT_LABELS[topUp.eventName] ?? topUp.eventName;
     out.push({
       tone: "positive",
-      headline: `${label} is up ${topUp.fireCountDeltaPct.toFixed(0)}%`,
+      headline: `${topUp.label} is up ${topUp.fireCountDeltaPct.toFixed(0)}%`,
       detail: `${topUp.fireCount} fires this window vs ${topUp.fireCountPrior} prior. Lean in.`,
     });
   }
 
-  // 3. Biggest mover down — same logic, opposite sign.
-  const eligibleDown = behavior.features
+  // 3. Biggest Product mover down — same logic, opposite sign.
+  const eligibleDown = movers
     .filter(
-      (f) =>
-        f.fireCountDeltaPct != null &&
-        f.fireCountDeltaPct < 0 &&
-        f.fireCountPrior >= MIN_PRIOR_FIRES,
+      (p) =>
+        p.fireCountDeltaPct != null &&
+        p.fireCountDeltaPct < 0 &&
+        p.fireCountPrior >= MIN_PRIOR_FIRES,
     )
     .sort((a, b) => (a.fireCountDeltaPct ?? 0) - (b.fireCountDeltaPct ?? 0));
   const topDown = eligibleDown[0];
@@ -101,11 +89,28 @@ function deriveInsights(
     topDown.fireCountDeltaPct != null &&
     topDown.fireCountDeltaPct <= -20
   ) {
-    const label = EVENT_LABELS[topDown.eventName] ?? topDown.eventName;
     out.push({
       tone: "negative",
-      headline: `${label} is down ${Math.abs(topDown.fireCountDeltaPct).toFixed(0)}%`,
+      headline: `${topDown.label} is down ${Math.abs(topDown.fireCountDeltaPct).toFixed(0)}%`,
       detail: `${topDown.fireCount} fires this window vs ${topDown.fireCountPrior} prior. Worth investigating.`,
+    });
+  }
+
+  // 4. Coverage gap — if more than half the Products aren't instrumented
+  //    yet, surface that as a neutral callout. The product team needs to
+  //    know which surfaces have no signal so we don't make decisions in the
+  //    dark.
+  const total = behavior.products.length;
+  const uninstrumented = behavior.products.filter((p) => !p.instrumented);
+  if (total > 0 && uninstrumented.length / total >= 0.5) {
+    const names = uninstrumented
+      .slice(0, 3)
+      .map((p) => p.label)
+      .join(", ");
+    out.push({
+      tone: "neutral",
+      headline: `${uninstrumented.length} of ${total} Products lack instrumentation`,
+      detail: `${names}${uninstrumented.length > 3 ? "…" : ""} have no events yet — add tracking to see usage.`,
     });
   }
 
