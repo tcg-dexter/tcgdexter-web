@@ -127,7 +127,7 @@ export interface PlayerSide {
 
 export interface StadiumState {
   card: CardInstance;
-  owner: Actor;          // "player" | "opponent" — never "system"
+  owner: "player" | "opponent";
 }
 
 /* ─── Turn metadata ─────────────────────────────────────────────── */
@@ -159,7 +159,7 @@ export interface GameState {
     player: number;
     opponent: number;
   };
-  winner: Actor | null;
+  winner: "player" | "opponent" | null;
   endReason: EndReason | null;
 }
 
