@@ -64,6 +64,38 @@ function formatPerUser(fires: number, users: number): string {
   return ratio >= 10 ? ratio.toFixed(0) : ratio.toFixed(1);
 }
 
+function DeltaChip({
+  delta,
+  deltaPct,
+}: {
+  delta: number;
+  deltaPct: number | null;
+}) {
+  if (delta === 0 && (deltaPct == null || deltaPct === 0)) {
+    return (
+      <span className="inline-flex items-center rounded-full bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--text-muted)]">
+        – flat
+      </span>
+    );
+  }
+  const up = delta > 0;
+  // Fall back to absolute delta when prior is 0 (no % defined).
+  const label =
+    deltaPct != null
+      ? `${up ? "+" : ""}${deltaPct.toFixed(0)}%`
+      : `${up ? "+" : ""}${delta}`;
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
+        up ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
+      }`}
+    >
+      <span aria-hidden>{up ? "▲" : "▼"}</span>
+      {label.replace(/^-/, "")}
+    </span>
+  );
+}
+
 export default function EventAdoptionList({ rows }: { rows: FeatureRow[] }) {
   if (rows.length === 0) {
     return (
@@ -128,11 +160,14 @@ export default function EventAdoptionList({ rows }: { rows: FeatureRow[] }) {
 
             {/* Numbers */}
             <div className="text-right tabular-nums">
-              <div className="text-sm font-semibold text-[var(--text-primary)]">
-                {r.fireCount.toLocaleString()}
-                <span className="ml-1 text-[10px] font-normal text-[var(--text-muted)]">
-                  fires
-                </span>
+              <div className="flex items-center justify-end gap-1.5">
+                <DeltaChip delta={r.fireCountDelta} deltaPct={r.fireCountDeltaPct} />
+                <div className="text-sm font-semibold text-[var(--text-primary)]">
+                  {r.fireCount.toLocaleString()}
+                  <span className="ml-1 text-[10px] font-normal text-[var(--text-muted)]">
+                    fires
+                  </span>
+                </div>
               </div>
               <div className="mt-0.5 text-[11px] text-[var(--text-secondary)]">
                 {r.userCount.toLocaleString()} users
