@@ -23,6 +23,13 @@ interface Props {
    */
   publishMode?: boolean;
   className?: string;
+  /**
+   * Origin of the share. Forwarded to /api/deck-share so the server can
+   * fire a Product-specific event ("meta.deck.shared") in addition to the
+   * umbrella deck.shared counter.
+   */
+  source?: "meta";
+  metaArchetypeId?: string | null;
 }
 
 export default function ShareButton({
@@ -31,6 +38,8 @@ export default function ShareButton({
   shareUrl: presetUrl,
   publishMode,
   className,
+  source,
+  metaArchetypeId,
 }: Props) {
   const router = useRouter();
   const [sharing, setSharing] = useState(false);
@@ -109,7 +118,7 @@ export default function ShareButton({
         const res = await fetch("/api/deck-share", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ deckList, analysis }),
+          body: JSON.stringify({ deckList, analysis, source, metaArchetypeId }),
         });
         const data = await res.json();
         if (!res.ok || !data.url) {

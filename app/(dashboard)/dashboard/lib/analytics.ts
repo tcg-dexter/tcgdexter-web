@@ -1,10 +1,235 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import cardData from "@/data/cards-standard.json";
 import {
   PRODUCTS,
   isAuthEvent,
   productOf,
   type ProductKey,
 } from "./products";
+
+// ── DOMAIN STATS (Product highlights) ───────────────────────────────────
+//
+// Per-Product totals computed directly from app tables, not from the
+// analytics event stream. These are the headline numbers each Product
+// card leads with — e.g. "Card Catalog · 12,345 cards saved across all
+// users". Lightweight, runs once per page render via fetchBehavior.
+
+type CardCollectionRow = { user_id: string; set_id: string; number: string; quantity: number };
+type DataEntry = { set_id: string; number: string; market_price: number | null };
+
+let PRICE_INDEX: Map<string, number> | null = null;
+function priceIndex(): Map<string, number> {
+  if (PRICE_INDEX) return PRICE_INDEX;
+  const idx = new Map<string, number>();
+  const db = cardData as unknown as Record<string, DataEntry[]>;
+  for (const entries of Object.values(db)) {
+    for (const e of entries) {
+      if (e.market_price == null || e.market_price <= 0) continue;
+      idx.set(`${e.set_id}|${e.number}`, e.market_price);
+    }
+  }
+  PRICE_INDEX = idx;
+  return idx;
+}
+
+export type ProductDomainStats = {
+  cardCatalog: {
+    totalCards: number;
+    totalValue: number;
+    distinctOwners: number;
+    avgCardsPerUser: number;
+    avgValuePerUser: number;
+  };
+  deckCollection: {
+    totalAnalyses: number;
+    totalSaved: number;
+    analyzedNotSaved: number;
+    distinctSavers: number;
+    avgSavedPerUser: number;
+  };
+  metaArchetypes: {
+    saved: number;
+    shared: number;
+  };
+};
+
+const PAGE_SIZE = 1000;
+
+async function fetchCardCatalogStats(): Promise<ProductDomainStats["cardCatalog"]> {
+  const admin = createAdminClient();
+  const prices = priceIndex();
+  let totalCards = 0;
+  let totalValue = 0;
+  const owners = new Set<string>();
+  let from = 0;
+  // Paginate — Supabase caps each request at 1000 rows. Loop until empty.
+  for (;;) {
+    const { data, error } = await admin
+      .from("user_card_collection")
+      .select("user_id, set_id, number, quantity")
+      .gt("quantity", 0)
+      .range(from, from + PAGE_SIZE - 1);
+    if (error || !data) break;
+    const rows = data as CardCollectionRow[];
+    for (const row of rows) {
+      totalCards += row.quantity;
+      owners.add(row.user_id);
+      const price = prices.get(`${row.set_id}|${row.number}`);
+      if (price) totalValue += price * row.quantity;
+    }
+    if (rows.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  const distinctOwners = owners.size;
+  return {
+    totalCards,
+    totalValue: Math.round(totalValue * 100) / 100,
+    distinctOwners,
+    avgCardsPerUser: distinctOwners > 0 ? totalCards / distinctOwners : 0,
+    avgValuePerUser:
+      distinctOwners > 0 ? Math.round((totalValue / distinctOwners) * 100) / 100 : 0,
+  };
+}
+
+async function fetchDeckCollectionStats(): Promise<ProductDomainStats["deckCollection"]> {
+  const admin = createAdminClient();
+  // Cheap count("exact", head: true) — same approach as app/page.tsx.
+  const [analysesRes, savedRes] = await Promise.all([
+    admin
+      .from("analysis_submissions")
+      .select("id", { count: "exact", head: true }),
+    admin
+      .from("saved_decks")
+      .select("id", { count: "exact", head: true }),
+  ]);
+
+  // distinct_savers — full select capped at 50k, then dedupe in-memory.
+  // Cheaper than a server-side DISTINCT until we outgrow it; the row
+  // count is bounded by saved_decks size which is small at our scale.
+  const { data: savers } = await admin
+    .from("saved_decks")
+    .select("user_id")
+    .limit(50_000);
+  const distinctSavers = new Set<string>(
+    ((savers ?? []) as { user_id: string }[]).map((r) => r.user_id),
+  ).size;
+
+  const totalAnalyses = analysesRes.count ?? 0;
+  const totalSaved = savedRes.count ?? 0;
+  return {
+    totalAnalyses,
+    totalSaved,
+    // Approximation: every saved deck implies an analysis. Negative
+    // values are clamped to 0 in case the counts drift (rare).
+    analyzedNotSaved: Math.max(0, totalAnalyses - totalSaved),
+    distinctSavers,
+    avgSavedPerUser: distinctSavers > 0 ? totalSaved / distinctSavers : 0,
+  };
+}
+
+async function fetchMetaArchetypeStats(
+  windowDays: number,
+): Promise<ProductDomainStats["metaArchetypes"]> {
+  const admin = createAdminClient();
+  const sinceIso = (() => {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - windowDays);
+    return d.toISOString();
+  })();
+  const [savedRes, sharedRes] = await Promise.all([
+    admin
+      .from("analytics_events")
+      .select("id", { count: "exact", head: true })
+      .eq("event_name", "meta.deck.saved")
+      .gte("occurred_at", sinceIso),
+    admin
+      .from("analytics_events")
+      .select("id", { count: "exact", head: true })
+      .eq("event_name", "meta.deck.shared")
+      .gte("occurred_at", sinceIso),
+  ]);
+  return {
+    saved: savedRes.count ?? 0,
+    shared: sharedRes.count ?? 0,
+  };
+}
+
+export async function fetchProductDomainStats(
+  windowDays: number,
+): Promise<ProductDomainStats> {
+  const [cardCatalog, deckCollection, metaArchetypes] = await Promise.all([
+    fetchCardCatalogStats(),
+    fetchDeckCollectionStats(),
+    fetchMetaArchetypeStats(windowDays),
+  ]);
+  return { cardCatalog, deckCollection, metaArchetypes };
+}
+
+// Formatter helpers — Product cards lean on terse numbers (12.3K, $4.5K)
+// because the row is wide and the label already provides context.
+function fmtCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 10_000) return `${(n / 1000).toFixed(1)}K`;
+  if (n >= 1000) return n.toLocaleString();
+  return n.toLocaleString();
+}
+
+function fmtMoney(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1000) return `$${(n / 1000).toFixed(1)}K`;
+  return `$${n.toFixed(2)}`;
+}
+
+function fmtAvg(n: number): string {
+  if (n >= 10) return n.toFixed(0);
+  return n.toFixed(1);
+}
+
+function highlightsFor(
+  productKey: ProductKey,
+  domain: ProductDomainStats,
+): ProductHighlight[] {
+  switch (productKey) {
+    case "card_catalog": {
+      const s = domain.cardCatalog;
+      return [
+        { label: "Total cards saved", value: fmtCount(s.totalCards) },
+        { label: "Total collection value", value: fmtMoney(s.totalValue) },
+        {
+          label: "Avg cards / user",
+          value: fmtAvg(s.avgCardsPerUser),
+          hint: `${s.distinctOwners} owners`,
+        },
+        { label: "Avg value / user", value: fmtMoney(s.avgValuePerUser) },
+      ];
+    }
+    case "deck_collection": {
+      const s = domain.deckCollection;
+      return [
+        {
+          label: "Decks analyzed (not saved)",
+          value: fmtCount(s.analyzedNotSaved),
+          hint: `${fmtCount(s.totalAnalyses)} analyses total`,
+        },
+        { label: "Total saved decks", value: fmtCount(s.totalSaved) },
+        {
+          label: "Avg saved / user",
+          value: fmtAvg(s.avgSavedPerUser),
+          hint: `${s.distinctSavers} savers`,
+        },
+      ];
+    }
+    case "meta_archetypes": {
+      const s = domain.metaArchetypes;
+      return [
+        { label: "Meta decks saved (window)", value: fmtCount(s.saved) },
+        { label: "Meta decks shared (window)", value: fmtCount(s.shared) },
+      ];
+    }
+    default:
+      return [];
+  }
+}
 
 // Cohort windows used by the activation funnel. `null` = all time.
 export type Cohort = 7 | 30 | null;
@@ -51,6 +276,18 @@ export type FeatureRow = {
   weekly: number[]; // 4 weekly buckets, oldest → newest
 };
 
+// Per-Product domain stats — not derived from analytics_events. Each
+// Product card leads with these (totals, averages, etc) before showing
+// event roll-ups beneath. Examples: card-catalog totals come from
+// `user_card_collection` joined to `cards-standard.json` prices; the
+// deck-collection totals come from `analysis_submissions` + `saved_decks`.
+export type ProductHighlight = {
+  label: string;
+  value: string;
+  // Optional sub-text shown beneath the value (e.g. "across 42 users").
+  hint?: string;
+};
+
 // Aggregated Product-level view derived from FeatureRow[]. Each Product
 // rolls up its constituent events so the page can answer "which Product
 // is paying off?" without translating event names in your head.
@@ -70,6 +307,9 @@ export type ProductRow = {
   // The raw events that contributed to this Product, sorted by fireCount
   // desc. Empty for uninstrumented Products.
   events: FeatureRow[];
+  // Headline domain stats — these are the primary content for a Product
+  // card. Empty array when the Product has no domain data wired up yet.
+  highlights: ProductHighlight[];
 };
 
 export type BehaviorData = {
@@ -339,7 +579,8 @@ export async function fetchBehavior(windowDays: number = 7): Promise<BehaviorDat
     else firstSessionUsers++;
   });
 
-  const products = aggregateProducts(features);
+  const domain = await fetchProductDomainStats(windowDays);
+  const products = aggregateProducts(features, domain);
 
   return {
     windowDays,
@@ -359,7 +600,10 @@ export async function fetchBehavior(windowDays: number = 7): Promise<BehaviorDat
 // any one Product. Distinct-user counts are taken across the union of
 // contributing events so a user firing two events in the same Product is
 // counted once.
-function aggregateProducts(features: FeatureRow[]): ProductRow[] {
+function aggregateProducts(
+  features: FeatureRow[],
+  domain: ProductDomainStats,
+): ProductRow[] {
   // We don't have per-event distinct-user sets here (RPC returns counts,
   // not raw user_ids), so userCount is approximated as the max across
   // contributing events. It's a known lower bound — the true count sits
@@ -383,7 +627,13 @@ function aggregateProducts(features: FeatureRow[]): ProductRow[] {
       (a, b) => b.fireCount - a.fireCount,
     );
     if (meta.key === "other" && evts.length === 0) continue; // hide empty "Other"
-    const instrumented = evts.some((e) => e.fireCount > 0 || e.fireCountPrior > 0);
+    const highlights = highlightsFor(meta.key, domain);
+    // A Product is treated as "instrumented" when it has either event
+    // signals or domain stats — both surface real numbers, both deserve
+    // the full card treatment instead of the empty-state placeholder.
+    const instrumented =
+      evts.some((e) => e.fireCount > 0 || e.fireCountPrior > 0) ||
+      highlights.length > 0;
     const fireCount = evts.reduce((s, e) => s + e.fireCount, 0);
     const fireCountPrior = evts.reduce((s, e) => s + e.fireCountPrior, 0);
     const fireCountDelta = fireCount - fireCountPrior;
@@ -406,6 +656,7 @@ function aggregateProducts(features: FeatureRow[]): ProductRow[] {
       fireCountDeltaPct,
       weekly,
       events: evts,
+      highlights,
     });
   }
   return rows;
