@@ -275,6 +275,7 @@ export default function MatchesClient({ matches, currentUsername = null }: Props
             <Pagination page={page} totalPages={totalPages} onPage={setPage} />
           )}
         </>
+      )}
 
     </>
   );
