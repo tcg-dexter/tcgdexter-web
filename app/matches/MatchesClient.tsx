@@ -79,6 +79,10 @@ export default function MatchesClient({ matches, currentUsername = null }: Props
     setPage(1);
   };
 
+  // Any active search or filter overrides the view — always show all content.
+  const isSearching = query.trim().length > 0 || activeFilters.size > 0;
+  const effectiveViewMode: ViewMode = isSearching ? "browse" : viewMode;
+
   const activeFilterCount = activeFilters.size;
 
   const filtered = useMemo(() => {
@@ -111,40 +115,6 @@ export default function MatchesClient({ matches, currentUsername = null }: Props
   ];
 
   const buckets = useMemo(() => bucketMatches(matches), [matches]);
-
-  if (viewMode === "sections") {
-    const hasAny =
-      buckets.today.length + buckets.thisWeek.length + buckets.thisMonth.length > 0;
-    return (
-      <>
-        {hasAny ? (
-          <div className="flex flex-col gap-8">
-            {buckets.today.length > 0 && (
-              <MatchSection title="Today" matches={buckets.today} />
-            )}
-            {buckets.thisWeek.length > 0 && (
-              <MatchSection title="This Week" matches={buckets.thisWeek} />
-            )}
-            {buckets.thisMonth.length > 0 && (
-              <MatchSection title="This Month" matches={buckets.thisMonth} />
-            )}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
-            <p className="text-sm text-text-secondary">No recent matches yet.</p>
-          </div>
-        )}
-        <div className="mt-8 flex justify-center">
-          <button
-            onClick={() => setViewMode("browse")}
-            className="rounded-full bg-black text-white text-sm font-semibold px-6 py-3 hover:bg-black/85 transition-colors"
-          >
-            View All
-          </button>
-        </div>
-      </>
-    );
-  }
 
   return (
     <>
@@ -237,24 +207,75 @@ export default function MatchesClient({ matches, currentUsername = null }: Props
         </div>
       )}
 
-      {/* Results */}
-      {pageItems.length === 0 ? (
-        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
-          <p className="text-sm text-text-secondary">
-            No matches found{query ? ` for "${query}"` : ""}.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {pageItems.map((m) => (
-            <MatchCard key={m.id} match={m} />
-          ))}
-        </div>
+      {/* ── Sections view: Today / This Week / This Month ────────── */}
+      {effectiveViewMode === "sections" && (
+        <>
+          {buckets.today.length + buckets.thisWeek.length + buckets.thisMonth.length > 0 ? (
+            <div className="flex flex-col gap-8">
+              {buckets.today.length > 0 && (
+                <MatchSection title="Today" matches={buckets.today} />
+              )}
+              {buckets.thisWeek.length > 0 && (
+                <MatchSection title="This Week" matches={buckets.thisWeek} />
+              )}
+              {buckets.thisMonth.length > 0 && (
+                <MatchSection title="This Month" matches={buckets.thisMonth} />
+              )}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
+              <p className="text-sm text-text-secondary">No recent matches yet.</p>
+            </div>
+          )}
+          <div className="mt-8 flex justify-center">
+            <button
+              onClick={() => { setViewMode("browse"); setPage(1); }}
+              className="rounded-full bg-black text-white text-sm font-semibold px-6 py-3 hover:bg-black/85 transition-colors"
+            >
+              View All
+            </button>
+          </div>
+        </>
       )}
 
-      {totalPages > 1 && (
-        <Pagination page={page} totalPages={totalPages} onPage={setPage} />
-      )}
+      {/* ── Browse view: paginated all-matches list ───────────────── */}
+      {effectiveViewMode === "browse" && (
+        <>
+          {!isSearching && (
+            <button
+              onClick={() => { setViewMode("sections"); setPage(1); }}
+              className="mb-4 flex items-center gap-1 text-xs font-semibold text-text-muted hover:text-text-primary transition-colors"
+            >
+              <svg
+                className="w-3.5 h-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+              </svg>
+              Recent
+            </button>
+          )}
+          {pageItems.length === 0 ? (
+            <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
+              <p className="text-sm text-text-secondary">
+                No matches found{query ? ` for "${query}"` : ""}.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {pageItems.map((m) => (
+                <MatchCard key={m.id} match={m} />
+              ))}
+            </div>
+          )}
+          {totalPages > 1 && (
+            <Pagination page={page} totalPages={totalPages} onPage={setPage} />
+          )}
+        </>
+
     </>
   );
 }
