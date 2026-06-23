@@ -25,6 +25,12 @@ const TOOLS: Tool[] = [
     description:
       "Browse 9:16 social-ready cards built from published content.",
   },
+  {
+    href: "/admin-tools/replay",
+    title: "Replay",
+    description:
+      "Step a parsed battle log through the engine on a board view.",
+  },
 ];
 
 export default async function AdminToolsPage() {
