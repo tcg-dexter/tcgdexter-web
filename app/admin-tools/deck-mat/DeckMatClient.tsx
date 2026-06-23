@@ -25,7 +25,8 @@ export interface DeckSummary {
 // Each fanned copy is offset by FAN_OVERLAP × the card's width.
 export const FAN_OVERLAP = 0.20;
 export const ROW_GAP_X = 6;
-export const MAX_PILES_PER_ROW = 7;
+export const MAX_PILES_PER_ROW = 8;
+export const MAX_ROWS = 4;
 export const MAT_PADDING = 8;
 export const MAT_ASPECT = 13.5 / 24;
 const EXPORT_PADDING = 15;      // px, outer padding added around the exported image
@@ -138,7 +139,7 @@ function proxied(url: string): string {
 
 export function computeRows(tiles: ResolvedDeckTile[]): ResolvedDeckTile[][] {
   const rows: ResolvedDeckTile[][] = [];
-  for (let i = 0; i < tiles.length; i += MAX_PILES_PER_ROW) {
+  for (let i = 0; i < tiles.length && rows.length < MAX_ROWS; i += MAX_PILES_PER_ROW) {
     rows.push(tiles.slice(i, i + MAX_PILES_PER_ROW));
   }
   return rows;
