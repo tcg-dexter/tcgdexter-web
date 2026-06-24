@@ -476,9 +476,12 @@ interface Props {
    *  prize-taking moment) are omitted. Used by the Replay tool where the
    *  live board view already represents that state. */
   hideScoreCards?: boolean;
+  /** When true, post avatars render 25% smaller for tighter side-panel
+   *  presentations (e.g. the Replay thread next to the board). */
+  compactAvatars?: boolean;
 }
 
-export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, opponentColor, maxSequence, hideScoreCards }: Props) {
+export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, opponentColor, maxSequence, hideScoreCards, compactAvatars }: Props) {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -813,6 +816,7 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
               key={post.key}
               post={post}
               isLast={i === filteredPregamePosts.length - 1}
+              compactAvatars={compactAvatars}
             />
           ))}
           {!hideScoreCards && (
@@ -841,6 +845,7 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
             key={post.key}
             post={post}
             isLast={hasPrizes || i === gamePosts.length - 1}
+            compactAvatars={compactAvatars}
           />,
         ];
         if (hasPrizes && !hideScoreCards) {
@@ -931,7 +936,7 @@ interface ThreadPostInput {
 const WIN_GRADIENT = "linear-gradient(135deg,#F2A20C 0%,#D91E0D 50%,#A60D0D 100%)";
 const LOSS_COLOR = "#1a1a1a";
 
-function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }) {
+function ThreadPost({ post, isLast, compactAvatars }: { post: ThreadPostInput; isLast: boolean; compactAvatars?: boolean }) {
   const isSystem = post.kind === "system";
   const isResult = post.system?.handle === "game";
   const avatarStyle: CSSProperties = post.system
@@ -949,13 +954,19 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
     >
       <div className="flex flex-col items-center self-stretch">
         <div
-          className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+          className={`relative flex shrink-0 items-center justify-center rounded-full font-bold text-white ${
+            compactAvatars ? "h-[27px] w-[27px] text-[11px]" : "h-9 w-9 text-sm"
+          }`}
           style={avatarStyle}
         >
           {post.system?.label ? (
-            <span className="text-[11px] font-bold tracking-tight">{post.system.label}</span>
+            <span
+              className={`font-bold tracking-tight ${compactAvatars ? "text-[9px]" : "text-[11px]"}`}
+            >
+              {post.system.label}
+            </span>
           ) : SystemGlyph ? (
-            <SystemGlyph className="w-4 h-4" />
+            <SystemGlyph className={compactAvatars ? "w-3 h-3" : "w-4 h-4"} />
           ) : (
             avatarInitial(post.displayName)
           )}
