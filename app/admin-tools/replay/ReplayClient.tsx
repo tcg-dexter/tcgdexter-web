@@ -338,16 +338,18 @@ function BenchRow({ label, pokemon }: { label: string; pokemon: PokemonFrame[] }
       <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
         {label}
       </div>
-      <div className="mt-2 grid grid-cols-5 gap-2">
+      <div className="mt-2 flex justify-center gap-2">
         {Array.from({ length: 5 }).map((_, i) => {
           const mon = pokemon[i];
+          // Width-matched to the rail piles (P1/P2 Discard, P1/P2 Draw)
+          // so benched Pokémon read at the same scale as the side stacks.
           return (
-            <div key={i} className="overflow-hidden rounded-lg bg-white">
+            <div key={i} className="w-[64px] shrink-0 sm:w-[88px]">
               {mon ? (
                 <PokemonCardImage mon={mon} />
               ) : (
                 <div
-                  className="flex items-center justify-center rounded-lg border border-dashed border-black/15 bg-white text-[10px] text-text-muted"
+                  className="flex w-full items-center justify-center rounded-lg border border-dashed border-black/15 bg-white text-[10px] text-text-muted"
                   style={{ aspectRatio: "245 / 342" }}
                 >
                   empty
