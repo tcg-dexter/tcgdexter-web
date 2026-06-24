@@ -63,6 +63,7 @@ export default function ReplayClient({ options }: ReplayClientProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [frameIndex, setFrameIndex] = useState(0);
+  const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
     if (!selectedId) {
@@ -72,6 +73,7 @@ export default function ReplayClient({ options }: ReplayClientProps) {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setPlaying(false);
     fetch(`/api/admin/replay/${selectedId}`)
       .then(async (r) => {
         if (!r.ok) throw new Error(`Replay failed (${r.status})`);
@@ -101,6 +103,23 @@ export default function ReplayClient({ options }: ReplayClientProps) {
   }, [data, frameIndex]);
 
   const frameCount = data?.frames.length ?? 0;
+
+  // Auto-advance one action per second while playing.
+  useEffect(() => {
+    if (!playing) return;
+    const id = setInterval(() => {
+      setFrameIndex((i) => {
+        if (i >= frameCount - 1) return i;
+        return i + 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [playing, frameCount]);
+
+  // Pause automatically when the last frame is reached.
+  useEffect(() => {
+    if (playing && frameIndex >= frameCount - 1) setPlaying(false);
+  }, [playing, frameIndex, frameCount]);
 
   // Index of every frame that opens a new turn (turn number changes vs the
   // prior frame). Drives the outer chevrons — back/forward by whole turn —
@@ -205,10 +224,12 @@ export default function ReplayClient({ options }: ReplayClientProps) {
           canStepForward={canStepForward}
           canTurnBack={canTurnBack}
           canTurnForward={canTurnForward}
-          onStepBack={() => canStepBack && setFrameIndex((i) => i - 1)}
-          onStepForward={() => canStepForward && setFrameIndex((i) => i + 1)}
-          onTurnBack={stepTurnBack}
-          onTurnForward={stepTurnForward}
+          playing={playing}
+          onTogglePlay={() => setPlaying((p) => !p)}
+          onStepBack={() => { setPlaying(false); canStepBack && setFrameIndex((i) => i - 1); }}
+          onStepForward={() => { setPlaying(false); canStepForward && setFrameIndex((i) => i + 1); }}
+          onTurnBack={() => { setPlaying(false); stepTurnBack(); }}
+          onTurnForward={() => { setPlaying(false); stepTurnForward(); }}
         />
 
         {/* Row 1: thread (lg only) + board side-by-side. The aside is
@@ -259,10 +280,12 @@ export default function ReplayClient({ options }: ReplayClientProps) {
               canStepForward={canStepForward}
               canTurnBack={canTurnBack}
               canTurnForward={canTurnForward}
-              onStepBack={() => canStepBack && setFrameIndex((i) => i - 1)}
-              onStepForward={() => canStepForward && setFrameIndex((i) => i + 1)}
-              onTurnBack={stepTurnBack}
-              onTurnForward={stepTurnForward}
+              playing={playing}
+              onTogglePlay={() => setPlaying((p) => !p)}
+              onStepBack={() => { setPlaying(false); canStepBack && setFrameIndex((i) => i - 1); }}
+              onStepForward={() => { setPlaying(false); canStepForward && setFrameIndex((i) => i + 1); }}
+              onTurnBack={() => { setPlaying(false); stepTurnBack(); }}
+              onTurnForward={() => { setPlaying(false); stepTurnForward(); }}
             />
           </div>
 
@@ -288,6 +311,8 @@ function ReplayHeader({
   canStepForward,
   canTurnBack,
   canTurnForward,
+  playing,
+  onTogglePlay,
   onStepBack,
   onStepForward,
   onTurnBack,
@@ -299,6 +324,8 @@ function ReplayHeader({
   canStepForward: boolean;
   canTurnBack: boolean;
   canTurnForward: boolean;
+  playing: boolean;
+  onTogglePlay: () => void;
   onStepBack: () => void;
   onStepForward: () => void;
   onTurnBack: () => void;
@@ -343,6 +370,16 @@ function ReplayHeader({
           className={buttonClass}
         >
           ‹
+        </button>
+        <button
+          type="button"
+          onClick={onTogglePlay}
+          disabled={!playing && !canStepForward}
+          aria-label={playing ? "Pause" : "Play"}
+          title={playing ? "Pause" : "Play"}
+          className={`${buttonClass} min-w-[2.5rem]`}
+        >
+          {playing ? "⏸" : "▶"}
         </button>
         <button
           type="button"
@@ -961,6 +998,8 @@ function TurnNavigator({
   canStepForward,
   canTurnBack,
   canTurnForward,
+  playing,
+  onTogglePlay,
   onStepBack,
   onStepForward,
   onTurnBack,
@@ -973,6 +1012,8 @@ function TurnNavigator({
   canStepForward: boolean;
   canTurnBack: boolean;
   canTurnForward: boolean;
+  playing: boolean;
+  onTogglePlay: () => void;
   onStepBack: () => void;
   onStepForward: () => void;
   onTurnBack: () => void;
@@ -1025,6 +1066,16 @@ function TurnNavigator({
           <div className="mt-1 text-[10px] tabular-nums text-text-muted">
             Step {frameCount > 0 ? frameIndex + 1 : 0} / {frameCount}
           </div>
+          <button
+            type="button"
+            onClick={onTogglePlay}
+            disabled={!playing && !canStepForward}
+            aria-label={playing ? "Pause" : "Play"}
+            title={playing ? "Pause" : "Play"}
+            className="mt-2 rounded-md border border-black/10 px-5 py-1 text-sm font-semibold text-text-secondary hover:bg-surface disabled:opacity-30"
+          >
+            {playing ? "⏸" : "▶"}
+          </button>
         </div>
         <button
           type="button"
