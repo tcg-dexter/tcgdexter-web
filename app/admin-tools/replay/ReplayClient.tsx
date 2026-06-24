@@ -371,7 +371,7 @@ function PokemonSlot({
   pokemon: PokemonFrame | null;
 }) {
   return (
-    <div className="flex w-[120px] flex-col items-center gap-1 sm:w-[150px]">
+    <div className="flex w-[90px] flex-col items-center gap-1 sm:w-[112px]">
       <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
         {label}
       </div>
