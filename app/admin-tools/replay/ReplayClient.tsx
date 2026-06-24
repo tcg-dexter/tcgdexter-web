@@ -370,10 +370,12 @@ function ReplayHeader({
 //   5×cardW + 4×8 ≤ innerW − 2×cardW − 2×GAP
 //   7×cardW ≤ innerW − 2×GAP − 4×8
 function computeCardWidth(innerW: number): number {
-  const GAP = 12;       // gap-3 between outer grid columns
-  const BENCH_GAP = 8;  // gap-2 between bench cards
+  // Use sm+ gap values (the larger ones) so the formula stays conservative
+  // at every breakpoint — mobile gaps are smaller, giving extra margin there.
+  const GAP = 12;       // gap-3 (sm+) between outer grid columns
+  const BENCH_GAP = 8;  // gap-2 (sm+) between bench cards
   const MAX_BENCH = 5;
-  return Math.max(30, Math.floor((innerW - 2 * GAP - MAX_BENCH * BENCH_GAP) / (MAX_BENCH + 2)));
+  return Math.max(25, Math.floor((innerW - 2 * GAP - MAX_BENCH * BENCH_GAP) / (MAX_BENCH + 2)));
 }
 
 function Board({
@@ -418,14 +420,14 @@ function Board({
   }
 
   return (
-    <div className="mt-4 rounded-2xl border border-black/8 bg-white p-4 sm:p-5 overflow-x-hidden">
+    <div className="mt-4 rounded-2xl border border-black/8 bg-white p-2 sm:p-5 overflow-x-hidden">
       <div
         ref={gridRef}
-        className="grid gap-3"
+        className="grid gap-1.5 sm:gap-3"
         style={{ gridTemplateColumns: `${cardWidth}px 1fr ${cardWidth}px` }}
       >
         {/* ── Left rail: P1 piles at top, P2 prize pile at bottom ─ */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1.5 sm:gap-3">
           <Pile
             label="P1 Discard"
             count={frame.player.discardCount}
@@ -446,13 +448,13 @@ function Board({
             The middle row is stadium | (P1 active over P2 active) |
             stadium. Only one Stadium ever sits in play; the slot
             opposite the active owner shows an empty placeholder. */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1.5 sm:gap-3">
           <BenchRow
             label={`P1 Bench${frame.player.handle ? ` · ${frame.player.handle}` : ""}`}
             pokemon={frame.player.bench}
             cardWidth={cardWidth}
           />
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center justify-center gap-1.5 sm:gap-3">
             <StadiumSlot
               label="P1 Stadium"
               stadium={frame.stadium?.owner === "player" ? frame.stadium : null}
@@ -476,7 +478,7 @@ function Board({
         </div>
 
         {/* ── Right rail: P1 prize pile at top, P2 piles at bottom ─ */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1.5 sm:gap-3">
           <StackedPrizePile label="Prize Pile" count={frame.player.prizesRemaining} />
           <div className="flex-1" aria-hidden />
           <Pile
@@ -586,7 +588,7 @@ function Pile({
 function BenchRow({ pokemon, cardWidth }: { label?: string; pokemon: PokemonFrame[]; cardWidth: number }) {
   if (pokemon.length === 0) {
     return (
-      <div className="flex justify-center gap-2">
+      <div className="flex justify-center gap-1 sm:gap-2">
         <div className="shrink-0" style={{ width: cardWidth, aspectRatio: "245 / 342" }} aria-hidden />
       </div>
     );
