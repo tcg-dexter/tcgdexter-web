@@ -372,18 +372,17 @@ function ReplayHeader({
 /* Board                                                            */
 /* ──────────────────────────────────────────────────────────────── */
 
-// Each mat has bench + active = 2 card rows. 4 fixed-width columns flank the
-// center (left-rail, played-card, center, right-rail — or mirrored for P2),
-// so 3 fixed card columns + 3 sm+ column gaps constrain the center width.
-// Height constraint: 2 card rows + gap must fit inside the mat.
+// Each mat has bench + active = 2 card rows. Stadium and played-trainer cards
+// are absolutely positioned overlays and don't participate in the grid, so
+// only the 2 outer fixed-width rail columns constrain the center.
 function computeReplayCardWidth(matWidth: number): number {
   const innerW = matWidth - 2 * MAT_PADDING;
   const innerH = matWidth * MAT_ASPECT - 2 * MAT_PADDING;
   const ROW_GAP = 6;
   const maxCardH = (innerH - ROW_GAP) / 2;
   const maxWidthFromH = maxCardH * (245 / 342);
-  // 3 fixed cols + center 1fr → 3 outer gaps. 5 bench × conservative gaps.
-  const maxWidthFromW = (innerW - 3 * 12 - 5 * 8) / 8;
+  // 2 fixed cols + center 1fr → 2 outer gaps. 5 bench × conservative gaps.
+  const maxWidthFromW = (innerW - 2 * 12 - 5 * 8) / 7;
   return Math.max(20, Math.floor(Math.min(maxWidthFromH, maxWidthFromW)));
 }
 
@@ -473,14 +472,9 @@ function Board({
 // P1 mat: bench at top, active at bottom — actives face each other across the
 // gap between the two mats. P2 mat: active at top, bench at bottom.
 //
-// 4-column grid per mat:
-//   P1: [discard+draw] [played-card] [center] [prize]
-//   P2: [prize] [center] [played-card] [draw+discard]
-//
-// The played-card column is always reserved; it shows the last played
-// item/supporter and is empty otherwise (no layout shift between frames).
-// The active row uses a 3-sub-column sub-grid so the active card stays
-// horizontally centered, with the stadium anchored to one side.
+// 3-column grid: [left-rail] [center 1fr] [right-rail]
+// Stadium and played-trainer are absolutely positioned overlays that float
+// on a higher z-layer so they never affect bench centering or active centering.
 function PlayerMat({
   side,
   bench,
@@ -514,70 +508,45 @@ function PlayerMat({
   const label = isPlayer ? "P1" : "P2";
   const texScale = matWidth > 0 ? matWidth / 600 : 1;
 
+  // ── Overlay geometry ──────────────────────────────────────────────────────
+  // The center column's horizontal midpoint is always innerW/2 regardless of
+  // gap size (the gaps cancel out in the algebra). Active card is centered there.
+  const innerW = matWidth - 2 * MAT_PADDING;
+  const innerH = matWidth * MAT_ASPECT - 2 * MAT_PADDING;
+  const cardH = cardWidth * (342 / 245);
+  const FLOAT_GAP = 4; // px between floating card and its anchor
+
+  // Active card top edge, measured from the mat's top edge (includes padding).
+  // justify-between pins bench to top and active to bottom (P1), or vice-versa (P2).
+  const activeMatTop = isPlayer
+    ? MAT_PADDING + innerH - cardH   // P1: active pinned to bottom
+    : MAT_PADDING;                   // P2: active pinned to top
+
+  // Stadium floats at same height as the active; anchored left (P1) or right (P2).
+  const stadiumLeft = isPlayer
+    ? MAT_PADDING + innerW / 2 - cardWidth / 2 - FLOAT_GAP - cardWidth
+    : MAT_PADDING + innerW / 2 + cardWidth / 2 + FLOAT_GAP;
+
+  // Played trainer floats vertically centered between the two rail piles.
+  // Rail pile gap matches gap-1.5 (6px); piles stack draw then discard from top.
+  const RAIL_GAP = 6;
+  const playedTrainerTop = MAT_PADDING + cardH / 2 + RAIL_GAP / 2;
+  const playedTrainerLeft = isPlayer
+    ? MAT_PADDING + cardWidth + FLOAT_GAP              // P1: right of left-rail
+    : MAT_PADDING + innerW - 2 * cardWidth - FLOAT_GAP; // P2: left of right-rail
+
   const benchRow = <BenchRow pokemon={bench} cardWidth={cardWidth} />;
 
-  // Active card is always centered. Stadium is anchored left (P1) or right (P2)
-  // via a 3-sub-column sub-grid: [left-slot | flex-center active | right-slot].
+  // Active row: plain centered card — stadium handled as overlay above.
   const activeRow = (
-    <div
-      className="grid items-center gap-1.5 sm:gap-3"
-      style={{ gridTemplateColumns: `${cardWidth}px 1fr ${cardWidth}px` }}
-    >
-      <div className="flex justify-center">
-        {isPlayer && stadium ? (
-          <StadiumSlot label="Stadium" stadium={stadium} cardWidth={cardWidth} />
-        ) : null}
-      </div>
-      <div className="flex justify-center">
-        <PokemonSlot label={`${label} Active`} pokemon={active} cardWidth={cardWidth} />
-      </div>
-      <div className="flex justify-center">
-        {!isPlayer && stadium ? (
-          <StadiumSlot label="Stadium" stadium={stadium} cardWidth={cardWidth} />
-        ) : null}
-      </div>
+    <div className="flex justify-center">
+      <PokemonSlot label={`${label} Active`} pokemon={active} cardWidth={cardWidth} />
     </div>
   );
-
-  // Played-card column: vertically centered so it sits at the midpoint between
-  // the draw and discard piles in the adjacent rail column.
-  const playedCardCol = (
-    <div className="flex h-full flex-col items-center justify-center">
-      {lastPlayedTrainer && (
-        <div
-          className="relative w-full overflow-hidden rounded border border-amber-400/80 bg-white"
-          style={{ width: cardWidth, aspectRatio: "245 / 342" }}
-          title={lastPlayedTrainer.name}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={lastPlayedTrainer.imageUrl ?? CARD_BACK_URL}
-            alt={lastPlayedTrainer.name}
-            className="h-full w-full object-cover"
-            onError={(e) => {
-              if (e.currentTarget.src !== CARD_BACK_URL)
-                e.currentTarget.src = CARD_BACK_URL;
-            }}
-          />
-          {!lastPlayedTrainer.imageUrl && (
-            <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
-              {lastPlayedTrainer.name}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-
-  // P1: discard+draw | played-card | center | prize
-  // P2: prize | center | played-card | draw+discard
-  const gridCols = isPlayer
-    ? `${cardWidth}px ${cardWidth}px 1fr ${cardWidth}px`
-    : `${cardWidth}px 1fr ${cardWidth}px ${cardWidth}px`;
 
   return (
     <div
-      className="rounded-xl overflow-hidden"
+      className="relative rounded-xl overflow-hidden"
       style={{
         padding: MAT_PADDING,
         height: matWidth > 0 ? matWidth * MAT_ASPECT : undefined,
@@ -586,70 +555,96 @@ function PlayerMat({
         boxShadow: "0 4px 4px rgba(0,0,0,0.66)",
       }}
     >
+      {/* ── 3-column grid: left-rail | center | right-rail ── */}
       <div
         className="grid h-full gap-1.5 sm:gap-3"
-        style={{ gridTemplateColumns: gridCols }}
+        style={{ gridTemplateColumns: `${cardWidth}px 1fr ${cardWidth}px` }}
       >
-        {isPlayer ? (
-          <>
-            {/* P1 Col 1: discard + draw */}
-            <div className="flex flex-col gap-1.5 sm:gap-3">
-              <Pile
-                label="P1 Discard"
-                count={discardCount}
-                topName={discardTop}
-                topImageUrl={discardTopImageUrl}
-              />
-              <Pile
-                label="P1 Draw"
-                count={deckCount}
-                hint={`${handCount} in hand`}
-                useCardBack
-              />
-            </div>
-            {/* P1 Col 2: played card (right of draw/discard, vertically centered) */}
-            {playedCardCol}
-            {/* P1 Col 3: center — bench top, active bottom */}
-            <div className="flex h-full flex-col justify-between">
-              {benchRow}
-              {activeRow}
-            </div>
-            {/* P1 Col 4: prize pile */}
-            <div className="flex flex-col">
-              <StackedPrizePile label="Prize Pile" count={prizesRemaining} />
-            </div>
-          </>
-        ) : (
-          <>
-            {/* P2 Col 1: prize pile */}
-            <div className="flex flex-col">
-              <StackedPrizePile label="Prize Pile" count={prizesRemaining} />
-            </div>
-            {/* P2 Col 2: center — active top, bench bottom */}
-            <div className="flex h-full flex-col justify-between">
-              {activeRow}
-              {benchRow}
-            </div>
-            {/* P2 Col 3: played card (left of draw/discard, vertically centered) */}
-            {playedCardCol}
-            {/* P2 Col 4: draw + discard */}
-            <div className="flex flex-col gap-1.5 sm:gap-3">
-              <Pile
-                label="P2 Draw"
-                count={deckCount}
-                hint={`${handCount} in hand`}
-                useCardBack
-              />
-              <Pile
-                label="P2 Discard"
-                count={discardCount}
-                topName={discardTop}
-                topImageUrl={discardTopImageUrl}
-              />
-            </div>
-          </>
-        )}
+        {/* Left rail */}
+        <div className="flex flex-col gap-1.5 sm:gap-3">
+          {isPlayer ? (
+            <>
+              <Pile label="P1 Discard" count={discardCount} topName={discardTop} topImageUrl={discardTopImageUrl} />
+              <Pile label="P1 Draw" count={deckCount} hint={`${handCount} in hand`} useCardBack />
+            </>
+          ) : (
+            <StackedPrizePile label="Prize Pile" count={prizesRemaining} />
+          )}
+        </div>
+        {/* Center: bench + active pinned to opposite ends */}
+        <div className="flex h-full flex-col justify-between">
+          {isPlayer ? <>{benchRow}{activeRow}</> : <>{activeRow}{benchRow}</>}
+        </div>
+        {/* Right rail */}
+        <div className="flex flex-col gap-1.5 sm:gap-3">
+          {isPlayer ? (
+            <StackedPrizePile label="Prize Pile" count={prizesRemaining} />
+          ) : (
+            <>
+              <Pile label="P2 Draw" count={deckCount} hint={`${handCount} in hand`} useCardBack />
+              <Pile label="P2 Discard" count={discardCount} topName={discardTop} topImageUrl={discardTopImageUrl} />
+            </>
+          )}
+        </div>
       </div>
+
+      {/* ── Floating overlays (z-10, don't affect grid flow) ── */}
+      {stadium && (
+        <div
+          className="absolute z-10"
+          style={{ top: activeMatTop, left: stadiumLeft, width: cardWidth }}
+          title={stadium.name}
+        >
+          <div
+            className="relative w-full overflow-hidden rounded border border-amber-300/70 bg-white"
+            style={{ aspectRatio: "245 / 342" }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={stadium.imageUrl ?? CARD_BACK_URL}
+              alt={stadium.name}
+              className="h-full w-full object-cover"
+              onError={(e) => {
+                if (e.currentTarget.src !== CARD_BACK_URL)
+                  e.currentTarget.src = CARD_BACK_URL;
+              }}
+            />
+            {!stadium.imageUrl && (
+              <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
+                {stadium.name}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {lastPlayedTrainer && (
+        <div
+          className="absolute z-10"
+          style={{ top: playedTrainerTop, left: playedTrainerLeft, width: cardWidth }}
+          title={lastPlayedTrainer.name}
+        >
+          <div
+            className="relative w-full overflow-hidden rounded border border-amber-400/80 bg-white"
+            style={{ aspectRatio: "245 / 342" }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={lastPlayedTrainer.imageUrl ?? CARD_BACK_URL}
+              alt={lastPlayedTrainer.name}
+              className="h-full w-full object-cover"
+              onError={(e) => {
+                if (e.currentTarget.src !== CARD_BACK_URL)
+                  e.currentTarget.src = CARD_BACK_URL;
+              }}
+            />
+            {!lastPlayedTrainer.imageUrl && (
+              <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
+                {lastPlayedTrainer.name}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
