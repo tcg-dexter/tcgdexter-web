@@ -543,8 +543,20 @@ function BenchRow({ pokemon }: { label?: string; pokemon: PokemonFrame[] }) {
   // The card width matches the rail piles so bench + rails read at the
   // same scale; the row is centered so a partial bench still feels
   // grounded under the active stack.
+  // Empty-bench placeholder: reserve the exact height of a single bench
+  // card so the row above/below the active stack doesn't collapse when no
+  // Pokémon are on the bench. Keeps the overall mat layout vertically
+  // consistent across replay frames.
   if (pokemon.length === 0) {
-    return <div className="min-h-[1px]" aria-hidden />;
+    return (
+      <div className="flex justify-center gap-2">
+        <div
+          className="w-[64px] shrink-0 sm:w-[75px]"
+          style={{ aspectRatio: "245 / 342" }}
+          aria-hidden
+        />
+      </div>
+    );
   }
   return (
     <div className="flex justify-center gap-2">
