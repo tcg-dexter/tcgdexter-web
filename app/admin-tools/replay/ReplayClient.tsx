@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import Link from "next/link";
 import BattleLogDetail from "@/app/components/BattleLogDetail";
 import type {
@@ -306,12 +307,12 @@ function ReplayHeader({
   const left = playerPrimaryName ?? "?";
   const right = opponentPrimaryName ?? "?";
   const buttonClass =
-    "rounded-md border border-black/10 px-2.5 py-1 text-xs font-semibold text-text-secondary hover:bg-surface disabled:opacity-30";
+    "rounded-md border border-black/10 px-4 py-1.5 text-sm font-semibold text-text-secondary hover:bg-surface disabled:opacity-30";
   return (
-    <div className="mt-4 hidden items-center gap-4 lg:flex">
-      <div className="flex flex-1 min-w-0 items-baseline gap-1.5 text-sm font-semibold text-text-primary">
+    <div className="mt-4 hidden items-center gap-6 lg:flex">
+      <div className="flex flex-1 min-w-0 items-baseline gap-2 text-xl font-semibold text-text-primary">
         <span className="truncate">{left}</span>
-        <span className="text-xs font-normal text-text-muted">vs</span>
+        <span className="text-base font-normal text-text-muted">vs</span>
         <span className="truncate">{right}</span>
       </div>
       <div className="flex shrink-0 justify-center">
@@ -319,10 +320,10 @@ function ReplayHeader({
         <img
           src="/logo-wordmark.png"
           alt="TCG Dexter"
-          className="h-7 w-auto opacity-90"
+          className="h-[42px] w-auto opacity-90"
         />
       </div>
-      <div className="flex flex-1 items-center justify-end gap-1">
+      <div className="flex flex-1 items-center justify-end gap-1.5">
         <button
           type="button"
           onClick={onTurnBack}
@@ -535,117 +536,170 @@ function PlayerMat({
     ? MAT_PADDING + innerW / 2 - cardWidth / 2 - FLOAT_GAP - cardWidth // P1: left of active
     : MAT_PADDING + innerW / 2 + cardWidth / 2 + FLOAT_GAP;            // P2: right of active
 
-  const benchRow = <BenchRow pokemon={bench} cardWidth={cardWidth} />;
+  // Bench row: each card animates in/out and glides to its new slot.
+  // layoutId ties the card to its identity so Framer Motion can move it
+  // across positions (bench→active) as a "magic move".
+  const benchRow = (
+    <div className="flex justify-center gap-2">
+      <AnimatePresence mode="popLayout">
+        {bench.map((mon) => (
+          <motion.div
+            key={mon.name}
+            layoutId={`${side}-${mon.name}`}
+            className="shrink-0"
+            style={{ width: cardWidth }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25, layout: { duration: 0.35, ease: "easeInOut" } }}
+          >
+            <PokemonCardImage mon={mon} />
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
 
-  // Active row: plain centered card — stadium handled as overlay above.
+  // Active slot: glides in from bench position when promoted; fades out on KO/retreat.
+  // Outer div is always present to hold layout even when empty.
   const activeRow = (
-    <div className="flex justify-center">
-      <PokemonSlot label={`${label} Active`} pokemon={active} cardWidth={cardWidth} />
+    <div className="flex justify-center" style={{ minWidth: cardWidth }}>
+      <AnimatePresence mode="wait">
+        {active && (
+          <motion.div
+            key={active.name}
+            layoutId={`${side}-${active.name}`}
+            style={{ width: cardWidth }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25, layout: { duration: 0.35, ease: "easeInOut" } }}
+          >
+            <PokemonCardImage mon={active} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 
   return (
-    <div
-      className="relative rounded-xl overflow-hidden"
-      style={{
-        padding: MAT_PADDING,
-        height: matWidth > 0 ? matWidth * MAT_ASPECT : undefined,
-        backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(REPLAY_TEXTURE.svg)}"), ${REPLAY_GRADIENT}`,
-        backgroundSize: `${REPLAY_TEXTURE.w * texScale}px ${REPLAY_TEXTURE.h * texScale}px, auto`,
-        boxShadow: "0 4px 4px rgba(0,0,0,0.66)",
-      }}
-    >
-      {/* ── 3-column grid: left-rail | center | right-rail ── */}
+    <LayoutGroup id={side}>
       <div
-        className="grid h-full gap-1.5 sm:gap-3"
-        style={{ gridTemplateColumns: `${cardWidth}px 1fr ${cardWidth}px` }}
+        className="relative rounded-xl overflow-hidden"
+        style={{
+          padding: MAT_PADDING,
+          height: matWidth > 0 ? matWidth * MAT_ASPECT : undefined,
+          backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(REPLAY_TEXTURE.svg)}"), ${REPLAY_GRADIENT}`,
+          backgroundSize: `${REPLAY_TEXTURE.w * texScale}px ${REPLAY_TEXTURE.h * texScale}px, auto`,
+          boxShadow: "0 4px 4px rgba(0,0,0,0.66)",
+        }}
       >
-        {/* Left rail */}
-        <div className="flex flex-col gap-1.5 sm:gap-3">
-          {isPlayer ? (
-            <>
-              <Pile label="P1 Discard" count={discardCount} topName={discardTop} topImageUrl={discardTopImageUrl} />
-              <Pile label="P1 Draw" count={deckCount} hint={`${handCount} in hand`} useCardBack />
-            </>
-          ) : (
-            <StackedPrizePile label="Prize Pile" count={prizesRemaining} />
-          )}
+        {/* ── 3-column grid: left-rail | center | right-rail ── */}
+        <div
+          className="grid h-full gap-1.5 sm:gap-3"
+          style={{ gridTemplateColumns: `${cardWidth}px 1fr ${cardWidth}px` }}
+        >
+          {/* Left rail */}
+          <div className="flex flex-col gap-1.5 sm:gap-3">
+            {isPlayer ? (
+              <>
+                <Pile label="P1 Discard" count={discardCount} topName={discardTop} topImageUrl={discardTopImageUrl} />
+                <Pile label="P1 Draw" count={deckCount} hint={`${handCount} in hand`} useCardBack />
+              </>
+            ) : (
+              <StackedPrizePile label="Prize Pile" count={prizesRemaining} />
+            )}
+          </div>
+          {/* Center: bench + active pinned to opposite ends */}
+          <div className="flex h-full flex-col justify-between">
+            {isPlayer ? <>{benchRow}{activeRow}</> : <>{activeRow}{benchRow}</>}
+          </div>
+          {/* Right rail */}
+          <div className="flex flex-col gap-1.5 sm:gap-3">
+            {isPlayer ? (
+              <StackedPrizePile label="Prize Pile" count={prizesRemaining} />
+            ) : (
+              <>
+                <Pile label="P2 Draw" count={deckCount} hint={`${handCount} in hand`} useCardBack />
+                <Pile label="P2 Discard" count={discardCount} topName={discardTop} topImageUrl={discardTopImageUrl} />
+              </>
+            )}
+          </div>
         </div>
-        {/* Center: bench + active pinned to opposite ends */}
-        <div className="flex h-full flex-col justify-between">
-          {isPlayer ? <>{benchRow}{activeRow}</> : <>{activeRow}{benchRow}</>}
-        </div>
-        {/* Right rail */}
-        <div className="flex flex-col gap-1.5 sm:gap-3">
-          {isPlayer ? (
-            <StackedPrizePile label="Prize Pile" count={prizesRemaining} />
-          ) : (
-            <>
-              <Pile label="P2 Draw" count={deckCount} hint={`${handCount} in hand`} useCardBack />
-              <Pile label="P2 Discard" count={discardCount} topName={discardTop} topImageUrl={discardTopImageUrl} />
-            </>
-          )}
-        </div>
-      </div>
 
-      {/* ── Floating overlays (z-10, don't affect grid flow) ── */}
-      {stadium && (
-        <div
-          className="absolute z-10"
-          style={{ top: activeMatTop, left: stadiumLeft, width: cardWidth }}
-          title={stadium.name}
-        >
-          <div
-            className="relative w-full overflow-hidden rounded border border-amber-300/70 bg-white"
-            style={{ aspectRatio: "245 / 342" }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={stadium.imageUrl ?? CARD_BACK_URL}
-              alt={stadium.name}
-              className="h-full w-full object-cover"
-              onError={(e) => {
-                if (e.currentTarget.src !== CARD_BACK_URL)
-                  e.currentTarget.src = CARD_BACK_URL;
-              }}
-            />
-            {!stadium.imageUrl && (
-              <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
-                {stadium.name}
+        {/* ── Floating overlays (z-10, don't affect grid flow) ── */}
+        <AnimatePresence>
+          {stadium && (
+            <motion.div
+              key={stadium.name}
+              className="absolute z-10"
+              style={{ top: activeMatTop, left: stadiumLeft, width: cardWidth }}
+              title={stadium.name}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <div
+                className="relative w-full overflow-hidden rounded border border-amber-300/70 bg-white"
+                style={{ aspectRatio: "245 / 342" }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={stadium.imageUrl ?? CARD_BACK_URL}
+                  alt={stadium.name}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    if (e.currentTarget.src !== CARD_BACK_URL)
+                      e.currentTarget.src = CARD_BACK_URL;
+                  }}
+                />
+                {!stadium.imageUrl && (
+                  <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
+                    {stadium.name}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </div>
-      )}
-      {lastPlayedTrainer && (
-        <div
-          className="absolute z-10"
-          style={{ top: playedTrainerTop, left: playedTrainerLeft, width: cardWidth }}
-          title={lastPlayedTrainer.name}
-        >
-          <div
-            className="relative w-full overflow-hidden rounded border border-amber-400/80 bg-white"
-            style={{ aspectRatio: "245 / 342" }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={lastPlayedTrainer.imageUrl ?? CARD_BACK_URL}
-              alt={lastPlayedTrainer.name}
-              className="h-full w-full object-cover"
-              onError={(e) => {
-                if (e.currentTarget.src !== CARD_BACK_URL)
-                  e.currentTarget.src = CARD_BACK_URL;
-              }}
-            />
-            {!lastPlayedTrainer.imageUrl && (
-              <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
-                {lastPlayedTrainer.name}
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <AnimatePresence>
+          {lastPlayedTrainer && (
+            <motion.div
+              key={lastPlayedTrainer.name}
+              className="absolute z-10"
+              style={{ top: playedTrainerTop, left: playedTrainerLeft, width: cardWidth }}
+              title={lastPlayedTrainer.name}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div
+                className="relative w-full overflow-hidden rounded border border-amber-400/80 bg-white"
+                style={{ aspectRatio: "245 / 342" }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={lastPlayedTrainer.imageUrl ?? CARD_BACK_URL}
+                  alt={lastPlayedTrainer.name}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    if (e.currentTarget.src !== CARD_BACK_URL)
+                      e.currentTarget.src = CARD_BACK_URL;
+                  }}
+                />
+                {!lastPlayedTrainer.imageUrl && (
+                  <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
+                    {lastPlayedTrainer.name}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </LayoutGroup>
   );
 }
 
@@ -724,62 +778,11 @@ function Pile({
   }
 
   return (
-    <div className={`flex flex-col items-center ${className}`} title={label}>
-      <div
-        className="flex w-full flex-col items-center justify-center rounded border border-dashed border-black/15 bg-white text-[10px] text-text-muted"
-        style={{ aspectRatio: "245 / 342" }}
-      >
-        {hint ?? "empty"}
-      </div>
-    </div>
-  );
-}
-
-function BenchRow({ pokemon, cardWidth }: { label?: string; pokemon: PokemonFrame[]; cardWidth: number }) {
-  if (pokemon.length === 0) {
-    return (
-      <div className="flex justify-center gap-1 sm:gap-2">
-        <div className="shrink-0" style={{ width: cardWidth, aspectRatio: "245 / 342" }} aria-hidden />
-      </div>
-    );
-  }
-  return (
-    <div className="flex justify-center gap-2">
-      {pokemon.map((mon, i) => (
-        <div key={i} className="shrink-0" style={{ width: cardWidth }}>
-          <PokemonCardImage mon={mon} />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function PokemonSlot({
-  label,
-  pokemon,
-  cardWidth,
-}: {
-  label: string;
-  pokemon: PokemonFrame | null;
-  cardWidth: number;
-}) {
-  return (
     <div
-      className="flex flex-col items-center"
-      style={{ width: cardWidth }}
-      title={label}
-    >
-      {pokemon ? (
-        <PokemonCardImage mon={pokemon} />
-      ) : (
-        <div
-          className="flex w-full items-center justify-center rounded border border-dashed border-black/15 bg-white text-[11px] text-text-muted"
-          style={{ aspectRatio: "245 / 342" }}
-        >
-          empty
-        </div>
-      )}
-    </div>
+      className={`w-full ${className}`}
+      style={{ aspectRatio: "245 / 342" }}
+      aria-hidden
+    />
   );
 }
 
@@ -872,48 +875,6 @@ function PokemonCardImage({ mon }: { mon: PokemonFrame }) {
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function StadiumSlot({
-  label,
-  stadium,
-  cardWidth,
-}: {
-  label: string;
-  stadium: { name: string; imageUrl: string | null } | null;
-  cardWidth: number;
-}) {
-  if (!stadium) return null;
-  return (
-    <div
-      className="flex flex-col items-center"
-      style={{ width: cardWidth }}
-      title={label}
-    >
-      <div
-        className="relative w-full overflow-hidden rounded border border-amber-300/70 bg-white"
-        style={{ aspectRatio: "245 / 342" }}
-        title={stadium.name}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={stadium.imageUrl ?? CARD_BACK_URL}
-          alt={stadium.name}
-          className="h-full w-full object-cover"
-          onError={(e) => {
-            if (e.currentTarget.src !== CARD_BACK_URL) {
-              e.currentTarget.src = CARD_BACK_URL;
-            }
-          }}
-        />
-        {!stadium.imageUrl && (
-          <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
-            {stadium.name}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
