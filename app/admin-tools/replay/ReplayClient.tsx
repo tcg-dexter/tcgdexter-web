@@ -170,13 +170,10 @@ export default function ReplayClient({ options }: ReplayClientProps) {
               key={selectedId}
               className="hidden min-w-0 lg:flex lg:flex-1 lg:flex-col"
             >
-              <div className="mt-4 flex flex-1 min-h-0 flex-col rounded-2xl border border-black/8 bg-white p-4">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
-                  Thread
-                </div>
+              <div className="mt-4 flex flex-1 min-h-0 flex-col">
                 <div
                   ref={threadScrollRef}
-                  className="mt-2 flex-1 min-h-0 overflow-y-auto pr-1"
+                  className="flex-1 min-h-0 overflow-y-auto pr-1"
                 >
                   <BattleLogDetail
                     matchId={selectedId}
