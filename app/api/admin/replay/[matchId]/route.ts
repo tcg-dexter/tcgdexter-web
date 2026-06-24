@@ -72,6 +72,10 @@ export interface ReplayPayload {
   matchId: string;
   playerHandle: string | null;
   opponentHandle: string | null;
+  /** Highest-damage attacker on each side across the full game. Used by
+   *  the Replay header to render "{player primary} vs {opponent primary}". */
+  playerPrimaryName: string | null;
+  opponentPrimaryName: string | null;
   frames: ReplayFrame[];
   unmatchedLines: string[];
 }
@@ -209,10 +213,42 @@ export async function GET(
     frames.push(frameFromState(state, idx, action.raw_text, actor));
   });
 
+  // Primary attacker per side = highest-damage Pokémon over the whole
+  // match. Mirrors the existing /battles/[id] header logic but reads from
+  // the in-memory parse rather than the DB, since we already have it
+  // tokenised here.
+  const dmgByActor: Record<"player" | "opponent", Map<string, number>> = {
+    player: new Map(),
+    opponent: new Map(),
+  };
+  for (const action of normalized.actions) {
+    if (action.action_type !== "attack") continue;
+    if (action.actor !== "player" && action.actor !== "opponent") continue;
+    const payload = action.payload as Record<string, unknown>;
+    const attacker = typeof payload.attacker === "string" ? payload.attacker : null;
+    const damage = typeof payload.damage === "number" ? payload.damage : 0;
+    if (!attacker) continue;
+    const bucket = dmgByActor[action.actor];
+    bucket.set(attacker, (bucket.get(attacker) ?? 0) + damage);
+  }
+  function topAttacker(bucket: Map<string, number>): string | null {
+    let topName: string | null = null;
+    let topDmg = 0;
+    bucket.forEach((dmg, name) => {
+      if (dmg > topDmg) {
+        topDmg = dmg;
+        topName = name;
+      }
+    });
+    return topName;
+  }
+
   const payload: ReplayPayload = {
     matchId: match.id,
     playerHandle: normalized.player_handle,
     opponentHandle: normalized.opponent_handle,
+    playerPrimaryName: topAttacker(dmgByActor.player),
+    opponentPrimaryName: topAttacker(dmgByActor.opponent),
     frames,
     unmatchedLines: normalized.unmatched,
   };
