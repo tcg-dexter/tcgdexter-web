@@ -177,6 +177,23 @@ export default function ReplayClient({ options }: ReplayClientProps) {
           </div>
         </header>
 
+        {/* Desktop header (above the thread + board row): match name
+            on the left, wordmark in the center, the four stepper
+            controls on the right. Replaces the lower TurnNavigator on
+            lg+; mobile keeps the navigator below the board. */}
+        <ReplayHeader
+          playerPrimaryName={data?.playerPrimaryName ?? null}
+          opponentPrimaryName={data?.opponentPrimaryName ?? null}
+          canStepBack={canStepBack}
+          canStepForward={canStepForward}
+          canTurnBack={canTurnBack}
+          canTurnForward={canTurnForward}
+          onStepBack={() => canStepBack && setFrameIndex((i) => i - 1)}
+          onStepForward={() => canStepForward && setFrameIndex((i) => i + 1)}
+          onTurnBack={stepTurnBack}
+          onTurnForward={stepTurnForward}
+        />
+
         {/* Row 1: thread (lg only) + board side-by-side. The aside is
             pinned to the board's measured height so its inner scroll
             container has something to clip against — without this the
@@ -212,23 +229,25 @@ export default function ReplayClient({ options }: ReplayClientProps) {
           </div>
         </div>
 
-        {/* Row 2: navigator + selector pinned under the board column on
-            desktop, full-width on mobile. ml-auto keeps them right-
-            aligned at lg so they sit directly under the board. */}
+        {/* Row 2: navigator (mobile only — desktop uses the header above)
+            + match selector pinned under the board column on desktop,
+            full-width on mobile. */}
         <div className="lg:ml-auto lg:w-[720px]">
-          <TurnNavigator
-            frame={frame}
-            frameIndex={frameIndex}
-            frameCount={frameCount}
-            canStepBack={canStepBack}
-            canStepForward={canStepForward}
-            canTurnBack={canTurnBack}
-            canTurnForward={canTurnForward}
-            onStepBack={() => canStepBack && setFrameIndex((i) => i - 1)}
-            onStepForward={() => canStepForward && setFrameIndex((i) => i + 1)}
-            onTurnBack={stepTurnBack}
-            onTurnForward={stepTurnForward}
-          />
+          <div className="lg:hidden">
+            <TurnNavigator
+              frame={frame}
+              frameIndex={frameIndex}
+              frameCount={frameCount}
+              canStepBack={canStepBack}
+              canStepForward={canStepForward}
+              canTurnBack={canTurnBack}
+              canTurnForward={canTurnForward}
+              onStepBack={() => canStepBack && setFrameIndex((i) => i - 1)}
+              onStepForward={() => canStepForward && setFrameIndex((i) => i + 1)}
+              onTurnBack={stepTurnBack}
+              onTurnForward={stepTurnForward}
+            />
+          </div>
 
           <MatchSelector
             options={options}
@@ -238,6 +257,98 @@ export default function ReplayClient({ options }: ReplayClientProps) {
         </div>
       </div>
     </main>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────── */
+/* Desktop header                                                   */
+/* ──────────────────────────────────────────────────────────────── */
+
+function ReplayHeader({
+  playerPrimaryName,
+  opponentPrimaryName,
+  canStepBack,
+  canStepForward,
+  canTurnBack,
+  canTurnForward,
+  onStepBack,
+  onStepForward,
+  onTurnBack,
+  onTurnForward,
+}: {
+  playerPrimaryName: string | null;
+  opponentPrimaryName: string | null;
+  canStepBack: boolean;
+  canStepForward: boolean;
+  canTurnBack: boolean;
+  canTurnForward: boolean;
+  onStepBack: () => void;
+  onStepForward: () => void;
+  onTurnBack: () => void;
+  onTurnForward: () => void;
+}) {
+  const left = playerPrimaryName ?? "?";
+  const right = opponentPrimaryName ?? "?";
+  const buttonClass =
+    "rounded-md border border-black/10 px-2.5 py-1 text-xs font-semibold text-text-secondary hover:bg-surface disabled:opacity-30";
+  return (
+    <div className="mt-4 hidden items-center gap-4 lg:flex">
+      <div className="flex flex-1 min-w-0 items-baseline gap-1.5 text-sm font-semibold text-text-primary">
+        <span className="truncate">{left}</span>
+        <span className="text-xs font-normal text-text-muted">vs</span>
+        <span className="truncate">{right}</span>
+      </div>
+      <div className="flex shrink-0 justify-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logo-wordmark.png"
+          alt="TCG Dexter"
+          className="h-7 w-auto opacity-90"
+        />
+      </div>
+      <div className="flex flex-1 items-center justify-end gap-1">
+        <button
+          type="button"
+          onClick={onTurnBack}
+          disabled={!canTurnBack}
+          aria-label="Previous turn"
+          title="Previous turn"
+          className={buttonClass}
+        >
+          ⟪
+        </button>
+        <button
+          type="button"
+          onClick={onStepBack}
+          disabled={!canStepBack}
+          aria-label="Previous action"
+          title="Previous action"
+          className={buttonClass}
+        >
+          ‹
+        </button>
+        <button
+          type="button"
+          onClick={onStepForward}
+          disabled={!canStepForward}
+          aria-label="Next action"
+          title="Next action"
+          className={buttonClass}
+        >
+          ›
+        </button>
+        <button
+          type="button"
+          onClick={onTurnForward}
+          disabled={!canTurnForward}
+          aria-label="Next turn"
+          title="Next turn"
+          className={buttonClass}
+        >
+          ⟫
+        </button>
+      </div>
+    </div>
   );
 }
 
