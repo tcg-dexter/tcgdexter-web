@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import BattleLogDetail from "@/app/components/BattleLogDetail";
 import type {
@@ -131,6 +131,16 @@ export default function ReplayClient({ options }: ReplayClientProps) {
   const canTurnForward =
     turnStartIndices.some((i) => i > frameIndex);
 
+  // Auto-pin the thread to its newest post as the playhead advances or
+  // rewinds. We scroll on every actionIndex change so the most-recently
+  // revealed row stays visible without the user having to scroll.
+  const threadScrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = threadScrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [frame?.actionIndex, selectedId]);
+
   return (
     <main className="min-h-dvh bg-bg pb-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-6">
@@ -149,53 +159,62 @@ export default function ReplayClient({ options }: ReplayClientProps) {
           </div>
         </header>
 
-        <div className="lg:flex lg:items-start lg:gap-6">
-          {/* Thread — left column on desktop, hidden below lg.
-              maxSequence ties the thread's visibility to the board
-              playhead: frame 0 (initial setup) clips to -1 so no
-              actions show, and each subsequent step reveals one more
-              row. */}
+        {/* Row 1: thread (lg only) + board side-by-side, equal-height.
+            items-stretch on the flex parent stretches the thread aside
+            to whatever height the board takes. The thread's inner body
+            is overflow-y-auto with min-h-0 so it scrolls inside the
+            fixed envelope rather than pushing the layout. */}
+        <div className="lg:flex lg:items-stretch lg:gap-6">
           {selectedId && (
             <aside
               key={selectedId}
-              className="hidden min-w-0 lg:block lg:flex-1"
+              className="hidden min-w-0 lg:flex lg:flex-1 lg:flex-col"
             >
-              <div className="rounded-2xl border border-black/8 bg-white p-4">
+              <div className="mt-4 flex flex-1 min-h-0 flex-col rounded-2xl border border-black/8 bg-white p-4">
                 <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
                   Thread
                 </div>
-                <BattleLogDetail
-                  matchId={selectedId}
-                  apiUrl={`/api/admin/replay/${selectedId}/log`}
-                  maxSequence={frame?.actionIndex ?? -1}
-                />
+                <div
+                  ref={threadScrollRef}
+                  className="mt-2 flex-1 min-h-0 overflow-y-auto pr-1"
+                >
+                  <BattleLogDetail
+                    matchId={selectedId}
+                    apiUrl={`/api/admin/replay/${selectedId}/log`}
+                    maxSequence={frame?.actionIndex ?? -1}
+                  />
+                </div>
               </div>
             </aside>
           )}
-
           <div className="lg:w-[720px] lg:shrink-0">
             <Board frame={frame} loading={loading} error={error} />
-
-            <TurnNavigator
-              frame={frame}
-              frameIndex={frameIndex}
-              frameCount={frameCount}
-              canStepBack={canStepBack}
-              canStepForward={canStepForward}
-              canTurnBack={canTurnBack}
-              canTurnForward={canTurnForward}
-              onStepBack={() => canStepBack && setFrameIndex((i) => i - 1)}
-              onStepForward={() => canStepForward && setFrameIndex((i) => i + 1)}
-              onTurnBack={stepTurnBack}
-              onTurnForward={stepTurnForward}
-            />
-
-            <MatchSelector
-              options={options}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-            />
           </div>
+        </div>
+
+        {/* Row 2: navigator + selector pinned under the board column on
+            desktop, full-width on mobile. ml-auto keeps them right-
+            aligned at lg so they sit directly under the board. */}
+        <div className="lg:ml-auto lg:w-[720px]">
+          <TurnNavigator
+            frame={frame}
+            frameIndex={frameIndex}
+            frameCount={frameCount}
+            canStepBack={canStepBack}
+            canStepForward={canStepForward}
+            canTurnBack={canTurnBack}
+            canTurnForward={canTurnForward}
+            onStepBack={() => canStepBack && setFrameIndex((i) => i - 1)}
+            onStepForward={() => canStepForward && setFrameIndex((i) => i + 1)}
+            onTurnBack={stepTurnBack}
+            onTurnForward={stepTurnForward}
+          />
+
+          <MatchSelector
+            options={options}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+          />
         </div>
       </div>
     </main>
