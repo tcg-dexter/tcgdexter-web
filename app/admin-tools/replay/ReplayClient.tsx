@@ -203,8 +203,8 @@ function Board({
   }
 
   return (
-    <div className="mt-4 rounded-2xl border border-black/8 bg-white p-4 sm:p-6">
-      <div className="grid grid-cols-[64px_1fr_64px] gap-3 sm:grid-cols-[88px_1fr_88px] sm:gap-4">
+    <div className="mt-4 rounded-2xl border border-black/8 bg-white p-4 sm:p-5">
+      <div className="grid grid-cols-[64px_1fr_64px] gap-3 sm:grid-cols-[75px_1fr_75px] sm:gap-[14px]">
         {/* ── Left rail: P1 piles at top, P2 prize pile at bottom ─ */}
         <div className="flex flex-col gap-3">
           <Pile
@@ -345,7 +345,7 @@ function BenchRow({ label, pokemon }: { label: string; pokemon: PokemonFrame[] }
           // Width-matched to the rail piles (P1/P2 Discard, P1/P2 Draw)
           // so benched Pokémon read at the same scale as the side stacks.
           return (
-            <div key={i} className="w-[64px] shrink-0 sm:w-[88px]">
+            <div key={i} className="w-[64px] shrink-0 sm:w-[75px]">
               {mon ? (
                 <PokemonCardImage mon={mon} />
               ) : (
@@ -372,7 +372,7 @@ function PokemonSlot({
   pokemon: PokemonFrame | null;
 }) {
   return (
-    <div className="flex w-[90px] flex-col items-center gap-1 sm:w-[112px]">
+    <div className="flex w-[90px] flex-col items-center gap-1 sm:w-[95px]">
       <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
         {label}
       </div>
@@ -434,7 +434,7 @@ function PokemonCardImage({ mon }: { mon: PokemonFrame }) {
               key={i}
               src={`/types/${t.toLowerCase()}.png`}
               alt={t}
-              className="h-3 w-3 sm:h-3.5 sm:w-3.5"
+              className="h-3 w-3"
             />
           ))}
           {mon.conditions.map((c) => (
@@ -460,7 +460,7 @@ function StadiumSlot({
   stadium: { name: string; imageUrl: string | null } | null;
 }) {
   return (
-    <div className="flex w-[88px] flex-col items-center gap-1 sm:w-[110px]">
+    <div className="flex w-[88px] flex-col items-center gap-1 sm:w-[94px]">
       <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted text-center">
         {label}
       </div>
@@ -505,7 +505,10 @@ function StackedPrizePile({ label, count }: { label: string; count: number }) {
   // layout. Each layer is absolutely positioned; the outermost container
   // reserves enough vertical room for the deepest stack.
   const layers = Math.max(0, Math.min(6, count));
-  const OFFSET_PCT_PER_LAYER = 8; // % of container width
+  // % of container width per stacked card. Kept tight so the rendered
+  // prize pile fits inside its rail column without spilling past the
+  // bottom of the board container.
+  const OFFSET_PCT_PER_LAYER = 4;
   return (
     <div className="flex w-full flex-col items-center gap-1">
       <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted text-center">
