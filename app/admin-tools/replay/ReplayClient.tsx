@@ -473,10 +473,7 @@ function Pile({
 }) {
   if (useCardBack) {
     return (
-      <div className={`flex flex-col items-center gap-1 ${className}`}>
-        <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-muted leading-tight text-center">
-          {label}
-        </div>
+      <div className={`flex flex-col items-center ${className}`} title={label}>
         <div
           className="relative w-full overflow-hidden rounded-lg border border-black/12"
           style={{ aspectRatio: "245 / 342" }}
@@ -500,14 +497,10 @@ function Pile({
   // card is rendered; previous discards stay implicit behind it.
   if (topName) {
     return (
-      <div className={`flex flex-col items-center gap-1 ${className}`}>
-        <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-muted leading-tight text-center">
-          {label}
-        </div>
+      <div className={`flex flex-col items-center ${className}`} title={label}>
         <div
           className="relative w-full overflow-hidden rounded-lg border border-black/12 bg-white"
           style={{ aspectRatio: "245 / 342" }}
-          title={topName}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -534,10 +527,7 @@ function Pile({
   }
 
   return (
-    <div className={`flex flex-col items-center gap-1 ${className}`}>
-      <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-muted leading-tight text-center">
-        {label}
-      </div>
+    <div className={`flex flex-col items-center ${className}`} title={label}>
       <div
         className="flex w-full flex-col items-center justify-center rounded-lg border border-dashed border-black/15 bg-white text-[10px] text-text-muted"
         style={{ aspectRatio: "245 / 342" }}
@@ -549,29 +539,20 @@ function Pile({
 }
 
 function BenchRow({ pokemon }: { label?: string; pokemon: PokemonFrame[] }) {
+  // Render only the Pokémon actually on the bench (no placeholder slots).
+  // The card width matches the rail piles so bench + rails read at the
+  // same scale; the row is centered so a partial bench still feels
+  // grounded under the active stack.
+  if (pokemon.length === 0) {
+    return <div className="min-h-[1px]" aria-hidden />;
+  }
   return (
-    <div>
-      <div className="flex justify-center gap-2">
-        {Array.from({ length: 5 }).map((_, i) => {
-          const mon = pokemon[i];
-          // Width-matched to the rail piles (P1/P2 Discard, P1/P2 Draw)
-          // so benched Pokémon read at the same scale as the side stacks.
-          return (
-            <div key={i} className="w-[64px] shrink-0 sm:w-[75px]">
-              {mon ? (
-                <PokemonCardImage mon={mon} />
-              ) : (
-                <div
-                  className="flex w-full items-center justify-center rounded-lg border border-dashed border-black/15 bg-white text-[10px] text-text-muted"
-                  style={{ aspectRatio: "245 / 342" }}
-                >
-                  empty
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+    <div className="flex justify-center gap-2">
+      {pokemon.map((mon, i) => (
+        <div key={i} className="w-[64px] shrink-0 sm:w-[75px]">
+          <PokemonCardImage mon={mon} />
+        </div>
+      ))}
     </div>
   );
 }
@@ -584,10 +565,10 @@ function PokemonSlot({
   pokemon: PokemonFrame | null;
 }) {
   return (
-    <div className="flex w-[90px] flex-col items-center gap-1 sm:w-[95px]">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
-        {label}
-      </div>
+    <div
+      className="flex w-[81px] flex-col items-center sm:w-[86px]"
+      title={label}
+    >
       {pokemon ? (
         <PokemonCardImage mon={pokemon} />
       ) : (
@@ -599,6 +580,34 @@ function PokemonSlot({
         </div>
       )}
     </div>
+  );
+}
+
+// Special-condition styling. Each pill carries a short label and a
+// color-matched chip so a glance at the corner of the card tells you
+// what's afflicting the Pokémon. Confused uses "¿?" rather than a
+// 3-letter abbreviation (per the game's iconography).
+const CONDITION_PILL: Record<string, { label: string; cls: string }> = {
+  Poisoned: { label: "PSN", cls: "bg-purple-600 text-white" },
+  Burned: { label: "BRN", cls: "bg-orange-500 text-white" },
+  Confused: { label: "¿?", cls: "bg-yellow-400 text-black" },
+  Asleep: { label: "SLP", cls: "bg-sky-500 text-white" },
+  Paralyzed: { label: "PAR", cls: "bg-amber-400 text-black" },
+};
+
+function ConditionPill({ condition }: { condition: string }) {
+  const meta =
+    CONDITION_PILL[condition] ?? {
+      label: condition.slice(0, 3).toUpperCase(),
+      cls: "bg-gray-500 text-white",
+    };
+  return (
+    <span
+      className={`rounded-full px-1 py-[1px] text-[8px] font-bold uppercase leading-none shadow-sm ${meta.cls}`}
+      title={condition}
+    >
+      {meta.label}
+    </span>
   );
 }
 
@@ -635,7 +644,7 @@ function PokemonCardImage({ mon }: { mon: PokemonFrame }) {
           </span>
         </span>
       )}
-      {(mon.energyTypes.length > 0 || mon.conditions.length > 0) && (
+      {mon.energyTypes.length > 0 && (
         // Gradient footer matches the Card Catalog's CardFooterOverlay so
         // the energy icons sit on the same darkened band shape across the
         // app. Energies render left-to-right in attach order.
@@ -649,14 +658,17 @@ function PokemonCardImage({ mon }: { mon: PokemonFrame }) {
               className="h-3 w-3"
             />
           ))}
+        </div>
+      )}
+      {mon.conditions.length > 0 && (
+        // Conditions render as color-matched pills anchored to the
+        // bottom-right corner of the card. flex-col-reverse means the
+        // first condition sits at the bottom and each additional pill
+        // stacks upward, mirroring how PTCG-Live's stacked status icons
+        // read.
+        <div className="pointer-events-none absolute bottom-1 right-1 z-10 flex flex-col-reverse items-end gap-0.5">
           {mon.conditions.map((c) => (
-            <span
-              key={c}
-              className="ml-0.5 rounded bg-violet-500/90 px-1 py-[1px] text-[9px] font-semibold uppercase text-white"
-              title={c}
-            >
-              {c[0]}
-            </span>
+            <ConditionPill key={c} condition={c} />
           ))}
         </div>
       )}
@@ -672,10 +684,10 @@ function StadiumSlot({
   stadium: { name: string; imageUrl: string | null } | null;
 }) {
   return (
-    <div className="flex w-[88px] flex-col items-center gap-1 sm:w-[94px]">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted text-center">
-        {label}
-      </div>
+    <div
+      className="flex w-[88px] flex-col items-center sm:w-[94px]"
+      title={label}
+    >
       {stadium ? (
         <div
           className="relative w-full overflow-hidden rounded-lg border border-amber-300/70 bg-white"
@@ -722,10 +734,7 @@ function StackedPrizePile({ label, count }: { label: string; count: number }) {
   // bottom of the board container.
   const OFFSET_PCT_PER_LAYER = 4;
   return (
-    <div className="flex w-full flex-col items-center gap-1">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted text-center">
-        {label}
-      </div>
+    <div className="flex w-full flex-col items-center" title={label}>
       {layers === 0 ? (
         <div
           className="flex w-full items-center justify-center rounded-lg border border-dashed border-black/15 text-[10px] text-text-muted"
