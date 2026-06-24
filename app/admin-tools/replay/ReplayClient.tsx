@@ -1,12 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import BattleLogDetail from "@/app/components/BattleLogDetail";
 import type {
   ReplayFrame,
   ReplayPayload,
 } from "@/app/api/admin/replay/[matchId]/route";
+
+// Fires synchronously before first paint on the client (prevents card-width
+// overflow flash) and falls back to useEffect during SSR to avoid the
+// "useLayoutEffect does nothing on the server" hydration warning.
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 export interface ReplayMatchOption {
   id: string;
@@ -380,9 +386,10 @@ function Board({
   error: string | null;
 }) {
   const gridRef = useRef<HTMLDivElement>(null);
-  const [cardWidth, setCardWidth] = useState(64);
+  // 28 is safe for the smallest common viewport (320px) without JS measurement.
+  const [cardWidth, setCardWidth] = useState(28);
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const el = gridRef.current;
     if (!el) return;
     const measure = () => {
@@ -411,7 +418,7 @@ function Board({
   }
 
   return (
-    <div className="mt-4 rounded-2xl border border-black/8 bg-white p-4 sm:p-5">
+    <div className="mt-4 rounded-2xl border border-black/8 bg-white p-4 sm:p-5 overflow-x-hidden">
       <div
         ref={gridRef}
         className="grid gap-3"
