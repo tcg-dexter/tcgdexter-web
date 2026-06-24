@@ -522,18 +522,18 @@ function PlayerMat({
     ? MAT_PADDING + innerH - cardH   // P1: active pinned to bottom
     : MAT_PADDING;                   // P2: active pinned to top
 
-  // Stadium floats at same height as the active; anchored left (P1) or right (P2).
+  // Stadium floats at same height as the active; anchored right (P1) or left (P2)
+  // — opposite side from the active Pokémon's center.
   const stadiumLeft = isPlayer
-    ? MAT_PADDING + innerW / 2 - cardWidth / 2 - FLOAT_GAP - cardWidth
-    : MAT_PADDING + innerW / 2 + cardWidth / 2 + FLOAT_GAP;
+    ? MAT_PADDING + innerW / 2 + cardWidth / 2 + FLOAT_GAP  // P1: right of active
+    : MAT_PADDING + innerW / 2 - cardWidth / 2 - FLOAT_GAP - cardWidth; // P2: left of active
 
-  // Played trainer floats vertically centered between the two rail piles.
-  // Rail pile gap matches gap-1.5 (6px); piles stack draw then discard from top.
-  const RAIL_GAP = 6;
-  const playedTrainerTop = MAT_PADDING + cardH / 2 + RAIL_GAP / 2;
+  // Played trainer floats where the stadium used to be: left of active (P1),
+  // right of active (P2), vertically centered on the active row.
+  const playedTrainerTop = activeMatTop;
   const playedTrainerLeft = isPlayer
-    ? MAT_PADDING + cardWidth + FLOAT_GAP              // P1: right of left-rail
-    : MAT_PADDING + innerW - 2 * cardWidth - FLOAT_GAP; // P2: left of right-rail
+    ? MAT_PADDING + innerW / 2 - cardWidth / 2 - FLOAT_GAP - cardWidth // P1: left of active
+    : MAT_PADDING + innerW / 2 + cardWidth / 2 + FLOAT_GAP;            // P2: right of active
 
   const benchRow = <BenchRow pokemon={bench} cardWidth={cardWidth} />;
 
