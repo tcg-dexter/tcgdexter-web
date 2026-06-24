@@ -51,6 +51,13 @@ interface StadiumFrame {
   imageUrl: string | null;
 }
 
+interface LastPlayedTrainerFrame {
+  name: string;
+  imageUrl: string | null;
+  /** Which side played the card — used by the UI to place it on the correct mat. */
+  actor: "player" | "opponent";
+}
+
 export interface ReplayFrame {
   /** Index into the original parsed action stream. */
   actionIndex: number;
@@ -66,6 +73,11 @@ export interface ReplayFrame {
   stadium: StadiumFrame | null;
   prizesTaken: { player: number; opponent: number };
   winner: "player" | "opponent" | null;
+  /** Item or Supporter card played in the action that produced this frame.
+   *  Null for all other action types. The UI shows it next to the player's
+   *  draw/discard piles and clears it on the next frame (it's already in
+   *  the discard by the time the frame is snapshotted). */
+  lastPlayedTrainer: LastPlayedTrainerFrame | null;
 }
 
 export interface ReplayPayload {
@@ -146,7 +158,13 @@ function mapSide(side: GameState["sides"]["player"]): SideFrame {
   };
 }
 
-function frameFromState(state: GameState, actionIndex: number, summary: string, actor: "player" | "opponent" | "system"): ReplayFrame {
+function frameFromState(
+  state: GameState,
+  actionIndex: number,
+  summary: string,
+  actor: "player" | "opponent" | "system",
+  lastPlayedTrainer: LastPlayedTrainerFrame | null = null,
+): ReplayFrame {
   return {
     actionIndex,
     turn: state.turn.number,
@@ -160,13 +178,12 @@ function frameFromState(state: GameState, actionIndex: number, summary: string, 
       ? {
           name: state.stadium.card.name,
           owner: state.stadium.owner,
-          // Stadiums are Trainer cards, so the Pokémon-only resolver
-          // returns null. Use the supertype-agnostic lookup.
           imageUrl: cardImageUrlForAnyName(state.stadium.card.name),
         }
       : null,
     prizesTaken: state.prizesTaken,
     winner: state.winner,
+    lastPlayedTrainer,
   };
 }
 
@@ -212,11 +229,25 @@ export async function GET(
 
   // Frame 0 = initial state, before any action. Then one frame per action.
   const frames: ReplayFrame[] = [];
-  frames.push(frameFromState(result.initialState, -1, "Setup", "system"));
+  frames.push(frameFromState(result.initialState, -1, "Setup", "system", null));
   result.states.forEach((state, idx) => {
     const action = normalized.actions[idx];
     const actor = (action.actor ?? "system") as "player" | "opponent" | "system";
-    frames.push(frameFromState(state, idx, action.raw_text, actor));
+
+    let lastPlayedTrainer: LastPlayedTrainerFrame | null = null;
+    if (
+      (action.action_type === "play_item" || action.action_type === "play_supporter") &&
+      (actor === "player" || actor === "opponent") &&
+      typeof action.payload.card === "string"
+    ) {
+      lastPlayedTrainer = {
+        name: action.payload.card,
+        imageUrl: cardImageUrlForAnyName(action.payload.card),
+        actor,
+      };
+    }
+
+    frames.push(frameFromState(state, idx, action.raw_text, actor, lastPlayedTrainer));
   });
 
   // Primary attacker per side = highest-damage Pokémon over the whole

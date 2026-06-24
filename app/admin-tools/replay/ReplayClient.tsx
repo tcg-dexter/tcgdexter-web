@@ -372,17 +372,18 @@ function ReplayHeader({
 /* Board                                                            */
 /* ──────────────────────────────────────────────────────────────── */
 
-// Each mat has bench + active = 2 card rows. Constrain card width so both
-// rows fit inside the mat both horizontally (center column ≥ 5-bench spread)
-// and vertically (2 rows + gap ≤ mat inner height).
+// Each mat has bench + active = 2 card rows. 4 fixed-width columns flank the
+// center (left-rail, played-card, center, right-rail — or mirrored for P2),
+// so 3 fixed card columns + 3 sm+ column gaps constrain the center width.
+// Height constraint: 2 card rows + gap must fit inside the mat.
 function computeReplayCardWidth(matWidth: number): number {
   const innerW = matWidth - 2 * MAT_PADDING;
   const innerH = matWidth * MAT_ASPECT - 2 * MAT_PADDING;
   const ROW_GAP = 6;
   const maxCardH = (innerH - ROW_GAP) / 2;
   const maxWidthFromH = maxCardH * (245 / 342);
-  // Use sm+ gap constants (larger) so smaller mobile gaps give extra margin.
-  const maxWidthFromW = (innerW - 2 * 12 - 5 * 8) / 7;
+  // 3 fixed cols + center 1fr → 3 outer gaps. 5 bench × conservative gaps.
+  const maxWidthFromW = (innerW - 3 * 12 - 5 * 8) / 8;
   return Math.max(20, Math.floor(Math.min(maxWidthFromH, maxWidthFromW)));
 }
 
@@ -436,6 +437,11 @@ function Board({
             handCount={frame.player.handCount}
             prizesRemaining={frame.player.prizesRemaining}
             stadium={frame.stadium?.owner === "player" ? frame.stadium : null}
+            lastPlayedTrainer={
+              frame.lastPlayedTrainer?.actor === "player"
+                ? frame.lastPlayedTrainer
+                : null
+            }
             cardWidth={cardWidth}
             matWidth={matWidth}
           />
@@ -450,6 +456,11 @@ function Board({
             handCount={frame.opponent.handCount}
             prizesRemaining={frame.opponent.prizesRemaining}
             stadium={frame.stadium?.owner === "opponent" ? frame.stadium : null}
+            lastPlayedTrainer={
+              frame.lastPlayedTrainer?.actor === "opponent"
+                ? frame.lastPlayedTrainer
+                : null
+            }
             cardWidth={cardWidth}
             matWidth={matWidth}
           />
@@ -460,8 +471,16 @@ function Board({
 }
 
 // P1 mat: bench at top, active at bottom — actives face each other across the
-// gap between the two mats, matching the orientation of the old combined view.
-// P2 mat: active at top, bench at bottom.
+// gap between the two mats. P2 mat: active at top, bench at bottom.
+//
+// 4-column grid per mat:
+//   P1: [discard+draw] [played-card] [center] [prize]
+//   P2: [prize] [center] [played-card] [draw+discard]
+//
+// The played-card column is always reserved; it shows the last played
+// item/supporter and is empty otherwise (no layout shift between frames).
+// The active row uses a 3-sub-column sub-grid so the active card stays
+// horizontally centered, with the stadium anchored to one side.
 function PlayerMat({
   side,
   bench,
@@ -473,6 +492,7 @@ function PlayerMat({
   handCount,
   prizesRemaining,
   stadium,
+  lastPlayedTrainer,
   cardWidth,
   matWidth,
 }: {
@@ -486,6 +506,7 @@ function PlayerMat({
   handCount: number;
   prizesRemaining: number;
   stadium: { name: string; imageUrl: string | null } | null;
+  lastPlayedTrainer: { name: string; imageUrl: string | null } | null;
   cardWidth: number;
   matWidth: number;
 }) {
@@ -495,14 +516,64 @@ function PlayerMat({
 
   const benchRow = <BenchRow pokemon={bench} cardWidth={cardWidth} />;
 
+  // Active card is always centered. Stadium is anchored left (P1) or right (P2)
+  // via a 3-sub-column sub-grid: [left-slot | flex-center active | right-slot].
   const activeRow = (
-    <div className="flex items-center justify-center gap-1.5 sm:gap-3">
-      <PokemonSlot label={`${label} Active`} pokemon={active} cardWidth={cardWidth} />
-      {stadium && (
-        <StadiumSlot label={`${label} Stadium`} stadium={stadium} cardWidth={cardWidth} />
+    <div
+      className="grid items-center gap-1.5 sm:gap-3"
+      style={{ gridTemplateColumns: `${cardWidth}px 1fr ${cardWidth}px` }}
+    >
+      <div className="flex justify-center">
+        {isPlayer && stadium ? (
+          <StadiumSlot label="Stadium" stadium={stadium} cardWidth={cardWidth} />
+        ) : null}
+      </div>
+      <div className="flex justify-center">
+        <PokemonSlot label={`${label} Active`} pokemon={active} cardWidth={cardWidth} />
+      </div>
+      <div className="flex justify-center">
+        {!isPlayer && stadium ? (
+          <StadiumSlot label="Stadium" stadium={stadium} cardWidth={cardWidth} />
+        ) : null}
+      </div>
+    </div>
+  );
+
+  // Played-card column: vertically centered so it sits at the midpoint between
+  // the draw and discard piles in the adjacent rail column.
+  const playedCardCol = (
+    <div className="flex h-full flex-col items-center justify-center">
+      {lastPlayedTrainer && (
+        <div
+          className="relative w-full overflow-hidden rounded border border-amber-400/80 bg-white"
+          style={{ width: cardWidth, aspectRatio: "245 / 342" }}
+          title={lastPlayedTrainer.name}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lastPlayedTrainer.imageUrl ?? CARD_BACK_URL}
+            alt={lastPlayedTrainer.name}
+            className="h-full w-full object-cover"
+            onError={(e) => {
+              if (e.currentTarget.src !== CARD_BACK_URL)
+                e.currentTarget.src = CARD_BACK_URL;
+            }}
+          />
+          {!lastPlayedTrainer.imageUrl && (
+            <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
+              {lastPlayedTrainer.name}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
+
+  // P1: discard+draw | played-card | center | prize
+  // P2: prize | center | played-card | draw+discard
+  const gridCols = isPlayer
+    ? `${cardWidth}px ${cardWidth}px 1fr ${cardWidth}px`
+    : `${cardWidth}px 1fr ${cardWidth}px ${cardWidth}px`;
 
   return (
     <div
@@ -517,12 +588,12 @@ function PlayerMat({
     >
       <div
         className="grid h-full gap-1.5 sm:gap-3"
-        style={{ gridTemplateColumns: `${cardWidth}px 1fr ${cardWidth}px` }}
+        style={{ gridTemplateColumns: gridCols }}
       >
-        {/* Left rail */}
-        <div className="flex flex-col gap-1.5 sm:gap-3">
-          {isPlayer ? (
-            <>
+        {isPlayer ? (
+          <>
+            {/* P1 Col 1: discard + draw */}
+            <div className="flex flex-col gap-1.5 sm:gap-3">
               <Pile
                 label="P1 Discard"
                 count={discardCount}
@@ -535,33 +606,34 @@ function PlayerMat({
                 hint={`${handCount} in hand`}
                 useCardBack
               />
-            </>
-          ) : (
-            <StackedPrizePile label="Prize Pile" count={prizesRemaining} />
-          )}
-        </div>
-
-        {/* Center: bench + active pinned to opposite ends via justify-between */}
-        <div className="flex h-full flex-col justify-between">
-          {isPlayer ? (
-            <>
+            </div>
+            {/* P1 Col 2: played card (right of draw/discard, vertically centered) */}
+            {playedCardCol}
+            {/* P1 Col 3: center — bench top, active bottom */}
+            <div className="flex h-full flex-col justify-between">
               {benchRow}
               {activeRow}
-            </>
-          ) : (
-            <>
+            </div>
+            {/* P1 Col 4: prize pile */}
+            <div className="flex flex-col">
+              <StackedPrizePile label="Prize Pile" count={prizesRemaining} />
+            </div>
+          </>
+        ) : (
+          <>
+            {/* P2 Col 1: prize pile */}
+            <div className="flex flex-col">
+              <StackedPrizePile label="Prize Pile" count={prizesRemaining} />
+            </div>
+            {/* P2 Col 2: center — active top, bench bottom */}
+            <div className="flex h-full flex-col justify-between">
               {activeRow}
               {benchRow}
-            </>
-          )}
-        </div>
-
-        {/* Right rail */}
-        <div className="flex flex-col gap-1.5 sm:gap-3">
-          {isPlayer ? (
-            <StackedPrizePile label="Prize Pile" count={prizesRemaining} />
-          ) : (
-            <>
+            </div>
+            {/* P2 Col 3: played card (left of draw/discard, vertically centered) */}
+            {playedCardCol}
+            {/* P2 Col 4: draw + discard */}
+            <div className="flex flex-col gap-1.5 sm:gap-3">
               <Pile
                 label="P2 Draw"
                 count={deckCount}
@@ -574,9 +646,9 @@ function PlayerMat({
                 topName={discardTop}
                 topImageUrl={discardTopImageUrl}
               />
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
