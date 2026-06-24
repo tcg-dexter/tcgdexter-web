@@ -202,6 +202,7 @@ export default function ReplayClient({ options }: ReplayClientProps) {
                   apiUrl={`/api/admin/replay/${selectedId}/log`}
                   maxSequence={frame?.actionIndex ?? -1}
                   hideScoreCards
+                  compactAvatars
                 />
               </div>
             </aside>
