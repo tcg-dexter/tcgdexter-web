@@ -373,25 +373,18 @@ function ReplayHeader({
 /* Board                                                            */
 /* ──────────────────────────────────────────────────────────────── */
 
-// Each mat has bench + active = 2 card rows. Stadium and played-trainer cards
-// are absolutely positioned overlays and don't participate in the grid, so
-// only the 2 outer fixed-width rail columns constrain the center.
-//
-// maxBench drives both the width and the denominators: for each extra bench
-// slot above 5 (Area Zero Underpaths raises the cap to 8), the formula
-// shrinks all cards uniformly so the bench always fits the center column.
-// The center column also widens as the rail columns shrink with it, so an
-// 8-card bench occupies more horizontal space than a 5-card bench — the
-// "wider container" effect the user expects.
-function computeReplayCardWidth(matWidth: number, maxBench: number = 5): number {
+// Rail columns (draw/discard/prizes) and active card are sized for a standard
+// 5-card bench. The bench itself is an absolutely positioned overlay and never
+// competes with the grid layout, so only those 5 card-widths + 2 grid gaps
+// constrain the formula.
+function computeReplayCardWidth(matWidth: number): number {
   const innerW = matWidth - 2 * MAT_PADDING;
   const innerH = matWidth * MAT_ASPECT - 2 * MAT_PADDING;
   const ROW_GAP = 6;
   const maxCardH = (innerH - ROW_GAP) / 2;
   const maxWidthFromH = maxCardH * (245 / 342);
-  // 2 rail cols + maxBench bench cols; maxBench gaps (conservative) within bench.
-  const n = Math.max(5, maxBench);
-  const maxWidthFromW = (innerW - 2 * 12 - n * 8) / (n + 2);
+  // 2 rail cols + 5 bench cols; 5 conservative bench gaps.
+  const maxWidthFromW = (innerW - 2 * 12 - 5 * 8) / 7;
   return Math.max(20, Math.floor(Math.min(maxWidthFromH, maxWidthFromW)));
 }
 
@@ -420,10 +413,7 @@ function Board({
     return () => ro.disconnect();
   }, []);
 
-  const maxBench = frame
-    ? Math.max(5, frame.player.bench.length, frame.opponent.bench.length)
-    : 5;
-  const cardWidth = computeReplayCardWidth(matWidth, maxBench);
+  const cardWidth = computeReplayCardWidth(matWidth);
 
   return (
     <div ref={matContainerRef} className="mt-4">
@@ -547,32 +537,18 @@ function PlayerMat({
     ? MAT_PADDING + innerW / 2 - cardWidth / 2 - FLOAT_GAP - cardWidth // P1: left of active
     : MAT_PADDING + innerW / 2 + cardWidth / 2 + FLOAT_GAP;            // P2: right of active
 
-  // Bench row: cards reposition with layout animation; layoutId enables the
-  // magic-move to active without needing AnimatePresence (the layoutId system
-  // tracks the card's last DOM position even after unmount, so the active slot
-  // can animate in from wherever the bench card was). AnimatePresence is
-  // deliberately omitted — it would leave exiting cards as position:absolute
-  // inside a non-positioned container, escaping the bench bounds.
-  const benchRow = (
-    <motion.div
-      layout
-      className="relative flex justify-center gap-2 overflow-hidden"
-      transition={{ duration: 0.3, ease: "easeInOut" }}
-    >
-      {bench.map((mon) => (
-        <motion.div
-          key={mon.name}
-          layoutId={`${side}-${mon.name}`}
-          layout
-          className="shrink-0"
-          style={{ width: cardWidth }}
-          transition={{ duration: 0.3, ease: "easeInOut" }}
-        >
-          <PokemonCardImage mon={mon} />
-        </motion.div>
-      ))}
-    </motion.div>
-  );
+  // Bench sizing: cards fill the full inner mat width divided by bench count.
+  // Height-constrained to the same row height as the active card. Since the
+  // bench is an absolute overlay, it never competes with the grid layout.
+  const n = bench.length || 1;
+  const benchCardWidth = Math.max(20, Math.floor(Math.min(
+    cardH * (245 / 342),                    // height: same row height as active
+    (innerW - Math.max(0, n - 1) * 8) / n, // width: fill innerW for n cards
+  )));
+  const benchCardH = benchCardWidth * (342 / 245);
+  const benchTop = isPlayer
+    ? MAT_PADDING                        // P1: bench at top of mat interior
+    : MAT_PADDING + innerH - benchCardH; // P2: bench at bottom of mat interior
 
   // Active slot: single card, clean fade+layout transition. The layoutId
   // receives the card from the bench when a Pokémon is promoted.
@@ -624,9 +600,9 @@ function PlayerMat({
               <StackedPrizePile label="Prize Pile" count={prizesRemaining} />
             )}
           </div>
-          {/* Center: bench + active pinned to opposite ends */}
-          <div className="flex h-full flex-col justify-between">
-            {isPlayer ? <>{benchRow}{activeRow}</> : <>{activeRow}{benchRow}</>}
+          {/* Center: active card only — bench is an absolute overlay */}
+          <div className={`flex h-full flex-col ${isPlayer ? "justify-end" : "justify-start"}`}>
+            {activeRow}
           </div>
           {/* Right rail */}
           <div className="flex flex-col gap-1.5 sm:gap-3">
@@ -640,6 +616,29 @@ function PlayerMat({
             )}
           </div>
         </div>
+
+        {/* ── Bench overlay (z-0, behind stadium/trainer, full mat width) ── */}
+        {bench.length > 0 && (
+          <motion.div
+            layout
+            className="absolute z-0 flex justify-center gap-2 overflow-hidden"
+            style={{ top: benchTop, left: MAT_PADDING, width: innerW }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+          >
+            {bench.map((mon) => (
+              <motion.div
+                key={mon.name}
+                layoutId={`${side}-${mon.name}`}
+                layout
+                className="shrink-0"
+                style={{ width: benchCardWidth }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+              >
+                <PokemonCardImage mon={mon} />
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
 
         {/* ── Floating overlays (z-10, don't affect grid flow) ── */}
         <AnimatePresence>
