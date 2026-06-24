@@ -522,7 +522,7 @@ function Pile({
     return (
       <div className={`flex flex-col items-center ${className}`} title={label}>
         <div
-          className="relative w-full overflow-hidden rounded-lg border border-black/12"
+          className="relative w-full overflow-hidden rounded border border-black/12"
           style={{ aspectRatio: "245 / 342" }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -546,7 +546,7 @@ function Pile({
     return (
       <div className={`flex flex-col items-center ${className}`} title={label}>
         <div
-          className="relative w-full overflow-hidden rounded-lg border border-black/12 bg-white"
+          className="relative w-full overflow-hidden rounded border border-black/12 bg-white"
           style={{ aspectRatio: "245 / 342" }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -576,7 +576,7 @@ function Pile({
   return (
     <div className={`flex flex-col items-center ${className}`} title={label}>
       <div
-        className="flex w-full flex-col items-center justify-center rounded-lg border border-dashed border-black/15 bg-white text-[10px] text-text-muted"
+        className="flex w-full flex-col items-center justify-center rounded border border-dashed border-black/15 bg-white text-[10px] text-text-muted"
         style={{ aspectRatio: "245 / 342" }}
       >
         {hint ?? "empty"}
@@ -623,7 +623,7 @@ function PokemonSlot({
         <PokemonCardImage mon={pokemon} />
       ) : (
         <div
-          className="flex w-full items-center justify-center rounded-lg border border-dashed border-black/15 bg-white text-[11px] text-text-muted"
+          className="flex w-full items-center justify-center rounded border border-dashed border-black/15 bg-white text-[11px] text-text-muted"
           style={{ aspectRatio: "245 / 342" }}
         >
           empty
@@ -666,7 +666,7 @@ function PokemonCardImage({ mon }: { mon: PokemonFrame }) {
   const hadFallback = !mon.imageUrl;
   return (
     <div
-      className="relative w-full overflow-hidden rounded-lg border border-black/10 bg-white"
+      className="relative w-full overflow-hidden rounded border border-black/10 bg-white"
       style={{ aspectRatio: "245 / 342" }}
       title={mon.name}
     >
@@ -743,7 +743,7 @@ function StadiumSlot({
     >
       {stadium ? (
         <div
-          className="relative w-full overflow-hidden rounded-lg border border-amber-300/70 bg-white"
+          className="relative w-full overflow-hidden rounded border border-amber-300/70 bg-white"
           style={{ aspectRatio: "245 / 342" }}
           title={stadium.name}
         >
@@ -766,7 +766,7 @@ function StadiumSlot({
         </div>
       ) : (
         <div
-          className="flex w-full items-center justify-center rounded-lg border border-dashed border-black/15 bg-white text-[10px] text-text-muted text-center px-1"
+          className="flex w-full items-center justify-center rounded border border-dashed border-black/15 bg-white text-[10px] text-text-muted text-center px-1"
           style={{ aspectRatio: "245 / 342" }}
         >
           no stadium
@@ -790,7 +790,7 @@ function StackedPrizePile({ label, count }: { label: string; count: number }) {
     <div className="flex w-full flex-col items-center" title={label}>
       {layers === 0 ? (
         <div
-          className="flex w-full items-center justify-center rounded-lg border border-dashed border-black/15 text-[10px] text-text-muted"
+          className="flex w-full items-center justify-center rounded border border-dashed border-black/15 text-[10px] text-text-muted"
           style={{ aspectRatio: "245 / 342" }}
         >
           empty
@@ -808,7 +808,7 @@ function StackedPrizePile({ label, count }: { label: string; count: number }) {
             return (
               <div
                 key={i}
-                className="absolute left-0 right-0 overflow-hidden rounded-md border border-black/15 bg-white shadow-sm"
+                className="absolute left-0 right-0 overflow-hidden rounded-sm border border-black/15 bg-white shadow-sm"
                 style={{
                   top: `${i * OFFSET_PCT_PER_LAYER}%`,
                   paddingBottom: `${(342 / 245) * 100}%`,
