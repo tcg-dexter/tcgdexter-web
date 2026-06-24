@@ -735,43 +735,35 @@ function StadiumSlot({
   stadium: { name: string; imageUrl: string | null } | null;
   cardWidth: number;
 }) {
+  if (!stadium) return null;
   return (
     <div
       className="flex flex-col items-center"
       style={{ width: cardWidth }}
       title={label}
     >
-      {stadium ? (
-        <div
-          className="relative w-full overflow-hidden rounded border border-amber-300/70 bg-white"
-          style={{ aspectRatio: "245 / 342" }}
-          title={stadium.name}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={stadium.imageUrl ?? CARD_BACK_URL}
-            alt={stadium.name}
-            className="h-full w-full object-cover"
-            onError={(e) => {
-              if (e.currentTarget.src !== CARD_BACK_URL) {
-                e.currentTarget.src = CARD_BACK_URL;
-              }
-            }}
-          />
-          {!stadium.imageUrl && (
-            <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
-              {stadium.name}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div
-          className="flex w-full items-center justify-center rounded border border-dashed border-black/15 bg-white text-[10px] text-text-muted text-center px-1"
-          style={{ aspectRatio: "245 / 342" }}
-        >
-          no stadium
-        </div>
-      )}
+      <div
+        className="relative w-full overflow-hidden rounded border border-amber-300/70 bg-white"
+        style={{ aspectRatio: "245 / 342" }}
+        title={stadium.name}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={stadium.imageUrl ?? CARD_BACK_URL}
+          alt={stadium.name}
+          className="h-full w-full object-cover"
+          onError={(e) => {
+            if (e.currentTarget.src !== CARD_BACK_URL) {
+              e.currentTarget.src = CARD_BACK_URL;
+            }
+          }}
+        />
+        {!stadium.imageUrl && (
+          <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
+            {stadium.name}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
