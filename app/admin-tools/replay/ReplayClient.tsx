@@ -201,6 +201,7 @@ export default function ReplayClient({ options }: ReplayClientProps) {
                   matchId={selectedId}
                   apiUrl={`/api/admin/replay/${selectedId}/log`}
                   maxSequence={frame?.actionIndex ?? -1}
+                  hideScoreCards
                 />
               </div>
             </aside>

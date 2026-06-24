@@ -472,9 +472,13 @@ interface Props {
    *  Lets a caller (e.g. the Replay tool) reveal/hide the thread in lockstep
    *  with an external playhead. Null/undefined renders the full log. */
   maxSequence?: number | null;
+  /** When true, the inline ScoreCards (initial board snapshot + each
+   *  prize-taking moment) are omitted. Used by the Replay tool where the
+   *  live board view already represents that state. */
+  hideScoreCards?: boolean;
 }
 
-export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, opponentColor, maxSequence }: Props) {
+export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, opponentColor, maxSequence, hideScoreCards }: Props) {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -811,19 +815,21 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
               isLast={i === filteredPregamePosts.length - 1}
             />
           ))}
-          <ScoreCard
-            key="initial-score"
-            playerPrizes={0}
-            opponentPrizes={0}
-            playerName={playerHandle}
-            opponentName={opponentHandle}
-            playerColor={resolvedPlayerColor}
-            opponentColor={resolvedOpponentColor}
-            playerActiveName={initialSnap.player}
-            opponentActiveName={initialSnap.opponent}
-            playerBench={initialSnap.playerBench}
-            opponentBench={initialSnap.opponentBench}
-          />
+          {!hideScoreCards && (
+            <ScoreCard
+              key="initial-score"
+              playerPrizes={0}
+              opponentPrizes={0}
+              playerName={playerHandle}
+              opponentName={opponentHandle}
+              playerColor={resolvedPlayerColor}
+              opponentColor={resolvedOpponentColor}
+              playerActiveName={initialSnap.player}
+              opponentActiveName={initialSnap.opponent}
+              playerBench={initialSnap.playerBench}
+              opponentBench={initialSnap.opponentBench}
+            />
+          )}
         </>
       )}
       {gamePosts.length > 0 && <SectionDivider label="Start" />}
@@ -837,7 +843,7 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
             isLast={hasPrizes || i === gamePosts.length - 1}
           />,
         ];
-        if (hasPrizes) {
+        if (hasPrizes && !hideScoreCards) {
           const cum = prizeCumulative[i];
           const snap = snapshotsAtEnd[i];
           items.push(
