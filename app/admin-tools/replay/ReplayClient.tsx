@@ -356,6 +356,20 @@ function ReplayHeader({
 /* Board                                                            */
 /* ──────────────────────────────────────────────────────────────── */
 
+// Compute card width so every card slot is the same proportional size and the
+// full board fits within `innerW` (the grid's own measured pixel width).
+//
+// The tightest row is the bench (up to 5 cards + 4 × 8px gaps) which sits inside
+// the center column. Center = innerW − 2×cardW − 2×GAP, so:
+//   5×cardW + 4×8 ≤ innerW − 2×cardW − 2×GAP
+//   7×cardW ≤ innerW − 2×GAP − 4×8
+function computeCardWidth(innerW: number): number {
+  const GAP = 12;       // gap-3 between outer grid columns
+  const BENCH_GAP = 8;  // gap-2 between bench cards
+  const MAX_BENCH = 5;
+  return Math.max(30, Math.floor((innerW - 2 * GAP - MAX_BENCH * BENCH_GAP) / (MAX_BENCH + 2)));
+}
+
 function Board({
   frame,
   loading,
@@ -365,6 +379,22 @@ function Board({
   loading: boolean;
   error: string | null;
 }) {
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [cardWidth, setCardWidth] = useState(64);
+
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const measure = () => {
+      const w = el.getBoundingClientRect().width;
+      if (w > 0) setCardWidth(computeCardWidth(w));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   if (error) {
     return (
       <div className="mt-4 rounded-2xl border border-accent/40 bg-white p-6 text-sm text-accent">
@@ -382,7 +412,11 @@ function Board({
 
   return (
     <div className="mt-4 rounded-2xl border border-black/8 bg-white p-4 sm:p-5">
-      <div className="grid grid-cols-[64px_1fr_64px] gap-3 sm:grid-cols-[75px_1fr_75px] sm:gap-[14px]">
+      <div
+        ref={gridRef}
+        className="grid gap-3"
+        style={{ gridTemplateColumns: `${cardWidth}px 1fr ${cardWidth}px` }}
+      >
         {/* ── Left rail: P1 piles at top, P2 prize pile at bottom ─ */}
         <div className="flex flex-col gap-3">
           <Pile
@@ -409,24 +443,28 @@ function Board({
           <BenchRow
             label={`P1 Bench${frame.player.handle ? ` · ${frame.player.handle}` : ""}`}
             pokemon={frame.player.bench}
+            cardWidth={cardWidth}
           />
           <div className="flex items-center justify-center gap-3">
             <StadiumSlot
               label="P1 Stadium"
               stadium={frame.stadium?.owner === "player" ? frame.stadium : null}
+              cardWidth={cardWidth}
             />
             <div className="flex flex-col items-center gap-2">
-              <PokemonSlot label="P1 Active" pokemon={frame.player.active} />
-              <PokemonSlot label="P2 Active" pokemon={frame.opponent.active} />
+              <PokemonSlot label="P1 Active" pokemon={frame.player.active} cardWidth={cardWidth} />
+              <PokemonSlot label="P2 Active" pokemon={frame.opponent.active} cardWidth={cardWidth} />
             </div>
             <StadiumSlot
               label="P2 Stadium"
               stadium={frame.stadium?.owner === "opponent" ? frame.stadium : null}
+              cardWidth={cardWidth}
             />
           </div>
           <BenchRow
             label={`P2 Bench${frame.opponent.handle ? ` · ${frame.opponent.handle}` : ""}`}
             pokemon={frame.opponent.bench}
+            cardWidth={cardWidth}
           />
         </div>
 
@@ -538,30 +576,18 @@ function Pile({
   );
 }
 
-function BenchRow({ pokemon }: { label?: string; pokemon: PokemonFrame[] }) {
-  // Render only the Pokémon actually on the bench (no placeholder slots).
-  // The card width matches the rail piles so bench + rails read at the
-  // same scale; the row is centered so a partial bench still feels
-  // grounded under the active stack.
-  // Empty-bench placeholder: reserve the exact height of a single bench
-  // card so the row above/below the active stack doesn't collapse when no
-  // Pokémon are on the bench. Keeps the overall mat layout vertically
-  // consistent across replay frames.
+function BenchRow({ pokemon, cardWidth }: { label?: string; pokemon: PokemonFrame[]; cardWidth: number }) {
   if (pokemon.length === 0) {
     return (
       <div className="flex justify-center gap-2">
-        <div
-          className="w-[64px] shrink-0 sm:w-[75px]"
-          style={{ aspectRatio: "245 / 342" }}
-          aria-hidden
-        />
+        <div className="shrink-0" style={{ width: cardWidth, aspectRatio: "245 / 342" }} aria-hidden />
       </div>
     );
   }
   return (
     <div className="flex justify-center gap-2">
       {pokemon.map((mon, i) => (
-        <div key={i} className="w-[64px] shrink-0 sm:w-[75px]">
+        <div key={i} className="shrink-0" style={{ width: cardWidth }}>
           <PokemonCardImage mon={mon} />
         </div>
       ))}
@@ -572,13 +598,16 @@ function BenchRow({ pokemon }: { label?: string; pokemon: PokemonFrame[] }) {
 function PokemonSlot({
   label,
   pokemon,
+  cardWidth,
 }: {
   label: string;
   pokemon: PokemonFrame | null;
+  cardWidth: number;
 }) {
   return (
     <div
-      className="flex w-[81px] flex-col items-center sm:w-[86px]"
+      className="flex flex-col items-center"
+      style={{ width: cardWidth }}
       title={label}
     >
       {pokemon ? (
@@ -691,13 +720,16 @@ function PokemonCardImage({ mon }: { mon: PokemonFrame }) {
 function StadiumSlot({
   label,
   stadium,
+  cardWidth,
 }: {
   label: string;
   stadium: { name: string; imageUrl: string | null } | null;
+  cardWidth: number;
 }) {
   return (
     <div
-      className="flex w-[88px] flex-col items-center sm:w-[94px]"
+      className="flex flex-col items-center"
+      style={{ width: cardWidth }}
       title={label}
     >
       {stadium ? (
