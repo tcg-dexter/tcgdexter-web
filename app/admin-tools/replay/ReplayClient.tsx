@@ -141,6 +141,24 @@ export default function ReplayClient({ options }: ReplayClientProps) {
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [frame?.actionIndex, selectedId]);
 
+  // Pin the thread aside to the board's measured height so it scrolls
+  // inside a fixed envelope instead of stretching the row to fit its own
+  // content (which would otherwise push the navigator away from the
+  // board on desktop).
+  const boardRef = useRef<HTMLDivElement>(null);
+  const [boardHeight, setBoardHeight] = useState<number | null>(null);
+  useEffect(() => {
+    const el = boardRef.current;
+    if (!el) return;
+    setBoardHeight(el.getBoundingClientRect().height);
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) setBoardHeight(entry.contentRect.height);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [frame?.actionIndex, selectedId]);
+
   return (
     <main className="min-h-dvh bg-bg pb-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-6">
@@ -159,32 +177,35 @@ export default function ReplayClient({ options }: ReplayClientProps) {
           </div>
         </header>
 
-        {/* Row 1: thread (lg only) + board side-by-side, equal-height.
-            items-stretch on the flex parent stretches the thread aside
-            to whatever height the board takes. The thread's inner body
-            is overflow-y-auto with min-h-0 so it scrolls inside the
-            fixed envelope rather than pushing the layout. */}
-        <div className="lg:flex lg:items-stretch lg:gap-6">
+        {/* Row 1: thread (lg only) + board side-by-side. The aside is
+            pinned to the board's measured height so its inner scroll
+            container has something to clip against — without this the
+            thread would stretch the row taller than the board, pushing
+            the navigator out of arm's reach. */}
+        <div className="lg:flex lg:items-start lg:gap-6">
           {selectedId && (
             <aside
               key={selectedId}
-              className="hidden min-w-0 lg:flex lg:flex-1 lg:flex-col"
+              className="hidden min-w-0 lg:flex lg:flex-1 lg:flex-col lg:overflow-hidden"
+              style={
+                boardHeight != null
+                  ? { height: `${boardHeight}px`, marginTop: "1rem" }
+                  : undefined
+              }
             >
-              <div className="mt-4 flex flex-1 min-h-0 flex-col">
-                <div
-                  ref={threadScrollRef}
-                  className="flex-1 min-h-0 overflow-y-auto pr-1"
-                >
-                  <BattleLogDetail
-                    matchId={selectedId}
-                    apiUrl={`/api/admin/replay/${selectedId}/log`}
-                    maxSequence={frame?.actionIndex ?? -1}
-                  />
-                </div>
+              <div
+                ref={threadScrollRef}
+                className="h-full overflow-y-auto pr-1"
+              >
+                <BattleLogDetail
+                  matchId={selectedId}
+                  apiUrl={`/api/admin/replay/${selectedId}/log`}
+                  maxSequence={frame?.actionIndex ?? -1}
+                />
               </div>
             </aside>
           )}
-          <div className="lg:w-[720px] lg:shrink-0">
+          <div ref={boardRef} className="lg:w-[720px] lg:shrink-0">
             <Board frame={frame} loading={loading} error={error} />
           </div>
         </div>
