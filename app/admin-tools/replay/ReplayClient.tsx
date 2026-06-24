@@ -385,7 +385,7 @@ function computeReplayCardWidth(matWidth: number): number {
   const maxWidthFromH = maxCardH * (245 / 342);
   // 2 rail cols + 5 bench cols; 5 conservative bench gaps.
   const maxWidthFromW = (innerW - 2 * 12 - 5 * 8) / 7;
-  return Math.max(20, Math.floor(Math.min(maxWidthFromH, maxWidthFromW)));
+  return Math.max(20, Math.floor(Math.min(maxWidthFromH, maxWidthFromW) * 0.8));
 }
 
 function Board({
@@ -668,7 +668,7 @@ function PlayerMat({
                   }}
                 />
                 {!stadium.imageUrl && (
-                  <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
+                  <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[7px] font-semibold leading-tight text-white line-clamp-2">
                     {stadium.name}
                   </div>
                 )}
@@ -703,7 +703,7 @@ function PlayerMat({
                   }}
                 />
                 {!lastPlayedTrainer.imageUrl && (
-                  <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
+                  <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[7px] font-semibold leading-tight text-white line-clamp-2">
                     {lastPlayedTrainer.name}
                   </div>
                 )}
@@ -749,7 +749,7 @@ function Pile({
             aria-hidden
             className="h-full w-full object-cover"
           />
-          <div className="absolute inset-x-1 bottom-1 flex items-center justify-center rounded bg-black/70 py-0.5 text-[10px] font-semibold tabular-nums text-white">
+          <div className="absolute inset-x-1 bottom-1 flex items-center justify-center rounded bg-black/70 py-0.5 text-[8px] font-semibold tabular-nums text-white">
             {count}
           </div>
         </div>
@@ -782,7 +782,7 @@ function Pile({
               {topName}
             </div>
           )}
-          <div className="absolute inset-x-1 bottom-1 flex items-center justify-center rounded bg-black/70 py-0.5 text-[10px] font-semibold tabular-nums text-white">
+          <div className="absolute inset-x-1 bottom-1 flex items-center justify-center rounded bg-black/70 py-0.5 text-[8px] font-semibold tabular-nums text-white">
             {count}
           </div>
         </div>
@@ -819,7 +819,7 @@ function ConditionPill({ condition }: { condition: string }) {
     };
   return (
     <span
-      className={`rounded-full px-1 py-[1px] text-[8px] font-bold uppercase leading-none shadow-sm ${meta.cls}`}
+      className={`rounded-full px-1 py-[1px] text-[6px] font-bold uppercase leading-none shadow-sm ${meta.cls}`}
       title={condition}
     >
       {meta.label}
@@ -848,14 +848,14 @@ function PokemonCardImage({ mon }: { mon: PokemonFrame }) {
         }}
       />
       {hadFallback && (
-        <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
+        <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[7px] font-semibold leading-tight text-white line-clamp-2">
           {mon.name}
         </div>
       )}
       {remainingHp != null && (
-        <span className="absolute right-1 top-1 flex items-baseline gap-0.5 rounded-full bg-black px-1.5 py-[2px] text-white shadow-sm">
-          <span className="text-[8px] font-bold uppercase leading-none">HP</span>
-          <span className="text-[12px] font-semibold tabular-nums leading-none">
+        <span className="absolute right-1 top-1 flex items-baseline gap-0.5 rounded-full bg-black px-1 py-[1px] text-white shadow-sm">
+          <span className="text-[6px] font-bold uppercase leading-none">HP</span>
+          <span className="text-[10px] font-semibold tabular-nums leading-none">
             {remainingHp}
           </span>
         </span>
@@ -871,7 +871,7 @@ function PokemonCardImage({ mon }: { mon: PokemonFrame }) {
               key={i}
               src={`/types/${t.toLowerCase()}.png`}
               alt={t}
-              className="h-3 w-3"
+              className="h-[10px] w-[10px]"
             />
           ))}
         </div>
