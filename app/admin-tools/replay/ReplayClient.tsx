@@ -376,14 +376,22 @@ function ReplayHeader({
 // Each mat has bench + active = 2 card rows. Stadium and played-trainer cards
 // are absolutely positioned overlays and don't participate in the grid, so
 // only the 2 outer fixed-width rail columns constrain the center.
-function computeReplayCardWidth(matWidth: number): number {
+//
+// maxBench drives both the width and the denominators: for each extra bench
+// slot above 5 (Area Zero Underpaths raises the cap to 8), the formula
+// shrinks all cards uniformly so the bench always fits the center column.
+// The center column also widens as the rail columns shrink with it, so an
+// 8-card bench occupies more horizontal space than a 5-card bench — the
+// "wider container" effect the user expects.
+function computeReplayCardWidth(matWidth: number, maxBench: number = 5): number {
   const innerW = matWidth - 2 * MAT_PADDING;
   const innerH = matWidth * MAT_ASPECT - 2 * MAT_PADDING;
   const ROW_GAP = 6;
   const maxCardH = (innerH - ROW_GAP) / 2;
   const maxWidthFromH = maxCardH * (245 / 342);
-  // 2 fixed cols + center 1fr → 2 outer gaps. 5 bench × conservative gaps.
-  const maxWidthFromW = (innerW - 2 * 12 - 5 * 8) / 7;
+  // 2 rail cols + maxBench bench cols; maxBench gaps (conservative) within bench.
+  const n = Math.max(5, maxBench);
+  const maxWidthFromW = (innerW - 2 * 12 - n * 8) / (n + 2);
   return Math.max(20, Math.floor(Math.min(maxWidthFromH, maxWidthFromW)));
 }
 
@@ -412,7 +420,10 @@ function Board({
     return () => ro.disconnect();
   }, []);
 
-  const cardWidth = computeReplayCardWidth(matWidth);
+  const maxBench = frame
+    ? Math.max(5, frame.player.bench.length, frame.opponent.bench.length)
+    : 5;
+  const cardWidth = computeReplayCardWidth(matWidth, maxBench);
 
   return (
     <div ref={matContainerRef} className="mt-4">
