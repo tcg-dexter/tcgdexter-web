@@ -548,13 +548,10 @@ function Pile({
   );
 }
 
-function BenchRow({ label, pokemon }: { label: string; pokemon: PokemonFrame[] }) {
+function BenchRow({ pokemon }: { label?: string; pokemon: PokemonFrame[] }) {
   return (
-    <div className="rounded-xl border border-black/12 bg-surface px-3 py-2">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
-        {label}
-      </div>
-      <div className="mt-2 flex justify-center gap-2">
+    <div>
+      <div className="flex justify-center gap-2">
         {Array.from({ length: 5 }).map((_, i) => {
           const mon = pokemon[i];
           // Width-matched to the rail piles (P1/P2 Discard, P1/P2 Draw)
