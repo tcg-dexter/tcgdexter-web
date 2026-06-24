@@ -536,32 +536,35 @@ function PlayerMat({
     ? MAT_PADDING + innerW / 2 - cardWidth / 2 - FLOAT_GAP - cardWidth // P1: left of active
     : MAT_PADDING + innerW / 2 + cardWidth / 2 + FLOAT_GAP;            // P2: right of active
 
-  // Bench row: each card animates in/out and glides to its new slot.
-  // layoutId ties the card to its identity so Framer Motion can move it
-  // across positions (bench→active) as a "magic move".
+  // Bench row: cards reposition with layout animation; layoutId enables the
+  // magic-move to active without needing AnimatePresence (the layoutId system
+  // tracks the card's last DOM position even after unmount, so the active slot
+  // can animate in from wherever the bench card was). AnimatePresence is
+  // deliberately omitted — it would leave exiting cards as position:absolute
+  // inside a non-positioned container, escaping the bench bounds.
   const benchRow = (
-    <div className="flex justify-center gap-2">
-      <AnimatePresence mode="popLayout">
-        {bench.map((mon) => (
-          <motion.div
-            key={mon.name}
-            layoutId={`${side}-${mon.name}`}
-            className="shrink-0"
-            style={{ width: cardWidth }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25, layout: { duration: 0.35, ease: "easeInOut" } }}
-          >
-            <PokemonCardImage mon={mon} />
-          </motion.div>
-        ))}
-      </AnimatePresence>
-    </div>
+    <motion.div
+      layout
+      className="relative flex justify-center gap-2 overflow-hidden"
+      transition={{ duration: 0.3, ease: "easeInOut" }}
+    >
+      {bench.map((mon) => (
+        <motion.div
+          key={mon.name}
+          layoutId={`${side}-${mon.name}`}
+          layout
+          className="shrink-0"
+          style={{ width: cardWidth }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+        >
+          <PokemonCardImage mon={mon} />
+        </motion.div>
+      ))}
+    </motion.div>
   );
 
-  // Active slot: glides in from bench position when promoted; fades out on KO/retreat.
-  // Outer div is always present to hold layout even when empty.
+  // Active slot: single card, clean fade+layout transition. The layoutId
+  // receives the card from the bench when a Pokémon is promoted.
   const activeRow = (
     <div className="flex justify-center" style={{ minWidth: cardWidth }}>
       <AnimatePresence mode="wait">
@@ -573,7 +576,7 @@ function PlayerMat({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25, layout: { duration: 0.35, ease: "easeInOut" } }}
+            transition={{ duration: 0.2, layout: { duration: 0.3, ease: "easeInOut" } }}
           >
             <PokemonCardImage mon={active} />
           </motion.div>
