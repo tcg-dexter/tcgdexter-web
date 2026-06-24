@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import BattleLogDetail from "@/app/components/BattleLogDetail";
 import type {
   ReplayFrame,
   ReplayPayload,
@@ -148,27 +149,54 @@ export default function ReplayClient({ options }: ReplayClientProps) {
           </div>
         </header>
 
-        <Board frame={frame} loading={loading} error={error} />
+        <div className="lg:flex lg:items-start lg:gap-6">
+          {/* Thread — left column on desktop, hidden below lg.
+              maxSequence ties the thread's visibility to the board
+              playhead: frame 0 (initial setup) clips to -1 so no
+              actions show, and each subsequent step reveals one more
+              row. */}
+          {selectedId && (
+            <aside
+              key={selectedId}
+              className="hidden min-w-0 lg:block lg:flex-1"
+            >
+              <div className="rounded-2xl border border-black/8 bg-white p-4">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
+                  Thread
+                </div>
+                <BattleLogDetail
+                  matchId={selectedId}
+                  apiUrl={`/api/admin/replay/${selectedId}/log`}
+                  maxSequence={frame?.actionIndex ?? -1}
+                />
+              </div>
+            </aside>
+          )}
 
-        <TurnNavigator
-          frame={frame}
-          frameIndex={frameIndex}
-          frameCount={frameCount}
-          canStepBack={canStepBack}
-          canStepForward={canStepForward}
-          canTurnBack={canTurnBack}
-          canTurnForward={canTurnForward}
-          onStepBack={() => canStepBack && setFrameIndex((i) => i - 1)}
-          onStepForward={() => canStepForward && setFrameIndex((i) => i + 1)}
-          onTurnBack={stepTurnBack}
-          onTurnForward={stepTurnForward}
-        />
+          <div className="lg:w-[720px] lg:shrink-0">
+            <Board frame={frame} loading={loading} error={error} />
 
-        <MatchSelector
-          options={options}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-        />
+            <TurnNavigator
+              frame={frame}
+              frameIndex={frameIndex}
+              frameCount={frameCount}
+              canStepBack={canStepBack}
+              canStepForward={canStepForward}
+              canTurnBack={canTurnBack}
+              canTurnForward={canTurnForward}
+              onStepBack={() => canStepBack && setFrameIndex((i) => i - 1)}
+              onStepForward={() => canStepForward && setFrameIndex((i) => i + 1)}
+              onTurnBack={stepTurnBack}
+              onTurnForward={stepTurnForward}
+            />
+
+            <MatchSelector
+              options={options}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+            />
+          </div>
+        </div>
       </div>
     </main>
   );

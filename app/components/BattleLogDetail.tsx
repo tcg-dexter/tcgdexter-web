@@ -468,9 +468,13 @@ interface Props {
   result?: "win" | "loss" | "draw" | null;
   playerColor?: string;
   opponentColor?: string;
+  /** When set, only actions with `sequence <= maxSequence` are rendered.
+   *  Lets a caller (e.g. the Replay tool) reveal/hide the thread in lockstep
+   *  with an external playhead. Null/undefined renders the full log. */
+  maxSequence?: number | null;
 }
 
-export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, opponentColor }: Props) {
+export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, opponentColor, maxSequence }: Props) {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -518,9 +522,17 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
 
   if (!data) return null;
 
+  // Caller-controlled clipping: when a playhead drives the thread (e.g. the
+  // Replay tool), drop everything past the current sequence so the visible
+  // posts grow/shrink in lockstep with the board state.
+  const visibleActions =
+    maxSequence != null
+      ? data.actions.filter((a) => a.sequence <= maxSequence)
+      : data.actions;
+
   // Group actions by turn_id, preserving sequence order.
   const actionsByTurn = new Map<string, ApiAction[]>();
-  for (const a of data.actions) {
+  for (const a of visibleActions) {
     if (!a.turn_id) continue;
     const arr = actionsByTurn.get(a.turn_id) ?? [];
     arr.push(a);
