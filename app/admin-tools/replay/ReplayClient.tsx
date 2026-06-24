@@ -203,7 +203,7 @@ function Board({
   }
 
   return (
-    <div className="mt-4 rounded-2xl border border-black/8 bg-white p-4 sm:mx-auto sm:max-w-3xl sm:p-5">
+    <div className="mt-4 rounded-2xl border border-black/8 bg-white p-4 sm:p-5">
       <div className="grid grid-cols-[64px_1fr_64px] gap-3 sm:grid-cols-[75px_1fr_75px] sm:gap-[14px]">
         {/* ── Left rail: P1 piles at top, P2 prize pile at bottom ─ */}
         <div className="flex flex-col gap-3">
