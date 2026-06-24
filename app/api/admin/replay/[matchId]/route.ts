@@ -40,6 +40,8 @@ interface SideFrame {
   deckCount: number;
   discardCount: number;
   discardTop: string | null;
+  /** Image URL for the most-recently discarded card (face-up top). */
+  discardTopImageUrl: string | null;
   prizesRemaining: number;
 }
 
@@ -124,7 +126,14 @@ function mapSide(side: GameState["sides"]["player"]): SideFrame {
     handCount: side.hand.length,
     deckCount: side.deck.length,
     discardCount: side.discard.length,
-    discardTop: side.discard.length > 0 ? side.discard[side.discard.length - 1].name : null,
+    discardTop:
+      side.discard.length > 0
+        ? side.discard[side.discard.length - 1].name
+        : null,
+    discardTopImageUrl:
+      side.discard.length > 0
+        ? cardImageUrlForName(side.discard[side.discard.length - 1].name)
+        : null,
     prizesRemaining: side.prizes.length,
   };
 }

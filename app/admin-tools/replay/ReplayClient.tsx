@@ -211,6 +211,7 @@ function Board({
             label="P1 Discard"
             count={frame.player.discardCount}
             topName={frame.player.discardTop}
+            topImageUrl={frame.player.discardTopImageUrl}
           />
           <Pile
             label="P1 Draw"
@@ -265,6 +266,7 @@ function Board({
             label="P2 Discard"
             count={frame.opponent.discardCount}
             topName={frame.opponent.discardTop}
+            topImageUrl={frame.opponent.discardTopImageUrl}
           />
         </div>
       </div>
@@ -276,6 +278,7 @@ function Pile({
   label,
   count,
   topName,
+  topImageUrl,
   hint,
   useCardBack,
   className = "",
@@ -283,6 +286,8 @@ function Pile({
   label: string;
   count: number;
   topName?: string | null;
+  /** When set, render the top card face-up using this image (discard). */
+  topImageUrl?: string | null;
   hint?: string;
   /** Render the standard card-back image as the face. */
   useCardBack?: boolean;
@@ -313,21 +318,53 @@ function Pile({
     );
   }
 
+  // Face-up top-card mode — used by the discard piles. Only the topmost
+  // card is rendered; previous discards stay implicit behind it.
+  if (topName) {
+    return (
+      <div className={`flex flex-col items-center gap-1 ${className}`}>
+        <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-muted leading-tight text-center">
+          {label}
+        </div>
+        <div
+          className="relative w-full overflow-hidden rounded-lg border border-black/12 bg-white"
+          style={{ aspectRatio: "245 / 342" }}
+          title={topName}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={topImageUrl ?? CARD_BACK_URL}
+            alt={topName}
+            className="h-full w-full object-cover"
+            onError={(e) => {
+              if (e.currentTarget.src !== CARD_BACK_URL) {
+                e.currentTarget.src = CARD_BACK_URL;
+              }
+            }}
+          />
+          {!topImageUrl && (
+            <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
+              {topName}
+            </div>
+          )}
+          <div className="absolute inset-x-1 bottom-1 flex items-center justify-center rounded bg-black/70 py-0.5 text-[10px] font-semibold tabular-nums text-white">
+            {count}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`flex flex-col items-center gap-1 ${className}`}>
       <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-muted leading-tight text-center">
         {label}
       </div>
       <div
-        className="flex w-full flex-col items-center justify-between rounded-lg border border-black/12 bg-surface px-1.5 py-2 text-center"
+        className="flex w-full flex-col items-center justify-center rounded-lg border border-dashed border-black/15 bg-white text-[10px] text-text-muted"
         style={{ aspectRatio: "245 / 342" }}
       >
-        <div className="text-2xl font-semibold tabular-nums text-text-primary">
-          {count}
-        </div>
-        <div className="text-[9px] text-text-secondary leading-tight line-clamp-2">
-          {topName ?? hint ?? " "}
-        </div>
+        {hint ?? "empty"}
       </div>
     </div>
   );
