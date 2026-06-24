@@ -64,6 +64,7 @@ export default function ReplayClient({ options }: ReplayClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [frameIndex, setFrameIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState<0.5 | 1 | 2 | 4>(1);
 
   useEffect(() => {
     if (!selectedId) {
@@ -104,7 +105,7 @@ export default function ReplayClient({ options }: ReplayClientProps) {
 
   const frameCount = data?.frames.length ?? 0;
 
-  // Auto-advance one action per second while playing.
+  // Auto-advance at the selected speed while playing.
   useEffect(() => {
     if (!playing) return;
     const id = setInterval(() => {
@@ -112,9 +113,9 @@ export default function ReplayClient({ options }: ReplayClientProps) {
         if (i >= frameCount - 1) return i;
         return i + 1;
       });
-    }, 1000);
+    }, Math.round(1000 / speed));
     return () => clearInterval(id);
-  }, [playing, frameCount]);
+  }, [playing, frameCount, speed]);
 
   // Pause automatically when the last frame is reached.
   useEffect(() => {
@@ -225,7 +226,9 @@ export default function ReplayClient({ options }: ReplayClientProps) {
           canTurnBack={canTurnBack}
           canTurnForward={canTurnForward}
           playing={playing}
+          speed={speed}
           onTogglePlay={() => setPlaying((p) => !p)}
+          onCycleSpeed={() => setSpeed((s) => s === 0.5 ? 1 : s === 1 ? 2 : s === 2 ? 4 : 0.5)}
           onStepBack={() => { setPlaying(false); canStepBack && setFrameIndex((i) => i - 1); }}
           onStepForward={() => { setPlaying(false); canStepForward && setFrameIndex((i) => i + 1); }}
           onTurnBack={() => { setPlaying(false); stepTurnBack(); }}
@@ -281,7 +284,9 @@ export default function ReplayClient({ options }: ReplayClientProps) {
               canTurnBack={canTurnBack}
               canTurnForward={canTurnForward}
               playing={playing}
+              speed={speed}
               onTogglePlay={() => setPlaying((p) => !p)}
+              onCycleSpeed={() => setSpeed((s) => s === 0.5 ? 1 : s === 1 ? 2 : s === 2 ? 4 : 0.5)}
               onStepBack={() => { setPlaying(false); canStepBack && setFrameIndex((i) => i - 1); }}
               onStepForward={() => { setPlaying(false); canStepForward && setFrameIndex((i) => i + 1); }}
               onTurnBack={() => { setPlaying(false); stepTurnBack(); }}
@@ -304,6 +309,23 @@ export default function ReplayClient({ options }: ReplayClientProps) {
 /* Desktop header                                                   */
 /* ──────────────────────────────────────────────────────────────── */
 
+function PlayPauseIcon({ playing }: { playing: boolean }) {
+  return playing ? (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current" aria-hidden>
+      <rect x="6" y="4" width="4" height="16" rx="1" />
+      <rect x="14" y="4" width="4" height="16" rx="1" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current" aria-hidden>
+      <path d="M5 3l14 9-14 9V3z" />
+    </svg>
+  );
+}
+
+function speedLabel(s: 0.5 | 1 | 2 | 4): string {
+  return s === 0.5 ? "½×" : `${s}×`;
+}
+
 function ReplayHeader({
   playerPrimaryName,
   opponentPrimaryName,
@@ -312,7 +334,9 @@ function ReplayHeader({
   canTurnBack,
   canTurnForward,
   playing,
+  speed,
   onTogglePlay,
+  onCycleSpeed,
   onStepBack,
   onStepForward,
   onTurnBack,
@@ -325,7 +349,9 @@ function ReplayHeader({
   canTurnBack: boolean;
   canTurnForward: boolean;
   playing: boolean;
+  speed: 0.5 | 1 | 2 | 4;
   onTogglePlay: () => void;
+  onCycleSpeed: () => void;
   onStepBack: () => void;
   onStepForward: () => void;
   onTurnBack: () => void;
@@ -377,9 +403,18 @@ function ReplayHeader({
           disabled={!playing && !canStepForward}
           aria-label={playing ? "Pause" : "Play"}
           title={playing ? "Pause" : "Play"}
-          className={`${buttonClass} min-w-[2.5rem]`}
+          className={`${buttonClass} px-3`}
         >
-          {playing ? "⏸" : "▶"}
+          <PlayPauseIcon playing={playing} />
+        </button>
+        <button
+          type="button"
+          onClick={onCycleSpeed}
+          aria-label={`Playback speed: ${speedLabel(speed)}`}
+          title="Cycle playback speed"
+          className="rounded-md border border-black/10 px-2.5 py-1.5 text-xs font-semibold tabular-nums text-text-secondary hover:bg-surface"
+        >
+          {speedLabel(speed)}
         </button>
         <button
           type="button"
@@ -999,7 +1034,9 @@ function TurnNavigator({
   canTurnBack,
   canTurnForward,
   playing,
+  speed,
   onTogglePlay,
+  onCycleSpeed,
   onStepBack,
   onStepForward,
   onTurnBack,
@@ -1013,7 +1050,9 @@ function TurnNavigator({
   canTurnBack: boolean;
   canTurnForward: boolean;
   playing: boolean;
+  speed: 0.5 | 1 | 2 | 4;
   onTogglePlay: () => void;
+  onCycleSpeed: () => void;
   onStepBack: () => void;
   onStepForward: () => void;
   onTurnBack: () => void;
@@ -1066,16 +1105,27 @@ function TurnNavigator({
           <div className="mt-1 text-[10px] tabular-nums text-text-muted">
             Step {frameCount > 0 ? frameIndex + 1 : 0} / {frameCount}
           </div>
-          <button
-            type="button"
-            onClick={onTogglePlay}
-            disabled={!playing && !canStepForward}
-            aria-label={playing ? "Pause" : "Play"}
-            title={playing ? "Pause" : "Play"}
-            className="mt-2 rounded-md border border-black/10 px-5 py-1 text-sm font-semibold text-text-secondary hover:bg-surface disabled:opacity-30"
-          >
-            {playing ? "⏸" : "▶"}
-          </button>
+          <div className="mt-2 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onTogglePlay}
+              disabled={!playing && !canStepForward}
+              aria-label={playing ? "Pause" : "Play"}
+              title={playing ? "Pause" : "Play"}
+              className="rounded-md border border-black/10 px-3 py-1.5 text-text-secondary hover:bg-surface disabled:opacity-30"
+            >
+              <PlayPauseIcon playing={playing} />
+            </button>
+            <button
+              type="button"
+              onClick={onCycleSpeed}
+              aria-label={`Playback speed: ${speedLabel(speed)}`}
+              title="Cycle playback speed"
+              className="rounded-md border border-black/10 px-2.5 py-1.5 text-xs font-semibold tabular-nums text-text-secondary hover:bg-surface"
+            >
+              {speedLabel(speed)}
+            </button>
+          </div>
         </div>
         <button
           type="button"
