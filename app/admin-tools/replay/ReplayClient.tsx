@@ -7,12 +7,22 @@ import type {
   ReplayFrame,
   ReplayPayload,
 } from "@/app/api/admin/replay/[matchId]/route";
+import {
+  MAT_STYLES,
+  TEXTURES,
+  MAT_PADDING,
+  MAT_ASPECT,
+} from "@/app/admin-tools/deck-mat/DeckMatClient";
 
 // Fires synchronously before first paint on the client (prevents card-width
 // overflow flash) and falls back to useEffect during SSR to avoid the
 // "useLayoutEffect does nothing on the server" hydration warning.
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
+// Hardcoded default mat style for the replay board.
+const REPLAY_GRADIENT = MAT_STYLES.find((s) => s.key === "fire-lightning")!.gradient;
+const REPLAY_TEXTURE = TEXTURES.find((t) => t.key === "lines")!;
 
 export interface ReplayMatchOption {
   id: string;
@@ -362,20 +372,18 @@ function ReplayHeader({
 /* Board                                                            */
 /* ──────────────────────────────────────────────────────────────── */
 
-// Compute card width so every card slot is the same proportional size and the
-// full board fits within `innerW` (the grid's own measured pixel width).
-//
-// The tightest row is the bench (up to 5 cards + 4 × 8px gaps) which sits inside
-// the center column. Center = innerW − 2×cardW − 2×GAP, so:
-//   5×cardW + 4×8 ≤ innerW − 2×cardW − 2×GAP
-//   7×cardW ≤ innerW − 2×GAP − 4×8
-function computeCardWidth(innerW: number): number {
-  // Use sm+ gap values (the larger ones) so the formula stays conservative
-  // at every breakpoint — mobile gaps are smaller, giving extra margin there.
-  const GAP = 12;       // gap-3 (sm+) between outer grid columns
-  const BENCH_GAP = 8;  // gap-2 (sm+) between bench cards
-  const MAX_BENCH = 5;
-  return Math.max(25, Math.floor((innerW - 2 * GAP - MAX_BENCH * BENCH_GAP) / (MAX_BENCH + 2)));
+// Each mat has bench + active = 2 card rows. Constrain card width so both
+// rows fit inside the mat both horizontally (center column ≥ 5-bench spread)
+// and vertically (2 rows + gap ≤ mat inner height).
+function computeReplayCardWidth(matWidth: number): number {
+  const innerW = matWidth - 2 * MAT_PADDING;
+  const innerH = matWidth * MAT_ASPECT - 2 * MAT_PADDING;
+  const ROW_GAP = 6;
+  const maxCardH = (innerH - ROW_GAP) / 2;
+  const maxWidthFromH = maxCardH * (245 / 342);
+  // Use sm+ gap constants (larger) so smaller mobile gaps give extra margin.
+  const maxWidthFromW = (innerW - 2 * 12 - 5 * 8) / 7;
+  return Math.max(20, Math.floor(Math.min(maxWidthFromH, maxWidthFromW)));
 }
 
 function Board({
@@ -387,16 +395,15 @@ function Board({
   loading: boolean;
   error: string | null;
 }) {
-  const gridRef = useRef<HTMLDivElement>(null);
-  // 28 is safe for the smallest common viewport (320px) without JS measurement.
-  const [cardWidth, setCardWidth] = useState(28);
+  const matContainerRef = useRef<HTMLDivElement>(null);
+  const [matWidth, setMatWidth] = useState(300);
 
   useIsomorphicLayoutEffect(() => {
-    const el = gridRef.current;
+    const el = matContainerRef.current;
     if (!el) return;
     const measure = () => {
       const w = el.getBoundingClientRect().width;
-      if (w > 0) setCardWidth(computeCardWidth(w));
+      if (w > 0) setMatWidth(w);
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -404,95 +411,171 @@ function Board({
     return () => ro.disconnect();
   }, []);
 
-  if (error) {
-    return (
-      <div className="mt-4 rounded-2xl border border-accent/40 bg-white p-6 text-sm text-accent">
-        {error}
-      </div>
-    );
-  }
-  if (!frame) {
-    return (
-      <div className="mt-4 rounded-2xl border border-black/8 bg-white p-10 text-center text-sm text-text-secondary">
-        {loading ? "Loading replay…" : "Pick a match below to begin."}
-      </div>
-    );
-  }
+  const cardWidth = computeReplayCardWidth(matWidth);
 
   return (
-    <div className="mt-4 rounded-2xl border border-black/8 bg-white p-2 sm:p-5 overflow-x-hidden">
+    <div ref={matContainerRef} className="mt-4">
+      {error ? (
+        <div className="rounded-2xl border border-accent/40 bg-white p-6 text-sm text-accent">
+          {error}
+        </div>
+      ) : !frame ? (
+        <div className="rounded-2xl border border-black/8 bg-white p-10 text-center text-sm text-text-secondary">
+          {loading ? "Loading replay…" : "Pick a match below to begin."}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <PlayerMat
+            side="player"
+            bench={frame.player.bench}
+            active={frame.player.active}
+            discardCount={frame.player.discardCount}
+            discardTop={frame.player.discardTop}
+            discardTopImageUrl={frame.player.discardTopImageUrl}
+            deckCount={frame.player.deckCount}
+            handCount={frame.player.handCount}
+            prizesRemaining={frame.player.prizesRemaining}
+            stadium={frame.stadium?.owner === "player" ? frame.stadium : null}
+            cardWidth={cardWidth}
+            matWidth={matWidth}
+          />
+          <PlayerMat
+            side="opponent"
+            bench={frame.opponent.bench}
+            active={frame.opponent.active}
+            discardCount={frame.opponent.discardCount}
+            discardTop={frame.opponent.discardTop}
+            discardTopImageUrl={frame.opponent.discardTopImageUrl}
+            deckCount={frame.opponent.deckCount}
+            handCount={frame.opponent.handCount}
+            prizesRemaining={frame.opponent.prizesRemaining}
+            stadium={frame.stadium?.owner === "opponent" ? frame.stadium : null}
+            cardWidth={cardWidth}
+            matWidth={matWidth}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// P1 mat: bench at top, active at bottom — actives face each other across the
+// gap between the two mats, matching the orientation of the old combined view.
+// P2 mat: active at top, bench at bottom.
+function PlayerMat({
+  side,
+  bench,
+  active,
+  discardCount,
+  discardTop,
+  discardTopImageUrl,
+  deckCount,
+  handCount,
+  prizesRemaining,
+  stadium,
+  cardWidth,
+  matWidth,
+}: {
+  side: "player" | "opponent";
+  bench: PokemonFrame[];
+  active: PokemonFrame | null;
+  discardCount: number;
+  discardTop?: string | null;
+  discardTopImageUrl?: string | null;
+  deckCount: number;
+  handCount: number;
+  prizesRemaining: number;
+  stadium: { name: string; imageUrl: string | null } | null;
+  cardWidth: number;
+  matWidth: number;
+}) {
+  const isPlayer = side === "player";
+  const label = isPlayer ? "P1" : "P2";
+  const texScale = matWidth > 0 ? matWidth / 600 : 1;
+
+  const benchRow = <BenchRow pokemon={bench} cardWidth={cardWidth} />;
+
+  const activeRow = (
+    <div className="flex items-center justify-center gap-1.5 sm:gap-3">
+      <PokemonSlot label={`${label} Active`} pokemon={active} cardWidth={cardWidth} />
+      {stadium && (
+        <StadiumSlot label={`${label} Stadium`} stadium={stadium} cardWidth={cardWidth} />
+      )}
+    </div>
+  );
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{
+        padding: MAT_PADDING,
+        height: matWidth > 0 ? matWidth * MAT_ASPECT : undefined,
+        backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(REPLAY_TEXTURE.svg)}"), ${REPLAY_GRADIENT}`,
+        backgroundSize: `${REPLAY_TEXTURE.w * texScale}px ${REPLAY_TEXTURE.h * texScale}px, auto`,
+        boxShadow: "0 4px 4px rgba(0,0,0,0.66)",
+      }}
+    >
       <div
-        ref={gridRef}
-        className="grid gap-1.5 sm:gap-3"
+        className="grid h-full gap-1.5 sm:gap-3"
         style={{ gridTemplateColumns: `${cardWidth}px 1fr ${cardWidth}px` }}
       >
-        {/* ── Left rail: P1 piles at top, P2 prize pile at bottom ─ */}
+        {/* Left rail */}
         <div className="flex flex-col gap-1.5 sm:gap-3">
-          <Pile
-            label="P1 Discard"
-            count={frame.player.discardCount}
-            topName={frame.player.discardTop}
-            topImageUrl={frame.player.discardTopImageUrl}
-          />
-          <Pile
-            label="P1 Draw"
-            count={frame.player.deckCount}
-            hint={`${frame.player.handCount} in hand`}
-            useCardBack
-          />
-          <div className="flex-1" aria-hidden />
-          <StackedPrizePile label="Prize Pile" count={frame.opponent.prizesRemaining} />
+          {isPlayer ? (
+            <>
+              <Pile
+                label="P1 Discard"
+                count={discardCount}
+                topName={discardTop}
+                topImageUrl={discardTopImageUrl}
+              />
+              <Pile
+                label="P1 Draw"
+                count={deckCount}
+                hint={`${handCount} in hand`}
+                useCardBack
+              />
+            </>
+          ) : (
+            <StackedPrizePile label="Prize Pile" count={prizesRemaining} />
+          )}
         </div>
 
-        {/* ── Center: benches + stadium-flanked actives ─────────
-            The middle row is stadium | (P1 active over P2 active) |
-            stadium. Only one Stadium ever sits in play; the slot
-            opposite the active owner shows an empty placeholder. */}
-        <div className="flex flex-col gap-1.5 sm:gap-3">
-          <BenchRow
-            label={`P1 Bench${frame.player.handle ? ` · ${frame.player.handle}` : ""}`}
-            pokemon={frame.player.bench}
-            cardWidth={cardWidth}
-          />
-          <div className="flex items-center justify-center gap-1.5 sm:gap-3">
-            <StadiumSlot
-              label="P1 Stadium"
-              stadium={frame.stadium?.owner === "player" ? frame.stadium : null}
-              cardWidth={cardWidth}
-            />
-            <div className="flex flex-col items-center gap-2">
-              <PokemonSlot label="P1 Active" pokemon={frame.player.active} cardWidth={cardWidth} />
-              <PokemonSlot label="P2 Active" pokemon={frame.opponent.active} cardWidth={cardWidth} />
-            </div>
-            <StadiumSlot
-              label="P2 Stadium"
-              stadium={frame.stadium?.owner === "opponent" ? frame.stadium : null}
-              cardWidth={cardWidth}
-            />
-          </div>
-          <BenchRow
-            label={`P2 Bench${frame.opponent.handle ? ` · ${frame.opponent.handle}` : ""}`}
-            pokemon={frame.opponent.bench}
-            cardWidth={cardWidth}
-          />
+        {/* Center: bench + active pinned to opposite ends via justify-between */}
+        <div className="flex h-full flex-col justify-between">
+          {isPlayer ? (
+            <>
+              {benchRow}
+              {activeRow}
+            </>
+          ) : (
+            <>
+              {activeRow}
+              {benchRow}
+            </>
+          )}
         </div>
 
-        {/* ── Right rail: P1 prize pile at top, P2 piles at bottom ─ */}
+        {/* Right rail */}
         <div className="flex flex-col gap-1.5 sm:gap-3">
-          <StackedPrizePile label="Prize Pile" count={frame.player.prizesRemaining} />
-          <div className="flex-1" aria-hidden />
-          <Pile
-            label="P2 Draw"
-            count={frame.opponent.deckCount}
-            hint={`${frame.opponent.handCount} in hand`}
-            useCardBack
-          />
-          <Pile
-            label="P2 Discard"
-            count={frame.opponent.discardCount}
-            topName={frame.opponent.discardTop}
-            topImageUrl={frame.opponent.discardTopImageUrl}
-          />
+          {isPlayer ? (
+            <StackedPrizePile label="Prize Pile" count={prizesRemaining} />
+          ) : (
+            <>
+              <Pile
+                label="P2 Draw"
+                count={deckCount}
+                hint={`${handCount} in hand`}
+                useCardBack
+              />
+              <Pile
+                label="P2 Discard"
+                count={discardCount}
+                topName={discardTop}
+                topImageUrl={discardTopImageUrl}
+              />
+            </>
+          )}
         </div>
       </div>
     </div>
