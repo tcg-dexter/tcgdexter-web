@@ -619,17 +619,14 @@ function PlayerMat({
 
         {/* ── Bench overlay (z-0, behind stadium/trainer, full mat width) ── */}
         {bench.length > 0 && (
-          <motion.div
-            layout
+          <div
             className="absolute z-0 flex justify-center gap-2 overflow-hidden"
             style={{ top: benchTop, left: MAT_PADDING, width: innerW }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
           >
             {bench.map((mon) => (
               <motion.div
                 key={mon.name}
                 layoutId={`${side}-${mon.name}`}
-                layout
                 className="shrink-0"
                 style={{ width: benchCardWidth }}
                 transition={{ duration: 0.3, ease: "easeInOut" }}
@@ -637,7 +634,7 @@ function PlayerMat({
                 <PokemonCardImage mon={mon} />
               </motion.div>
             ))}
-          </motion.div>
+          </div>
         )}
 
         {/* ── Floating overlays (z-10, don't affect grid flow) ── */}
