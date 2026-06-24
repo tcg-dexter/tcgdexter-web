@@ -208,6 +208,25 @@ export function findPokemonNameInText(text: string): string | null {
   return null;
 }
 
+/** Same as `cardImageUrlForName` but supertype-agnostic — works for
+ *  Trainer / Energy / Pokémon names alike. Picks the most recently
+ *  regulation-marked print and routes through `cardImageSmall` so per-set
+ *  CDN overrides are honored. Returns null when the name doesn't exist
+ *  in the catalog at all. */
+export function cardImageUrlForAnyName(name: string): string | null {
+  const entries = (
+    CARD_DB[name] ?? CARD_DB_LOWER.get(name.toLowerCase()) ?? []
+  ).filter((e) => e.set_id);
+  if (!entries.length) return null;
+  const best = entries.reduce((a, b) =>
+    (REGULATION_RANK[b.regulation_mark ?? ""] ?? 0) >
+    (REGULATION_RANK[a.regulation_mark ?? ""] ?? 0)
+      ? b
+      : a,
+  );
+  return cardImageSmall(best.set_id, best.number);
+}
+
 /** Resolve a Pokémon name to its most recently printed card — the entry
  *  with the highest regulation mark — for image + type display when only a
  *  name is known (no set/number). Returns null on no match. */

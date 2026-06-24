@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { normalizePerspective, parseBattleLog } from "@/lib/battle-log";
 import { lookupCard, replay } from "@/lib/engine";
 import type { GameState, PokemonInPlay } from "@/lib/engine";
-import { cardImageUrlForName } from "@/lib/primaryCardImage";
+import { cardImageUrlForAnyName, cardImageUrlForName } from "@/lib/primaryCardImage";
 
 /**
  * GET /api/admin/replay/[matchId]
@@ -134,9 +134,13 @@ function mapSide(side: GameState["sides"]["player"]): SideFrame {
       side.discard.length > 0
         ? side.discard[side.discard.length - 1].name
         : null,
+    // The top-discard can be any supertype (a played Item / Supporter /
+    // Tool, an attached energy that came off, a KO'd Pokémon, …), so route
+    // through the supertype-agnostic resolver — cardImageUrlForName filters
+    // to Pokémon only and would silently fall back to the card-back.
     discardTopImageUrl:
       side.discard.length > 0
-        ? cardImageUrlForName(side.discard[side.discard.length - 1].name)
+        ? cardImageUrlForAnyName(side.discard[side.discard.length - 1].name)
         : null,
     prizesRemaining: side.prizes.length,
   };
@@ -156,7 +160,9 @@ function frameFromState(state: GameState, actionIndex: number, summary: string, 
       ? {
           name: state.stadium.card.name,
           owner: state.stadium.owner,
-          imageUrl: cardImageUrlForName(state.stadium.card.name),
+          // Stadiums are Trainer cards, so the Pokémon-only resolver
+          // returns null. Use the supertype-agnostic lookup.
+          imageUrl: cardImageUrlForAnyName(state.stadium.card.name),
         }
       : null,
     prizesTaken: state.prizesTaken,
