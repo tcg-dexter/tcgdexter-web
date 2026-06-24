@@ -22,6 +22,7 @@ interface PokemonFrame {
   damage: number;
   hp: number | null;
   energy: string[];
+  energyTypes: string[];
   conditions: string[];
   evolutionStack: string[];
   imageUrl: string | null;
@@ -422,17 +423,24 @@ function PokemonCardImage({ mon }: { mon: PokemonFrame }) {
           </span>
         </span>
       )}
-      {(mon.energy.length > 0 || mon.conditions.length > 0) && (
-        <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-black/55 py-0.5">
-          {mon.energy.length > 0 && (
-            <span className="rounded bg-sky-500/90 px-1 py-[1px] text-[9px] font-semibold tabular-nums text-white">
-              ⚡{mon.energy.length}
-            </span>
-          )}
+      {(mon.energyTypes.length > 0 || mon.conditions.length > 0) && (
+        // Gradient footer matches the Card Catalog's CardFooterOverlay so
+        // the energy icons sit on the same darkened band shape across the
+        // app. Energies render left-to-right in attach order.
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-start gap-[2px] px-1 pb-1 pt-3 bg-gradient-to-b from-transparent to-neutral-800 to-80%">
+          {mon.energyTypes.map((t, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={i}
+              src={`/types/${t.toLowerCase()}.png`}
+              alt={t}
+              className="h-3 w-3 sm:h-3.5 sm:w-3.5"
+            />
+          ))}
           {mon.conditions.map((c) => (
             <span
               key={c}
-              className="rounded bg-violet-500/90 px-1 py-[1px] text-[9px] font-semibold uppercase text-white"
+              className="ml-0.5 rounded bg-violet-500/90 px-1 py-[1px] text-[9px] font-semibold uppercase text-white"
               title={c}
             >
               {c[0]}

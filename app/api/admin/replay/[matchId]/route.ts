@@ -21,6 +21,11 @@ interface PokemonFrame {
   /** Printed HP — null when the name doesn't resolve in the catalog. */
   hp: number | null;
   energy: string[];
+  /** One energy-type label per attached energy, in attach order. Used by
+   *  the UI to render the row of energy icons in the card footer. Special
+   *  / blend energies fall back to "Colorless" since no single type icon
+   *  fits them. */
+  energyTypes: string[];
   conditions: string[];
   evolutionStack: string[];
   /** Resolved most-recent printing image URL; null on catalog miss. */
@@ -69,6 +74,34 @@ export interface ReplayPayload {
   unmatchedLines: string[];
 }
 
+// Basic energy types we have icons for (public/types/*.png).
+const BASIC_TYPES = new Set([
+  "fire",
+  "water",
+  "grass",
+  "lightning",
+  "psychic",
+  "fighting",
+  "darkness",
+  "metal",
+  "fairy",
+  "dragon",
+  "colorless",
+]);
+
+/** Resolve an attached energy card name to a single type label that maps
+ *  to /types/{label}.png. Basic energies parse out of the name; special
+ *  / blend energies fall back to "Colorless". */
+function energyTypeFromName(name: string): string {
+  const m =
+    name.match(/^Basic\s+([A-Za-z]+)\s+Energy$/i) ??
+    name.match(/^([A-Za-z]+)\s+Energy$/);
+  if (m && BASIC_TYPES.has(m[1].toLowerCase())) {
+    return m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
+  }
+  return "Colorless";
+}
+
 function mapPokemon(mon: PokemonInPlay): PokemonFrame {
   const catalog = lookupCard(mon.card.name);
   return {
@@ -76,6 +109,7 @@ function mapPokemon(mon: PokemonInPlay): PokemonFrame {
     damage: mon.damage,
     hp: catalog?.hp ?? null,
     energy: mon.attachedEnergy.map((c) => c.name),
+    energyTypes: mon.attachedEnergy.map((c) => energyTypeFromName(c.name)),
     conditions: [...mon.conditions],
     evolutionStack: mon.stack.map((c) => c.name),
     imageUrl: cardImageUrlForName(mon.card.name),
