@@ -41,6 +41,7 @@ interface SideFrame {
 interface StadiumFrame {
   name: string;
   owner: "player" | "opponent";
+  imageUrl: string | null;
 }
 
 export interface ReplayFrame {
@@ -104,7 +105,13 @@ function frameFromState(state: GameState, actionIndex: number, summary: string, 
     summary,
     player: mapSide(state.sides.player),
     opponent: mapSide(state.sides.opponent),
-    stadium: state.stadium ? { name: state.stadium.card.name, owner: state.stadium.owner } : null,
+    stadium: state.stadium
+      ? {
+          name: state.stadium.card.name,
+          owner: state.stadium.owner,
+          imageUrl: cardImageUrlForName(state.stadium.card.name),
+        }
+      : null,
     prizesTaken: state.prizesTaken,
     winner: state.winner,
   };

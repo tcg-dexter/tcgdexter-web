@@ -204,8 +204,8 @@ function Board({
   return (
     <div className="mt-4 rounded-2xl border border-black/8 bg-white p-4 sm:p-6">
       <div className="grid grid-cols-[64px_1fr_64px] gap-3 sm:grid-cols-[88px_1fr_88px] sm:gap-4">
-        {/* ── Left rail: P1 piles at top ─────────────────────── */}
-        <div className="flex flex-col gap-3 justify-start">
+        {/* ── Left rail: P1 piles at top, P2 prize pile at bottom ─ */}
+        <div className="flex flex-col gap-3">
           <Pile
             label="P1 Discard"
             count={frame.player.discardCount}
@@ -217,44 +217,32 @@ function Board({
             hint={`${frame.player.handCount} in hand`}
             useCardBack
           />
+          <div className="flex-1" aria-hidden />
+          <StackedPrizePile label="Prize Pile" count={frame.opponent.prizesRemaining} />
         </div>
 
-        {/* ── Center: bench + active rows ─────────────────────
-            The active row is a 3-up flex with a width-matching
-            spacer opposite the prize pile so the active card
-            sits centered above / below its counterpart. */}
+        {/* ── Center: benches + stadium-flanked actives ─────────
+            The middle row is stadium | (P1 active over P2 active) |
+            stadium. Only one Stadium ever sits in play; the slot
+            opposite the active owner shows an empty placeholder. */}
         <div className="flex flex-col gap-3">
           <BenchRow
             label={`P1 Bench${frame.player.handle ? ` · ${frame.player.handle}` : ""}`}
             pokemon={frame.player.bench}
           />
-          <div className="flex items-stretch justify-center gap-3">
-            <div className="w-[72px] shrink-0 sm:w-[88px]" aria-hidden />
-            <PokemonSlot label="P1 Active" pokemon={frame.player.active} />
-            <Pile
-              label="P1 Prizes"
-              count={frame.player.prizesRemaining}
-              useCardBack
-              className="w-[72px] shrink-0 sm:w-[88px]"
+          <div className="flex items-center justify-center gap-3">
+            <StadiumSlot
+              label="P1 Stadium"
+              stadium={frame.stadium?.owner === "player" ? frame.stadium : null}
             />
-          </div>
-          {frame.stadium && (
-            <div className="self-center rounded-xl border border-amber-300/70 bg-amber-50 px-3 py-1.5 text-[11px] font-semibold text-amber-900">
-              Stadium · {frame.stadium.name}
-              <span className="ml-2 text-[10px] font-normal text-amber-700/80">
-                {frame.stadium.owner === "player" ? "P1" : "P2"}
-              </span>
+            <div className="flex flex-col items-center gap-2">
+              <PokemonSlot label="P1 Active" pokemon={frame.player.active} />
+              <PokemonSlot label="P2 Active" pokemon={frame.opponent.active} />
             </div>
-          )}
-          <div className="flex items-stretch justify-center gap-3">
-            <Pile
-              label="P2 Prizes"
-              count={frame.opponent.prizesRemaining}
-              useCardBack
-              className="w-[72px] shrink-0 sm:w-[88px]"
+            <StadiumSlot
+              label="P2 Stadium"
+              stadium={frame.stadium?.owner === "opponent" ? frame.stadium : null}
             />
-            <PokemonSlot label="P2 Active" pokemon={frame.opponent.active} />
-            <div className="w-[72px] shrink-0 sm:w-[88px]" aria-hidden />
           </div>
           <BenchRow
             label={`P2 Bench${frame.opponent.handle ? ` · ${frame.opponent.handle}` : ""}`}
@@ -262,8 +250,10 @@ function Board({
           />
         </div>
 
-        {/* ── Right rail: P2 piles at bottom ────────────────── */}
-        <div className="flex flex-col gap-3 justify-end">
+        {/* ── Right rail: P1 prize pile at top, P2 piles at bottom ─ */}
+        <div className="flex flex-col gap-3">
+          <StackedPrizePile label="Prize Pile" count={frame.player.prizesRemaining} />
+          <div className="flex-1" aria-hidden />
           <Pile
             label="P2 Draw"
             count={frame.opponent.deckCount}
@@ -446,6 +436,113 @@ function PokemonCardImage({ mon }: { mon: PokemonFrame }) {
               {c[0]}
             </span>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StadiumSlot({
+  label,
+  stadium,
+}: {
+  label: string;
+  stadium: { name: string; imageUrl: string | null } | null;
+}) {
+  return (
+    <div className="flex w-[88px] flex-col items-center gap-1 sm:w-[110px]">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted text-center">
+        {label}
+      </div>
+      {stadium ? (
+        <div
+          className="relative w-full overflow-hidden rounded-lg border border-amber-300/70 bg-white"
+          style={{ aspectRatio: "245 / 342" }}
+          title={stadium.name}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={stadium.imageUrl ?? CARD_BACK_URL}
+            alt={stadium.name}
+            className="h-full w-full object-cover"
+            onError={(e) => {
+              if (e.currentTarget.src !== CARD_BACK_URL) {
+                e.currentTarget.src = CARD_BACK_URL;
+              }
+            }}
+          />
+          {!stadium.imageUrl && (
+            <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
+              {stadium.name}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div
+          className="flex w-full items-center justify-center rounded-lg border border-dashed border-black/15 bg-white text-[10px] text-text-muted text-center px-1"
+          style={{ aspectRatio: "245 / 342" }}
+        >
+          no stadium
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StackedPrizePile({ label, count }: { label: string; count: number }) {
+  // Render up to `count` card backs stacked with a small vertical offset
+  // so the prize pile reads as "a stack of cards" without exploding the
+  // layout. Each layer is absolutely positioned; the outermost container
+  // reserves enough vertical room for the deepest stack.
+  const layers = Math.max(0, Math.min(6, count));
+  const OFFSET_PCT_PER_LAYER = 8; // % of container width
+  return (
+    <div className="flex w-full flex-col items-center gap-1">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted text-center">
+        {label}
+      </div>
+      {layers === 0 ? (
+        <div
+          className="flex w-full items-center justify-center rounded-lg border border-dashed border-black/15 text-[10px] text-text-muted"
+          style={{ aspectRatio: "245 / 342" }}
+        >
+          empty
+        </div>
+      ) : (
+        <div
+          className="relative w-full"
+          style={{
+            // Card aspect (342/245 ≈ 1.396) + extra room for the layered cards.
+            paddingBottom: `${(342 / 245) * 100 + (layers - 1) * OFFSET_PCT_PER_LAYER}%`,
+          }}
+        >
+          {Array.from({ length: layers }).map((_, i) => {
+            const isTop = i === layers - 1;
+            return (
+              <div
+                key={i}
+                className="absolute left-0 right-0 overflow-hidden rounded-md border border-black/15 bg-white shadow-sm"
+                style={{
+                  top: `${i * OFFSET_PCT_PER_LAYER}%`,
+                  paddingBottom: `${(342 / 245) * 100}%`,
+                  zIndex: i,
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={CARD_BACK_URL}
+                  alt=""
+                  aria-hidden
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+                {isTop && (
+                  <div className="absolute inset-x-1 bottom-1 rounded bg-black/70 py-0.5 text-center text-[10px] font-semibold tabular-nums text-white">
+                    {count}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
