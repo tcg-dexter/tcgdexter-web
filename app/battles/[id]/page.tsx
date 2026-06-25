@@ -118,7 +118,7 @@ export default async function BattleRoute({
           bucket.energy += 1;
           break;
         case "prize_taken":
-          bucket.prizes += 1;
+          bucket.prizes += typeof payload?.count === "number" && payload.count > 0 ? payload.count : 1;
           break;
       }
     }
