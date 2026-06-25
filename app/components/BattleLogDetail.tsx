@@ -468,9 +468,20 @@ interface Props {
   result?: "win" | "loss" | "draw" | null;
   playerColor?: string;
   opponentColor?: string;
+  /** When set, only actions with `sequence <= maxSequence` are rendered.
+   *  Lets a caller (e.g. the Replay tool) reveal/hide the thread in lockstep
+   *  with an external playhead. Null/undefined renders the full log. */
+  maxSequence?: number | null;
+  /** When true, the inline ScoreCards (initial board snapshot + each
+   *  prize-taking moment) are omitted. Used by the Replay tool where the
+   *  live board view already represents that state. */
+  hideScoreCards?: boolean;
+  /** When true, post avatars render 25% smaller for tighter side-panel
+   *  presentations (e.g. the Replay thread next to the board). */
+  compactAvatars?: boolean;
 }
 
-export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, opponentColor }: Props) {
+export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, opponentColor, maxSequence, hideScoreCards, compactAvatars }: Props) {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -518,9 +529,17 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
 
   if (!data) return null;
 
+  // Caller-controlled clipping: when a playhead drives the thread (e.g. the
+  // Replay tool), drop everything past the current sequence so the visible
+  // posts grow/shrink in lockstep with the board state.
+  const visibleActions =
+    maxSequence != null
+      ? data.actions.filter((a) => a.sequence <= maxSequence)
+      : data.actions;
+
   // Group actions by turn_id, preserving sequence order.
   const actionsByTurn = new Map<string, ApiAction[]>();
-  for (const a of data.actions) {
+  for (const a of visibleActions) {
     if (!a.turn_id) continue;
     const arr = actionsByTurn.get(a.turn_id) ?? [];
     arr.push(a);
@@ -797,21 +816,24 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
               key={post.key}
               post={post}
               isLast={i === filteredPregamePosts.length - 1}
+              compactAvatars={compactAvatars}
             />
           ))}
-          <ScoreCard
-            key="initial-score"
-            playerPrizes={0}
-            opponentPrizes={0}
-            playerName={playerHandle}
-            opponentName={opponentHandle}
-            playerColor={resolvedPlayerColor}
-            opponentColor={resolvedOpponentColor}
-            playerActiveName={initialSnap.player}
-            opponentActiveName={initialSnap.opponent}
-            playerBench={initialSnap.playerBench}
-            opponentBench={initialSnap.opponentBench}
-          />
+          {!hideScoreCards && (
+            <ScoreCard
+              key="initial-score"
+              playerPrizes={0}
+              opponentPrizes={0}
+              playerName={playerHandle}
+              opponentName={opponentHandle}
+              playerColor={resolvedPlayerColor}
+              opponentColor={resolvedOpponentColor}
+              playerActiveName={initialSnap.player}
+              opponentActiveName={initialSnap.opponent}
+              playerBench={initialSnap.playerBench}
+              opponentBench={initialSnap.opponentBench}
+            />
+          )}
         </>
       )}
       {gamePosts.length > 0 && <SectionDivider label="Start" />}
@@ -823,9 +845,10 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
             key={post.key}
             post={post}
             isLast={hasPrizes || i === gamePosts.length - 1}
+            compactAvatars={compactAvatars}
           />,
         ];
-        if (hasPrizes) {
+        if (hasPrizes && !hideScoreCards) {
           const cum = prizeCumulative[i];
           const snap = snapshotsAtEnd[i];
           items.push(
@@ -913,7 +936,7 @@ interface ThreadPostInput {
 const WIN_GRADIENT = "linear-gradient(135deg,#F2A20C 0%,#D91E0D 50%,#A60D0D 100%)";
 const LOSS_COLOR = "#1a1a1a";
 
-function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }) {
+function ThreadPost({ post, isLast, compactAvatars }: { post: ThreadPostInput; isLast: boolean; compactAvatars?: boolean }) {
   const isSystem = post.kind === "system";
   const isResult = post.system?.handle === "game";
   const avatarStyle: CSSProperties = post.system
@@ -931,13 +954,19 @@ function ThreadPost({ post, isLast }: { post: ThreadPostInput; isLast: boolean }
     >
       <div className="flex flex-col items-center self-stretch">
         <div
-          className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+          className={`relative flex shrink-0 items-center justify-center rounded-full font-bold text-white ${
+            compactAvatars ? "h-[27px] w-[27px] text-[11px]" : "h-9 w-9 text-sm"
+          }`}
           style={avatarStyle}
         >
           {post.system?.label ? (
-            <span className="text-[11px] font-bold tracking-tight">{post.system.label}</span>
+            <span
+              className={`font-bold tracking-tight ${compactAvatars ? "text-[9px]" : "text-[11px]"}`}
+            >
+              {post.system.label}
+            </span>
           ) : SystemGlyph ? (
-            <SystemGlyph className="w-4 h-4" />
+            <SystemGlyph className={compactAvatars ? "w-3 h-3" : "w-4 h-4"} />
           ) : (
             avatarInitial(post.displayName)
           )}
@@ -1149,13 +1178,14 @@ function groupSetupActions(
   return order.map((k) => byKey.get(k)!);
 }
 
-type ActionCategory = "featured-ko" | "featured-prize" | "featured-mulligan" | "attack" | "dim" | "normal";
+type ActionCategory = "featured-ko" | "featured-prize" | "featured-mulligan" | "featured-end" | "attack" | "dim" | "normal";
 
 function categoryFor(type: string): ActionCategory {
   switch (type) {
     case "knock_out":
-    case "game_end":
       return "featured-ko";
+    case "game_end":
+      return "featured-end";
     case "prize_taken":
       return "featured-prize";
     case "attack":
@@ -1310,6 +1340,18 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
             >
               <span>Mulligan</span>
               <span>×{mulliganCount}</span>
+            </li>
+          );
+        }
+
+        if (cat === "featured-end") {
+          return (
+            <li
+              key={a.id}
+              className="my-1.5 rounded-full px-3 py-2.5 text-xs font-bold text-white text-center"
+              style={{ background: WIN_GRADIENT }}
+            >
+              {label}
             </li>
           );
         }

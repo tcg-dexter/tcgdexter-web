@@ -49,7 +49,6 @@ export default function QuickLinks() {
           items={[
             { label: "Project", href: links.vercel.project() },
             { label: "Deployments", href: links.vercel.deployments() },
-            { label: "Analytics", href: links.vercel.analytics() },
             { label: "Logs", href: links.vercel.logs() },
           ]}
         />

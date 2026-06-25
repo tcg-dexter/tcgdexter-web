@@ -390,18 +390,8 @@ export default function HomeClient({
             </section>
           )}
 
-          {/* Global search */}
-          <section className="mx-auto max-w-xl px-4 sm:px-6 pb-16">
-            <div className="relative group">
-              <div className="absolute -inset-px rounded-full bg-gradient-brand opacity-30 group-focus-within:opacity-70 blur-xl transition-opacity" />
-              <div className="relative">
-                <UnifiedSearch placeholder="Search TCG Dexter" />
-              </div>
-            </div>
-          </section>
-
           {/* Final CTA */}
-          <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-32">
+          <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-24">
             <div className="relative rounded-3xl overflow-hidden border border-black/8 shadow-xl">
               <div className="absolute inset-0 bg-gradient-brand opacity-20" />
               <div className="relative p-12 md:p-20 text-center">
@@ -422,6 +412,16 @@ export default function HomeClient({
                     Browse the meta →
                   </Link>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Global search */}
+          <section className="mx-auto max-w-xl px-4 sm:px-6 pb-32">
+            <div className="relative group">
+              <div className="absolute -inset-px rounded-full bg-gradient-brand opacity-30 group-focus-within:opacity-70 blur-xl transition-opacity" />
+              <div className="relative">
+                <UnifiedSearch placeholder="Search TCG Dexter" />
               </div>
             </div>
           </section>

@@ -35,6 +35,13 @@ export async function POST(req: Request) {
      * set; otherwise we 422 with a hint.
      */
     publish?: boolean;
+    /**
+     * Origin of the save — informational. When "meta", we fire a parallel
+     * `meta.deck.saved` event so the Meta Archetypes Product can count it
+     * without losing the umbrella `deck.saved` count.
+     */
+    source?: "meta";
+    metaArchetypeId?: string | null;
   };
   try {
     body = await req.json();
@@ -42,7 +49,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { deckList, analysis, name, publish } = body;
+  const { deckList, analysis, name, publish, source, metaArchetypeId } = body;
 
   if (!deckList || typeof deckList !== "string" || !deckList.trim()) {
     return NextResponse.json(
@@ -111,7 +118,16 @@ export async function POST(req: Request) {
     archetype,
     is_public: publish === true,
     name: finalName,
+    source: source ?? null,
   });
+
+  if (source === "meta") {
+    void track(req, "meta.deck.saved", {
+      archetype,
+      meta_archetype_id: metaArchetypeId ?? null,
+      is_public: publish === true,
+    });
+  }
 
   return NextResponse.json({
     id: data.id,

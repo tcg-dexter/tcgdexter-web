@@ -2,6 +2,7 @@ import type { DevData } from "../lib/github";
 import type { OpsData } from "../lib/ops";
 import type { ProductData } from "../lib/product";
 import type { DeploysData } from "../lib/vercel-deploys";
+import type { BehaviorData } from "../lib/analytics";
 import { links } from "../lib/links";
 import { Delta, Sparkline, relTime } from "./Card";
 
@@ -80,11 +81,13 @@ export default function VitalsStrip({
   dev,
   product,
   deploys,
+  behavior,
 }: {
   ops: Maybe<OpsData>;
   dev: Maybe<DevData>;
   product: Maybe<ProductData>;
   deploys: DeploysData;
+  behavior: Maybe<BehaviorData>;
 }) {
   // --- Ops vital
   const opsTile = (() => {
@@ -236,30 +239,27 @@ export default function VitalsStrip({
     );
   })();
 
-  // --- Visitors 7d
-  const visitorsTile = (() => {
-    if ("error" in product || !product.vercel.available) {
+  // --- Active users 7d (from our in-house behavior analytics, replacing the
+  // Vercel visitors tile)
+  const activeTile = (() => {
+    if ("error" in behavior) {
       return (
         <Tile
-          href={links.vercel.analytics()}
-          label="Visitors · 7d"
+          href="/dashboard/analytics?window=7"
+          label="Active · 7d"
           value="—"
-          hint={
-            "error" in product
-              ? "fetch failed"
-              : product.vercel.available === false
-                ? "analytics offline"
-                : ""
-          }
+          hint="fetch failed"
         />
       );
     }
+    const { activeUsers, firstVsReturning } = behavior;
+    const returning = firstVsReturning.returningSessionUsers;
     return (
       <Tile
-        href={links.vercel.analytics()}
-        label="Visitors · 7d"
-        value={product.vercel.visitors7d ?? "—"}
-        hint={`${product.vercel.visitors30d ?? "—"} in 30d`}
+        href="/dashboard/analytics?window=7"
+        label="Active · 7d"
+        value={activeUsers}
+        hint={`${returning} returning`}
       />
     );
   })();
@@ -271,7 +271,7 @@ export default function VitalsStrip({
       {issuesTile}
       {prsTile}
       {signupsTile}
-      {visitorsTile}
+      {activeTile}
     </div>
   );
 }
