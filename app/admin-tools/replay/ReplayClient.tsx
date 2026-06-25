@@ -244,13 +244,14 @@ export default function ReplayClient({ options }: ReplayClientProps) {
           {selectedId && (
             <aside
               key={selectedId}
-              className="hidden min-w-0 lg:flex lg:flex-1 lg:flex-col lg:overflow-hidden"
+              className="relative hidden min-w-0 lg:flex lg:flex-1 lg:flex-col lg:overflow-hidden"
               style={
                 boardHeight != null
                   ? { height: `${boardHeight}px`, marginTop: "1rem" }
                   : undefined
               }
             >
+              <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-gradient-to-b from-[#f2f2f2] to-[#f2f2f2]/0" />
               <div
                 ref={threadScrollRef}
                 className="h-full overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
