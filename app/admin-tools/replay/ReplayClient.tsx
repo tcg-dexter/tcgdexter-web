@@ -253,7 +253,7 @@ export default function ReplayClient({ options }: ReplayClientProps) {
             >
               <div
                 ref={threadScrollRef}
-                className="h-full overflow-y-auto pr-1"
+                className="h-full overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               >
                 <BattleLogDetail
                   matchId={selectedId}
