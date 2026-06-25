@@ -1178,13 +1178,14 @@ function groupSetupActions(
   return order.map((k) => byKey.get(k)!);
 }
 
-type ActionCategory = "featured-ko" | "featured-prize" | "featured-mulligan" | "attack" | "dim" | "normal";
+type ActionCategory = "featured-ko" | "featured-prize" | "featured-mulligan" | "featured-end" | "attack" | "dim" | "normal";
 
 function categoryFor(type: string): ActionCategory {
   switch (type) {
     case "knock_out":
-    case "game_end":
       return "featured-ko";
+    case "game_end":
+      return "featured-end";
     case "prize_taken":
       return "featured-prize";
     case "attack":
@@ -1339,6 +1340,18 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
             >
               <span>Mulligan</span>
               <span>×{mulliganCount}</span>
+            </li>
+          );
+        }
+
+        if (cat === "featured-end") {
+          return (
+            <li
+              key={a.id}
+              className="my-1.5 rounded-full px-3 py-2.5 text-xs font-bold text-white text-center"
+              style={{ background: WIN_GRADIENT }}
+            >
+              {label}
             </li>
           );
         }
