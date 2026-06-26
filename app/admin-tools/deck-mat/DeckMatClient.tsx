@@ -11,7 +11,7 @@ import {
 import { ENERGY_HEX } from "@/app/components/DeckProfileView";
 import { shade } from "@/lib/color";
 import { useFadeIn } from "@/lib/useFadeIn";
-import { computeImagePlacement, type MatImage } from "@/lib/matImage";
+import { computeImagePlacement, readImageFile, type MatImage } from "@/lib/matImage";
 import PlaymatImageDialog from "./PlaymatImageDialog";
 
 export interface DeckSummary {
@@ -657,6 +657,13 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const [textureKey, setTextureKey] = useState<string | null>(null);
   const [matImage, setMatImage] = useState<MatImage | null>(null);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  // Image the dialog seeds from — a fresh upload draft or the placed image.
+  const [draftImage, setDraftImage] = useState<MatImage | null>(null);
+  // While an image is placed, the color/pattern pickers are covered by a
+  // safeguard overlay until the user taps "Use Color" — prevents an
+  // accidental swatch tap from wiping the image.
+  const [pickersUnlocked, setPickersUnlocked] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [isExporting, setIsExporting] = useState(false);
   const matColumnRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -744,6 +751,28 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   function chooseTexture(key: string) {
     setTextureKey((prev) => (prev === key ? null : key));
     setMatImage(null);
+  }
+
+  // First tap on "Add Image" opens the file picker straight away; the
+  // placement dialog only appears once a file is chosen. "Edit Image"
+  // (an image is already placed) opens the dialog directly.
+  function handleImageButton() {
+    if (matImage) {
+      setDraftImage(matImage);
+      setImageDialogOpen(true);
+    } else {
+      imageInputRef.current?.click();
+    }
+  }
+
+  async function handleImageFile(file: File) {
+    try {
+      const draft = await readImageFile(file);
+      setDraftImage(draft);
+      setImageDialogOpen(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't read that image.");
+    }
   }
 
   return (
@@ -835,6 +864,9 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             </div>
           </div>
 
+          {/* Color + pattern pickers — covered by a safeguard overlay while
+              an image is placed (until the user taps "Use Color"). */}
+          <div className="relative flex flex-col gap-3">
           {/* Color picker */}
           <div className="grid gap-1.5 pt-1 mx-auto [grid-template-columns:repeat(11,1.75rem)] md:[grid-template-columns:repeat(11,2.1875rem)]">
             {MAT_STYLES.map(({ key, gradient }) => (
@@ -875,11 +907,35 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             ))}
           </div>
 
+          {matImage && !pickersUnlocked && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-[#f2f2f2]/80">
+              <button
+                type="button"
+                onClick={() => setPickersUnlocked(true)}
+                className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-text-primary shadow-md border border-black/10 hover:bg-black/[0.03] transition-colors"
+              >
+                Use Color
+              </button>
+            </div>
+          )}
+          </div>
+
           {/* Add Image + Export — max-width matches the 11-swatch picker row */}
           <div className="flex flex-col items-center gap-2">
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) handleImageFile(f);
+              }}
+            />
             <button
               type="button"
-              onClick={() => setImageDialogOpen(true)}
+              onClick={handleImageButton}
               className="w-full max-w-[368px] md:max-w-[445px] py-2.5 rounded-full border border-black/15 bg-white text-sm font-semibold text-text-primary hover:bg-black/[0.03] transition-colors inline-flex items-center justify-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -965,16 +1021,23 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
 
       <PlaymatImageDialog
         open={imageDialogOpen}
-        initial={matImage}
+        initial={draftImage}
+        placed={!!matImage}
         aspect={MAT_ASPECT}
-        onClose={() => setImageDialogOpen(false)}
+        onClose={() => {
+          setImageDialogOpen(false);
+          setDraftImage(null);
+        }}
         onSave={(img) => {
           setMatImage(img);
+          setPickersUnlocked(false);
           setImageDialogOpen(false);
+          setDraftImage(null);
         }}
         onRemove={() => {
           setMatImage(null);
           setImageDialogOpen(false);
+          setDraftImage(null);
         }}
       />
     </>
