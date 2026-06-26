@@ -28,6 +28,7 @@ export async function POST(req: Request) {
     deckList?: string;
     analysis?: unknown;
     name?: string;
+    coverUrl?: string | null;
     /**
      * When true, save the deck with is_public=true and return the canonical
      * /u/[username]/[id] path so the client can route the user to their
@@ -49,7 +50,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { deckList, analysis, name, publish, source, metaArchetypeId } = body;
+  const { deckList, analysis, name, coverUrl, publish, source, metaArchetypeId } = body;
 
   if (!deckList || typeof deckList !== "string" || !deckList.trim()) {
     return NextResponse.json(
@@ -102,6 +103,7 @@ export async function POST(req: Request) {
       deck_list: deckList,
       analysis: analysis ?? null,
       is_public: publish === true,
+      ...(coverUrl != null ? { cover_image_url: coverUrl } : {}),
     })
     .select("id, short_id, name, created_at")
     .single();

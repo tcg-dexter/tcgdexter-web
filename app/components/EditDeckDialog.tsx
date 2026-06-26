@@ -32,11 +32,19 @@ interface Props {
   defaultCoverUrl: string | null;
   /** Current deck list, shown in the editable textarea. */
   initialDeckList: string;
+  /**
+   * "save" = initial save-to-collection flow (hides deck list field, shows
+   * visibility toggle). "edit" = editing an existing saved deck (default).
+   */
+  mode?: "save" | "edit";
+  /** Only used when mode="save". Defaults to true (public). */
+  initialIsPublic?: boolean;
   /** Persist all changes in one go. Throws on failure. */
   onSave: (next: {
     name: string;
     coverUrl: string | null;
     deckList: string;
+    isPublic?: boolean;
   }) => Promise<void>;
 }
 
@@ -55,11 +63,14 @@ export default function EditDeckDialog({
   currentCoverUrl,
   defaultCoverUrl,
   initialDeckList,
+  mode = "edit",
+  initialIsPublic = true,
   onSave,
 }: Props) {
   const [nameInput, setNameInput] = useState(initialName);
   const [pendingCoverUrl, setPendingCoverUrl] = useState<string | null>(currentCoverUrl);
   const [deckListInput, setDeckListInput] = useState(initialDeckList);
+  const [isPublic, setIsPublic] = useState(initialIsPublic);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,9 +81,10 @@ export default function EditDeckDialog({
       setNameInput(initialName);
       setPendingCoverUrl(currentCoverUrl);
       setDeckListInput(initialDeckList);
+      setIsPublic(initialIsPublic);
       setError(null);
     }
-  }, [open, initialName, currentCoverUrl, initialDeckList]);
+  }, [open, initialName, currentCoverUrl, initialDeckList, initialIsPublic]);
 
   const grouped = useMemo(() => {
     const seen = new Map<string, PickableCard>();
@@ -110,7 +122,7 @@ export default function EditDeckDialog({
   const canSave =
     !busy &&
     trimmedName.length > 0 &&
-    (nameChanged || coverChanged || deckListChanged);
+    (mode === "save" || nameChanged || coverChanged || deckListChanged);
 
   async function handleSave() {
     if (!canSave) return;
@@ -121,6 +133,7 @@ export default function EditDeckDialog({
         name: trimmedName,
         coverUrl: pendingCoverUrl,
         deckList: trimmedDeckList,
+        ...(mode === "save" ? { isPublic } : {}),
       });
       onClose();
     } catch (e) {
@@ -151,7 +164,7 @@ export default function EditDeckDialog({
             id="edit-deck-title"
             className="text-base font-semibold text-text-primary"
           >
-            Edit deck
+            {mode === "save" ? "Save to collection" : "Edit deck"}
           </h2>
           <button
             type="button"
@@ -196,31 +209,75 @@ export default function EditDeckDialog({
           />
         </div>
 
-        {/* Deck list */}
-        <div className="px-5 pt-4 pb-3 border-b border-black/5">
-          <label
-            htmlFor="edit-deck-list"
-            className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5"
-          >
-            Deck list
-          </label>
-          <textarea
-            id="edit-deck-list"
-            value={deckListInput}
-            onChange={(e) => setDeckListInput(e.target.value)}
-            disabled={busy}
-            rows={5}
-            spellCheck={false}
-            placeholder="Paste a deck list to replace the current one…"
-            className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-xs font-mono text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 resize-y disabled:opacity-50 [font-size:16px] sm:text-xs"
-          />
-          {deckListChanged && (
-            <p className="mt-1.5 text-[11px] text-text-secondary">
-              Saving re-analyzes the deck and refreshes the profile. Pick a new
-              cover below after it updates if needed.
+        {/* Visibility toggle — save mode only */}
+        {mode === "save" && (
+          <div className="px-5 pt-4 pb-3 border-b border-black/5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">
+              Visibility
             </p>
-          )}
-        </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setIsPublic(true)}
+                disabled={busy}
+                aria-pressed={isPublic}
+                className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition disabled:opacity-50 ${
+                  isPublic
+                    ? "border-accent bg-accent/5 text-accent"
+                    : "border-black/10 bg-white text-text-secondary hover:bg-black/[0.02]"
+                }`}
+              >
+                Public
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPublic(false)}
+                disabled={busy}
+                aria-pressed={!isPublic}
+                className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition disabled:opacity-50 ${
+                  !isPublic
+                    ? "border-accent bg-accent/5 text-accent"
+                    : "border-black/10 bg-white text-text-secondary hover:bg-black/[0.02]"
+                }`}
+              >
+                Private
+              </button>
+            </div>
+            {isPublic && (
+              <p className="mt-1.5 text-[11px] text-text-secondary">
+                Visible on your public profile and in recent matches.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Deck list — edit mode only */}
+        {mode === "edit" && (
+          <div className="px-5 pt-4 pb-3 border-b border-black/5">
+            <label
+              htmlFor="edit-deck-list"
+              className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5"
+            >
+              Deck list
+            </label>
+            <textarea
+              id="edit-deck-list"
+              value={deckListInput}
+              onChange={(e) => setDeckListInput(e.target.value)}
+              disabled={busy}
+              rows={5}
+              spellCheck={false}
+              placeholder="Paste a deck list to replace the current one…"
+              className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-xs font-mono text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 resize-y disabled:opacity-50 [font-size:16px] sm:text-xs"
+            />
+            {deckListChanged && (
+              <p className="mt-1.5 text-[11px] text-text-secondary">
+                Saving re-analyzes the deck and refreshes the profile. Pick a new
+                cover below after it updates if needed.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Cover image */}
         <div className="px-5 pt-4 pb-2">
@@ -353,7 +410,7 @@ export default function EditDeckDialog({
             disabled={!canSave}
             className="inline-flex items-center justify-center rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-white hover:bg-accent-light transition disabled:opacity-50 touch-manipulation"
           >
-            {busy ? "Saving…" : "Save"}
+            {busy ? "Saving…" : mode === "save" ? "Save to collection" : "Save"}
           </button>
         </div>
       </div>
