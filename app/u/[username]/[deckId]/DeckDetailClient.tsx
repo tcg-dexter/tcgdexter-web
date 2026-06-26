@@ -329,6 +329,7 @@ export default function DeckDetailClient({
       titleAction={titleAction}
       subtitle={false}
       shareUrl={shareUrl}
+      dimBelow={logOpen}
       preTitle={
         <BackButton
           href={`/u/${username}`}
