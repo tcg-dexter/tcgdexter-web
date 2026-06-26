@@ -77,10 +77,10 @@ export default function PlayerLeaderboard({ players, currentUsername = null }: P
         />
       </div>
 
-      {/* Table — bare on the page, no card container */}
+      {/* Table — bare on the page, styled like the battle-stats table */}
       <div>
         {/* Header row */}
-        <div className="flex items-center gap-3 px-1 py-2.5 border-b border-black/10 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+        <div className="flex items-center gap-4 px-1 pb-2 border-b border-black/[0.08] text-[11px] font-semibold uppercase tracking-widest text-text-primary">
           <span className="w-6 shrink-0 text-right">#</span>
           <span className="flex-1 min-w-0">Player</span>
           <span className="w-20 shrink-0 text-right tabular-nums">Matches</span>
@@ -100,9 +100,9 @@ export default function PlayerLeaderboard({ players, currentUsername = null }: P
                 <li key={p.username}>
                   <Link
                     href={`/u/${p.username}`}
-                    className={`flex items-center gap-3 px-1 py-2.5 border-b border-black/5 last:border-b-0 transition-colors hover:bg-surface/70 ${
-                      isMe ? "bg-accent/5" : ""
-                    }`}
+                    className={`flex items-center gap-4 px-1 py-2.5 transition-colors hover:bg-surface/70 ${
+                      i > 0 ? "border-t border-black/[0.08]" : ""
+                    } ${isMe ? "bg-accent/5" : ""}`}
                   >
                     <span
                       className={`w-6 shrink-0 text-right text-sm font-bold tabular-nums ${
@@ -143,7 +143,7 @@ export default function PlayerLeaderboard({ players, currentUsername = null }: P
                       </span>
                     </span>
 
-                    <span className="w-20 shrink-0 text-right text-sm font-semibold tabular-nums text-text-primary">
+                    <span className="w-20 shrink-0 text-right text-sm font-semibold tabular-nums text-text-secondary">
                       {p.games}
                     </span>
                     <span className="w-14 shrink-0 text-right text-sm font-bold tabular-nums text-text-primary">
