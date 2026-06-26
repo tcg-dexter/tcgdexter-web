@@ -10,7 +10,7 @@ interface Props {
   currentUsername?: string | null;
 }
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 30;
 
 /**
  * Leaderboard table of every public player with recorded matches — wins,
@@ -83,8 +83,7 @@ export default function PlayerLeaderboard({ players, currentUsername = null }: P
         <div className="flex items-center gap-3 px-4 py-2.5 border-b border-black/8 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
           <span className="w-6 shrink-0 text-right">#</span>
           <span className="flex-1 min-w-0">Player</span>
-          <span className="w-10 shrink-0 text-right tabular-nums">W</span>
-          <span className="w-10 shrink-0 text-right tabular-nums">L</span>
+          <span className="w-20 shrink-0 text-right tabular-nums">Matches</span>
           <span className="w-14 shrink-0 text-right tabular-nums">Win %</span>
         </div>
 
@@ -144,11 +143,8 @@ export default function PlayerLeaderboard({ players, currentUsername = null }: P
                       </span>
                     </span>
 
-                    <span className="w-10 shrink-0 text-right text-sm font-semibold tabular-nums text-text-primary">
-                      {p.wins}
-                    </span>
-                    <span className="w-10 shrink-0 text-right text-sm font-semibold tabular-nums text-text-secondary">
-                      {p.losses}
+                    <span className="w-20 shrink-0 text-right text-sm font-semibold tabular-nums text-text-primary">
+                      {p.games}
                     </span>
                     <span className="w-14 shrink-0 text-right text-sm font-bold tabular-nums text-text-primary">
                       {p.winPct == null ? "—" : `${Math.round(p.winPct)}%`}
