@@ -8,14 +8,18 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { computeImagePlacement, type MatImage } from "@/lib/matImage";
+import { computeImagePlacement, readImageFile, type MatImage } from "@/lib/matImage";
 
 interface Props {
   open: boolean;
-  /** Existing placement to re-edit, or null for a fresh upload. */
+  /** Image to seed the editor with (a fresh upload draft, or the placed
+   *  image being re-edited). */
   initial: MatImage | null;
   /** Mat aspect ratio (height / width) so the editor surface matches. */
   aspect: number;
+  /** Whether an image is already placed as the mat background — controls
+   *  whether the Remove action is offered. */
+  placed: boolean;
   onClose: () => void;
   onSave: (img: MatImage) => void;
   /** Clear any placed image and revert the mat to its gradient/pattern. */
@@ -36,6 +40,7 @@ export default function PlaymatImageDialog({
   open,
   initial,
   aspect,
+  placed,
   onClose,
   onSave,
   onRemove,
@@ -87,28 +92,18 @@ export default function PlaymatImageDialog({
     return () => ro.disconnect();
   }, [open]);
 
-  function handleFile(file: File) {
-    if (!file.type.startsWith("image/")) {
-      setError("Please choose an image file.");
-      return;
+  async function handleFile(file: File) {
+    try {
+      const draft = await readImageFile(file);
+      setSrc(draft.src);
+      setNatural({ w: draft.naturalW, h: draft.naturalH });
+      setZoom(1);
+      setPanX(0.5);
+      setPanY(0.5);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't read that image.");
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      const img = new Image();
-      img.onload = () => {
-        setSrc(dataUrl);
-        setNatural({ w: img.naturalWidth, h: img.naturalHeight });
-        setZoom(1);
-        setPanX(0.5);
-        setPanY(0.5);
-        setError(null);
-      };
-      img.onerror = () => setError("Couldn't read that image.");
-      img.src = dataUrl;
-    };
-    reader.onerror = () => setError("Couldn't read that file.");
-    reader.readAsDataURL(file);
   }
 
   const surfaceH = surfaceW * aspect;
@@ -307,7 +302,7 @@ export default function PlaymatImageDialog({
               />
             </label>
           )}
-          {initial && (
+          {placed && (
             <button
               type="button"
               onClick={onRemove}

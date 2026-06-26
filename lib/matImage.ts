@@ -56,3 +56,35 @@ export function computeImagePlacement(
 function clamp01(n: number): number {
   return Math.min(1, Math.max(0, n));
 }
+
+/**
+ * Read a user-selected image file fully in-browser (FileReader → data URL)
+ * and resolve a MatImage with cover-fit defaults (zoom 1, centered). Nothing
+ * is uploaded or stored server-side. Rejects on a non-image or read failure.
+ */
+export function readImageFile(file: File): Promise<MatImage> {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith("image/")) {
+      reject(new Error("Please choose an image file."));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const img = new Image();
+      img.onload = () =>
+        resolve({
+          src: dataUrl,
+          naturalW: img.naturalWidth,
+          naturalH: img.naturalHeight,
+          zoom: 1,
+          panX: 0.5,
+          panY: 0.5,
+        });
+      img.onerror = () => reject(new Error("Couldn't read that image."));
+      img.src = dataUrl;
+    };
+    reader.onerror = () => reject(new Error("Couldn't read that file."));
+    reader.readAsDataURL(file);
+  });
+}
