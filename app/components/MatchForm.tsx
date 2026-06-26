@@ -552,13 +552,26 @@ export default function MatchForm({
         <button
           type="button"
           onClick={() => setShowNotesField((v) => !v)}
-          className={`rounded-full px-3 py-2 text-xs font-semibold transition-colors ${
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition-colors ${
             showNotesField
               ? "bg-black/70 text-white"
               : "bg-black text-white hover:bg-black/80"
           }`}
         >
-          + Notes
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            className={`w-3.5 h-3.5 transition-transform duration-200 ${
+              showNotesField ? "rotate-45" : ""
+            }`}
+          >
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Notes
         </button>
         <div className="flex-1" />
         {showDateField ? (
