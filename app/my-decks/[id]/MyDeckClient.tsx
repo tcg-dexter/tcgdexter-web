@@ -259,6 +259,7 @@ export default function MyDeckClient({
       titleAction={titleAction}
       subtitle={subtitle}
       shareUrl={shareUrl}
+      dimBelow={logOpen}
       postStatsSlot={
         <>
           {/* Action buttons */}

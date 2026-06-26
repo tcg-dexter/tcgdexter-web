@@ -227,6 +227,16 @@ export default function MatchForm({
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
   const dateInputRef = useRef<HTMLInputElement>(null);
+  const opponentNameRef = useRef<HTMLInputElement>(null);
+
+  // Focus the opponent name field when logging a new match (not when
+  // editing an existing one). The input carries [font-size:16px] so iOS
+  // Safari doesn't zoom the viewport on focus.
+  useEffect(() => {
+    if (initial) return;
+    const id = requestAnimationFrame(() => opponentNameRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [initial]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -406,6 +416,7 @@ export default function MatchForm({
     <div className="pt-1">
       {/* Opponent name */}
       <input
+        ref={opponentNameRef}
         type="text"
         value={opponentName}
         onChange={(e) => setOpponentName(e.target.value)}

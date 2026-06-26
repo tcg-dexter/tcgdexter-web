@@ -211,6 +211,12 @@ interface Props {
    */
   postStatsSlot?: React.ReactNode;
   /**
+   * When true, the modules below postStatsSlot are covered by a site-gray
+   * overlay (0.8) and made inaccessible — used while the match-logging form
+   * is open so the user focuses on logging.
+   */
+  dimBelow?: boolean;
+  /**
    * Content injected directly below the Save/Share button row.
    * Used by /meta-archetypes/[slug] to place the Scouting Note after the CTAs.
    */
@@ -264,6 +270,7 @@ export default function DeckProfileView({
   preOverviewSlot,
   postOverviewSlot,
   postStatsSlot,
+  dimBelow = false,
   postCtaSlot,
   shareUrl,
   headerSlot,
@@ -388,6 +395,16 @@ export default function DeckProfileView({
 
           {/* Post-stats slot: saved variant places action buttons + match log here */}
           {postStatsSlot}
+
+          {/* Everything below the match log — dimmed + made inaccessible while
+              the match-logging form is open (dimBelow). */}
+          <div className="relative flex flex-col gap-4">
+          {dimBelow && (
+            <div
+              className="absolute inset-0 z-20 bg-[#f2f2f2]/80"
+              aria-hidden="true"
+            />
+          )}
 
           {/* Save + Share buttons — sit right under the overview so the
               primary action is always within thumb reach. The saved variant
@@ -616,6 +633,7 @@ export default function DeckProfileView({
           {footerCta !== null && (
             <div className="text-center mt-4">{footerCta ?? defaultFooterCta}</div>
           )}
+          </div>
         </div>
       </main>
 
