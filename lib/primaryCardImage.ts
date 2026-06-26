@@ -318,6 +318,38 @@ export function cardTypesForSetIdNumber(
   return entries.find((e) => e.types?.length)?.types ?? [];
 }
 
+/** Every distinct (set_id, number) printing of a card name in the bundled
+ *  standard DB. Used by the collection-ownership module to count a card as
+ *  owned when the user has *any* printing of it, not just the deck's exact
+ *  set/number. */
+export function cardPrintingsForName(
+  name: string,
+): { setId: string; number: string }[] {
+  const entries = CARD_DB[name] ?? CARD_DB_LOWER.get(name.toLowerCase()) ?? [];
+  const out: { setId: string; number: string }[] = [];
+  const seen = new Set<string>();
+  for (const e of entries) {
+    if (!e.set_id) continue;
+    const key = `${e.set_id}|${e.number}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ setId: e.set_id, number: e.number });
+  }
+  return out;
+}
+
+/** True for a basic Energy card (e.g. "Grass Energy", "Basic Fire Energy").
+ *  Basic energy is excluded from ownership math since it's freely obtainable.
+ *  Special energies (Double Turbo, Jet, Reversal, …) never match this. */
+const BASIC_ENERGY_RE =
+  /^(basic\s+)?(grass|fire|water|lightning|psychic|fighting|darkness|metal|fairy|dragon|colorless)\s+energy$/i;
+export function isBasicEnergyCard(
+  card: Pick<AnalysisCard, "name" | "section">,
+): boolean {
+  if (card.section !== "energy") return false;
+  return BASIC_ENERGY_RE.test(card.name.trim());
+}
+
 export interface DeckAvatarInfo {
   /** The card name used to derive the sprite slug. */
   name: string;

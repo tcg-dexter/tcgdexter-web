@@ -2,12 +2,14 @@ import Link from "next/link";
 import DeckCardGrid from "@/app/components/DeckCardGrid";
 import DeckListCard from "@/app/components/DeckListCard";
 import DeckMulliganModule from "@/app/components/DeckMulliganModule";
+import DeckOwnershipModule from "@/app/components/DeckOwnershipModule";
 import DeckPriceModule from "@/app/components/DeckPriceModule";
 import MetaDeckListCarousel from "@/app/components/MetaDeckListCarousel";
 import SaveDeckButton from "@/app/components/SaveDeckButton";
 import ShareButton from "@/app/components/ShareButton";
 import StandardFormatInfo from "@/app/components/StandardFormatInfo";
 import StatsStrip from "@/app/components/ui/StatsStrip";
+import { cardPrintingsForName, isBasicEnergyCard } from "@/lib/primaryCardImage";
 
 /* ─── Types ──────────────────────────────────────────────────── */
 
@@ -269,6 +271,18 @@ export default function DeckProfileView({
   metaArchetypeId,
 }: Props) {
   const result = analysis;
+
+  // Cards the user could need to acquire — every deck line except basic
+  // Energy (freely obtainable). Each carries all printings of its name so
+  // the ownership module can count any finish/set the user already has.
+  const ownableCards = (result.cards ?? [])
+    .filter((c) => !isBasicEnergyCard(c))
+    .map((c) => ({
+      name: c.name,
+      qty: c.qty,
+      printings: cardPrintingsForName(c.name),
+    }));
+
   const CARD_CLS = "rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm";
   const TRACK_CLS = "bg-black/5";
   const dateStr = new Date(profiledAt).toLocaleDateString("en-US", {
@@ -412,6 +426,10 @@ export default function DeckProfileView({
           ) : (
             <DeckListCard deckList={deckList} />
           )}
+
+          {/* Cards Owned — signed-in users with a tracked collection only;
+              renders null otherwise. */}
+          <DeckOwnershipModule cards={ownableCards} />
 
           {/* Mulligan Rate */}
           <DeckMulliganModule
