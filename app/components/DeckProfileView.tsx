@@ -9,6 +9,7 @@ import SaveDeckButton from "@/app/components/SaveDeckButton";
 import ShareButton from "@/app/components/ShareButton";
 import StandardFormatInfo from "@/app/components/StandardFormatInfo";
 import StatsStrip from "@/app/components/ui/StatsStrip";
+import MatchLogModules from "@/app/components/MatchLogModules";
 import { cardPrintingsForName, isBasicEnergyCard } from "@/lib/primaryCardImage";
 
 /* ─── Types ──────────────────────────────────────────────────── */
@@ -396,15 +397,9 @@ export default function DeckProfileView({
           {/* Post-stats slot: saved variant places action buttons + match log here */}
           {postStatsSlot}
 
-          {/* Everything below the match log — dimmed + made inaccessible while
-              the match-logging form is open (dimBelow). */}
-          <div className="relative flex flex-col gap-4">
-          {dimBelow && (
-            <div
-              className="absolute inset-0 z-20 bg-[#f2f2f2]/80"
-              aria-hidden="true"
-            />
-          )}
+          {/* Everything below the match log magic-moves to its new position
+              and is dimmed/inaccessible while the match-logging form is open. */}
+          <MatchLogModules dimBelow={dimBelow}>
 
           {/* Save + Share buttons — sit right under the overview so the
               primary action is always within thumb reach. The saved variant
@@ -633,7 +628,7 @@ export default function DeckProfileView({
           {footerCta !== null && (
             <div className="text-center mt-4">{footerCta ?? defaultFooterCta}</div>
           )}
-          </div>
+          </MatchLogModules>
         </div>
       </main>
 
