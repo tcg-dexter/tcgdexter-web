@@ -99,15 +99,16 @@ export async function loadPlayerLeaderboard(): Promise<LeaderboardPlayer[]> {
       });
     });
 
-    // Leaderboard order: most wins first, then win %, then most games.
+    // Leaderboard order: most matches logged first, then win %, then wins.
     rows.sort(
       (a, b) =>
-        b.wins - a.wins ||
+        b.games - a.games ||
         (b.winPct ?? -1) - (a.winPct ?? -1) ||
-        b.games - a.games,
+        b.wins - a.wins,
     );
 
-    return rows;
+    // Cap the board at the 30 most active players.
+    return rows.slice(0, 30);
   } catch (err) {
     console.error("[player-leaderboard] failed:", err);
     return [];
