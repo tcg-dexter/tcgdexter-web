@@ -44,6 +44,7 @@ interface DeckRow {
   id: string;
   short_id: string;
   name: string;
+  deck_list: string;
   analysis: {
     deckPrice?: number;
     metaMatch?: { archetypeName?: string | null; archetypeId?: string | null };
@@ -137,12 +138,12 @@ export default async function ProfilePage({
   const { data: decksRaw } = isOwner
     ? await supabase
         .from("saved_decks")
-        .select("id, short_id, name, analysis, updated_at, created_at, like_count, is_public, cover_image_url")
+        .select("id, short_id, name, deck_list, analysis, updated_at, created_at, like_count, is_public, cover_image_url")
         .eq("user_id", profile.id)
         .order("updated_at", { ascending: false })
     : await supabase
         .from("saved_decks")
-        .select("id, short_id, name, analysis, updated_at, created_at, like_count, is_public, cover_image_url")
+        .select("id, short_id, name, deck_list, analysis, updated_at, created_at, like_count, is_public, cover_image_url")
         .eq("user_id", profile.id)
         .eq("is_public", true)
         .order("like_count", { ascending: false })
@@ -458,6 +459,9 @@ export default async function ProfilePage({
                   iconBg={avatar ? typeColor(avatar.types) : null}
                   cards={cards}
                   coverImageUrl={deck.cover_image_url}
+                  deckList={deck.deck_list}
+                  isPublic={deck.is_public}
+                  canManage={isOwner}
                   index={i}
                 />
               );
