@@ -235,7 +235,11 @@ export default function DeckOwnershipModule({ cards }: Props) {
                   key={`${r.name}-${i}`}
                   className="flex items-center gap-3 text-sm"
                 >
-                  <span className="flex-1 min-w-0 truncate text-text-secondary">
+                  <span
+                    className={`flex-1 min-w-0 truncate text-text-secondary ${
+                      r.owned >= r.qty ? "" : "italic"
+                    }`}
+                  >
                     {r.name}
                   </span>
                   <span className={`w-16 text-right tabular-nums font-semibold ${tone}`}>
