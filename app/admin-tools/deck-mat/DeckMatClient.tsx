@@ -659,6 +659,10 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   // Image the dialog seeds from — a fresh upload draft or the placed image.
   const [draftImage, setDraftImage] = useState<MatImage | null>(null);
+  // While an image is placed, the color/pattern pickers are covered by a
+  // safeguard overlay until the user taps "Use Color" — prevents an
+  // accidental swatch tap from wiping the image.
+  const [pickersUnlocked, setPickersUnlocked] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [isExporting, setIsExporting] = useState(false);
   const matColumnRef = useRef<HTMLDivElement>(null);
@@ -860,6 +864,9 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             </div>
           </div>
 
+          {/* Color + pattern pickers — covered by a safeguard overlay while
+              an image is placed (until the user taps "Use Color"). */}
+          <div className="relative flex flex-col gap-3">
           {/* Color picker */}
           <div className="grid gap-1.5 pt-1 mx-auto [grid-template-columns:repeat(11,1.75rem)] md:[grid-template-columns:repeat(11,2.1875rem)]">
             {MAT_STYLES.map(({ key, gradient }) => (
@@ -898,6 +905,19 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                 }}
               />
             ))}
+          </div>
+
+          {matImage && !pickersUnlocked && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-[#f2f2f2]/80">
+              <button
+                type="button"
+                onClick={() => setPickersUnlocked(true)}
+                className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-text-primary shadow-md border border-black/10 hover:bg-black/[0.03] transition-colors"
+              >
+                Use Color
+              </button>
+            </div>
+          )}
           </div>
 
           {/* Add Image + Export — max-width matches the 11-swatch picker row */}
@@ -1010,6 +1030,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
         }}
         onSave={(img) => {
           setMatImage(img);
+          setPickersUnlocked(false);
           setImageDialogOpen(false);
           setDraftImage(null);
         }}
