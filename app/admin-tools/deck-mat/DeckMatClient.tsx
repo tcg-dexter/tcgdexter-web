@@ -11,7 +11,7 @@ import {
 import { ENERGY_HEX } from "@/app/components/DeckProfileView";
 import { shade } from "@/lib/color";
 import { useFadeIn } from "@/lib/useFadeIn";
-import { computeImagePlacement, type MatImage } from "@/lib/matImage";
+import { computeImagePlacement, readImageFile, type MatImage } from "@/lib/matImage";
 import PlaymatImageDialog from "./PlaymatImageDialog";
 
 export interface DeckSummary {
@@ -657,6 +657,9 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const [textureKey, setTextureKey] = useState<string | null>(null);
   const [matImage, setMatImage] = useState<MatImage | null>(null);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  // Image the dialog seeds from — a fresh upload draft or the placed image.
+  const [draftImage, setDraftImage] = useState<MatImage | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [isExporting, setIsExporting] = useState(false);
   const matColumnRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -744,6 +747,28 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   function chooseTexture(key: string) {
     setTextureKey((prev) => (prev === key ? null : key));
     setMatImage(null);
+  }
+
+  // First tap on "Add Image" opens the file picker straight away; the
+  // placement dialog only appears once a file is chosen. "Edit Image"
+  // (an image is already placed) opens the dialog directly.
+  function handleImageButton() {
+    if (matImage) {
+      setDraftImage(matImage);
+      setImageDialogOpen(true);
+    } else {
+      imageInputRef.current?.click();
+    }
+  }
+
+  async function handleImageFile(file: File) {
+    try {
+      const draft = await readImageFile(file);
+      setDraftImage(draft);
+      setImageDialogOpen(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't read that image.");
+    }
   }
 
   return (
@@ -877,9 +902,20 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
 
           {/* Add Image + Export — max-width matches the 11-swatch picker row */}
           <div className="flex flex-col items-center gap-2">
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) handleImageFile(f);
+              }}
+            />
             <button
               type="button"
-              onClick={() => setImageDialogOpen(true)}
+              onClick={handleImageButton}
               className="w-full max-w-[368px] md:max-w-[445px] py-2.5 rounded-full border border-black/15 bg-white text-sm font-semibold text-text-primary hover:bg-black/[0.03] transition-colors inline-flex items-center justify-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -965,16 +1001,22 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
 
       <PlaymatImageDialog
         open={imageDialogOpen}
-        initial={matImage}
+        initial={draftImage}
+        placed={!!matImage}
         aspect={MAT_ASPECT}
-        onClose={() => setImageDialogOpen(false)}
+        onClose={() => {
+          setImageDialogOpen(false);
+          setDraftImage(null);
+        }}
         onSave={(img) => {
           setMatImage(img);
           setImageDialogOpen(false);
+          setDraftImage(null);
         }}
         onRemove={() => {
           setMatImage(null);
           setImageDialogOpen(false);
+          setDraftImage(null);
         }}
       />
     </>
