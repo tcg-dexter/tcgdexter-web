@@ -81,7 +81,7 @@ export default function PlayerLeaderboard({ players, currentUsername = null }: P
       <div>
         {/* Header row */}
         <div className="flex items-center gap-4 px-1 pb-2 border-b border-black/[0.08] text-[11px] font-semibold uppercase tracking-widest text-text-primary">
-          <span className="w-6 shrink-0 text-right">#</span>
+          <span className="w-6 shrink-0" aria-hidden="true" />
           <span className="flex-1 min-w-0">Player</span>
           <span className="w-20 shrink-0 text-right tabular-nums">Matches</span>
           <span className="w-14 shrink-0 text-right tabular-nums">Win %</span>
