@@ -11,6 +11,8 @@ import {
 import { ENERGY_HEX } from "@/app/components/DeckProfileView";
 import { shade } from "@/lib/color";
 import { useFadeIn } from "@/lib/useFadeIn";
+import { computeImagePlacement, type MatImage } from "@/lib/matImage";
+import PlaymatImageDialog from "./PlaymatImageDialog";
 
 export interface DeckSummary {
   id: string;
@@ -395,6 +397,7 @@ async function rasterizeMat({
   cardWidth,
   activeGradient,
   textureKey,
+  matImage,
   deckName,
   matWidth,
 }: {
@@ -402,6 +405,7 @@ async function rasterizeMat({
   cardWidth: number;
   activeGradient: string | null;
   textureKey: string | null;
+  matImage: MatImage | null;
   deckName: string;
   matWidth: number;
 }): Promise<string> {
@@ -496,40 +500,64 @@ async function rasterizeMat({
   ctx.fill();
   ctx.restore();
 
-  if (activeGradient) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.roundRect(matX, matY, matWidth, matHeight, 12);
-    ctx.closePath();
-    ctx.clip();
-    ctx.fillStyle =
-      cssGradToCanvas(ctx, activeGradient, matX, matY, matWidth, matHeight) ?? "#888";
-    ctx.fillRect(matX, matY, matWidth, matHeight);
-    ctx.restore();
-  }
+  // A placed image is the mat content and replaces the gradient/pattern.
+  if (matImage) {
+    try {
+      const img = await loadImg(matImage.src);
+      const { dispW, dispH, drawX, drawY } = computeImagePlacement(
+        matWidth,
+        matHeight,
+        matImage.naturalW,
+        matImage.naturalH,
+        matImage.zoom,
+        matImage.panX,
+        matImage.panY,
+      );
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(matX, matY, matWidth, matHeight, 12);
+      ctx.clip();
+      ctx.drawImage(img, matX + drawX, matY + drawY, dispW, dispH);
+      ctx.restore();
+    } catch {
+      console.warn("[DeckMat] mat image draw failed");
+    }
+  } else {
+    if (activeGradient) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(matX, matY, matWidth, matHeight, 12);
+      ctx.closePath();
+      ctx.clip();
+      ctx.fillStyle =
+        cssGradToCanvas(ctx, activeGradient, matX, matY, matWidth, matHeight) ?? "#888";
+      ctx.fillRect(matX, matY, matWidth, matHeight);
+      ctx.restore();
+    }
 
-  // ── 7. Texture overlay ────────────────────────────────────────────────────
-  // Texture tiles are drawn to an offscreen canvas with Canvas 2D
-  // primitives, *not* loaded from the SVG strings — see drawTextureTile
-  // for the iOS Safari canvas-taint reasoning.
-  if (textureKey) {
-    const patCanvas = drawTextureTile(textureKey);
-    if (patCanvas) {
-      try {
-        const pat = ctx.createPattern(patCanvas, "repeat");
-        if (pat) {
-          const ts = matWidth / 600;
-          pat.setTransform(new DOMMatrix([ts, 0, 0, ts, 0, 0]));
-          ctx.save();
-          ctx.beginPath();
-          ctx.roundRect(matX, matY, matWidth, matHeight, 12);
-          ctx.clip();
-          ctx.fillStyle = pat;
-          ctx.fillRect(matX, matY, matWidth, matHeight);
-          ctx.restore();
+    // ── 7. Texture overlay ──────────────────────────────────────────────────
+    // Texture tiles are drawn to an offscreen canvas with Canvas 2D
+    // primitives, *not* loaded from the SVG strings — see drawTextureTile
+    // for the iOS Safari canvas-taint reasoning.
+    if (textureKey) {
+      const patCanvas = drawTextureTile(textureKey);
+      if (patCanvas) {
+        try {
+          const pat = ctx.createPattern(patCanvas, "repeat");
+          if (pat) {
+            const ts = matWidth / 600;
+            pat.setTransform(new DOMMatrix([ts, 0, 0, ts, 0, 0]));
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(matX, matY, matWidth, matHeight, 12);
+            ctx.clip();
+            ctx.fillStyle = pat;
+            ctx.fillRect(matX, matY, matWidth, matHeight);
+            ctx.restore();
+          }
+        } catch {
+          console.warn("[DeckMat] texture pattern failed:", textureKey);
         }
-      } catch {
-        console.warn("[DeckMat] texture pattern failed:", textureKey);
       }
     }
   }
@@ -627,6 +655,8 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const [error, setError] = useState<string | null>(null);
   const [matStyle, setMatStyle] = useState<MatStyle>("brand");
   const [textureKey, setTextureKey] = useState<string | null>(null);
+  const [matImage, setMatImage] = useState<MatImage | null>(null);
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const matColumnRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -674,7 +704,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
       const deckName = decks.find((d) => d.id === selectedDeckId)?.name ?? "";
       const fileName = `${deckName.replace(/[^a-z0-9]/gi, "-").toLowerCase() || "deck-mat"}.png`;
       const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
-      const dataUrl = await rasterizeMat({ rows, cardWidth, activeGradient, textureKey, deckName, matWidth });
+      const dataUrl = await rasterizeMat({ rows, cardWidth, activeGradient, textureKey, matImage, deckName, matWidth });
       downloadDataUrl(dataUrl, fileName);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Export failed.");
@@ -688,8 +718,33 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
   const activeTex = TEXTURES.find((t) => t.key === textureKey) ?? null;
   const texScale = matWidth > 0 ? matWidth / 600 : 1;
-  const emptyTextStyle = activeGradient ? { color: "rgba(255,255,255,0.5)" as const } : undefined;
-  const emptyTextClass = activeGradient ? "" : "text-text-muted";
+  const matHeightPx = matWidth > 0 ? matWidth * MAT_ASPECT : 0;
+  // A placed image replaces the gradient/pattern as the mat background.
+  const imagePlacement =
+    matImage && matWidth > 0
+      ? computeImagePlacement(
+          matWidth,
+          matHeightPx,
+          matImage.naturalW,
+          matImage.naturalH,
+          matImage.zoom,
+          matImage.panX,
+          matImage.panY,
+        )
+      : null;
+  const hasDarkBg = !!activeGradient || !!matImage;
+  const emptyTextStyle = hasDarkBg ? { color: "rgba(255,255,255,0.5)" as const } : undefined;
+  const emptyTextClass = hasDarkBg ? "" : "text-text-muted";
+
+  // Selecting a color or pattern clears any placed image (mutually exclusive).
+  function chooseStyle(key: MatStyle) {
+    setMatStyle(key);
+    setMatImage(null);
+  }
+  function chooseTexture(key: string) {
+    setTextureKey((prev) => (prev === key ? null : key));
+    setMatImage(null);
+  }
 
   return (
     <>
@@ -713,19 +768,42 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             </div>
 
             <div
-              className="rounded-xl overflow-hidden"
+              className="relative rounded-xl overflow-hidden"
               style={{
                 padding: MAT_PADDING,
-                backgroundImage: activeTex
+                backgroundImage: matImage
+                  ? "none"
+                  : activeTex
                   ? `url("data:image/svg+xml,${encodeURIComponent(activeTex.svg)}"), ${activeGradient ?? "none"}`
                   : (activeGradient ?? "none"),
-                backgroundSize: activeTex
+                backgroundSize: !matImage && activeTex
                   ? `${activeTex.w * texScale}px ${activeTex.h * texScale}px, auto`
                   : "auto",
                 height: matWidth > 0 ? matWidth * MAT_ASPECT : undefined,
                 boxShadow: "0 4px 4px rgba(0,0,0,0.66)",
               }}
             >
+              {/* Placed-image background layer (behind the card piles). */}
+              {matImage && imagePlacement && (
+                <div className="absolute inset-0 z-0 overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={matImage.src}
+                    alt=""
+                    draggable={false}
+                    className="absolute"
+                    style={{
+                      left: imagePlacement.drawX,
+                      top: imagePlacement.drawY,
+                      width: imagePlacement.dispW,
+                      height: imagePlacement.dispH,
+                      maxWidth: "none",
+                    }}
+                  />
+                </div>
+              )}
+
+              <div className="relative z-10 h-full">
               {!tiles ? (
                 <div className="h-full flex items-center justify-center text-sm" style={emptyTextStyle}>
                   <span className={emptyTextClass}>Select a deck to lay out the mat.</span>
@@ -753,6 +831,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                   ))}
                 </div>
               )}
+              </div>
             </div>
           </div>
 
@@ -762,10 +841,10 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
               <button
                 key={key}
                 type="button"
-                onClick={() => setMatStyle(key)}
+                onClick={() => chooseStyle(key)}
                 aria-label={key}
                 className={`w-7 h-7 md:w-[35px] md:h-[35px] rounded-full transition-all ${
-                  matStyle === key
+                  matStyle === key && !matImage
                     ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
                     : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
                 }`}
@@ -780,10 +859,10 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
               <button
                 key={t.key}
                 type="button"
-                onClick={() => setTextureKey((prev) => (prev === t.key ? null : t.key))}
+                onClick={() => chooseTexture(t.key)}
                 aria-label={t.key}
                 className={`w-7 h-7 md:w-[35px] md:h-[35px] rounded-full transition-all ${
-                  textureKey === t.key
+                  textureKey === t.key && !matImage
                     ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
                     : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
                 }`}
@@ -796,8 +875,20 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             ))}
           </div>
 
-          {/* Export button — max-width matches the 11-swatch picker row */}
-          <div className="flex justify-center">
+          {/* Add Image + Export — max-width matches the 11-swatch picker row */}
+          <div className="flex flex-col items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setImageDialogOpen(true)}
+              className="w-full max-w-[368px] md:max-w-[445px] py-2.5 rounded-full border border-black/15 bg-white text-sm font-semibold text-text-primary hover:bg-black/[0.03] transition-colors inline-flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="m21 15-5-5L5 21" />
+              </svg>
+              {matImage ? "Edit Image" : "Add Image"}
+            </button>
             <button
               type="button"
               onClick={handleExport}
@@ -871,6 +962,21 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           {error && <p className="text-xs text-accent">{error}</p>}
         </div>
       </div>
+
+      <PlaymatImageDialog
+        open={imageDialogOpen}
+        initial={matImage}
+        aspect={MAT_ASPECT}
+        onClose={() => setImageDialogOpen(false)}
+        onSave={(img) => {
+          setMatImage(img);
+          setImageDialogOpen(false);
+        }}
+        onRemove={() => {
+          setMatImage(null);
+          setImageDialogOpen(false);
+        }}
+      />
     </>
   );
 }
