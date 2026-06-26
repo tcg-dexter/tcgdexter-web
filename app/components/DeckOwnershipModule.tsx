@@ -40,6 +40,7 @@ type State = "loading" | "signedOut" | "empty" | "owned";
 export default function DeckOwnershipModule({ cards }: Props) {
   const [state, setState] = useState<State>("loading");
   const [collection, setCollection] = useState<CollectionItem[]>([]);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -162,48 +163,82 @@ export default function DeckOwnershipModule({ cards }: Props) {
 
   return (
     <div className={CARD_CLS}>
-      <div className="flex items-center justify-between mb-3">
+      {/* Collapsed header — percentage + chevron toggle the breakdown. */}
+      <button
+        type="button"
+        onClick={() => setExpanded((e) => !e)}
+        aria-expanded={expanded}
+        className="flex w-full items-center justify-between gap-3"
+      >
         <h2 className="text-lg font-semibold">Cards Owned</h2>
-        <span className={`text-lg font-bold tabular-nums ${overallTone}`}>
-          {pctLabel}
+        <span className="flex items-center gap-2">
+          <span className={`text-lg font-bold tabular-nums ${overallTone}`}>
+            {pctLabel}
+          </span>
+          <svg
+            className={`w-5 h-5 text-text-muted transition-transform ${
+              expanded ? "rotate-180" : ""
+            }`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+            aria-hidden
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
         </span>
-      </div>
+      </button>
 
-      {/* Overall progress bar */}
-      <div className="h-2 rounded-full bg-[var(--surface)] overflow-hidden mb-4">
-        <div
-          className="h-full rounded-full bg-gradient-brand transition-[width] duration-500"
-          style={{ width: `${Math.min(100, totals.pct)}%` }}
-        />
-      </div>
+      {expanded && (
+        <>
+          {/* Overall progress bar */}
+          <div className="mt-3 h-2 rounded-full bg-[var(--surface)] overflow-hidden mb-4">
+            <div
+              className="h-full rounded-full bg-gradient-brand transition-[width] duration-500"
+              style={{ width: `${Math.min(100, totals.pct)}%` }}
+            />
+          </div>
 
-      <ul className="space-y-1.5">
-        {rows.map((r, i) => {
-          const complete = r.owned >= r.qty;
-          const tone = complete
-            ? "text-emerald-700"
-            : r.owned > 0
-              ? "text-amber-600"
-              : "text-text-muted";
-          return (
-            <li
-              key={`${r.name}-${i}`}
-              className="flex items-center justify-between gap-3 text-sm"
-            >
-              <span className="min-w-0 truncate text-text-secondary">
-                {r.name}
-              </span>
-              <span className={`shrink-0 tabular-nums font-semibold ${tone}`}>
-                {r.owned}/{r.qty}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
+          {/* Column headers */}
+          <div className="flex items-center gap-3 pb-1.5 mb-1.5 border-b border-black/5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+            <span className="flex-1" />
+            <span className="w-16 text-right">Owned</span>
+            <span className="w-16 text-right">In Deck</span>
+          </div>
 
-      <p className="mt-3 text-xs text-text-muted">
-        {totals.have} of {totals.needed} cards owned (basic Energy excluded).
-      </p>
+          <ul className="space-y-1.5">
+            {rows.map((r, i) => {
+              const complete = r.owned >= r.qty;
+              const tone = complete
+                ? "text-emerald-700"
+                : r.owned > 0
+                  ? "text-amber-600"
+                  : "text-text-muted";
+              return (
+                <li
+                  key={`${r.name}-${i}`}
+                  className="flex items-center gap-3 text-sm"
+                >
+                  <span className="flex-1 min-w-0 truncate text-text-secondary">
+                    {r.name}
+                  </span>
+                  <span className={`w-16 text-right tabular-nums font-semibold ${tone}`}>
+                    {r.owned}
+                  </span>
+                  <span className="w-16 text-right tabular-nums font-semibold text-text-primary">
+                    {r.qty}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+
+          <p className="mt-3 text-xs text-text-muted">
+            {totals.have} of {totals.needed} cards owned (basic Energy excluded).
+          </p>
+        </>
+      )}
     </div>
   );
 }
