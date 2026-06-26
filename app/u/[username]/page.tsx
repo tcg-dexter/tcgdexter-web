@@ -400,10 +400,10 @@ export default async function ProfilePage({
         }
       />
 
-      {/* Deck feed — mobile uses px-2 (8px) so the cards stretch
-          edge-to-edge on small screens; sm+ matches the /my-decks
-          gutter (24px). */}
-      <div className="px-2 sm:px-6 mt-6">
+      {/* Deck feed — full-width within the layout's content column.
+          Mobile keeps a tight 16px gutter; sm+ opens to 32px so the
+          grid breathes against the edges instead of sitting flush. */}
+      <div className="px-4 sm:px-8 mt-6">
         <h2 className="text-lg font-semibold text-text-primary mb-3 px-1">
           Decks
           {decks.length > 0 && (
