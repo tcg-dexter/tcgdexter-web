@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import DeckCardFooter from "./DeckCardFooter";
+import DeckCardMenu from "./DeckCardMenu";
 import AvatarStack, { type AvatarStackItem } from "./AvatarStack";
 import { deckAvatarInfo } from "@/lib/primaryCardImage";
 import { metaTopPokemonByCount } from "@/lib/metaPrimaryCard";
@@ -238,6 +239,12 @@ export interface UserDeckCardProps {
   }>;
   /** Persisted cover override (null when auto-picked). */
   coverImageUrl?: string | null;
+  /** Raw deck list text. Required for the manage menu (copy + edit). */
+  deckList?: string;
+  /** Current visibility — drives the manage menu's Make public/private item. */
+  isPublic?: boolean;
+  /** When true, render the ⋯ manage menu (owner-only context). */
+  canManage?: boolean;
   /** Position in the grid — drives the entrance-animation stagger delay. */
   index?: number;
 }
@@ -255,6 +262,9 @@ export function UserDeckCard({
   iconBg,
   cards,
   coverImageUrl: initialCoverImageUrl,
+  deckList,
+  isPublic = true,
+  canManage = false,
   index,
 }: UserDeckCardProps) {
   const name = initialName;
@@ -297,8 +307,8 @@ export function UserDeckCard({
       className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       style={useFadeIn(index)}
     >
-      {/* Header — deck name + W-L record. */}
-      <div className="flex items-center gap-3 px-3.5 pt-3">
+      {/* Header — deck name + W-L record + (owner) manage menu. */}
+      <div className="flex items-center gap-2 px-3.5 pt-3">
         <Link
           href={href}
           className="flex-1 min-w-0 text-[19px] font-semibold text-text-primary truncate hover:underline underline-offset-2"
@@ -310,6 +320,18 @@ export function UserDeckCard({
             <WLCircles wl={wl} />
           </div>
         ) : null}
+        {canManage && deckList != null && (
+          <div className="shrink-0 -mr-1">
+            <DeckCardMenu
+              deckId={id}
+              deckName={name}
+              deckList={deckList}
+              isPublic={isPublic}
+              cards={cards ?? []}
+              coverImageUrl={coverImageUrl}
+            />
+          </div>
+        )}
       </div>
 
       {/* Body */}

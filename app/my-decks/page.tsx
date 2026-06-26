@@ -9,6 +9,7 @@ interface DeckRow {
   id: string;
   short_id: string;
   name: string;
+  deck_list: string;
   analysis: {
     deckPrice?: number;
     metaMatch?: { archetypeName?: string | null; archetypeId?: string | null };
@@ -49,7 +50,7 @@ export default async function MyDecksPage() {
 
   const { data: decksRaw } = await supabase
     .from("saved_decks")
-    .select("id, short_id, name, analysis, updated_at, created_at, like_count, is_public, cover_image_url")
+    .select("id, short_id, name, deck_list, analysis, updated_at, created_at, like_count, is_public, cover_image_url")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
   const decks = (decksRaw ?? []) as DeckRow[];
@@ -93,6 +94,9 @@ export default async function MyDecksPage() {
       iconBg: avatar ? typeColor(avatar.types) : null,
       cards,
       coverImageUrl: deck.cover_image_url,
+      deckList: deck.deck_list,
+      isPublic: deck.is_public,
+      canManage: true,
     };
   });
 
