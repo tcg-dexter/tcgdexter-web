@@ -104,42 +104,21 @@ export default function PlayerLeaderboard({ players, currentUsername = null }: P
                       i > 0 ? "border-t border-black/[0.08]" : ""
                     } ${isMe ? "bg-accent/5" : ""}`}
                   >
-                    <span
-                      className={`w-6 shrink-0 text-right text-sm font-bold tabular-nums ${
-                        rank <= 3 ? "text-accent" : "text-text-muted"
-                      }`}
-                    >
+                    <span className="w-6 shrink-0 text-right text-sm font-bold tabular-nums text-text-secondary">
                       {rank}
                     </span>
 
-                    <span className="flex-1 min-w-0 flex items-center gap-2.5">
-                      <span className="w-7 h-7 shrink-0 rounded-full overflow-hidden bg-surface flex items-center justify-center">
-                        {p.avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={p.avatarUrl}
-                            alt=""
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <span className="text-xs font-bold text-text-muted">
-                            {p.displayName.trim().charAt(0).toUpperCase() || "?"}
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm font-semibold text-text-primary truncate">
+                        {p.displayName}
+                        {isMe && (
+                          <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                            You
                           </span>
                         )}
                       </span>
-                      <span className="min-w-0">
-                        <span className="block text-sm font-semibold text-text-primary truncate">
-                          {p.displayName}
-                          {isMe && (
-                            <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider text-accent">
-                              You
-                            </span>
-                          )}
-                        </span>
-                        <span className="block text-xs text-text-muted truncate">
-                          @{p.username}
-                        </span>
+                      <span className="block text-xs text-text-muted truncate">
+                        @{p.username}
                       </span>
                     </span>
 
