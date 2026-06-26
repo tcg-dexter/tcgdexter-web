@@ -77,10 +77,10 @@ export default function PlayerLeaderboard({ players, currentUsername = null }: P
         />
       </div>
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-black/8 bg-white shadow-sm">
+      {/* Table — bare on the page, no card container */}
+      <div>
         {/* Header row */}
-        <div className="flex items-center gap-3 px-4 py-2.5 border-b border-black/8 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+        <div className="flex items-center gap-3 px-1 py-2.5 border-b border-black/10 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
           <span className="w-6 shrink-0 text-right">#</span>
           <span className="flex-1 min-w-0">Player</span>
           <span className="w-20 shrink-0 text-right tabular-nums">Matches</span>
@@ -88,7 +88,7 @@ export default function PlayerLeaderboard({ players, currentUsername = null }: P
         </div>
 
         {pageItems.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-text-secondary">
+          <p className="px-1 py-8 text-center text-sm text-text-secondary">
             No players match &ldquo;{query}&rdquo;.
           </p>
         ) : (
@@ -100,7 +100,7 @@ export default function PlayerLeaderboard({ players, currentUsername = null }: P
                 <li key={p.username}>
                   <Link
                     href={`/u/${p.username}`}
-                    className={`flex items-center gap-3 px-4 py-2.5 border-b border-black/5 last:border-b-0 transition-colors hover:bg-surface/70 ${
+                    className={`flex items-center gap-3 px-1 py-2.5 border-b border-black/5 last:border-b-0 transition-colors hover:bg-surface/70 ${
                       isMe ? "bg-accent/5" : ""
                     }`}
                   >
