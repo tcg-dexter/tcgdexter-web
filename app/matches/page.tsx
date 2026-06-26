@@ -1,5 +1,5 @@
-import SectionHeader from "@/app/components/ui/SectionHeader";
 import { loadRecentMatches } from "@/lib/recent-matches";
+import { loadPlayerLeaderboard } from "@/lib/player-leaderboard";
 import { createClient } from "@/lib/supabase/server";
 import MatchesClient from "./MatchesClient";
 
@@ -21,15 +21,18 @@ export default async function MatchesPage() {
     currentUsername = profile?.username ?? null;
   }
 
-  const matches = await loadRecentMatches(200);
+  const [matches, leaderboard] = await Promise.all([
+    loadRecentMatches(200),
+    loadPlayerLeaderboard(),
+  ]);
 
   return (
     <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
-      <div className="mb-6">
-        <SectionHeader title="Matches" />
-      </div>
-
-      <MatchesClient matches={matches} currentUsername={currentUsername} />
+      <MatchesClient
+        matches={matches}
+        leaderboard={leaderboard}
+        currentUsername={currentUsername}
+      />
     </main>
   );
 }

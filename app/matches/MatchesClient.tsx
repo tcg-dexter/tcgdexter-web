@@ -4,9 +4,12 @@ import { useMemo, useState } from "react";
 import PillSelect from "@/app/components/ui/PillSelect";
 import { MatchCard, type RecentMatch } from "@/app/components/MatchCard";
 import { normalizeForSearch } from "@/lib/searchNormalize";
+import PlayerLeaderboard from "./PlayerLeaderboard";
+import type { LeaderboardPlayer } from "@/lib/player-leaderboard";
 
 interface Props {
   matches: RecentMatch[];
+  leaderboard: LeaderboardPlayer[];
   currentUsername?: string | null;
 }
 
@@ -57,7 +60,12 @@ function bucketMatches(matches: RecentMatch[]) {
   return { today, thisWeek, thisMonth };
 }
 
-export default function MatchesClient({ matches, currentUsername = null }: Props) {
+export default function MatchesClient({
+  matches,
+  leaderboard,
+  currentUsername = null,
+}: Props) {
+  const [mode, setMode] = useState<"matches" | "leaderboard">("matches");
   const [viewMode, setViewMode] = useState<ViewMode>("sections");
   const [query, setQuery] = useState("");
   const [dir, setDir] = useState<SortDir>("desc");
@@ -118,6 +126,47 @@ export default function MatchesClient({ matches, currentUsername = null }: Props
 
   return (
     <>
+      {/* Header: title + view toggle (mirrors the Card Catalog data toggle) */}
+      <div className="mb-6 flex items-end justify-between gap-3">
+        <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-text-primary">
+          Matches
+        </h2>
+        <button
+          type="button"
+          onClick={() => setMode((m) => (m === "leaderboard" ? "matches" : "leaderboard"))}
+          aria-pressed={mode === "leaderboard"}
+          aria-label={mode === "leaderboard" ? "Switch to matches view" : "Switch to leaderboard"}
+          title={mode === "leaderboard" ? "Switch to matches view" : "Switch to leaderboard"}
+          className={`inline-flex items-center justify-center h-[38px] w-[38px] rounded-full border transition-colors shrink-0 ${
+            mode === "leaderboard"
+              ? "border-transparent bg-black text-white"
+              : "border-black/10 bg-white text-text-primary hover:bg-surface"
+          }`}
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-4 h-4"
+          >
+            <path d="M7 6.5h10" />
+            <path d="M7 10h10" />
+            <path d="M7 13.5h10" />
+            <path d="M3.5 6.5h.01" />
+            <path d="M3.5 10h.01" />
+            <path d="M3.5 13.5h.01" />
+          </svg>
+        </button>
+      </div>
+
+      {mode === "leaderboard" ? (
+        <PlayerLeaderboard players={leaderboard} currentUsername={currentUsername} />
+      ) : (
+      <>
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
         <div className="flex-1 relative">
@@ -276,7 +325,8 @@ export default function MatchesClient({ matches, currentUsername = null }: Props
           )}
         </>
       )}
-
+      </>
+      )}
     </>
   );
 }
