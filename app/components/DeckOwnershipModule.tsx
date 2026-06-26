@@ -41,6 +41,7 @@ export default function DeckOwnershipModule({ cards }: Props) {
   const [state, setState] = useState<State>("loading");
   const [collection, setCollection] = useState<CollectionItem[]>([]);
   const [expanded, setExpanded] = useState(false);
+  const [fill, setFill] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -94,6 +95,24 @@ export default function DeckOwnershipModule({ cards }: Props) {
     const have = rows.reduce((s, r) => s + r.owned, 0);
     return { needed, have, pct: needed > 0 ? (have / needed) * 100 : 0 };
   }, [rows]);
+
+  // Animate the progress bar from 0 → target each time the module expands.
+  // The bar mounts at width 0; a double rAF lets the browser paint that
+  // initial frame before we set the target so the CSS width transition runs.
+  useEffect(() => {
+    if (!expanded) {
+      setFill(0);
+      return;
+    }
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setFill(Math.min(100, totals.pct)));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [expanded, totals.pct]);
 
   const neededCount = cards.reduce((s, c) => s + c.qty, 0);
 
@@ -195,8 +214,8 @@ export default function DeckOwnershipModule({ cards }: Props) {
           {/* Overall progress bar */}
           <div className="mt-3 h-2 rounded-full bg-[var(--surface)] overflow-hidden mb-4">
             <div
-              className="h-full rounded-full bg-gradient-brand transition-[width] duration-500"
-              style={{ width: `${Math.min(100, totals.pct)}%` }}
+              className="h-full rounded-full bg-gradient-brand transition-[width] duration-700 ease-out"
+              style={{ width: `${fill}%` }}
             />
           </div>
 
