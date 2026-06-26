@@ -201,7 +201,7 @@ export default function DeckOwnershipModule({ cards }: Props) {
           </div>
 
           {/* Column headers */}
-          <div className="flex items-center gap-3 pb-1.5 mb-1.5 border-b border-black/5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+          <div className="flex items-center gap-3 pb-1.5 mb-1.5 border-b border-black/5 text-[11px] font-semibold uppercase tracking-wider text-black">
             <span className="flex-1" />
             <span className="w-16 text-right">Owned</span>
             <span className="w-16 text-right">In Deck</span>
@@ -209,12 +209,8 @@ export default function DeckOwnershipModule({ cards }: Props) {
 
           <ul className="space-y-1.5">
             {rows.map((r, i) => {
-              const complete = r.owned >= r.qty;
-              const tone = complete
-                ? "text-emerald-700"
-                : r.owned > 0
-                  ? "text-amber-600"
-                  : "text-text-muted";
+              // Black when the user has enough copies, red when short.
+              const tone = r.owned >= r.qty ? "text-black" : "text-accent";
               return (
                 <li
                   key={`${r.name}-${i}`}
