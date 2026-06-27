@@ -95,6 +95,12 @@ export default function DeckOwnershipModule({ cards }: Props) {
     return () => clearTimeout(t);
   }, [toast]);
 
+  // With no tracked cards, auto-expand so the "Add Cards to Catalog" CTA is
+  // visible immediately — nudging the user to start a collection.
+  useEffect(() => {
+    if (state === "empty") setExpanded(true);
+  }, [state]);
+
   // Owned quantity per "setId|number", summed across finishes.
   const ownedByPrinting = useMemo(() => {
     const map = new Map<string, number>();
@@ -218,12 +224,8 @@ export default function DeckOwnershipModule({ cards }: Props) {
     );
   }
 
-  // ── CTA states (signed out, or signed in with no tracked cards) ─────────
-  if (state === "signedOut" || state === "empty") {
-    const lead =
-      state === "empty"
-        ? "You haven't added any cards to your collection yet."
-        : "Track your card collection to see how much of any deck you already own.";
+  // ── Signed-out CTA (the only state without the breakdown) ───────────────
+  if (state === "signedOut") {
     return (
       <div className={CARD_CLS}>
         <div className="flex items-center justify-between mb-2">
@@ -242,7 +244,8 @@ export default function DeckOwnershipModule({ cards }: Props) {
           </svg>
         </div>
         <p className="text-sm text-text-secondary leading-relaxed mb-4">
-          {lead} Build your collection in the Card Catalog and we&apos;ll show
+          Track your card collection to see how much of any deck you already
+          own. Build your collection in the Card Catalog and we&apos;ll show
           exactly how many of this deck&apos;s {neededCount} cards you can
           already put together.
         </p>
