@@ -1,6 +1,7 @@
 import cardData from "@/data/cards-standard.json";
 import { cardImageSmall } from "@/lib/cardImages";
 import { basicEnergyAliasKeys } from "@/lib/basicEnergyAlias";
+import { allowedAddVariants } from "@/lib/inventory";
 
 interface AnalysisCard {
   qty: number;
@@ -17,6 +18,7 @@ interface CardEntry {
   subtypes: string[];
   types?: string[];
   supertype?: string;
+  rarity?: string | null;
   regulation_mark?: string | null;
   evolves_from?: string | null;
 }
@@ -337,6 +339,24 @@ export function cardPrintingsForName(
     out.push({ setId: e.set_id, number: e.number });
   }
   return out;
+}
+
+/** Resolve a deck-list card to the catalog "add" target for its specific
+ *  printing: the (setId, number) the deck uses plus a sensible default
+ *  variant for that rarity (the first finish the catalog's add menu offers).
+ *  Returns null when the printing can't be resolved in the standard DB. */
+export interface DeckAddTarget {
+  setId: string;
+  number: string;
+  variant: string;
+}
+export function deckCardAddTarget(
+  card: Pick<AnalysisCard, "name" | "number" | "setCode">,
+): DeckAddTarget | null {
+  const entry = resolveEntry(card);
+  if (!entry?.set_id) return null;
+  const variant = allowedAddVariants(entry.rarity ?? null)[0] ?? "normal";
+  return { setId: entry.set_id, number: entry.number, variant };
 }
 
 /** True for a basic Energy card. Basic energy is excluded from ownership math
