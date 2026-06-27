@@ -173,12 +173,6 @@ export default function DeckOwnershipModule({ cards }: Props) {
   if (cards.length === 0) return null;
 
   const pctLabel = `${Math.round(totals.pct)}%`;
-  const overallTone =
-    totals.pct >= 100
-      ? "text-emerald-700"
-      : totals.pct >= 50
-        ? "text-amber-600"
-        : "text-text-secondary";
 
   return (
     <div className={CARD_CLS}>
@@ -191,7 +185,7 @@ export default function DeckOwnershipModule({ cards }: Props) {
       >
         <h2 className="text-lg font-semibold">Cards Owned</h2>
         <span className="flex items-center gap-2">
-          <span className={`text-lg font-bold tabular-nums ${overallTone}`}>
+          <span className="text-lg font-bold tabular-nums text-text-primary">
             {pctLabel}
           </span>
           <svg
