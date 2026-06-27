@@ -1,5 +1,6 @@
 import cardData from "@/data/cards-standard.json";
 import { cardImageSmall } from "@/lib/cardImages";
+import { basicEnergyAliasKeys } from "@/lib/basicEnergyAlias";
 
 interface AnalysisCard {
   qty: number;
@@ -338,16 +339,15 @@ export function cardPrintingsForName(
   return out;
 }
 
-/** True for a basic Energy card (e.g. "Grass Energy", "Basic Fire Energy").
- *  Basic energy is excluded from ownership math since it's freely obtainable.
- *  Special energies (Double Turbo, Jet, Reversal, …) never match this. */
-const BASIC_ENERGY_RE =
-  /^(basic\s+)?(grass|fire|water|lightning|psychic|fighting|darkness|metal|fairy|dragon|colorless)\s+energy$/i;
+/** True for a basic Energy card. Basic energy is excluded from ownership math
+ *  since it's freely obtainable. Reuses the canonical basicEnergyAliasKeys
+ *  parser so every decklist form is caught — spelled-out ("Grass Energy",
+ *  "Basic Fire Energy") *and* the TCG Live symbol form ("Basic {L} Energy").
+ *  Special energies (Double Turbo, Jet, Reversal, …) never match. */
 export function isBasicEnergyCard(
-  card: Pick<AnalysisCard, "name" | "section">,
+  card: Pick<AnalysisCard, "name">,
 ): boolean {
-  if (card.section !== "energy") return false;
-  return BASIC_ENERGY_RE.test(card.name.trim());
+  return basicEnergyAliasKeys(card.name) !== null;
 }
 
 export interface DeckAvatarInfo {
