@@ -10,7 +10,11 @@ import ShareButton from "@/app/components/ShareButton";
 import StandardFormatInfo from "@/app/components/StandardFormatInfo";
 import StatsStrip from "@/app/components/ui/StatsStrip";
 import MatchLogModules from "@/app/components/MatchLogModules";
-import { cardPrintingsForName, isBasicEnergyCard } from "@/lib/primaryCardImage";
+import {
+  cardPrintingsForName,
+  deckCardAddTarget,
+  isBasicEnergyCard,
+} from "@/lib/primaryCardImage";
 
 /* ─── Types ──────────────────────────────────────────────────── */
 
@@ -289,6 +293,7 @@ export default function DeckProfileView({
       name: c.name,
       qty: c.qty,
       printings: cardPrintingsForName(c.name),
+      add: deckCardAddTarget(c),
     }));
 
   const CARD_CLS = "rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm";
