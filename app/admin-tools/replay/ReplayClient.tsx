@@ -993,7 +993,7 @@ function PokemonCardImage({ mon, width }: { mon: PokemonFrame; width: number }) 
           // Gradient footer matches the Card Catalog's CardFooterOverlay so
           // the energy icons sit on the same darkened band shape across the
           // app. Energies render left-to-right in attach order.
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-start gap-[2px] px-1 pb-1 pt-3 bg-gradient-to-b from-transparent to-neutral-800 to-80%">
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-start gap-[2px] px-1 pb-1 pt-3 bg-gradient-to-b from-transparent to-black to-80%">
             {mon.energyTypes.map((t, i) => (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -1010,7 +1010,7 @@ function PokemonCardImage({ mon, width }: { mon: PokemonFrame; width: number }) 
       {/* Info strip — HP header (label + remaining/total) above the HP bar. */}
       {hpPct != null && (
         <div
-          className="flex flex-col justify-between"
+          className="flex flex-col gap-[1px]"
           style={{ height: m.strip, marginTop: m.gap }}
         >
           <div
