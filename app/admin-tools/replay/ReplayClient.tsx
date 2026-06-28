@@ -1026,7 +1026,7 @@ function PokemonCardImage({ mon, width }: { mon: PokemonFrame; width: number }) 
             style={{ height: barH }}
           >
             <div
-              className="h-full rounded-full transition-[width] duration-300"
+              className="h-full rounded-full"
               style={{ width: `${hpPct}%`, background: hpColor }}
             />
           </div>
