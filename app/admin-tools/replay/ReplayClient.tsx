@@ -1000,7 +1000,8 @@ function PokemonCardImage({ mon, width }: { mon: PokemonFrame; width: number }) 
                 key={i}
                 src={`/types/${t.toLowerCase()}.png`}
                 alt={t}
-                className="h-[10px] w-[10px]"
+                // 25% smaller on mobile; full size on sm+.
+                className="h-[7.5px] w-[7.5px] sm:h-[10px] sm:w-[10px]"
               />
             ))}
           </div>
