@@ -8,6 +8,7 @@ import {
 import { questionsForClient } from "./questions";
 import QuizClient from "./QuizClient";
 import CertifiedTrainerBadge from "./CertifiedTrainerBadge";
+import TrackView from "@/app/components/TrackView";
 
 export const metadata: Metadata = {
   title: "Trainer Quiz | Learn to Play",
@@ -125,6 +126,7 @@ export default async function QuizPage() {
   // ── Signed-in, not earned: render the quiz carousel ───────────────
   return (
     <main className="mx-auto max-w-2xl px-6 py-8 sm:py-12">
+      <TrackView event="learn.quiz_started" />
       <nav className="text-xs text-text-muted mb-6 flex items-center gap-2 flex-wrap">
         <Link href="/learn" className="hover:text-text-secondary">
           Learn to Play

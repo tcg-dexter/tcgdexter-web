@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { track } from "@/lib/analytics/track";
 import { CERTIFIED_TRAINER, hasAchievement } from "@/lib/learn/achievements";
 import {
   PASSING_SCORE,
@@ -58,6 +59,11 @@ export async function POST(req: Request) {
     CERTIFIED_TRAINER,
   );
   if (alreadyEarned) {
+    void track(req, "learn.quiz_completed", {
+      score: QUIZ_LENGTH,
+      passed: true,
+      already_earned: true,
+    });
     return NextResponse.json({
       score: QUIZ_LENGTH,
       passed: true,
@@ -67,6 +73,7 @@ export async function POST(req: Request) {
 
   const score = gradeAnswers(answers as number[]);
   const passed = score >= PASSING_SCORE;
+  void track(req, "learn.quiz_completed", { score, passed, already_earned: false });
 
   if (passed) {
     // Primary key (user_id, achievement_key) makes this idempotent —

@@ -48,19 +48,19 @@ export const PRODUCTS: ProductMeta[] = [
     key: "playmat_studio",
     label: "Playmat Studio",
     description: "Custom playmat designer",
-    prefixes: [],
+    prefixes: ["playmat"],
   },
   {
     key: "spotlight",
     label: "Spotlight",
     description: "Trainer profiles and community spotlights",
-    prefixes: [],
+    prefixes: ["spotlight"],
   },
   {
     key: "learn_to_play",
     label: "Learn to Play",
     description: "Onboarding for new TCG players",
-    prefixes: [],
+    prefixes: ["learn"],
   },
   {
     key: "other",
