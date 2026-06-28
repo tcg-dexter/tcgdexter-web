@@ -450,15 +450,31 @@ function ReplayHeader({
 // 5-card bench. The bench itself is an absolutely positioned overlay and never
 // competes with the grid layout, so only those 5 card-widths + 2 grid gaps
 // constrain the formula.
+// Tray geometry ratios (×card width). A Pokémon renders inside a rounded
+// "card holder": padding around the contents, the card image on top, a gap,
+// then a stacked info strip (energy row above, HP bar below). TRAY_TOTAL_RATIO
+// is the holder's full height as a multiple of card width — used to reserve
+// vertical space so two stacked rows (bench + active) never collide.
+const TRAY_PAD_RATIO = 0.045;
+const TRAY_GAP_RATIO = 0.04;
+const TRAY_STRIP_RATIO = 0.4;
+const TRAY_TOTAL_RATIO =
+  2 * TRAY_PAD_RATIO +
+  TRAY_GAP_RATIO +
+  TRAY_STRIP_RATIO +
+  (1 - 2 * TRAY_PAD_RATIO) * (342 / 245);
+
 function computeReplayCardWidth(matWidth: number): number {
   const innerW = matWidth - 2 * MAT_PADDING;
   const innerH = matWidth * MAT_ASPECT - 2 * MAT_PADDING;
   const ROW_GAP = 6;
-  const maxCardH = (innerH - ROW_GAP) / 2;
-  const maxWidthFromH = maxCardH * (245 / 342);
+  // Two tray rows (bench + active) must fit the mat height; size from the
+  // tray's full height, not the bare card.
+  const maxTrayH = (innerH - ROW_GAP) / 2;
+  const maxWidthFromH = maxTrayH / TRAY_TOTAL_RATIO;
   // 2 rail cols + 5 bench cols; 5 conservative bench gaps.
   const maxWidthFromW = (innerW - 2 * 12 - 5 * 8) / 7;
-  return Math.max(20, Math.floor(Math.min(maxWidthFromH, maxWidthFromW) * 0.8));
+  return Math.max(20, Math.floor(Math.min(maxWidthFromH, maxWidthFromW) * 0.9));
 }
 
 function Board({
@@ -900,17 +916,9 @@ function ConditionPill({ condition }: { condition: string }) {
   );
 }
 
-// Tray geometry. A Pokémon renders inside a rounded "card holder": the card
-// image sits at the top with a concentric corner radius (container radius
-// minus the uniform padding), and an info strip sits below it carrying the
-// attached energy (left) and remaining HP (right). All sizes scale with the
-// card width so the tray reads consistently at any board scale. The total
-// height is reserved by the board geometry so the strip never overlaps a
-// neighbouring row.
-const TRAY_PAD_RATIO = 0.045;
-const TRAY_GAP_RATIO = 0.04;
-const TRAY_STRIP_RATIO = 0.3;
-
+// Resolve the tray's pixel geometry from a card width. The card image keeps a
+// concentric corner radius (container radius − padding); ratios are defined up
+// near computeReplayCardWidth so the board can reserve the holder's height.
 export function replayTrayMetrics(width: number) {
   const pad = Math.max(2, Math.round(width * TRAY_PAD_RATIO));
   const gap = Math.max(1, Math.round(width * TRAY_GAP_RATIO));
@@ -927,12 +935,27 @@ function PokemonCardImage({ mon, width }: { mon: PokemonFrame; width: number }) 
   const remainingHp = mon.hp != null ? Math.max(0, mon.hp - mon.damage) : null;
   const hadFallback = !mon.imageUrl;
   const m = replayTrayMetrics(width);
-  const iconSize = Math.max(8, Math.round(m.strip * 0.62));
-  const hpNumSize = Math.max(8, Math.round(m.strip * 0.5));
-  const hpLabelSize = Math.max(5, Math.round(m.strip * 0.32));
+  const iconSize = Math.max(7, Math.round(m.strip * 0.46));
+  const barH = Math.max(3, Math.round(m.strip * 0.22));
+
+  // HP as a percentage of the card's printed maximum.
+  const hpPct =
+    mon.hp != null && mon.hp > 0 && remainingHp != null
+      ? Math.max(0, Math.min(100, (remainingHp / mon.hp) * 100))
+      : null;
+  // Full HP → green, anything above 20% → yellow, 20% or below → red.
+  const hpColor =
+    hpPct == null
+      ? "transparent"
+      : hpPct >= 100
+        ? "#22c55e"
+        : hpPct > 20
+          ? "#facc15"
+          : "#ef4444";
+
   return (
     <div
-      className="relative w-full border border-white/10 bg-black/40 shadow-sm"
+      className="relative w-full bg-black shadow-sm"
       style={{ height: m.totalH, borderRadius: m.radius, padding: m.pad }}
       title={mon.name}
     >
@@ -968,12 +991,15 @@ function PokemonCardImage({ mon, width }: { mon: PokemonFrame; width: number }) 
         )}
       </div>
 
-      {/* Info strip — attached energy (left, attach order) + remaining HP. */}
+      {/* Info strip — attached energy row stacked above the HP bar. */}
       <div
-        className="flex items-center justify-between"
+        className="flex flex-col justify-between"
         style={{ height: m.strip, marginTop: m.gap }}
       >
-        <div className="flex min-w-0 items-center gap-[2px] overflow-hidden">
+        <div
+          className="flex min-w-0 items-center gap-[2px] overflow-hidden"
+          style={{ height: iconSize }}
+        >
           {mon.energyTypes.map((t, i) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -984,21 +1010,17 @@ function PokemonCardImage({ mon, width }: { mon: PokemonFrame; width: number }) 
             />
           ))}
         </div>
-        {remainingHp != null && (
-          <span className="flex shrink-0 items-baseline gap-0.5 pl-1 text-white">
-            <span
-              className="font-bold uppercase leading-none"
-              style={{ fontSize: hpLabelSize }}
-            >
-              HP
-            </span>
-            <span
-              className="font-semibold tabular-nums leading-none"
-              style={{ fontSize: hpNumSize }}
-            >
-              {remainingHp}
-            </span>
-          </span>
+        {hpPct != null && (
+          <div
+            className="w-full overflow-hidden rounded-full bg-white/20"
+            style={{ height: barH }}
+            title={`HP ${remainingHp}/${mon.hp} (${Math.round(hpPct)}%)`}
+          >
+            <div
+              className="h-full rounded-full transition-[width] duration-300"
+              style={{ width: `${hpPct}%`, background: hpColor }}
+            />
+          </div>
         )}
       </div>
     </div>
