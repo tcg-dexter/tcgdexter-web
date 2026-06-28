@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { compileMDX } from "next-mdx-remote/rsc";
 import matter from "gray-matter";
+import TrackView from "@/app/components/TrackView";
 import {
   lessons,
   getLesson,
@@ -157,6 +158,7 @@ export default async function LessonPage({
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-8 sm:py-12">
+      <TrackView event="learn.lesson_viewed" properties={{ slug: params.slug }} />
       <nav className="text-xs text-text-muted mb-6 flex items-center gap-2 flex-wrap">
         <Link href="/learn" className="hover:text-text-secondary">
           Learn to Play

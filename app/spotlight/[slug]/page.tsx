@@ -12,6 +12,7 @@ import {
 } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
 import ThemeColor from "@/app/components/ThemeColor";
+import TrackView from "@/app/components/TrackView";
 import SpotlightAdminBar from "../components/SpotlightAdminBar";
 import SpotlightQAThread from "../components/SpotlightQAThread";
 import SpotlightHeader from "../components/SpotlightHeader";
@@ -167,6 +168,7 @@ export default async function SpotlightPage({
 
   return (
     <main className="min-h-dvh bg-bg pb-24 -mt-14 xl:mt-0">
+      <TrackView event="spotlight.viewed" properties={{ slug }} />
       {/* Overlay the mobile/tablet sticky toolbar onto the banner: clear
           its background + blur so the banner shows through to the top
           of the viewport, and force the hamburger icon white so it

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { parseDeckListCards } from "@/lib/cardPrinting";
 import { resolveDeckTiles } from "@/lib/deckTiles";
+import { track } from "@/lib/analytics/track";
 
 /**
  * Resolve a raw deck list to render-ready tiles for Playmat Studio.
@@ -29,5 +30,6 @@ export async function POST(req: Request) {
 
   const parsed = parseDeckListCards(deckList);
   const tiles = resolveDeckTiles(parsed);
+  void track(req, "playmat.deck_selected", { tiles: tiles.length });
   return NextResponse.json({ tiles });
 }

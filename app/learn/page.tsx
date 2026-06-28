@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import TrackView from "@/app/components/TrackView";
 import { lessons, modules } from "@/lib/learn/curriculum";
 import { TYPE_COLOR } from "@/lib/metaPrimaryCard";
 import { shade } from "@/lib/color";
@@ -45,6 +46,7 @@ export default function LearnIndexPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10 sm:py-14">
+      <TrackView event="learn.index_viewed" />
       <header className="mb-10">
         <h1 className="text-3xl sm:text-4xl font-bold text-text-primary mb-3 leading-tight">
           Learn to Play
