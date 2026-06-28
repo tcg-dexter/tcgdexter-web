@@ -457,7 +457,7 @@ function ReplayHeader({
 // vertical space so two stacked rows (bench + active) never collide.
 const TRAY_PAD_RATIO = 0.045;
 const TRAY_GAP_RATIO = 0.04;
-const TRAY_STRIP_RATIO = 0.4;
+const TRAY_STRIP_RATIO = 0.34;
 const TRAY_TOTAL_RATIO =
   2 * TRAY_PAD_RATIO +
   TRAY_GAP_RATIO +
@@ -935,8 +935,8 @@ function PokemonCardImage({ mon, width }: { mon: PokemonFrame; width: number }) 
   const remainingHp = mon.hp != null ? Math.max(0, mon.hp - mon.damage) : null;
   const hadFallback = !mon.imageUrl;
   const m = replayTrayMetrics(width);
-  const iconSize = Math.max(7, Math.round(m.strip * 0.46));
   const barH = Math.max(3, Math.round(m.strip * 0.22));
+  const hpFontSize = Math.max(6, Math.round(m.strip * 0.34));
 
   // HP as a percentage of the card's printed maximum.
   const hpPct =
@@ -989,40 +989,50 @@ function PokemonCardImage({ mon, width }: { mon: PokemonFrame; width: number }) 
             ))}
           </div>
         )}
+        {mon.energyTypes.length > 0 && (
+          // Gradient footer matches the Card Catalog's CardFooterOverlay so
+          // the energy icons sit on the same darkened band shape across the
+          // app. Energies render left-to-right in attach order.
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-start gap-[2px] px-1 pb-1 pt-3 bg-gradient-to-b from-transparent to-neutral-800 to-80%">
+            {mon.energyTypes.map((t, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={i}
+                src={`/types/${t.toLowerCase()}.png`}
+                alt={t}
+                className="h-[10px] w-[10px]"
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Info strip — attached energy row stacked above the HP bar. */}
-      <div
-        className="flex flex-col justify-between"
-        style={{ height: m.strip, marginTop: m.gap }}
-      >
+      {/* Info strip — HP header (label + remaining/total) above the HP bar. */}
+      {hpPct != null && (
         <div
-          className="flex min-w-0 items-center gap-[2px] overflow-hidden"
-          style={{ height: iconSize }}
+          className="flex flex-col justify-between"
+          style={{ height: m.strip, marginTop: m.gap }}
         >
-          {mon.energyTypes.map((t, i) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={i}
-              src={`/types/${t.toLowerCase()}.png`}
-              alt={t}
-              style={{ width: iconSize, height: iconSize }}
-            />
-          ))}
-        </div>
-        {hpPct != null && (
+          <div
+            className="flex items-center justify-between leading-none text-white"
+            style={{ fontSize: hpFontSize }}
+          >
+            <span className="font-bold uppercase">HP</span>
+            <span className="font-semibold tabular-nums">
+              {remainingHp}/{mon.hp}
+            </span>
+          </div>
           <div
             className="w-full overflow-hidden rounded-full bg-white/20"
             style={{ height: barH }}
-            title={`HP ${remainingHp}/${mon.hp} (${Math.round(hpPct)}%)`}
           >
             <div
               className="h-full rounded-full transition-[width] duration-300"
               style={{ width: `${hpPct}%`, background: hpColor }}
             />
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
