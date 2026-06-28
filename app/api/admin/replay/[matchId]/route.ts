@@ -4,6 +4,7 @@ import { normalizePerspective, parseBattleLog } from "@/lib/battle-log";
 import { lookupCard, replay } from "@/lib/engine";
 import type { GameState, PokemonInPlay } from "@/lib/engine";
 import { cardImageUrlForAnyName, cardImageUrlForName } from "@/lib/primaryCardImage";
+import { cardImageSmall } from "@/lib/cardImages";
 
 /**
  * GET /api/admin/replay/[matchId]
@@ -122,6 +123,14 @@ function energyTypeFromName(name: string): string {
 
 function mapPokemon(mon: PokemonInPlay): PokemonFrame {
   const catalog = lookupCard(mon.card.name);
+  // Show the *exact* card in play. cardImageUrlForName escalates a name to
+  // its highest evolution (great for the battle banner, wrong here) — e.g.
+  // an N's Zorua basic would render as N's Zoroark ex. The engine catalog
+  // already resolved the actual printing, so build the image from its
+  // set/number; fall back to the name resolver only when unresolved.
+  const imageUrl = catalog?.set_id
+    ? cardImageSmall(catalog.set_id, catalog.number)
+    : cardImageUrlForName(mon.card.name);
   return {
     name: mon.card.name,
     damage: mon.damage,
@@ -130,7 +139,7 @@ function mapPokemon(mon: PokemonInPlay): PokemonFrame {
     energyTypes: mon.attachedEnergy.map((c) => energyTypeFromName(c.name)),
     conditions: [...mon.conditions],
     evolutionStack: mon.stack.map((c) => c.name),
-    imageUrl: cardImageUrlForName(mon.card.name),
+    imageUrl,
   };
 }
 
