@@ -956,7 +956,7 @@ function PokemonCardImage({ mon, width }: { mon: PokemonFrame; width: number }) 
   return (
     <div
       className="relative w-full bg-black shadow-sm"
-      style={{ height: m.totalH, borderRadius: m.radius, padding: m.pad }}
+      style={{ borderRadius: m.radius, padding: m.pad }}
       title={mon.name}
     >
       {/* Card image — anchored to the top of the holder with a concentric
@@ -1011,7 +1011,7 @@ function PokemonCardImage({ mon, width }: { mon: PokemonFrame; width: number }) 
       {hpPct != null && (
         <div
           className="flex flex-col gap-[1px]"
-          style={{ height: m.strip, marginTop: m.gap }}
+          style={{ marginTop: m.gap }}
         >
           <div
             className="flex items-center justify-between leading-none text-white"
