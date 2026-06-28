@@ -11,7 +11,15 @@
 export { replay } from "./replay";
 export { applyAction } from "./reducer";
 export { buildInitialState } from "./initial";
-export { lookupCard, isBasicPokemon, isEnergy, isTrainerSubtype, supertypeOf } from "./catalog";
+export {
+  hasStandardVariant,
+  isBasicPokemon,
+  isEnergy,
+  isTrainerSubtype,
+  lookupCard,
+  standardPrintingsOf,
+  supertypeOf,
+} from "./catalog";
 export { ENGINE_VERSION } from "./types";
 
 export type {

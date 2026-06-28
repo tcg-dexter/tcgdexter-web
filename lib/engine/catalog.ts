@@ -35,6 +35,9 @@ interface PrintingRaw {
   // Regulation mark drives our "newest printing" tiebreak. G/H/I represent
   // current Standard; later marks sort first.
   regulation_mark?: string | null;
+  // Baked by scripts/bake-standard-variants.mjs. True when 2+ Standard-
+  // legal printings of this name differ mechanically.
+  hasStandardVariant?: boolean | null;
 }
 
 const RAW = cardsRaw as Record<string, PrintingRaw[]>;
@@ -85,6 +88,7 @@ function normalize(printing: PrintingRaw): EngineCard {
     attacks: printing.attacks ?? [],
     abilities: printing.abilities ?? [],
     rules: printing.rules ?? [],
+    hasStandardVariant: Boolean(printing.hasStandardVariant),
   };
 }
 
@@ -120,6 +124,29 @@ export function isBasicPokemon(name: string): boolean {
 /** True if the named card is an Energy (Basic or Special). */
 export function isEnergy(name: string): boolean {
   return supertypeOf(name) === "Energy";
+}
+
+/** Quick check used by the match-import disambiguation pass: does this
+ *  Pokémon name resolve to multiple Standard-legal printings that differ
+ *  mechanically? When true, the importer needs the user (or their deck
+ *  list) to pick a specific printing. Always false for Trainer / Energy
+ *  names. */
+export function hasStandardVariant(name: string): boolean {
+  return Boolean(lookupCard(name)?.hasStandardVariant);
+}
+
+/** All Standard-legal printings of a name, raw — the importer feeds these
+ *  into the disambiguation form so the user can pick one. Returns []
+ *  for names not in the catalog. */
+const CURRENT_STANDARD_MARKS = new Set(["G", "H", "I", "J"]);
+export function standardPrintingsOf(name: string): PrintingRaw[] {
+  const prints = RAW[name];
+  if (!prints) return [];
+  return prints.filter(
+    (p) =>
+      p.supertype === "Pokémon" &&
+      CURRENT_STANDARD_MARKS.has(p.regulation_mark ?? ""),
+  );
 }
 
 /** True if the named card is a Trainer of the given subtype. */
