@@ -134,13 +134,42 @@ function mapPokemon(mon: PokemonInPlay): PokemonFrame {
   };
 }
 
-function mapSide(side: GameState["sides"]["player"]): SideFrame {
+// Standard Pokémon TCG decks are exactly 60 cards. The engine doesn't track
+// the deck's contents (it conjures cards into visible zones as they're
+// revealed, leaving `side.deck` empty), so the draw pile can't be read off
+// `side.deck.length`. Derive it instead: 60 minus everything currently out of
+// the deck. Card instances move between zones with stable ids, so this stays
+// accurate as the game progresses.
+const DECK_SIZE = 60;
+
+function cardsInPlay(mon: GameState["sides"]["player"]["bench"][number]): number {
+  return (
+    1 +
+    mon.stack.length +
+    mon.attachedEnergy.length +
+    mon.attachedTools.length
+  );
+}
+
+function mapSide(
+  side: GameState["sides"]["player"],
+  ownedStadium = 0,
+): SideFrame {
+  const outOfDeck =
+    side.hand.length +
+    side.discard.length +
+    side.lostZone.length +
+    side.prizes.length +
+    (side.active ? cardsInPlay(side.active) : 0) +
+    side.bench.reduce((sum, mon) => sum + cardsInPlay(mon), 0) +
+    ownedStadium;
+
   return {
     handle: side.handle,
     active: side.active ? mapPokemon(side.active) : null,
     bench: side.bench.map(mapPokemon),
     handCount: side.hand.length,
-    deckCount: side.deck.length,
+    deckCount: Math.max(0, DECK_SIZE - outOfDeck),
     discardCount: side.discard.length,
     discardTop:
       side.discard.length > 0
@@ -172,8 +201,14 @@ function frameFromState(
     phase: state.turn.phase,
     actor,
     summary,
-    player: mapSide(state.sides.player),
-    opponent: mapSide(state.sides.opponent),
+    player: mapSide(
+      state.sides.player,
+      state.stadium?.owner === "player" ? 1 : 0,
+    ),
+    opponent: mapSide(
+      state.sides.opponent,
+      state.stadium?.owner === "opponent" ? 1 : 0,
+    ),
     stadium: state.stadium
       ? {
           name: state.stadium.card.name,
