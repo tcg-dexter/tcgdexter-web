@@ -591,11 +591,14 @@ function PlayerMat({
   const cardH = cardWidth * (342 / 245);
   const FLOAT_GAP = 4; // px between floating card and its anchor
 
-  // Active card top edge, measured from the mat's top edge (includes padding).
-  // justify-between pins bench to top and active to bottom (P1), or vice-versa (P2).
+  // Active Pokémon now renders inside a tray (card + info strip), taller than
+  // the bare card. The grid pins the tray to the bottom (P1) / top (P2) of the
+  // center column; this resolves the card *image* top within that tray so the
+  // floating stadium / played-trainer cards still line up with the card art.
+  const activeTray = replayTrayMetrics(cardWidth);
   const activeMatTop = isPlayer
-    ? MAT_PADDING + innerH - cardH   // P1: active pinned to bottom
-    : MAT_PADDING;                   // P2: active pinned to top
+    ? MAT_PADDING + innerH - activeTray.totalH + activeTray.pad // P1: tray bottom-pinned
+    : MAT_PADDING + activeTray.pad;                             // P2: tray top-pinned
 
   // Stadium floats at same height as the active; anchored right (P1) or left (P2)
   // — opposite side from the active Pokémon's center.
@@ -618,10 +621,10 @@ function PlayerMat({
     cardH * (245 / 342),                    // height: same row height as active
     (innerW - Math.max(0, n - 1) * 8) / n, // width: fill innerW for n cards
   )));
-  const benchCardH = benchCardWidth * (342 / 245);
+  const benchTray = replayTrayMetrics(benchCardWidth);
   const benchTop = isPlayer
-    ? MAT_PADDING                        // P1: bench at top of mat interior
-    : MAT_PADDING + innerH - benchCardH; // P2: bench at bottom of mat interior
+    ? MAT_PADDING                                 // P1: bench tray at top of mat interior
+    : MAT_PADDING + innerH - benchTray.totalH;    // P2: bench tray at bottom of mat interior
 
   // Active slot: single card, clean fade+layout transition. The layoutId
   // receives the card from the bench when a Pokémon is promoted.
@@ -638,7 +641,7 @@ function PlayerMat({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, layout: { duration: 0.3, ease: "easeInOut" } }}
           >
-            <PokemonCardImage mon={active} />
+            <PokemonCardImage mon={active} width={cardWidth} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -704,7 +707,7 @@ function PlayerMat({
                 style={{ width: benchCardWidth }}
                 transition={{ duration: 0.3, ease: "easeInOut" }}
               >
-                <PokemonCardImage mon={mon} />
+                <PokemonCardImage mon={mon} width={benchCardWidth} />
               </motion.div>
             ))}
           </div>
@@ -897,67 +900,107 @@ function ConditionPill({ condition }: { condition: string }) {
   );
 }
 
-function PokemonCardImage({ mon }: { mon: PokemonFrame }) {
+// Tray geometry. A Pokémon renders inside a rounded "card holder": the card
+// image sits at the top with a concentric corner radius (container radius
+// minus the uniform padding), and an info strip sits below it carrying the
+// attached energy (left) and remaining HP (right). All sizes scale with the
+// card width so the tray reads consistently at any board scale. The total
+// height is reserved by the board geometry so the strip never overlaps a
+// neighbouring row.
+const TRAY_PAD_RATIO = 0.045;
+const TRAY_GAP_RATIO = 0.04;
+const TRAY_STRIP_RATIO = 0.3;
+
+export function replayTrayMetrics(width: number) {
+  const pad = Math.max(2, Math.round(width * TRAY_PAD_RATIO));
+  const gap = Math.max(1, Math.round(width * TRAY_GAP_RATIO));
+  const strip = Math.max(12, Math.round(width * TRAY_STRIP_RATIO));
+  const cardW = width - 2 * pad;
+  const cardH = cardW * (342 / 245);
+  const totalH = pad + cardH + gap + strip + pad;
+  const radius = Math.max(4, Math.round(width * 0.09));
+  const cardRadius = Math.max(2, radius - pad);
+  return { pad, gap, strip, cardW, cardH, totalH, radius, cardRadius };
+}
+
+function PokemonCardImage({ mon, width }: { mon: PokemonFrame; width: number }) {
   const remainingHp = mon.hp != null ? Math.max(0, mon.hp - mon.damage) : null;
   const hadFallback = !mon.imageUrl;
+  const m = replayTrayMetrics(width);
+  const iconSize = Math.max(8, Math.round(m.strip * 0.62));
+  const hpNumSize = Math.max(8, Math.round(m.strip * 0.5));
+  const hpLabelSize = Math.max(5, Math.round(m.strip * 0.32));
   return (
     <div
-      className="relative w-full overflow-hidden rounded border border-black/10 bg-white"
-      style={{ aspectRatio: "245 / 342" }}
+      className="relative w-full border border-white/10 bg-black/40 shadow-sm"
+      style={{ height: m.totalH, borderRadius: m.radius, padding: m.pad }}
       title={mon.name}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={mon.imageUrl ?? CARD_BACK_URL}
-        alt={mon.name}
-        className="h-full w-full object-cover"
-        onError={(e) => {
-          if (e.currentTarget.src !== CARD_BACK_URL) {
-            e.currentTarget.src = CARD_BACK_URL;
-          }
-        }}
-      />
-      {hadFallback && (
-        <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[7px] font-semibold leading-tight text-white line-clamp-2">
-          {mon.name}
-        </div>
-      )}
-      {remainingHp != null && (
-        <span className="absolute right-1 top-1 flex items-baseline gap-0.5 rounded-full bg-black px-1 py-[1px] text-white shadow-sm">
-          <span className="text-[6px] font-bold uppercase leading-none">HP</span>
-          <span className="text-[10px] font-semibold tabular-nums leading-none">
-            {remainingHp}
-          </span>
-        </span>
-      )}
-      {mon.energyTypes.length > 0 && (
-        // Gradient footer matches the Card Catalog's CardFooterOverlay so
-        // the energy icons sit on the same darkened band shape across the
-        // app. Energies render left-to-right in attach order.
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-start gap-[2px] px-1 pb-1 pt-3 bg-gradient-to-b from-transparent to-neutral-800 to-80%">
+      {/* Card image — anchored to the top of the holder with a concentric
+          corner radius (container radius − padding). */}
+      <div
+        className="relative overflow-hidden bg-white"
+        style={{ height: m.cardH, borderRadius: m.cardRadius }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={mon.imageUrl ?? CARD_BACK_URL}
+          alt={mon.name}
+          className="h-full w-full object-cover"
+          onError={(e) => {
+            if (e.currentTarget.src !== CARD_BACK_URL) {
+              e.currentTarget.src = CARD_BACK_URL;
+            }
+          }}
+        />
+        {hadFallback && (
+          <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[7px] font-semibold leading-tight text-white line-clamp-2">
+            {mon.name}
+          </div>
+        )}
+        {mon.conditions.length > 0 && (
+          // Status pills stay on the card, stacked up from the bottom-right.
+          <div className="pointer-events-none absolute bottom-1 right-1 z-10 flex flex-col-reverse items-end gap-0.5">
+            {mon.conditions.map((c) => (
+              <ConditionPill key={c} condition={c} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Info strip — attached energy (left, attach order) + remaining HP. */}
+      <div
+        className="flex items-center justify-between"
+        style={{ height: m.strip, marginTop: m.gap }}
+      >
+        <div className="flex min-w-0 items-center gap-[2px] overflow-hidden">
           {mon.energyTypes.map((t, i) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               key={i}
               src={`/types/${t.toLowerCase()}.png`}
               alt={t}
-              className="h-[10px] w-[10px]"
+              style={{ width: iconSize, height: iconSize }}
             />
           ))}
         </div>
-      )}
-      {mon.conditions.length > 0 && (
-        // Conditions render as color-matched pills anchored to the
-        // bottom-right corner of the card. flex-col-reverse means the
-        // first condition sits at the bottom and each additional pill
-        // stacks upward, mirroring how PTCG-Live's stacked status icons
-        // read.
-        <div className="pointer-events-none absolute bottom-1 right-1 z-10 flex flex-col-reverse items-end gap-0.5">
-          {mon.conditions.map((c) => (
-            <ConditionPill key={c} condition={c} />
-          ))}
-        </div>
-      )}
+        {remainingHp != null && (
+          <span className="flex shrink-0 items-baseline gap-0.5 pl-1 text-white">
+            <span
+              className="font-bold uppercase leading-none"
+              style={{ fontSize: hpLabelSize }}
+            >
+              HP
+            </span>
+            <span
+              className="font-semibold tabular-nums leading-none"
+              style={{ fontSize: hpNumSize }}
+            >
+              {remainingHp}
+            </span>
+          </span>
+        )}
+      </div>
     </div>
   );
 }
