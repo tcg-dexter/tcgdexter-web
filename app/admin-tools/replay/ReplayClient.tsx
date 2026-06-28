@@ -1019,9 +1019,7 @@ function PokemonCardImage({ mon, width }: { mon: PokemonFrame; width: number }) 
             style={{ fontSize: hpFontSize }}
           >
             <span className="font-bold uppercase">HP</span>
-            <span className="font-semibold tabular-nums">
-              {remainingHp}/{mon.hp}
-            </span>
+            <span className="font-semibold tabular-nums">{remainingHp}</span>
           </div>
           <div
             className="w-full overflow-hidden rounded-full bg-white/20"
