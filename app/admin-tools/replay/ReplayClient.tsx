@@ -458,11 +458,14 @@ function ReplayHeader({
 const TRAY_PAD_RATIO = 0.045;
 const TRAY_GAP_RATIO = 0.04;
 const TRAY_STRIP_RATIO = 0.34;
+// The holder wraps a full-size card image (same width as the stand-alone
+// cards), inset by `pad` on every side — so the container is wider than the
+// card image by 2*pad.
+const CONTAINER_W_FACTOR = 1 + 2 * TRAY_PAD_RATIO;
+// Holder height as a multiple of the card-image width: top pad + card
+// (342/245 tall) + gap + HP strip + bottom pad.
 const TRAY_TOTAL_RATIO =
-  2 * TRAY_PAD_RATIO +
-  TRAY_GAP_RATIO +
-  TRAY_STRIP_RATIO +
-  (1 - 2 * TRAY_PAD_RATIO) * (342 / 245);
+  2 * TRAY_PAD_RATIO + 342 / 245 + TRAY_GAP_RATIO + TRAY_STRIP_RATIO;
 
 function computeReplayCardWidth(matWidth: number): number {
   const innerW = matWidth - 2 * MAT_PADDING;
@@ -472,8 +475,9 @@ function computeReplayCardWidth(matWidth: number): number {
   // tray's full height, not the bare card.
   const maxTrayH = (innerH - ROW_GAP) / 2;
   const maxWidthFromH = maxTrayH / TRAY_TOTAL_RATIO;
-  // 2 rail cols + 5 bench cols; 5 conservative bench gaps.
-  const maxWidthFromW = (innerW - 2 * 12 - 5 * 8) / 7;
+  // 2 rail cols (card width) + 5 bench Pokémon holders (wider by the
+  // container factor); 5 conservative bench gaps.
+  const maxWidthFromW = (innerW - 2 * 12 - 5 * 8) / (2 + 5 * CONTAINER_W_FACTOR);
   return Math.max(20, Math.floor(Math.min(maxWidthFromH, maxWidthFromW) * 0.9));
 }
 
@@ -612,6 +616,9 @@ function PlayerMat({
   // center column; this resolves the card *image* top within that tray so the
   // floating stadium / played-trainer cards still line up with the card art.
   const activeTray = replayTrayMetrics(cardWidth);
+  // The active Pokémon's holder is wider than the bare card by 2*pad; the
+  // floating stadium / played-trainer anchor off the holder's edge.
+  const activeHalf = activeTray.containerW / 2;
   const activeMatTop = isPlayer
     ? MAT_PADDING + innerH - activeTray.totalH + activeTray.pad // P1: tray bottom-pinned
     : MAT_PADDING + activeTray.pad;                             // P2: tray top-pinned
@@ -619,23 +626,24 @@ function PlayerMat({
   // Stadium floats at same height as the active; anchored right (P1) or left (P2)
   // — opposite side from the active Pokémon's center.
   const stadiumLeft = isPlayer
-    ? MAT_PADDING + innerW / 2 + cardWidth / 2 + FLOAT_GAP  // P1: right of active
-    : MAT_PADDING + innerW / 2 - cardWidth / 2 - FLOAT_GAP - cardWidth; // P2: left of active
+    ? MAT_PADDING + innerW / 2 + activeHalf + FLOAT_GAP  // P1: right of active
+    : MAT_PADDING + innerW / 2 - activeHalf - FLOAT_GAP - cardWidth; // P2: left of active
 
   // Played trainer floats where the stadium used to be: left of active (P1),
   // right of active (P2), vertically centered on the active row.
   const playedTrainerTop = activeMatTop;
   const playedTrainerLeft = isPlayer
-    ? MAT_PADDING + innerW / 2 - cardWidth / 2 - FLOAT_GAP - cardWidth // P1: left of active
-    : MAT_PADDING + innerW / 2 + cardWidth / 2 + FLOAT_GAP;            // P2: right of active
+    ? MAT_PADDING + innerW / 2 - activeHalf - FLOAT_GAP - cardWidth // P1: left of active
+    : MAT_PADDING + innerW / 2 + activeHalf + FLOAT_GAP;            // P2: right of active
 
   // Bench sizing: cards fill the full inner mat width divided by bench count.
   // Height-constrained to the same row height as the active card. Since the
   // bench is an absolute overlay, it never competes with the grid layout.
   const n = bench.length || 1;
   const benchCardWidth = Math.max(20, Math.floor(Math.min(
-    cardH * (245 / 342),                    // height: same row height as active
-    (innerW - Math.max(0, n - 1) * 8) / n, // width: fill innerW for n cards
+    cardH * (245 / 342),                    // height: same card size as active
+    // width: fit n holders (each wider than its card by the container factor)
+    (innerW - Math.max(0, n - 1) * 8) / (n * CONTAINER_W_FACTOR),
   )));
   const benchTray = replayTrayMetrics(benchCardWidth);
   const benchTop = isPlayer
@@ -645,13 +653,13 @@ function PlayerMat({
   // Active slot: single card, clean fade+layout transition. The layoutId
   // receives the card from the bench when a Pokémon is promoted.
   const activeRow = (
-    <div className="flex justify-center" style={{ minWidth: cardWidth }}>
+    <div className="flex justify-center" style={{ minWidth: activeTray.containerW }}>
       <AnimatePresence mode="wait">
         {active && (
           <motion.div
             key={active.name}
             layoutId={`${side}-${active.name}`}
-            style={{ width: cardWidth }}
+            style={{ width: activeTray.containerW }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -720,7 +728,7 @@ function PlayerMat({
                 key={mon.name}
                 layoutId={`${side}-${mon.name}`}
                 className="shrink-0"
-                style={{ width: benchCardWidth }}
+                style={{ width: benchTray.containerW }}
                 transition={{ duration: 0.3, ease: "easeInOut" }}
               >
                 <PokemonCardImage mon={mon} width={benchCardWidth} />
@@ -916,19 +924,22 @@ function ConditionPill({ condition }: { condition: string }) {
   );
 }
 
-// Resolve the tray's pixel geometry from a card width. The card image keeps a
-// concentric corner radius (container radius − padding); ratios are defined up
-// near computeReplayCardWidth so the board can reserve the holder's height.
+// Resolve the holder's pixel geometry from a card-image width (the same width
+// as the stand-alone cards). The card image is inset by `pad` on every side
+// for a concentric corner radius, so the container is `width + 2*pad` wide and
+// taller by the card height + gap + HP strip + paddings. Ratios live up near
+// computeReplayCardWidth so the board can reserve the holder's footprint.
 export function replayTrayMetrics(width: number) {
   const pad = Math.max(2, Math.round(width * TRAY_PAD_RATIO));
   const gap = Math.max(1, Math.round(width * TRAY_GAP_RATIO));
   const strip = Math.max(12, Math.round(width * TRAY_STRIP_RATIO));
-  const cardW = width - 2 * pad;
+  const cardW = width;
   const cardH = cardW * (342 / 245);
+  const containerW = width + 2 * pad;
   const totalH = pad + cardH + gap + strip + pad;
-  const radius = Math.max(4, Math.round(width * 0.09));
+  const radius = Math.max(4, Math.round(containerW * 0.08));
   const cardRadius = Math.max(2, radius - pad);
-  return { pad, gap, strip, cardW, cardH, totalH, radius, cardRadius };
+  return { pad, gap, strip, cardW, cardH, containerW, totalH, radius, cardRadius };
 }
 
 function PokemonCardImage({ mon, width }: { mon: PokemonFrame; width: number }) {
@@ -955,14 +966,14 @@ function PokemonCardImage({ mon, width }: { mon: PokemonFrame; width: number }) 
 
   return (
     <div
-      className="relative w-full bg-black shadow-sm"
-      style={{ borderRadius: m.radius, padding: m.pad }}
+      className="relative bg-black shadow-sm"
+      style={{ width: m.containerW, borderRadius: m.radius, padding: m.pad }}
       title={mon.name}
     >
-      {/* Card image — anchored to the top of the holder with a concentric
-          corner radius (container radius − padding). */}
+      {/* Card image — full size (same as the stand-alone cards), inset by the
+          holder padding for a concentric corner radius. */}
       <div
-        className="relative overflow-hidden bg-white"
+        className="relative w-full overflow-hidden bg-white"
         style={{ height: m.cardH, borderRadius: m.cardRadius }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
