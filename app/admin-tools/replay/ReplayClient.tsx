@@ -1,6 +1,15 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import Link from "next/link";
 import BattleLogDetail from "@/app/components/BattleLogDetail";
@@ -50,6 +59,17 @@ interface PokemonFrame {
 // a 404 — browsers render the bytes regardless of status code. Reusing
 // that gives us a card-back without bundling an asset of our own.
 const CARD_BACK_URL = "https://images.pokemontcg.io/back.png";
+
+// Card inspector (lightbox) target. A tapped Pokémon opens with its full
+// holder — HP bar + attached energies — while any other card (stadium,
+// played trainer, top discard) opens as a plain large image.
+type InspectTarget =
+  | { kind: "pokemon"; mon: PokemonFrame }
+  | { kind: "card"; name: string; imageUrl: string | null };
+
+// Lets any card on the mat open the inspector without prop-drilling a
+// callback through PlayerMat → rows → individual cards.
+const InspectContext = createContext<((t: InspectTarget) => void) | null>(null);
 
 interface ReplayClientProps {
   options: ReplayMatchOption[];
@@ -515,8 +535,10 @@ function Board({
   }, []);
 
   const cardWidth = computeReplayCardWidth(matWidth);
+  const [inspect, setInspect] = useState<InspectTarget | null>(null);
 
   return (
+    <InspectContext.Provider value={setInspect}>
     <div ref={matContainerRef} className="mt-4">
       {error ? (
         <div className="rounded-2xl border border-accent/40 bg-white p-6 text-sm text-accent">
@@ -568,7 +590,11 @@ function Board({
           />
         </div>
       )}
+      {inspect && (
+        <ReplayCardInspector target={inspect} onClose={() => setInspect(null)} />
+      )}
     </div>
+    </InspectContext.Provider>
   );
 }
 
@@ -610,6 +636,7 @@ function PlayerMat({
   const isPlayer = side === "player";
   const label = isPlayer ? "P1" : "P2";
   const texScale = matWidth > 0 ? matWidth / 600 : 1;
+  const inspect = useContext(InspectContext);
 
   // ── Overlay geometry ──────────────────────────────────────────────────────
   // The center column's horizontal midpoint is always innerW/2 regardless of
@@ -759,8 +786,19 @@ function PlayerMat({
               transition={{ duration: 0.25 }}
             >
               <div
-                className="relative w-full overflow-hidden rounded border border-amber-300/70 bg-white"
+                className={`relative w-full overflow-hidden rounded border border-amber-300/70 bg-white ${inspect ? "cursor-pointer" : ""}`}
                 style={{ aspectRatio: "245 / 342" }}
+                role={inspect ? "button" : undefined}
+                onClick={
+                  inspect
+                    ? () =>
+                        inspect({
+                          kind: "card",
+                          name: stadium.name,
+                          imageUrl: stadium.imageUrl,
+                        })
+                    : undefined
+                }
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -794,8 +832,19 @@ function PlayerMat({
               transition={{ duration: 0.2 }}
             >
               <div
-                className="relative w-full overflow-hidden rounded border border-amber-400/80 bg-white"
+                className={`relative w-full overflow-hidden rounded border border-amber-400/80 bg-white ${inspect ? "cursor-pointer" : ""}`}
                 style={{ aspectRatio: "245 / 342" }}
+                role={inspect ? "button" : undefined}
+                onClick={
+                  inspect
+                    ? () =>
+                        inspect({
+                          kind: "card",
+                          name: lastPlayedTrainer.name,
+                          imageUrl: lastPlayedTrainer.imageUrl,
+                        })
+                    : undefined
+                }
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -846,12 +895,16 @@ function Pile({
   useCardBack?: boolean;
   className?: string;
 }) {
+  const inspect = useContext(InspectContext);
   const m = replayTrayMetrics(width);
   const fontSize = Math.max(6, Math.round((m.strip * 0.34) / CARD_IMAGE_BUMP));
   // Face image: card back for the draw pile, the top discard otherwise. With
   // no top card (empty discard) the card area stays an empty translucent slot.
   const faceSrc = useCardBack ? CARD_BACK_URL : topImageUrl ?? null;
   const hasFace = useCardBack || Boolean(topName);
+  // Only the face-up top discard is worth inspecting (the draw pile is a
+  // card back, an empty pile has nothing to show).
+  const clickable = inspect != null && !useCardBack && Boolean(topName);
 
   return (
     <div
@@ -861,12 +914,23 @@ function Pile({
     >
       {/* Card image — inset by the holder padding for a concentric radius. */}
       <div
-        className="relative w-full overflow-hidden"
+        className={`relative w-full overflow-hidden ${clickable ? "cursor-pointer" : ""}`}
         style={{
           height: m.cardH,
           borderRadius: m.cardRadius,
           background: hasFace ? "#fff" : "rgba(255,255,255,0.06)",
         }}
+        role={clickable ? "button" : undefined}
+        onClick={
+          clickable
+            ? () =>
+                inspect!({
+                  kind: "card",
+                  name: topName as string,
+                  imageUrl: topImageUrl ?? null,
+                })
+            : undefined
+        }
       >
         {hasFace && (
           <>
@@ -949,7 +1013,23 @@ export function replayTrayMetrics(width: number) {
   return { pad, gap, strip, cardW, cardH, containerW, totalH, radius, cardRadius };
 }
 
-function PokemonCardImage({ mon, width }: { mon: PokemonFrame; width: number }) {
+function PokemonCardImage({
+  mon,
+  width,
+  inspectable = true,
+  energyIconSize,
+}: {
+  mon: PokemonFrame;
+  width: number;
+  /** When true (board context), tapping opens the card inspector. The
+   *  inspector renders its own copy with this off so it can't re-open. */
+  inspectable?: boolean;
+  /** Explicit energy-icon px size. When omitted, the responsive board sizes
+   *  apply; the inspector passes a value proportional to the enlarged card. */
+  energyIconSize?: number;
+}) {
+  const inspect = useContext(InspectContext);
+  const clickable = inspectable && inspect != null;
   const remainingHp = mon.hp != null ? Math.max(0, mon.hp - mon.damage) : null;
   const hadFallback = !mon.imageUrl;
   const m = replayTrayMetrics(width);
@@ -973,9 +1053,11 @@ function PokemonCardImage({ mon, width }: { mon: PokemonFrame; width: number }) 
 
   return (
     <div
-      className="relative bg-black shadow-sm"
+      className={`relative bg-black shadow-sm ${clickable ? "cursor-pointer" : ""}`}
       style={{ width: m.containerW, borderRadius: m.radius, padding: m.pad }}
       title={mon.name}
+      role={clickable ? "button" : undefined}
+      onClick={clickable ? () => inspect!({ kind: "pokemon", mon }) : undefined}
     >
       {/* Card image — full size (same as the stand-alone cards), inset by the
           holder padding for a concentric corner radius. */}
@@ -1018,8 +1100,18 @@ function PokemonCardImage({ mon, width }: { mon: PokemonFrame; width: number }) 
                 key={i}
                 src={`/types/${t.toLowerCase()}.png`}
                 alt={t}
-                // 25% smaller on mobile; full size on sm+.
-                className="h-[7.5px] w-[7.5px] sm:h-[10px] sm:w-[10px]"
+                // On the board: 25% smaller on mobile, full size on sm+. In
+                // the inspector: scaled proportionally to the enlarged card.
+                className={
+                  energyIconSize == null
+                    ? "h-[7.5px] w-[7.5px] sm:h-[10px] sm:w-[10px]"
+                    : undefined
+                }
+                style={
+                  energyIconSize == null
+                    ? undefined
+                    : { height: energyIconSize, width: energyIconSize }
+                }
               />
             ))}
           </div>
@@ -1122,6 +1214,129 @@ function StackedPrizePile({
         <span className="font-semibold tabular-nums">{count}</span>
       </div>
     </div>
+  );
+}
+
+// Card inspector (lightbox) for the replay mat. Mirrors the deck-profile
+// card viewer — a gray semi-opaque scrim over the board with the tapped card
+// presented large — but a Pokémon opens inside its full holder (HP bar +
+// attached energies) rather than as a bare image.
+function ReplayCardInspector({
+  target,
+  onClose,
+}: {
+  target: InspectTarget;
+  onClose: () => void;
+}) {
+  const [vp, setVp] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const measure = () =>
+      setVp({ w: window.innerWidth, h: window.innerHeight });
+    measure();
+    window.addEventListener("resize", measure);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  if (typeof document === "undefined") return null;
+
+  // Size the presented card to ~80vw / ~78vh, whichever binds first.
+  const maxW = vp.w > 0 ? vp.w * 0.8 : 320;
+  const maxH = vp.h > 0 ? vp.h * 0.78 : 480;
+
+  const targetName = target.kind === "pokemon" ? target.mon.name : target.name;
+
+  let content: JSX.Element;
+  if (target.kind === "pokemon") {
+    // The holder is `width * CONTAINER_W_FACTOR` wide and `width *
+    // TRAY_TOTAL_RATIO` tall — invert both bounds and take the smaller width.
+    const pokeWidth = Math.max(
+      140,
+      Math.floor(
+        Math.min(maxW / CONTAINER_W_FACTOR, maxH / TRAY_TOTAL_RATIO),
+      ),
+    );
+    content = (
+      <PokemonCardImage
+        mon={target.mon}
+        width={pokeWidth}
+        inspectable={false}
+        energyIconSize={Math.max(12, Math.round(pokeWidth * 0.14))}
+      />
+    );
+  } else {
+    // Plain card: bound by the 245/342 aspect.
+    const imgW = Math.floor(Math.min(maxW, maxH * (245 / 342)));
+    content = (
+      <div
+        className="relative overflow-hidden rounded-[20px] sm:rounded-3xl bg-white shadow-lg"
+        style={{ width: imgW, aspectRatio: "245 / 342" }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={target.imageUrl ?? CARD_BACK_URL}
+          alt={target.name}
+          className="h-full w-full object-cover"
+          onError={(e) => {
+            if (e.currentTarget.src !== CARD_BACK_URL)
+              e.currentTarget.src = CARD_BACK_URL;
+          }}
+        />
+        {!target.imageUrl && (
+          <div className="absolute inset-x-2 top-2 rounded bg-black/60 px-2 py-1 text-center text-sm font-semibold leading-tight text-white line-clamp-2">
+            {target.name}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${targetName} preview`}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{
+        background:
+          "linear-gradient(180deg, rgba(242, 242, 242, 1) 0%, rgba(242, 242, 242, 0.85) 100%)",
+      }}
+      onClick={onClose}
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+        aria-label="Close card viewer"
+        className="absolute top-4 left-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md transition hover:bg-black/70"
+      >
+        <svg
+          className="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.75}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      {/* Stop taps on the card from bubbling to the scrim and dismissing. */}
+      <div onClick={(e) => e.stopPropagation()}>{content}</div>
+    </div>,
+    document.body,
   );
 }
 
