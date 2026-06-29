@@ -297,7 +297,6 @@ export default function ReplayClient({ options }: ReplayClientProps) {
         <div className="lg:ml-auto lg:w-[720px]">
           <div className="lg:hidden">
             <TurnNavigator
-              frame={frame}
               frameIndex={frameIndex}
               frameCount={frameCount}
               canStepBack={canStepBack}
@@ -569,6 +568,7 @@ function Board({
             cardWidth={cardWidth}
             matWidth={matWidth}
           />
+          <BetweenMatsBar frame={frame} />
           <PlayerMat
             side="opponent"
             bench={frame.opponent.bench}
@@ -595,6 +595,45 @@ function Board({
       )}
     </div>
     </InspectContext.Provider>
+  );
+}
+
+// Thread-style current-action strip slotted between the two mats. Repurposes
+// the battle-log thread's vocabulary — actor name + concise action + a
+// black "Turn N" pill — but collapses to a single row showing only the
+// action for the board state on screen. Left: actor (or "Setup" / "Pokémon
+// Checkup" for the synthetic phases). Center: the current action. Right: the
+// turn number.
+function BetweenMatsBar({ frame }: { frame: ReplayFrame }) {
+  const leftLabel =
+    frame.phase === "setup"
+      ? "Setup"
+      : frame.phase === "checkup"
+        ? "Pokémon Checkup"
+        : frame.actor === "player"
+          ? frame.player.handle ?? "Player"
+          : frame.actor === "opponent"
+            ? frame.opponent.handle ?? "Opponent"
+            : "Game";
+  // Setup has no turn yet; turns and between-turn checkups do.
+  const showTurn = frame.phase === "turn" || frame.phase === "checkup";
+
+  return (
+    <div className="flex items-center gap-2 px-1">
+      <span className="flex-1 min-w-0 truncate text-sm font-bold text-text-primary">
+        {leftLabel}
+      </span>
+      <span className="flex-[2] min-w-0 truncate text-center text-xs text-text-secondary">
+        {frame.summary}
+      </span>
+      <span className="flex flex-1 justify-end">
+        {showTurn && (
+          <span className="shrink-0 rounded-full bg-[#1a1a1a] px-2.5 py-0.5 text-[10px] font-bold tabular-nums text-white">
+            Turn {frame.turn}
+          </span>
+        )}
+      </span>
+    </div>
   );
 }
 
@@ -1345,7 +1384,6 @@ function ReplayCardInspector({
 /* ──────────────────────────────────────────────────────────────── */
 
 function TurnNavigator({
-  frame,
   frameIndex,
   frameCount,
   canStepBack,
@@ -1361,7 +1399,6 @@ function TurnNavigator({
   onTurnBack,
   onTurnForward,
 }: {
-  frame: ReplayFrame | null;
   frameIndex: number;
   frameCount: number;
   canStepBack: boolean;
@@ -1377,15 +1414,6 @@ function TurnNavigator({
   onTurnBack: () => void;
   onTurnForward: () => void;
 }) {
-  const turnLabel = frame
-    ? frame.phase === "setup"
-      ? "Setup"
-      : frame.phase === "checkup"
-        ? "Checkup"
-        : `Turn ${frame.turn}`
-    : "—";
-  const actorLabel = frame?.actor === "player" ? "P1" : frame?.actor === "opponent" ? "P2" : "";
-
   return (
     <div className="mt-4 rounded-2xl border border-black/8 bg-white p-4">
       <div className="flex items-center justify-between gap-3">
@@ -1410,18 +1438,7 @@ function TurnNavigator({
           ‹
         </button>
         <div className="flex flex-1 flex-col items-center text-center">
-          <div className="text-lg font-bold text-text-primary tabular-nums">
-            {turnLabel}
-            {actorLabel && (
-              <span className="ml-2 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
-                {actorLabel}
-              </span>
-            )}
-          </div>
-          <div className="mt-0.5 max-w-prose text-[11px] text-text-secondary line-clamp-2">
-            {frame?.summary ?? " "}
-          </div>
-          <div className="mt-1 text-[10px] tabular-nums text-text-muted">
+          <div className="text-[10px] tabular-nums text-text-muted">
             Step {frameCount > 0 ? frameIndex + 1 : 0} / {frameCount}
           </div>
           <div className="mt-2 flex items-center gap-2">
