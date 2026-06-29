@@ -466,6 +466,11 @@ const CONTAINER_W_FACTOR = 1 + 2 * TRAY_PAD_RATIO;
 // (342/245 tall) + gap + HP strip + bottom pad.
 const TRAY_TOTAL_RATIO =
   2 * TRAY_PAD_RATIO + 342 / 245 + TRAY_GAP_RATIO + TRAY_STRIP_RATIO;
+// Card images (and their holders) are rendered 10% larger than the bare
+// fit-to-mat size, consuming the layout headroom. The holder geometry scales
+// with them, but the footer/label text is pinned to its pre-bump pixel size
+// (see the `/ CARD_IMAGE_BUMP` in the font-size computations).
+const CARD_IMAGE_BUMP = 1.1;
 
 function computeReplayCardWidth(matWidth: number): number {
   const innerW = matWidth - 2 * MAT_PADDING;
@@ -478,7 +483,10 @@ function computeReplayCardWidth(matWidth: number): number {
   // 2 rail holders + 5 bench Pokémon holders — all are holders now (wider
   // than the bare card by the container factor); 5 conservative bench gaps.
   const maxWidthFromW = (innerW - 2 * 12 - 5 * 8) / (7 * CONTAINER_W_FACTOR);
-  return Math.max(20, Math.floor(Math.min(maxWidthFromH, maxWidthFromW) * 0.9));
+  return Math.max(
+    20,
+    Math.floor(Math.min(maxWidthFromH, maxWidthFromW) * 0.9 * CARD_IMAGE_BUMP),
+  );
 }
 
 function Board({
@@ -839,7 +847,7 @@ function Pile({
   className?: string;
 }) {
   const m = replayTrayMetrics(width);
-  const fontSize = Math.max(6, Math.round(m.strip * 0.34));
+  const fontSize = Math.max(6, Math.round((m.strip * 0.34) / CARD_IMAGE_BUMP));
   // Face image: card back for the draw pile, the top discard otherwise. With
   // no top card (empty discard) the card area stays an empty translucent slot.
   const faceSrc = useCardBack ? CARD_BACK_URL : topImageUrl ?? null;
@@ -946,7 +954,7 @@ function PokemonCardImage({ mon, width }: { mon: PokemonFrame; width: number }) 
   const hadFallback = !mon.imageUrl;
   const m = replayTrayMetrics(width);
   const barH = Math.max(3, Math.round(m.strip * 0.22));
-  const hpFontSize = Math.max(6, Math.round(m.strip * 0.34));
+  const hpFontSize = Math.max(6, Math.round((m.strip * 0.34) / CARD_IMAGE_BUMP));
 
   // HP as a percentage of the card's printed maximum.
   const hpPct =
@@ -1059,7 +1067,7 @@ function StackedPrizePile({
   width: number;
 }) {
   const m = replayTrayMetrics(width);
-  const fontSize = Math.max(6, Math.round(m.strip * 0.34));
+  const fontSize = Math.max(6, Math.round((m.strip * 0.34) / CARD_IMAGE_BUMP));
   const layers = Math.max(0, Math.min(6, count));
   // Per-layer vertical offset, in px. Cards stay full size (m.cardW × m.cardH)
   // and the card area grows to contain the stack rather than shrinking them.
