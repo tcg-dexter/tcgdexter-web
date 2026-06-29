@@ -380,6 +380,26 @@ function Icon({ type, className }: { type: string; className?: string }) {
   return <Cmp className={className} />;
 }
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Strip a leading actor name (and optional possessive "'s") from an action
+ * label, then capitalize the first letter of what remains. The turn holder
+ * is already named alongside the action, so echoing it in the body is
+ * redundant — "alice drew 4 cards" → "Drew 4 cards". Returns the text
+ * unchanged (no re-capitalization) when it doesn't start with the name, so
+ * name-free labels like "Pikachu to Active" are left intact.
+ */
+export function stripLeadingActorName(text: string, name?: string | null): string {
+  if (!text || !name) return text;
+  const re = new RegExp(`^\\s*${escapeRegExp(name.trim())}(?:['’]s)?\\s+`, "i");
+  if (!re.test(text)) return text;
+  const stripped = text.replace(re, "");
+  return stripped.charAt(0).toUpperCase() + stripped.slice(1);
+}
+
 /* ─── Avatar + identity helpers ───────────────────────────────── */
 
 const AVATAR_PALETTE = [
@@ -1013,7 +1033,10 @@ function ThreadPost({ post, isLast, compactAvatars }: { post: ThreadPostInput; i
         </div>
 
         <div className="mt-1">
-          <ActionList actions={post.actions} />
+          <ActionList
+            actions={post.actions}
+            authorName={isSystem ? null : post.displayName}
+          />
         </div>
       </div>
     </div>
@@ -1237,7 +1260,7 @@ function ActionTypeLabel({ type, className }: { type: string; className?: string
   );
 }
 
-function ActionList({ actions }: { actions: ApiAction[] }) {
+function ActionList({ actions, authorName }: { actions: ApiAction[]; authorName?: string | null }) {
   // Pre-pair each knock_out with the nearest subsequent prize_taken, skipping
   // any intervening actions (e.g. abilities triggered mid-checkup). Each
   // prize_taken is consumed by at most one knock_out.
@@ -1284,7 +1307,7 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
   return (
     <ul className="flex flex-col gap-1">
       {actions.map((a, idx) => {
-        const label = labelFor(a);
+        const label = stripLeadingActorName(labelFor(a), authorName);
         if (!label) return null;
         const cat = categoryFor(a.action_type);
 

@@ -12,7 +12,7 @@ import {
 import { createPortal } from "react-dom";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import Link from "next/link";
-import BattleLogDetail from "@/app/components/BattleLogDetail";
+import BattleLogDetail, { stripLeadingActorName } from "@/app/components/BattleLogDetail";
 import type {
   ReplayFrame,
   ReplayPayload,
@@ -629,7 +629,18 @@ function BetweenMatsBar({ frame }: { frame: ReplayFrame }) {
   const isImplied =
     s.includes("ended their turn") ||
     handles.some((h) => s.includes(`${h}'s turn`) || s.includes(`${h} turn`));
-  const actionText = isImplied ? "" : summary;
+  // During a player's turn the holder is named on the line above, so strip a
+  // leading "<holder> " / "<holder>'s " from the action (and recapitalize).
+  // Setup/checkup keep the name since the left label doesn't identify who acted.
+  const turnHolder =
+    frame.phase === "turn"
+      ? frame.actor === "player"
+        ? frame.player.handle
+        : frame.actor === "opponent"
+          ? frame.opponent.handle
+          : null
+      : null;
+  const actionText = isImplied ? "" : stripLeadingActorName(summary, turnHolder);
 
   return (
     <div className="flex flex-col gap-0.5 px-1">
