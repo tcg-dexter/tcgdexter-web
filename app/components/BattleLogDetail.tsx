@@ -400,6 +400,22 @@ export function stripLeadingActorName(text: string, name?: string | null): strin
   return stripped.charAt(0).toUpperCase() + stripped.slice(1);
 }
 
+/**
+ * Format an action label for display next to its author: swap the generic
+ * "Opponent" placeholder for the other player's actual name, then strip the
+ * redundant leading author name. `otherName` is the side opposite the author.
+ */
+export function formatActionLabel(
+  text: string,
+  opts: { authorName?: string | null; otherName?: string | null },
+): string {
+  let out = text;
+  if (opts.otherName) {
+    out = out.replace(/\bOpponent\b/g, opts.otherName);
+  }
+  return stripLeadingActorName(out, opts.authorName);
+}
+
 /* ─── Avatar + identity helpers ───────────────────────────────── */
 
 const AVATAR_PALETTE = [
@@ -837,6 +853,8 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
               post={post}
               isLast={i === filteredPregamePosts.length - 1}
               compactAvatars={compactAvatars}
+              playerHandle={playerHandle}
+              opponentHandle={opponentHandle}
             />
           ))}
           {!hideScoreCards && (
@@ -866,6 +884,8 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
             post={post}
             isLast={hasPrizes || i === gamePosts.length - 1}
             compactAvatars={compactAvatars}
+            playerHandle={playerHandle}
+            opponentHandle={opponentHandle}
           />,
         ];
         if (hasPrizes && !hideScoreCards) {
@@ -956,8 +976,27 @@ interface ThreadPostInput {
 const WIN_GRADIENT = "linear-gradient(135deg,#F2A20C 0%,#D91E0D 50%,#A60D0D 100%)";
 const LOSS_COLOR = "#1a1a1a";
 
-function ThreadPost({ post, isLast, compactAvatars }: { post: ThreadPostInput; isLast: boolean; compactAvatars?: boolean }) {
+function ThreadPost({
+  post,
+  isLast,
+  compactAvatars,
+  playerHandle,
+  opponentHandle,
+}: {
+  post: ThreadPostInput;
+  isLast: boolean;
+  compactAvatars?: boolean;
+  playerHandle: string;
+  opponentHandle: string;
+}) {
   const isSystem = post.kind === "system";
+  // "Opponent" in a post's actions means the side opposite its author.
+  const otherName =
+    post.kind === "player"
+      ? opponentHandle
+      : post.kind === "opponent"
+        ? playerHandle
+        : null;
   const isResult = post.system?.handle === "game";
   const avatarStyle: CSSProperties = post.system
     ? { background: post.system.bg }
@@ -1036,6 +1075,7 @@ function ThreadPost({ post, isLast, compactAvatars }: { post: ThreadPostInput; i
           <ActionList
             actions={post.actions}
             authorName={isSystem ? null : post.displayName}
+            otherName={otherName}
           />
         </div>
       </div>
@@ -1260,7 +1300,15 @@ function ActionTypeLabel({ type, className }: { type: string; className?: string
   );
 }
 
-function ActionList({ actions, authorName }: { actions: ApiAction[]; authorName?: string | null }) {
+function ActionList({
+  actions,
+  authorName,
+  otherName,
+}: {
+  actions: ApiAction[];
+  authorName?: string | null;
+  otherName?: string | null;
+}) {
   // Pre-pair each knock_out with the nearest subsequent prize_taken, skipping
   // any intervening actions (e.g. abilities triggered mid-checkup). Each
   // prize_taken is consumed by at most one knock_out.
@@ -1307,7 +1355,7 @@ function ActionList({ actions, authorName }: { actions: ApiAction[]; authorName?
   return (
     <ul className="flex flex-col gap-1">
       {actions.map((a, idx) => {
-        const label = stripLeadingActorName(labelFor(a), authorName);
+        const label = formatActionLabel(labelFor(a), { authorName, otherName });
         if (!label) return null;
         const cat = categoryFor(a.action_type);
 
