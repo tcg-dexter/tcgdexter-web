@@ -475,9 +475,9 @@ function computeReplayCardWidth(matWidth: number): number {
   // tray's full height, not the bare card.
   const maxTrayH = (innerH - ROW_GAP) / 2;
   const maxWidthFromH = maxTrayH / TRAY_TOTAL_RATIO;
-  // 2 rail cols (card width) + 5 bench Pokémon holders (wider by the
-  // container factor); 5 conservative bench gaps.
-  const maxWidthFromW = (innerW - 2 * 12 - 5 * 8) / (2 + 5 * CONTAINER_W_FACTOR);
+  // 2 rail holders + 5 bench Pokémon holders — all are holders now (wider
+  // than the bare card by the container factor); 5 conservative bench gaps.
+  const maxWidthFromW = (innerW - 2 * 12 - 5 * 8) / (7 * CONTAINER_W_FACTOR);
   return Math.max(20, Math.floor(Math.min(maxWidthFromH, maxWidthFromW) * 0.9));
 }
 
@@ -687,17 +687,17 @@ function PlayerMat({
         {/* ── 3-column grid: left-rail | center | right-rail ── */}
         <div
           className="grid h-full gap-1.5 sm:gap-3"
-          style={{ gridTemplateColumns: `${cardWidth}px 1fr ${cardWidth}px` }}
+          style={{ gridTemplateColumns: `${activeTray.containerW}px 1fr ${activeTray.containerW}px` }}
         >
           {/* Left rail */}
           <div className="flex flex-col gap-1.5 sm:gap-3">
             {isPlayer ? (
               <>
-                <Pile label="P1 Discard" count={discardCount} topName={discardTop} topImageUrl={discardTopImageUrl} />
-                <Pile label="P1 Draw" count={deckCount} hint={`${handCount} in hand`} useCardBack />
+                <Pile label="Discard" count={discardCount} width={cardWidth} topName={discardTop} topImageUrl={discardTopImageUrl} />
+                <Pile label="Draw" count={deckCount} width={cardWidth} hint={`${handCount} in hand`} useCardBack />
               </>
             ) : (
-              <StackedPrizePile label="Prize Pile" count={prizesRemaining} />
+              <StackedPrizePile label="Prizes" count={prizesRemaining} width={cardWidth} />
             )}
           </div>
           {/* Center: active card only — bench is an absolute overlay */}
@@ -707,11 +707,11 @@ function PlayerMat({
           {/* Right rail */}
           <div className="flex flex-col gap-1.5 sm:gap-3">
             {isPlayer ? (
-              <StackedPrizePile label="Prize Pile" count={prizesRemaining} />
+              <StackedPrizePile label="Prizes" count={prizesRemaining} width={cardWidth} />
             ) : (
               <>
-                <Pile label="P2 Draw" count={deckCount} hint={`${handCount} in hand`} useCardBack />
-                <Pile label="P2 Discard" count={discardCount} topName={discardTop} topImageUrl={discardTopImageUrl} />
+                <Pile label="Draw" count={deckCount} width={cardWidth} hint={`${handCount} in hand`} useCardBack />
+                <Pile label="Discard" count={discardCount} width={cardWidth} topName={discardTop} topImageUrl={discardTopImageUrl} />
               </>
             )}
           </div>
@@ -813,9 +813,13 @@ function PlayerMat({
   );
 }
 
+// Draw / discard pile, rendered in the same black holder as the Pokémon
+// cards: a full-size card image inset for concentric corners, with a label
+// row below that mirrors the HP header — name left, count right.
 function Pile({
   label,
   count,
+  width,
   topName,
   topImageUrl,
   hint,
@@ -824,6 +828,8 @@ function Pile({
 }: {
   label: string;
   count: number;
+  /** Card-image width — drives the holder geometry (matches the actives). */
+  width: number;
   topName?: string | null;
   /** When set, render the top card face-up using this image (discard). */
   topImageUrl?: string | null;
@@ -832,67 +838,60 @@ function Pile({
   useCardBack?: boolean;
   className?: string;
 }) {
-  if (useCardBack) {
-    return (
-      <div className={`flex flex-col items-center ${className}`} title={label}>
-        <div
-          className="relative w-full overflow-hidden rounded border border-black/12"
-          style={{ aspectRatio: "245 / 342" }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={CARD_BACK_URL}
-            alt=""
-            aria-hidden
-            className="h-full w-full object-cover"
-          />
-          <div className="absolute inset-x-1 bottom-1 flex items-center justify-center rounded bg-black/70 py-0.5 text-[8px] font-semibold tabular-nums text-white">
-            {count}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Face-up top-card mode — used by the discard piles. Only the topmost
-  // card is rendered; previous discards stay implicit behind it.
-  if (topName) {
-    return (
-      <div className={`flex flex-col items-center ${className}`} title={label}>
-        <div
-          className="relative w-full overflow-hidden rounded border border-black/12 bg-white"
-          style={{ aspectRatio: "245 / 342" }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={topImageUrl ?? CARD_BACK_URL}
-            alt={topName}
-            className="h-full w-full object-cover"
-            onError={(e) => {
-              if (e.currentTarget.src !== CARD_BACK_URL) {
-                e.currentTarget.src = CARD_BACK_URL;
-              }
-            }}
-          />
-          {!topImageUrl && (
-            <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
-              {topName}
-            </div>
-          )}
-          <div className="absolute inset-x-1 bottom-1 flex items-center justify-center rounded bg-black/70 py-0.5 text-[8px] font-semibold tabular-nums text-white">
-            {count}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const m = replayTrayMetrics(width);
+  const fontSize = Math.max(6, Math.round(m.strip * 0.34));
+  // Face image: card back for the draw pile, the top discard otherwise. With
+  // no top card (empty discard) the card area stays an empty translucent slot.
+  const faceSrc = useCardBack ? CARD_BACK_URL : topImageUrl ?? null;
+  const hasFace = useCardBack || Boolean(topName);
 
   return (
     <div
-      className={`w-full ${className}`}
-      style={{ aspectRatio: "245 / 342" }}
-      aria-hidden
-    />
+      className={`relative bg-black shadow-sm ${className}`}
+      style={{ width: m.containerW, borderRadius: m.radius, padding: m.pad }}
+      title={hint ? `${label} · ${hint}` : label}
+    >
+      {/* Card image — inset by the holder padding for a concentric radius. */}
+      <div
+        className="relative w-full overflow-hidden"
+        style={{
+          height: m.cardH,
+          borderRadius: m.cardRadius,
+          background: hasFace ? "#fff" : "rgba(255,255,255,0.06)",
+        }}
+      >
+        {hasFace && (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={faceSrc ?? CARD_BACK_URL}
+              alt={useCardBack ? "" : topName ?? ""}
+              aria-hidden={useCardBack || undefined}
+              className="h-full w-full object-cover"
+              onError={(e) => {
+                if (e.currentTarget.src !== CARD_BACK_URL) {
+                  e.currentTarget.src = CARD_BACK_URL;
+                }
+              }}
+            />
+            {!useCardBack && topName && !topImageUrl && (
+              <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
+                {topName}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Label row — mirrors the HP header: label left, count right. */}
+      <div
+        className="flex items-center justify-between leading-none text-white"
+        style={{ fontSize, marginTop: m.gap }}
+      >
+        <span className="font-bold uppercase">{label}</span>
+        <span className="font-semibold tabular-nums">{count}</span>
+      </div>
+    </div>
   );
 }
 
@@ -1047,62 +1046,77 @@ function PokemonCardImage({ mon, width }: { mon: PokemonFrame; width: number }) 
   );
 }
 
-function StackedPrizePile({ label, count }: { label: string; count: number }) {
-  // Render up to `count` card backs stacked with a small vertical offset
-  // so the prize pile reads as "a stack of cards" without exploding the
-  // layout. Each layer is absolutely positioned; the outermost container
-  // reserves enough vertical room for the deepest stack.
+// Prize pile, in the same black holder as the other piles. Inside the card
+// area we stack up to 6 card backs with a small vertical offset so it reads
+// as "a stack of cards"; the label row below shows "PRIZES" + remaining count.
+function StackedPrizePile({
+  label,
+  count,
+  width,
+}: {
+  label: string;
+  count: number;
+  width: number;
+}) {
+  const m = replayTrayMetrics(width);
+  const fontSize = Math.max(6, Math.round(m.strip * 0.34));
   const layers = Math.max(0, Math.min(6, count));
-  // % of container width per stacked card. Kept tight so the rendered
-  // prize pile fits inside its rail column without spilling past the
-  // bottom of the board container.
-  const OFFSET_PCT_PER_LAYER = 4;
+  // Per-layer vertical offset, in px. The stacked cards are shrunk just enough
+  // that the whole stack (top card + offsets) fits the holder's card area.
+  const offset = Math.max(2, Math.round(width * 0.06));
+  const stackSpan = layers > 0 ? (layers - 1) * offset : 0;
+  const cardH = Math.max(8, m.cardH - stackSpan);
+  const cardW = cardH * (245 / 342);
+
   return (
-    <div className="flex w-full flex-col items-center" title={label}>
-      {layers === 0 ? (
-        <div
-          className="flex w-full items-center justify-center rounded border border-dashed border-black/15 text-[10px] text-text-muted"
-          style={{ aspectRatio: "245 / 342" }}
-        >
-          empty
-        </div>
-      ) : (
-        <div
-          className="relative w-full"
-          style={{
-            // Card aspect (342/245 ≈ 1.396) + extra room for the layered cards.
-            paddingBottom: `${(342 / 245) * 100 + (layers - 1) * OFFSET_PCT_PER_LAYER}%`,
-          }}
-        >
-          {Array.from({ length: layers }).map((_, i) => {
-            const isTop = i === layers - 1;
-            return (
-              <div
-                key={i}
-                className="absolute left-0 right-0 overflow-hidden rounded-sm border border-black/15 bg-white shadow-sm"
-                style={{
-                  top: `${i * OFFSET_PCT_PER_LAYER}%`,
-                  paddingBottom: `${(342 / 245) * 100}%`,
-                  zIndex: i,
-                }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={CARD_BACK_URL}
-                  alt=""
-                  aria-hidden
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
-                {isTop && (
-                  <div className="absolute inset-x-1 bottom-1 rounded bg-black/70 py-0.5 text-center text-[10px] font-semibold tabular-nums text-white">
-                    {count}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+    <div
+      className="relative bg-black shadow-sm"
+      style={{ width: m.containerW, borderRadius: m.radius, padding: m.pad }}
+      title={label}
+    >
+      <div className="relative w-full" style={{ height: m.cardH }}>
+        {layers === 0 ? (
+          <div
+            className="absolute inset-0 flex items-center justify-center border border-dashed border-white/20 text-white/40"
+            style={{ borderRadius: m.cardRadius, fontSize }}
+          >
+            empty
+          </div>
+        ) : (
+          Array.from({ length: layers }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute overflow-hidden border border-black/30 bg-white shadow-sm"
+              style={{
+                width: cardW,
+                height: cardH,
+                left: "50%",
+                marginLeft: -cardW / 2,
+                top: i * offset,
+                borderRadius: m.cardRadius,
+                zIndex: i,
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={CARD_BACK_URL}
+                alt=""
+                aria-hidden
+                className="h-full w-full object-cover"
+              />
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Label row — mirrors the HP header: label left, count right. */}
+      <div
+        className="flex items-center justify-between leading-none text-white"
+        style={{ fontSize, marginTop: m.gap }}
+      >
+        <span className="font-bold uppercase">{label}</span>
+        <span className="font-semibold tabular-nums">{count}</span>
+      </div>
     </div>
   );
 }
