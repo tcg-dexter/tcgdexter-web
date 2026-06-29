@@ -12,7 +12,7 @@ import {
 import { createPortal } from "react-dom";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import Link from "next/link";
-import BattleLogDetail, { stripLeadingActorName } from "@/app/components/BattleLogDetail";
+import BattleLogDetail, { formatActionLabel } from "@/app/components/BattleLogDetail";
 import type {
   ReplayFrame,
   ReplayPayload,
@@ -640,7 +640,16 @@ function BetweenMatsBar({ frame }: { frame: ReplayFrame }) {
           ? frame.opponent.handle
           : null
       : null;
-  const actionText = isImplied ? "" : stripLeadingActorName(summary, turnHolder);
+  // "Opponent" in the action means the side opposite the actor.
+  const otherName =
+    frame.actor === "player"
+      ? frame.opponent.handle
+      : frame.actor === "opponent"
+        ? frame.player.handle
+        : null;
+  const actionText = isImplied
+    ? ""
+    : formatActionLabel(summary, { authorName: turnHolder, otherName });
 
   return (
     <div className="flex flex-col gap-0.5 px-1">
@@ -654,7 +663,7 @@ function BetweenMatsBar({ frame }: { frame: ReplayFrame }) {
           </span>
         )}
       </div>
-      <div className="min-h-[1rem] truncate text-center text-xs text-text-secondary">
+      <div className="line-clamp-2 min-h-[2.5rem] py-1 text-center text-xs leading-snug text-text-secondary">
         {actionText}
       </div>
     </div>
