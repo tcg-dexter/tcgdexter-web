@@ -618,21 +618,34 @@ function BetweenMatsBar({ frame }: { frame: ReplayFrame }) {
   // Setup has no turn yet; turns and between-turn checkups do.
   const showTurn = frame.phase === "turn" || frame.phase === "checkup";
 
+  // Turn bookends ("… ended their turn", "<player>'s turn") are implied by
+  // whatever action follows, so we suppress them here and leave the action
+  // line blank rather than echoing redundant scaffolding.
+  const summary = frame.summary ?? "";
+  const s = summary.toLowerCase();
+  const handles = [frame.player.handle, frame.opponent.handle]
+    .filter((h): h is string => Boolean(h))
+    .map((h) => h.toLowerCase());
+  const isImplied =
+    s.includes("ended their turn") ||
+    handles.some((h) => s.includes(`${h}'s turn`) || s.includes(`${h} turn`));
+  const actionText = isImplied ? "" : summary;
+
   return (
-    <div className="flex items-center gap-2 px-1">
-      <span className="flex-1 min-w-0 truncate text-sm font-bold text-text-primary">
-        {leftLabel}
-      </span>
-      <span className="flex-[2] min-w-0 truncate text-center text-xs text-text-secondary">
-        {frame.summary}
-      </span>
-      <span className="flex flex-1 justify-end">
+    <div className="flex flex-col gap-0.5 px-1">
+      <div className="flex items-center justify-between gap-2">
+        <span className="min-w-0 truncate text-sm font-bold text-text-primary">
+          {leftLabel}
+        </span>
         {showTurn && (
           <span className="shrink-0 rounded-full bg-[#1a1a1a] px-2.5 py-0.5 text-[10px] font-bold tabular-nums text-white">
             Turn {frame.turn}
           </span>
         )}
-      </span>
+      </div>
+      <div className="min-h-[1rem] truncate text-center text-xs text-text-secondary">
+        {actionText}
+      </div>
     </div>
   );
 }
