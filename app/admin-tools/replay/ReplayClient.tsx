@@ -1061,12 +1061,11 @@ function StackedPrizePile({
   const m = replayTrayMetrics(width);
   const fontSize = Math.max(6, Math.round(m.strip * 0.34));
   const layers = Math.max(0, Math.min(6, count));
-  // Per-layer vertical offset, in px. The stacked cards are shrunk just enough
-  // that the whole stack (top card + offsets) fits the holder's card area.
+  // Per-layer vertical offset, in px. Cards stay full size (m.cardW × m.cardH)
+  // and the card area grows to contain the stack rather than shrinking them.
   const offset = Math.max(2, Math.round(width * 0.06));
   const stackSpan = layers > 0 ? (layers - 1) * offset : 0;
-  const cardH = Math.max(8, m.cardH - stackSpan);
-  const cardW = cardH * (245 / 342);
+  const areaH = m.cardH + stackSpan;
 
   return (
     <div
@@ -1074,7 +1073,7 @@ function StackedPrizePile({
       style={{ width: m.containerW, borderRadius: m.radius, padding: m.pad }}
       title={label}
     >
-      <div className="relative w-full" style={{ height: m.cardH }}>
+      <div className="relative w-full" style={{ height: areaH }}>
         {layers === 0 ? (
           <div
             className="absolute inset-0 flex items-center justify-center border border-dashed border-white/20 text-white/40"
@@ -1086,12 +1085,9 @@ function StackedPrizePile({
           Array.from({ length: layers }).map((_, i) => (
             <div
               key={i}
-              className="absolute overflow-hidden border border-black/30 bg-white shadow-sm"
+              className="absolute left-0 right-0 overflow-hidden border border-black/30 bg-white shadow-sm"
               style={{
-                width: cardW,
-                height: cardH,
-                left: "50%",
-                marginLeft: -cardW / 2,
+                height: m.cardH,
                 top: i * offset,
                 borderRadius: m.cardRadius,
                 zIndex: i,
