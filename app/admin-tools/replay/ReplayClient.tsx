@@ -1325,7 +1325,7 @@ function StackedPrizePile({
   const holderW = L + 2 * m.pad;
   // Per-layer vertical offset, in px — unchanged by the rotation. The card
   // area grows to contain the stack rather than shrinking the cards.
-  const offset = Math.max(2, Math.round(width * 0.06));
+  const offset = Math.max(3, Math.round(width * 0.09));
   const stackSpan = layers > 0 ? (layers - 1) * offset : 0;
   const areaH = H + stackSpan;
 
