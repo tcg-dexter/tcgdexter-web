@@ -25,6 +25,7 @@ import type {
   FeaturedManualMatchSubject,
   MetaArchetypeSubject,
   SpotlightSubject,
+  SpotlightThumbSubject,
 } from "./templates/types";
 
 export const metadata: Metadata = {
@@ -173,6 +174,12 @@ export default async function SocialStudioPage() {
         pokemonName: s.favorite_pokemon?.name ?? null,
       };
     });
+
+  // Same spotlight data, surfaced through the flashy 5:4 thumbnail template.
+  const spotlightThumbs: SpotlightThumbSubject[] = spotlights.map((s) => ({
+    ...s,
+    kind: "spotlight_thumb",
+  }));
 
   // ── Meta archetypes ───────────────────────────────────────────
   const archetypes = (archetypesRaw as Archetype[])
@@ -575,6 +582,7 @@ export default async function SocialStudioPage() {
   return (
     <SocialStudioClient
       spotlights={spotlights}
+      spotlightThumbs={spotlightThumbs}
       metaArchetypes={metaArchetypes}
       cardSpotlights={cardSpotlights}
       featuredDecks={featuredDecks}
