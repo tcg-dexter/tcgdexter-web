@@ -18,28 +18,14 @@ import {
   type SpecialCondition,
 } from "./types";
 import { tokenize, type Block, type Section } from "./tokenize";
-import { splitCardId, stripCardIds } from "./cardId";
+import {
+  CARD_NAME_ARRAY_FIELDS,
+  CARD_NAME_FIELDS,
+  splitCardId,
+  stripCardIds,
+} from "./cardId";
 
 /* ─── Helpers ─────────────────────────────────────────────────── */
-
-// Payload fields that hold a single card name, across every action type.
-const CARD_NAME_FIELDS = [
-  "card",
-  "energy",
-  "target",
-  "from",
-  "to",
-  "pokemon",
-  "source",
-  "attacker",
-  "defender",
-] as const;
-// Payload fields that hold a list of card names.
-const CARD_NAME_ARRAY_FIELDS = [
-  "revealed_cards",
-  "replaced_stadium",
-  "discarded_energies",
-] as const;
 
 /**
  * Strip TCG Live card-id prefixes ("(me2-5_155) N's Zekrom") out of an
