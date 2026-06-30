@@ -18,8 +18,58 @@ import {
   type SpecialCondition,
 } from "./types";
 import { tokenize, type Block, type Section } from "./tokenize";
+import { splitCardId, stripCardIds } from "./cardId";
 
 /* ─── Helpers ─────────────────────────────────────────────────── */
+
+// Payload fields that hold a single card name, across every action type.
+const CARD_NAME_FIELDS = [
+  "card",
+  "energy",
+  "target",
+  "from",
+  "to",
+  "pokemon",
+  "source",
+  "attacker",
+  "defender",
+] as const;
+// Payload fields that hold a list of card names.
+const CARD_NAME_ARRAY_FIELDS = [
+  "revealed_cards",
+  "replaced_stadium",
+  "discarded_energies",
+] as const;
+
+/**
+ * Strip TCG Live card-id prefixes ("(me2-5_155) N's Zekrom") out of an
+ * action's card-name payload fields and its raw_text, recording each clean
+ * name → id into the shared map. A no-op on the standard export. Patterns
+ * capture the id together with the name (they use `.+?`), so this runs once
+ * per action after matching rather than complicating every regex.
+ */
+function stripActionCardIds(a: ParsedAction, ids: Record<string, string>): void {
+  for (const f of CARD_NAME_FIELDS) {
+    const v = a.payload[f];
+    if (typeof v === "string") {
+      const { name, id } = splitCardId(v);
+      a.payload[f] = name;
+      if (id && !(name in ids)) ids[name] = id;
+    }
+  }
+  for (const f of CARD_NAME_ARRAY_FIELDS) {
+    const v = a.payload[f];
+    if (Array.isArray(v)) {
+      a.payload[f] = v.map((item) => {
+        if (typeof item !== "string") return item;
+        const { name, id } = splitCardId(item);
+        if (id && !(name in ids)) ids[name] = id;
+        return name;
+      });
+    }
+  }
+  a.raw_text = stripCardIds(a.raw_text);
+}
 
 /** Normalize curly apostrophes/quotes to straight so a single pattern matches. */
 function normalizeQuotes(s: string): string {
@@ -588,6 +638,7 @@ export function parseBattleLog(raw: string): BattleLogParseResult {
   const turns: ParsedTurn[] = [];
   const unmatched: string[] = [];
   const handleSeen: string[] = [];
+  const cardIds: Record<string, string> = {};
 
   function noteHandle(h: string | null) {
     if (!h) return;
@@ -636,6 +687,7 @@ export function parseBattleLog(raw: string): BattleLogParseResult {
     for (const block of section.blocks) {
       const result = parseBlock(block);
       for (const a of result.actions) {
+        stripActionCardIds(a, cardIds);
         actions.push(a);
         noteHandle(a.actor_handle);
         // Game-end winner handle is in payload, also worth tracking.
@@ -643,7 +695,7 @@ export function parseBattleLog(raw: string): BattleLogParseResult {
           noteHandle(a.payload.winner);
         }
       }
-      if (result.unmatched) unmatched.push(block.text);
+      if (result.unmatched) unmatched.push(stripCardIds(block.text));
     }
 
     const turnEnd = actions.length;
@@ -666,6 +718,7 @@ export function parseBattleLog(raw: string): BattleLogParseResult {
     actions,
     turns,
     unmatched,
+    cardIds,
     parser_version: PARSER_VERSION,
   };
 }
