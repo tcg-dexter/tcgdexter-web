@@ -62,3 +62,22 @@ export function cardImageSmall(setId: string, number: string): string {
 export function cardImageLarge(setId: string, number: string): string {
   return build(setId, number, "large");
 }
+
+/**
+ * URL-prefix allowlist for user-supplied card-image URLs (deck cover images).
+ * These are the hosts our own resolvers emit — pokemontcg.io for most sets,
+ * plus the per-set CDN overrides above (scrydex for Chaos Rising, Limitless
+ * for the other Mega Evolution sets). Validating against this set keeps cover
+ * images to images our pipeline actually serves while still covering every set
+ * we support — pokemontcg.io alone wrongly rejected ME-era cards.
+ */
+export const TRUSTED_CARD_IMAGE_PREFIXES = [
+  "https://images.pokemontcg.io/",
+  "https://images.scrydex.com/",
+  "https://limitlesstcg.nyc3.digitaloceanspaces.com/",
+] as const;
+
+/** True when `url` is one of our trusted card-image hosts. */
+export function isTrustedCardImageUrl(url: string): boolean {
+  return TRUSTED_CARD_IMAGE_PREFIXES.some((prefix) => url.startsWith(prefix));
+}
