@@ -1,4 +1,3 @@
-import { shade } from "@/lib/color";
 import { pokemonSlug } from "@/lib/primaryCardImage";
 import LayerCanvas from "./LayerCanvas";
 import {
@@ -17,18 +16,11 @@ interface Props {
   copy: TemplateCopy;
 }
 
-/** Two-letter monogram. Mirrors SpotlightTemplate / SpotlightHeader. */
-function monogramFor(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return "?";
-  if (words.length === 1) return words[0].charAt(0).toUpperCase();
-  return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
-}
-
 /**
  * Flashy 5:4 (1350×1080) thumbnail for a published trainer spotlight. Text
- * column on the left, the partner Pokémon as a big glowing hero on the right.
- * Repurposes the same SpotlightSubject data the 9:16 portrait template uses.
+ * column on the left (display name as the headline), the trainer's uploaded
+ * avatar as a hero portrait on the right with the partner Pokémon popping in
+ * front. Repurposes the same SpotlightSubject data the 9:16 template uses.
  */
 export function buildSpotlightThumbLayers(
   subject: SpotlightThumbSubject,
@@ -40,13 +32,19 @@ export function buildSpotlightThumbLayers(
   const gradient = `linear-gradient(120deg, ${stops
     .map((c, i) => `${c} ${Math.round((i / Math.max(stops.length - 1, 1)) * 100)}%`)
     .join(", ")})`;
-  const avatarGradient = `linear-gradient(180deg, ${stops[0]} 0%, ${shade(stops[0], -22)} 100%)`;
   const accent = stops[0];
-  const monogram = monogramFor(subject.displayName);
 
-  // Hero sprite occupies the right ~45% of the canvas; its glow centers here.
-  const spriteCx = THUMB_CANVAS_W - 320;
-  const spriteCy = THUMB_CANVAS_H / 2;
+  // Right-side hero cluster: the trainer's uploaded avatar as a big portrait,
+  // with the partner Pokémon popping in front of it and offset down-left.
+  const avatarD = 480;
+  const avatarCx = 1052;
+  const avatarCy = 398;
+  const spriteBox = 470;
+  const spriteCx = 884;
+  const spriteCy = 614;
+  // Text column lives to the left of the hero cluster.
+  const COL_LEFT = 92;
+  const COL_W = 540;
 
   const layers: StudioLayer[] = [
     {
@@ -61,7 +59,7 @@ export function buildSpotlightThumbLayers(
               position: "absolute",
               inset: 0,
               background:
-                "linear-gradient(90deg, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.12) 46%, rgba(0,0,0,0) 70%)",
+                "linear-gradient(90deg, rgba(0,0,0,0.46) 0%, rgba(0,0,0,0.14) 44%, rgba(0,0,0,0) 66%)",
             }}
           />
           {/* Bottom + top vignette for depth. */}
@@ -81,36 +79,70 @@ export function buildSpotlightThumbLayers(
       name: "Hero Glow",
       node: (
         <>
-          {/* Colored accent burst. */}
+          {/* Colored accent burst behind the cluster. */}
           <div
             style={{
               position: "absolute",
-              left: spriteCx - 470,
-              top: spriteCy - 470,
-              width: 940,
-              height: 940,
+              left: 990 - 500,
+              top: 470 - 500,
+              width: 1000,
+              height: 1000,
               borderRadius: "50%",
               background: `radial-gradient(circle, ${accent} 0%, rgba(0,0,0,0) 60%)`,
               opacity: 0.5,
             }}
           />
-          {/* Bright white core glow so the sprite pops. */}
+          {/* Bright white core glow so the cluster pops. */}
           <div
             style={{
               position: "absolute",
-              left: spriteCx - 360,
-              top: spriteCy - 360,
-              width: 720,
-              height: 720,
+              left: 990 - 380,
+              top: 470 - 380,
+              width: 760,
+              height: 760,
               borderRadius: "50%",
               background:
-                "radial-gradient(circle, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0) 62%)",
+                "radial-gradient(circle, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 62%)",
             }}
           />
         </>
       ),
     },
   ];
+
+  // Trainer's uploaded avatar as the hero portrait. Only shown when one is
+  // set — no monogram fallback.
+  if (subject.avatarUrl) {
+    layers.push({
+      id: "trainer",
+      name: "Trainer Avatar",
+      node: (
+        <div
+          style={{
+            position: "absolute",
+            left: avatarCx - avatarD / 2,
+            top: avatarCy - avatarD / 2,
+            width: avatarD,
+            height: avatarD,
+            borderRadius: "50%",
+            border: "10px solid rgba(255,255,255,0.94)",
+            overflow: "hidden",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 24px 60px rgba(0,0,0,0.4)",
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={proxied(subject.avatarUrl)}
+            alt={subject.displayName}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        </div>
+      ),
+    });
+  }
 
   if (subject.pokemonName) {
     layers.push({
@@ -120,10 +152,10 @@ export function buildSpotlightThumbLayers(
         <div
           style={{
             position: "absolute",
-            left: spriteCx - 330,
-            top: spriteCy - 350,
-            width: 660,
-            height: 700,
+            left: spriteCx - spriteBox / 2,
+            top: spriteCy - spriteBox / 2,
+            width: spriteBox,
+            height: spriteBox,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -139,7 +171,7 @@ export function buildSpotlightThumbLayers(
               width: "100%",
               height: "100%",
               objectFit: "contain",
-              filter: "drop-shadow(0 28px 46px rgba(0,0,0,0.45))",
+              filter: "drop-shadow(0 28px 46px rgba(0,0,0,0.5))",
             }}
           />
         </div>
@@ -156,74 +188,18 @@ export function buildSpotlightThumbLayers(
         <div
           style={{
             position: "absolute",
-            top: 96,
-            left: 96,
-            right: 560,
-            fontSize: 30,
+            top: 120,
+            left: COL_LEFT,
+            width: COL_W,
+            fontSize: 28,
             fontWeight: 700,
-            letterSpacing: "0.32em",
+            letterSpacing: "0.3em",
             textTransform: "uppercase",
             color: "rgba(255,255,255,0.92)",
             textShadow: "0 2px 12px rgba(0,0,0,0.35)",
           }}
         >
           {copy.eyebrow}
-        </div>
-      ),
-    },
-    {
-      id: "avatar",
-      name: "Avatar",
-      node: (
-        <div
-          style={{
-            position: "absolute",
-            top: 156,
-            left: 96,
-            display: "flex",
-            alignItems: "center",
-            gap: 22,
-          }}
-        >
-          <div
-            style={{
-              width: 118,
-              height: 118,
-              borderRadius: "50%",
-              border: "6px solid rgba(255,255,255,0.92)",
-              overflow: "hidden",
-              background: subject.avatarUrl ? undefined : avatarGradient,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
-              flexShrink: 0,
-            }}
-          >
-            {subject.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={proxied(subject.avatarUrl)}
-                alt={subject.displayName}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
-            ) : (
-              <span style={{ fontSize: 54, fontWeight: 900, color: "#fff" }}>
-                {monogram}
-              </span>
-            )}
-          </div>
-          <span
-            style={{
-              fontSize: 40,
-              fontWeight: 700,
-              letterSpacing: "0.02em",
-              color: "rgba(255,255,255,0.92)",
-              textShadow: "0 2px 12px rgba(0,0,0,0.35)",
-            }}
-          >
-            @{subject.username}
-          </span>
         </div>
       ),
     },
@@ -235,14 +211,14 @@ export function buildSpotlightThumbLayers(
         <div
           style={{
             position: "absolute",
-            top: 320,
-            left: 96,
-            width: 720,
-            fontSize: 118,
+            top: 196,
+            left: COL_LEFT,
+            width: COL_W,
+            fontSize: 100,
             fontWeight: 900,
             letterSpacing: "-0.02em",
             lineHeight: 0.98,
-            textShadow: "0 6px 28px rgba(0,0,0,0.4)",
+            textShadow: "0 6px 28px rgba(0,0,0,0.42)",
           }}
         >
           {copy.headline}
@@ -256,9 +232,9 @@ export function buildSpotlightThumbLayers(
         <div
           style={{
             position: "absolute",
-            top: 560,
-            left: 100,
-            width: 132,
+            top: 446,
+            left: COL_LEFT + 4,
+            width: 124,
             height: 12,
             borderRadius: 999,
             background: accent,
@@ -275,10 +251,10 @@ export function buildSpotlightThumbLayers(
         <div
           style={{
             position: "absolute",
-            top: 606,
-            left: 96,
-            width: 690,
-            fontSize: 36,
+            top: 490,
+            left: COL_LEFT,
+            width: COL_W - 10,
+            fontSize: 34,
             fontStyle: "italic",
             fontWeight: 500,
             lineHeight: 1.32,
@@ -295,7 +271,7 @@ export function buildSpotlightThumbLayers(
       name: "CTA",
       copyField: "cta",
       node: (
-        <div style={{ position: "absolute", bottom: 84, left: 96 }}>
+        <div style={{ position: "absolute", bottom: 84, left: COL_LEFT }}>
           {copy.cta && (
             <span
               style={{

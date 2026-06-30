@@ -139,7 +139,7 @@ const cases: Array<{
       { ...spotlight, kind: "spotlight_thumb" },
       copy,
     ),
-    mustContain: ["Headline Text", "@ash", "Eyebrow Text", "tcgdexter.com/spotlight/ash"],
+    mustContain: ["Headline Text", "Eyebrow Text", "tcgdexter.com/spotlight/ash"],
   },
   {
     label: "meta archetype",
