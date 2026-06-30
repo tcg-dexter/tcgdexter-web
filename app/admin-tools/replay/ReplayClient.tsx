@@ -1328,6 +1328,8 @@ function StackedPrizePile({
   const offset = Math.max(3, Math.round(width * 0.09));
   const stackSpan = layers > 0 ? (layers - 1) * offset : 0;
   const areaH = H + stackSpan;
+  // Signature gradient border width, scaled to the card.
+  const prizeBorder = Math.max(1, Math.round(width * 0.04));
 
   return (
     <div
@@ -1347,12 +1349,17 @@ function StackedPrizePile({
           Array.from({ length: layers }).map((_, i) => (
             <div
               key={i}
-              className="absolute left-0 right-0 overflow-hidden bg-white shadow-sm"
+              className="absolute left-0 right-0 overflow-hidden shadow-sm"
               style={{
                 height: H,
                 top: i * offset,
                 borderRadius: m.cardRadius,
                 zIndex: i,
+                // Site signature gradient border: white fill in the padding
+                // box, the brand gradient in the (transparent) border ring.
+                border: `${prizeBorder}px solid transparent`,
+                background:
+                  "linear-gradient(#fff, #fff) padding-box, var(--gradient-brand) border-box",
               }}
             >
               <RotatedCardFace
