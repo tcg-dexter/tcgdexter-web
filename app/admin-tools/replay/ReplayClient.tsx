@@ -502,8 +502,10 @@ function computeReplayCardWidth(matWidth: number): number {
   // tray's full height, not the bare card.
   const maxTrayH = (innerH - ROW_GAP) / 2;
   const maxWidthFromH = maxTrayH / TRAY_TOTAL_RATIO;
-  // 2 rail holders + 5 bench Pokémon holders — all are holders now (wider
-  // than the bare card by the container factor); 5 conservative bench gaps.
+  // Conservative width budget. The bench row (5 holders) is the tightest at
+  // 5·CONTAINER_W_FACTOR; the rail row (2 landscape pile holders + the active)
+  // is looser. Reserving 7·CONTAINER_W_FACTOR over-estimates both, so the
+  // wider rotated-pile rails still fit comfortably.
   const maxWidthFromW =
     (innerW - 2 * 12 - 5 * REPLAY_CARD_GAP) / (7 * CONTAINER_W_FACTOR);
   return Math.max(
@@ -727,6 +729,9 @@ function PlayerMat({
   // center column; this resolves the card *image* top within that tray so the
   // floating stadium / played-trainer cards still line up with the card art.
   const activeTray = replayTrayMetrics(cardWidth);
+  // Rail columns are sized to the rotated pile holders (landscape, full card
+  // proportions), which are wider than the active's portrait holder.
+  const railW = pileHolderWidth(cardWidth);
   // The active Pokémon's holder is wider than the bare card by 2*pad; the
   // floating stadium / played-trainer anchor off the holder's edge.
   const activeHalf = activeTray.containerW / 2;
@@ -802,14 +807,15 @@ function PlayerMat({
           boxShadow: "0 4px 4px rgba(0,0,0,0.66)",
         }}
       >
-        {/* ── 3-column grid: left-rail | center | right-rail ── */}
+        {/* ── 3-column grid: left-rail | center | right-rail. Rails are sized
+            to the rotated (landscape) pile holders. ── */}
         <div
           className="grid h-full gap-1.5 sm:gap-3"
-          style={{ gridTemplateColumns: `${activeTray.containerW}px 1fr ${activeTray.containerW}px` }}
+          style={{ gridTemplateColumns: `${railW}px 1fr ${railW}px` }}
         >
           {/* Left rail — cards rotate top-toward-left (outer edge). On the top
-              mat (P2) the piles anchor to the bottom of the mat. */}
-          <div className={`flex h-full flex-col gap-1.5 sm:gap-3 ${isPlayer ? "" : "justify-end"}`}>
+              (player) mat the piles anchor to the bottom of the mat. */}
+          <div className={`flex h-full flex-col gap-1.5 sm:gap-3 ${isPlayer ? "justify-end" : ""}`}>
             {isPlayer ? (
               <>
                 <Pile label="Discard" count={discardCount} width={cardWidth} rotate="ccw" topName={discardTop} topImageUrl={discardTopImageUrl} />
@@ -824,8 +830,8 @@ function PlayerMat({
             {activeRow}
           </div>
           {/* Right rail — cards rotate top-toward-right (outer edge). On the top
-              mat (P2) the piles anchor to the bottom of the mat. */}
-          <div className={`flex h-full flex-col gap-1.5 sm:gap-3 ${isPlayer ? "" : "justify-end"}`}>
+              (player) mat the piles anchor to the bottom of the mat. */}
+          <div className={`flex h-full flex-col gap-1.5 sm:gap-3 ${isPlayer ? "justify-end" : ""}`}>
             {isPlayer ? (
               <StackedPrizePile label="Prizes" count={prizesRemaining} width={cardWidth} rotate="cw" />
             ) : (
@@ -1033,10 +1039,12 @@ function Pile({
   const inspect = useContext(InspectContext);
   const m = replayTrayMetrics(width);
   const fontSize = Math.max(6, Math.round((m.strip * 0.34) / CARD_IMAGE_BUMP));
-  // Landscape card slot: long edge spans the holder width, short edge is the
-  // 245/342 counterpart.
-  const L = width;
-  const H = Math.round(width * (245 / 342));
+  // Landscape card slot at full card proportions: the card's long edge (342)
+  // runs horizontally, its short edge (245 → `width`) vertically — i.e. the
+  // portrait card turned on its side, same size. The holder widens to suit.
+  const L = pileCardLong(width);
+  const H = width;
+  const holderW = L + 2 * m.pad;
   // Face image: card back for the draw pile, the top discard otherwise. With
   // no top card (empty discard) the card area stays an empty translucent slot.
   const faceSrc = useCardBack ? CARD_BACK_URL : topImageUrl ?? null;
@@ -1048,7 +1056,7 @@ function Pile({
   return (
     <div
       className={`relative bg-black shadow-sm ${className}`}
-      style={{ width: m.containerW, borderRadius: m.radius, padding: m.pad }}
+      style={{ width: holderW, borderRadius: m.radius, padding: m.pad }}
       title={hint ? `${label} · ${hint}` : label}
     >
       {/* Landscape card slot — inset by the holder padding for concentric corners. */}
@@ -1147,6 +1155,17 @@ export function replayTrayMetrics(width: number) {
   const radius = Math.max(4, Math.round(containerW * 0.08));
   const cardRadius = Math.max(2, radius - pad);
   return { pad, gap, strip, cardW, cardH, containerW, totalH, radius, cardRadius };
+}
+
+// Pile cards are the portrait card turned on its side, at full proportions:
+// the long edge (342) runs horizontally while the short edge stays `width`.
+// `pileHolderWidth` is the resulting holder width — used both by the pile
+// components and by the rail grid columns so they stay in lockstep.
+function pileCardLong(width: number): number {
+  return Math.round(width * (342 / 245));
+}
+function pileHolderWidth(width: number): number {
+  return pileCardLong(width) + 2 * replayTrayMetrics(width).pad;
 }
 
 function PokemonCardImage({
@@ -1300,9 +1319,10 @@ function StackedPrizePile({
   const m = replayTrayMetrics(width);
   const fontSize = Math.max(6, Math.round((m.strip * 0.34) / CARD_IMAGE_BUMP));
   const layers = Math.max(0, Math.min(6, count));
-  // Landscape card slot (long edge spans the holder width).
-  const L = width;
-  const H = Math.round(width * (245 / 342));
+  // Landscape card slot at full proportions (long edge horizontal).
+  const L = pileCardLong(width);
+  const H = width;
+  const holderW = L + 2 * m.pad;
   // Per-layer vertical offset, in px — unchanged by the rotation. The card
   // area grows to contain the stack rather than shrinking the cards.
   const offset = Math.max(2, Math.round(width * 0.06));
@@ -1312,7 +1332,7 @@ function StackedPrizePile({
   return (
     <div
       className="relative bg-black shadow-sm"
-      style={{ width: m.containerW, borderRadius: m.radius, padding: m.pad }}
+      style={{ width: holderW, borderRadius: m.radius, padding: m.pad }}
       title={label}
     >
       <div className="relative w-full" style={{ height: areaH }}>
