@@ -1007,6 +1007,25 @@ function RotatedCardFace({
   );
 }
 
+// The back of a face-down card — what shows on the draw and prize piles.
+// Currently a card-shaped rounded rect in the site signature gradient; this is
+// the seam where the "card sleeve" becomes customizable later (a chosen
+// gradient, or the Pokémon standard back via RotatedCardFace + CARD_BACK_URL).
+// The shadow mirrors the stacked-card shadow in Playmat Studio so layered
+// sleeves read with depth. Fills its positioned parent.
+function CardSleeve({ radius, shadow }: { radius: number; shadow?: boolean }) {
+  return (
+    <div
+      className="absolute inset-0"
+      style={{
+        borderRadius: radius,
+        background: "var(--gradient-brand)",
+        boxShadow: shadow ? "0 -2px 2px rgba(0,0,0,0.33)" : undefined,
+      }}
+    />
+  );
+}
+
 // Draw / discard pile, in the same black holder as the Pokémon cards, but
 // turned on its side so the card's printed top faces the mat's outer edge.
 // The card art fills a landscape slot; the footer (label + count) stays
@@ -1045,9 +1064,8 @@ function Pile({
   const L = pileCardLong(width);
   const H = width;
   const holderW = L + 2 * m.pad;
-  // Face image: card back for the draw pile, the top discard otherwise. With
-  // no top card (empty discard) the card area stays an empty translucent slot.
-  const faceSrc = useCardBack ? CARD_BACK_URL : topImageUrl ?? null;
+  // Face-down piles (draw) show a card sleeve; face-up piles (discard) show the
+  // actual top card. An empty pile stays a translucent slot.
   const hasFace = useCardBack || Boolean(topName);
   // Only the face-up top discard is worth inspecting (the draw pile is a
   // card back, an empty pile has nothing to show).
@@ -1079,24 +1097,25 @@ function Pile({
             : undefined
         }
       >
-        {hasFace && (
+        {useCardBack ? (
+          <CardSleeve radius={m.cardRadius} />
+        ) : hasFace ? (
           <>
             <RotatedCardFace
-              src={faceSrc ?? CARD_BACK_URL}
-              alt={useCardBack ? "" : topName ?? ""}
-              ariaHidden={useCardBack}
+              src={topImageUrl ?? CARD_BACK_URL}
+              alt={topName ?? ""}
               L={L}
               H={H}
               radius={m.cardRadius}
               rotate={rotate}
             />
-            {!useCardBack && topName && !topImageUrl && (
+            {topName && !topImageUrl && (
               <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
                 {topName}
               </div>
             )}
           </>
-        )}
+        ) : null}
       </div>
 
       {/* Label row — mirrors the HP header: label left, count right. */}
@@ -1301,15 +1320,18 @@ function PokemonCardImage({
   );
 }
 
-// Prize pile, in the same black holder as the other piles, turned on its side
-// to match the draw/discard rotation. Up to 6 landscape card backs stack with
-// a small vertical offset so it reads as "a stack of cards"; the label row
-// below shows "PRIZES" + remaining count.
+// Prize pile, in the same black holder as the other piles. The prizes are
+// face down, so each is a card sleeve; up to 6 stack with a small vertical
+// offset (and a stacked-card shadow) so it reads as "a stack of cards". The
+// label row below shows "PRIZES" + remaining count.
+//
+// `rotate` is reserved: it's unused while the sleeve is the symmetric gradient,
+// but the future Pokémon-standard-back sleeve option will need it.
 function StackedPrizePile({
   label,
   count,
   width,
-  rotate,
+  rotate: _rotate,
 }: {
   label: string;
   count: number;
@@ -1323,13 +1345,11 @@ function StackedPrizePile({
   const L = pileCardLong(width);
   const H = width;
   const holderW = L + 2 * m.pad;
-  // Per-layer vertical offset, in px — unchanged by the rotation. The card
-  // area grows to contain the stack rather than shrinking the cards.
+  // Per-layer vertical offset, in px. The card area grows to contain the stack
+  // rather than shrinking the cards.
   const offset = Math.max(3, Math.round(width * 0.09));
   const stackSpan = layers > 0 ? (layers - 1) * offset : 0;
   const areaH = H + stackSpan;
-  // Signature gradient border width, scaled to the card.
-  const prizeBorder = Math.max(1, Math.round(width * 0.04));
 
   return (
     <div
@@ -1349,28 +1369,10 @@ function StackedPrizePile({
           Array.from({ length: layers }).map((_, i) => (
             <div
               key={i}
-              className="absolute left-0 right-0 overflow-hidden shadow-sm"
-              style={{
-                height: H,
-                top: i * offset,
-                borderRadius: m.cardRadius,
-                zIndex: i,
-                // Site signature gradient border: white fill in the padding
-                // box, the brand gradient in the (transparent) border ring.
-                border: `${prizeBorder}px solid transparent`,
-                background:
-                  "linear-gradient(#fff, #fff) padding-box, var(--gradient-brand) border-box",
-              }}
+              className="absolute left-0 right-0"
+              style={{ height: H, top: i * offset, zIndex: i }}
             >
-              <RotatedCardFace
-                src={CARD_BACK_URL}
-                alt=""
-                ariaHidden
-                L={L}
-                H={H}
-                radius={m.cardRadius}
-                rotate={rotate}
-              />
+              <CardSleeve radius={m.cardRadius} shadow={i > 0} />
             </div>
           ))
         )}
