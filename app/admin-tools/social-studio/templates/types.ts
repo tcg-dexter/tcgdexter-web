@@ -1,11 +1,24 @@
 import type { ReactNode } from "react";
 
-/** Shared types for Social Studio templates. Each template renders at a
- *  fixed 1080×1920 canvas (9:16) and is composed of named layers so the
- *  editor can toggle, isolate, and export each one as its own PNG. */
+/** Shared types for Social Studio templates. Most templates render at a
+ *  fixed 1080×1920 canvas (9:16); the spotlight thumbnail uses a 5:4
+ *  landscape canvas. Per-template dimensions live in CANVAS_SIZE_BY_KIND.
+ *  Each template is composed of named layers so the editor can toggle,
+ *  isolate, and export each one as its own PNG. */
 
+// Default (9:16) canvas — the size every template but the spotlight thumbnail
+// renders at. Kept as the LayerCanvas / rasterizer defaults.
 export const CANVAS_W = 1080;
 export const CANVAS_H = 1920;
+
+// 5:4 landscape canvas for the flashy spotlight thumbnail.
+export const THUMB_CANVAS_W = 1350;
+export const THUMB_CANVAS_H = 1080;
+
+export interface CanvasSize {
+  w: number;
+  h: number;
+}
 
 /** One compositing layer of a template. `node` is absolutely positioned
  *  content for the 1080×1920 canvas; LayerCanvas stacks layers in array
@@ -44,6 +57,12 @@ export interface SpotlightSubject {
    *  first-collection card → first-play card. Resolved server-side. */
   accentColors: string[];
   pokemonName: string | null;
+}
+
+/** Same source data as SpotlightSubject, rendered through the 5:4
+ *  flashy-thumbnail template instead of the 9:16 portrait one. */
+export interface SpotlightThumbSubject extends Omit<SpotlightSubject, "kind"> {
+  kind: "spotlight_thumb";
 }
 
 export interface MetaArchetypeSubject {
@@ -132,6 +151,7 @@ export type FeaturedMatchLikeSubject = FeaturedMatchSubject | FeaturedManualMatc
 
 export type TemplateSubject =
   | SpotlightSubject
+  | SpotlightThumbSubject
   | MetaArchetypeSubject
   | CardSpotlightSubject
   | FeaturedDeckSubject
@@ -139,6 +159,18 @@ export type TemplateSubject =
   | FeaturedManualMatchSubject;
 
 export type TemplateKind = TemplateSubject["kind"];
+
+/** Canvas dimensions per template. Most are the default 9:16; the spotlight
+ *  thumbnail is 5:4 landscape. */
+export const CANVAS_SIZE_BY_KIND: Record<TemplateKind, CanvasSize> = {
+  spotlight: { w: CANVAS_W, h: CANVAS_H },
+  spotlight_thumb: { w: THUMB_CANVAS_W, h: THUMB_CANVAS_H },
+  meta_archetype: { w: CANVAS_W, h: CANVAS_H },
+  card_spotlight: { w: CANVAS_W, h: CANVAS_H },
+  featured_deck: { w: CANVAS_W, h: CANVAS_H },
+  featured_match: { w: CANVAS_W, h: CANVAS_H },
+  featured_match_manual: { w: CANVAS_W, h: CANVAS_H },
+};
 
 export interface TemplateCopy {
   eyebrow: string;
@@ -149,6 +181,7 @@ export interface TemplateCopy {
 
 export const TEMPLATE_LABELS: Record<TemplateKind, string> = {
   spotlight: "Trainer Spotlight",
+  spotlight_thumb: "Spotlight Thumbnail",
   meta_archetype: "Meta Archetype Spotlight",
   card_spotlight: "Card Spotlight",
   featured_deck: "Featured Deck",
@@ -158,6 +191,7 @@ export const TEMPLATE_LABELS: Record<TemplateKind, string> = {
 
 export const TEMPLATE_DESCRIPTIONS: Record<TemplateKind, string> = {
   spotlight: "Published trainer spotlights — avatar, headline, and partner Pokémon.",
+  spotlight_thumb: "Published spotlights as a flashy 5:4 thumbnail — partner Pokémon hero, avatar, and headline.",
   meta_archetype: "Top archetypes from the live meta, with their share as the hero stat.",
   card_spotlight: "Chase cards from the Standard catalog, ranked by market price.",
   featured_deck: "Most-liked public decks from the community library.",

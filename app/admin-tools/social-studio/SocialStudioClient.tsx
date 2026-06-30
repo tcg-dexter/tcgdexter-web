@@ -4,14 +4,14 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import LayerCanvas from "./templates/LayerCanvas";
 import { buildSpotlightLayers } from "./templates/SpotlightTemplate";
+import { buildSpotlightThumbLayers } from "./templates/SpotlightThumbTemplate";
 import { buildMetaArchetypeLayers } from "./templates/MetaArchetypeTemplate";
 import { buildCardSpotlightLayers } from "./templates/CardSpotlightTemplate";
 import { buildFeaturedDeckLayers } from "./templates/FeaturedDeckTemplate";
 import { buildFeaturedMatchLayers } from "./templates/FeaturedMatchTemplate";
 import { downloadDataUrl, rasterizeLayers, slugify } from "./exportLayers";
 import {
-  CANVAS_H,
-  CANVAS_W,
+  CANVAS_SIZE_BY_KIND,
   TEMPLATE_DESCRIPTIONS,
   TEMPLATE_LABELS,
   type CardSpotlightSubject,
@@ -20,6 +20,7 @@ import {
   type FeaturedManualMatchSubject,
   type MetaArchetypeSubject,
   type SpotlightSubject,
+  type SpotlightThumbSubject,
   type StudioLayer,
   type TemplateCopy,
   type TemplateKind,
@@ -28,6 +29,7 @@ import {
 
 interface Props {
   spotlights: SpotlightSubject[];
+  spotlightThumbs: SpotlightThumbSubject[];
   metaArchetypes: MetaArchetypeSubject[];
   cardSpotlights: CardSpotlightSubject[];
   featuredDecks: FeaturedDeckSubject[];
@@ -40,6 +42,7 @@ interface Props {
 function defaultCopy(subject: TemplateSubject): TemplateCopy {
   switch (subject.kind) {
     case "spotlight":
+    case "spotlight_thumb":
       return {
         eyebrow: "Trainer Spotlight",
         headline: subject.displayName,
@@ -86,6 +89,7 @@ function defaultCopy(subject: TemplateSubject): TemplateCopy {
  *  copy; Meta Archetype renders its stat block instead of a subhead). */
 const COPY_FIELDS_BY_KIND: Record<TemplateKind, (keyof TemplateCopy)[]> = {
   spotlight: ["eyebrow", "headline", "subhead", "cta"],
+  spotlight_thumb: ["eyebrow", "headline", "subhead", "cta"],
   meta_archetype: ["eyebrow", "headline", "cta"],
   card_spotlight: ["eyebrow", "headline", "subhead", "cta"],
   featured_deck: ["eyebrow", "headline", "subhead", "cta"],
@@ -98,6 +102,8 @@ function buildLayers(subject: TemplateSubject, copy: TemplateCopy): StudioLayer[
   switch (subject.kind) {
     case "spotlight":
       return buildSpotlightLayers(subject, copy);
+    case "spotlight_thumb":
+      return buildSpotlightThumbLayers(subject, copy);
     case "meta_archetype":
       return buildMetaArchetypeLayers(subject, copy);
     case "card_spotlight":
@@ -114,6 +120,7 @@ function buildLayers(subject: TemplateSubject, copy: TemplateCopy): StudioLayer[
 function subjectLabel(s: TemplateSubject): string {
   switch (s.kind) {
     case "spotlight":
+    case "spotlight_thumb":
       return s.displayName;
     case "meta_archetype":
       return s.name;
@@ -165,6 +172,7 @@ function DownloadIcon() {
 
 export default function SocialStudioClient({
   spotlights,
+  spotlightThumbs,
   metaArchetypes,
   cardSpotlights,
   featuredDecks,
@@ -174,13 +182,14 @@ export default function SocialStudioClient({
   const subjectsByKind = useMemo(
     () => ({
       spotlight: spotlights,
+      spotlight_thumb: spotlightThumbs,
       meta_archetype: metaArchetypes,
       card_spotlight: cardSpotlights,
       featured_deck: featuredDecks,
       featured_match: featuredMatches,
       featured_match_manual: featuredManualMatches,
     }),
-    [spotlights, metaArchetypes, cardSpotlights, featuredDecks, featuredMatches, featuredManualMatches],
+    [spotlights, spotlightThumbs, metaArchetypes, cardSpotlights, featuredDecks, featuredMatches, featuredManualMatches],
   );
 
   const [active, setActive] = useState<TemplateSubject | null>(null);
@@ -216,6 +225,8 @@ export default function SocialStudioClient({
   // ── Editor view ────────────────────────────────────────────────
   if (active && copy) {
     const scale = actualSize ? 1 : EDITOR_SCALE;
+    const size = CANVAS_SIZE_BY_KIND[active.kind];
+    const sizeLabel = `${size.w}×${size.h}`;
     const pool = subjectsByKind[active.kind];
     const layers = buildLayers(active, copy);
     const selectedLayer = layers.find((l) => l.id === selectedId) ?? null;
@@ -229,7 +240,7 @@ export default function SocialStudioClient({
     const exportComposite = async () => {
       setExportStatus("Rendering PNG…");
       try {
-        downloadDataUrl(await rasterizeLayers(visibleLayers), `${exportBase}.png`);
+        downloadDataUrl(await rasterizeLayers(visibleLayers, size), `${exportBase}.png`);
       } finally {
         setExportStatus(null);
       }
@@ -241,7 +252,7 @@ export default function SocialStudioClient({
         const idx = layers.findIndex((l) => l.id === layer.id);
         const nn = String(idx + 1).padStart(2, "0");
         downloadDataUrl(
-          await rasterizeLayers([layer]),
+          await rasterizeLayers([layer], size),
           `${exportBase}__${nn}-${layer.id}.png`,
         );
       } finally {
@@ -259,7 +270,7 @@ export default function SocialStudioClient({
           const idx = layers.findIndex((l) => l.id === layer.id);
           const nn = String(idx + 1).padStart(2, "0");
           downloadDataUrl(
-            await rasterizeLayers([layer]),
+            await rasterizeLayers([layer], size),
             `${exportBase}__${nn}-${layer.id}.png`,
           );
           // Give the browser a beat between downloads so it doesn't
@@ -295,8 +306,8 @@ export default function SocialStudioClient({
               <div
                 className="rounded-2xl border border-black/8 shadow-sm overflow-hidden mx-auto"
                 style={{
-                  width: CANVAS_W * scale,
-                  height: CANVAS_H * scale,
+                  width: size.w * scale,
+                  height: size.h * scale,
                   ...CHECKERBOARD,
                 }}
               >
@@ -304,19 +315,24 @@ export default function SocialStudioClient({
                   style={{
                     transform: `scale(${scale})`,
                     transformOrigin: "top left",
-                    width: CANVAS_W,
-                    height: CANVAS_H,
+                    width: size.w,
+                    height: size.h,
                   }}
                 >
-                  <LayerCanvas layers={canvasLayers} hiddenIds={canvasHidden} />
+                  <LayerCanvas
+                    layers={canvasLayers}
+                    hiddenIds={canvasHidden}
+                    width={size.w}
+                    height={size.h}
+                  />
                 </div>
               </div>
               <p className="mt-3 text-center text-xs text-text-muted">
                 {isolating
                   ? `Isolating “${selectedLayer!.name}” — this is what the layer PNG will contain.`
                   : actualSize
-                    ? "Actual size (1080×1920)."
-                    : `Preview at ${Math.round(EDITOR_SCALE * 100)}%. Exports always render at 1080×1920.`}
+                    ? `Actual size (${sizeLabel}).`
+                    : `Preview at ${Math.round(EDITOR_SCALE * 100)}%. Exports always render at ${sizeLabel}.`}
               </p>
             </div>
 
@@ -453,7 +469,7 @@ export default function SocialStudioClient({
                   disabled={busy || visibleLayers.length === 0}
                   className="w-full text-xs font-semibold px-3 py-2 rounded-full bg-black text-white border border-transparent disabled:opacity-50"
                 >
-                  Export PNG (1080×1920)
+                  Export PNG ({sizeLabel})
                 </button>
                 <button
                   onClick={() => void exportAllLayers()}
@@ -502,10 +518,10 @@ export default function SocialStudioClient({
           <div>
             <h1 className="text-2xl font-bold text-text-primary">Social Studio</h1>
             <p className="text-sm text-text-secondary mt-1 max-w-xl">
-              A playground for TCG Dexter visuals — 9:16 social cards built
-              live from published content. Pick any preview to open the
-              layer editor, then export the frame or its individual layers
-              as PNGs.
+              A playground for TCG Dexter visuals — social cards built live
+              from published content (9:16 stories plus the 5:4 spotlight
+              thumbnail). Pick any preview to open the layer editor, then
+              export the frame or its individual layers as PNGs.
             </p>
           </div>
           <Link
@@ -518,6 +534,7 @@ export default function SocialStudioClient({
 
         {(Object.keys(subjectsByKind) as TemplateKind[]).map((kind) => {
           const items = subjectsByKind[kind];
+          const tsize = CANVAS_SIZE_BY_KIND[kind];
           return (
             <section key={kind} className="mb-10">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-text-muted">
@@ -541,27 +558,29 @@ export default function SocialStudioClient({
                       <div
                         className="rounded-xl overflow-hidden border border-black/10 bg-white shadow-sm group-hover:shadow-md group-hover:-translate-y-0.5 transition-all"
                         style={{
-                          width: CANVAS_W * THUMB_SCALE,
-                          height: CANVAS_H * THUMB_SCALE,
+                          width: tsize.w * THUMB_SCALE,
+                          height: tsize.h * THUMB_SCALE,
                         }}
                       >
                         <div
                           style={{
                             transform: `scale(${THUMB_SCALE})`,
                             transformOrigin: "top left",
-                            width: CANVAS_W,
-                            height: CANVAS_H,
+                            width: tsize.w,
+                            height: tsize.h,
                             pointerEvents: "none",
                           }}
                         >
                           <LayerCanvas
                             layers={buildLayers(subject, defaultCopy(subject))}
+                            width={tsize.w}
+                            height={tsize.h}
                           />
                         </div>
                       </div>
                       <p
                         className="mt-2 text-xs text-text-secondary truncate"
-                        style={{ width: CANVAS_W * THUMB_SCALE }}
+                        style={{ width: tsize.w * THUMB_SCALE }}
                       >
                         {subjectLabel(subject)}
                       </p>
