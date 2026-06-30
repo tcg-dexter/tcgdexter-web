@@ -35,3 +35,41 @@ export function splitCardId(value: string): { name: string; id: string | null } 
 export function stripCardIds(text: string): string {
   return text.replace(GLOBAL_ID_RE, "");
 }
+
+// Payload fields that hold a single card name, across every action type.
+export const CARD_NAME_FIELDS = [
+  "card",
+  "energy",
+  "target",
+  "from",
+  "to",
+  "pokemon",
+  "source",
+  "attacker",
+  "defender",
+] as const;
+// Payload fields that hold a list of card names.
+export const CARD_NAME_ARRAY_FIELDS = [
+  "revealed_cards",
+  "replaced_stadium",
+  "discarded_energies",
+] as const;
+
+/** Return a copy of an action payload with card-id prefixes stripped from its
+ *  card-name fields. Used at display time to clean actions that were parsed
+ *  and persisted before the verbose-export id stripping landed. */
+export function cleanPayloadCardIds(
+  payload: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...payload };
+  for (const f of CARD_NAME_FIELDS) {
+    if (typeof out[f] === "string") out[f] = splitCardId(out[f] as string).name;
+  }
+  for (const f of CARD_NAME_ARRAY_FIELDS) {
+    const v = out[f];
+    if (Array.isArray(v)) {
+      out[f] = v.map((x) => (typeof x === "string" ? splitCardId(x).name : x));
+    }
+  }
+  return out;
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties, type SVGProps } from "react";
+import { cleanPayloadCardIds, stripCardIds } from "@/lib/battle-log";
 
 /* ─── Types (mirror lib/battle-log + the API response) ────────── */
 
@@ -531,9 +532,21 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
         if (!r.ok) throw new Error(json.error ?? "Failed to load battle log.");
         return json as ApiResponse;
       })
-      .then((json) => {
+      .then((json: ApiResponse) => {
         if (cancelled) return;
-        setData(json);
+        // Strip TCG Live card-id prefixes ("(me2-5_155) N's Zekrom") from
+        // card-name payload fields and raw_text. Matches imported before the
+        // verbose-export support landed have these baked into their stored
+        // actions; cleaning at ingestion keeps the thread readable without a
+        // data migration.
+        setData({
+          ...json,
+          actions: json.actions.map((a) => ({
+            ...a,
+            payload: cleanPayloadCardIds(a.payload ?? {}),
+            raw_text: a.raw_text != null ? stripCardIds(a.raw_text) : a.raw_text,
+          })),
+        });
       })
       .catch((err) => {
         if (cancelled) return;
