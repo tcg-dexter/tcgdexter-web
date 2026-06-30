@@ -134,8 +134,11 @@ export function buildSpotlightThumbLayers(
             src={proxied(`${SPRITE_BASE}/${pokemonSlug(subject.pokemonName)}.png`)}
             alt={subject.pokemonName}
             style={{
-              maxWidth: "100%",
-              maxHeight: "100%",
+              // Fill the hero box (objectFit keeps aspect). maxWidth/maxHeight
+              // alone never upscale, so small sprites would render tiny.
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
               filter: "drop-shadow(0 28px 46px rgba(0,0,0,0.45))",
             }}
           />
