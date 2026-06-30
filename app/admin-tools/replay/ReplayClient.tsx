@@ -730,6 +730,11 @@ function PlayerMat({
     ? MAT_PADDING + innerH - activeTray.totalH + activeTray.pad // P1: tray bottom-pinned
     : MAT_PADDING + activeTray.pad;                             // P2: tray top-pinned
 
+  // The floating stadium / played-trainer cards are bare (no holder), so to
+  // line their top edge up with the active Pokémon's *card artwork* — not the
+  // holder's black frame — they drop by the holder's top padding.
+  const overlayTop = activeMatTop + activeTray.pad;
+
   // Stadium floats at same height as the active; anchored right (P1) or left (P2)
   // — opposite side from the active Pokémon's center.
   const stadiumLeft = isPlayer
@@ -738,7 +743,7 @@ function PlayerMat({
 
   // Played trainer floats where the stadium used to be: left of active (P1),
   // right of active (P2), vertically centered on the active row.
-  const playedTrainerTop = activeMatTop;
+  const playedTrainerTop = overlayTop;
   const playedTrainerLeft = isPlayer
     ? MAT_PADDING + innerW / 2 - activeHalf - FLOAT_GAP - cardWidth // P1: left of active
     : MAT_PADDING + innerW / 2 + activeHalf + FLOAT_GAP;            // P2: right of active
@@ -850,7 +855,7 @@ function PlayerMat({
             <motion.div
               key={stadium.name}
               className="absolute z-10"
-              style={{ top: activeMatTop, left: stadiumLeft, width: cardWidth }}
+              style={{ top: overlayTop, left: stadiumLeft, width: cardWidth }}
               title={stadium.name}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
