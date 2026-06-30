@@ -8,6 +8,7 @@ import {
 import { typeColor } from "@/lib/metaPrimaryCard";
 import { metaArchetypeCard } from "@/lib/metaArchetypeCards";
 import { manualPrizeTotals } from "@/lib/bo3";
+import { stripCardIds } from "@/lib/battle-log";
 import type { RecentMatch } from "@/app/components/MatchCard";
 
 type AnalysisCard = {
@@ -116,7 +117,12 @@ export async function loadRecentMatches(limit = 6): Promise<RecentMatch[]> {
     const opponentDmg = new Map<string, Map<string, number>>();
     for (const row of attackRows ?? []) {
       const payload = row.payload as Record<string, unknown> | null;
-      const attacker = typeof payload?.attacker === "string" ? payload.attacker : null;
+      // Strip verbose-export card-id prefixes ("(me1_77) Mega Lucario ex") so
+      // the name resolves to a card image and reads cleanly in the preview.
+      const attacker =
+        typeof payload?.attacker === "string"
+          ? stripCardIds(payload.attacker).trim()
+          : null;
       const damage = typeof payload?.damage === "number" ? payload.damage : 0;
       if (!attacker || !damage) continue;
       const matchId = row.match_id as string;
@@ -142,10 +148,11 @@ export async function loadRecentMatches(limit = 6): Promise<RecentMatch[]> {
     const opponentPlaysByMatch = new Map<string, Map<string, number>>();
     for (const row of playRows ?? []) {
       const payload = row.payload as Record<string, unknown> | null;
-      const name =
+      const rawName =
         row.action_type === "evolve"
           ? (typeof payload?.to === "string" ? payload.to : null)
           : (typeof payload?.card === "string" ? payload.card : null);
+      const name = rawName ? stripCardIds(rawName).trim() : null;
       if (!name) continue;
       const matchId = row.match_id as string;
       if (!opponentPlaysByMatch.has(matchId)) opponentPlaysByMatch.set(matchId, new Map());
