@@ -730,10 +730,12 @@ function PlayerMat({
     ? MAT_PADDING + innerH - activeTray.totalH + activeTray.pad // P1: tray bottom-pinned
     : MAT_PADDING + activeTray.pad;                             // P2: tray top-pinned
 
-  // The floating stadium / played-trainer cards are bare (no holder), so to
-  // line their top edge up with the active Pokémon's *card artwork* — not the
-  // holder's black frame — they drop by the holder's top padding.
-  const overlayTop = activeMatTop + activeTray.pad;
+  // Center the bare stadium / played-trainer cards on the active Pokémon's
+  // holder: take the holder's vertical midpoint and back off half a card
+  // height. The holder top is the card-art top minus its padding.
+  const activeContainerTop = activeMatTop - activeTray.pad;
+  const overlayTop =
+    activeContainerTop + activeTray.totalH / 2 - cardH / 2;
 
   // Stadium floats at same height as the active; anchored right (P1) or left (P2)
   // — opposite side from the active Pokémon's center.
@@ -863,7 +865,7 @@ function PlayerMat({
               transition={{ duration: 0.25 }}
             >
               <div
-                className={`relative w-full overflow-hidden rounded border border-amber-300/70 bg-white ${inspect ? "cursor-pointer" : ""}`}
+                className={`relative w-full overflow-hidden rounded bg-white ${inspect ? "cursor-pointer" : ""}`}
                 style={{ aspectRatio: "245 / 342" }}
                 role={inspect ? "button" : undefined}
                 onClick={
@@ -909,7 +911,7 @@ function PlayerMat({
               transition={{ duration: 0.2 }}
             >
               <div
-                className={`relative w-full overflow-hidden rounded border border-amber-400/80 bg-white ${inspect ? "cursor-pointer" : ""}`}
+                className={`relative w-full overflow-hidden rounded bg-white ${inspect ? "cursor-pointer" : ""}`}
                 style={{ aspectRatio: "245 / 342" }}
                 role={inspect ? "button" : undefined}
                 onClick={
