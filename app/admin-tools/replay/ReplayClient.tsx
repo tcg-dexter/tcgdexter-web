@@ -490,6 +490,9 @@ const TRAY_TOTAL_RATIO =
 // with them, but the footer/label text is pinned to its pre-bump pixel size
 // (see the `/ CARD_IMAGE_BUMP` in the font-size computations).
 const CARD_IMAGE_BUMP = 1.1;
+// Shared gap (px) between adjacent cards on the board: bench-to-bench and the
+// float gap between the active and its stadium / played-trainer neighbours.
+const REPLAY_CARD_GAP = 4;
 
 function computeReplayCardWidth(matWidth: number): number {
   const innerW = matWidth - 2 * MAT_PADDING;
@@ -501,7 +504,8 @@ function computeReplayCardWidth(matWidth: number): number {
   const maxWidthFromH = maxTrayH / TRAY_TOTAL_RATIO;
   // 2 rail holders + 5 bench Pokémon holders — all are holders now (wider
   // than the bare card by the container factor); 5 conservative bench gaps.
-  const maxWidthFromW = (innerW - 2 * 12 - 5 * 8) / (7 * CONTAINER_W_FACTOR);
+  const maxWidthFromW =
+    (innerW - 2 * 12 - 5 * REPLAY_CARD_GAP) / (7 * CONTAINER_W_FACTOR);
   return Math.max(
     20,
     Math.floor(Math.min(maxWidthFromH, maxWidthFromW) * 0.9 * CARD_IMAGE_BUMP),
@@ -716,7 +720,7 @@ function PlayerMat({
   const innerW = matWidth - 2 * MAT_PADDING;
   const innerH = matWidth * MAT_ASPECT - 2 * MAT_PADDING;
   const cardH = cardWidth * (342 / 245);
-  const FLOAT_GAP = 4; // px between floating card and its anchor
+  const FLOAT_GAP = REPLAY_CARD_GAP; // px between floating card and its anchor
 
   // Active Pokémon now renders inside a tray (card + info strip), taller than
   // the bare card. The grid pins the tray to the bottom (P1) / top (P2) of the
@@ -757,7 +761,7 @@ function PlayerMat({
   const benchCardWidth = Math.max(20, Math.floor(Math.min(
     cardH * (245 / 342),                    // height: same card size as active
     // width: fit n holders (each wider than its card by the container factor)
-    (innerW - Math.max(0, n - 1) * 8) / (n * CONTAINER_W_FACTOR),
+    (innerW - Math.max(0, n - 1) * REPLAY_CARD_GAP) / (n * CONTAINER_W_FACTOR),
   )));
   const benchTray = replayTrayMetrics(benchCardWidth);
   const benchTop = isPlayer
@@ -834,8 +838,8 @@ function PlayerMat({
         {/* ── Bench overlay (z-0, behind stadium/trainer, full mat width) ── */}
         {bench.length > 0 && (
           <div
-            className="absolute z-0 flex justify-center gap-2 overflow-hidden"
-            style={{ top: benchTop, left: MAT_PADDING, width: innerW }}
+            className="absolute z-0 flex justify-center overflow-hidden"
+            style={{ top: benchTop, left: MAT_PADDING, width: innerW, gap: REPLAY_CARD_GAP }}
           >
             {bench.map((mon) => (
               <motion.div
