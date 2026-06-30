@@ -807,29 +807,31 @@ function PlayerMat({
           className="grid h-full gap-1.5 sm:gap-3"
           style={{ gridTemplateColumns: `${activeTray.containerW}px 1fr ${activeTray.containerW}px` }}
         >
-          {/* Left rail */}
-          <div className="flex flex-col gap-1.5 sm:gap-3">
+          {/* Left rail — cards rotate top-toward-left (outer edge). On the top
+              mat (P2) the piles anchor to the bottom of the mat. */}
+          <div className={`flex h-full flex-col gap-1.5 sm:gap-3 ${isPlayer ? "" : "justify-end"}`}>
             {isPlayer ? (
               <>
-                <Pile label="Discard" count={discardCount} width={cardWidth} topName={discardTop} topImageUrl={discardTopImageUrl} />
-                <Pile label="Draw" count={deckCount} width={cardWidth} hint={`${handCount} in hand`} useCardBack />
+                <Pile label="Discard" count={discardCount} width={cardWidth} rotate="ccw" topName={discardTop} topImageUrl={discardTopImageUrl} />
+                <Pile label="Draw" count={deckCount} width={cardWidth} rotate="ccw" hint={`${handCount} in hand`} useCardBack />
               </>
             ) : (
-              <StackedPrizePile label="Prizes" count={prizesRemaining} width={cardWidth} />
+              <StackedPrizePile label="Prizes" count={prizesRemaining} width={cardWidth} rotate="ccw" />
             )}
           </div>
           {/* Center: active card only — bench is an absolute overlay */}
           <div className={`flex h-full flex-col ${isPlayer ? "justify-end" : "justify-start"}`}>
             {activeRow}
           </div>
-          {/* Right rail */}
-          <div className="flex flex-col gap-1.5 sm:gap-3">
+          {/* Right rail — cards rotate top-toward-right (outer edge). On the top
+              mat (P2) the piles anchor to the bottom of the mat. */}
+          <div className={`flex h-full flex-col gap-1.5 sm:gap-3 ${isPlayer ? "" : "justify-end"}`}>
             {isPlayer ? (
-              <StackedPrizePile label="Prizes" count={prizesRemaining} width={cardWidth} />
+              <StackedPrizePile label="Prizes" count={prizesRemaining} width={cardWidth} rotate="cw" />
             ) : (
               <>
-                <Pile label="Draw" count={deckCount} width={cardWidth} hint={`${handCount} in hand`} useCardBack />
-                <Pile label="Discard" count={discardCount} width={cardWidth} topName={discardTop} topImageUrl={discardTopImageUrl} />
+                <Pile label="Draw" count={deckCount} width={cardWidth} rotate="cw" hint={`${handCount} in hand`} useCardBack />
+                <Pile label="Discard" count={discardCount} width={cardWidth} rotate="cw" topName={discardTop} topImageUrl={discardTopImageUrl} />
               </>
             )}
           </div>
@@ -953,13 +955,61 @@ function PlayerMat({
   );
 }
 
-// Draw / discard pile, rendered in the same black holder as the Pokémon
-// cards: a full-size card image inset for concentric corners, with a label
-// row below that mirrors the HP header — name left, count right.
+// Direction a pile's cards are rotated so their printed top points at the
+// mat's outer edge: "ccw" for the left rail (top → left), "cw" for the right
+// rail (top → right).
+type PileRotate = "cw" | "ccw";
+
+// A single card face turned on its side to fill a landscape `L × H` slot. The
+// source art is portrait (245:342), so we render it at `H × L` (still 245:342)
+// and rotate ±90° about the center; its bounding box then matches the slot.
+function RotatedCardFace({
+  src,
+  alt,
+  L,
+  H,
+  radius,
+  rotate,
+  ariaHidden,
+}: {
+  src: string;
+  alt: string;
+  L: number;
+  H: number;
+  radius: number;
+  rotate: PileRotate;
+  ariaHidden?: boolean;
+}) {
+  const deg = rotate === "cw" ? 90 : -90;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      aria-hidden={ariaHidden || undefined}
+      className="absolute left-1/2 top-1/2 max-w-none object-cover"
+      style={{
+        width: H,
+        height: L,
+        transform: `translate(-50%, -50%) rotate(${deg}deg)`,
+        borderRadius: radius,
+      }}
+      onError={(e) => {
+        if (e.currentTarget.src !== CARD_BACK_URL) e.currentTarget.src = CARD_BACK_URL;
+      }}
+    />
+  );
+}
+
+// Draw / discard pile, in the same black holder as the Pokémon cards, but
+// turned on its side so the card's printed top faces the mat's outer edge.
+// The card art fills a landscape slot; the footer (label + count) stays
+// upright below it, along the now-longer edge.
 function Pile({
   label,
   count,
   width,
+  rotate,
   topName,
   topImageUrl,
   hint,
@@ -970,6 +1020,8 @@ function Pile({
   count: number;
   /** Card-image width — drives the holder geometry (matches the actives). */
   width: number;
+  /** Which way to rotate so the card top points at the mat's outer edge. */
+  rotate: PileRotate;
   topName?: string | null;
   /** When set, render the top card face-up using this image (discard). */
   topImageUrl?: string | null;
@@ -981,6 +1033,10 @@ function Pile({
   const inspect = useContext(InspectContext);
   const m = replayTrayMetrics(width);
   const fontSize = Math.max(6, Math.round((m.strip * 0.34) / CARD_IMAGE_BUMP));
+  // Landscape card slot: long edge spans the holder width, short edge is the
+  // 245/342 counterpart.
+  const L = width;
+  const H = Math.round(width * (245 / 342));
   // Face image: card back for the draw pile, the top discard otherwise. With
   // no top card (empty discard) the card area stays an empty translucent slot.
   const faceSrc = useCardBack ? CARD_BACK_URL : topImageUrl ?? null;
@@ -995,11 +1051,11 @@ function Pile({
       style={{ width: m.containerW, borderRadius: m.radius, padding: m.pad }}
       title={hint ? `${label} · ${hint}` : label}
     >
-      {/* Card image — inset by the holder padding for a concentric radius. */}
+      {/* Landscape card slot — inset by the holder padding for concentric corners. */}
       <div
         className={`relative w-full overflow-hidden ${clickable ? "cursor-pointer" : ""}`}
         style={{
-          height: m.cardH,
+          height: H,
           borderRadius: m.cardRadius,
           background: hasFace ? "#fff" : "rgba(255,255,255,0.06)",
         }}
@@ -1017,17 +1073,14 @@ function Pile({
       >
         {hasFace && (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <RotatedCardFace
               src={faceSrc ?? CARD_BACK_URL}
               alt={useCardBack ? "" : topName ?? ""}
-              aria-hidden={useCardBack || undefined}
-              className="h-full w-full object-cover"
-              onError={(e) => {
-                if (e.currentTarget.src !== CARD_BACK_URL) {
-                  e.currentTarget.src = CARD_BACK_URL;
-                }
-              }}
+              ariaHidden={useCardBack}
+              L={L}
+              H={H}
+              radius={m.cardRadius}
+              rotate={rotate}
             />
             {!useCardBack && topName && !topImageUrl && (
               <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[9px] font-semibold leading-tight text-white line-clamp-2">
@@ -1229,26 +1282,32 @@ function PokemonCardImage({
   );
 }
 
-// Prize pile, in the same black holder as the other piles. Inside the card
-// area we stack up to 6 card backs with a small vertical offset so it reads
-// as "a stack of cards"; the label row below shows "PRIZES" + remaining count.
+// Prize pile, in the same black holder as the other piles, turned on its side
+// to match the draw/discard rotation. Up to 6 landscape card backs stack with
+// a small vertical offset so it reads as "a stack of cards"; the label row
+// below shows "PRIZES" + remaining count.
 function StackedPrizePile({
   label,
   count,
   width,
+  rotate,
 }: {
   label: string;
   count: number;
   width: number;
+  rotate: PileRotate;
 }) {
   const m = replayTrayMetrics(width);
   const fontSize = Math.max(6, Math.round((m.strip * 0.34) / CARD_IMAGE_BUMP));
   const layers = Math.max(0, Math.min(6, count));
-  // Per-layer vertical offset, in px. Cards stay full size (m.cardW × m.cardH)
-  // and the card area grows to contain the stack rather than shrinking them.
+  // Landscape card slot (long edge spans the holder width).
+  const L = width;
+  const H = Math.round(width * (245 / 342));
+  // Per-layer vertical offset, in px — unchanged by the rotation. The card
+  // area grows to contain the stack rather than shrinking the cards.
   const offset = Math.max(2, Math.round(width * 0.06));
   const stackSpan = layers > 0 ? (layers - 1) * offset : 0;
-  const areaH = m.cardH + stackSpan;
+  const areaH = H + stackSpan;
 
   return (
     <div
@@ -1268,20 +1327,22 @@ function StackedPrizePile({
           Array.from({ length: layers }).map((_, i) => (
             <div
               key={i}
-              className="absolute left-0 right-0 overflow-hidden border border-black/30 bg-white shadow-sm"
+              className="absolute left-0 right-0 overflow-hidden bg-white shadow-sm"
               style={{
-                height: m.cardH,
+                height: H,
                 top: i * offset,
                 borderRadius: m.cardRadius,
                 zIndex: i,
               }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <RotatedCardFace
                 src={CARD_BACK_URL}
                 alt=""
-                aria-hidden
-                className="h-full w-full object-cover"
+                ariaHidden
+                L={L}
+                H={H}
+                radius={m.cardRadius}
+                rotate={rotate}
               />
             </div>
           ))
