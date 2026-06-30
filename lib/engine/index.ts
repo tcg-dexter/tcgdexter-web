@@ -17,6 +17,7 @@ export {
   isEnergy,
   isTrainerSubtype,
   lookupCard,
+  lookupPrintingByLiveId,
   standardPrintingsOf,
   supertypeOf,
 } from "./catalog";

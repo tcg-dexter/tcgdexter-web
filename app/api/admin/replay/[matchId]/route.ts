@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { normalizePerspective, parseBattleLog } from "@/lib/battle-log";
-import { lookupCard, replay } from "@/lib/engine";
+import { lookupCard, lookupPrintingByLiveId, replay } from "@/lib/engine";
 import type { GameState, PokemonInPlay } from "@/lib/engine";
 import { cardImageUrlForAnyName, cardImageUrlForName } from "@/lib/primaryCardImage";
 import { cardImageSmall } from "@/lib/cardImages";
@@ -121,8 +121,18 @@ function energyTypeFromName(name: string): string {
   return "Colorless";
 }
 
-function mapPokemon(mon: PokemonInPlay): PokemonFrame {
-  const catalog = lookupCard(mon.card.name);
+function mapPokemon(
+  mon: PokemonInPlay,
+  cardIds: Record<string, string>,
+): PokemonFrame {
+  // Prefer the EXACT printing the player used when the verbose export gave us
+  // its id (disambiguates same-name cards the regulation-mark heuristic can't,
+  // e.g. picking N's Reshiram me2pt5_154 over its sv9 printings). Fall back to
+  // the name-only catalog lookup for the standard export.
+  const liveId = cardIds[mon.card.name];
+  const catalog =
+    (liveId ? lookupPrintingByLiveId(mon.card.name, liveId) : null) ??
+    lookupCard(mon.card.name);
   // Show the *exact* card in play. cardImageUrlForName escalates a name to
   // its highest evolution (great for the battle banner, wrong here) — e.g.
   // an N's Zorua basic would render as N's Zoroark ex. The engine catalog
@@ -162,6 +172,7 @@ function cardsInPlay(mon: GameState["sides"]["player"]["bench"][number]): number
 
 function mapSide(
   side: GameState["sides"]["player"],
+  cardIds: Record<string, string>,
   ownedStadium = 0,
 ): SideFrame {
   const outOfDeck =
@@ -175,8 +186,8 @@ function mapSide(
 
   return {
     handle: side.handle,
-    active: side.active ? mapPokemon(side.active) : null,
-    bench: side.bench.map(mapPokemon),
+    active: side.active ? mapPokemon(side.active, cardIds) : null,
+    bench: side.bench.map((mon) => mapPokemon(mon, cardIds)),
     handCount: side.hand.length,
     deckCount: Math.max(0, DECK_SIZE - outOfDeck),
     discardCount: side.discard.length,
@@ -201,6 +212,7 @@ function frameFromState(
   actionIndex: number,
   summary: string,
   actor: "player" | "opponent" | "system",
+  cardIds: Record<string, string>,
   lastPlayedTrainer: LastPlayedTrainerFrame | null = null,
 ): ReplayFrame {
   return {
@@ -212,10 +224,12 @@ function frameFromState(
     summary,
     player: mapSide(
       state.sides.player,
+      cardIds,
       state.stadium?.owner === "player" ? 1 : 0,
     ),
     opponent: mapSide(
       state.sides.opponent,
+      cardIds,
       state.stadium?.owner === "opponent" ? 1 : 0,
     ),
     stadium: state.stadium
@@ -272,8 +286,9 @@ export async function GET(
   const result = replay(normalized);
 
   // Frame 0 = initial state, before any action. Then one frame per action.
+  const cardIds = normalized.cardIds;
   const frames: ReplayFrame[] = [];
-  frames.push(frameFromState(result.initialState, -1, "Setup", "system", null));
+  frames.push(frameFromState(result.initialState, -1, "Setup", "system", cardIds, null));
   result.states.forEach((state, idx) => {
     const action = normalized.actions[idx];
     const actor = (action.actor ?? "system") as "player" | "opponent" | "system";
@@ -291,7 +306,7 @@ export async function GET(
       };
     }
 
-    frames.push(frameFromState(state, idx, action.raw_text, actor, lastPlayedTrainer));
+    frames.push(frameFromState(state, idx, action.raw_text, actor, cardIds, lastPlayedTrainer));
   });
 
   // Primary attacker per side = highest-damage Pokémon over the whole

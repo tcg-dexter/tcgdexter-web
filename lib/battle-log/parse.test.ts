@@ -6,6 +6,10 @@ import { normalizePerspective } from "./normalize";
 import { summarize } from "./summarize";
 
 const EXAMPLE = readFileSync(join(__dirname, "fixtures/example-1.txt"), "utf8");
+const VERBOSE = readFileSync(
+  join(__dirname, "fixtures/example-2-verbose.txt"),
+  "utf8",
+);
 
 describe("parseBattleLog (example-1)", () => {
   const parsed = parseBattleLog(EXAMPLE);
@@ -145,6 +149,61 @@ describe("parseBattleLog (example-1)", () => {
     // 'unknown' actions plus the unmatched list should be empty or trivial.
     // Allow a small allowance for any new wording we haven't seen.
     expect(parsed.unmatched.length).toBeLessThanOrEqual(2);
+  });
+});
+
+describe("parseBattleLog (verbose / card-id export)", () => {
+  const parsed = parseBattleLog(VERBOSE);
+
+  it("detects both handles despite card-id prefixes", () => {
+    expect(parsed.handles).toContain("a11father");
+    expect(parsed.handles).toContain("lampdust94432");
+  });
+
+  it("strips card-id prefixes from card-name payloads", () => {
+    const active = parsed.actions.find(
+      (a) => a.action_type === "play_to_active" && a.actor_handle === "a11father",
+    );
+    expect(active?.payload.card).toBe("N's Zekrom");
+
+    const attack = parsed.actions.find((a) => a.action_type === "attack");
+    expect(attack?.payload.attacker).toBe("Solrock");
+    expect(attack?.payload.defender).toBe("N's Zekrom");
+
+    const evolve = parsed.actions.find((a) => a.action_type === "evolve");
+    expect(evolve?.payload.from).toBe("Riolu");
+    expect(evolve?.payload.to).toBe("Mega Lucario ex");
+  });
+
+  it("strips card-id prefixes from revealed card lists", () => {
+    const opening = parsed.actions.find(
+      (a) => a.action_type === "opening_hand" && a.actor_handle === "a11father",
+    );
+    const revealed = opening?.payload.revealed_cards as string[];
+    expect(revealed).toContain("N's Zekrom");
+    expect(revealed).toContain("Basic Darkness Energy");
+    expect(revealed.every((c) => !c.includes("("))).toBe(true);
+  });
+
+  it("captures the name → id map for printing disambiguation", () => {
+    expect(parsed.cardIds["N's Zekrom"]).toBe("me2-5_155");
+    expect(parsed.cardIds["N's Reshiram"]).toBe("me2-5_154_ph2");
+    expect(parsed.cardIds["Solrock"]).toBe("me1_75");
+  });
+
+  it("keeps raw_text free of id prefixes", () => {
+    const active = parsed.actions.find((a) => a.action_type === "play_to_active");
+    expect(active?.raw_text.includes("(")).toBe(false);
+  });
+
+  it("reads the concession as a game end", () => {
+    const end = parsed.actions.find((a) => a.action_type === "game_end");
+    expect(end?.payload.winner).toBe("lampdust94432");
+    expect(end?.payload.reason).toBe("concede");
+  });
+
+  it("leaves the standard export's cardIds empty", () => {
+    expect(Object.keys(parseBattleLog(EXAMPLE).cardIds)).toHaveLength(0);
   });
 });
 

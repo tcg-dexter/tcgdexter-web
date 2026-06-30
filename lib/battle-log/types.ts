@@ -101,6 +101,10 @@ export interface BattleLogParseResult {
   turns: ParsedTurn[];
   /** Lines the parser couldn't match. Kept so we can improve patterns. */
   unmatched: string[];
+  /** Clean card name → TCG Live set/number id, harvested from the verbose
+   *  export ("(me2-5_155) N's Zekrom"). Empty for the standard export. Lets
+   *  downstream resolution pick the exact printing the player actually used. */
+  cardIds: Record<string, string>;
   parser_version: number;
 }
 

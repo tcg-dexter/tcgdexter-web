@@ -106,6 +106,31 @@ export function lookupCard(name: string): EngineCard | null {
   return card;
 }
 
+/** Resolve a card to the EXACT printing named by a TCG Live id from the
+ *  verbose battle-log export (e.g. "me2-5_155" or "me2-5_154_ph2"). The
+ *  verbose export's set codes differ from the catalog's only in how "point"
+ *  sets are spelled — TCG Live "me2-5" ↔ catalog "me2pt5" — and the number
+ *  may carry a variant suffix ("_ph2") that we drop. Returns null when no
+ *  printing matches, so callers fall back to the name-only lookup. */
+export function lookupPrintingByLiveId(
+  name: string,
+  liveId: string,
+): EngineCard | null {
+  const prints = RAW[name];
+  if (!prints || prints.length === 0) return null;
+  const underscore = liveId.indexOf("_");
+  if (underscore < 0) return null;
+  const setCode = liveId
+    .slice(0, underscore)
+    .replace(/-(\d+)/g, "pt$1")
+    .toLowerCase();
+  const number = liveId.slice(underscore + 1).split("_")[0].toLowerCase();
+  const hit = prints.find(
+    (p) => p.set_id.toLowerCase() === setCode && p.number.toLowerCase() === number,
+  );
+  return hit ? normalize(hit) : null;
+}
+
 /** Returns the supertype of a card by name. Convenience for handlers that
  *  need to branch on Pokémon vs Trainer vs Energy without holding the row. */
 export function supertypeOf(name: string): EngineCard["supertype"] | null {
