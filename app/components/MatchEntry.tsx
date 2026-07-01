@@ -101,7 +101,7 @@ export default function MatchEntry({
             }}
             type="button"
             onClick={() => selectTab(t.id)}
-            className={`px-3 py-2 text-xs font-semibold transition-colors ${
+            className={`px-3 py-2 text-[15px] font-semibold transition-colors ${
               tab === t.id
                 ? "text-text-primary"
                 : "text-text-muted hover:text-text-secondary"

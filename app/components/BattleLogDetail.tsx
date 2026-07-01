@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties, type SVGProps } from "react";
+import { cleanPayloadCardIds, stripCardIds } from "@/lib/battle-log";
 
 /* ─── Types (mirror lib/battle-log + the API response) ────────── */
 
@@ -380,6 +381,42 @@ function Icon({ type, className }: { type: string; className?: string }) {
   return <Cmp className={className} />;
 }
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Strip a leading actor name (and optional possessive "'s") from an action
+ * label, then capitalize the first letter of what remains. The turn holder
+ * is already named alongside the action, so echoing it in the body is
+ * redundant — "alice drew 4 cards" → "Drew 4 cards". Returns the text
+ * unchanged (no re-capitalization) when it doesn't start with the name, so
+ * name-free labels like "Pikachu to Active" are left intact.
+ */
+export function stripLeadingActorName(text: string, name?: string | null): string {
+  if (!text || !name) return text;
+  const re = new RegExp(`^\\s*${escapeRegExp(name.trim())}(?:['’]s)?\\s+`, "i");
+  if (!re.test(text)) return text;
+  const stripped = text.replace(re, "");
+  return stripped.charAt(0).toUpperCase() + stripped.slice(1);
+}
+
+/**
+ * Format an action label for display next to its author: swap the generic
+ * "Opponent" placeholder for the other player's actual name, then strip the
+ * redundant leading author name. `otherName` is the side opposite the author.
+ */
+export function formatActionLabel(
+  text: string,
+  opts: { authorName?: string | null; otherName?: string | null },
+): string {
+  let out = text;
+  if (opts.otherName) {
+    out = out.replace(/\bOpponent\b/g, opts.otherName);
+  }
+  return stripLeadingActorName(out, opts.authorName);
+}
+
 /* ─── Avatar + identity helpers ───────────────────────────────── */
 
 const AVATAR_PALETTE = [
@@ -495,9 +532,21 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
         if (!r.ok) throw new Error(json.error ?? "Failed to load battle log.");
         return json as ApiResponse;
       })
-      .then((json) => {
+      .then((json: ApiResponse) => {
         if (cancelled) return;
-        setData(json);
+        // Strip TCG Live card-id prefixes ("(me2-5_155) N's Zekrom") from
+        // card-name payload fields and raw_text. Matches imported before the
+        // verbose-export support landed have these baked into their stored
+        // actions; cleaning at ingestion keeps the thread readable without a
+        // data migration.
+        setData({
+          ...json,
+          actions: json.actions.map((a) => ({
+            ...a,
+            payload: cleanPayloadCardIds(a.payload ?? {}),
+            raw_text: a.raw_text != null ? stripCardIds(a.raw_text) : a.raw_text,
+          })),
+        });
       })
       .catch((err) => {
         if (cancelled) return;
@@ -817,6 +866,8 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
               post={post}
               isLast={i === filteredPregamePosts.length - 1}
               compactAvatars={compactAvatars}
+              playerHandle={playerHandle}
+              opponentHandle={opponentHandle}
             />
           ))}
           {!hideScoreCards && (
@@ -846,6 +897,8 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
             post={post}
             isLast={hasPrizes || i === gamePosts.length - 1}
             compactAvatars={compactAvatars}
+            playerHandle={playerHandle}
+            opponentHandle={opponentHandle}
           />,
         ];
         if (hasPrizes && !hideScoreCards) {
@@ -936,8 +989,27 @@ interface ThreadPostInput {
 const WIN_GRADIENT = "linear-gradient(135deg,#F2A20C 0%,#D91E0D 50%,#A60D0D 100%)";
 const LOSS_COLOR = "#1a1a1a";
 
-function ThreadPost({ post, isLast, compactAvatars }: { post: ThreadPostInput; isLast: boolean; compactAvatars?: boolean }) {
+function ThreadPost({
+  post,
+  isLast,
+  compactAvatars,
+  playerHandle,
+  opponentHandle,
+}: {
+  post: ThreadPostInput;
+  isLast: boolean;
+  compactAvatars?: boolean;
+  playerHandle: string;
+  opponentHandle: string;
+}) {
   const isSystem = post.kind === "system";
+  // "Opponent" in a post's actions means the side opposite its author.
+  const otherName =
+    post.kind === "player"
+      ? opponentHandle
+      : post.kind === "opponent"
+        ? playerHandle
+        : null;
   const isResult = post.system?.handle === "game";
   const avatarStyle: CSSProperties = post.system
     ? { background: post.system.bg }
@@ -1013,7 +1085,11 @@ function ThreadPost({ post, isLast, compactAvatars }: { post: ThreadPostInput; i
         </div>
 
         <div className="mt-1">
-          <ActionList actions={post.actions} />
+          <ActionList
+            actions={post.actions}
+            authorName={isSystem ? null : post.displayName}
+            otherName={otherName}
+          />
         </div>
       </div>
     </div>
@@ -1237,7 +1313,15 @@ function ActionTypeLabel({ type, className }: { type: string; className?: string
   );
 }
 
-function ActionList({ actions }: { actions: ApiAction[] }) {
+function ActionList({
+  actions,
+  authorName,
+  otherName,
+}: {
+  actions: ApiAction[];
+  authorName?: string | null;
+  otherName?: string | null;
+}) {
   // Pre-pair each knock_out with the nearest subsequent prize_taken, skipping
   // any intervening actions (e.g. abilities triggered mid-checkup). Each
   // prize_taken is consumed by at most one knock_out.
@@ -1284,7 +1368,7 @@ function ActionList({ actions }: { actions: ApiAction[] }) {
   return (
     <ul className="flex flex-col gap-1">
       {actions.map((a, idx) => {
-        const label = labelFor(a);
+        const label = formatActionLabel(labelFor(a), { authorName, otherName });
         if (!label) return null;
         const cat = categoryFor(a.action_type);
 

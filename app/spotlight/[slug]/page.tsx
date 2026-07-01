@@ -12,6 +12,7 @@ import {
 } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
 import ThemeColor from "@/app/components/ThemeColor";
+import TrackView from "@/app/components/TrackView";
 import SpotlightAdminBar from "../components/SpotlightAdminBar";
 import SpotlightQAThread from "../components/SpotlightQAThread";
 import SpotlightHeader from "../components/SpotlightHeader";
@@ -165,30 +166,29 @@ export default async function SpotlightPage({
       : null,
   ];
 
+  // Top of the (now vertical) banner gradient = the first resolved accent.
+  // The site chrome — iOS status bar + mobile toolbar — is painted this
+  // color so it reads as one continuous surface into the banner, exactly
+  // like the meta-archetype pages.
+  const topColor = accentColors.find((c): c is string => !!c) ?? "#B0A89E";
+
   return (
-    <main className="min-h-dvh bg-bg pb-24 -mt-14 xl:mt-0">
-      {/* Overlay the mobile/tablet sticky toolbar onto the banner: clear
-          its background + blur so the banner shows through to the top
-          of the viewport, and force the hamburger icon white so it
-          stays legible over the gradient. Scoped below xl since the
-          desktop sidebars replace the toolbar at xl+. */}
+    <main className="min-h-dvh bg-bg pb-24">
+      <TrackView event="spotlight.viewed" properties={{ slug }} />
+      {/* Paint the mobile sticky toolbar in the banner's top color so the
+          toolbar, the iOS status bar (set via ThemeColor below), and the
+          banner all read as one continuous surface — same pattern as the
+          meta-archetype pages. The toolbar is xl:hidden already, so this
+          only affects below-xl widths. */}
       <style
         dangerouslySetInnerHTML={{
-          __html: `@media (max-width: 1279px){
-            [data-site-toolbar]{
-              background:transparent !important;
-              backdrop-filter:none !important;
-              -webkit-backdrop-filter:none !important;
-              border-color:transparent !important;
-            }
-            [data-site-toolbar] button[aria-label="Toggle navigation menu"]{color:#fff;}
-          }`,
+          __html: `[data-site-toolbar]{background:${topColor};backdrop-filter:none;-webkit-backdrop-filter:none}[data-site-toolbar] button[aria-label="Toggle navigation menu"]{color:#fff}`,
         }}
       />
-      {/* Paint the iOS/Android status bar to the banner's leftmost
-          accent so the gradient reads as continuing up into the
-          device chrome instead of butting against a system color. */}
-      <ThemeColor color={accentColors.find((c): c is string => !!c) ?? "#B0A89E"} />
+      {/* Match the iOS Safari chrome + status-bar color to the banner's top
+          color so the page reads as one continuous surface from the
+          time/battery row down through the banner. */}
+      <ThemeColor color={topColor} />
       <SpotlightHeader
         displayName={profile.display_name}
         username={profile.username}

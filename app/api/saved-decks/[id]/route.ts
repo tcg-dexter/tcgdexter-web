@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { track } from "@/lib/analytics/track";
+import { isTrustedCardImageUrl } from "@/lib/cardImages";
 
 /**
  * DELETE /api/saved-decks/[id]
@@ -100,21 +101,20 @@ export async function PATCH(
     updates.is_public = body.is_public;
   }
 
-  // Cover image: null clears the override; otherwise must be a pokemontcg.io
-  // image URL to prevent arbitrary <img src> injection on every page that
-  // renders the deck preview card.
+  // Cover image: null clears the override; otherwise must be one of our
+  // trusted card-image hosts to prevent arbitrary <img src> injection on every
+  // page that renders the deck preview card. The allowlist covers every set we
+  // serve (pokemontcg.io alone wrongly rejected ME-era cards like the Chaos
+  // Rising Mega Greninja ex, whose images come from scrydex).
   if ("cover_image_url" in body) {
     const val = body.cover_image_url;
     if (val === null) {
       updates.cover_image_url = null;
-    } else if (
-      typeof val === "string" &&
-      val.startsWith("https://images.pokemontcg.io/")
-    ) {
+    } else if (typeof val === "string" && isTrustedCardImageUrl(val)) {
       updates.cover_image_url = val;
     } else {
       return NextResponse.json(
-        { error: "cover_image_url must be a pokemontcg.io URL or null" },
+        { error: "cover_image_url must be a trusted card-image URL or null" },
         { status: 400 }
       );
     }

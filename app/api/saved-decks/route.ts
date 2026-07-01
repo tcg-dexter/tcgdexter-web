@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { track } from "@/lib/analytics/track";
+import { isTrustedCardImageUrl } from "@/lib/cardImages";
 
 /**
  * POST /api/saved-decks
@@ -55,6 +56,15 @@ export async function POST(req: Request) {
   if (!deckList || typeof deckList !== "string" || !deckList.trim()) {
     return NextResponse.json(
       { error: "deckList is required" },
+      { status: 400 }
+    );
+  }
+
+  // Cover image (optional) must be one of our trusted card-image hosts — same
+  // allowlist as the PATCH route — to prevent arbitrary <img src> injection.
+  if (coverUrl != null && !(typeof coverUrl === "string" && isTrustedCardImageUrl(coverUrl))) {
+    return NextResponse.json(
+      { error: "coverUrl must be a trusted card-image URL or null" },
       { status: 400 }
     );
   }

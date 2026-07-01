@@ -628,10 +628,13 @@ function aggregateProducts(
     );
     if (meta.key === "other" && evts.length === 0) continue; // hide empty "Other"
     const highlights = highlightsFor(meta.key, domain);
-    // A Product is treated as "instrumented" when it has either event
-    // signals or domain stats — both surface real numbers, both deserve
-    // the full card treatment instead of the empty-state placeholder.
+    // A Product is treated as "instrumented" when tracking has been wired
+    // for it — i.e. it has configured event prefixes — or when it surfaces
+    // real numbers (event signals or domain stats). The prefix check means a
+    // freshly-instrumented Product reads as instrumented (awaiting usage)
+    // rather than "Not yet instrumented" before its first event lands.
     const instrumented =
+      meta.prefixes.length > 0 ||
       evts.some((e) => e.fireCount > 0 || e.fireCountPrior > 0) ||
       highlights.length > 0;
     const fireCount = evts.reduce((s, e) => s + e.fireCount, 0);

@@ -28,12 +28,18 @@ const CARD_FAN_WIDTH_PCT = 18;
 
 const FAN_ANCHOR_X_PCT = 35;
 const FAN_ANCHOR_Y_PCT = 50;
-const FAN_DX_STEPS_PCT = [0, 8.4, 16.8];
+// Middle + outer cards spread wider along x than the base fan — two
+// compounding 15% bumps off the original 8.4 / 16.8 (×1.3225); y unchanged.
+const FAN_DX_STEPS_PCT = [0, 11.109, 22.218];
 const FAN_DY_STEPS_PCT = [0, 1.5, 3];
 const FAN_ROTATION_DEG = [4, 8, 12];
 
+// On mobile the tall banner centers the fanned cards, leaving an empty
+// gradient band above them. Pull the banner up so the card tops meet the
+// toolbar; the excess top band tucks under the now-same-colored toolbar
+// (invisible). Reset on sm+ where the 3:1 banner already fills.
 const DEFAULT_CLASSNAME =
-  "relative w-full overflow-hidden h-[calc(44.88vw-12px)] sm:h-auto sm:aspect-[3/1]";
+  "relative w-full overflow-hidden h-[calc(44.88vw-12px)] -mt-[8vw] sm:mt-0 sm:h-auto sm:aspect-[3/1]";
 
 export default function SpotlightBanner({
   accentColors,
@@ -48,7 +54,7 @@ export default function SpotlightBanner({
   const stops = accentColors.filter((c): c is string => !!c);
   const usable = stops.length > 0 ? stops : [COLORLESS, COLORLESS, COLORLESS];
 
-  const bannerGradient = `linear-gradient(90deg, ${usable
+  const bannerGradient = `linear-gradient(180deg, ${usable
     .map(
       (c, i) =>
         `${c} ${Math.round((i / Math.max(usable.length - 1, 1)) * 100)}%`,

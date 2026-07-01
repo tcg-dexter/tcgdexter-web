@@ -29,15 +29,6 @@ export default function DeckMulliganModule({ deckSize, basicCount }: Props) {
   const label =
     pct >= 10 ? `${pct.toFixed(0)}%` : pct >= 0.1 ? `${pct.toFixed(1)}%` : "<0.1%";
 
-  // Color cue: low = green, moderate = amber, high = red. Thresholds are
-  // intentionally tight because anything above ~12% feels punishing in play.
-  const tone =
-    pct >= 12
-      ? "text-red-600"
-      : pct >= 6
-      ? "text-amber-600"
-      : "text-emerald-700";
-
   const cardClass =
     "rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5";
 
@@ -45,7 +36,7 @@ export default function DeckMulliganModule({ deckSize, basicCount }: Props) {
     <div className={cardClass}>
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Mulligan Risk</h2>
-        <span className={`text-lg font-bold ${tone}`}>{label}</span>
+        <span className="text-lg font-bold text-text-primary">{label}</span>
       </div>
     </div>
   );

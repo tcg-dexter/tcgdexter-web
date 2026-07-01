@@ -35,6 +35,9 @@ interface PrintingRaw {
   // Regulation mark drives our "newest printing" tiebreak. G/H/I represent
   // current Standard; later marks sort first.
   regulation_mark?: string | null;
+  // Baked by scripts/bake-standard-variants.mjs. True when 2+ Standard-
+  // legal printings of this name differ mechanically.
+  hasStandardVariant?: boolean | null;
 }
 
 const RAW = cardsRaw as Record<string, PrintingRaw[]>;
@@ -85,6 +88,7 @@ function normalize(printing: PrintingRaw): EngineCard {
     attacks: printing.attacks ?? [],
     abilities: printing.abilities ?? [],
     rules: printing.rules ?? [],
+    hasStandardVariant: Boolean(printing.hasStandardVariant),
   };
 }
 
@@ -100,6 +104,31 @@ export function lookupCard(name: string): EngineCard | null {
   const card = normalize(pickPrinting(prints));
   CACHE.set(name, card);
   return card;
+}
+
+/** Resolve a card to the EXACT printing named by a TCG Live id from the
+ *  verbose battle-log export (e.g. "me2-5_155" or "me2-5_154_ph2"). The
+ *  verbose export's set codes differ from the catalog's only in how "point"
+ *  sets are spelled — TCG Live "me2-5" ↔ catalog "me2pt5" — and the number
+ *  may carry a variant suffix ("_ph2") that we drop. Returns null when no
+ *  printing matches, so callers fall back to the name-only lookup. */
+export function lookupPrintingByLiveId(
+  name: string,
+  liveId: string,
+): EngineCard | null {
+  const prints = RAW[name];
+  if (!prints || prints.length === 0) return null;
+  const underscore = liveId.indexOf("_");
+  if (underscore < 0) return null;
+  const setCode = liveId
+    .slice(0, underscore)
+    .replace(/-(\d+)/g, "pt$1")
+    .toLowerCase();
+  const number = liveId.slice(underscore + 1).split("_")[0].toLowerCase();
+  const hit = prints.find(
+    (p) => p.set_id.toLowerCase() === setCode && p.number.toLowerCase() === number,
+  );
+  return hit ? normalize(hit) : null;
 }
 
 /** Returns the supertype of a card by name. Convenience for handlers that
@@ -120,6 +149,29 @@ export function isBasicPokemon(name: string): boolean {
 /** True if the named card is an Energy (Basic or Special). */
 export function isEnergy(name: string): boolean {
   return supertypeOf(name) === "Energy";
+}
+
+/** Quick check used by the match-import disambiguation pass: does this
+ *  Pokémon name resolve to multiple Standard-legal printings that differ
+ *  mechanically? When true, the importer needs the user (or their deck
+ *  list) to pick a specific printing. Always false for Trainer / Energy
+ *  names. */
+export function hasStandardVariant(name: string): boolean {
+  return Boolean(lookupCard(name)?.hasStandardVariant);
+}
+
+/** All Standard-legal printings of a name, raw — the importer feeds these
+ *  into the disambiguation form so the user can pick one. Returns []
+ *  for names not in the catalog. */
+const CURRENT_STANDARD_MARKS = new Set(["G", "H", "I", "J"]);
+export function standardPrintingsOf(name: string): PrintingRaw[] {
+  const prints = RAW[name];
+  if (!prints) return [];
+  return prints.filter(
+    (p) =>
+      p.supertype === "Pokémon" &&
+      CURRENT_STANDARD_MARKS.has(p.regulation_mark ?? ""),
+  );
 }
 
 /** True if the named card is a Trainer of the given subtype. */

@@ -1,5 +1,7 @@
 import cardData from "@/data/cards-standard.json";
 import { cardImageSmall } from "@/lib/cardImages";
+import { basicEnergyAliasKeys } from "@/lib/basicEnergyAlias";
+import { allowedAddVariants } from "@/lib/inventory";
 
 interface AnalysisCard {
   qty: number;
@@ -16,6 +18,7 @@ interface CardEntry {
   subtypes: string[];
   types?: string[];
   supertype?: string;
+  rarity?: string | null;
   regulation_mark?: string | null;
   evolves_from?: string | null;
 }
@@ -338,16 +341,33 @@ export function cardPrintingsForName(
   return out;
 }
 
-/** True for a basic Energy card (e.g. "Grass Energy", "Basic Fire Energy").
- *  Basic energy is excluded from ownership math since it's freely obtainable.
- *  Special energies (Double Turbo, Jet, Reversal, …) never match this. */
-const BASIC_ENERGY_RE =
-  /^(basic\s+)?(grass|fire|water|lightning|psychic|fighting|darkness|metal|fairy|dragon|colorless)\s+energy$/i;
+/** Resolve a deck-list card to the catalog "add" target for its specific
+ *  printing: the (setId, number) the deck uses plus a sensible default
+ *  variant for that rarity (the first finish the catalog's add menu offers).
+ *  Returns null when the printing can't be resolved in the standard DB. */
+export interface DeckAddTarget {
+  setId: string;
+  number: string;
+  variant: string;
+}
+export function deckCardAddTarget(
+  card: Pick<AnalysisCard, "name" | "number" | "setCode">,
+): DeckAddTarget | null {
+  const entry = resolveEntry(card);
+  if (!entry?.set_id) return null;
+  const variant = allowedAddVariants(entry.rarity ?? null)[0] ?? "normal";
+  return { setId: entry.set_id, number: entry.number, variant };
+}
+
+/** True for a basic Energy card. Basic energy is excluded from ownership math
+ *  since it's freely obtainable. Reuses the canonical basicEnergyAliasKeys
+ *  parser so every decklist form is caught — spelled-out ("Grass Energy",
+ *  "Basic Fire Energy") *and* the TCG Live symbol form ("Basic {L} Energy").
+ *  Special energies (Double Turbo, Jet, Reversal, …) never match. */
 export function isBasicEnergyCard(
-  card: Pick<AnalysisCard, "name" | "section">,
+  card: Pick<AnalysisCard, "name">,
 ): boolean {
-  if (card.section !== "energy") return false;
-  return BASIC_ENERGY_RE.test(card.name.trim());
+  return basicEnergyAliasKeys(card.name) !== null;
 }
 
 export interface DeckAvatarInfo {

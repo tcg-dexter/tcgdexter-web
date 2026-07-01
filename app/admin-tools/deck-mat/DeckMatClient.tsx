@@ -13,6 +13,7 @@ import { shade } from "@/lib/color";
 import { useFadeIn } from "@/lib/useFadeIn";
 import { computeImagePlacement, readImageFile, type MatImage } from "@/lib/matImage";
 import PlaymatImageDialog from "./PlaymatImageDialog";
+import { trackClient } from "@/lib/analytics/trackClient";
 
 export interface DeckSummary {
   id: string;
@@ -669,6 +670,11 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const exportRef = useRef<HTMLDivElement>(null);
   const [matWidth, setMatWidth] = useState(0);
 
+  // Record a Playmat Studio open once per mount.
+  useEffect(() => {
+    trackClient("playmat.opened");
+  }, []);
+
   useEffect(() => {
     const el = matColumnRef.current;
     if (!el) return;
@@ -713,6 +719,11 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
       const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
       const dataUrl = await rasterizeMat({ rows, cardWidth, activeGradient, textureKey, matImage, deckName, matWidth });
       downloadDataUrl(dataUrl, fileName);
+      trackClient("playmat.exported", {
+        style: matStyle,
+        texture: textureKey ?? null,
+        has_image: !!matImage,
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Export failed.");
     } finally {
@@ -1033,6 +1044,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           setPickersUnlocked(false);
           setImageDialogOpen(false);
           setDraftImage(null);
+          trackClient("playmat.image_added");
         }}
         onRemove={() => {
           setMatImage(null);

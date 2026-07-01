@@ -44,6 +44,11 @@ export interface EngineCard {
   // For Trainers, the rules array carries the card text the engine would
   // execute. Kept raw so the data-driven interpreter (phase 2) can read it.
   rules: string[];
+  /** True when the catalog holds 2+ Standard-legal printings of this name
+   *  that differ mechanically (HP / attacks / abilities). Drives the
+   *  match-import disambiguation prompt. False for single-print or
+   *  Trainer / Energy names. */
+  hasStandardVariant: boolean;
 }
 
 export interface EngineAttack {

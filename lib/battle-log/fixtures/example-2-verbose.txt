@@ -1,0 +1,77 @@
+Setup
+a11father chose heads for the opening coin flip.
+a11father won the coin toss.
+a11father decided to go first.
+a11father drew 7 cards for the opening hand.
+- 7 drawn cards.
+   • (mee_7) Basic Darkness Energy, (me2-5_155) N's Zekrom, (me4_82) Special Red Card, (sv9_157) Ruffian, (sv8-5_95) Binding Mochi, (me4_83) Transformation Tome, (mee_7) Basic Darkness Energy
+lampdust94432 drew 7 cards for the opening hand.
+- 7 drawn cards.
+a11father played (me2-5_155) N's Zekrom to the Active Spot.
+lampdust94432 played (me1_75) Solrock to the Active Spot.
+
+a11father's Turn
+a11father drew (sv9_152) N's Castle.
+a11father ended their turn.
+
+lampdust94432's Turn
+lampdust94432 drew a card.
+lampdust94432 attached (mee_6) Basic Fighting Energy to (me1_75) Solrock in the Active Spot.
+lampdust94432 played (me1_119) Lillie's Determination.
+- lampdust94432 shuffled 5 cards into their deck.
+- lampdust94432 drew 8 cards.
+lampdust94432 played (me2_85) Battle Cage to the Stadium spot.
+lampdust94432 played (me3_81) Poké Pad.
+- lampdust94432 drew (me1_74) Lunatone.
+- lampdust94432 shuffled their deck.
+lampdust94432 played (me1_74) Lunatone to the Bench.
+lampdust94432 played (me1_76) Riolu to the Bench.
+lampdust94432's (me1_74) Lunatone used Lunar Cycle.
+- lampdust94432 discarded (mee_6) Basic Fighting Energy.
+- lampdust94432 drew 3 cards.
+lampdust94432's (me1_75) Solrock used Cosmic Beam on a11father’s (me2-5_155) N's Zekrom for 70 damage.
+
+a11father's Turn
+a11father drew (me2-5_154_ph2) N's Reshiram.
+a11father played (me2-5_154_ph2) N's Reshiram to the Bench.
+a11father played (sv9_152) N's Castle to the Stadium spot.
+- a11father discarded (me2_85) Battle Cage.
+a11father retreated (me2-5_155) N's Zekrom to the Bench.
+a11father's (me2-5_154_ph2) N's Reshiram is now in the Active Spot.
+a11father ended their turn.
+
+lampdust94432's Turn
+lampdust94432 drew a card.
+lampdust94432's (me1_74) Lunatone used Lunar Cycle.
+- lampdust94432 discarded (mee_6) Basic Fighting Energy.
+- lampdust94432 drew 3 cards.
+lampdust94432 played (me2_85) Battle Cage to the Stadium spot.
+- lampdust94432 discarded (sv9_152) N's Castle.
+lampdust94432 evolved (me1_76) Riolu to (me1_77) Mega Lucario ex on the Bench.
+lampdust94432 attached (zsv10-5_79) Air Balloon to (me1_75) Solrock in the Active Spot.
+lampdust94432 played (me1_116) Fighting Gong.
+- lampdust94432 drew (me1_76) Riolu.
+- lampdust94432 shuffled their deck.
+lampdust94432 played (me1_76) Riolu to the Bench.
+lampdust94432 played (rsv10-5_84) Hilda.
+- lampdust94432 drew 2 cards.
+   • (mebsp_33) Mega Lucario ex, (me3_87) Rocky Fighting Energy
+- lampdust94432 shuffled their deck.
+lampdust94432 attached (me3_87) Rocky Fighting Energy to (me1_77) Mega Lucario ex on the Bench.
+lampdust94432 retreated (me1_75) Solrock to the Bench.
+lampdust94432's (me1_77) Mega Lucario ex is now in the Active Spot.
+lampdust94432's (me1_77) Mega Lucario ex used Aura Jab on a11father’s (me2-5_154_ph2) N's Reshiram for 130 damage.
+- lampdust94432 attached (mee_6) Basic Fighting Energy to (me1_76) Riolu on the Bench.
+- lampdust94432 attached (mee_6) Basic Fighting Energy to (me1_76) Riolu on the Bench.
+a11father's (me2-5_154_ph2) N's Reshiram was Knocked Out!
+lampdust94432 took a Prize card.
+A card was added to lampdust94432's hand.
+a11father's (me2-5_155) N's Zekrom is now in the Active Spot.
+
+a11father's Turn
+a11father drew (me1_114) Boss's Orders.
+a11father ended their turn.
+
+lampdust94432's Turn
+lampdust94432 drew a card.
+You conceded. lampdust94432 wins.

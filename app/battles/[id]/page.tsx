@@ -8,6 +8,7 @@ import {
   highestEvolutionForName,
 } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
+import { stripCardIds } from "@/lib/battle-log";
 import BattleLogPage from "./BattleLogPage";
 
 type AnalysisCard = {
@@ -97,7 +98,10 @@ export default async function BattleRoute({
           const damage = typeof payload?.damage === "number" ? payload.damage : 0;
           bucket.damage += damage;
           if (side === "opponent") {
-            const attacker = typeof payload?.attacker === "string" ? payload.attacker : null;
+            const attacker =
+              typeof payload?.attacker === "string"
+                ? stripCardIds(payload.attacker).trim()
+                : null;
             if (attacker && damage) {
               dmgByAttacker.set(attacker, (dmgByAttacker.get(attacker) ?? 0) + damage);
             }
@@ -142,10 +146,11 @@ export default async function BattleRoute({
       const countByName = new Map<string, number>();
       for (const row of playRows ?? []) {
         const payload = row.payload as Record<string, unknown>;
-        const name =
+        const rawName =
           row.action_type === "evolve"
             ? (typeof payload?.to === "string" ? payload.to : null)
             : (typeof payload?.card === "string" ? payload.card : null);
+        const name = rawName ? stripCardIds(rawName).trim() : null;
         if (name) countByName.set(name, (countByName.get(name) ?? 0) + 1);
       }
       if (countByName.size > 0) {

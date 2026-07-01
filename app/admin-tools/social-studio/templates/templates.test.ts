@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import LayerCanvas from "./LayerCanvas";
 import { buildSpotlightLayers } from "./SpotlightTemplate";
+import { buildSpotlightThumbLayers } from "./SpotlightThumbTemplate";
 import { buildMetaArchetypeLayers } from "./MetaArchetypeTemplate";
 import { buildCardSpotlightLayers } from "./CardSpotlightTemplate";
 import { buildFeaturedDeckLayers } from "./FeaturedDeckTemplate";
@@ -133,6 +134,14 @@ const cases: Array<{
     mustContain: ["Headline Text", "@ash", "Partner Pokémon", "tcgdexter.com/spotlight/ash"],
   },
   {
+    label: "spotlight thumbnail",
+    layers: buildSpotlightThumbLayers(
+      { ...spotlight, kind: "spotlight_thumb" },
+      copy,
+    ),
+    mustContain: ["Headline Text", "Eyebrow Text", "tcgdexter.com/spotlight/ash"],
+  },
+  {
     label: "meta archetype",
     layers: buildMetaArchetypeLayers(metaArchetype, copy),
     mustContain: ["18.4%", "Meta Share", "1,234 tournament entries tracked"],
@@ -145,7 +154,7 @@ const cases: Array<{
   {
     label: "featured deck",
     layers: buildFeaturedDeckLayers(featuredDeck, copy),
-    mustContain: ["♥ 42", "@misty", "tcgdexter.com/u/misty/d1"],
+    mustContain: ["♥ 42", "@misty", "tcgdexter.com/u/misty/abc12345"],
   },
   {
     label: "featured match",
