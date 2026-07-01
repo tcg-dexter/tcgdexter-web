@@ -34,8 +34,12 @@ const FAN_DX_STEPS_PCT = [0, 11.109, 22.218];
 const FAN_DY_STEPS_PCT = [0, 1.5, 3];
 const FAN_ROTATION_DEG = [4, 8, 12];
 
+// On mobile the tall banner centers the fanned cards, leaving an empty
+// gradient band above them. Pull the banner up so the card tops meet the
+// toolbar; the excess top band tucks under the now-same-colored toolbar
+// (invisible). Reset on sm+ where the 3:1 banner already fills.
 const DEFAULT_CLASSNAME =
-  "relative w-full overflow-hidden h-[calc(44.88vw-12px)] sm:h-auto sm:aspect-[3/1]";
+  "relative w-full overflow-hidden h-[calc(44.88vw-12px)] -mt-[8vw] sm:mt-0 sm:h-auto sm:aspect-[3/1]";
 
 export default function SpotlightBanner({
   accentColors,
