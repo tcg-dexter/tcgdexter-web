@@ -50,7 +50,7 @@ export default function SpotlightBanner({
   const stops = accentColors.filter((c): c is string => !!c);
   const usable = stops.length > 0 ? stops : [COLORLESS, COLORLESS, COLORLESS];
 
-  const bannerGradient = `linear-gradient(90deg, ${usable
+  const bannerGradient = `linear-gradient(180deg, ${usable
     .map(
       (c, i) =>
         `${c} ${Math.round((i / Math.max(usable.length - 1, 1)) * 100)}%`,
