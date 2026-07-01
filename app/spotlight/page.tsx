@@ -103,7 +103,7 @@ export default async function SpotlightIndex() {
             No spotlights yet — check back soon.
           </div>
         ) : (
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <ul className="flex flex-col gap-3">
             {spotlights.map((s) => {
               const profile = s.profiles;
               if (!profile) return null;
@@ -114,11 +114,11 @@ export default async function SpotlightIndex() {
                 <li key={s.id}>
                   <Link
                     href={`/spotlight/${s.slug}`}
-                    className="relative block aspect-[3/2] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                    className="relative block h-28 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                     style={{ background: cardGradient }}
                   >
-                    {/* Foreground content */}
-                    <div className="relative z-10 p-4 flex items-start gap-3">
+                    {/* Foreground content — vertically centered in the row. */}
+                    <div className="relative z-10 h-full px-4 flex items-center gap-3">
                       {/* Trainer avatar — mirrors SpotlightHeader. */}
                       <div
                         className="rounded-full ring-2 ring-white/80 flex items-center justify-center overflow-hidden shrink-0 w-14 h-14"
@@ -141,7 +141,7 @@ export default async function SpotlightIndex() {
                           </span>
                         )}
                       </div>
-                      <div className="min-w-0 flex-1 pr-16">
+                      <div className="min-w-0 flex-1 pr-28">
                         <div className="text-sm font-bold text-white leading-tight truncate drop-shadow-sm">
                           {profile.display_name}
                         </div>
@@ -149,30 +149,23 @@ export default async function SpotlightIndex() {
                           @{profile.username}
                         </div>
                         {s.headline && (
-                          <p className="text-xs italic font-semibold text-white/90 mt-2 line-clamp-2 drop-shadow-sm">
+                          <p className="text-xs italic font-semibold text-white/90 mt-1 line-clamp-2 drop-shadow-sm">
                             {s.headline}
                           </p>
                         )}
                       </div>
                     </div>
 
-                    {/* Favorite Pokémon sprite, pinned bottom-right —
-                        mirrors the corner placement in SpotlightHeader. */}
+                    {/* Favorite Pokémon sprite, pinned right and sized to the
+                        row height — mirrors the corner placement in
+                        SpotlightHeader. */}
                     {s.favorite_pokemon && (
-                      <div
-                        className="absolute pointer-events-none"
-                        style={{
-                          right: "4%",
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                          width: "16.5%",
-                        }}
-                      >
+                      <div className="absolute right-4 inset-y-2 flex items-center pointer-events-none">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={`${SPRITE_BASE}/${pokemonSlug(s.favorite_pokemon.name)}.png`}
                           alt={s.favorite_pokemon.name}
-                          className="w-full h-auto drop-shadow"
+                          className="h-full w-auto drop-shadow"
                         />
                       </div>
                     )}
