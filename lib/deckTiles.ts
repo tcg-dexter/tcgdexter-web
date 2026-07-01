@@ -48,6 +48,7 @@ function pickMostRecentCanonical(
 
 function resolveEntry(
   byNameIndex: Map<string, CardIndexEntry[]>,
+  bySetNumberIndex: Map<string, CardIndexEntry[]>,
   card: Pick<DeckTileCard, "name" | "number" | "setCode">,
 ): CardIndexEntry | null {
   const primary = byNameIndex.get(normalizeForSearch(card.name)) ?? [];
@@ -65,14 +66,25 @@ function resolveEntry(
       if (!seen.has(e.id)) { seen.add(e.id); lookupName.push(e); }
     }
   }
-  if (!lookupName.length) return null;
-  return (
-    lookupName.find(
-      (c) => c.ptcgoCode === card.setCode && c.number === card.number,
-    ) ??
-    lookupName.find((c) => c.number === card.number) ??
-    pickMostRecentCanonical(lookupName)
-  );
+  if (lookupName.length) {
+    return (
+      lookupName.find(
+        (c) => c.ptcgoCode === card.setCode && c.number === card.number,
+      ) ??
+      lookupName.find((c) => c.number === card.number) ??
+      pickMostRecentCanonical(lookupName)
+    );
+  }
+  // Name didn't resolve — the deck's card name can differ from the catalog's
+  // (e.g. "Telepathic Energy" vs the catalog's "Telepathic Psychic Energy").
+  // The set code + number still pins the exact printing, so fall back to that.
+  const setCode = card.setCode.trim().toLowerCase();
+  const number = card.number.trim().toLowerCase();
+  if (setCode && number) {
+    const pool = bySetNumberIndex.get(`${setCode}:${number}`);
+    if (pool?.length) return pickMostRecentCanonical(pool);
+  }
+  return null;
 }
 
 interface Tile {
@@ -227,13 +239,24 @@ export function resolveDeckTiles(cards: DeckTileCard[]): ResolvedDeckTile[] {
   }
 
   const byNameIndex = new Map<string, CardIndexEntry[]>();
+  // Set-code/number → entries, for resolving cards whose deck-list name
+  // doesn't match the catalog name (keyed by both ptcgo code and set id).
+  const bySetNumberIndex = new Map<string, CardIndexEntry[]>();
+  const addSetNumberKey = (key: string, entry: CardIndexEntry) => {
+    const arr = bySetNumberIndex.get(key);
+    if (arr) arr.push(entry);
+    else bySetNumberIndex.set(key, [entry]);
+  };
   for (const c of getAllCards()) {
     const arr = byNameIndex.get(c.nameLower);
     if (arr) arr.push(c);
     else byNameIndex.set(c.nameLower, [c]);
+    const num = c.number.toLowerCase();
+    if (c.ptcgoCode) addSetNumberKey(`${c.ptcgoCode.toLowerCase()}:${num}`, c);
+    if (c.setId) addSetNumberKey(`${c.setId.toLowerCase()}:${num}`, c);
   }
   const allTiles = Array.from(grouped.values()).map((tile) => {
-    tile.entry = resolveEntry(byNameIndex, {
+    tile.entry = resolveEntry(byNameIndex, bySetNumberIndex, {
       name: tile.name,
       number: tile.fallbackNumber,
       setCode: tile.fallbackSetCode,
