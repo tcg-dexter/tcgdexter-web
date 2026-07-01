@@ -28,9 +28,9 @@ const CARD_FAN_WIDTH_PCT = 18;
 
 const FAN_ANCHOR_X_PCT = 35;
 const FAN_ANCHOR_Y_PCT = 50;
-// Middle + outer cards spread 15% further along x than the base fan
-// (8.4 → 9.66, 16.8 → 19.32); y positions unchanged.
-const FAN_DX_STEPS_PCT = [0, 9.66, 19.32];
+// Middle + outer cards spread wider along x than the base fan — two
+// compounding 15% bumps off the original 8.4 / 16.8 (×1.3225); y unchanged.
+const FAN_DX_STEPS_PCT = [0, 11.109, 22.218];
 const FAN_DY_STEPS_PCT = [0, 1.5, 3];
 const FAN_ROTATION_DEG = [4, 8, 12];
 
