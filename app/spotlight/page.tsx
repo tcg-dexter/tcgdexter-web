@@ -114,7 +114,7 @@ export default async function SpotlightIndex() {
                 <li key={s.id}>
                   <Link
                     href={`/spotlight/${s.slug}`}
-                    className="relative block rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                    className="relative block aspect-[3/2] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                     style={{ background: cardGradient }}
                   >
                     {/* Foreground content */}
