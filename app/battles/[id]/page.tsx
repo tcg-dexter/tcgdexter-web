@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import {
   primaryCardImageUrl,
@@ -27,6 +28,14 @@ export default async function BattleRoute({
   const { id } = await params;
   const admin = createAdminClient();
 
+  // The signed-in viewer, if any. The owner can view their own battle even
+  // when the deck or profile is still private (e.g. a match they just logged
+  // on a deck they haven't shared yet) — everyone else needs both public.
+  const supabase = await createClient();
+  const {
+    data: { user: viewer },
+  } = await supabase.auth.getUser();
+
   const { data: match } = await admin
     .from("matches")
     .select(
@@ -43,7 +52,11 @@ export default async function BattleRoute({
     .eq("id", match.saved_deck_id as string)
     .maybeSingle();
 
-  if (!deck || !(deck.is_public as boolean)) notFound();
+  if (!deck) notFound();
+
+  const isOwner = !!viewer && viewer.id === (deck.user_id as string);
+
+  if (!isOwner && !(deck.is_public as boolean)) notFound();
 
   const { data: profile } = await admin
     .from("profiles")
@@ -51,7 +64,8 @@ export default async function BattleRoute({
     .eq("id", deck.user_id as string)
     .maybeSingle();
 
-  if (!profile || !(profile.is_public as boolean) || !profile.username) notFound();
+  if (!profile || !profile.username) notFound();
+  if (!isOwner && !(profile.is_public as boolean)) notFound();
 
   const analysis = deck.analysis as { cards?: AnalysisCard[] } | null | undefined;
   const coverUrl = deck.cover_image_url as string | null | undefined;
