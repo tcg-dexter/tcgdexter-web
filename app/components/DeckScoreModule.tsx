@@ -1,18 +1,18 @@
+import type { AxisResult, DeckGrade } from "@/lib/deckGrade/types";
+
 /**
- * Deck Grade — the headline deck-health readout. Renders the analyzer's
- * `deckScore` (letter grade S–D + total /100) as a hero badge, with the four
- * sub-scores (rotation / consistency / evolution / energy fit, each /25) as
- * labeled bars.
+ * Deck Grade — the headline deck-health readout.
  *
- * This is a free-tier *diagnosis* surface: it shows where a deck loses points
- * but not how to fix them — the prescriptive "how to raise each score" layer
- * is reserved for the (upcoming) paid coaching system.
+ * Preferred path: the v2 `DeckGrade` (function-based, style-aware) renders a
+ * hero letter grade + the detected play-style + a per-axis findings list. Each
+ * finding is the free *diagnosis*; the paid-coaching *remedy* (`axis.lever`) is
+ * intentionally not shown yet.
  *
- * `deckScore` is optional on older persisted analyses (repriceDeck only
- * refreshes price + rotation, not scores), so this renders nothing when the
- * score is absent rather than fabricating one.
+ * Fallback path: rows persisted before v2 only carry the legacy 4-subscore
+ * `deckScore` — those render the simpler grade + bars view so nothing regresses.
+ * When neither is present (older analyses without a score at all), renders null.
  */
-interface DeckScore {
+interface LegacyScore {
   total: number;
   grade: string;
   rotation: number;
@@ -29,52 +29,109 @@ const GRADE_STYLE: Record<string, { fg: string; bg: string }> = {
   D: { fg: "#d93232", bg: "rgba(217,50,50,0.12)" },
 };
 
-const SUBSCORE_MAX = 25;
+const STATUS_COLOR: Record<AxisResult["status"], string> = {
+  good: "#2f9e44",
+  warn: "#d98a00",
+  weak: "#d93232",
+  info: "#888888",
+};
 
-export default function DeckScoreModule({ score }: { score?: DeckScore | null }) {
-  if (!score) return null;
+const CARD_CLS =
+  "rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5";
+
+function GradeBadge({ grade, total }: { grade: string; total: number }) {
+  const style = GRADE_STYLE[grade] ?? GRADE_STYLE.C;
+  return (
+    <div className="flex items-center gap-4">
+      <div
+        className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl text-4xl font-black leading-none"
+        style={{ color: style.fg, background: style.bg }}
+      >
+        {grade}
+      </div>
+      <div className="min-w-0">
+        <h2 className="text-lg font-semibold text-text-primary">Deck Grade</h2>
+        <p className="text-sm text-text-secondary">
+          <span className="font-semibold tabular-nums" style={{ color: style.fg }}>
+            {total}
+          </span>
+          <span className="text-text-muted">/100 overall</span>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function AxisRow({ axis }: { axis: AxisResult }) {
+  const color = STATUS_COLOR[axis.status];
+  const isInfo = axis.status === "info";
+  return (
+    <div className="flex items-start gap-3 border-t border-black/5 py-2.5 first:border-t-0 first:pt-0">
+      <span
+        className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full"
+        style={{ background: color }}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-semibold text-text-primary">{axis.label}</span>
+          {!isInfo && (
+            <span className="text-xs font-semibold tabular-nums" style={{ color }}>
+              {axis.score}
+            </span>
+          )}
+        </div>
+        <p className="mt-0.5 text-xs text-text-secondary">{axis.finding}</p>
+      </div>
+    </div>
+  );
+}
+
+function renderGrade(grade: DeckGrade) {
+  return (
+    <div className={CARD_CLS}>
+      <div className="flex items-start justify-between gap-3">
+        <GradeBadge grade={grade.grade} total={grade.total} />
+        <span className="mt-1 rounded-full bg-black/5 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-text-secondary">
+          {grade.styleLabel}
+        </span>
+      </div>
+
+      <div className="mt-4">
+        {grade.axes.map((axis) => (
+          <AxisRow key={axis.key} axis={axis} />
+        ))}
+      </div>
+
+      {/* Coaching teaser — findings above are the free diagnosis; the fix
+          (each axis's lever) is the paid coaching layer, not yet shipped. */}
+      <p className="mt-4 text-xs text-text-muted">
+        Coaching — how to fix each of these — coming soon.
+      </p>
+    </div>
+  );
+}
+
+function renderLegacy(score: LegacyScore) {
   const style = GRADE_STYLE[score.grade] ?? GRADE_STYLE.C;
-
   const bars = [
     { label: "Rotation", value: score.rotation },
     { label: "Consistency", value: score.consistency },
     { label: "Evolution", value: score.evolution },
     { label: "Energy Fit", value: score.energyFit },
   ];
-
   return (
-    <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5">
-      <div className="flex items-center gap-4">
-        <div
-          className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl text-4xl font-black leading-none"
-          style={{ color: style.fg, background: style.bg }}
-        >
-          {score.grade}
-        </div>
-        <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-text-primary">Deck Grade</h2>
-          <p className="text-sm text-text-secondary">
-            <span
-              className="font-semibold tabular-nums"
-              style={{ color: style.fg }}
-            >
-              {score.total}
-            </span>
-            <span className="text-text-muted">/100 overall</span>
-          </p>
-        </div>
-      </div>
-
+    <div className={CARD_CLS}>
+      <GradeBadge grade={score.grade} total={score.total} />
       <div className="mt-4 space-y-2.5">
         {bars.map((b) => {
-          const pct = Math.max(0, Math.min(100, (b.value / SUBSCORE_MAX) * 100));
+          const pct = Math.max(0, Math.min(100, (b.value / 25) * 100));
           return (
             <div key={b.label}>
               <div className="mb-1 flex items-center justify-between text-xs">
                 <span className="text-text-secondary">{b.label}</span>
                 <span className="font-semibold tabular-nums text-text-primary">
                   {b.value}
-                  <span className="font-normal text-text-muted">/{SUBSCORE_MAX}</span>
+                  <span className="font-normal text-text-muted">/25</span>
                 </span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-black/5">
@@ -87,12 +144,18 @@ export default function DeckScoreModule({ score }: { score?: DeckScore | null })
           );
         })}
       </div>
-
-      {/* Coaching teaser — the free grade is the diagnosis; the remedy (how to
-          raise each score) is the paid coaching layer, not yet shipped. */}
-      <p className="mt-4 text-xs text-text-muted">
-        Coaching breakdowns — how to raise each score — coming soon.
-      </p>
     </div>
   );
+}
+
+export default function DeckScoreModule({
+  grade,
+  legacyScore,
+}: {
+  grade?: DeckGrade | null;
+  legacyScore?: LegacyScore | null;
+}) {
+  if (grade) return renderGrade(grade);
+  if (legacyScore) return renderLegacy(legacyScore);
+  return null;
 }

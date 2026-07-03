@@ -10,6 +10,8 @@ import {
   pickPrinting,
   pickPrintingForCard,
 } from "@/lib/cardPrinting";
+import { gradeDeck, type DeckGrade } from "@/lib/deckGrade";
+import { buildGradeCards } from "@/lib/deckGrade/buildGradeCards";
 
 /* ─── Shop Listings ──────────────────────────────────────────── */
 
@@ -107,6 +109,7 @@ interface AnalysisResult {
     evolution: number;
     energyFit: number;
   };
+  deckGrade: DeckGrade;
   shopMatches: Array<{
     cardName: string;
     listings: ShopListing[];
@@ -411,81 +414,32 @@ export async function POST(req: NextRequest) {
       .filter(m => m.listings.length > 0)
       .filter((m, i, arr) => arr.findIndex(x => x.cardName === m.cardName) === i);
 
-    // ── Deck Health Score ──────────────────────────────────────
-    const STAPLE_TRAINERS = [
-      "professor's research", "iono", "colress's experiment", "arven", "nemona", "penny",
-      "ultra ball", "nest ball", "pokégear 3.0", "battle vip pass", "buddy-buddy poffin",
-      "crispin", "kieran", "perrin", "lacey",
-      "rare candy", "level ball", "quick ball", "energy search",
-    ];
+    // ── Deck Grade (function-based, style-aware) ───────────────
+    // Engine lives in lib/deckGrade. Legality is a separate gate (the
+    // rotation banner), NOT folded into the quality total.
+    const deckGrade = gradeDeck({
+      cards: buildGradeCards(cards),
+      legality: { legal: rotatingCount === 0, rotatingCount },
+      meta: {
+        archetypeName: metaMatch.archetypeName,
+        rank: metaMatch.rank,
+        conversionRate: metaMatch.conversionRate,
+      },
+    });
 
-    // Rotation score (0–25)
-    const uniqueRotating = new Set(rotatingCards.map(c => c.name)).size;
-    const rotationScore = Math.max(25 - uniqueRotating * 5, 0);
-
-    // Consistency score (0–25)
-    const deckTrainerNames = new Set(
-      cards.filter(c => c.section === "trainer").map(c => c.name.toLowerCase())
-    );
-    let stapleCount = 0;
-    for (const staple of STAPLE_TRAINERS) {
-      if (deckTrainerNames.has(staple)) stapleCount++;
-    }
-    const consistencyScore = Math.min(stapleCount * 3, 25);
-
-    // Evolution score (0–25)
-    const stage2Names: string[] = [];
-    const stage1Names: string[] = [];
-    const basicNames: string[] = [];
-    for (const pokemonName of uniquePokemonNames) {
-      const deckCard = pokemonCards.find((c) => c.name === pokemonName);
-      const card = deckCard
-        ? pickPrintingForCard(deckCard)
-        : pickPrinting(pokemonName);
-      const subtypes: string[] = card?.subtypes ?? [];
-      if (subtypes.includes("Stage 2")) stage2Names.push(pokemonName);
-      else if (subtypes.includes("Stage 1")) stage1Names.push(pokemonName);
-      else if (subtypes.includes("Basic")) basicNames.push(pokemonName);
-    }
-
-    const sharesWord = (a: string, b: string): boolean => {
-      const wordsA = a.toLowerCase().split(/\s+/);
-      const wordsB = new Set(b.toLowerCase().split(/\s+/));
-      return wordsA.some(w => w.length > 2 && wordsB.has(w));
-    };
-
-    let evolutionScore = 25;
-    for (const s2 of stage2Names) {
-      if (!stage1Names.some(s1 => sharesWord(s2, s1))) evolutionScore -= 8;
-    }
-    for (const s1 of stage1Names) {
-      if (!basicNames.some(b => sharesWord(s1, b))) evolutionScore -= 5;
-    }
-    evolutionScore = Math.max(evolutionScore, 0);
-
-    // Energy fit score (0–25)
-    let energyScore: number;
-    if (energyCount >= 8 && energyCount <= 14) energyScore = 25;
-    else if ((energyCount >= 6 && energyCount <= 7) || (energyCount >= 15 && energyCount <= 16)) energyScore = 15;
-    else if ((energyCount >= 4 && energyCount <= 5) || (energyCount >= 17 && energyCount <= 18)) energyScore = 8;
-    else energyScore = 0;
-
-    // Grade
-    const totalScore = rotationScore + consistencyScore + evolutionScore + energyScore;
-    let grade: string;
-    if (totalScore >= 90) grade = "S";
-    else if (totalScore >= 80) grade = "A";
-    else if (totalScore >= 70) grade = "B";
-    else if (totalScore >= 55) grade = "C";
-    else grade = "D";
-
+    // Legacy deckScore shim — readers persisted before v2 (saved rows,
+    // analysis_submissions, DeckScoreModule's fallback view) still expect the
+    // four 0–25 subscores; derive them from the new axes.
+    const axisPct = (key: string) =>
+      deckGrade.axes.find((a) => a.key === key)?.score ?? 0;
+    const to25 = (pct: number) => Math.round((pct / 100) * 25);
     const deckScore = {
-      total: totalScore,
-      grade,
-      rotation: rotationScore,
-      consistency: consistencyScore,
-      evolution: evolutionScore,
-      energyFit: energyScore,
+      total: deckGrade.total,
+      grade: deckGrade.grade,
+      rotation: Math.max(25 - new Set(rotatingCards.map((c) => c.name)).size * 5, 0),
+      consistency: to25(axisPct("setup")),
+      evolution: to25(axisPct("evolution")),
+      energyFit: to25(axisPct("energy")),
     };
 
     const result: AnalysisResult = {
@@ -525,6 +479,7 @@ export async function POST(req: NextRequest) {
       deckPrice: Math.round(deckPrice * 100) / 100,
       metaMatch,
       deckScore,
+      deckGrade,
       cards,
       warnings,
       shopMatches,
@@ -562,6 +517,11 @@ export async function POST(req: NextRequest) {
             rotation: result.rotation,
             metaMatch: result.metaMatch,
             deckScore: result.deckScore,
+            deckGrade: {
+              style: result.deckGrade.style,
+              total: result.deckGrade.total,
+              grade: result.deckGrade.grade,
+            },
             warnings: result.warnings,
           },
           locale,
