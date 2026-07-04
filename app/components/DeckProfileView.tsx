@@ -17,6 +17,7 @@ import {
   deckCardAddTarget,
   isBasicEnergyCard,
 } from "@/lib/primaryCardImage";
+import type { DeckGrade } from "@/lib/deckGrade/types";
 
 /* ─── Types ──────────────────────────────────────────────────── */
 
@@ -94,6 +95,9 @@ export interface AnalysisResult {
     evolution: number;
     energyFit: number;
   };
+  /** Deck Grade v2 — the function-based, style-aware grade. Optional so rows
+   *  persisted before v2 (which only carry `deckScore`) still typecheck. */
+  deckGrade?: DeckGrade;
   rotation: {
     ready: boolean;
     rotatingCount: number;
@@ -378,7 +382,7 @@ export default function DeckProfileView({
           {overviewNode}
 
           {/* ── Deck Grade — headline health readout (free diagnosis). ── */}
-          <DeckScoreModule score={result.deckScore} />
+          <DeckScoreModule grade={result.deckGrade} legacyScore={result.deckScore} />
 
           {/* ── Post-overview slot: meta variant credits (creator / event / date) ── */}
           {postOverviewSlot}
