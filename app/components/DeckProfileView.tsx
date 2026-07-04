@@ -1,9 +1,7 @@
 import Link from "next/link";
 import DeckCardGrid from "@/app/components/DeckCardGrid";
-import DeckEnergyModule from "@/app/components/DeckEnergyModule";
 import DeckListCard from "@/app/components/DeckListCard";
 import DeckMulliganModule from "@/app/components/DeckMulliganModule";
-import DeckScoreModule from "@/app/components/DeckScoreModule";
 import DeckOwnershipModule from "@/app/components/DeckOwnershipModule";
 import DeckPriceModule from "@/app/components/DeckPriceModule";
 import MetaDeckListCarousel from "@/app/components/MetaDeckListCarousel";
@@ -17,7 +15,6 @@ import {
   deckCardAddTarget,
   isBasicEnergyCard,
 } from "@/lib/primaryCardImage";
-import type { DeckGrade } from "@/lib/deckGrade/types";
 
 /* ─── Types ──────────────────────────────────────────────────── */
 
@@ -95,9 +92,6 @@ export interface AnalysisResult {
     evolution: number;
     energyFit: number;
   };
-  /** Deck Grade v2 — the function-based, style-aware grade. Optional so rows
-   *  persisted before v2 (which only carry `deckScore`) still typecheck. */
-  deckGrade?: DeckGrade;
   rotation: {
     ready: boolean;
     rotatingCount: number;
@@ -126,9 +120,19 @@ export interface AnalysisResult {
 
 /* ─── Energy styling ─────────────────────────────────────────── */
 
-// Single source of truth now lives in lib/energyColors; re-exported here so
-// existing `import { ENERGY_HEX } from ".../DeckProfileView"` paths keep working.
-export { ENERGY_HEX } from "@/lib/energyColors";
+export const ENERGY_HEX: Record<string, string> = {
+  Fire:      "#d93232",
+  Water:     "#0096d3",
+  Grass:     "#64bf4b",
+  Lightning: "#f2b90c",
+  Psychic:   "#9263a6",
+  Fighting:  "#c56928",
+  Darkness:  "#245B64",
+  Metal:     "#7e949a",
+  Dragon:    "#1a5276",
+  Fairy:     "#fd79a8",
+  Colorless: "#b2bec3",
+};
 
 /* ─── DeckProfileView ────────────────────────────────────────── */
 
@@ -381,9 +385,6 @@ export default function DeckProfileView({
           {/* ── Overview — always at the top across all variants ── */}
           {overviewNode}
 
-          {/* ── Deck Grade — headline health readout (free diagnosis). ── */}
-          <DeckScoreModule grade={result.deckGrade} legacyScore={result.deckScore} />
-
           {/* ── Post-overview slot: meta variant credits (creator / event / date) ── */}
           {postOverviewSlot}
 
@@ -396,27 +397,6 @@ export default function DeckProfileView({
                 { label: "Energy", value: String(result.sections.energy) },
               ]}
             />
-            {/* Trainer engine sub-breakdown — supporter/item/tool/stadium
-                counts (all computed by the analyzer, only the total was shown). */}
-            {result.trainer.totalCards > 0 && (
-              <div className="mt-2 flex flex-wrap justify-center gap-x-5 gap-y-1 text-xs text-text-muted">
-                {[
-                  { label: "Supporters", value: result.trainer.supporterCount },
-                  { label: "Items", value: result.trainer.itemCount },
-                  { label: "Tools", value: result.trainer.toolCount },
-                  { label: "Stadiums", value: result.trainer.stadiumCount },
-                ]
-                  .filter((t) => t.value > 0)
-                  .map((t) => (
-                    <span key={t.label} className="inline-flex items-center gap-1">
-                      <span className="font-semibold tabular-nums text-text-secondary">
-                        {t.value}
-                      </span>
-                      {t.label}
-                    </span>
-                  ))}
-              </div>
-            )}
           </div>
 
           {/* Post-stats slot: saved variant places action buttons + match log here */}
@@ -472,14 +452,6 @@ export default function DeckProfileView({
           <DeckMulliganModule
             deckSize={result.deckSize}
             basicCount={result.pokemon.basicCount}
-          />
-
-          {/* Energy distribution — basic-by-type split + special energy */}
-          <DeckEnergyModule
-            basicByType={result.energy.basicByType}
-            basicCount={result.energy.basicCount}
-            specialCount={result.energy.specialCount}
-            specialDetails={result.energy.specialDetails}
           />
 
           {/* ── Top slot: deck notes (saved/public); stat cards + record (meta) ── */}
