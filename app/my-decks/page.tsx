@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { UserDeckCardProps } from "@/app/components/DeckPostCard";
 import { primaryCardImageUrl, deckAvatarInfo, pokemonSlug } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
+import { computeDeckRecords } from "@/lib/deck-record";
 import MyDecksClient from "./MyDecksClient";
 
 interface DeckRow {
@@ -21,12 +22,14 @@ interface DeckRow {
   created_at: string;
   like_count: number;
   is_public: boolean;
+  is_favorite: boolean;
   cover_image_url: string | null;
 }
 
 interface MatchRow {
   saved_deck_id: string | null;
   result: string;
+  played_at: string;
 }
 
 export const metadata = {
@@ -50,25 +53,17 @@ export default async function MyDecksPage() {
 
   const { data: decksRaw } = await supabase
     .from("saved_decks")
-    .select("id, short_id, name, deck_list, analysis, updated_at, created_at, like_count, is_public, cover_image_url")
+    .select("id, short_id, name, deck_list, analysis, updated_at, created_at, like_count, is_public, is_favorite, cover_image_url")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
   const decks = (decksRaw ?? []) as DeckRow[];
 
   const { data: matchesRaw } = await supabase
     .from("matches")
-    .select("saved_deck_id, result");
+    .select("saved_deck_id, result, played_at");
   const manualMatches = (matchesRaw ?? []) as MatchRow[];
 
-  const deckWL = new Map<string, { w: number; l: number; d: number }>();
-  for (const m of manualMatches) {
-    if (!m.saved_deck_id) continue;
-    const prev = deckWL.get(m.saved_deck_id) ?? { w: 0, l: 0, d: 0 };
-    if (m.result === "win") prev.w++;
-    else if (m.result === "loss") prev.l++;
-    else if (m.result === "draw") prev.d++;
-    deckWL.set(m.saved_deck_id, prev);
-  }
+  const deckRecords = computeDeckRecords(manualMatches);
 
   const deckCards: UserDeckCardProps[] = decks.map((deck) => {
     const cards = deck.analysis?.cards ?? [];
@@ -82,9 +77,14 @@ export default async function MyDecksPage() {
       displayName: profile.display_name,
       price: deck.analysis?.deckPrice ?? null,
       counts: deck.analysis?.sections ?? null,
-      wl: deckWL.get(deck.id) ?? null,
+      wl: deckRecords.get(deck.id) ?? null,
       likeCount: deck.like_count,
       isPrivate: !deck.is_public,
+      isFavorite: deck.is_favorite,
+      legalityReady: deck.analysis?.rotation?.ready ?? null,
+      archetypeName: deck.analysis?.metaMatch?.archetypeName ?? null,
+      archetypeId: deck.analysis?.metaMatch?.archetypeId ?? null,
+      updatedAt: deck.updated_at,
       imageUrl: deck.cover_image_url ?? primaryCardImageUrl(cards),
       ownerUserId: user.id,
       createdAt: deck.created_at,
