@@ -1,6 +1,6 @@
 import type { ActivityData, ActivityKind } from "../lib/activity";
 import { links } from "../lib/links";
-import { ErrorBox, Initials, relTime } from "./Card";
+import { ErrorBox, ExternalLinkPill, Initials, relTime } from "./Card";
 
 type Props = { data: ActivityData | { error: string } };
 
@@ -39,31 +39,14 @@ export default function ActivityFeed({ data }: Props) {
             · {data.events.length}
           </span>
         </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-          <a
-            href={links.supabase.auth}
-            target="_blank"
-            rel="noreferrer"
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
-          >
-            users ↗
-          </a>
-          <a
-            href={links.supabase.table("saved_decks")}
-            target="_blank"
-            rel="noreferrer"
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
-          >
-            decks ↗
-          </a>
-          <a
-            href={links.supabase.table("matches")}
-            target="_blank"
-            rel="noreferrer"
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
-          >
-            matches ↗
-          </a>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <ExternalLinkPill href={links.supabase.auth}>users</ExternalLinkPill>
+          <ExternalLinkPill href={links.supabase.table("saved_decks")}>
+            decks
+          </ExternalLinkPill>
+          <ExternalLinkPill href={links.supabase.table("matches")}>
+            matches
+          </ExternalLinkPill>
         </div>
       </div>
 

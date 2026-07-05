@@ -1,6 +1,6 @@
 import type { OpsData } from "../lib/ops";
 import { links } from "../lib/links";
-import { ErrorBox, relTime } from "./Card";
+import { ErrorBox, ExternalLinkPill, relTime } from "./Card";
 
 type Props = { data: OpsData | { error: string } };
 
@@ -116,24 +116,13 @@ export default function OpsCard({ data }: Props) {
         </details>
       )}
 
-      <div className="flex flex-wrap items-center gap-3 border-t border-black/5 pt-3 text-xs">
-        <a
-          href={links.supabase.table("ops_runs")}
-          target="_blank"
-          rel="noreferrer"
-          className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
-        >
-          ops_runs table ↗
-        </a>
-        <span className="text-[var(--text-muted)]">·</span>
-        <a
-          href={links.github.repo("dexter-ops")}
-          target="_blank"
-          rel="noreferrer"
-          className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
-        >
-          dexter-ops repo ↗
-        </a>
+      <div className="flex flex-wrap items-center gap-2 border-t border-black/5 pt-3 text-xs">
+        <ExternalLinkPill href={links.supabase.table("ops_runs")}>
+          ops_runs table
+        </ExternalLinkPill>
+        <ExternalLinkPill href={links.github.repo("dexter-ops")}>
+          dexter-ops repo
+        </ExternalLinkPill>
         {latest?.log_path && (
           <>
             <span className="hidden text-[var(--text-muted)] sm:inline">·</span>

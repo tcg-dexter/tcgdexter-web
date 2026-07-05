@@ -1,6 +1,6 @@
 import type { DevData, IssueLabel, IssueSummary } from "../lib/github";
 import { links } from "../lib/links";
-import { ErrorBox, relTime } from "./Card";
+import { ErrorBox, ExternalLinkPill, relTime } from "./Card";
 
 type Props = { data: DevData | { error: string } };
 
@@ -152,14 +152,7 @@ export default function DevCard({ data }: Props) {
                 · {data.openPrCount}
               </span>
             </div>
-            <a
-              href={links.github.prs}
-              target="_blank"
-              rel="noreferrer"
-              className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
-            >
-              all ↗
-            </a>
+            <ExternalLinkPill href={links.github.prs}>all</ExternalLinkPill>
           </div>
           <ul className="divide-y divide-black/5 text-xs">
             {data.recentPrs.slice(0, 8).map((i) => (
@@ -181,14 +174,7 @@ export default function DevCard({ data }: Props) {
                 · {data.openIssueCount}
               </span>
             </div>
-            <a
-              href={links.github.issues}
-              target="_blank"
-              rel="noreferrer"
-              className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
-            >
-              all ↗
-            </a>
+            <ExternalLinkPill href={links.github.issues}>all</ExternalLinkPill>
           </div>
           <ul className="divide-y divide-black/5 text-xs">
             {data.recentIssues.slice(0, 10).map((i) => (

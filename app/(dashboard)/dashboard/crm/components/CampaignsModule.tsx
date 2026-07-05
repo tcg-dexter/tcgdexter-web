@@ -1,5 +1,5 @@
+import { InternalLinkPill, SectionHeader } from "../../components/Card";
 import Link from "next/link";
-import { SectionHeader } from "../../components/Card";
 import type { CrmCampaign } from "../lib/types";
 
 // Compact at-a-glance summary block. Shows every non-complete campaign
@@ -26,12 +26,7 @@ export default function CampaignsModule({ campaigns }: { campaigns: CrmCampaign[
         eyebrow="Campaigns"
         title="In flight"
         meta={
-          <Link
-            href="/dashboard/crm/campaigns"
-            className="hover:text-[var(--text-primary)] hover:underline underline-offset-4"
-          >
-            See all ↗
-          </Link>
+          <InternalLinkPill href="/dashboard/crm/campaigns">See all</InternalLinkPill>
         }
       />
 

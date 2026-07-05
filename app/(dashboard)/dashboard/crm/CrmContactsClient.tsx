@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { SectionHeader } from "../components/Card";
+import { InternalLinkPill, SectionHeader } from "../components/Card";
 import type { CrmCampaign, CrmContact } from "./lib/types";
 
 type SortKey =
@@ -308,12 +308,9 @@ export default function CrmContactsClient({
           <span className="text-xs font-semibold">{selected.size} selected</span>
           <span className="text-[11px] text-[var(--text-muted)]">Add to campaign:</span>
           {campaignTargets.length === 0 ? (
-            <Link
-              href="/dashboard/crm/campaigns/new"
-              className="text-xs font-semibold underline underline-offset-4"
-            >
-              create one first ↗
-            </Link>
+            <InternalLinkPill href="/dashboard/crm/campaigns/new">
+              create one first
+            </InternalLinkPill>
           ) : (
             <>
               <select

@@ -1,6 +1,6 @@
 import type { Deploy, DeploysData } from "../lib/vercel-deploys";
 import { links } from "../lib/links";
-import { relTime } from "./Card";
+import { ExternalLinkPill, relTime } from "./Card";
 
 type Props = { data: DeploysData };
 
@@ -93,14 +93,7 @@ export default function DeploysCard({ data }: Props) {
         <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
           Recent deploys
         </div>
-        <a
-          href={links.vercel.deployments()}
-          target="_blank"
-          rel="noreferrer"
-          className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
-        >
-          all ↗
-        </a>
+        <ExternalLinkPill href={links.vercel.deployments()}>all</ExternalLinkPill>
       </div>
 
       {data.deploys.length === 0 ? (

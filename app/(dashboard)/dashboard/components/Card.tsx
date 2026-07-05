@@ -1,3 +1,75 @@
+import Link from "next/link";
+
+/** Diagonal external-link icon — mirrors the arrow used by the "View" shop
+ *  link on public deck-profile pages, so the dashboard's capsule links read
+ *  as the same affordance as the rest of the site. */
+function ArrowIcon() {
+  return (
+    <svg
+      className="h-3 w-3"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+      />
+    </svg>
+  );
+}
+
+/** Shared capsule styling for the small "jump to X" links scattered across
+ *  the dashboard (Supabase tables, GitHub, Vercel, internal analytics
+ *  drill-downs). Idle state is a quiet bordered pill; hover shifts border +
+ *  text to the site accent — the same secondary-action hover treatment used
+ *  site-wide, just tuned to the dashboard's muted palette. */
+const PILL_LINK_CLASS =
+  "inline-flex items-center gap-1 rounded-full border border-black/10 px-2.5 py-1 text-[11px] font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--accent)]/40 hover:text-[var(--accent)]";
+
+/** Capsule link out to an external resource (Supabase, GitHub, Vercel, prod/preview). */
+export function ExternalLinkPill({
+  href,
+  children,
+  className,
+}: {
+  href: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className={`${PILL_LINK_CLASS} ${className ?? ""}`}
+    >
+      {children}
+      <ArrowIcon />
+    </a>
+  );
+}
+
+/** Same capsule treatment for same-app navigation (e.g. drill into /dashboard/analytics). */
+export function InternalLinkPill({
+  href,
+  children,
+  className,
+}: {
+  href: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <Link href={href} className={`${PILL_LINK_CLASS} ${className ?? ""}`}>
+      {children}
+      <ArrowIcon />
+    </Link>
+  );
+}
+
 /**
  * Dashboard "Card" is now a transparent pass-through so primary content
  * sits directly on the page background. The variant prop is preserved for
