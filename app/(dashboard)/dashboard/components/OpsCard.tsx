@@ -27,8 +27,16 @@ export default function OpsCard({ data }: Props) {
         <div className="flex items-center gap-3">
           {latest ? (
             <span
-              className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ring-1 ${STATUS_TONE[latest.status] ?? "bg-gray-100 text-gray-700 ring-gray-200"}`}
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ring-1 ${STATUS_TONE[latest.status] ?? "bg-gray-100 text-gray-700 ring-gray-200"}`}
             >
+              <span className="relative flex h-1.5 w-1.5">
+                <span
+                  className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${STATUS_DOT[latest.status] ?? "bg-gray-400"}`}
+                />
+                <span
+                  className={`relative inline-flex h-1.5 w-1.5 rounded-full ${STATUS_DOT[latest.status] ?? "bg-gray-400"}`}
+                />
+              </span>
               {latest.status}
             </span>
           ) : (

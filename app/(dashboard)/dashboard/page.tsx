@@ -7,7 +7,7 @@ import OpsCard from "./components/OpsCard";
 import ProductCard from "./components/ProductCard";
 import QuickLinks from "./components/QuickLinks";
 import VitalsStrip from "./components/VitalsStrip";
-import { SectionHeader } from "./components/Card";
+import { SectionCard, SectionHeader } from "./components/Card";
 import { fetchActivity } from "./lib/activity";
 import { fetchActivation, fetchBehavior } from "./lib/analytics";
 import { fetchDeploys } from "./lib/vercel-deploys";
@@ -60,7 +60,11 @@ export default async function DashboardPage() {
       <header className="flex flex-col gap-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
+              <span className="relative flex h-1.5 w-1.5 flex-shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent" />
+              </span>
               Mission control · {todayLabel()}
             </div>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-3xl">
@@ -89,7 +93,9 @@ export default async function DashboardPage() {
             title="Users, decks & traffic"
             meta="Supabase"
           />
-          <ProductCard data={product} />
+          <SectionCard>
+            <ProductCard data={product} />
+          </SectionCard>
         </section>
 
         <section>
@@ -98,7 +104,9 @@ export default async function DashboardPage() {
             title="Activation & behavior"
             meta="In-house · last 7 days"
           />
-          <AnalyticsPreview activation={activation} behavior={behavior} />
+          <SectionCard>
+            <AnalyticsPreview activation={activation} behavior={behavior} />
+          </SectionCard>
         </section>
 
         <section>
@@ -107,7 +115,9 @@ export default async function DashboardPage() {
             title="Daily ops pipeline"
             meta="6am cron · writes to ops_runs"
           />
-          <OpsCard data={ops} />
+          <SectionCard>
+            <OpsCard data={ops} />
+          </SectionCard>
         </section>
 
         <section>
@@ -116,7 +126,9 @@ export default async function DashboardPage() {
             title="Quick links"
             meta="Vercel · Supabase · GitHub"
           />
-          <QuickLinks />
+          <SectionCard>
+            <QuickLinks />
+          </SectionCard>
         </section>
 
         {deploys.available && (
@@ -126,7 +138,9 @@ export default async function DashboardPage() {
               title="Recent builds"
               meta="Vercel · last 8"
             />
-            <DeploysCard data={deploys} />
+            <SectionCard>
+              <DeploysCard data={deploys} />
+            </SectionCard>
           </section>
         )}
 
@@ -136,7 +150,9 @@ export default async function DashboardPage() {
             title="Real-time pulse"
             meta="Signups · saved decks · matches"
           />
-          <ActivityFeed data={activity} />
+          <SectionCard>
+            <ActivityFeed data={activity} />
+          </SectionCard>
         </section>
 
         <section>
@@ -145,7 +161,9 @@ export default async function DashboardPage() {
             title="Engineering throughput"
             meta="GitHub · tcg-dexter org"
           />
-          <DevCard data={dev} />
+          <SectionCard>
+            <DevCard data={dev} />
+          </SectionCard>
         </section>
       </div>
     </div>

@@ -57,7 +57,7 @@ function Tile({
       </div>
       <div className="flex items-end justify-between gap-2">
         <div className="min-w-0">
-          <div className="truncate text-2xl font-semibold tracking-tight tabular-nums leading-none text-[var(--text-primary)] transition group-hover:text-[var(--accent)] sm:text-[28px]">
+          <div className="truncate bg-gradient-to-b from-[var(--text-primary)] to-[var(--text-secondary)] bg-clip-text text-2xl font-semibold tracking-tight tabular-nums leading-none text-transparent transition-[background-image] duration-200 group-hover:from-accent group-hover:to-accent-dark sm:text-[28px]">
             {value}
           </div>
           {hint || delta ? (

@@ -88,6 +88,29 @@ export function Card({
   return <div className={className ?? ""}>{children}</div>;
 }
 
+/**
+ * The glassy white module shell used across every product-facing page
+ * (deck profile modules, spotlight cards, etc.) — `rounded-2xl` + soft
+ * border + `backdrop-blur-xl` + `shadow-sm`. Section bodies on the mission
+ * control page use this so the page reads like the rest of the site instead
+ * of bare text floating on the background.
+ */
+export function SectionCard({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5 ${className ?? ""}`}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function Stat({
   label,
   value,
