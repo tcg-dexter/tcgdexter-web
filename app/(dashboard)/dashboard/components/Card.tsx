@@ -126,8 +126,8 @@ export function Stat({
 }) {
   const valueClass =
     size === "lg"
-      ? "mt-1 text-3xl font-semibold tabular-nums tracking-tight text-[var(--text-primary)] sm:text-4xl"
-      : "mt-0.5 text-2xl font-semibold tabular-nums tracking-tight text-[var(--text-primary)]";
+      ? "mt-1 bg-gradient-to-b from-[var(--text-primary)] to-[var(--text-secondary)] bg-clip-text text-3xl font-semibold tabular-nums tracking-tight text-transparent sm:text-4xl"
+      : "mt-0.5 bg-gradient-to-b from-[var(--text-primary)] to-[var(--text-secondary)] bg-clip-text text-2xl font-semibold tabular-nums tracking-tight text-transparent";
   return (
     <div>
       <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">

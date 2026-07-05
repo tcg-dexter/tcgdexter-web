@@ -40,7 +40,7 @@ export default function NorthStarHero({
         {label}
       </div>
       <div className="mt-1 flex flex-wrap items-end gap-x-5 gap-y-2">
-        <span className="text-5xl font-semibold tracking-tight tabular-nums text-[var(--text-primary)] sm:text-6xl">
+        <span className="bg-gradient-to-b from-[var(--text-primary)] to-[var(--text-secondary)] bg-clip-text text-5xl font-semibold tracking-tight tabular-nums text-transparent sm:text-6xl">
           {value.toLocaleString()}
         </span>
         <div className="flex flex-col gap-1">

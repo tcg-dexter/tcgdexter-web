@@ -4,7 +4,7 @@ import InsightsStrip from "../components/InsightsStrip";
 import NorthStarHero from "../components/NorthStarHero";
 import ProductAdoptionList from "../components/ProductAdoptionList";
 import RetentionMatrix from "../components/RetentionMatrix";
-import { SectionHeader, Stat } from "../components/Card";
+import { SectionCard, SectionHeader, Stat } from "../components/Card";
 import {
   fetchActivation,
   fetchBehavior,
@@ -64,17 +64,9 @@ export default async function AnalyticsPage({
   return (
     <div className="flex flex-col gap-8">
       <header>
-        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-          Analytics · last {windowDays} days
-        </div>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-3xl">
-          What's happening across our Products.
+        <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-3xl">
+          Analytics
         </h1>
-        <p className="mt-1 max-w-prose text-xs text-[var(--text-secondary)] sm:text-sm">
-          Headline numbers for each Product we ship — saves, value, decks,
-          shares — alongside the movers that shifted this window and how the
-          cohorts we acquire stick.
-        </p>
         <nav className="mt-3 flex items-center gap-1 text-xs">
           {WINDOWS.map((w) => {
             const active = w.value === activeKey;
@@ -112,7 +104,9 @@ export default async function AnalyticsPage({
           title="What's happening across the surfaces we ship"
           meta="Card Catalog · Deck Collection · Meta Archetypes · Playmat Studio · Spotlight · Learn to Play"
         />
-        <ProductAdoptionList rows={behavior.products} />
+        <SectionCard>
+          <ProductAdoptionList rows={behavior.products} />
+        </SectionCard>
       </section>
 
       {/* ── What changed ────────────────────────────────────────────────── */}
@@ -122,7 +116,9 @@ export default async function AnalyticsPage({
           title="Top movers this window"
           meta="Funnel bottleneck · biggest Product mover up · biggest mover down"
         />
-        <InsightsStrip behavior={behavior} activation={activation} />
+        <SectionCard>
+          <InsightsStrip behavior={behavior} activation={activation} />
+        </SectionCard>
       </section>
 
       {/* ── Supporting stats ────────────────────────────────────────────── */}
@@ -132,27 +128,29 @@ export default async function AnalyticsPage({
           title="Who showed up"
           meta="Distinct user_ids with any event in window"
         />
-        <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3">
-          <Stat
-            label="Returning"
-            value={behavior.firstVsReturning.returningSessionUsers.toLocaleString()}
-            hint={`${returningPct.toFixed(0)}% of active`}
-            size="lg"
-          />
-          <Stat
-            label="First session"
-            value={behavior.firstVsReturning.firstSessionUsers.toLocaleString()}
-            hint={`${firstPct.toFixed(0)}% of active`}
-            size="lg"
-          />
-          <Stat
-            label="Feature fires"
-            value={behavior.totalFires.toLocaleString()}
-            hint={`across ${behavior.features.length} events`}
-            delta={{ value: firesDelta }}
-            size="lg"
-          />
-        </div>
+        <SectionCard>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3">
+            <Stat
+              label="Returning"
+              value={behavior.firstVsReturning.returningSessionUsers.toLocaleString()}
+              hint={`${returningPct.toFixed(0)}% of active`}
+              size="lg"
+            />
+            <Stat
+              label="First session"
+              value={behavior.firstVsReturning.firstSessionUsers.toLocaleString()}
+              hint={`${firstPct.toFixed(0)}% of active`}
+              size="lg"
+            />
+            <Stat
+              label="Feature fires"
+              value={behavior.totalFires.toLocaleString()}
+              hint={`across ${behavior.features.length} events`}
+              delta={{ value: firesDelta }}
+              size="lg"
+            />
+          </div>
+        </SectionCard>
       </section>
 
       {/* ── Retention matrix ────────────────────────────────────────────── */}
@@ -162,7 +160,9 @@ export default async function AnalyticsPage({
           title="Are the cohorts we acquire sticking"
           meta="Signup week × week-N activity · 🟢 ≥60% / 🟡 30–60% / 🔴 <30%"
         />
-        <RetentionMatrix data={retention} />
+        <SectionCard>
+          <RetentionMatrix data={retention} />
+        </SectionCard>
       </section>
 
       {/* ── Activation, demoted ─────────────────────────────────────────── */}
@@ -172,7 +172,9 @@ export default async function AnalyticsPage({
           title="Signup → analyze → save → match"
           meta="Bar colour: 🟢 ≥70% / 🟡 40–70% / 🔴 <40% of prior step"
         />
-        <FunnelBars steps={activation.steps} />
+        <SectionCard>
+          <FunnelBars steps={activation.steps} />
+        </SectionCard>
       </section>
 
       <section>
@@ -181,31 +183,33 @@ export default async function AnalyticsPage({
           title="Pre-signup visitor funnel"
           meta="By dx_aid cookie · same window"
         />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Stat
-            label="Anonymous visitors"
-            value={activation.anonymous.visitedCount.toLocaleString()}
-            hint="Distinct dx_aid cookies seen"
-          />
-          <Stat
-            label="…who analyzed a deck"
-            value={activation.anonymous.analyzedCount.toLocaleString()}
-            hint={
-              activation.anonymous.visitedCount > 0
-                ? `${((activation.anonymous.analyzedCount / activation.anonymous.visitedCount) * 100).toFixed(1)}% of visitors`
-                : undefined
-            }
-          />
-          <Stat
-            label="…who signed up"
-            value={activation.anonymous.signedUpCount.toLocaleString()}
-            hint={
-              activation.anonymous.analyzedCount > 0
-                ? `${((activation.anonymous.signedUpCount / activation.anonymous.analyzedCount) * 100).toFixed(1)}% of analyzers`
-                : undefined
-            }
-          />
-        </div>
+        <SectionCard>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Stat
+              label="Anonymous visitors"
+              value={activation.anonymous.visitedCount.toLocaleString()}
+              hint="Distinct dx_aid cookies seen"
+            />
+            <Stat
+              label="…who analyzed a deck"
+              value={activation.anonymous.analyzedCount.toLocaleString()}
+              hint={
+                activation.anonymous.visitedCount > 0
+                  ? `${((activation.anonymous.analyzedCount / activation.anonymous.visitedCount) * 100).toFixed(1)}% of visitors`
+                  : undefined
+              }
+            />
+            <Stat
+              label="…who signed up"
+              value={activation.anonymous.signedUpCount.toLocaleString()}
+              hint={
+                activation.anonymous.analyzedCount > 0
+                  ? `${((activation.anonymous.signedUpCount / activation.anonymous.analyzedCount) * 100).toFixed(1)}% of analyzers`
+                  : undefined
+              }
+            />
+          </div>
+        </SectionCard>
       </section>
     </div>
   );
