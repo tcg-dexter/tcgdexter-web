@@ -292,7 +292,7 @@ function DeckBanner({
         </span>
       )}
       <div
-        className="absolute rounded-lg overflow-hidden border-[5px] border-[#f5d34c] bg-white shadow-[0_8px_18px_rgba(0,0,0,0.3)]"
+        className="absolute rounded-lg overflow-hidden bg-white shadow-[0_8px_18px_rgba(0,0,0,0.3)]"
         style={{
           width: 138,
           height: 191,

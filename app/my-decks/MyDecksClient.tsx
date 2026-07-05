@@ -69,7 +69,7 @@ function TopPerformerHero({ deck }: { deck: UserDeckCardProps }) {
         style={{ background: "linear-gradient(120deg, #2c2440 0%, #4b3a72 100%)" }}
       >
         <div
-          className="absolute rounded-lg overflow-hidden border-[6px] border-[#f5d34c] bg-white shadow-[0_16px_34px_rgba(0,0,0,0.35)]"
+          className="absolute rounded-lg overflow-hidden bg-white shadow-[0_16px_34px_rgba(0,0,0,0.35)]"
           style={{ width: 130, height: 180, left: "45%", top: "50%", transform: "translate(-50%,-56%) rotate(-4deg)" }}
         >
           {deck.imageUrl ? (
