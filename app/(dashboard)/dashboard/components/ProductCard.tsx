@@ -1,6 +1,6 @@
 import type { ProductData } from "../lib/product";
 import { links } from "../lib/links";
-import { ErrorBox, Sparkline, Stat } from "./Card";
+import { ErrorBox, ExternalLinkPill, Sparkline, Stat } from "./Card";
 
 type Props = { data: ProductData | { error: string } };
 
@@ -19,23 +19,11 @@ export default function ProductCard({ data }: Props) {
           <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
             Supabase · users & content
           </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
-            <a
-              href={links.supabase.auth}
-              target="_blank"
-              rel="noreferrer"
-              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
-            >
-              auth users ↗
-            </a>
-            <a
-              href={links.supabase.table("saved_decks")}
-              target="_blank"
-              rel="noreferrer"
-              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
-            >
-              saved_decks ↗
-            </a>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <ExternalLinkPill href={links.supabase.auth}>auth users</ExternalLinkPill>
+            <ExternalLinkPill href={links.supabase.table("saved_decks")}>
+              saved_decks
+            </ExternalLinkPill>
           </div>
         </div>
 

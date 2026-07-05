@@ -1,5 +1,6 @@
 import { requireDashboardAdmin } from "./lib/auth";
 import DashboardNav from "./components/DashboardNav";
+import { ExternalLinkPill } from "./components/Card";
 
 export const metadata = {
   title: "Dexter Dashboard",
@@ -24,23 +25,11 @@ export default async function DashboardLayout({
             </div>
             <DashboardNav />
           </div>
-          <nav className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-secondary)]">
-            <a
-              href="https://tcgdexter.com"
-              target="_blank"
-              rel="noreferrer"
-              className="hover:text-[var(--text-primary)] hover:underline underline-offset-4"
-            >
-              prod ↗
-            </a>
-            <a
-              href="https://preview.tcgdexter.com"
-              target="_blank"
-              rel="noreferrer"
-              className="hover:text-[var(--text-primary)] hover:underline underline-offset-4"
-            >
-              preview ↗
-            </a>
+          <nav className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-secondary)]">
+            <ExternalLinkPill href="https://tcgdexter.com">prod</ExternalLinkPill>
+            <ExternalLinkPill href="https://preview.tcgdexter.com">
+              preview
+            </ExternalLinkPill>
             {/* Email hidden on very narrow widths — admin already knows who they are */}
             <span className="hidden text-[var(--text-muted)] sm:inline">·</span>
             <span className="hidden truncate max-w-[200px] sm:inline">{email}</span>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ActivationData, BehaviorData } from "../lib/analytics";
-import { ErrorBox } from "./Card";
+import { ErrorBox, InternalLinkPill } from "./Card";
 
 type Maybe<T> = T | { error: string };
 
@@ -74,12 +74,9 @@ function ActivationBlock({ data }: { data: Maybe<ActivationData> }) {
               ) : null}
             </div>
           ) : null}
-          <Link
-            href="/dashboard/analytics"
-            className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline underline-offset-4"
-          >
-            View funnel ↗
-          </Link>
+          <InternalLinkPill href="/dashboard/analytics" className="self-start">
+            View funnel
+          </InternalLinkPill>
         </div>
       )}
     </div>
@@ -142,12 +139,9 @@ function BehaviorBlock({ data }: { data: Maybe<BehaviorData> }) {
             ))}
           </ul>
         ) : null}
-        <Link
-          href="/dashboard/analytics"
-          className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline underline-offset-4"
-        >
-          View behavior ↗
-        </Link>
+        <InternalLinkPill href="/dashboard/analytics" className="self-start">
+          View behavior
+        </InternalLinkPill>
       </div>
     </div>
   );
