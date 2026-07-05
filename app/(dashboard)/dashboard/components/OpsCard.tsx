@@ -68,10 +68,19 @@ export default function OpsCard({ data }: Props) {
       </div>
 
       {latest && (
-        <div>
-          <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-            Steps
-          </div>
+        <details className="group">
+          <summary className="mb-2 flex cursor-pointer list-none items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)] [&::-webkit-details-marker]:hidden">
+            <svg
+              className="h-3 w-3 flex-shrink-0 transition-transform group-open:rotate-180"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+            Details
+          </summary>
           <div className="-mx-1 overflow-x-auto px-1">
             <table className="w-full min-w-[340px] text-xs">
               <thead className="text-[var(--text-muted)]">
@@ -104,7 +113,7 @@ export default function OpsCard({ data }: Props) {
               </tbody>
             </table>
           </div>
-        </div>
+        </details>
       )}
 
       <div className="flex flex-wrap items-center gap-3 border-t border-black/5 pt-3 text-xs">

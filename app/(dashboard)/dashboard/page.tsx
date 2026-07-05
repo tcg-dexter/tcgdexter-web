@@ -85,6 +85,24 @@ export default async function DashboardPage() {
       <div className="flex flex-col gap-6">
         <section>
           <SectionHeader
+            eyebrow="Product"
+            title="Users, decks & traffic"
+            meta="Supabase"
+          />
+          <ProductCard data={product} />
+        </section>
+
+        <section>
+          <SectionHeader
+            eyebrow="Analytics"
+            title="Activation & behavior"
+            meta="In-house · last 7 days"
+          />
+          <AnalyticsPreview activation={activation} behavior={behavior} />
+        </section>
+
+        <section>
+          <SectionHeader
             eyebrow="Operations"
             title="Daily ops pipeline"
             meta="6am cron · writes to ops_runs"
@@ -117,24 +135,6 @@ export default async function DashboardPage() {
             meta="Signups · saved decks · matches"
           />
           <ActivityFeed data={activity} />
-        </section>
-
-        <section>
-          <SectionHeader
-            eyebrow="Product"
-            title="Users, decks & traffic"
-            meta="Supabase"
-          />
-          <ProductCard data={product} />
-        </section>
-
-        <section>
-          <SectionHeader
-            eyebrow="Analytics"
-            title="Activation & behavior"
-            meta="In-house · last 7 days"
-          />
-          <AnalyticsPreview activation={activation} behavior={behavior} />
         </section>
 
         <section>
