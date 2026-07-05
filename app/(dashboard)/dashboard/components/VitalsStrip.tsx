@@ -129,17 +129,7 @@ export default function VitalsStrip({
 
   // --- Deploys vital
   const deploysTile = (() => {
-    if (!deploys.available) {
-      return (
-        <Tile
-          href={links.vercel.deployments()}
-          label="Last deploy"
-          value="—"
-          hint={deploys.reason}
-          accent={<span className="h-2 w-2 rounded-full bg-gray-300" />}
-        />
-      );
-    }
+    if (!deploys.available) return null;
     const latest = deploys.deploys[0];
     if (!latest) {
       return (

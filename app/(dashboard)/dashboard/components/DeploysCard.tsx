@@ -85,6 +85,8 @@ function DeployRow({ d }: { d: Deploy }) {
 }
 
 export default function DeploysCard({ data }: Props) {
+  if (!data.available) return null;
+
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
@@ -101,31 +103,16 @@ export default function DeploysCard({ data }: Props) {
         </a>
       </div>
 
-      {data.available ? (
-        data.deploys.length === 0 ? (
-          <div className="py-6 text-center text-xs text-[var(--text-muted)]">
-            No recent deployments returned.
-          </div>
-        ) : (
-          <ul className="-mx-2 divide-y divide-black/5">
-            {data.deploys.map((d) => (
-              <DeployRow key={d.id} d={d} />
-            ))}
-          </ul>
-        )
-      ) : (
-        <div className="text-xs text-[var(--text-muted)]">
-          Not available — {data.reason}.{" "}
-          <a
-            href={links.vercel.deployments()}
-            target="_blank"
-            rel="noreferrer"
-            className="underline"
-          >
-            Open Vercel
-          </a>
-          .
+      {data.deploys.length === 0 ? (
+        <div className="py-6 text-center text-xs text-[var(--text-muted)]">
+          No recent deployments returned.
         </div>
+      ) : (
+        <ul className="-mx-2 divide-y divide-black/5">
+          {data.deploys.map((d) => (
+            <DeployRow key={d.id} d={d} />
+          ))}
+        </ul>
       )}
     </div>
   );
