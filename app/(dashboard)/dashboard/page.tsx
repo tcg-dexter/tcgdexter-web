@@ -119,14 +119,16 @@ export default async function DashboardPage() {
           <QuickLinks />
         </section>
 
-        <section>
-          <SectionHeader
-            eyebrow="Deploys"
-            title="Recent builds"
-            meta="Vercel · last 8"
-          />
-          <DeploysCard data={deploys} />
-        </section>
+        {deploys.available && (
+          <section>
+            <SectionHeader
+              eyebrow="Deploys"
+              title="Recent builds"
+              meta="Vercel · last 8"
+            />
+            <DeploysCard data={deploys} />
+          </section>
+        )}
 
         <section>
           <SectionHeader
