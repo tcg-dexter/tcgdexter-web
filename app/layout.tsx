@@ -7,6 +7,7 @@ import SiteNav from "./components/ui/SiteNav";
 import SiteFooter from "./components/ui/SiteFooter";
 import GlobalSearchHotkey from "./components/ui/GlobalSearchHotkey";
 import NavigationTracker from "./components/ui/NavigationTracker";
+import BrandGradientDefs from "./components/BrandGradientDefs";
 
 const DASHBOARD_HOST = "dashboard.tcgdexter.com";
 
@@ -64,6 +65,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased text-[var(--text-primary)]`}
       >
+        <BrandGradientDefs />
         <ThemeProvider>
           {isDashboard ? (
             <div className="min-h-dvh bg-bg text-text-primary antialiased overflow-x-hidden">

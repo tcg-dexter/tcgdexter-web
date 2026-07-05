@@ -6,7 +6,7 @@ import { isTrustedCardImageUrl } from "@/lib/cardImages";
 /**
  * DELETE /api/saved-decks/[id]
  * PATCH  /api/saved-decks/[id]
- *   body: { name?, notes?, is_public?, cover_image_url?, deck_list?, analysis? }
+ *   body: { name?, notes?, is_public?, is_favorite?, cover_image_url?, deck_list?, analysis? }
  *   When deck_list changes the caller also sends a freshly-computed analysis
  *   (from POST /api/analyze) so the stored snapshot stays in sync.
  *
@@ -69,6 +69,7 @@ export async function PATCH(
     name?: string;
     notes?: string;
     is_public?: boolean;
+    is_favorite?: boolean;
     cover_image_url?: string | null;
     deck_list?: string;
     analysis?: unknown;
@@ -99,6 +100,10 @@ export async function PATCH(
 
   if (typeof body.is_public === "boolean") {
     updates.is_public = body.is_public;
+  }
+
+  if (typeof body.is_favorite === "boolean") {
+    updates.is_favorite = body.is_favorite;
   }
 
   // Cover image: null clears the override; otherwise must be one of our
@@ -169,6 +174,10 @@ export async function PATCH(
       ? updates.is_public === true
         ? "deck.published"
         : "deck.unpublished"
+      : "is_favorite" in updates
+      ? updates.is_favorite === true
+        ? "deck.favorited"
+        : "deck.unfavorited"
       : "deck.updated";
   void track(req, eventName, { id, fields: updatedFields });
 
