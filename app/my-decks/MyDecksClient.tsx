@@ -263,7 +263,7 @@ export default function MyDecksClient({ decks }: Props) {
         <SectionHeader title="Deck Collection" />
       </div>
 
-      {pinnedDeck && <PinnedDeckHero deck={pinnedDeck} />}
+      {pinnedDeck && <PinnedDeckHero key={pinnedDeck.id} deck={pinnedDeck} />}
 
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
