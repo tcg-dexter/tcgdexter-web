@@ -23,6 +23,7 @@ interface DeckRow {
   like_count: number;
   is_public: boolean;
   is_favorite: boolean;
+  is_pinned: boolean;
   cover_image_url: string | null;
 }
 
@@ -53,7 +54,7 @@ export default async function MyDecksPage() {
 
   const { data: decksRaw } = await supabase
     .from("saved_decks")
-    .select("id, short_id, name, deck_list, analysis, updated_at, created_at, like_count, is_public, is_favorite, cover_image_url")
+    .select("id, short_id, name, deck_list, analysis, updated_at, created_at, like_count, is_public, is_favorite, is_pinned, cover_image_url")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
   const decks = (decksRaw ?? []) as DeckRow[];
@@ -81,6 +82,7 @@ export default async function MyDecksPage() {
       likeCount: deck.like_count,
       isPrivate: !deck.is_public,
       isFavorite: deck.is_favorite,
+      isPinned: deck.is_pinned,
       legalityReady: deck.analysis?.rotation?.ready ?? null,
       archetypeName: deck.analysis?.metaMatch?.archetypeName ?? null,
       archetypeId: deck.analysis?.metaMatch?.archetypeId ?? null,
