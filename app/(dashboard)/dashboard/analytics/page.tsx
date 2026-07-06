@@ -99,14 +99,10 @@ export default async function AnalyticsPage({
 
       {/* ── Products (primary lens) ─────────────────────────────────────── */}
       <section>
-        <SectionHeader
-          eyebrow="Products"
-          title="What's happening across the surfaces we ship"
-          meta="Card Catalog · Deck Collection · Meta Archetypes · Playmat Studio · Spotlight · Learn to Play"
-        />
-        <SectionCard>
-          <ProductAdoptionList rows={behavior.products} />
-        </SectionCard>
+        <h1 className="mb-4 text-2xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-3xl">
+          Products
+        </h1>
+        <ProductAdoptionList rows={behavior.products} />
       </section>
 
       {/* ── What changed ────────────────────────────────────────────────── */}
