@@ -10,8 +10,7 @@ import CompositionRing, { CompositionLegend } from "./CompositionRing";
 import { type MatchFormData } from "./MatchForm";
 import MatchEntry from "./MatchEntry";
 import QRCodeButton from "./QRCodeButton";
-import { deckAvatarInfo } from "@/lib/primaryCardImage";
-import { metaTopPokemonByCount } from "@/lib/metaPrimaryCard";
+import { buildAvatarItems } from "@/lib/deckAvatarItems";
 import { shade } from "@/lib/color";
 import { useFadeIn } from "@/lib/useFadeIn";
 
@@ -241,7 +240,7 @@ export interface UserDeckCardProps {
   index?: number;
 }
 
-function DeckBanner({
+export function DeckBanner({
   imageUrl,
   name,
   iconBg,
@@ -360,36 +359,10 @@ export function UserDeckCard({
   const [isFavorite, setIsFavorite] = useState(initialIsFavorite);
   const [logOpen, setLogOpen] = useState(false);
 
-  // Avatar 1 = the existing primary sprite. Slots 2 & 3 are picked from a
-  // larger candidate pool (next Pokémon by total copy count, deduped
-  // against avatar 1's evolution line — same logic as MetaVariantCard).
-  // We over-fetch the pool so AvatarStack can shift forward when a sprite
-  // 404s on the limitless host (some forms / regionals aren't covered).
-  const avatarItems = useMemo<AvatarStackItem[]>(() => {
-    const primaryItem: AvatarStackItem = {
-      key: "primary",
-      iconUrl: iconUrl ?? null,
-      iconBg: iconBg ?? null,
-    };
-    if (!cards || cards.length === 0) return [primaryItem];
-    const primary = deckAvatarInfo(cards, coverImageUrl);
-    const adapted = cards.map((c) => ({
-      qty: c.qty,
-      name: c.name,
-      number: c.number,
-      setCode: c.setCode,
-      category: c.section,
-    }));
-    const pool = metaTopPokemonByCount(
-      adapted,
-      5,
-      primary ? [primary.name] : [],
-    );
-    return [
-      primaryItem,
-      ...pool.map((a) => ({ key: a.name, iconUrl: a.iconUrl, iconBg: a.iconBg })),
-    ];
-  }, [cards, coverImageUrl, iconUrl, iconBg]);
+  const avatarItems = useMemo(
+    () => buildAvatarItems(cards, coverImageUrl, iconUrl, iconBg),
+    [cards, coverImageUrl, iconUrl, iconBg],
+  );
 
   async function toggleFavorite(e: React.MouseEvent) {
     e.preventDefault();
