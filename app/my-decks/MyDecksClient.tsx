@@ -2,9 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import SectionHeader from "@/app/components/ui/SectionHeader";
 import PillSelect from "@/app/components/ui/PillSelect";
 import { UserDeckCard, type UserDeckCardProps } from "@/app/components/DeckPostCard";
+import QRCodeButton from "@/app/components/QRCodeButton";
+import MatchForm, { type MatchFormData } from "@/app/components/MatchForm";
 import SavedDeckRow from "./SavedDeckRow";
 import { normalizeForSearch } from "@/lib/searchNormalize";
 
@@ -21,11 +24,11 @@ type SortKey =
   | "trainer"
   | "energy";
 type SortDir = "asc" | "desc";
-type FilterKey = "all" | "favorites" | "standard";
 type ViewMode = "grid" | "list";
 
 const VIEW_MODE_KEY = "myDecksViewMode";
 const MIN_MATCHES_FOR_HERO = 3;
+const TOOLBAR_ITEM_HEIGHT = "h-[38px]";
 
 function sortValue(deck: UserDeckCardProps, key: SortKey): number | string {
   switch (key) {
@@ -59,11 +62,53 @@ function currentStreak(recentForm?: ("W" | "L" | "D")[]): string | null {
   return `${first}${count}`;
 }
 
-function TopPerformerHero({ deck }: { deck: UserDeckCardProps }) {
-  const wl = deck.wl;
-  const streak = currentStreak(wl?.recentForm);
+function PinIcon({ className }: { className?: string }) {
   return (
-    <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden flex flex-col md:flex-row mb-4">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 21s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12z" />
+      <circle cx="12" cy="9" r="2.5" />
+    </svg>
+  );
+}
+
+function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
+  const router = useRouter();
+  const [logOpen, setLogOpen] = useState(false);
+  const wl = deck.wl;
+  const hasRecord = !!wl && wl.w + wl.l + wl.d > 0;
+  const streak = currentStreak(wl?.recentForm);
+
+  async function handleQuickLog(data: MatchFormData) {
+    const res = await fetch("/api/matches", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ saved_deck_id: deck.id, ...data }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error ?? "Failed to log match.");
+    }
+    setLogOpen(false);
+    router.refresh();
+  }
+
+  const capsuleBase =
+    "inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-[13px] font-semibold transition-colors";
+
+  return (
+    <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden flex flex-col md:flex-row mb-4">
+      <div className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-accent">
+        <PinIcon className="w-4 h-4" />
+      </div>
+
       <div
         className="relative h-[170px] md:h-auto md:w-[360px] shrink-0 overflow-hidden"
         style={{ background: "linear-gradient(120deg, #2c2440 0%, #4b3a72 100%)" }}
@@ -79,10 +124,7 @@ function TopPerformerHero({ deck }: { deck: UserDeckCardProps }) {
         </div>
       </div>
       <div className="flex-1 p-5 md:p-6">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fdeeee] px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#c03434]">
-          ★ Top performer
-        </span>
-        <Link href={deck.href} className="block mt-2.5 text-[26px] font-bold text-text-primary hover:underline underline-offset-2 leading-tight">
+        <Link href={deck.href} className="block text-[26px] font-bold text-text-primary hover:underline underline-offset-2 leading-tight">
           {deck.name}
         </Link>
         <p className="text-[13.5px] text-text-secondary mt-1">
@@ -91,53 +133,63 @@ function TopPerformerHero({ deck }: { deck: UserDeckCardProps }) {
             .join(" · ")}
         </p>
 
-        <div className="flex flex-wrap gap-x-9 gap-y-3 mt-4">
-          <div>
-            <div className="text-[24px] font-extrabold tabular-nums text-text-primary">{wl?.w}–{wl?.l}</div>
-            <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Record</div>
-          </div>
-          <div>
-            <div className="text-[24px] font-extrabold tabular-nums text-[#127a3c]">{wl?.winRatePct}%</div>
-            <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Win rate</div>
-          </div>
-          {streak && (
+        {hasRecord ? (
+          <div className="flex flex-wrap gap-x-9 gap-y-3 mt-4">
             <div>
-              <div className="text-[24px] font-extrabold tabular-nums text-text-primary">{streak}</div>
-              <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Streak</div>
+              <div className="text-[24px] font-extrabold tabular-nums text-text-primary">{wl!.w}–{wl!.l}</div>
+              <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Record</div>
             </div>
-          )}
-          {wl?.recentForm && wl.recentForm.length > 0 && (
             <div>
-              <div className="flex gap-1">
-                {wl.recentForm.map((r, i) => (
-                  <span
-                    key={i}
-                    className={`w-[22px] h-[22px] rounded-[6px] text-[10.5px] font-extrabold flex items-center justify-center ${
-                      r === "W" ? "bg-[#e7f4eb] text-[#127a3c]" : r === "L" ? "bg-[#fdeeee] text-[#c03434]" : "bg-black/5 text-text-muted"
-                    }`}
-                  >
-                    {r}
-                  </span>
-                ))}
+              <div className="text-[24px] font-extrabold tabular-nums text-[#127a3c]">{wl!.winRatePct}%</div>
+              <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Win rate</div>
+            </div>
+            {streak && (
+              <div>
+                <div className="text-[24px] font-extrabold tabular-nums text-text-primary">{streak}</div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Streak</div>
               </div>
-              <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted mt-1.5">Recent form</div>
-            </div>
-          )}
-        </div>
+            )}
+            {wl?.recentForm && wl.recentForm.length > 0 && (
+              <div>
+                <div className="flex gap-1">
+                  {wl.recentForm.map((r, i) => (
+                    <span
+                      key={i}
+                      className={`w-[22px] h-[22px] rounded-[6px] text-[10.5px] font-extrabold flex items-center justify-center ${
+                        r === "W" ? "bg-[#e7f4eb] text-[#127a3c]" : r === "L" ? "bg-[#fdeeee] text-[#c03434]" : "bg-black/5 text-text-muted"
+                      }`}
+                    >
+                      {r}
+                    </span>
+                  ))}
+                </div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted mt-1.5">Recent form</div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-[13px] font-semibold text-text-muted mt-4">No matches logged yet</p>
+        )}
 
         <div className="flex flex-wrap gap-2 mt-5">
-          <Link href={deck.href} className="rounded-xl border border-transparent bg-black px-4 py-2.5 text-[13px] font-semibold text-white">
-            Open deck
+          <button
+            type="button"
+            onClick={() => setLogOpen((v) => !v)}
+            className={`${capsuleBase} bg-black text-white`}
+          >
+            Log match
+          </button>
+          <QRCodeButton shareUrl={deck.href} className={`${capsuleBase} border border-black/10 bg-white text-text-primary hover:bg-black/[0.03]`} />
+          <Link href={deck.href} className={`${capsuleBase} bg-accent text-white`}>
+            View deck
           </Link>
-          {deck.archetypeId && (
-            <Link
-              href={`/meta-archetypes/${deck.archetypeId}`}
-              className="rounded-xl border border-transparent bg-accent px-4 py-2.5 text-[13px] font-semibold text-white"
-            >
-              Compare vs meta
-            </Link>
-          )}
         </div>
+
+        {logOpen && (
+          <div className="mt-4 max-w-sm">
+            <MatchForm compact onSubmit={handleQuickLog} onCancel={() => setLogOpen(false)} />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -147,7 +199,7 @@ export default function MyDecksClient({ decks }: Props) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("date");
   const [dir, setDir] = useState<SortDir>("desc");
-  const [filter, setFilter] = useState<FilterKey>("all");
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [view, setView] = useState<ViewMode>("grid");
 
   useEffect(() => {
@@ -160,24 +212,31 @@ export default function MyDecksClient({ decks }: Props) {
     window.localStorage.setItem(VIEW_MODE_KEY, next);
   }
 
-  const topPerformer = useMemo(() => {
+  // The hero always shows exactly one deck once the collection is non-empty:
+  // the user's explicit pin, else the winningest deck (min match threshold
+  // so a 1-0 fluke can't dominate), else simply the first deck.
+  const pinnedDeck = useMemo(() => {
+    if (decks.length === 0) return null;
+    const pinned = decks.find((d) => d.isPinned);
+    if (pinned) return pinned;
     const qualifying = decks.filter((d) => d.wl && d.wl.w + d.wl.l >= MIN_MATCHES_FOR_HERO);
-    if (qualifying.length === 0) return null;
-    return qualifying.reduce((best, d) => {
-      const bestPct = best.wl?.winRatePct ?? -1;
-      const dPct = d.wl?.winRatePct ?? -1;
-      if (dPct !== bestPct) return dPct > bestPct ? d : best;
-      const bestGames = (best.wl?.w ?? 0) + (best.wl?.l ?? 0);
-      const dGames = (d.wl?.w ?? 0) + (d.wl?.l ?? 0);
-      return dGames > bestGames ? d : best;
-    });
+    if (qualifying.length > 0) {
+      return qualifying.reduce((best, d) => {
+        const bestPct = best.wl?.winRatePct ?? -1;
+        const dPct = d.wl?.winRatePct ?? -1;
+        if (dPct !== bestPct) return dPct > bestPct ? d : best;
+        const bestGames = (best.wl?.w ?? 0) + (best.wl?.l ?? 0);
+        const dGames = (d.wl?.w ?? 0) + (d.wl?.l ?? 0);
+        return dGames > bestGames ? d : best;
+      });
+    }
+    return decks[0];
   }, [decks]);
 
   const filtered = useMemo(() => {
     const q = normalizeForSearch(query.trim());
     let base = q ? decks.filter((d) => normalizeForSearch(d.name).includes(q)) : decks;
-    if (filter === "favorites") base = base.filter((d) => d.isFavorite);
-    else if (filter === "standard") base = base.filter((d) => d.legalityReady !== false);
+    if (favoritesOnly) base = base.filter((d) => d.isFavorite);
     const sorted = [...base].sort((a, b) => {
       const av = sortValue(a, sort);
       const bv = sortValue(b, sort);
@@ -186,7 +245,7 @@ export default function MyDecksClient({ decks }: Props) {
       return 0;
     });
     return sorted;
-  }, [decks, query, sort, dir, filter]);
+  }, [decks, query, sort, dir, favoritesOnly]);
 
   return (
     <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
@@ -194,15 +253,7 @@ export default function MyDecksClient({ decks }: Props) {
         <SectionHeader title="Deck Collection" />
       </div>
 
-      {topPerformer ? (
-        <TopPerformerHero deck={topPerformer} />
-      ) : decks.length > 0 ? (
-        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5 text-center mb-4">
-          <p className="text-sm text-text-secondary">
-            Log a few matches to crown a top performer — decks need at least {MIN_MATCHES_FOR_HERO} decisive games to qualify.
-          </p>
-        </div>
-      ) : null}
+      {pinnedDeck && <PinnedDeckHero deck={pinnedDeck} />}
 
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
@@ -233,16 +284,16 @@ export default function MyDecksClient({ decks }: Props) {
           />
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-full bg-black/5 p-[3px]">
+          <div className={`flex items-center ${TOOLBAR_ITEM_HEIGHT} rounded-full bg-black/5 p-[3px]`}>
             <button
               onClick={() => changeView("grid")}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors ${view === "grid" ? "bg-white text-text-primary shadow-sm" : "text-text-muted"}`}
+              className={`h-full flex items-center px-3.5 rounded-full text-xs font-bold transition-colors ${view === "grid" ? "bg-white text-text-primary shadow-sm" : "text-text-muted"}`}
             >
               Grid
             </button>
             <button
               onClick={() => changeView("list")}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors ${view === "list" ? "bg-white text-text-primary shadow-sm" : "text-text-muted"}`}
+              className={`h-full flex items-center px-3.5 rounded-full text-xs font-bold transition-colors ${view === "list" ? "bg-white text-text-primary shadow-sm" : "text-text-muted"}`}
             >
               List
             </button>
@@ -270,6 +321,28 @@ export default function MyDecksClient({ decks }: Props) {
             <option value="energy:desc">Energy Card Count (Descending)</option>
             <option value="energy:asc">Energy Card Count (Ascending)</option>
           </PillSelect>
+          <button
+            type="button"
+            onClick={() => setFavoritesOnly((v) => !v)}
+            aria-pressed={favoritesOnly}
+            title={favoritesOnly ? "Showing favorites only" : "Show favorites only"}
+            className={`${TOOLBAR_ITEM_HEIGHT} inline-flex items-center gap-1.5 px-3 rounded-full text-xs font-semibold transition-colors ${
+              favoritesOnly ? "bg-black text-white" : "bg-white text-text-secondary border border-black/8"
+            }`}
+          >
+            <svg
+              className="w-3.5 h-3.5"
+              viewBox="0 0 24 24"
+              fill={favoritesOnly ? "currentColor" : "none"}
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+            </svg>
+            Favorites
+          </button>
           <Link
             href="/"
             className="text-xs font-semibold h-[38px] inline-flex items-center px-3 rounded-full border border-transparent bg-gradient-brand bg-origin-border text-white shadow-brand hover:shadow-brand-lg transition"
@@ -277,25 +350,6 @@ export default function MyDecksClient({ decks }: Props) {
             + New Deck
           </Link>
         </div>
-      </div>
-
-      {/* Filter chips */}
-      <div className="flex items-center gap-2 mb-4">
-        {([
-          ["all", "All decks"],
-          ["favorites", "♥ Favorites"],
-          ["standard", "Standard-legal"],
-        ] as [FilterKey, string][]).map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => setFilter(key)}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-              filter === key ? "bg-black text-white" : "bg-white text-text-secondary border border-black/8"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
       </div>
 
       {decks.length === 0 ? (
