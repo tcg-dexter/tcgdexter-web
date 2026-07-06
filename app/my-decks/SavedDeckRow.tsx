@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import MatchForm, { type MatchFormData } from "@/app/components/MatchForm";
+import { type MatchFormData } from "@/app/components/MatchForm";
+import MatchEntry from "@/app/components/MatchEntry";
 import type { UserDeckCardProps } from "@/app/components/DeckPostCard";
 
 /** Compact three-segment composition bar — the List-view counterpart to
@@ -65,8 +66,9 @@ function FormPips({ recentForm }: { recentForm?: ("W" | "L" | "D")[] }) {
  * Single row in the My Decks List view. Mirrors the fields shown on the
  * Grid card (UserDeckCard) in a denser, table-like layout: record + win
  * rate, recent form, composition, legality, price, and quick actions.
- * Tapping the row navigates to the deck profile; Log Match expands an
- * inline MatchForm without leaving the page.
+ * Tapping the row navigates to the deck profile; Log match expands the
+ * same inline MatchEntry flow (Single/Best of 3/TCG Live import) used by
+ * the grid cards and the pinned-deck hero, without leaving the page.
  */
 export default function SavedDeckRow({
   id,
@@ -174,14 +176,23 @@ export default function SavedDeckRow({
               backgroundClip: "padding-box, border-box",
             }}
           >
-            Log
+            Log match
           </button>
         </div>
       </div>
 
       {logOpen && (
         <div className="px-4 pb-4">
-          <MatchForm compact onSubmit={handleQuickLog} onCancel={() => setLogOpen(false)} />
+          <MatchEntry
+            savedDeckId={id}
+            onSubmitManual={handleQuickLog}
+            onImported={() => {
+              setLogOpen(false);
+              router.refresh();
+            }}
+            onCancel={() => setLogOpen(false)}
+            scrollToTopOnCancel={false}
+          />
         </div>
       )}
     </div>
