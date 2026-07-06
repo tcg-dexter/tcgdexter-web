@@ -34,11 +34,20 @@ interface Props {
   savedDeckId: string;
   onSuccess: () => void;
   onCancel: () => void;
+  /** Whether Cancel scrolls the page to top before closing. Defaults to
+   *  true (deck-profile behavior); grid preview cards pass false since
+   *  the form sits inline in the page flow. */
+  scrollToTopOnCancel?: boolean;
 }
 
 type Phase = "paste" | "review";
 
-export default function BattleLogImportTab({ savedDeckId, onSuccess, onCancel }: Props) {
+export default function BattleLogImportTab({
+  savedDeckId,
+  onSuccess,
+  onCancel,
+  scrollToTopOnCancel = true,
+}: Props) {
   const [phase, setPhase] = useState<Phase>("paste");
   const [raw, setRaw] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -242,7 +251,7 @@ export default function BattleLogImportTab({ savedDeckId, onSuccess, onCancel }:
           </button>
           <button
             onClick={() => {
-              window.scrollTo({ top: 0, behavior: "smooth" });
+              if (scrollToTopOnCancel) window.scrollTo({ top: 0, behavior: "smooth" });
               onCancel();
             }}
             className="rounded-full border border-border bg-bg px-4 py-2 text-sm font-semibold text-text-secondary hover:bg-surface-2 transition-all"
