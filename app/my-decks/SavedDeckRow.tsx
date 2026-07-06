@@ -98,7 +98,7 @@ export default function SavedDeckRow({
       <div className="flex items-center gap-3.5 px-4 py-3">
         <Link href={href} className="shrink-0">
           <div
-            className="w-11 h-14 rounded-[5px] border-[3px] border-[#f5d34c] bg-surface overflow-hidden flex items-center justify-center"
+            className="w-11 h-14 rounded-[5px] bg-surface overflow-hidden flex items-center justify-center"
           >
             {imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
