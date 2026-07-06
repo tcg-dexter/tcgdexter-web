@@ -8,6 +8,7 @@ import DeckCardMenu from "./DeckCardMenu";
 import AvatarStack, { type AvatarStackItem } from "./AvatarStack";
 import CompositionRing, { CompositionLegend } from "./CompositionRing";
 import MatchForm, { type MatchFormData } from "./MatchForm";
+import QRCodeButton from "./QRCodeButton";
 import { deckAvatarInfo } from "@/lib/primaryCardImage";
 import { metaTopPokemonByCount } from "@/lib/metaPrimaryCard";
 import { shade } from "@/lib/color";
@@ -197,6 +198,9 @@ export interface UserDeckCardProps {
   /** Personal bookmark flag (saved_decks.is_favorite) — private to the
    *  owner, distinct from the public Like feature in DeckCardFooter. */
   isFavorite?: boolean;
+  /** Whether this is the single deck pinned to the /my-decks hero. Drives
+   *  whether the manage menu offers "Pin this deck". */
+  isPinned?: boolean;
   /** analysis.rotation.ready — false when the deck contains cards that have
    *  rotated out of Standard. Null when no analysis snapshot exists. */
   legalityReady?: boolean | null;
@@ -263,6 +267,23 @@ function DeckBanner({
       className="relative h-[150px] overflow-hidden"
       style={{ background: `linear-gradient(120deg, ${accentDeep} 0%, ${accentBg} 100%)` }}
     >
+      <div
+        aria-hidden
+        className="absolute rounded-lg overflow-hidden bg-white"
+        style={{
+          width: 166,
+          height: 229,
+          left: "44%",
+          top: "50%",
+          opacity: 0.2,
+          transform: "translate(-50%, -50%) scale(3) rotate(-4deg)",
+        }}
+      >
+        {imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={imageUrl} alt="" className="w-full h-full object-cover" />
+        ) : null}
+      </div>
       {showFavorite && (
         <button
           type="button"
@@ -320,9 +341,8 @@ export function UserDeckCard({
   imageUrl: initialImageUrl,
   counts,
   wl,
-  likeCount = 0,
-  ownerUserId,
   isFavorite: initialIsFavorite = false,
+  isPinned = false,
   iconUrl,
   iconBg,
   cards,
@@ -428,6 +448,7 @@ export function UserDeckCard({
               deckName={name}
               deckList={deckList}
               isPublic={isPublic}
+              isPinned={isPinned}
               cards={cards ?? []}
               coverImageUrl={coverImageUrl}
             />
@@ -455,17 +476,10 @@ export function UserDeckCard({
         >
           Log match
         </button>
-        <div className="flex-1 [&>div:first-child]:border-t-0 [&>div:first-child]:justify-center [&>div:first-child]:border-l [&>div:first-child]:border-black/5">
-          <DeckCardFooter
-            deckId={id}
-            ownerUserId={ownerUserId}
-            initialLikes={likeCount}
-            saveHref={href}
-            deckName={name}
-            hideSave
-            hideLikes
-          />
-        </div>
+        <QRCodeButton
+          shareUrl={href}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 text-[13px] font-semibold text-text-primary hover:bg-black/[0.03] transition-colors border-l border-black/5"
+        />
       </div>
 
       {logOpen && (
