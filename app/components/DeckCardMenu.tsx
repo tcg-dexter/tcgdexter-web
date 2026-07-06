@@ -24,6 +24,7 @@ interface Props {
   deckName: string;
   deckList: string;
   isPublic: boolean;
+  isPinned?: boolean;
   cards: DeckCard[];
   coverImageUrl: string | null;
 }
@@ -42,6 +43,7 @@ export default function DeckCardMenu({
   deckName,
   deckList,
   isPublic: initialIsPublic,
+  isPinned = false,
   cards,
   coverImageUrl: initialCoverImageUrl,
 }: Props) {
@@ -56,6 +58,7 @@ export default function DeckCardMenu({
   const [copied, setCopied] = useState(false);
   const [isPublic, setIsPublic] = useState(initialIsPublic);
   const [visibilityBusy, setVisibilityBusy] = useState(false);
+  const [pinBusy, setPinBusy] = useState(false);
 
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -139,6 +142,21 @@ export default function DeckCardMenu({
       setIsPublic(!next);
     } finally {
       setVisibilityBusy(false);
+    }
+  }
+
+  async function pinDeck() {
+    if (pinBusy || isPinned) return;
+    setPinBusy(true);
+    try {
+      const res = await fetch(`/api/saved-decks/${deckId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_pinned: true }),
+      });
+      if (res.ok) router.refresh();
+    } finally {
+      setPinBusy(false);
     }
   }
 
@@ -271,6 +289,20 @@ export default function DeckCardMenu({
             >
               {isPublic ? "Make private" : "Make public"}
             </button>
+            {!isPinned && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  pinDeck();
+                  setOpen(false);
+                }}
+                disabled={pinBusy}
+                className="w-full text-left rounded-lg px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface-2 transition-colors disabled:opacity-50"
+              >
+                Pin this deck
+              </button>
+            )}
             <button
               type="button"
               role="menuitem"
