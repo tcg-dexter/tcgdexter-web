@@ -1,6 +1,6 @@
-import { Sparkline } from "./Card";
+import { SectionCard, Sparkline } from "./Card";
 import type { ProductRow } from "../lib/analytics";
-import { PRODUCT_BAR, PRODUCT_CHIP, PRODUCT_STROKE } from "../lib/products";
+import { PRODUCT_BAR, PRODUCT_STROKE } from "../lib/products";
 
 // Per-event labels reused beneath each Product card so the underlying
 // instrumentation is still visible without dominating the page.
@@ -69,22 +69,18 @@ export default function ProductAdoptionList({ rows }: { rows: ProductRow[] }) {
   });
 
   return (
-    <div className="flex flex-col divide-y divide-black/5">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {sorted.map((r) => {
-        const chip = PRODUCT_CHIP[r.productKey];
         const barClass = PRODUCT_BAR[r.productKey];
         const stroke = PRODUCT_STROKE[r.productKey];
         const widthPct = maxFires > 0 ? (r.fireCount / maxFires) * 100 : 0;
         const hasEvents = r.events.length > 0;
         return (
-          <div key={r.productKey} className="py-5">
-            {/* Identity row */}
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span
-                className={`shrink-0 rounded-full px-1.5 py-[1px] text-[10px] font-semibold uppercase tracking-wider ${chip}`}
-              >
-                Product
-              </span>
+          <SectionCard key={r.productKey}>
+            {/* Identity row — a product-coloured dot stands in for the old
+                "PRODUCT" chip now that each row is its own titled cell. */}
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <span className={`h-2 w-2 shrink-0 rounded-full ${barClass}`} />
               <span className="text-base font-semibold tracking-tight text-[var(--text-primary)]">
                 {r.label}
               </span>
@@ -189,7 +185,7 @@ export default function ProductAdoptionList({ rows }: { rows: ProductRow[] }) {
                 })}
               </div>
             )}
-          </div>
+          </SectionCard>
         );
       })}
     </div>
