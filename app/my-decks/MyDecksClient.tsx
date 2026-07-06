@@ -113,10 +113,10 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
           style={{
             width: 130,
             height: 180,
-            left: "45%",
+            left: "50%",
             top: "50%",
             opacity: 0.2,
-            transform: "translate(-50%, -30%) scale(3) rotate(-4deg)",
+            transform: "translate(-50%, -50%) scale(3) rotate(-4deg)",
           }}
         >
           {deck.imageUrl ? (
@@ -126,7 +126,7 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
         </div>
         <div
           className="absolute rounded-lg overflow-hidden bg-white shadow-[0_16px_34px_rgba(0,0,0,0.35)]"
-          style={{ width: 130, height: 180, left: "45%", top: "50%", transform: "translate(-50%,-56%) rotate(-4deg)" }}
+          style={{ width: 130, height: 180, left: "50%", top: "50%", transform: "translate(-50%,-50%) rotate(-4deg)" }}
         >
           {deck.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
