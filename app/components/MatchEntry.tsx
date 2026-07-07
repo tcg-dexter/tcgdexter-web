@@ -11,6 +11,8 @@ interface Props {
   /** Called when an import completes successfully. Parent should refresh. */
   onImported: () => void;
   onCancel: () => void;
+  /** Whether Cancel scrolls the page to top before closing. Defaults to true. */
+  scrollToTopOnCancel?: boolean;
 }
 
 type Tab = "single" | "bo3" | "import";
@@ -36,6 +38,7 @@ export default function MatchEntry({
   onSubmitManual,
   onImported,
   onCancel,
+  scrollToTopOnCancel = true,
 }: Props) {
   const [tab, setTab] = useState<Tab>("single");
   const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({
@@ -126,6 +129,7 @@ export default function MatchEntry({
             savedDeckId={savedDeckId}
             onSuccess={onImported}
             onCancel={onCancel}
+            scrollToTopOnCancel={scrollToTopOnCancel}
           />
         ) : (
           <MatchForm
@@ -133,6 +137,7 @@ export default function MatchEntry({
             onCancel={onCancel}
             bestOf3={tab === "bo3"}
             onBestOf3Change={(v) => setTab(v ? "bo3" : "single")}
+            scrollToTopOnCancel={scrollToTopOnCancel}
           />
         )}
       </div>
