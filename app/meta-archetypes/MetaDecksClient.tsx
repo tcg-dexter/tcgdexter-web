@@ -95,18 +95,18 @@ export default function MetaDecksClient({ items }: Props) {
               setDir(d);
             }}
           >
-            <option value="representation:desc">Meta Share (Descending)</option>
-            <option value="representation:asc">Meta Share (Ascending)</option>
+            <option value="representation:desc">Meta Share ↓</option>
+            <option value="representation:asc">Meta Share ↑</option>
             <option value="name:asc">Deck Name (A–Z)</option>
             <option value="name:desc">Deck Name (Z–A)</option>
-            <option value="likes:desc">Likes (Descending)</option>
-            <option value="likes:asc">Likes (Ascending)</option>
-            <option value="pokemon:desc">Pokémon Card Count (Descending)</option>
-            <option value="pokemon:asc">Pokémon Card Count (Ascending)</option>
-            <option value="trainer:desc">Trainer Card Count (Descending)</option>
-            <option value="trainer:asc">Trainer Card Count (Ascending)</option>
-            <option value="energy:desc">Energy Card Count (Descending)</option>
-            <option value="energy:asc">Energy Card Count (Ascending)</option>
+            <option value="likes:desc">Likes ↓</option>
+            <option value="likes:asc">Likes ↑</option>
+            <option value="pokemon:desc">Pokémon Card Count ↓</option>
+            <option value="pokemon:asc">Pokémon Card Count ↑</option>
+            <option value="trainer:desc">Trainer Card Count ↓</option>
+            <option value="trainer:asc">Trainer Card Count ↑</option>
+            <option value="energy:desc">Energy Card Count ↓</option>
+            <option value="energy:asc">Energy Card Count ↑</option>
           </PillSelect>
         </div>
       </div>
