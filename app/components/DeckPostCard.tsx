@@ -462,20 +462,24 @@ export function UserDeckCard({
         />
       </div>
 
-      {logOpen && (
-        <div className="border-t border-black/5 p-3.5">
-          <MatchEntry
-            savedDeckId={id}
-            onSubmitManual={handleQuickLog}
-            onImported={() => {
-              setLogOpen(false);
-              router.refresh();
-            }}
-            onCancel={() => setLogOpen(false)}
-            scrollToTopOnCancel={false}
-          />
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${logOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+      >
+        <div className="overflow-hidden">
+          <div className="border-t border-black/5 p-3.5">
+            <MatchEntry
+              savedDeckId={id}
+              onSubmitManual={handleQuickLog}
+              onImported={() => {
+                setLogOpen(false);
+                router.refresh();
+              }}
+              onCancel={() => setLogOpen(false)}
+              scrollToTopOnCancel={false}
+            />
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
