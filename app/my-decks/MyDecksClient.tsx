@@ -160,23 +160,6 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
                 <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Streak</div>
               </div>
             )}
-            {wl?.recentForm && wl.recentForm.length > 0 && (
-              <div>
-                <div className="flex gap-1">
-                  {wl.recentForm.map((r, i) => (
-                    <span
-                      key={i}
-                      className={`w-[22px] h-[22px] rounded-[6px] text-[10.5px] font-extrabold flex items-center justify-center ${
-                        r === "W" ? "bg-[#e7f4eb] text-[#127a3c]" : r === "L" ? "bg-[#fdeeee] text-[#c03434]" : "bg-black/5 text-text-muted"
-                      }`}
-                    >
-                      {r}
-                    </span>
-                  ))}
-                </div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted mt-1.5">Recent form</div>
-              </div>
-            )}
           </div>
         ) : (
           <p className="text-[13px] font-semibold text-text-muted mt-4">No matches logged yet</p>
