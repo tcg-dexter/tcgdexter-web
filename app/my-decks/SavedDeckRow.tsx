@@ -64,8 +64,9 @@ function FormPips({ recentForm }: { recentForm?: ("W" | "L" | "D")[] }) {
 
 /**
  * Single row in the My Decks List view. Mirrors the fields shown on the
- * Grid card (UserDeckCard) in a denser, table-like layout: record + win
- * rate, recent form, composition, legality, price, and quick actions.
+ * Grid card (UserDeckCard) in a denser, table-like layout: recent form,
+ * composition, price, and quick actions (record is shown inline under the
+ * deck name on mobile, where the recent-form/composition columns are hidden).
  * Tapping the row navigates to the deck profile; Log match expands the
  * same inline MatchEntry flow (Single/Best of 3/TCG Live import) used by
  * the grid cards and the pinned-deck hero, without leaving the page.
@@ -78,15 +79,11 @@ export default function SavedDeckRow({
   price,
   counts,
   wl,
-  legalityReady,
   updatedAt,
   isLast,
 }: UserDeckCardProps & { isLast?: boolean }) {
   const router = useRouter();
   const [logOpen, setLogOpen] = useState(false);
-
-  const hasRecord = !!wl && wl.w + wl.l + wl.d > 0;
-  const winRatePct = wl?.winRatePct ?? null;
 
   async function handleQuickLog(data: MatchFormData) {
     const res = await fetch("/api/matches", {
@@ -133,29 +130,12 @@ export default function SavedDeckRow({
           {updatedLabel && <span className="hidden sm:block text-[11.5px] text-text-muted">{updatedLabel}</span>}
         </div>
 
-        <div className="w-[90px] shrink-0 hidden sm:flex items-center gap-2">
-          <RecordPill wl={wl} />
-          {hasRecord && winRatePct !== null && (
-            <span className={`text-[12px] font-bold tabular-nums ${winRatePct >= 50 ? "text-[#127a3c]" : "text-[#c03434]"}`}>
-              {winRatePct}%
-            </span>
-          )}
-        </div>
-
         <div className="w-[110px] shrink-0 hidden sm:block">
           <FormPips recentForm={wl?.recentForm} />
         </div>
 
         <div className="w-[150px] shrink-0 hidden md:block">
           {counts ? <CompositionBar counts={counts} /> : null}
-        </div>
-
-        <div className="w-[110px] shrink-0 hidden lg:block">
-          {legalityReady === false ? (
-            <span className="text-[11px] font-bold text-[#a06710] bg-[#fdf3e3] rounded-md px-2 py-1">⚠ Rotating</span>
-          ) : (
-            <span className="text-[11px] font-bold text-[#127a3c] bg-[#e7f4eb] rounded-md px-2 py-1">✓ Standard</span>
-          )}
         </div>
 
         <div className="w-[70px] shrink-0 hidden lg:block text-[13px] font-bold text-text-secondary tabular-nums">
