@@ -276,7 +276,7 @@ function DeckBanner({
           left: "44%",
           top: "50%",
           opacity: 0.2,
-          transform: "translate(-50%, -50%) scale(3) rotate(-4deg)",
+          transform: "translate(-50%, -30%) scale(3) rotate(-4deg)",
         }}
       >
         {imageUrl ? (
