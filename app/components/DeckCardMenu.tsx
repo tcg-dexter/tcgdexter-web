@@ -154,7 +154,10 @@ export default function DeckCardMenu({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ is_pinned: true }),
       });
-      if (res.ok) router.refresh();
+      if (res.ok) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        router.refresh();
+      }
     } finally {
       setPinBusy(false);
     }
