@@ -140,6 +140,10 @@ interface Props {
    */
   bestOf3?: boolean;
   onBestOf3Change?: (value: boolean) => void;
+  /** Whether Cancel scrolls the page to top before closing. Defaults to
+   *  true (deck-profile behavior); grid preview cards pass false since
+   *  the form sits inline in the page flow. */
+  scrollToTopOnCancel?: boolean;
 }
 
 /**
@@ -155,6 +159,7 @@ export default function MatchForm({
   compact = false,
   bestOf3: bestOf3Prop,
   onBestOf3Change,
+  scrollToTopOnCancel = true,
 }: Props) {
   const [opponentName, setOpponentName] = useState(initial?.opponent_name ?? "");
   const [opponentArchetype, setOpponentArchetype] = useState(
@@ -660,7 +665,7 @@ export default function MatchForm({
         </button>
         <button
           onClick={() => {
-            window.scrollTo({ top: 0, behavior: "smooth" });
+            if (scrollToTopOnCancel) window.scrollTo({ top: 0, behavior: "smooth" });
             onCancel();
           }}
           className="rounded-full border border-border bg-bg px-4 py-2 text-sm font-semibold text-text-secondary hover:bg-surface-2 transition-all"
