@@ -238,6 +238,9 @@ export interface UserDeckCardProps {
   canManage?: boolean;
   /** Position in the grid — drives the entrance-animation stagger delay. */
   index?: number;
+  /** Skip the mount fade-in — for remounts that aren't the page's true
+   *  first paint (e.g. toggling grid/list view). */
+  skipEntranceAnimation?: boolean;
 }
 
 export function DeckBanner({
@@ -357,6 +360,7 @@ export function UserDeckCard({
   isPublic = true,
   canManage = false,
   index,
+  skipEntranceAnimation = false,
 }: UserDeckCardProps) {
   const router = useRouter();
   const name = initialName;
@@ -400,7 +404,7 @@ export function UserDeckCard({
   return (
     <div
       className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
-      style={useFadeIn(index)}
+      style={useFadeIn(index, skipEntranceAnimation)}
     >
       <DeckBanner
         imageUrl={imageUrl}
