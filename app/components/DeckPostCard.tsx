@@ -433,7 +433,7 @@ export function UserDeckCard({
 
       <Link href={href} className="block">
         {counts && (
-          <div className="flex items-center gap-3.5 px-3.5 pt-2.5 pb-1">
+          <div className="flex items-center gap-3.5 px-3.5 py-1">
             <CompositionRing counts={counts} />
             <CompositionLegend counts={counts} />
           </div>
