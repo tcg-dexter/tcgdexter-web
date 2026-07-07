@@ -5,13 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import SectionHeader from "@/app/components/ui/SectionHeader";
 import PillSelect from "@/app/components/ui/PillSelect";
-import { UserDeckCard, type UserDeckCardProps } from "@/app/components/DeckPostCard";
+import { UserDeckCard, DeckBanner, type UserDeckCardProps } from "@/app/components/DeckPostCard";
 import QRCodeButton from "@/app/components/QRCodeButton";
 import { type MatchFormData } from "@/app/components/MatchForm";
 import MatchEntry from "@/app/components/MatchEntry";
 import DeckCardMenu from "@/app/components/DeckCardMenu";
 import SavedDeckRow from "./SavedDeckRow";
 import { normalizeForSearch } from "@/lib/searchNormalize";
+import { buildAvatarItems } from "@/lib/deckAvatarItems";
 
 interface Props {
   decks: UserDeckCardProps[];
@@ -78,9 +79,28 @@ function PinIcon({ className }: { className?: string }) {
 function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
   const router = useRouter();
   const [logOpen, setLogOpen] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(!!deck.isFavorite);
   const wl = deck.wl;
   const hasRecord = !!wl && wl.w + wl.l + wl.d > 0;
   const streak = currentStreak(wl?.recentForm);
+
+  const avatarItems = useMemo(
+    () => buildAvatarItems(deck.cards, deck.coverImageUrl ?? null, deck.iconUrl, deck.iconBg),
+    [deck.cards, deck.coverImageUrl, deck.iconUrl, deck.iconBg],
+  );
+
+  async function toggleFavorite(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    const next = !isFavorite;
+    setIsFavorite(next);
+    const res = await fetch(`/api/saved-decks/${deck.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_favorite: next }),
+    });
+    if (!res.ok) setIsFavorite(!next);
+  }
 
   async function handleQuickLog(data: MatchFormData) {
     const res = await fetch("/api/matches", {
@@ -100,111 +120,96 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
     "inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-[13px] font-semibold transition-colors";
 
   return (
-    <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden flex flex-col md:flex-row mb-4">
-      <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
-        {deck.canManage && deck.deckList != null && (
-          <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center">
-            <DeckCardMenu
-              deckId={deck.id}
-              deckName={deck.name}
-              deckList={deck.deckList}
-              isPublic={!!deck.isPublic}
-              isPinned={deck.isPinned}
-              cards={deck.cards ?? []}
-              coverImageUrl={deck.coverImageUrl ?? null}
-            />
-          </div>
-        )}
-        <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-accent">
-          <PinIcon className="w-4 h-4" />
-        </div>
-      </div>
-
-      <div
-        className="relative h-[170px] md:h-auto md:w-[360px] shrink-0 overflow-hidden"
-        style={{ background: "linear-gradient(120deg, #2c2440 0%, #4b3a72 100%)" }}
-      >
-        <div
-          aria-hidden
-          className="absolute rounded-lg overflow-hidden bg-white"
-          style={{
-            width: 130,
-            height: 180,
-            left: "50%",
-            top: "50%",
-            opacity: 0.2,
-            transform: "translate(-50%, -30%) scale(3) rotate(-4deg)",
-          }}
-        >
-          {deck.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={deck.imageUrl} alt="" className="w-full h-full object-cover" />
-          ) : null}
-        </div>
-        <div
-          className="absolute rounded-lg overflow-hidden bg-white shadow-[0_16px_34px_rgba(0,0,0,0.35)]"
-          style={{ width: 130, height: 180, left: "50%", top: "50%", transform: "translate(-50%,-50%) rotate(-4deg)" }}
-        >
-          {deck.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={deck.imageUrl} alt={deck.name} className="w-full h-full object-cover" />
-          ) : null}
-        </div>
-      </div>
-      <div className="flex-1 p-5 md:p-6">
-        <Link href={deck.href} className="block text-[26px] font-bold text-text-primary hover:underline underline-offset-2 leading-tight">
-          {deck.name}
-        </Link>
-
-        {hasRecord ? (
-          <div className="flex flex-wrap justify-between gap-y-3 mt-4">
-            <div>
-              <div className="text-[24px] font-extrabold tabular-nums text-text-primary">{wl!.w}–{wl!.l}</div>
-              <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Record</div>
+    <div className="relative mb-4">
+      {/* Gradient glow — same treatment as the homepage deck-list input card */}
+      <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 blur-xl" />
+      <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-brand-lg overflow-hidden flex flex-col md:flex-row">
+        <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5">
+          {deck.canManage && deck.deckList != null && (
+            <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center">
+              <DeckCardMenu
+                deckId={deck.id}
+                deckName={deck.name}
+                deckList={deck.deckList}
+                isPublic={!!deck.isPublic}
+                isPinned={deck.isPinned}
+                cards={deck.cards ?? []}
+                coverImageUrl={deck.coverImageUrl ?? null}
+              />
             </div>
-            <div>
-              <div className="text-[24px] font-extrabold tabular-nums text-[#127a3c]">{wl!.winRatePct}%</div>
-              <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Win rate</div>
-            </div>
-            {streak && (
-              <div>
-                <div className="text-[24px] font-extrabold tabular-nums text-text-primary">{streak}</div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Streak</div>
-              </div>
-            )}
+          )}
+          <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-accent">
+            <PinIcon className="w-4 h-4" />
           </div>
-        ) : (
-          <p className="text-[13px] font-semibold text-text-muted mt-4">No matches logged yet</p>
-        )}
+        </div>
 
-        <div className="flex gap-2 mt-5">
-          <button
-            type="button"
-            onClick={() => setLogOpen((v) => !v)}
-            className={`${capsuleBase} flex-1 bg-black text-white`}
-          >
-            Log match
-          </button>
-          <QRCodeButton shareUrl={deck.href} className={`${capsuleBase} flex-1 border border-black/10 bg-white text-text-primary hover:bg-black/[0.03]`} />
-          <Link href={deck.href} className={`${capsuleBase} flex-1 bg-accent text-white`}>
-            View deck
+        <div className="md:w-[360px] shrink-0">
+          <DeckBanner
+            imageUrl={deck.imageUrl ?? null}
+            name={deck.name}
+            iconBg={deck.iconBg ?? null}
+            wl={deck.wl}
+            isFavorite={isFavorite}
+            onToggleFavorite={toggleFavorite}
+            showFavorite={!!deck.canManage}
+            avatarItems={avatarItems}
+          />
+        </div>
+        <div className="flex-1 p-5 md:p-6">
+          <Link href={deck.href} className="block text-[26px] font-bold text-text-primary hover:underline underline-offset-2 leading-tight">
+            {deck.name}
           </Link>
-        </div>
 
-        {logOpen && (
-          <div className="mt-4 max-w-sm">
-            <MatchEntry
-              savedDeckId={deck.id}
-              onSubmitManual={handleQuickLog}
-              onImported={() => {
-                setLogOpen(false);
-                router.refresh();
-              }}
-              onCancel={() => setLogOpen(false)}
-              scrollToTopOnCancel={false}
-            />
+          {hasRecord ? (
+            <div className="flex flex-wrap justify-between gap-y-3 mt-4">
+              <div>
+                <div className="text-[24px] font-extrabold tabular-nums text-text-primary">{wl!.w}–{wl!.l}</div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Record</div>
+              </div>
+              <div>
+                <div className="text-[24px] font-extrabold tabular-nums text-[#127a3c]">{wl!.winRatePct}%</div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Win rate</div>
+              </div>
+              {streak && (
+                <div>
+                  <div className="text-[24px] font-extrabold tabular-nums text-text-primary">{streak}</div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Streak</div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-[13px] font-semibold text-text-muted mt-4">No matches logged yet</p>
+          )}
+
+          <div className="flex gap-2 mt-5">
+            <button
+              type="button"
+              onClick={() => setLogOpen((v) => !v)}
+              className={`${capsuleBase} flex-1 bg-black text-white`}
+            >
+              Log match
+            </button>
+            <QRCodeButton shareUrl={deck.href} className={`${capsuleBase} flex-1 border border-black/10 bg-white text-text-primary hover:bg-black/[0.03]`} />
+            <Link href={deck.href} className={`${capsuleBase} flex-1 bg-accent text-white`}>
+              View deck
+            </Link>
           </div>
-        )}
+
+          {logOpen && (
+            <div className="mt-4 max-w-sm">
+              <MatchEntry
+                savedDeckId={deck.id}
+                onSubmitManual={handleQuickLog}
+                onImported={() => {
+                  setLogOpen(false);
+                  router.refresh();
+                }}
+                onCancel={() => setLogOpen(false)}
+                scrollToTopOnCancel={false}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
