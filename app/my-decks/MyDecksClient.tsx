@@ -114,7 +114,7 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
           with half the blur and half the shadow's blur-radius so it reads
           softer/tighter against the hero's larger footprint. */}
       <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 blur-md" />
-      <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-[0_20px_30px_-15px_rgba(217,30,13,0.25)] overflow-hidden flex flex-col md:flex-row">
+      <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-[0_20px_30px_-15px_rgba(217,30,13,0.3)] overflow-hidden flex flex-col md:flex-row">
         <div className="md:w-[360px] shrink-0">
           <DeckBanner
             imageUrl={deck.imageUrl ?? null}
