@@ -172,7 +172,7 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
             <button
               type="button"
               onClick={() => setLogOpen((v) => !v)}
-              className={`flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-[1px] py-2 text-sm font-semibold transition-all ${
+              className={`${TOOLBAR_ITEM_HEIGHT} flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-[1px] text-sm font-semibold transition-all ${
                 logOpen ? "text-white" : "text-text-secondary"
               }`}
               style={{
@@ -187,11 +187,11 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
             </button>
             <QRCodeButton
               shareUrl={deck.href}
-              className="flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-gradient-brand-reverse bg-origin-border px-[1px] py-2 text-sm font-semibold text-white transition disabled:opacity-50"
+              className={`${TOOLBAR_ITEM_HEIGHT} flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-gradient-brand-reverse bg-origin-border px-[1px] text-sm font-semibold text-white transition disabled:opacity-50`}
             />
             <Link
               href={deck.href}
-              className="flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-black px-[1px] py-[11px] text-sm font-semibold text-white transition-opacity hover:opacity-80 touch-manipulation"
+              className={`${TOOLBAR_ITEM_HEIGHT} flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-black px-[1px] text-sm font-semibold text-white transition-opacity hover:opacity-80 touch-manipulation`}
             >
               View deck
             </Link>
