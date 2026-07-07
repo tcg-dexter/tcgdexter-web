@@ -30,6 +30,17 @@ function CompositionBar({ counts }: { counts: NonNullable<UserDeckCardProps["cou
   );
 }
 
+function RecordPill({ wl }: { wl?: UserDeckCardProps["wl"] }) {
+  const hasRecord = !!wl && wl.w + wl.l + wl.d > 0;
+  return hasRecord ? (
+    <span className="rounded-full bg-black px-[11px] py-1 text-[12.5px] font-extrabold text-white tabular-nums">
+      {wl!.w}–{wl!.l}
+    </span>
+  ) : (
+    <span className="rounded-full bg-black/5 px-[11px] py-1 text-[12.5px] font-extrabold text-text-muted tabular-nums">0–0</span>
+  );
+}
+
 function FormPips({ recentForm }: { recentForm?: ("W" | "L" | "D")[] }) {
   if (!recentForm || recentForm.length === 0) {
     return <span className="text-[11px] font-semibold text-text-muted">No matches</span>;
@@ -111,23 +122,21 @@ export default function SavedDeckRow({
           <Link href={href} className="font-semibold text-text-primary text-[14.5px] truncate hover:underline underline-offset-2 block">
             {name}
           </Link>
-          {updatedLabel && <span className="text-[11.5px] text-text-muted">{updatedLabel}</span>}
+          {/* Mobile only — the dedicated record column is hidden below sm,
+              so the W-L pill moves here, leading the updated-date text. */}
+          <div className="flex items-center gap-2 mt-0.5 sm:hidden">
+            <RecordPill wl={wl} />
+            {updatedLabel && <span className="text-[11.5px] text-text-muted">{updatedLabel}</span>}
+          </div>
+          {updatedLabel && <span className="hidden sm:block text-[11.5px] text-text-muted">{updatedLabel}</span>}
         </div>
 
-        <div className="w-[90px] shrink-0 flex items-center gap-2">
-          {hasRecord ? (
-            <>
-              <span className="rounded-full bg-black px-[11px] py-1 text-[12.5px] font-extrabold text-white tabular-nums">
-                {wl!.w}–{wl!.l}
-              </span>
-              {winRatePct !== null && (
-                <span className={`text-[12px] font-bold tabular-nums ${winRatePct >= 50 ? "text-[#127a3c]" : "text-[#c03434]"}`}>
-                  {winRatePct}%
-                </span>
-              )}
-            </>
-          ) : (
-            <span className="rounded-full bg-black/5 px-[11px] py-1 text-[12.5px] font-extrabold text-text-muted tabular-nums">0–0</span>
+        <div className="w-[90px] shrink-0 hidden sm:flex items-center gap-2">
+          <RecordPill wl={wl} />
+          {hasRecord && winRatePct !== null && (
+            <span className={`text-[12px] font-bold tabular-nums ${winRatePct >= 50 ? "text-[#127a3c]" : "text-[#c03434]"}`}>
+              {winRatePct}%
+            </span>
           )}
         </div>
 
