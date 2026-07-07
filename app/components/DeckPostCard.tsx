@@ -7,7 +7,8 @@ import DeckCardFooter from "./DeckCardFooter";
 import DeckCardMenu from "./DeckCardMenu";
 import AvatarStack, { type AvatarStackItem } from "./AvatarStack";
 import CompositionRing, { CompositionLegend } from "./CompositionRing";
-import MatchForm, { type MatchFormData } from "./MatchForm";
+import { type MatchFormData } from "./MatchForm";
+import MatchEntry from "./MatchEntry";
 import QRCodeButton from "./QRCodeButton";
 import { deckAvatarInfo } from "@/lib/primaryCardImage";
 import { metaTopPokemonByCount } from "@/lib/metaPrimaryCard";
@@ -317,7 +318,7 @@ function DeckBanner({
         style={{
           width: 166,
           height: 229,
-          left: "44%",
+          left: "39%",
           bottom: 0,
           transform: "translate(-50%, 40%) rotate(-4deg)",
         }}
@@ -484,7 +485,15 @@ export function UserDeckCard({
 
       {logOpen && (
         <div className="border-t border-black/5 p-3.5">
-          <MatchForm compact onSubmit={handleQuickLog} onCancel={() => setLogOpen(false)} />
+          <MatchEntry
+            savedDeckId={id}
+            onSubmitManual={handleQuickLog}
+            onImported={() => {
+              setLogOpen(false);
+              router.refresh();
+            }}
+            onCancel={() => setLogOpen(false)}
+          />
         </div>
       )}
     </div>
