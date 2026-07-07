@@ -139,14 +139,9 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
         <Link href={deck.href} className="block text-[26px] font-bold text-text-primary hover:underline underline-offset-2 leading-tight">
           {deck.name}
         </Link>
-        <p className="text-[13.5px] text-text-secondary mt-1">
-          {[deck.archetypeName, deck.legalityReady === false ? "Rotating" : "Standard legal", deck.price != null ? `$${deck.price.toFixed(2)} market` : null]
-            .filter(Boolean)
-            .join(" · ")}
-        </p>
 
         {hasRecord ? (
-          <div className="flex flex-wrap gap-x-9 gap-y-3 mt-4">
+          <div className="flex flex-wrap justify-between gap-y-3 mt-4">
             <div>
               <div className="text-[24px] font-extrabold tabular-nums text-text-primary">{wl!.w}–{wl!.l}</div>
               <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Record</div>
@@ -166,7 +161,7 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
           <p className="text-[13px] font-semibold text-text-muted mt-4">No matches logged yet</p>
         )}
 
-        <div className="flex flex-wrap gap-2 mt-5">
+        <div className="flex flex-wrap justify-between gap-2 mt-5">
           <button
             type="button"
             onClick={() => setLogOpen((v) => !v)}
