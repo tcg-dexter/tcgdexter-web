@@ -6,7 +6,9 @@ import { isTrustedCardImageUrl } from "@/lib/cardImages";
 /**
  * DELETE /api/saved-decks/[id]
  * PATCH  /api/saved-decks/[id]
- *   body: { name?, notes?, is_public?, is_favorite?, cover_image_url?, deck_list?, analysis? }
+ *   body: { name?, notes?, is_public?, is_favorite?, is_pinned?, cover_image_url?, deck_list?, analysis? }
+ *   Setting is_pinned:true clears it on the caller's other decks first, so
+ *   at most one deck is pinned per user.
  *   When deck_list changes the caller also sends a freshly-computed analysis
  *   (from POST /api/analyze) so the stored snapshot stays in sync.
  *
@@ -70,6 +72,7 @@ export async function PATCH(
     notes?: string;
     is_public?: boolean;
     is_favorite?: boolean;
+    is_pinned?: boolean;
     cover_image_url?: string | null;
     deck_list?: string;
     analysis?: unknown;
@@ -104,6 +107,26 @@ export async function PATCH(
 
   if (typeof body.is_favorite === "boolean") {
     updates.is_favorite = body.is_favorite;
+  }
+
+  if (typeof body.is_pinned === "boolean") {
+    if (body.is_pinned) {
+      // Exclusive: only one deck may be pinned per user, so clear it on
+      // every other deck before setting it here.
+      const { error: unpinError } = await supabase
+        .from("saved_decks")
+        .update({ is_pinned: false })
+        .eq("user_id", user.id)
+        .neq("id", id);
+      if (unpinError) {
+        console.error("[saved-decks] unpin-others failed:", unpinError);
+        return NextResponse.json(
+          { error: "Failed to update pinned deck." },
+          { status: 500 }
+        );
+      }
+    }
+    updates.is_pinned = body.is_pinned;
   }
 
   // Cover image: null clears the override; otherwise must be one of our
@@ -178,6 +201,10 @@ export async function PATCH(
       ? updates.is_favorite === true
         ? "deck.favorited"
         : "deck.unfavorited"
+      : "is_pinned" in updates
+      ? updates.is_pinned === true
+        ? "deck.pinned"
+        : "deck.unpinned"
       : "deck.updated";
   void track(req, eventName, { id, fields: updatedFields });
 
