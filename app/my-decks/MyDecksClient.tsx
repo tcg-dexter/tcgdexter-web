@@ -114,6 +114,23 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
         style={{ background: "linear-gradient(120deg, #2c2440 0%, #4b3a72 100%)" }}
       >
         <div
+          aria-hidden
+          className="absolute rounded-lg overflow-hidden bg-white"
+          style={{
+            width: 130,
+            height: 180,
+            left: "45%",
+            top: "50%",
+            opacity: 0.2,
+            transform: "translate(-50%, -30%) scale(3) rotate(-4deg)",
+          }}
+        >
+          {deck.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={deck.imageUrl} alt="" className="w-full h-full object-cover" />
+          ) : null}
+        </div>
+        <div
           className="absolute rounded-lg overflow-hidden bg-white shadow-[0_16px_34px_rgba(0,0,0,0.35)]"
           style={{ width: 130, height: 180, left: "45%", top: "50%", transform: "translate(-50%,-56%) rotate(-4deg)" }}
         >
