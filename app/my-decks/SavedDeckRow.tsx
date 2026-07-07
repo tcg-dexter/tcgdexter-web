@@ -51,8 +51,12 @@ function FormPips({ recentForm }: { recentForm?: ("W" | "L" | "D")[] }) {
       {recentForm.map((r, i) => (
         <span
           key={i}
-          className={`w-[17px] h-[17px] rounded-[5px] text-[9px] font-extrabold flex items-center justify-center ${
-            r === "W" ? "bg-[#e7f4eb] text-[#127a3c]" : r === "L" ? "bg-[#fdeeee] text-[#c03434]" : "bg-black/5 text-text-muted"
+          className={`w-[17px] h-[17px] rounded-full text-[9px] font-extrabold flex items-center justify-center ${
+            r === "W"
+              ? "bg-[linear-gradient(135deg,#F2A20C_0%,#D91E0D_50%,#A60D0D_100%)] text-white"
+              : r === "L"
+              ? "bg-black text-white"
+              : "bg-black/5 text-text-muted"
           }`}
         >
           {r}
