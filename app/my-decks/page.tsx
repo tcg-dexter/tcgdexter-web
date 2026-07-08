@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import type { UserDeckCardProps } from "@/app/components/DeckPostCard";
 import { primaryCardImageUrl, deckAvatarInfo, pokemonSlug } from "@/lib/primaryCardImage";
@@ -52,6 +53,15 @@ export default async function MyDecksPage() {
 
   if (!profile?.username) redirect("/settings");
 
+  // Absolute origin for share links — matches the deck profile page's own
+  // canonicalShareUrl, so the QR/copy-link popup shows a full URL rather
+  // than the app-relative path used for internal navigation.
+  const headersList = await headers();
+  const host =
+    headersList.get("x-forwarded-host") ?? headersList.get("host") ?? "tcgdexter.com";
+  const proto = headersList.get("x-forwarded-proto") ?? "https";
+  const origin = `${proto}://${host}`;
+
   const { data: decksRaw } = await supabase
     .from("saved_decks")
     .select("id, short_id, name, deck_list, analysis, updated_at, created_at, like_count, is_public, is_favorite, is_pinned, cover_image_url")
@@ -74,6 +84,7 @@ export default async function MyDecksPage() {
       id: deck.id,
       name: deck.name,
       href: `/u/${profile.username}/${deck.short_id}`,
+      shareUrl: `${origin}/u/${profile.username}/${deck.short_id}`,
       username: profile.username,
       displayName: profile.display_name,
       price: deck.analysis?.deckPrice ?? null,
