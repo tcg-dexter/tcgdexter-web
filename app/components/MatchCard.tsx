@@ -91,7 +91,7 @@ export function MatchCard({ match }: { match: RecentMatch }) {
       };
   const gradientClass = isDraw
     ? "absolute inset-0 bg-gradient-brand opacity-80"
-    : "absolute inset-0 opacity-80";
+    : "absolute inset-0";
 
   const footer = (
     <div className="grid grid-cols-2 gap-3 px-3.5 pt-3 pb-3.5 border-t border-black/[0.06]">
