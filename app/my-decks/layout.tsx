@@ -4,19 +4,32 @@
  * than the real content — deck count and match history vary per user, so
  * there's no fixed height to match.
  *
- * Wrapping `{children}` in a container with `overflow-anchor: none` is the
- * primary fix here: when the Suspense boundary swaps the skeleton fallback
- * for the real content, that's a full subtree replacement, not an
- * incremental resize. The browser's default CSS scroll anchoring tries to
- * keep whatever "anchor node" it had picked inside the (about-to-be-
- * destroyed) skeleton visually stable across the swap — recalculating an
- * anchor across a full subtree replacement like this is exactly the case
- * scroll anchoring handles badly, and it can compensate with a scroll jump
- * to the bottom of the newly-inserted content the instant the swap
- * happens. `overflow-anchor: none` opts this whole subtree out of
- * anchor-node candidacy — since this div is a stable ancestor that
- * persists across the skeleton → real-content swap, the property covers
- * both without needing to touch loading.tsx and the real page separately.
+ * The scroll-to-bottom bug at skeleton → real-content swap:
+ * ─────────────────────────────────────────────────────────
+ * The root layout renders <SiteFooter /> immediately AFTER {children}, in
+ * normal flow. While the short skeleton is up, the footer sits somewhere
+ * near the top of the viewport. The browser's default CSS scroll
+ * anchoring picks an in-flow element (in practice, the footer or a
+ * descendant of it) as the "anchor node" and tries to keep it visually
+ * stable when the DOM changes.
+ *
+ * When Suspense swaps the skeleton for real content, the wrapper grows
+ * from a few hundred px to a few thousand — the footer's document
+ * position jumps down by the same amount. Scroll anchoring compensates
+ * by scrolling the viewport down to keep the footer visually stable,
+ * which lands the page exactly at the bottom of the newly-inserted
+ * content. That matches the report exactly.
+ *
+ * A previous attempt applied `overflow-anchor: none` to a wrapper div
+ * INSIDE {children}. That doesn't help: the footer is a sibling of that
+ * wrapper, not a descendant, and can still be picked as the anchor.
+ * `overflow-anchor: none` must be on the SCROLL CONTAINER (or on the
+ * anchor candidate itself) to actually disable the mechanism. The scroll
+ * container here is <html>, so we inject an inline <style> that opts it
+ * out — scoped to this route because it's the only one with the
+ * short-skeleton → tall-content transition. React renders this style tag
+ * during SSR, so it's in the initial HTML before the browser ever assigns
+ * an anchor.
  *
  * The inline script below is a secondary, unrelated fix for a different
  * failure mode: on a hard refresh, the browser's default scroll
@@ -37,7 +50,8 @@ export default function MyDecksLayout({
   return (
     <>
       <script dangerouslySetInnerHTML={{ __html: DISABLE_SCROLL_RESTORATION }} />
-      <div className="[overflow-anchor:none]">{children}</div>
+      <style>{`html{overflow-anchor:none}`}</style>
+      {children}
     </>
   );
 }
