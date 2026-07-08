@@ -155,7 +155,7 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
                 <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Record</div>
               </div>
               <div>
-                <div className="text-[24px] font-extrabold tabular-nums text-[#127a3c]">{wl!.winRatePct}%</div>
+                <div className="text-[24px] font-extrabold tabular-nums bg-gradient-brand bg-clip-text text-transparent">{wl!.winRatePct}%</div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Win rate</div>
               </div>
               {streak && (
