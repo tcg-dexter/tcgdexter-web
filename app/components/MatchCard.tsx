@@ -142,7 +142,7 @@ export function MatchCard({ match }: { match: RecentMatch }) {
                 top: "50%",
                 opacity: 0.2,
                 filter: "grayscale(1)",
-                transform: "translate(-50%, -25%) scale(2.4) rotate(-4deg)",
+                transform: "translate(-50%, -15%) scale(2.4) rotate(-4deg)",
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
