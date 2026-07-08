@@ -187,7 +187,7 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
               Log match
             </button>
             <QRCodeButton
-              shareUrl={deck.href}
+              shareUrl={deck.shareUrl ?? deck.href}
               className={`${TOOLBAR_ITEM_HEIGHT} flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-gradient-brand-reverse bg-origin-border px-[1px] text-sm font-semibold text-white transition disabled:opacity-50`}
             />
             <Link
