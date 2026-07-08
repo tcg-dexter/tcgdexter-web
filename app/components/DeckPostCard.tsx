@@ -84,7 +84,7 @@ export function MetaDeckCard({
   creators,
   index,
 }: MetaDeckCardProps) {
-  const creatorList = (creators && creators.length > 0 ? creators : ["Trainer"]).slice(0, 5);
+  const creatorList = (creators && creators.length > 0 ? creators : ["Trainer"]).slice(0, 3);
   const href = `/meta-archetypes/${id}`;
   const accentBg = icon_bg ?? "#B0A89E";
   const accentDeep = shade(accentBg, -35);
