@@ -38,26 +38,6 @@ function avatarBg(name: string): string {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function CardArt({ url, name }: { url?: string | null; name: string }) {
-  return (
-    <div
-      className="shrink-0 self-start rounded-lg overflow-hidden border border-black/[0.07] bg-[var(--surface)] flex items-center justify-center"
-      style={{ width: 106, height: 148 }}
-    >
-      {url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt={name} className="w-full h-full object-contain" />
-      ) : (
-        <span className="text-[11px] text-text-muted text-center leading-relaxed px-2">
-          No cover
-          <br />
-          set
-        </span>
-      )}
-    </div>
-  );
-}
-
 export function WLCircles({ wl }: { wl: WinLoss }) {
   if (wl.w + wl.l + wl.d === 0) return null;
   return (
@@ -114,11 +94,12 @@ export function MetaDeckCard({
       style={useFadeIn(index)}
     >
       {/* Banner — same treatment as the deck collection preview cards'
-          DeckBanner: full diagonal accent gradient + a scaled/rotated ghost
-          watermark of the card art behind everything. */}
+          DeckBanner: full diagonal accent gradient, a scaled/rotated ghost
+          watermark of the card art behind everything, and the same
+          rotated hero card art tucked into the bottom edge. */}
       <div
         aria-hidden
-        className="relative h-[150px] overflow-hidden"
+        className="relative h-[150px] overflow-hidden md:[--hero-card-x:42%]"
         style={{ background: `linear-gradient(120deg, ${accentDeep} 0%, ${accentBg} 100%)` }}
       >
         <div
@@ -141,6 +122,21 @@ export function MetaDeckCard({
         <span className="absolute top-2.5 right-2.5 z-10 rounded-full bg-black px-3 py-[5px] text-[12px] font-bold text-white tabular-nums">
           {(representation_pct * 100).toFixed(1)}%
         </span>
+        <div
+          className="absolute rounded-lg overflow-hidden bg-white shadow-[0_8px_18px_rgba(0,0,0,0.3)]"
+          style={{
+            width: "var(--hero-card-w, 166px)",
+            height: "var(--hero-card-h, 229px)",
+            left: "var(--hero-card-x, 39%)",
+            bottom: 0,
+            transform: "translate(-50%, 40%) rotate(-4deg)",
+          }}
+        >
+          {image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={image_url} alt={name} className="w-full h-full object-cover" />
+          ) : null}
+        </div>
       </div>
       <Link href={href} className="relative block">
         {/* Header — deck name */}
@@ -152,7 +148,6 @@ export function MetaDeckCard({
 
         {/* Body */}
         <div className="relative flex gap-3.5 p-3.5 pt-3">
-          <CardArt url={image_url} name={name} />
           <div className="flex-1 min-w-0 flex flex-col">
             <div className="flex flex-col gap-0.5">
               <p className="text-[12px] font-bold text-text-primary">
