@@ -187,6 +187,9 @@ export interface UserDeckCardProps {
   id: string;
   name: string;
   href: string;
+  /** Absolute, publicly-shareable URL for the QR/copy-link popup. Falls
+   *  back to `href` (app-relative) if omitted. */
+  shareUrl?: string;
   imageUrl?: string | null;
   username: string;
   displayName?: string | null;
@@ -347,6 +350,7 @@ export function UserDeckCard({
   id,
   name: initialName,
   href,
+  shareUrl,
   imageUrl: initialImageUrl,
   counts,
   wl,
@@ -461,7 +465,7 @@ export function UserDeckCard({
           Log match
         </button>
         <QRCodeButton
-          shareUrl={href}
+          shareUrl={shareUrl ?? href}
           className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 text-[13px] font-semibold text-text-primary hover:bg-black/[0.03] transition-colors border-l border-black/5"
         />
       </div>
