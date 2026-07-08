@@ -468,7 +468,7 @@ export default function MatchForm({
           <button
             type="button"
             onClick={() => setShowDeckListField((v) => !v)}
-            className={`flex-shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition-colors ${
+            className={`h-9 flex-shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors ${
               showDeckListField
                 ? "bg-black/70 text-white"
                 : "bg-black text-white hover:bg-black/80"
@@ -570,7 +570,7 @@ export default function MatchForm({
         <button
           type="button"
           onClick={() => setShowNotesField((v) => !v)}
-          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition-colors ${
+          className={`h-10 inline-flex items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors ${
             showNotesField
               ? "bg-black/70 text-white"
               : "bg-black text-white hover:bg-black/80"
