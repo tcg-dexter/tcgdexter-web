@@ -171,13 +171,13 @@ export function MatchCard({ match }: { match: RecentMatch }) {
           </span>
           <div className="relative flex items-end justify-center gap-4 px-4 pt-5 pb-3">
             <div style={{ transform: "rotate(-6deg)", transformOrigin: "bottom center" }}>
-              <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
+              <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 96, height: 134 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={leftSide.imageUrl} alt={leftSide.imageAlt} className="w-full h-full object-contain" />
               </div>
             </div>
             <div style={{ transform: "rotate(6deg)", transformOrigin: "bottom center" }}>
-              <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 80, height: 112 }}>
+              <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 96, height: 134 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={rightSide.imageUrl} alt={rightSide.imageAlt} className="w-full h-full object-contain" />
               </div>
