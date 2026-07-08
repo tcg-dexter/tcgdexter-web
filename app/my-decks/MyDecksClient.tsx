@@ -116,7 +116,7 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
             left: "50%",
             top: "50%",
             opacity: 0.2,
-            transform: "translate(-50%, -40%) scale(3) rotate(-4deg)",
+            transform: "translate(-50%, -30%) scale(3) rotate(-4deg)",
           }}
         >
           {deck.imageUrl ? (
