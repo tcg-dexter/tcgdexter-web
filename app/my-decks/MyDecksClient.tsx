@@ -107,6 +107,23 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
     return () => clearTimeout(t);
   }, [logOpen]);
 
+  // Opening the drawer anchors the hero card to the top of the screen (with
+  // a little headroom, scrolling past the "Deck Collection" title on
+  // purpose) so the match form is immediately visible instead of getting
+  // pushed off-screen by the card's own growth. Offsets by the mobile sticky
+  // toolbar's live height (0 on desktop, where nav lives in a side rail).
+  const heroRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!logOpen) return;
+    const el = heroRef.current;
+    if (!el) return;
+    const headroom = 16;
+    const toolbar = document.querySelector<HTMLElement>("[data-site-toolbar]");
+    const toolbarH = toolbar ? toolbar.getBoundingClientRect().height : 0;
+    const top = el.getBoundingClientRect().top + window.scrollY - toolbarH - headroom;
+    window.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
+  }, [logOpen]);
+
   async function toggleFavorite(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -135,7 +152,7 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
   }
 
   return (
-    <div className="relative mb-4">
+    <div ref={heroRef} className="relative mb-4">
       {/* Gradient glow — same treatment as the homepage deck-list input card,
           with half the blur and half the shadow's blur-radius so it reads
           softer/tighter against the hero's larger footprint. */}
@@ -216,16 +233,20 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
             >
               Log match
             </button>
-            <QRCodeButton
-              shareUrl={deck.shareUrl ?? deck.href}
-              className={`${TOOLBAR_ITEM_HEIGHT} flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-gradient-brand-reverse bg-origin-border px-[1px] text-sm font-semibold text-white transition disabled:opacity-50`}
-            />
-            <Link
-              href={deck.href}
-              className={`${TOOLBAR_ITEM_HEIGHT} flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-black px-[1px] text-sm font-semibold text-white transition-opacity hover:opacity-80 touch-manipulation`}
-            >
-              View deck
-            </Link>
+            {!logOpen && (
+              <>
+                <QRCodeButton
+                  shareUrl={deck.shareUrl ?? deck.href}
+                  className={`${TOOLBAR_ITEM_HEIGHT} flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-gradient-brand-reverse bg-origin-border px-[1px] text-sm font-semibold text-white transition disabled:opacity-50`}
+                />
+                <Link
+                  href={deck.href}
+                  className={`${TOOLBAR_ITEM_HEIGHT} flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-black px-[1px] text-sm font-semibold text-white transition-opacity hover:opacity-80 touch-manipulation`}
+                >
+                  View deck
+                </Link>
+              </>
+            )}
           </div>
 
           <div
