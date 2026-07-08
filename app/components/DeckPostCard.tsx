@@ -302,7 +302,7 @@ export function DeckBanner({
             top: "50%",
             opacity: 0.2,
             filter: "grayscale(1)",
-            transform: "translate(-50%, 0%) scale(3) rotate(-4deg)",
+            transform: "translate(-50%, 5%) scale(3) rotate(-4deg)",
           }}
         >
           {imageUrl ? (
