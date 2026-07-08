@@ -493,6 +493,7 @@ export function UserDeckCard({
               router.refresh();
             }}
             onCancel={() => setLogOpen(false)}
+            scrollToTopOnCancel={false}
           />
         </div>
       )}
