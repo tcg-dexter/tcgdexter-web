@@ -62,19 +62,13 @@ function currentStreak(recentForm?: ("W" | "L" | "D")[]): string | null {
   return `${first}${count}`;
 }
 
+/** Solid pushpin/thumbtack silhouette — a round head with a distinctly
+ *  narrower needle below it, unlike a map-pin's single continuous teardrop. */
 function PinIcon({ className }: { className?: string }) {
   return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 21s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12z" />
-      <circle cx="12" cy="9" r="2.5" />
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <circle cx="12" cy="8" r="5" />
+      <path d="M10.7 13h2.6l.4 3-1.7 5-1.7-5z" />
     </svg>
   );
 }
