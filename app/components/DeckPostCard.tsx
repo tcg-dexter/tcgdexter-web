@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import DeckCardFooter from "./DeckCardFooter";
 import DeckCardMenu from "./DeckCardMenu";
@@ -392,6 +392,23 @@ export function UserDeckCard({
   const [isFavorite, setIsFavorite] = useState(initialIsFavorite);
   const [logOpen, setLogOpen] = useState(false);
 
+  // Opening the drawer anchors this card to the top of the screen (with a
+  // little headroom), same as the pinned deck hero — offset by the mobile
+  // sticky toolbar's live height (0 on desktop, where nav lives in a side
+  // rail) so the match form is immediately visible instead of growing the
+  // card off-screen below the fold.
+  const cardRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!logOpen) return;
+    const el = cardRef.current;
+    if (!el) return;
+    const headroom = 16;
+    const toolbar = document.querySelector<HTMLElement>("[data-site-toolbar]");
+    const toolbarH = toolbar ? toolbar.getBoundingClientRect().height : 0;
+    const top = el.getBoundingClientRect().top + window.scrollY - toolbarH - headroom;
+    window.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
+  }, [logOpen]);
+
   const avatarItems = useMemo(
     () => buildAvatarItems(cards, coverImageUrl, iconUrl, iconBg),
     [cards, coverImageUrl, iconUrl, iconBg],
@@ -426,6 +443,7 @@ export function UserDeckCard({
 
   return (
     <div
+      ref={cardRef}
       className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       style={useFadeIn(index, skipEntranceAnimation)}
     >
