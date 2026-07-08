@@ -233,7 +233,6 @@ export default function MetaVariantCard({
           saveHref={href ?? `/meta-archetypes/${archetypeId}`}
           deckName={headerName}
           hideLikes
-          saveLabel="Save Deck"
         />
       </div>
     </div>
