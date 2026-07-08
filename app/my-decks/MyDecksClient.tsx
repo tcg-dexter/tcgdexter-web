@@ -161,16 +161,16 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
           <p className="text-[13px] font-semibold text-text-muted mt-4">No matches logged yet</p>
         )}
 
-        <div className="flex flex-wrap justify-between gap-2 mt-5">
+        <div className="flex gap-2 mt-5">
           <button
             type="button"
             onClick={() => setLogOpen((v) => !v)}
-            className={`${capsuleBase} bg-black text-white`}
+            className={`${capsuleBase} flex-1 bg-black text-white`}
           >
             Log match
           </button>
-          <QRCodeButton shareUrl={deck.href} className={`${capsuleBase} border border-black/10 bg-white text-text-primary hover:bg-black/[0.03]`} />
-          <Link href={deck.href} className={`${capsuleBase} bg-accent text-white`}>
+          <QRCodeButton shareUrl={deck.href} className={`${capsuleBase} flex-1 border border-black/10 bg-white text-text-primary hover:bg-black/[0.03]`} />
+          <Link href={deck.href} className={`${capsuleBase} flex-1 bg-accent text-white`}>
             View deck
           </Link>
         </div>
