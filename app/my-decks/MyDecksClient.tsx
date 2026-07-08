@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import SectionHeader from "@/app/components/ui/SectionHeader";
@@ -234,6 +234,15 @@ export default function MyDecksClient({ decks }: Props) {
     if (stored === "grid" || stored === "list") setView(stored);
   }, []);
 
+  // Grid and List render entirely different components, so toggling
+  // between them unmounts/remounts the grid cards — which would otherwise
+  // replay their mount fade-in and read as the page reloading. Only the
+  // page's true first paint should animate.
+  const hasAnimatedOnceRef = useRef(false);
+  useEffect(() => {
+    hasAnimatedOnceRef.current = true;
+  }, []);
+
   function changeView(next: ViewMode) {
     setView(next);
     window.localStorage.setItem(VIEW_MODE_KEY, next);
@@ -395,7 +404,7 @@ export default function MyDecksClient({ decks }: Props) {
       ) : view === "grid" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((deck, i) => (
-            <UserDeckCard key={deck.id} {...deck} index={i} />
+            <UserDeckCard key={deck.id} {...deck} index={i} skipEntranceAnimation={hasAnimatedOnceRef.current} />
           ))}
         </div>
       ) : (
