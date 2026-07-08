@@ -249,6 +249,7 @@ export function DeckBanner({
   onToggleFavorite,
   showFavorite,
   avatarItems,
+  className = "",
 }: {
   imageUrl: string | null;
   name: string;
@@ -258,13 +259,17 @@ export function DeckBanner({
   onToggleFavorite: (e: React.MouseEvent) => void;
   showFavorite: boolean;
   avatarItems: AvatarStackItem[];
+  /** Extra classes merged onto the root — lets callers override the default
+   *  fixed height (e.g. stretch full-height in a desktop side-by-side
+   *  layout) without affecting the grid card's own fixed-height use. */
+  className?: string;
 }) {
   const accentBg = iconBg ?? "#B0A89E";
   const accentDeep = shade(accentBg, -35);
   const hasRecord = !!wl && wl.w + wl.l + wl.d > 0;
   return (
     <div
-      className="relative h-[150px] overflow-hidden"
+      className={`relative h-[150px] overflow-hidden ${className}`}
       style={{ background: `linear-gradient(120deg, ${accentDeep} 0%, ${accentBg} 100%)` }}
     >
       <div
