@@ -325,7 +325,7 @@ export function DeckBanner({
                 the 2px stroke's outward extent — tight enough for accurate
                 centering without clipping the stroke at the path edges. */}
             <svg
-              className="w-[15px] h-[15px]"
+              className="w-[13.5px] h-[13.5px]"
               viewBox="1.16 2 21.68 20.23"
               fill={isFavorite ? "currentColor" : "none"}
               stroke="currentColor"
