@@ -320,12 +320,13 @@ export function DeckBanner({
               isFavorite ? "text-accent" : "text-black/25 hover:text-black/40"
             }`}
           >
-            {/* viewBox tightened to the heart's actual bbox (path spans
-                y≈3–21.23, x≈2.16–21.84) so flex centering places it exactly
-                mid-circle instead of within the loose 0–24 padding. */}
+            {/* viewBox centered on the heart's path bbox (x≈2.16–21.84,
+                y≈3–21.23) with 1-unit margin on all sides to leave room for
+                the 2px stroke's outward extent — tight enough for accurate
+                centering without clipping the stroke at the path edges. */}
             <svg
               className="w-[15px] h-[15px]"
-              viewBox="2.16 3 19.68 18.23"
+              viewBox="1.16 2 21.68 20.23"
               fill={isFavorite ? "currentColor" : "none"}
               stroke="currentColor"
               strokeWidth={2}
@@ -437,7 +438,7 @@ export function UserDeckCard({
         onToggleFavorite={toggleFavorite}
         showFavorite={canManage}
         avatarItems={avatarItems}
-        className="md:[--hero-card-x:44%]"
+        className="md:[--hero-card-x:42%]"
       />
 
       {/* Body — deck name + (owner) manage menu, then composition ring. */}
