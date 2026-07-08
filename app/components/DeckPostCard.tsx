@@ -276,6 +276,7 @@ export function DeckBanner({
           left: "44%",
           top: "50%",
           opacity: 0.2,
+          filter: "grayscale(1)",
           transform: "translate(-50%, -10%) scale(3) rotate(-4deg)",
         }}
       >
