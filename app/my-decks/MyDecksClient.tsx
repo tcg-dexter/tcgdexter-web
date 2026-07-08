@@ -288,6 +288,28 @@ export default function MyDecksClient({ decks }: Props) {
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [view, setView] = useState<ViewMode>("grid");
 
+  // This route streams behind loading.tsx, whose fixed-height skeleton is
+  // much shorter than the real content (variable deck count, taller pinned
+  // hero). The browser's default scroll restoration (history.scrollRestoration
+  // = "auto") reapplies the pre-refresh scrollY against that short skeleton
+  // on reload, clamping near its bottom — then the real, taller content
+  // streams in underneath without re-adjusting, landing the page far past
+  // its actual top. Take manual control for the lifetime of this page and
+  // snap to top once the real content has mounted; restore the browser's
+  // default on unmount so normal in-app back/forward navigation is unaffected.
+  useEffect(() => {
+    const original = window.history.scrollRestoration;
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+    window.scrollTo(0, 0);
+    return () => {
+      if ("scrollRestoration" in window.history) {
+        window.history.scrollRestoration = original;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const stored = window.localStorage.getItem(VIEW_MODE_KEY);
     if (stored === "grid" || stored === "list") setView(stored);
