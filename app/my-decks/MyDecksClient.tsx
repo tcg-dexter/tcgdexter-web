@@ -7,7 +7,8 @@ import SectionHeader from "@/app/components/ui/SectionHeader";
 import PillSelect from "@/app/components/ui/PillSelect";
 import { UserDeckCard, type UserDeckCardProps } from "@/app/components/DeckPostCard";
 import QRCodeButton from "@/app/components/QRCodeButton";
-import MatchForm, { type MatchFormData } from "@/app/components/MatchForm";
+import { type MatchFormData } from "@/app/components/MatchForm";
+import MatchEntry from "@/app/components/MatchEntry";
 import SavedDeckRow from "./SavedDeckRow";
 import { normalizeForSearch } from "@/lib/searchNormalize";
 
@@ -181,7 +182,16 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
 
         {logOpen && (
           <div className="mt-4 max-w-sm">
-            <MatchForm compact onSubmit={handleQuickLog} onCancel={() => setLogOpen(false)} />
+            <MatchEntry
+              savedDeckId={deck.id}
+              onSubmitManual={handleQuickLog}
+              onImported={() => {
+                setLogOpen(false);
+                router.refresh();
+              }}
+              onCancel={() => setLogOpen(false)}
+              scrollToTopOnCancel={false}
+            />
           </div>
         )}
       </div>
