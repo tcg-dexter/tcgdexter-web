@@ -321,8 +321,8 @@ export function DeckBanner({
       <div
         className="absolute rounded-lg overflow-hidden bg-white shadow-[0_8px_18px_rgba(0,0,0,0.3)]"
         style={{
-          width: 166,
-          height: 229,
+          width: "var(--hero-card-w, 166px)",
+          height: "var(--hero-card-h, 229px)",
           left: "39%",
           bottom: 0,
           transform: "translate(-50%, 40%) rotate(-4deg)",
