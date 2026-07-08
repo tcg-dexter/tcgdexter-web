@@ -232,7 +232,7 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
             className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${logOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
           >
             <div className="overflow-hidden">
-              <div className="mt-4 max-w-sm">
+              <div className="mt-4">
                 <MatchEntry
                   savedDeckId={deck.id}
                   onSubmitManual={handleQuickLog}
