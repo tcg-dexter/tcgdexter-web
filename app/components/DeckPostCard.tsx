@@ -107,34 +107,47 @@ export function MetaDeckCard({
   const creatorList = (creators && creators.length > 0 ? creators : ["Trainer"]).slice(0, 5);
   const href = `/meta-archetypes/${id}`;
   const accentBg = icon_bg ?? "#B0A89E";
-  const accentDeep = shade(accentBg, -22);
+  const accentDeep = shade(accentBg, -35);
   return (
     <div
       className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       style={useFadeIn(index)}
     >
-      {/* Energy-type accent gradient — mirrors the recent-battles preview
-          treatment (horizontal accent gradient at opacity-80) but uses the
-          card's own type color + banner-deep stop, masked along the
-          vertical axis so the top edge still fades in cleanly. */}
+      {/* Banner — same treatment as the deck collection preview cards'
+          DeckBanner: full diagonal accent gradient + a scaled/rotated ghost
+          watermark of the card art behind everything. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 opacity-80"
-        style={{
-          background: `linear-gradient(90deg, ${accentBg} 0%, ${accentDeep} 100%)`,
-          maskImage: "linear-gradient(to bottom, transparent 0%, black 100%)",
-          WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 100%)",
-        }}
-      />
+        className="relative h-[150px] overflow-hidden"
+        style={{ background: `linear-gradient(120deg, ${accentDeep} 0%, ${accentBg} 100%)` }}
+      >
+        <div
+          className="absolute rounded-lg overflow-hidden bg-white"
+          style={{
+            width: 166,
+            height: 229,
+            left: "44%",
+            top: "50%",
+            opacity: 0.2,
+            filter: "grayscale(1)",
+            transform: "translate(-50%, 5%) scale(3) rotate(-4deg)",
+          }}
+        >
+          {image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={image_url} alt="" className="w-full h-full object-cover" />
+          ) : null}
+        </div>
+        <span className="absolute top-2.5 right-2.5 z-10 rounded-full bg-black px-3 py-[5px] text-[12px] font-bold text-white tabular-nums">
+          {(representation_pct * 100).toFixed(1)}%
+        </span>
+      </div>
       <Link href={href} className="relative block">
-        {/* Header — deck name + rank */}
+        {/* Header — deck name */}
         <div className="flex items-center gap-2 px-3.5 pt-3">
           <p className="flex-1 min-w-0 text-[19px] font-semibold text-text-primary truncate">
             {name}
           </p>
-          <span className="ml-2 shrink-0 text-[13px] font-semibold text-text-muted tabular-nums">
-            {(representation_pct * 100).toFixed(1)}%
-          </span>
         </div>
 
         {/* Body */}
