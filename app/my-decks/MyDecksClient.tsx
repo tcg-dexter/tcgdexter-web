@@ -288,25 +288,31 @@ export default function MyDecksClient({ decks }: Props) {
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [view, setView] = useState<ViewMode>("grid");
 
-  // Belt-and-suspenders alongside layout.tsx's inline script (which wins
-  // the race against the browser's native scroll restoration on a hard
-  // refresh — see that file for the full explanation). This effect covers
-  // the case that script can't: a client-side SPA transition into this
-  // route from elsewhere in the app, where the layout's script tag was
-  // parser-inserted once on the original document load and doesn't
-  // re-execute on a soft navigation. useLayoutEffect (not useEffect) so it
-  // fires before the browser paints this mount's first frame. Restores the
-  // browser's default on unmount so normal back/forward elsewhere in the
-  // app is unaffected.
+  // Belt-and-suspenders alongside layout.tsx's inline script + style tag.
+  // Those cover the SSR + hard-refresh path; this effect covers the
+  // client-only case: an SPA transition INTO this route where the layout's
+  // parser-inserted script tag doesn't re-execute. Sets both
+  // overflow-anchor and scrollRestoration imperatively, and snaps to top
+  // so the previous route's scroll position doesn't leak in. See
+  // layout.tsx for the full write-up of the scroll-jump-to-bottom bug and
+  // why scroll anchoring needs to be opt-out on this route specifically.
   useLayoutEffect(() => {
-    const original = window.history.scrollRestoration;
+    const html = document.documentElement;
+    const body = document.body;
+    const originalHtmlAnchor = html.style.overflowAnchor;
+    const originalBodyAnchor = body?.style.overflowAnchor ?? "";
+    const originalRestore = window.history.scrollRestoration;
+    html.style.overflowAnchor = "none";
+    if (body) body.style.overflowAnchor = "none";
     if ("scrollRestoration" in window.history) {
       window.history.scrollRestoration = "manual";
     }
     window.scrollTo(0, 0);
     return () => {
+      html.style.overflowAnchor = originalHtmlAnchor;
+      if (body) body.style.overflowAnchor = originalBodyAnchor;
       if ("scrollRestoration" in window.history) {
-        window.history.scrollRestoration = original;
+        window.history.scrollRestoration = originalRestore;
       }
     };
   }, []);
