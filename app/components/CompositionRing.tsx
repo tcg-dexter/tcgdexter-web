@@ -57,7 +57,6 @@ export default function CompositionRing({ counts, size = 58, className }: Props)
       className={className}
       style={{ transform: "rotate(-90deg)", transformOrigin: "50% 50%" }}
     >
-      <circle cx="29" cy="29" r={R} stroke="var(--surface-2)" strokeWidth={STROKE} fill="none" />
       <circle
         cx="29"
         cy="29"
