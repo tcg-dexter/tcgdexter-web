@@ -256,6 +256,7 @@ export function DeckBanner({
   showFavorite,
   avatarItems,
   className = "",
+  artworkAreaHeightPx,
 }: {
   imageUrl: string | null;
   name: string;
@@ -269,6 +270,15 @@ export function DeckBanner({
    *  fixed height (e.g. stretch full-height in a desktop side-by-side
    *  layout) without affecting the grid card's own fixed-height use. */
   className?: string;
+  /** Pins the artwork layer (ghost/hero card, favorite button, WL ribbon,
+   *  avatar stack) to a fixed height in px, independent of the root's own
+   *  height. Without this the artwork's percentage-based positioning
+   *  recalculates whenever the root grows (e.g. a sibling column expanding
+   *  for an inline drawer), visibly shifting it. Pass the root's natural
+   *  collapsed height here so growth only reveals more background below
+   *  the artwork instead of stretching/repositioning it. Defaults to
+   *  filling the root exactly (today's behavior, unaffected). */
+  artworkAreaHeightPx?: number | null;
 }) {
   const accentBg = iconBg ?? "#B0A89E";
   const accentDeep = shade(accentBg, -35);
@@ -279,68 +289,73 @@ export function DeckBanner({
       style={{ background: `linear-gradient(120deg, ${accentDeep} 0%, ${accentBg} 100%)` }}
     >
       <div
-        aria-hidden
-        className="absolute rounded-lg overflow-hidden bg-white"
-        style={{
-          width: 166,
-          height: 229,
-          left: "44%",
-          top: "50%",
-          opacity: 0.2,
-          filter: "grayscale(1)",
-          transform: "translate(-50%, 0%) scale(3) rotate(-4deg)",
-        }}
+        className="relative"
+        style={artworkAreaHeightPx != null ? { height: artworkAreaHeightPx } : { height: "100%" }}
       >
-        {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrl} alt="" className="w-full h-full object-cover" />
-        ) : null}
-      </div>
-      {showFavorite && (
-        <button
-          type="button"
-          onClick={onToggleFavorite}
-          aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-          aria-pressed={isFavorite}
-          className={`absolute top-2.5 left-2.5 z-10 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center text-[13px] transition-colors ${
-            isFavorite ? "text-accent" : "text-black/25 hover:text-black/40"
-          }`}
+        <div
+          aria-hidden
+          className="absolute rounded-lg overflow-hidden bg-white"
+          style={{
+            width: 166,
+            height: 229,
+            left: "44%",
+            top: "50%",
+            opacity: 0.2,
+            filter: "grayscale(1)",
+            transform: "translate(-50%, 0%) scale(3) rotate(-4deg)",
+          }}
         >
-          <svg
-            className="w-[15px] h-[15px]"
-            viewBox="0 0 24 24"
-            fill={isFavorite ? "currentColor" : "none"}
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
+          {imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={imageUrl} alt="" className="w-full h-full object-cover" />
+          ) : null}
+        </div>
+        {showFavorite && (
+          <button
+            type="button"
+            onClick={onToggleFavorite}
+            aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+            aria-pressed={isFavorite}
+            className={`absolute top-2.5 left-2.5 z-10 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center text-[13px] transition-colors ${
+              isFavorite ? "text-accent" : "text-black/25 hover:text-black/40"
+            }`}
           >
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-          </svg>
-        </button>
-      )}
-      {hasRecord && (
-        <span className="absolute top-2.5 right-2.5 z-10 rounded-full bg-black px-3 py-[5px] text-[12px] font-bold text-white tabular-nums">
-          {wl!.w}–{wl!.l}
-        </span>
-      )}
-      <div
-        className="absolute rounded-lg overflow-hidden bg-white shadow-[0_8px_18px_rgba(0,0,0,0.3)]"
-        style={{
-          width: "var(--hero-card-w, 166px)",
-          height: "var(--hero-card-h, 229px)",
-          left: "39%",
-          bottom: 0,
-          transform: "translate(-50%, 40%) rotate(-4deg)",
-        }}
-      >
-        {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrl} alt={name} className="w-full h-full object-cover" />
-        ) : null}
-      </div>
-      <div className="absolute right-3 bottom-2.5 z-10 flex">
-        <AvatarStack items={avatarItems} count={3} />
+            <svg
+              className="w-[15px] h-[15px]"
+              viewBox="0 0 24 24"
+              fill={isFavorite ? "currentColor" : "none"}
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+            </svg>
+          </button>
+        )}
+        {hasRecord && (
+          <span className="absolute top-2.5 right-2.5 z-10 rounded-full bg-black px-3 py-[5px] text-[12px] font-bold text-white tabular-nums">
+            {wl!.w}–{wl!.l}
+          </span>
+        )}
+        <div
+          className="absolute rounded-lg overflow-hidden bg-white shadow-[0_8px_18px_rgba(0,0,0,0.3)]"
+          style={{
+            width: "var(--hero-card-w, 166px)",
+            height: "var(--hero-card-h, 229px)",
+            left: "39%",
+            bottom: 0,
+            transform: "translate(-50%, 40%) rotate(-4deg)",
+          }}
+        >
+          {imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={imageUrl} alt={name} className="w-full h-full object-cover" />
+          ) : null}
+        </div>
+        <div className="absolute right-3 bottom-2.5 z-10 flex">
+          <AvatarStack items={avatarItems} count={3} />
+        </div>
       </div>
     </div>
   );
