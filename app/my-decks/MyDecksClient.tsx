@@ -198,20 +198,24 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
             </Link>
           </div>
 
-          {logOpen && (
-            <div className="mt-4 max-w-sm">
-              <MatchEntry
-                savedDeckId={deck.id}
-                onSubmitManual={handleQuickLog}
-                onImported={() => {
-                  setLogOpen(false);
-                  router.refresh();
-                }}
-                onCancel={() => setLogOpen(false)}
-                scrollToTopOnCancel={false}
-              />
+          <div
+            className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${logOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+          >
+            <div className="overflow-hidden">
+              <div className="mt-4 max-w-sm">
+                <MatchEntry
+                  savedDeckId={deck.id}
+                  onSubmitManual={handleQuickLog}
+                  onImported={() => {
+                    setLogOpen(false);
+                    router.refresh();
+                  }}
+                  onCancel={() => setLogOpen(false)}
+                  scrollToTopOnCancel={false}
+                />
+              </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
@@ -339,7 +343,7 @@ export default function MyDecksClient({ decks }: Props) {
             </button>
             <button
               onClick={() => changeView("list")}
-              className={`h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${view === "list" ? "bg-white text-text-primary shadow-sm" : "text-text-muted"}`}
+              className={`h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${view === "list" ? "bg-black text-white shadow-sm" : "text-text-muted"}`}
             >
               List
             </button>
