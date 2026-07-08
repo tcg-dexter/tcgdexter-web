@@ -216,7 +216,11 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
             <p className="text-[13px] font-semibold text-text-muted mt-4">No matches logged yet</p>
           )}
 
-          <div className="flex gap-3 mt-5">
+          <div
+            className={`relative flex items-center mt-5 transition-all duration-300 ${
+              logOpen ? "gap-0" : "gap-3"
+            }`}
+          >
             <button
               type="button"
               onClick={() => setLogOpen((v) => !v)}
@@ -233,20 +237,24 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
             >
               Log match
             </button>
-            {!logOpen && (
-              <>
-                <QRCodeButton
-                  shareUrl={deck.shareUrl ?? deck.href}
-                  className={`${TOOLBAR_ITEM_HEIGHT} flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-gradient-brand-reverse bg-origin-border px-[1px] text-sm font-semibold text-white transition disabled:opacity-50`}
-                />
-                <Link
-                  href={deck.href}
-                  className={`${TOOLBAR_ITEM_HEIGHT} flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-black px-[1px] text-sm font-semibold text-white transition-opacity hover:opacity-80 touch-manipulation`}
-                >
-                  View deck
-                </Link>
-              </>
-            )}
+            <div
+              className={`flex items-center gap-3 overflow-hidden transition-all duration-300 ${
+                logOpen ? "opacity-0 pointer-events-none" : "opacity-100"
+              }`}
+              style={{ flexGrow: logOpen ? 0 : 2, flexBasis: "0%" }}
+              aria-hidden={logOpen}
+            >
+              <QRCodeButton
+                shareUrl={deck.shareUrl ?? deck.href}
+                className={`${TOOLBAR_ITEM_HEIGHT} flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-gradient-brand-reverse bg-origin-border px-[1px] text-sm font-semibold text-white transition disabled:opacity-50`}
+              />
+              <Link
+                href={deck.href}
+                className={`${TOOLBAR_ITEM_HEIGHT} flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-black px-[1px] text-sm font-semibold text-white transition-opacity hover:opacity-80 touch-manipulation`}
+              >
+                View deck
+              </Link>
+            </div>
           </div>
 
           <div
