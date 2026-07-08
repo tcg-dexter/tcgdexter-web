@@ -121,14 +121,16 @@ export function MatchCard({ match }: { match: RecentMatch }) {
         href={`/battles/${match.id}`}
         className="block rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       >
-        <div className="relative">
+        <div className="relative overflow-hidden">
           <div className={gradientClass} style={gradientStyle} />
           {/* Ghost card — the winner's deck hero card, blown up into a
               faded grayscale background texture. Mirrors DeckBanner's
               ghost-card treatment on the Deck Collection preview cards
               (gradient background, then the scaled/desaturated card art,
               then content on top) — same opacity/grayscale/scale recipe,
-              sized for this card's wider, shorter gradient zone. */}
+              sized for this card's wider, shorter gradient zone. The
+              parent's overflow-hidden clips it to this top hero zone only,
+              so it never bleeds into the footer below. */}
           {!isDraw && leftSide.imageUrl && (
             <div
               aria-hidden
@@ -140,7 +142,7 @@ export function MatchCard({ match }: { match: RecentMatch }) {
                 top: "50%",
                 opacity: 0.2,
                 filter: "grayscale(1)",
-                transform: "translate(-50%, -50%) scale(2.4) rotate(-4deg)",
+                transform: "translate(-50%, -25%) scale(2.4) rotate(-4deg)",
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
