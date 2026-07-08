@@ -123,6 +123,7 @@ const top3Cards = (() => {
       if (!creators.includes(c)) creators.push(c);
       if (creators.length >= 5) break;
     }
+    const deckListCount = deckData?.variants?.length ?? (deckData ? 1 : 0);
     return {
       id: arch.id,
       name: arch.name,
@@ -131,6 +132,7 @@ const top3Cards = (() => {
       icon_bg: iconBg,
       representation_pct: arch.representation_pct,
       creators,
+      deckListCount,
     };
   });
 })();
@@ -308,6 +310,7 @@ export default function HomeClient({
                   icon_bg={c.icon_bg}
                   representation_pct={c.representation_pct}
                   creators={c.creators}
+                  deckListCount={c.deckListCount}
                 />
               ))}
             </div>

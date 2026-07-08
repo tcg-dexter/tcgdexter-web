@@ -128,6 +128,7 @@ export default function MetaDecksClient({ items }: Props) {
               representation_pct={item.representation_pct}
               like_count={item.like_count}
               creators={item.creators}
+              deckListCount={item.deckListCount}
               index={i}
             />
           ))}

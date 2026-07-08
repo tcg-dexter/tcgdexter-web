@@ -63,6 +63,7 @@ export default function MetaDecksPage() {
     }
     const counts = { pokemon: 0, trainer: 0, energy: 0 };
     for (const c of cards) counts[c.category] += c.qty;
+    const deckListCount = deckData?.variants?.length ?? (deckData ? 1 : 0);
     return {
       id: arch.id,
       name: arch.name,
@@ -71,6 +72,7 @@ export default function MetaDecksPage() {
       icon_bg: iconBg,
       representation_pct: arch.representation_pct,
       creators,
+      deckListCount,
       counts,
     };
   });
