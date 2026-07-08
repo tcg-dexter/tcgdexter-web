@@ -9,6 +9,7 @@ import { UserDeckCard, type UserDeckCardProps } from "@/app/components/DeckPostC
 import QRCodeButton from "@/app/components/QRCodeButton";
 import { type MatchFormData } from "@/app/components/MatchForm";
 import MatchEntry from "@/app/components/MatchEntry";
+import DeckCardMenu from "@/app/components/DeckCardMenu";
 import SavedDeckRow from "./SavedDeckRow";
 import { normalizeForSearch } from "@/lib/searchNormalize";
 
@@ -100,8 +101,23 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
 
   return (
     <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden flex flex-col md:flex-row mb-4">
-      <div className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-accent">
-        <PinIcon className="w-4 h-4" />
+      <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+        {deck.canManage && deck.deckList != null && (
+          <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center">
+            <DeckCardMenu
+              deckId={deck.id}
+              deckName={deck.name}
+              deckList={deck.deckList}
+              isPublic={!!deck.isPublic}
+              isPinned={deck.isPinned}
+              cards={deck.cards ?? []}
+              coverImageUrl={deck.coverImageUrl ?? null}
+            />
+          </div>
+        )}
+        <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-accent">
+          <PinIcon className="w-4 h-4" />
+        </div>
       </div>
 
       <div
