@@ -69,6 +69,9 @@ export interface MetaDeckCardProps {
   representation_pct: number;
   like_count?: number;
   creators?: string[];
+  /** Total number of submitted deck lists for this archetype — shown as
+   *  "N Lists" next to the deck name. */
+  deckListCount?: number;
   /** Position in the grid — drives the entrance-animation stagger delay. */
   index?: number;
 }
@@ -82,6 +85,7 @@ export function MetaDeckCard({
   representation_pct,
   like_count = 0,
   creators,
+  deckListCount,
   index,
 }: MetaDeckCardProps) {
   const creatorList = (creators && creators.length > 0 ? creators : ["Trainer"]).slice(0, 3);
@@ -139,11 +143,16 @@ export function MetaDeckCard({
         </div>
       </div>
       <Link href={href} className="relative block">
-        {/* Header — deck name */}
+        {/* Header — deck name + submitted deck list count */}
         <div className="flex items-center gap-2 px-3.5 pt-3">
           <p className="flex-1 min-w-0 text-[19px] font-semibold text-text-primary truncate">
             {name}
           </p>
+          {deckListCount != null && (
+            <span className="shrink-0 text-[12px] font-semibold text-text-secondary">
+              {deckListCount} Lists
+            </span>
+          )}
         </div>
 
         {/* Body */}
@@ -151,7 +160,7 @@ export function MetaDeckCard({
           <div className="flex-1 min-w-0 flex flex-col">
             <div className="flex flex-col gap-0.5">
               <p className="text-[12px] font-bold text-text-primary">
-                Top Deck Lists
+                Top Cuts
               </p>
               {creatorList.map((c, i) => (
                 <p
