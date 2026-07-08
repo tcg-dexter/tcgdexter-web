@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { shade } from "@/lib/color";
 
 export interface AvatarStackItem {
   /** Stable identity for failure tracking. Usually the Pokémon name. */
@@ -85,10 +86,11 @@ function Avatar({
       />
     );
   }
+  const accentBg = iconBg ?? "#B0A89E";
   return (
     <div
       className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden ring-2 ring-white"
-      style={{ background: iconBg ?? "#B0A89E" }}
+      style={{ background: `linear-gradient(120deg, ${accentBg} 0%, ${shade(accentBg, -35)} 100%)` }}
       aria-hidden
     >
       {iconUrl ? (
