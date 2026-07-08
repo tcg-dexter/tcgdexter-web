@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import SectionHeader from "@/app/components/ui/SectionHeader";
@@ -78,6 +78,23 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
     [deck.cards, deck.coverImageUrl, deck.iconUrl, deck.iconBg],
   );
 
+  // On desktop the banner column stretches to match the row (md:h-full),
+  // so opening the inline Log match drawer in the body column — which
+  // grows the row taller — would otherwise stretch the banner too and
+  // shift the percentage-anchored ghost/hero card with it. Pin the
+  // artwork to the row's natural collapsed height instead, so growth
+  // only reveals more banner background beneath it. Re-baseline whenever
+  // the drawer is closed (not while open, which would just capture the
+  // expanded height) so viewport resizes self-correct.
+  const bannerColRef = useRef<HTMLDivElement>(null);
+  const [artworkH, setArtworkH] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    if (logOpen) return;
+    if (bannerColRef.current) {
+      setArtworkH(bannerColRef.current.getBoundingClientRect().height);
+    }
+  }, [logOpen]);
+
   async function toggleFavorite(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -112,7 +129,7 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
           softer/tighter against the hero's larger footprint. */}
       <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 blur-md" />
       <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-[0_20px_30px_-15px_rgba(217,30,13,0.3)] overflow-hidden flex flex-col md:flex-row">
-        <div className="md:w-[360px] shrink-0">
+        <div ref={bannerColRef} className="md:w-[360px] shrink-0">
           <DeckBanner
             imageUrl={deck.imageUrl ?? null}
             name={deck.name}
@@ -123,6 +140,7 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
             showFavorite={!!deck.canManage}
             avatarItems={avatarItems}
             className="md:h-full md:[--hero-card-w:207.5px] md:[--hero-card-h:286.25px]"
+            artworkAreaHeightPx={artworkH}
           />
         </div>
         <div className="flex-1 p-5 md:p-6">
@@ -408,7 +426,7 @@ export default function MyDecksClient({ decks }: Props) {
           <p className="text-sm text-text-secondary">No decks match “{query}”.</p>
         </div>
       ) : view === "grid" ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
           {filtered.map((deck, i) => (
             <UserDeckCard key={deck.id} {...deck} index={i} skipEntranceAnimation={hasAnimatedOnceRef.current} />
           ))}
