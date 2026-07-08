@@ -99,6 +99,17 @@ export default function MetaVariantCard({
   const accentDeep = shade(accentBg, -35);
   const hasAccolade = Boolean(placingLine || competitionName || dateLine);
 
+  // competitionName arrives as comma-separated parts (e.g. "Regional
+  // Indianapolis, IN") — first part is the event name (left column, under
+  // the placing line), the rest is the city/state (right column, alongside
+  // the date).
+  const competitionParts = (competitionName ?? "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const eventNameLine = competitionParts[0] ?? null;
+  const cityLine = competitionParts.slice(1).join(", ") || null;
+
   const headerTitle = (
     <div className="flex-1 min-w-0">
       <p
@@ -121,31 +132,38 @@ export default function MetaVariantCard({
       {/* Header — reused two-line creator/deck-name header, now in the body */}
       <div className="flex items-center gap-2 px-3.5 pt-3">{headerTitle}</div>
 
-      {/* Placement stats — directly below the header */}
+      {/* Placement stats — directly below the header. Placing + event name
+          stay left-aligned; city + date share a single row anchored right. */}
       {hasAccolade && (
-        <div className="flex flex-col items-start text-left leading-tight px-3.5 pt-1.5 pb-3">
-          {placingLine && (
-            <span className="text-[13px] font-semibold text-text-primary truncate">
-              {placingLine}
-            </span>
-          )}
-          {competitionName &&
-            competitionName.split(",").map((part, i) => {
-              const text = part.trim();
-              if (!text) return null;
-              return (
-                <span
-                  key={i}
-                  className="text-[13px] text-text-secondary truncate"
-                >
-                  {text}
+        <div className="flex items-start justify-between gap-2 px-3.5 pt-1.5 pb-3">
+          <div className="flex flex-col items-start text-left leading-tight min-w-0">
+            {placingLine && (
+              <span className="text-[13px] font-semibold text-text-primary truncate">
+                {placingLine}
+              </span>
+            )}
+            {eventNameLine && (
+              <span className="text-[13px] text-text-secondary truncate">
+                {eventNameLine}
+              </span>
+            )}
+          </div>
+          {(cityLine || dateLine) && (
+            <div className="flex items-center gap-1.5 shrink-0 text-right">
+              {cityLine && (
+                <span className="text-[13px] text-text-secondary truncate">
+                  {cityLine}
                 </span>
-              );
-            })}
-          {dateLine && (
-            <span className="text-[13px] text-text-muted truncate">
-              {dateLine}
-            </span>
+              )}
+              {cityLine && dateLine && (
+                <span className="text-[13px] text-text-muted">·</span>
+              )}
+              {dateLine && (
+                <span className="text-[13px] text-text-muted truncate">
+                  {dateLine}
+                </span>
+              )}
+            </div>
           )}
         </div>
       )}
