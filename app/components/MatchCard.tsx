@@ -123,6 +123,34 @@ export function MatchCard({ match }: { match: RecentMatch }) {
       >
         <div className="relative">
           <div className={gradientClass} style={gradientStyle} />
+          {/* Ghost card — the winner's deck hero card, blown up into a
+              faded grayscale background texture. Mirrors DeckBanner's
+              ghost-card treatment on the Deck Collection preview cards
+              (gradient background, then the scaled/desaturated card art,
+              then content on top) — same opacity/grayscale/scale recipe,
+              sized for this card's wider, shorter gradient zone. */}
+          {!isDraw && leftSide.imageUrl && (
+            <div
+              aria-hidden
+              className="absolute rounded-lg overflow-hidden"
+              style={{
+                width: 150,
+                height: 207,
+                left: "50%",
+                top: "50%",
+                opacity: 0.2,
+                filter: "grayscale(1)",
+                transform: "translate(-50%, -50%) scale(2.4) rotate(-4deg)",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={leftSide.imageUrl}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
           {/* Prize counts — large white digits flanking the card pair,
               vertically centered within the gradient zone. Use absolute
               positioning so the centered cards stay perfectly centered
