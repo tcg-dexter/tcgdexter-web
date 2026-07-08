@@ -84,15 +84,27 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
   // shift the percentage-anchored ghost/hero card with it. Pin the
   // artwork to the row's natural collapsed height instead, so growth
   // only reveals more banner background beneath it. Re-baseline whenever
-  // the drawer is closed (not while open, which would just capture the
-  // expanded height) so viewport resizes self-correct.
+  // the drawer is closed so viewport resizes self-correct. The close-side
+  // remeasurement is delayed past the drawer's 300ms collapse transition
+  // (see grid-template-rows below) — measuring synchronously on close would
+  // capture the still-expanded height mid-transition and pin the banner at
+  // that stale size forever, since this effect won't fire again while
+  // logOpen stays false.
   const bannerColRef = useRef<HTMLDivElement>(null);
   const [artworkH, setArtworkH] = useState<number | null>(null);
   useLayoutEffect(() => {
-    if (logOpen) return;
     if (bannerColRef.current) {
       setArtworkH(bannerColRef.current.getBoundingClientRect().height);
     }
+  }, []);
+  useEffect(() => {
+    if (logOpen) return;
+    const t = setTimeout(() => {
+      if (bannerColRef.current) {
+        setArtworkH(bannerColRef.current.getBoundingClientRect().height);
+      }
+    }, 320);
+    return () => clearTimeout(t);
   }, [logOpen]);
 
   async function toggleFavorite(e: React.MouseEvent) {
