@@ -110,9 +110,11 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
 
   return (
     <div className="relative mb-4">
-      {/* Gradient glow — same treatment as the homepage deck-list input card */}
-      <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 blur-xl" />
-      <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-brand-lg overflow-hidden flex flex-col md:flex-row">
+      {/* Gradient glow — same treatment as the homepage deck-list input card,
+          with half the blur and half the shadow's blur-radius so it reads
+          softer/tighter against the hero's larger footprint. */}
+      <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 blur-md" />
+      <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-[0_20px_30px_-15px_rgba(217,30,13,0.25)] overflow-hidden flex flex-col md:flex-row">
         <div className="md:w-[360px] shrink-0">
           <DeckBanner
             imageUrl={deck.imageUrl ?? null}
@@ -292,6 +294,29 @@ export default function MyDecksClient({ decks }: Props) {
           />
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+          <PillSelect
+            value={`${sort}:${dir}`}
+            onChange={(e) => {
+              const [s, d] = e.target.value.split(":") as [SortKey, SortDir];
+              setSort(s);
+              setDir(d);
+            }}
+          >
+            <option value="date:desc">Date Added ↓</option>
+            <option value="date:asc">Date Added ↑</option>
+            <option value="name:asc">Deck Name (A–Z)</option>
+            <option value="name:desc">Deck Name (Z–A)</option>
+            <option value="wins:desc">Wins ↓</option>
+            <option value="wins:asc">Wins ↑</option>
+            <option value="likes:desc">Likes ↓</option>
+            <option value="likes:asc">Likes ↑</option>
+            <option value="pokemon:desc">Pokémon Card Count ↓</option>
+            <option value="pokemon:asc">Pokémon Card Count ↑</option>
+            <option value="trainer:desc">Trainer Card Count ↓</option>
+            <option value="trainer:asc">Trainer Card Count ↑</option>
+            <option value="energy:desc">Energy Card Count ↓</option>
+            <option value="energy:asc">Energy Card Count ↑</option>
+          </PillSelect>
           <div className={`flex items-center ${TOOLBAR_ITEM_HEIGHT} rounded-full bg-black/5 p-[3px]`}>
             <button
               onClick={() => changeView("grid")}
@@ -306,29 +331,6 @@ export default function MyDecksClient({ decks }: Props) {
               List
             </button>
           </div>
-          <PillSelect
-            value={`${sort}:${dir}`}
-            onChange={(e) => {
-              const [s, d] = e.target.value.split(":") as [SortKey, SortDir];
-              setSort(s);
-              setDir(d);
-            }}
-          >
-            <option value="date:desc">Date Added (Descending)</option>
-            <option value="date:asc">Date Added (Ascending)</option>
-            <option value="name:asc">Deck Name (A–Z)</option>
-            <option value="name:desc">Deck Name (Z–A)</option>
-            <option value="wins:desc">Wins (Descending)</option>
-            <option value="wins:asc">Wins (Ascending)</option>
-            <option value="likes:desc">Likes (Descending)</option>
-            <option value="likes:asc">Likes (Ascending)</option>
-            <option value="pokemon:desc">Pokémon Card Count (Descending)</option>
-            <option value="pokemon:asc">Pokémon Card Count (Ascending)</option>
-            <option value="trainer:desc">Trainer Card Count (Descending)</option>
-            <option value="trainer:asc">Trainer Card Count (Ascending)</option>
-            <option value="energy:desc">Energy Card Count (Descending)</option>
-            <option value="energy:asc">Energy Card Count (Ascending)</option>
-          </PillSelect>
           <button
             type="button"
             onClick={() => setFavoritesOnly((v) => !v)}
