@@ -168,7 +168,7 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
             onToggleFavorite={toggleFavorite}
             showFavorite={!!deck.canManage}
             avatarItems={avatarItems}
-            className="md:h-full md:[--hero-card-w:207.5px] md:[--hero-card-h:286.25px]"
+            className="md:h-full [--hero-card-w:182.6px] [--hero-card-h:251.9px] [--hero-card-x:46%] md:[--hero-card-w:228.25px] md:[--hero-card-h:314.875px]"
             artworkAreaHeightPx={artworkH}
           />
         </div>
