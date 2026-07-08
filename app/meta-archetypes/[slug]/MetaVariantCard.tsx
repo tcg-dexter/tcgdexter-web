@@ -2,12 +2,16 @@
 
 import Link from "next/link";
 import AvatarStack, { type AvatarStackItem } from "@/app/components/AvatarStack";
+import DeckCardFooter from "@/app/components/DeckCardFooter";
 import type { MetaAvatar } from "@/lib/metaPrimaryCard";
+import { shade } from "@/lib/color";
 import { useFadeIn } from "@/lib/useFadeIn";
 
 interface Props {
   /** Stable key — typically `${archetypeSlug}-v${index}`. */
   id: string;
+  /** Parent archetype slug — used for the Save button's clone endpoint. */
+  archetypeId: string;
   /** Parent archetype display name — used as the header title when this
    *  variant has no specific sub-archetype tag from Limitless. */
   archetypeName: string;
@@ -17,10 +21,9 @@ interface Props {
    *  (e.g. "Dragapult Blaziken"). When present this is the header title;
    *  when null we fall back to the parent archetype name. */
   variantName?: string | null;
-  /** Pokémon icon for the archetype — shown in the header next to the
-   *  variant title. Mirrors UserDeckCard's deck-icon avatar. */
+  /** Pokémon icon for the archetype — shown in the banner avatar stack. */
   iconUrl?: string | null;
-  /** Background color behind the header icon (typing tint). */
+  /** Background color for the banner gradient + avatar circle (typing tint). */
   iconBg?: string | null;
   /** "Nth Place" line for the accolade stack, or null when placing is
    *  unknown. */
@@ -35,7 +38,7 @@ interface Props {
   cardImageUrl: string | null;
   /** Up to 2 additional Pokémon avatars (next-highest HP, deduped against
    *  the archetype primary) stacked next to the archetype avatar in the
-   *  body. */
+   *  banner. */
   secondaryAvatars: MetaAvatar[];
   /**
    * Optional click-through. When omitted the card is visual-only.
@@ -47,34 +50,19 @@ interface Props {
   index?: number;
 }
 
-function CardArt({ url, name }: { url?: string | null; name: string }) {
-  return (
-    <div
-      className="shrink-0 self-start rounded-lg overflow-hidden border border-black/[0.07] bg-[var(--surface)] flex items-center justify-center"
-      style={{ width: 106, height: 148 }}
-    >
-      {url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt={name} className="w-full h-full object-contain" />
-      ) : (
-        <span className="text-[13px] text-text-muted text-center leading-relaxed px-2">
-          No cover
-          <br />
-          set
-        </span>
-      )}
-    </div>
-  );
-}
-
 /**
  * Preview card for one of the top-5 meta deck variants.
  *
- * Visual style mirrors UserDeckCard (the variant we use for user-created
- * decks) so meta deck profiles read like a Twitter "Posts" feed where each
- * post is a known player's build of the archetype.
+ * Adopts the same banner treatment as the main /meta-archetypes cards
+ * (MetaDeckCard): full diagonal accent gradient, a scaled/rotated ghost
+ * watermark, the rotated hero card art tucked into the bottom edge, and the
+ * Pokémon avatar stack in the banner's bottom-right corner. The body reuses
+ * the existing "{creator}'s / {deck name}" two-line header with the
+ * placement/accolade stack directly beneath it, and a Save Deck + Share
+ * footer matching the saved-deck preview cards' footer style.
  */
 export default function MetaVariantCard({
+  archetypeId,
   archetypeName,
   annotation,
   variantName,
@@ -107,44 +95,9 @@ export default function MetaVariantCard({
     })),
   ];
 
+  const accentBg = iconBg ?? "#B0A89E";
+  const accentDeep = shade(accentBg, -35);
   const hasAccolade = Boolean(placingLine || competitionName || dateLine);
-  const body = (
-    <div className="flex gap-3.5 p-3.5 pt-3">
-      <CardArt url={cardImageUrl} name={headerName} />
-      <div className="flex-1 min-w-0 flex flex-col">
-        {hasAccolade && (
-          <div className="flex flex-col items-start text-left leading-tight">
-            {placingLine && (
-              <span className="text-[13px] font-semibold text-text-primary truncate">
-                {placingLine}
-              </span>
-            )}
-            {competitionName &&
-              competitionName.split(",").map((part, i) => {
-                const text = part.trim();
-                if (!text) return null;
-                return (
-                  <span
-                    key={i}
-                    className="text-[13px] text-text-secondary truncate"
-                  >
-                    {text}
-                  </span>
-                );
-              })}
-            {dateLine && (
-              <span className="text-[13px] text-text-muted truncate">
-                {dateLine}
-              </span>
-            )}
-          </div>
-        )}
-        <div className="mt-auto flex items-center justify-end">
-          <AvatarStack items={avatarItems} count={3} bare />
-        </div>
-      </div>
-    </div>
-  );
 
   const headerTitle = (
     <div className="flex-1 min-w-0">
@@ -163,19 +116,91 @@ export default function MetaVariantCard({
     </div>
   );
 
+  const body = (
+    <>
+      {/* Header — reused two-line creator/deck-name header, now in the body */}
+      <div className="flex items-center gap-2 px-3.5 pt-3">{headerTitle}</div>
+
+      {/* Placement stats — directly below the header */}
+      {hasAccolade && (
+        <div className="flex flex-col items-start text-left leading-tight px-3.5 pt-1.5 pb-3">
+          {placingLine && (
+            <span className="text-[13px] font-semibold text-text-primary truncate">
+              {placingLine}
+            </span>
+          )}
+          {competitionName &&
+            competitionName.split(",").map((part, i) => {
+              const text = part.trim();
+              if (!text) return null;
+              return (
+                <span
+                  key={i}
+                  className="text-[13px] text-text-secondary truncate"
+                >
+                  {text}
+                </span>
+              );
+            })}
+          {dateLine && (
+            <span className="text-[13px] text-text-muted truncate">
+              {dateLine}
+            </span>
+          )}
+        </div>
+      )}
+    </>
+  );
+
   return (
     <div
-      className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+      className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       style={useFadeIn(index)}
     >
-      <div className="flex items-stretch gap-3 px-3.5 pt-3">
-        {href ? (
-          <Link href={href} className="flex-1 min-w-0 block">
-            {headerTitle}
-          </Link>
-        ) : (
-          headerTitle
-        )}
+      {/* Banner — same treatment as the main meta-archetype preview cards'
+          banner: diagonal accent gradient, scaled/rotated ghost watermark,
+          rotated hero card tucked into the bottom edge, avatar stack in the
+          bottom-right corner. */}
+      <div
+        aria-hidden
+        className="relative h-[150px] overflow-hidden md:[--hero-card-x:42%]"
+        style={{ background: `linear-gradient(120deg, ${accentDeep} 0%, ${accentBg} 100%)` }}
+      >
+        <div
+          className="absolute rounded-lg overflow-hidden bg-white"
+          style={{
+            width: 166,
+            height: 229,
+            left: "44%",
+            top: "50%",
+            opacity: 0.2,
+            filter: "grayscale(1)",
+            transform: "translate(-50%, 5%) scale(3) rotate(-4deg)",
+          }}
+        >
+          {cardImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={cardImageUrl} alt="" className="w-full h-full object-cover" />
+          ) : null}
+        </div>
+        <div
+          className="absolute rounded-lg overflow-hidden bg-white shadow-[0_8px_18px_rgba(0,0,0,0.3)]"
+          style={{
+            width: "var(--hero-card-w, 166px)",
+            height: "var(--hero-card-h, 229px)",
+            left: "var(--hero-card-x, 39%)",
+            bottom: 0,
+            transform: "translate(-50%, 40%) rotate(-4deg)",
+          }}
+        >
+          {cardImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={cardImageUrl} alt={headerName} className="w-full h-full object-cover" />
+          ) : null}
+        </div>
+        <div className="absolute right-3 bottom-2.5 z-10 flex">
+          <AvatarStack items={avatarItems} count={3} />
+        </div>
       </div>
 
       {href ? (
@@ -186,7 +211,16 @@ export default function MetaVariantCard({
         body
       )}
 
+      <div className="relative">
+        <DeckCardFooter
+          metaArchetypeId={archetypeId}
+          initialLikes={0}
+          saveHref={href ?? `/meta-archetypes/${archetypeId}`}
+          deckName={headerName}
+          hideLikes
+          saveLabel="Save Deck"
+        />
+      </div>
     </div>
   );
 }
-

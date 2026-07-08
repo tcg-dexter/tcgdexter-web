@@ -35,6 +35,9 @@ interface Props {
   hideShare?: boolean;
   /** Hide the Like action. */
   hideLikes?: boolean;
+  /** Override the Save button's unsaved-state label (default "Save").
+   *  Saved state always reads "Saved" regardless of this override. */
+  saveLabel?: string;
 }
 
 type PromptKind = "like" | "save" | null;
@@ -49,6 +52,7 @@ export default function DeckCardFooter({
   hideSave = false,
   hideShare = false,
   hideLikes = false,
+  saveLabel = "Save",
 }: Props) {
   const router = useRouter();
   const [liked, setLiked] = useState(false);
@@ -252,8 +256,8 @@ export default function DeckCardFooter({
       )}&color=1a1a1a&bgcolor=ffffff&margin=1`
     : null;
 
-  const saveLabel =
-    saveMode === "user" && isOwner ? "Saved" : saved ? "Saved" : "Save";
+  const saveButtonLabel =
+    saveMode === "user" && isOwner ? "Saved" : saved ? "Saved" : saveLabel;
   const saveAria =
     saveMode === "user" && isOwner
       ? "Already in your library"
@@ -314,7 +318,7 @@ export default function DeckCardFooter({
             >
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
             </svg>
-            {saveLabel}
+            {saveButtonLabel}
           </button>
         )}
 

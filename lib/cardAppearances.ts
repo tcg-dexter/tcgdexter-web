@@ -54,6 +54,8 @@ export interface CardAppearance {
   id: string;
   /** URL into the variant detail page. */
   href: string;
+  /** Parent archetype slug — used for the Save button's clone endpoint. */
+  archetypeId: string;
   archetypeName: string;
   annotation?: string;
   variantName: string | null;
@@ -165,6 +167,7 @@ function buildAppearance(m: Match): CardAppearance {
   return {
     id: `${archetype.id}-v${variantIndex}`,
     href: `/meta-archetypes/${archetype.id}/${variantIndex + 1}`,
+    archetypeId: archetype.id,
     archetypeName: archetype.name,
     annotation: archetype.annotation,
     variantName: (variant.variantName ?? "").trim() || null,
