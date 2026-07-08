@@ -65,17 +65,6 @@ function currentStreak(recentForm?: ("W" | "L" | "D")[]): string | null {
   return `${first}${count}`;
 }
 
-/** Solid pushpin/thumbtack silhouette — a round head with a distinctly
- *  narrower needle below it, unlike a map-pin's single continuous teardrop. */
-function PinIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <circle cx="12" cy="8" r="5" />
-      <path d="M10.7 13h2.6l.4 3-1.7 5-1.7-5z" />
-    </svg>
-  );
-}
-
 function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
   const router = useRouter();
   const [logOpen, setLogOpen] = useState(false);
@@ -124,25 +113,6 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
       {/* Gradient glow — same treatment as the homepage deck-list input card */}
       <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 blur-xl" />
       <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-brand-lg overflow-hidden flex flex-col md:flex-row">
-        <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5">
-          {deck.canManage && deck.deckList != null && (
-            <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center">
-              <DeckCardMenu
-                deckId={deck.id}
-                deckName={deck.name}
-                deckList={deck.deckList}
-                isPublic={!!deck.isPublic}
-                isPinned={deck.isPinned}
-                cards={deck.cards ?? []}
-                coverImageUrl={deck.coverImageUrl ?? null}
-              />
-            </div>
-          )}
-          <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-accent">
-            <PinIcon className="w-4 h-4" />
-          </div>
-        </div>
-
         <div className="md:w-[360px] shrink-0">
           <DeckBanner
             imageUrl={deck.imageUrl ?? null}
@@ -156,9 +126,27 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
           />
         </div>
         <div className="flex-1 p-5 md:p-6">
-          <Link href={deck.href} className="block text-[26px] font-bold text-text-primary hover:underline underline-offset-2 leading-tight">
-            {deck.name}
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href={deck.href}
+              className="flex-1 min-w-0 truncate block text-[26px] font-bold text-text-primary hover:underline underline-offset-2 leading-tight"
+            >
+              {deck.name}
+            </Link>
+            {deck.canManage && deck.deckList != null && (
+              <div className="shrink-0 -mr-1">
+                <DeckCardMenu
+                  deckId={deck.id}
+                  deckName={deck.name}
+                  deckList={deck.deckList}
+                  isPublic={!!deck.isPublic}
+                  isPinned={deck.isPinned}
+                  cards={deck.cards ?? []}
+                  coverImageUrl={deck.coverImageUrl ?? null}
+                />
+              </div>
+            )}
+          </div>
 
           {hasRecord ? (
             <div className="flex flex-wrap justify-between gap-y-3 mt-4">
@@ -303,17 +291,17 @@ export default function MyDecksClient({ decks }: Props) {
             className="w-full pl-10 pr-4 py-2 rounded-full border border-black/10 bg-white text-[16px] sm:text-sm focus:outline-none focus-gradient-border transition-colors"
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
           <div className={`flex items-center ${TOOLBAR_ITEM_HEIGHT} rounded-full bg-black/5 p-[3px]`}>
             <button
               onClick={() => changeView("grid")}
-              className={`h-full flex items-center px-3.5 rounded-full text-xs font-bold transition-colors ${view === "grid" ? "bg-white text-text-primary shadow-sm" : "text-text-muted"}`}
+              className={`h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${view === "grid" ? "bg-white text-text-primary shadow-sm" : "text-text-muted"}`}
             >
               Grid
             </button>
             <button
               onClick={() => changeView("list")}
-              className={`h-full flex items-center px-3.5 rounded-full text-xs font-bold transition-colors ${view === "list" ? "bg-white text-text-primary shadow-sm" : "text-text-muted"}`}
+              className={`h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${view === "list" ? "bg-white text-text-primary shadow-sm" : "text-text-muted"}`}
             >
               List
             </button>
@@ -346,7 +334,7 @@ export default function MyDecksClient({ decks }: Props) {
             onClick={() => setFavoritesOnly((v) => !v)}
             aria-pressed={favoritesOnly}
             title={favoritesOnly ? "Showing favorites only" : "Show favorites only"}
-            className={`${TOOLBAR_ITEM_HEIGHT} inline-flex items-center gap-1.5 px-3 rounded-full text-xs font-semibold transition-colors ${
+            className={`${TOOLBAR_ITEM_HEIGHT} inline-flex items-center justify-center gap-1.5 px-3 rounded-full text-xs font-semibold transition-colors ${
               favoritesOnly ? "bg-black text-white" : "bg-white text-text-secondary border border-black/8"
             }`}
           >
@@ -365,7 +353,7 @@ export default function MyDecksClient({ decks }: Props) {
           </button>
           <Link
             href="/"
-            className="text-xs font-semibold h-[38px] inline-flex items-center px-3 rounded-full border border-transparent bg-gradient-brand bg-origin-border text-white shadow-brand hover:shadow-brand-lg transition"
+            className="text-xs font-semibold h-[38px] inline-flex items-center justify-center px-3 rounded-full border border-transparent bg-gradient-brand bg-origin-border text-white shadow-brand hover:shadow-brand-lg transition"
           >
             + New Deck
           </Link>
