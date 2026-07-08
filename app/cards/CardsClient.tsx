@@ -300,8 +300,8 @@ function CatalogBody({
             <option value="hp:asc">Hit Points (Low to High)</option>
             <option value="price:desc">Market Price (High to Low)</option>
             <option value="price:asc">Market Price (Low to High)</option>
-            <option value="rarity:desc">Rarity (Descending)</option>
-            <option value="rarity:asc">Rarity (Ascending)</option>
+            <option value="rarity:desc">Rarity ↓</option>
+            <option value="rarity:asc">Rarity ↑</option>
           </PillSelect>
           <button
             onClick={() => setShowFilters((s) => !s)}
