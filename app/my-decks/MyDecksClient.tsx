@@ -343,16 +343,22 @@ export default function MyDecksClient({ decks }: Props) {
             <option value="energy:desc">Energy Card Count ↓</option>
             <option value="energy:asc">Energy Card Count ↑</option>
           </PillSelect>
-          <div className={`flex items-center ${TOOLBAR_ITEM_HEIGHT} rounded-full bg-black/5 p-[3px]`}>
+          <div className={`relative flex items-center ${TOOLBAR_ITEM_HEIGHT} rounded-full bg-black/5 p-[3px]`}>
+            <div
+              aria-hidden
+              className={`absolute inset-y-[3px] left-[3px] w-[calc(50%-3px)] rounded-full shadow-sm transition-all duration-300 ease-in-out ${
+                view === "grid" ? "translate-x-0 bg-white" : "translate-x-full bg-black"
+              }`}
+            />
             <button
               onClick={() => changeView("grid")}
-              className={`h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${view === "grid" ? "bg-white text-text-primary shadow-sm" : "text-text-muted"}`}
+              className={`relative z-10 h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${view === "grid" ? "text-text-primary" : "text-text-muted"}`}
             >
               Grid
             </button>
             <button
               onClick={() => changeView("list")}
-              className={`h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${view === "list" ? "bg-black text-white shadow-sm" : "text-text-muted"}`}
+              className={`relative z-10 h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${view === "list" ? "text-white" : "text-text-muted"}`}
             >
               List
             </button>
