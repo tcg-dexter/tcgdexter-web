@@ -133,7 +133,7 @@ export default function MetaVariantCard({
       <div className="flex items-center gap-2 px-3.5 pt-3">{headerTitle}</div>
 
       {/* Placement stats — directly below the header. Placing + event name
-          stay left-aligned; city + date share a single row anchored right. */}
+          stack left-aligned; city + date stack right-aligned, same row. */}
       {hasAccolade && (
         <div className="flex items-start justify-between gap-2 px-3.5 pt-1.5 pb-3">
           <div className="flex flex-col items-start text-left leading-tight min-w-0">
@@ -149,14 +149,11 @@ export default function MetaVariantCard({
             )}
           </div>
           {(cityLine || dateLine) && (
-            <div className="flex items-center gap-1.5 shrink-0 text-right">
+            <div className="flex flex-col items-end text-right leading-tight shrink-0">
               {cityLine && (
                 <span className="text-[13px] text-text-secondary truncate">
                   {cityLine}
                 </span>
-              )}
-              {cityLine && dateLine && (
-                <span className="text-[13px] text-text-muted">·</span>
               )}
               {dateLine && (
                 <span className="text-[13px] text-text-muted truncate">
