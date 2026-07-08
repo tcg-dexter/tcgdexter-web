@@ -288,16 +288,17 @@ export default function MyDecksClient({ decks }: Props) {
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [view, setView] = useState<ViewMode>("grid");
 
-  // This route streams behind loading.tsx, whose fixed-height skeleton is
-  // much shorter than the real content (variable deck count, taller pinned
-  // hero). The browser's default scroll restoration (history.scrollRestoration
-  // = "auto") reapplies the pre-refresh scrollY against that short skeleton
-  // on reload, clamping near its bottom — then the real, taller content
-  // streams in underneath without re-adjusting, landing the page far past
-  // its actual top. Take manual control for the lifetime of this page and
-  // snap to top once the real content has mounted; restore the browser's
-  // default on unmount so normal in-app back/forward navigation is unaffected.
-  useEffect(() => {
+  // Belt-and-suspenders alongside layout.tsx's inline script (which wins
+  // the race against the browser's native scroll restoration on a hard
+  // refresh — see that file for the full explanation). This effect covers
+  // the case that script can't: a client-side SPA transition into this
+  // route from elsewhere in the app, where the layout's script tag was
+  // parser-inserted once on the original document load and doesn't
+  // re-execute on a soft navigation. useLayoutEffect (not useEffect) so it
+  // fires before the browser paints this mount's first frame. Restores the
+  // browser's default on unmount so normal back/forward elsewhere in the
+  // app is unaffected.
+  useLayoutEffect(() => {
     const original = window.history.scrollRestoration;
     if ("scrollRestoration" in window.history) {
       window.history.scrollRestoration = "manual";
