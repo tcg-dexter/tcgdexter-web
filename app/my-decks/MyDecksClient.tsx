@@ -105,9 +105,6 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
     router.refresh();
   }
 
-  const capsuleBase =
-    "inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-[13px] font-semibold transition-colors";
-
   return (
     <div className="relative mb-4">
       {/* Gradient glow — same treatment as the homepage deck-list input card,
@@ -171,16 +168,31 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
             <p className="text-[13px] font-semibold text-text-muted mt-4">No matches logged yet</p>
           )}
 
-          <div className="flex gap-2 mt-5">
+          <div className="flex gap-3 mt-5">
             <button
               type="button"
               onClick={() => setLogOpen((v) => !v)}
-              className={`${capsuleBase} flex-1 bg-black text-white`}
+              className={`flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-[1px] py-2 text-sm font-semibold transition-all ${
+                logOpen ? "text-white" : "text-text-secondary"
+              }`}
+              style={{
+                backgroundImage: logOpen
+                  ? "linear-gradient(black, black), linear-gradient(black, black)"
+                  : "linear-gradient(var(--bg), var(--bg)), var(--gradient-brand)",
+                backgroundOrigin: "border-box",
+                backgroundClip: "padding-box, border-box",
+              }}
             >
               Log match
             </button>
-            <QRCodeButton shareUrl={deck.href} className={`${capsuleBase} flex-1 border border-black/10 bg-white text-text-primary hover:bg-black/[0.03]`} />
-            <Link href={deck.href} className={`${capsuleBase} flex-1 bg-accent text-white`}>
+            <QRCodeButton
+              shareUrl={deck.href}
+              className="flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-gradient-brand-reverse bg-origin-border px-[1px] py-2 text-sm font-semibold text-white transition disabled:opacity-50"
+            />
+            <Link
+              href={deck.href}
+              className="flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-black px-[1px] py-[11px] text-sm font-semibold text-white transition-opacity hover:opacity-80 touch-manipulation"
+            >
               View deck
             </Link>
           </div>
