@@ -69,6 +69,12 @@ function currentStreak(recentForm?: ("W" | "L" | "D")[]): string | null {
 function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
   const router = useRouter();
   const [logOpen, setLogOpen] = useState(false);
+  // Bumped on every successful save/import so <MatchEntry> remounts fresh —
+  // it's a persistently-mounted subtree (collapsed via grid-rows, not
+  // conditionally rendered), so its internal MatchForm state would
+  // otherwise survive close/reopen and leak the previous match's inputs
+  // into the next one.
+  const [logKey, setLogKey] = useState(0);
   const [isFavorite, setIsFavorite] = useState(!!deck.isFavorite);
   const wl = deck.wl;
   const hasRecord = !!wl && wl.w + wl.l + wl.d > 0;
@@ -149,6 +155,7 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
       throw new Error(err.error ?? "Failed to log match.");
     }
     setLogOpen(false);
+    setLogKey((k) => k + 1);
     router.refresh();
   }
 
@@ -264,10 +271,12 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
             <div className="overflow-hidden">
               <div className="mt-4">
                 <MatchEntry
+                  key={logKey}
                   savedDeckId={deck.id}
                   onSubmitManual={handleQuickLog}
                   onImported={() => {
                     setLogOpen(false);
+                    setLogKey((k) => k + 1);
                     router.refresh();
                   }}
                   onCancel={() => setLogOpen(false)}

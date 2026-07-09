@@ -408,6 +408,12 @@ export function UserDeckCard({
   const coverImageUrl = initialCoverImageUrl ?? null;
   const [isFavorite, setIsFavorite] = useState(initialIsFavorite);
   const [logOpen, setLogOpen] = useState(false);
+  // Bumped on every successful save/import so <MatchEntry> remounts fresh —
+  // it's a persistently-mounted subtree (collapsed via grid-rows, not
+  // conditionally rendered), so its internal MatchForm state would
+  // otherwise survive close/reopen and leak the previous match's inputs
+  // into the next one.
+  const [logKey, setLogKey] = useState(0);
 
   // Opening the drawer anchors this card to the top of the screen (with a
   // little headroom), same as the pinned deck hero — offset by the mobile
@@ -455,6 +461,7 @@ export function UserDeckCard({
       throw new Error(err.error ?? "Failed to log match.");
     }
     setLogOpen(false);
+    setLogKey((k) => k + 1);
     router.refresh();
   }
 
@@ -531,10 +538,12 @@ export function UserDeckCard({
         <div className="overflow-hidden">
           <div className="border-t border-black/5 p-3.5">
             <MatchEntry
+              key={logKey}
               savedDeckId={id}
               onSubmitManual={handleQuickLog}
               onImported={() => {
                 setLogOpen(false);
+                setLogKey((k) => k + 1);
                 router.refresh();
               }}
               onCancel={() => setLogOpen(false)}
