@@ -232,7 +232,7 @@ export default function FeaturedMatchHero({ match }: { match: RecentMatch }) {
                   {match.totalDamage.toLocaleString()}
                 </div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">
-                  Damage Dealt
+                  Damage
                 </div>
               </div>
             )}
@@ -241,7 +241,7 @@ export default function FeaturedMatchHero({ match }: { match: RecentMatch }) {
                 {leftSide.prizes}&ndash;{rightSide.prizes}
               </div>
               <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">
-                Prizes Taken
+                Prizes
               </div>
             </div>
             <div className="text-center">
