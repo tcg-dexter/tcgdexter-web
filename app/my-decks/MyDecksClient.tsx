@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import SectionHeader from "@/app/components/ui/SectionHeader";
 import PillSelect from "@/app/components/ui/PillSelect";
+import GridListToggle from "@/app/components/ui/GridListToggle";
 import { UserDeckCard, DeckBanner, type UserDeckCardProps } from "@/app/components/DeckPostCard";
 import QRCodeButton from "@/app/components/QRCodeButton";
 import { type MatchFormData } from "@/app/components/MatchForm";
@@ -478,26 +479,7 @@ export default function MyDecksClient({ decks }: Props) {
             <option value="energy:desc">Energy Card Count ↓</option>
             <option value="energy:asc">Energy Card Count ↑</option>
           </PillSelect>
-          <div className={`relative flex items-center ${TOOLBAR_ITEM_HEIGHT} rounded-full bg-black/5 p-[3px]`}>
-            <div
-              aria-hidden
-              className={`absolute inset-y-[3px] left-[3px] w-[calc(50%-3px)] rounded-full shadow-sm transition-all duration-300 ease-in-out ${
-                view === "grid" ? "translate-x-0 bg-white" : "translate-x-full bg-black"
-              }`}
-            />
-            <button
-              onClick={() => changeView("grid")}
-              className={`relative z-10 h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${view === "grid" ? "text-text-primary" : "text-text-muted"}`}
-            >
-              Grid
-            </button>
-            <button
-              onClick={() => changeView("list")}
-              className={`relative z-10 h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${view === "list" ? "text-white" : "text-text-muted"}`}
-            >
-              List
-            </button>
-          </div>
+          <GridListToggle value={view} onChange={changeView} className={TOOLBAR_ITEM_HEIGHT} />
           <button
             type="button"
             onClick={() => setFavoritesOnly((v) => !v)}
