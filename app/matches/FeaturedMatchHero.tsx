@@ -227,7 +227,7 @@ export default function FeaturedMatchHero({ match }: { match: RecentMatch }) {
 
           <div className="flex flex-wrap justify-between gap-y-3 mt-4">
             {match.totalDamage != null && (
-              <div>
+              <div className="text-center">
                 <div className="text-[24px] font-extrabold tabular-nums bg-[linear-gradient(135deg,#F2A20C_0%,#D91E0D_50%,#A60D0D_100%)] bg-clip-text text-transparent">
                   {match.totalDamage.toLocaleString()}
                 </div>
@@ -236,7 +236,7 @@ export default function FeaturedMatchHero({ match }: { match: RecentMatch }) {
                 </div>
               </div>
             )}
-            <div>
+            <div className="text-center">
               <div className="text-[24px] font-extrabold tabular-nums text-text-primary">
                 {leftSide.prizes}&ndash;{rightSide.prizes}
               </div>
@@ -244,7 +244,7 @@ export default function FeaturedMatchHero({ match }: { match: RecentMatch }) {
                 Prizes Taken
               </div>
             </div>
-            <div>
+            <div className="text-center">
               <div className="text-[24px] font-extrabold text-text-primary">
                 {playedDateLabel(match.createdAt)}
               </div>
