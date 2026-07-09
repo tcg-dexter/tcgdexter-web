@@ -55,7 +55,7 @@ export async function loadRecentMatches(limit = 6): Promise<RecentMatch[]> {
     // and trim to `limit` after that filter.
     const { data: matchRows, error: matchErr } = await admin
       .from("matches")
-      .select("id, result, opponent_archetype, opponent_handle, created_at, saved_deck_id, source, prizes_taken_player, prizes_taken_opponent, game_prizes, game_results")
+      .select("id, result, opponent_archetype, opponent_handle, created_at, saved_deck_id, source, prizes_taken_player, prizes_taken_opponent, game_prizes, game_results, total_turns")
       .or(
         "source.eq.tcg_live_log,and(prizes_taken_player.not.is.null,prizes_taken_opponent.not.is.null),game_prizes.not.is.null"
       )
@@ -255,6 +255,7 @@ export async function loadRecentMatches(limit = 6): Promise<RecentMatch[]> {
         opponentPrizes: opponentPrizesByMatch.get(m.id as string) ?? manualPrizes?.opponent ?? 0,
         isBestOf3: typeof m.game_results === "string" && m.game_results.length >= 2,
         hasBattleLog: m.source === "tcg_live_log",
+        totalTurns: (m.total_turns as number | null) ?? null,
       }];
     });
 
