@@ -210,20 +210,22 @@ export default function FeaturedMatchHero({ match }: { match: RecentMatch }) {
           </div>
           {/* Title — two lines: "<player>'s <deck>" then "vs <player>'s
               <deck>". Player names live in the banner too so this line is
-              purely the deck-owner phrasing you'd hear a caster read. */}
-          <p className="mt-2 text-[26px] font-bold text-text-primary leading-tight">
+              purely the deck-owner phrasing you'd hear a caster read. H2
+              scale (text-xl) sits below the stat numbers in visual weight,
+              letting the eyebrow + damage figure lead. */}
+          <h2 className="mt-2 text-xl font-bold text-text-primary leading-tight">
             <span className="block truncate">
               {leftSide.handleLabel}&rsquo;s {leftSide.deckLabel}
             </span>
             <span className="block truncate">
-              <span className="text-text-muted font-semibold text-[18px] mr-2">
+              <span className="text-text-muted font-semibold text-sm mr-2">
                 vs
               </span>
               {rightSide.handleLabel}&rsquo;s {rightSide.deckLabel}
             </span>
-          </p>
+          </h2>
 
-          <div className="flex flex-wrap gap-x-8 gap-y-3 mt-4">
+          <div className="flex flex-wrap justify-between gap-y-3 mt-4">
             {match.totalDamage != null && (
               <div>
                 <div className="text-[24px] font-extrabold tabular-nums bg-[linear-gradient(135deg,#F2A20C_0%,#D91E0D_50%,#A60D0D_100%)] bg-clip-text text-transparent">
