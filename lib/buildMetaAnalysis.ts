@@ -13,6 +13,7 @@
 import cardData from "@/data/cards-standard.json";
 import shopListingsData from "@/data/shop-listings.json";
 import { type AnalysisResult } from "@/app/components/DeckProfileView";
+import { ROTATING_MARKS, hasLegalTrainerReprint } from "@/lib/cardPrinting";
 
 /* ─── Card DB ────────────────────────────────────────────────── */
 
@@ -52,8 +53,6 @@ interface ShopListing {
 const SHOP_LISTINGS = shopListingsData as Record<string, ShopListing[]>;
 
 /* ─── Constants ──────────────────────────────────────────────── */
-
-const ROTATING_MARKS = new Set(["A", "B", "C", "D", "E", "F", "G"]);
 
 const ENERGY_SYMBOL_TO_TYPE: Record<string, string> = {
   R: "Fire", W: "Water", G: "Grass", L: "Lightning",
@@ -214,7 +213,11 @@ export function buildMetaAnalysis(
   for (const card of cards) {
     const data = CARD_DB_LOWER.get(card.name.toLowerCase())?.[0];
     const mark = data?.regulation_mark ?? null;
-    if (mark && ROTATING_MARKS.has(mark.toUpperCase())) {
+    if (
+      mark &&
+      ROTATING_MARKS.has(mark.toUpperCase()) &&
+      !hasLegalTrainerReprint(card.name)
+    ) {
       rotatingCards.push({ name: card.name, qty: card.qty });
     }
   }

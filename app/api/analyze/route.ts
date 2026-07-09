@@ -9,6 +9,8 @@ import {
   parseDeckListCards,
   pickPrinting,
   pickPrintingForCard,
+  ROTATING_MARKS,
+  hasLegalTrainerReprint,
 } from "@/lib/cardPrinting";
 
 /* ─── Shop Listings ──────────────────────────────────────────── */
@@ -386,12 +388,15 @@ export async function POST(req: NextRequest) {
     }, 0);
 
     // ── Rotation Check ─────────────────────────────────────────
-    const ROTATING_MARKS = new Set(["A", "B", "C", "D", "E", "F", "G"]);
     const rotatingCards: Array<{ name: string; qty: number }> = [];
     for (const card of cards) {
       const data = pickPrintingForCard(card);
       const mark = data?.regulation_mark ?? null;
-      if (mark && ROTATING_MARKS.has(mark.toUpperCase())) {
+      if (
+        mark &&
+        ROTATING_MARKS.has(mark.toUpperCase()) &&
+        !hasLegalTrainerReprint(card.name)
+      ) {
         rotatingCards.push({ name: card.name, qty: card.qty });
       }
     }

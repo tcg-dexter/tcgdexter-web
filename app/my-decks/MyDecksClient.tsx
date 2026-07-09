@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import SectionHeader from "@/app/components/ui/SectionHeader";
 import PillSelect from "@/app/components/ui/PillSelect";
+import GridListToggle from "@/app/components/ui/GridListToggle";
 import { UserDeckCard, DeckBanner, type UserDeckCardProps } from "@/app/components/DeckPostCard";
 import QRCodeButton from "@/app/components/QRCodeButton";
 import { type MatchFormData } from "@/app/components/MatchForm";
@@ -197,16 +198,16 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
 
           {hasRecord ? (
             <div className="flex flex-wrap justify-between gap-y-3 mt-4">
-              <div>
+              <div className="text-center">
                 <div className="text-[24px] font-extrabold tabular-nums text-text-primary">{wl!.w}–{wl!.l}</div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Record</div>
               </div>
-              <div>
+              <div className="text-center">
                 <div className="text-[24px] font-extrabold tabular-nums bg-[linear-gradient(135deg,#F2A20C_0%,#D91E0D_50%,#A60D0D_100%)] bg-clip-text text-transparent">{wl!.winRatePct}%</div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Win rate</div>
               </div>
               {streak && (
-                <div>
+                <div className="text-center">
                   <div className="text-[24px] font-extrabold tabular-nums text-text-primary">{streak}</div>
                   <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Streak</div>
                 </div>
@@ -314,6 +315,53 @@ export default function MyDecksClient({ decks }: Props) {
       if ("scrollRestoration" in window.history) {
         window.history.scrollRestoration = originalRestore;
       }
+    };
+  }, []);
+
+  // Preserve scroll position across orientation changes.
+  //
+  // With scroll anchoring disabled (see the effect above and layout.tsx —
+  // required to fix the skeleton→content and grid↔list jump-to-bottom),
+  // the browser has nothing to grip onto during an orientation change:
+  // the viewport dimensions swap, media queries flip the grid from 1 col
+  // to 2/3 cols, the document height drops sharply, and the browser's
+  // fallback resize-scroll behavior can leave the viewport clamped near
+  // the bottom of the new, shorter content. Reported bug matches exactly.
+  //
+  // Capture the pre-rotation scroll ratio on the raw `orientationchange`
+  // event (fires before layout reflow, so scrollY is still the
+  // pre-rotation value) and restore it after the matching `resize` fires
+  // (which happens once the browser has finished laying out at the new
+  // dimensions). Ratio-based restore keeps the user roughly where they
+  // were in the document proportionally, which is the closest analog to
+  // what scroll anchoring would have done automatically.
+  useEffect(() => {
+    let capturedRatio: number | null = null;
+    const captureRatio = () => {
+      const doc = document.documentElement;
+      const maxScroll = doc.scrollHeight - window.innerHeight;
+      capturedRatio = maxScroll > 0 ? window.scrollY / maxScroll : 0;
+    };
+    const restoreRatio = () => {
+      if (capturedRatio === null) return;
+      const ratio = capturedRatio;
+      capturedRatio = null;
+      // Wait one animation frame for the browser to settle its own
+      // layout + scroll adjustment, then override with our ratio-based
+      // target. behavior:"instant" bypasses html{scroll-behavior:smooth}
+      // in globals.css — a smooth animation here reads as a glitch, not
+      // an intentional scroll.
+      requestAnimationFrame(() => {
+        const doc = document.documentElement;
+        const maxScroll = Math.max(0, doc.scrollHeight - window.innerHeight);
+        window.scrollTo({ top: ratio * maxScroll, behavior: "instant" });
+      });
+    };
+    window.addEventListener("orientationchange", captureRatio);
+    window.addEventListener("resize", restoreRatio);
+    return () => {
+      window.removeEventListener("orientationchange", captureRatio);
+      window.removeEventListener("resize", restoreRatio);
     };
   }, []);
 
@@ -431,26 +479,7 @@ export default function MyDecksClient({ decks }: Props) {
             <option value="energy:desc">Energy Card Count ↓</option>
             <option value="energy:asc">Energy Card Count ↑</option>
           </PillSelect>
-          <div className={`relative flex items-center ${TOOLBAR_ITEM_HEIGHT} rounded-full bg-black/5 p-[3px]`}>
-            <div
-              aria-hidden
-              className={`absolute inset-y-[3px] left-[3px] w-[calc(50%-3px)] rounded-full shadow-sm transition-all duration-300 ease-in-out ${
-                view === "grid" ? "translate-x-0 bg-white" : "translate-x-full bg-black"
-              }`}
-            />
-            <button
-              onClick={() => changeView("grid")}
-              className={`relative z-10 h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${view === "grid" ? "text-text-primary" : "text-text-muted"}`}
-            >
-              Grid
-            </button>
-            <button
-              onClick={() => changeView("list")}
-              className={`relative z-10 h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${view === "list" ? "text-white" : "text-text-muted"}`}
-            >
-              List
-            </button>
-          </div>
+          <GridListToggle value={view} onChange={changeView} className={TOOLBAR_ITEM_HEIGHT} />
           <button
             type="button"
             onClick={() => setFavoritesOnly((v) => !v)}

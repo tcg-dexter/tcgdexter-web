@@ -82,10 +82,9 @@ export async function loadRecentMatches(limit = 6): Promise<RecentMatch[]> {
         .in("id", matchDeckIds),
       admin
         .from("match_actions")
-        .select("match_id, payload")
+        .select("match_id, actor, payload")
         .in("match_id", matchIds)
-        .eq("action_type", "attack")
-        .eq("actor", "opponent"),
+        .eq("action_type", "attack"),
       // Fallback inputs: opponent's played/evolved Pokémon. Used when
       // the opponent never attacked (concede, KO'd before swinging),
       // mirroring the /battles/[id] page's opponent-card resolution
@@ -113,19 +112,26 @@ export async function loadRecentMatches(limit = 6): Promise<RecentMatch[]> {
       (deckDetailRows ?? []).map((d) => [d.id as string, d])
     );
 
-    // Aggregate opponent damage per match → top attacker name
+    // Aggregate opponent damage per match → top attacker name; and total
+    // damage across BOTH sides per match → drives the /matches Featured
+    // Match ranking (highest total damage in the last 7 days).
     const opponentDmg = new Map<string, Map<string, number>>();
+    const totalDamageByMatch = new Map<string, number>();
     for (const row of attackRows ?? []) {
       const payload = row.payload as Record<string, unknown> | null;
+      const damage = typeof payload?.damage === "number" ? payload.damage : 0;
+      if (!damage) continue;
+      const matchId = row.match_id as string;
+      totalDamageByMatch.set(matchId, (totalDamageByMatch.get(matchId) ?? 0) + damage);
+
+      if (row.actor !== "opponent") continue;
       // Strip verbose-export card-id prefixes ("(me1_77) Mega Lucario ex") so
       // the name resolves to a card image and reads cleanly in the preview.
       const attacker =
         typeof payload?.attacker === "string"
           ? stripCardIds(payload.attacker).trim()
           : null;
-      const damage = typeof payload?.damage === "number" ? payload.damage : 0;
-      if (!attacker || !damage) continue;
-      const matchId = row.match_id as string;
+      if (!attacker) continue;
       if (!opponentDmg.has(matchId)) opponentDmg.set(matchId, new Map());
       const m = opponentDmg.get(matchId)!;
       m.set(attacker, (m.get(attacker) ?? 0) + damage);
@@ -255,6 +261,7 @@ export async function loadRecentMatches(limit = 6): Promise<RecentMatch[]> {
         opponentPrizes: opponentPrizesByMatch.get(m.id as string) ?? manualPrizes?.opponent ?? 0,
         isBestOf3: typeof m.game_results === "string" && m.game_results.length >= 2,
         hasBattleLog: m.source === "tcg_live_log",
+        totalDamage: totalDamageByMatch.get(m.id as string) ?? null,
       }];
     });
 

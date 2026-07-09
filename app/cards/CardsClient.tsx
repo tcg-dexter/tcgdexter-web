@@ -18,6 +18,7 @@ import {
   type InventoryMenuMode,
 } from "./InventoryCapsule";
 import PillSelect from "@/app/components/ui/PillSelect";
+import GridListToggle from "@/app/components/ui/GridListToggle";
 
 interface Facets {
   supertypes: string[];
@@ -313,26 +314,10 @@ function CatalogBody({
           >
             Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
           </button>
-          <div className="inline-flex h-[38px] rounded-full border border-black/10 bg-white overflow-hidden">
-            <button
-              onClick={() => updateParams({ view: "grid" })}
-              className={`text-xs font-semibold px-3 transition-colors ${
-                params.view === "grid" ? "bg-black text-white" : "hover:bg-surface"
-              }`}
-              aria-label="Grid view"
-            >
-              Grid
-            </button>
-            <button
-              onClick={() => updateParams({ view: "list" })}
-              className={`text-xs font-semibold px-3 transition-colors ${
-                params.view === "list" ? "bg-black text-white" : "hover:bg-surface"
-              }`}
-              aria-label="List view"
-            >
-              List
-            </button>
-          </div>
+          <GridListToggle
+            value={params.view}
+            onChange={(v) => updateParams({ view: v })}
+          />
         </div>
       </div>
 

@@ -1,10 +1,17 @@
 "use client";
 
-import { Fragment, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import BattleLogDetail from "@/app/components/BattleLogDetail";
 import BackButton from "@/app/components/ui/BackButton";
 import ThemeColor from "@/app/components/ThemeColor";
+import {
+  BattleStatChart,
+  buildBattleStatRows,
+  type BattleSideStats,
+} from "@/app/components/BattleStatChart";
 import { shade } from "@/lib/color";
+
+export type { BattleSideStats };
 
 interface Props {
   matchId: string;
@@ -28,15 +35,6 @@ interface Props {
   playerStats: BattleSideStats;
   opponentStats: BattleSideStats;
   hasBattleLog: boolean;
-}
-
-export interface BattleSideStats {
-  damage: number;
-  pokemon: number;
-  supporters: number;
-  items: number;
-  energy: number;
-  prizes: number;
 }
 
 function formatPlayedAt(iso: string): string {
@@ -202,18 +200,11 @@ export default function BattleLogPage({
           as one continuous summary. */}
       <div className="mx-auto w-full max-w-2xl px-4 mt-4">
         <div className="px-1">
-          <StatChart
+          <BattleStatChart
             playerName={playerSideName}
             opponentName={opponentSideName}
             winnerSide={result === "win" ? "left" : result === "loss" ? "right" : null}
-            rows={[
-              { label: "Damage Dealt", left: playerStats.damage, right: opponentStats.damage },
-              { label: "Pokémon Played", left: playerStats.pokemon, right: opponentStats.pokemon },
-              { label: "Supporters Played", left: playerStats.supporters, right: opponentStats.supporters },
-              { label: "Items Played", left: playerStats.items, right: opponentStats.items },
-              { label: "Energy Attached", left: playerStats.energy, right: opponentStats.energy },
-              { label: "Prizes Taken", left: playerStats.prizes, right: opponentStats.prizes },
-            ]}
+            rows={buildBattleStatRows(playerStats, opponentStats)}
           />
         </div>
       </div>
@@ -367,59 +358,6 @@ function FitText({
   );
 }
 
-/** Per-stat table: one row per stat, one column per player. Numbers
- *  carry the comparison — the leader on each row is bolded a touch
- *  heavier so the eye still lands on it without a bar telling you to.
- *  Row dividers span the entire grid width (col-span-3) so the
- *  separators read as one continuous line rather than three column
- *  segments. */
-function StatChart({
-  playerName,
-  opponentName,
-  winnerSide,
-  rows,
-}: {
-  playerName: string;
-  opponentName: string;
-  winnerSide: "left" | "right" | null;
-  rows: { label: string; left: number; right: number }[];
-}) {
-  const leftGradient = winnerSide === "left";
-  const rightGradient = winnerSide === "right";
-  return (
-    <div className="grid grid-cols-[1fr_auto_auto] gap-x-6 items-baseline">
-      {/* Column headers */}
-      <div />
-      <div className={`pb-2 text-[11px] font-bold truncate text-right tabular-nums ${leftGradient ? "bg-gradient-brand bg-clip-text text-transparent" : "text-text-primary"}`}>
-        {playerName}
-      </div>
-      <div className={`pb-2 text-[11px] font-bold truncate text-right tabular-nums ${rightGradient ? "bg-gradient-brand bg-clip-text text-transparent" : "text-text-primary"}`}>
-        {opponentName}
-      </div>
-
-      {rows.map((row, idx) => {
-        const isFirst = idx === 0;
-        const isFooter = idx === rows.length - 1;
-        return (
-        <Fragment key={row.label}>
-          {!isFirst && (
-            <div className={`col-span-3 border-t ${isFooter ? "border-black" : "border-black/[0.08]"}`} />
-          )}
-          <div className={`font-semibold uppercase tracking-widest text-text-primary py-2.5 ${isFooter ? "text-[14px]" : "text-[11px]"}`}>
-            {row.label}
-          </div>
-          <div className={`py-2.5 text-right tabular-nums font-semibold text-text-secondary ${isFooter ? "text-[18px]" : "text-sm"}`}>
-            {row.left}
-          </div>
-          <div className={`py-2.5 text-right tabular-nums font-semibold text-text-secondary ${isFooter ? "text-[18px]" : "text-sm"}`}>
-            {row.right}
-          </div>
-        </Fragment>
-        );
-      })}
-    </div>
-  );
-}
 
 function BannerCard({
   src,
