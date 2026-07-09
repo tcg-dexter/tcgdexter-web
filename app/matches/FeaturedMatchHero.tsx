@@ -5,7 +5,7 @@ import { shade } from "@/lib/color";
 import { relativeTime, type RecentMatch } from "@/app/components/MatchCard";
 
 /**
- * Match of the Week hero — an amalgamation of two existing patterns:
+ * Featured Match hero — an amalgamation of two existing patterns:
  *
  *  1. The /my-decks pinned-deck hero shell (glow, rounded card, two-column
  *     desktop split, gradient-brand shadow) from MyDecksClient's
@@ -16,11 +16,11 @@ import { relativeTime, type RecentMatch } from "@/app/components/MatchCard";
  *
  * The banner column takes the versus imagery; the info column takes the
  * pinned-deck's stat treatment, but populated with match numbers instead
- * of deck record — turns played (the eyebrow the pick is ranked on),
+ * of deck record — total damage dealt (the axis this pick is ranked on),
  * prize score, and time since — then a "View battle" CTA that jumps to
  * /battles/[id].
  */
-export default function MatchOfTheWeekHero({ match }: { match: RecentMatch }) {
+export default function FeaturedMatchHero({ match }: { match: RecentMatch }) {
   const opponentDeckLabel =
     match.opponentArchetype ?? match.opponentAttackerName ?? "Unknown deck";
   const opponentHandleLabel = match.opponentHandle ?? "Opponent";
@@ -188,7 +188,7 @@ export default function MatchOfTheWeekHero({ match }: { match: RecentMatch }) {
             numbers instead of deck record. */}
         <div className="flex-1 p-5 md:p-6 flex flex-col">
           <div className="text-[11px] font-bold uppercase tracking-[0.15em] bg-gradient-brand bg-clip-text text-transparent">
-            Match of the Week
+            Featured Match
           </div>
           <p className="mt-2 text-[26px] font-bold text-text-primary leading-tight">
             <span className="truncate block">
@@ -204,13 +204,13 @@ export default function MatchOfTheWeekHero({ match }: { match: RecentMatch }) {
           </p>
 
           <div className="flex flex-wrap gap-x-8 gap-y-3 mt-4">
-            {match.totalTurns != null && (
+            {match.totalDamage != null && (
               <div>
                 <div className="text-[24px] font-extrabold tabular-nums bg-[linear-gradient(135deg,#F2A20C_0%,#D91E0D_50%,#A60D0D_100%)] bg-clip-text text-transparent">
-                  {match.totalTurns}
+                  {match.totalDamage.toLocaleString()}
                 </div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">
-                  Turns
+                  Damage
                 </div>
               </div>
             )}

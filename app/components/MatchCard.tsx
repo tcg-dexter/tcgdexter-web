@@ -23,10 +23,11 @@ export type RecentMatch = {
   opponentPrizes: number;
   isBestOf3: boolean;
   hasBattleLog: boolean;
-  /** Populated only for imported battle logs (source = 'tcg_live_log').
-   *  Null for manual and prize-only matches. Used by the /matches Match
-   *  of the Week hero, which ranks by longest game in the last 7 days. */
-  totalTurns: number | null;
+  /** Total damage dealt across BOTH sides for this match, summed from
+   *  match_actions.attack rows. Populated only for imported battle logs
+   *  (source = 'tcg_live_log'); null for manual and prize-only matches.
+   *  Drives the /matches Featured Match ranking. */
+  totalDamage: number | null;
 };
 
 export function relativeTime(iso: string): string {

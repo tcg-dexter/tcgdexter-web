@@ -26,19 +26,19 @@ export default async function MatchesPage() {
     loadPlayerLeaderboard(),
   ]);
 
-  // Match of the Week: within the last 7 days, the match with the highest
-  // total_turns. Rank ties by createdAt (most recent wins) so a repeat
-  // long-slog on the same day picks up the fresher of the two.
+  // Featured Match: within the last 7 days, the match with the most
+  // total damage dealt across both sides. Rank ties by createdAt (most
+  // recent wins) so the fresher of two similar bloodbaths surfaces.
   const sevenDaysAgoMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const matchOfWeek =
+  const featuredMatch =
     matches
       .filter(
         (m) =>
-          m.totalTurns != null &&
+          m.totalDamage != null &&
           new Date(m.createdAt).getTime() >= sevenDaysAgoMs,
       )
       .sort((a, b) => {
-        const dt = (b.totalTurns ?? 0) - (a.totalTurns ?? 0);
+        const dt = (b.totalDamage ?? 0) - (a.totalDamage ?? 0);
         if (dt !== 0) return dt;
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       })[0] ?? null;
@@ -47,7 +47,7 @@ export default async function MatchesPage() {
     <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
       <MatchesClient
         matches={matches}
-        matchOfWeek={matchOfWeek}
+        featuredMatch={featuredMatch}
         leaderboard={leaderboard}
         currentUsername={currentUsername}
       />

@@ -5,14 +5,14 @@ import PillSelect from "@/app/components/ui/PillSelect";
 import { MatchCard, type RecentMatch } from "@/app/components/MatchCard";
 import { normalizeForSearch } from "@/lib/searchNormalize";
 import PlayerLeaderboard from "./PlayerLeaderboard";
-import MatchOfTheWeekHero from "./MatchOfTheWeekHero";
+import FeaturedMatchHero from "./FeaturedMatchHero";
 import type { LeaderboardPlayer } from "@/lib/player-leaderboard";
 
 interface Props {
   matches: RecentMatch[];
-  /** Highest-turn-count match from the last 7 days, picked server-side.
-   *  Null when nothing in the window has a parsed battle log with turns. */
-  matchOfWeek?: RecentMatch | null;
+  /** Highest-total-damage match from the last 7 days, picked server-side.
+   *  Null when nothing in the window has a parsed battle log with damage. */
+  featuredMatch?: RecentMatch | null;
   leaderboard: LeaderboardPlayer[];
   currentUsername?: string | null;
 }
@@ -66,7 +66,7 @@ function bucketMatches(matches: RecentMatch[]) {
 
 export default function MatchesClient({
   matches,
-  matchOfWeek = null,
+  featuredMatch = null,
   leaderboard,
   currentUsername = null,
 }: Props) {
@@ -172,11 +172,11 @@ export default function MatchesClient({
         <PlayerLeaderboard players={leaderboard} currentUsername={currentUsername} />
       ) : (
       <>
-      {/* Match of the Week hero — shown in the default "sections" view; a
+      {/* Featured Match hero — shown in the default "sections" view; a
           search or filter takes over the surface, so the hero yields when
           the user is drilling into something specific. */}
-      {matchOfWeek && !isSearching && effectiveViewMode === "sections" && (
-        <MatchOfTheWeekHero match={matchOfWeek} />
+      {featuredMatch && !isSearching && effectiveViewMode === "sections" && (
+        <FeaturedMatchHero match={featuredMatch} />
       )}
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
