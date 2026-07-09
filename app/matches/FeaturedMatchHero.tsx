@@ -123,7 +123,7 @@ export default function FeaturedMatchHero({ match }: { match: RecentMatch }) {
             >
               {rightSide.prizes}
             </span>
-            <div className="relative h-full flex items-center justify-center gap-4 px-4">
+            <div className="relative h-full flex items-center justify-center gap-[18px] px-4">
               {leftSide.imageUrl && (
                 <div
                   style={{
@@ -133,7 +133,7 @@ export default function FeaturedMatchHero({ match }: { match: RecentMatch }) {
                 >
                   <div
                     className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]"
-                    style={{ width: 96, height: 134 }}
+                    style={{ width: 115, height: 161 }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -153,7 +153,7 @@ export default function FeaturedMatchHero({ match }: { match: RecentMatch }) {
                 >
                   <div
                     className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]"
-                    style={{ width: 96, height: 134 }}
+                    style={{ width: 115, height: 161 }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
