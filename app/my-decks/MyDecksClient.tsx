@@ -198,16 +198,16 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
 
           {hasRecord ? (
             <div className="flex flex-wrap justify-between gap-y-3 mt-4">
-              <div>
+              <div className="text-center">
                 <div className="text-[24px] font-extrabold tabular-nums text-text-primary">{wl!.w}–{wl!.l}</div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Record</div>
               </div>
-              <div>
+              <div className="text-center">
                 <div className="text-[24px] font-extrabold tabular-nums bg-[linear-gradient(135deg,#F2A20C_0%,#D91E0D_50%,#A60D0D_100%)] bg-clip-text text-transparent">{wl!.winRatePct}%</div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Win rate</div>
               </div>
               {streak && (
-                <div>
+                <div className="text-center">
                   <div className="text-[24px] font-extrabold tabular-nums text-text-primary">{streak}</div>
                   <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Streak</div>
                 </div>
