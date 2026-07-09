@@ -218,3 +218,41 @@ export function pickPrinting(
 export function pickPrintingForCard(c: Card): CardDataEntry | null {
   return pickPrinting(c.name, c.number, c.setCode);
 }
+
+/* ─── Rotation legality ──────────────────────────────────────── */
+
+/** Regulation marks currently rotated out of Standard. A card printed
+ *  with one of these marks is not legal on its own — see
+ *  `hasLegalTrainerReprint` for the Trainer-card exception. Single
+ *  source of truth: app/api/analyze/route.ts, lib/reprice-deck.ts, and
+ *  lib/buildMetaAnalysis.ts all import this rather than keeping their
+ *  own copy, so a future rotation only needs updating here. */
+export const ROTATING_MARKS = new Set(["A", "B", "C", "D", "E", "F", "G"]);
+
+/**
+ * True when `name` is a Trainer card with at least one printing in the DB
+ * carrying a currently-legal regulation mark (i.e. NOT in ROTATING_MARKS).
+ *
+ * Per official Pokémon TCG rules, a Trainer card's tournament legality is
+ * tied to its name/effect, not the specific printing: once a Trainer card
+ * has been reprinted under a current regulation mark, every earlier
+ * printing of that same card becomes legal too — even a copy stamped with
+ * an older, rotated-out mark. Boss's Orders is the canonical example: the
+ * RCL 189 printing carries mark D (rotated), but the me1/me2pt5 reprints
+ * carry mark I (current), so RCL 189 is legal to play.
+ *
+ * This exception does NOT extend to Pokémon cards (whose printings can
+ * carry different game text/abilities) or Energy cards (Basic Energy is
+ * already unrestricted by a separate rule; Special Energy follows strict
+ * per-printing rotation).
+ */
+export function hasLegalTrainerReprint(name: string): boolean {
+  const entries = CARD_DB_LOWER.get(name.toLowerCase());
+  if (!entries) return false;
+  return entries.some(
+    (e) =>
+      e.supertype === "Trainer" &&
+      !!e.regulation_mark &&
+      !ROTATING_MARKS.has(e.regulation_mark.toUpperCase()),
+  );
+}

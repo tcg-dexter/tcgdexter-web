@@ -84,7 +84,12 @@ export default function StandardFormatInfo({ className }: Props) {
 
             <p className="text-sm text-text-secondary leading-relaxed">
               2026 Standard Format went into effect on April 10, 2026.
-              Cards with a G-mark and earlier are no longer legal.
+              Cards with a G-mark and earlier are no longer legal — with
+              one exception: a Trainer card is legal on any printing as
+              long as it&apos;s also been reprinted with a current
+              regulation mark. Boss&apos;s Orders, for example, is still
+              legal even on an older G-mark copy, since it has since
+              been reprinted with a current mark.
             </p>
           </div>
         </div>

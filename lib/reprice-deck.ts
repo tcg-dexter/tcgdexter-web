@@ -11,9 +11,12 @@
  * flag a legal card (e.g. JTG Dunsparce, mark "I") as "not legal".
  */
 
-import { parseDeckListCards, pickPrintingForCard } from "@/lib/cardPrinting";
-
-const ROTATING_MARKS = new Set(["A", "B", "C", "D", "E", "F", "G"]);
+import {
+  parseDeckListCards,
+  pickPrintingForCard,
+  ROTATING_MARKS,
+  hasLegalTrainerReprint,
+} from "@/lib/cardPrinting";
 
 export interface RepriceResult {
   deckPrice: number;
@@ -45,7 +48,11 @@ export function repriceDeck(deckList: string): RepriceResult {
     }
 
     const mark = entry.regulation_mark;
-    if (mark && ROTATING_MARKS.has(mark.toUpperCase())) {
+    if (
+      mark &&
+      ROTATING_MARKS.has(mark.toUpperCase()) &&
+      !hasLegalTrainerReprint(card.name)
+    ) {
       rotatingCards.push({ name: card.name, qty: card.qty });
     }
   }
