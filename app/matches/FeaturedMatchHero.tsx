@@ -1,8 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { shade } from "@/lib/color";
 import { type RecentMatch } from "@/app/components/MatchCard";
+import {
+  BattleStatChart,
+  buildBattleStatRows,
+} from "@/app/components/BattleStatChart";
+import type { MatchSideStats } from "@/lib/match-side-stats";
 
 /** Short month/day for the "Played" stat value — no year, since the
  *  Featured Match is by definition within the last 7 days. */
@@ -29,7 +35,14 @@ function playedDateLabel(iso: string): string {
  * prize score, and time since — then a "View battle" CTA that jumps to
  * /battles/[id].
  */
-export default function FeaturedMatchHero({ match }: { match: RecentMatch }) {
+export default function FeaturedMatchHero({
+  match,
+  stats,
+}: {
+  match: RecentMatch;
+  stats?: MatchSideStats | null;
+}) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const opponentDeckLabel =
     match.opponentArchetype ?? match.opponentAttackerName ?? "Unknown deck";
   const opponentHandleLabel = match.opponentHandle ?? "Opponent";
@@ -254,7 +267,29 @@ export default function FeaturedMatchHero({ match }: { match: RecentMatch }) {
             </div>
           </div>
 
-          <div className="flex items-center mt-5">
+          {/* Button row + Details drawer. Mirrors PinnedDeckHero's Log
+              match pattern: gradient-bordered toggle button that swaps to
+              solid black when open, and a grid-rows-[0fr]/[1fr] transition
+              on the collapsible below. */}
+          <div className="flex items-center gap-3 mt-5">
+            <button
+              type="button"
+              onClick={() => setDetailsOpen((v) => !v)}
+              aria-expanded={detailsOpen}
+              aria-controls={`featured-match-details-${match.id}`}
+              className={`h-[38px] flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-[1px] text-sm font-semibold transition-all ${
+                detailsOpen ? "text-white" : "text-text-secondary"
+              }`}
+              style={{
+                backgroundImage: detailsOpen
+                  ? "linear-gradient(black, black), linear-gradient(black, black)"
+                  : "linear-gradient(var(--bg), var(--bg)), var(--gradient-brand)",
+                backgroundOrigin: "border-box",
+                backgroundClip: "padding-box, border-box",
+              }}
+            >
+              Details
+            </button>
             <Link
               href={`/battles/${match.id}`}
               className="h-[38px] flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-black px-[1px] text-sm font-semibold text-white transition-opacity hover:opacity-80 touch-manipulation"
@@ -262,6 +297,33 @@ export default function FeaturedMatchHero({ match }: { match: RecentMatch }) {
               View battle
             </Link>
           </div>
+
+          {stats && (
+            <div
+              id={`featured-match-details-${match.id}`}
+              className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                detailsOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+              }`}
+            >
+              <div className="overflow-hidden">
+                <div className="mt-4">
+                  {/* Winner-on-left to match the banner's convention: leftSide
+                      is already the winner (or the player on a draw), so the
+                      stat table's columns line up visually with the fanned
+                      card pair above. */}
+                  <BattleStatChart
+                    playerName={leftSide.handleLabel}
+                    opponentName={rightSide.handleLabel}
+                    winnerSide={isDraw ? null : "left"}
+                    rows={buildBattleStatRows(
+                      playerWon ? stats.player : stats.opponent,
+                      playerWon ? stats.opponent : stats.player,
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

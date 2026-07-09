@@ -7,12 +7,17 @@ import { normalizeForSearch } from "@/lib/searchNormalize";
 import PlayerLeaderboard from "./PlayerLeaderboard";
 import FeaturedMatchHero from "./FeaturedMatchHero";
 import type { LeaderboardPlayer } from "@/lib/player-leaderboard";
+import type { MatchSideStats } from "@/lib/match-side-stats";
 
 interface Props {
   matches: RecentMatch[];
   /** Highest-total-damage match from the last 7 days, picked server-side.
    *  Null when nothing in the window has a parsed battle log with damage. */
   featuredMatch?: RecentMatch | null;
+  /** Per-side aggregate stats for the featured match, aggregated server-side
+   *  and passed straight into the Details drawer. Null when the match has no
+   *  parsed action rows to aggregate from. */
+  featuredMatchStats?: MatchSideStats | null;
   leaderboard: LeaderboardPlayer[];
   currentUsername?: string | null;
 }
@@ -67,6 +72,7 @@ function bucketMatches(matches: RecentMatch[]) {
 export default function MatchesClient({
   matches,
   featuredMatch = null,
+  featuredMatchStats = null,
   leaderboard,
   currentUsername = null,
 }: Props) {
@@ -176,7 +182,7 @@ export default function MatchesClient({
           search or filter takes over the surface, so the hero yields when
           the user is drilling into something specific. */}
       {featuredMatch && !isSearching && effectiveViewMode === "sections" && (
-        <FeaturedMatchHero match={featuredMatch} />
+        <FeaturedMatchHero match={featuredMatch} stats={featuredMatchStats} />
       )}
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
