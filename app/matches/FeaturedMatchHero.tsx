@@ -113,8 +113,8 @@ export default function FeaturedMatchHero({
                 aria-hidden
                 className="absolute rounded-lg overflow-hidden"
                 style={{
-                  width: 150,
-                  height: 207,
+                  width: 180,
+                  height: 248,
                   left: "50%",
                   top: "50%",
                   opacity: 0.2,
