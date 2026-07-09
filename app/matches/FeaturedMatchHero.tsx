@@ -2,7 +2,16 @@
 
 import Link from "next/link";
 import { shade } from "@/lib/color";
-import { relativeTime, type RecentMatch } from "@/app/components/MatchCard";
+import { type RecentMatch } from "@/app/components/MatchCard";
+
+/** Short month/day for the "Played" stat value — no year, since the
+ *  Featured Match is by definition within the last 7 days. */
+function playedDateLabel(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
 
 /**
  * Featured Match hero — an amalgamation of two existing patterns:
@@ -113,13 +122,13 @@ export default function FeaturedMatchHero({ match }: { match: RecentMatch }) {
                 treatment as MatchCard. */}
             <span
               aria-label={`${leftSide.handleLabel} prizes taken`}
-              className="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-white text-[2.4rem] font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
+              className="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-white text-[2.64rem] font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
             >
               {leftSide.prizes}
             </span>
             <span
               aria-label={`${rightSide.handleLabel} prizes taken`}
-              className="absolute right-3 top-1/2 -translate-y-1/2 z-10 text-white text-[2.4rem] font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
+              className="absolute right-3 top-1/2 -translate-y-1/2 z-10 text-white text-[2.64rem] font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
             >
               {rightSide.prizes}
             </span>
@@ -165,6 +174,15 @@ export default function FeaturedMatchHero({ match }: { match: RecentMatch }) {
                 </div>
               )}
             </div>
+            {/* Player names anchored to each side's hero-card / prize-count
+                pair. Matched typography with the prize digits (white +
+                drop-shadow) so they read as part of the same score-strip. */}
+            <span className="absolute left-3 bottom-2 z-10 max-w-[45%] truncate text-white text-[13px] font-bold leading-none drop-shadow-sm pointer-events-none">
+              {leftSide.handleLabel}
+            </span>
+            <span className="absolute right-3 bottom-2 z-10 max-w-[45%] truncate text-white text-[13px] font-bold leading-none drop-shadow-sm pointer-events-none">
+              {rightSide.handleLabel}
+            </span>
             {match.isBestOf3 && (
               <div className="absolute inset-x-0 bottom-2 z-10 flex justify-center pointer-events-none">
                 <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold text-black">
@@ -190,17 +208,19 @@ export default function FeaturedMatchHero({ match }: { match: RecentMatch }) {
           <div className="text-[11px] font-bold uppercase tracking-[0.15em] bg-gradient-brand bg-clip-text text-transparent">
             Featured Match
           </div>
+          {/* Title — two lines: "<player>'s <deck>" then "vs <player>'s
+              <deck>". Player names live in the banner too so this line is
+              purely the deck-owner phrasing you'd hear a caster read. */}
           <p className="mt-2 text-[26px] font-bold text-text-primary leading-tight">
-            <span className="truncate block">
-              {leftSide.deckLabel}
-              <span className="text-text-muted font-semibold text-[18px] mx-2">
+            <span className="block truncate">
+              {leftSide.handleLabel}&rsquo;s {leftSide.deckLabel}
+            </span>
+            <span className="block truncate">
+              <span className="text-text-muted font-semibold text-[18px] mr-2">
                 vs
               </span>
-              {rightSide.deckLabel}
+              {rightSide.handleLabel}&rsquo;s {rightSide.deckLabel}
             </span>
-          </p>
-          <p className="mt-1 text-[13px] font-medium text-text-muted truncate">
-            {leftSide.handleLabel} &middot; {rightSide.handleLabel}
           </p>
 
           <div className="flex flex-wrap gap-x-8 gap-y-3 mt-4">
@@ -210,7 +230,7 @@ export default function FeaturedMatchHero({ match }: { match: RecentMatch }) {
                   {match.totalDamage.toLocaleString()}
                 </div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">
-                  Damage
+                  Damage Dealt
                 </div>
               </div>
             )}
@@ -219,12 +239,12 @@ export default function FeaturedMatchHero({ match }: { match: RecentMatch }) {
                 {leftSide.prizes}&ndash;{rightSide.prizes}
               </div>
               <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">
-                Prizes
+                Prizes Taken
               </div>
             </div>
             <div>
               <div className="text-[24px] font-extrabold text-text-primary">
-                {relativeTime(match.createdAt)}
+                {playedDateLabel(match.createdAt)}
               </div>
               <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">
                 Played
