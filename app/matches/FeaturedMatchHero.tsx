@@ -107,11 +107,14 @@ export default function FeaturedMatchHero({
             <div className={gradientClass} style={gradientStyle} />
             {/* Ghost card — winner's deck hero, blown up + desaturated,
                 same recipe as the grid preview cards but sized for this
-                hero zone. */}
+                hero zone. Scales up another 20% while the Details drawer
+                is open (and back down on close), animated at the same
+                300ms ease-in-out as the drawer itself so the two motions
+                read as one gesture. */}
             {!isDraw && leftSide.imageUrl && (
               <div
                 aria-hidden
-                className="absolute rounded-lg overflow-hidden"
+                className="absolute rounded-lg overflow-hidden transition-transform duration-300 ease-in-out"
                 style={{
                   width: 180,
                   height: 248,
@@ -119,8 +122,7 @@ export default function FeaturedMatchHero({
                   top: "50%",
                   opacity: 0.2,
                   filter: "grayscale(1)",
-                  transform:
-                    "translate(-50%, -15%) scale(2.4) rotate(-4deg)",
+                  transform: `translate(-50%, -15%) scale(${detailsOpen ? 2.88 : 2.4}) rotate(-4deg)`,
                 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
