@@ -41,6 +41,7 @@ export async function POST(req: Request) {
 
   let body: {
     saved_deck_id?: string;
+    saved_deck_version_id?: string | null;
     result?: string;
     opponent_name?: string;
     opponent_archetype?: string;
@@ -94,9 +95,39 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Deck not found." }, { status: 404 });
   }
 
+  // Version stamping: an explicit version must belong to this deck;
+  // otherwise the match records the deck's latest version at log time.
+  // Null-safe throughout — a deck with no versions yet just logs unstamped.
+  let versionId: string | null = null;
+  if (typeof body.saved_deck_version_id === "string") {
+    const { data: version } = await supabase
+      .from("deck_versions")
+      .select("id")
+      .eq("id", body.saved_deck_version_id)
+      .eq("deck_id", saved_deck_id)
+      .maybeSingle();
+    if (!version) {
+      return NextResponse.json(
+        { error: "saved_deck_version_id does not belong to this deck." },
+        { status: 400 }
+      );
+    }
+    versionId = version.id;
+  } else {
+    const { data: latest } = await supabase
+      .from("deck_versions")
+      .select("id")
+      .eq("deck_id", saved_deck_id)
+      .order("version_number", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    versionId = latest?.id ?? null;
+  }
+
   const insertRow: Record<string, unknown> = {
     user_id: user.id,
     saved_deck_id,
+    saved_deck_version_id: versionId,
     result: finalResult,
     opponent_name: opponent_name?.trim() || null,
     opponent_archetype: opponent_archetype?.trim() || null,
@@ -115,7 +146,7 @@ export async function POST(req: Request) {
   const { data, error } = await supabase
     .from("matches")
     .insert(insertRow)
-    .select("id, result, opponent_archetype, played_at, created_at")
+    .select("id, result, opponent_archetype, played_at, created_at, saved_deck_version_id")
     .single();
 
   if (error) {

@@ -78,6 +78,9 @@ export interface MetaDeckCard {
 }
 
 export interface MetaArchetypeInfo {
+  /** Meta-archetype id from data/meta-archetypes.json, when the caller
+   *  knows it (the meta clone route does). Flows into metaMatch.archetypeId. */
+  id?: string;
   name: string;
   rank: number;
   conversionRate: number;
@@ -296,6 +299,7 @@ export function buildMetaAnalysis(
   const metaMatch: AnalysisResult["metaMatch"] = {
     matched: true,
     archetypeName: archetype.name,
+    archetypeId: archetype.id ?? null,
     matchPct: 1,
     rank: archetype.rank,
     conversionRate: archetype.conversionRate,

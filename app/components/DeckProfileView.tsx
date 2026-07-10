@@ -17,106 +17,18 @@ import {
 } from "@/lib/primaryCardImage";
 
 /* ─── Types ──────────────────────────────────────────────────── */
+/* The canonical AnalysisResult lives in @/lib/analyzeDeck next to the
+ * analyzer that produces it. Re-exported here so the many existing
+ * importers keep their `@/app/components/DeckProfileView` path. */
 
-export interface ShopListing {
-  title: string;
-  price: number;
-  currency: string;
-  imageUrl: string | null;
-  listingUrl: string;
-  condition: string;
-  bestOffer: boolean;
-  itemId: string;
-}
+export type {
+  AnalysisResult,
+  PokemonAbility,
+  PokemonAttack,
+  ShopListing,
+} from "@/lib/analyzeDeck";
 
-export interface PokemonAbility {
-  pokemonName: string;
-  abilityName: string;
-  description: string;
-}
-
-export interface PokemonAttack {
-  pokemonName: string;
-  attackName: string;
-  cost: string[];
-  damage: string;
-  description: string;
-}
-
-export interface AnalysisResult {
-  deckSize: number;
-  sections: {
-    pokemon: number;
-    trainer: number;
-    energy: number;
-    pokemonRatio: string;
-    trainerRatio: string;
-    energyRatio: string;
-  };
-  pokemon: {
-    totalCards: number;
-    uniqueSpecies: number;
-    basicCount: number;
-    stage1Count: number;
-    stage2Count: number;
-    abilities: PokemonAbility[];
-    attacks: PokemonAttack[];
-    /** @deprecated No longer read by the renderer — the Overview matrix now
-     *  re-derives types from `cards` against the bundled card DB at render
-     *  time (see `buildTypesByName` in `lib/cardTypes.ts`). Still emitted by
-     *  the analyzer and persisted on older saved-deck rows; safe to ignore. */
-    typesByName?: Record<string, string[]>;
-  };
-  trainer: {
-    totalCards: number;
-    uniqueCards: number;
-    supporterCount: number;
-    itemCount: number;
-    toolCount: number;
-    stadiumCount: number;
-    details: Array<{ name: string; description: string }>;
-  };
-  energy: {
-    totalCards: number;
-    basicByType: Record<string, number>;
-    basicCount: number;
-    specialCount: number;
-    specialDetails: Array<{ name: string; qty: number; description: string }>;
-  };
-  deckPrice: number;
-  deckScore?: {
-    total: number;
-    grade: string;
-    rotation: number;
-    consistency: number;
-    evolution: number;
-    energyFit: number;
-  };
-  rotation: {
-    ready: boolean;
-    rotatingCount: number;
-    rotatingCards: Array<{ name: string; qty: number }>;
-  };
-  metaMatch: {
-    matched: boolean;
-    archetypeName: string | null;
-    matchPct: number | null;
-    rank: number | null;
-    conversionRate: number | null;
-  };
-  cards: Array<{
-    qty: number;
-    name: string;
-    number: string;
-    setCode: string;
-    section: "pokemon" | "trainer" | "energy";
-  }>;
-  warnings: string[];
-  shopMatches: Array<{
-    cardName: string;
-    listings: ShopListing[];
-  }>;
-}
+import type { AnalysisResult } from "@/lib/analyzeDeck";
 
 /* ─── Energy styling ─────────────────────────────────────────── */
 
