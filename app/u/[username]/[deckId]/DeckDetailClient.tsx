@@ -17,6 +17,7 @@ import EditDeckDialog from "@/app/components/EditDeckDialog";
 import MatchLog from "@/app/my-decks/[id]/MatchLog";
 import DeckNotes from "@/app/my-decks/[id]/DeckNotes";
 import VersionHistory, { type VersionSummary } from "./VersionHistory";
+import NewVersionDialog from "./NewVersionDialog";
 import type { GamePrize } from "@/lib/bo3";
 import { primaryCardImageUrl, deckAvatarInfo, pokemonSlug } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
@@ -97,6 +98,7 @@ export default function DeckDetailClient({
   const [archetypeSuggestion, setArchetypeSuggestion] =
     useState<ArchetypeSuggestion | null>(null);
   const [archetypeBusy, setArchetypeBusy] = useState(false);
+  const [newVersionOpen, setNewVersionOpen] = useState(false);
 
   const [isPublic, setIsPublic] = useState(initialIsPublic);
   const [visibilityBusy, setVisibilityBusy] = useState(false);
@@ -293,8 +295,11 @@ export default function DeckDetailClient({
       </div>
     ) : null;
 
+  // Owners get the commit button (and the empty state for pre-versioning
+  // decks); visitors only see the module when history exists.
+  const canCommit = isOwner && viewingVersion === null;
   const versionHistory =
-    versions.length > 0 ? (
+    versions.length > 0 || canCommit ? (
       <div className="mt-6">
         <VersionHistory
           deckId={savedDeckId}
@@ -303,6 +308,7 @@ export default function DeckDetailClient({
           recordsByVersion={recordsByVersion}
           viewingVersion={viewingVersion}
           isOwner={isOwner}
+          onNewVersion={canCommit ? () => setNewVersionOpen(true) : undefined}
         />
       </div>
     ) : null;
@@ -641,6 +647,17 @@ export default function DeckDetailClient({
             defaultCoverUrl={primaryCardImageUrl(analysis.cards ?? [])}
             initialDeckList={deckList}
             onSave={handleEditSave}
+          />
+
+          <NewVersionDialog
+            open={newVersionOpen}
+            onClose={() => setNewVersionOpen(false)}
+            deckId={savedDeckId}
+            initialDeckList={deckList}
+            onCommitted={(suggestion) => {
+              if (suggestion) setArchetypeSuggestion(suggestion);
+              router.refresh();
+            }}
           />
 
           {confirmingDelete && (

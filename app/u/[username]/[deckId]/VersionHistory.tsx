@@ -36,6 +36,10 @@ interface Props {
   /** The version currently rendered by the page (from ?v=), if not latest. */
   viewingVersion: number | null;
   isOwner: boolean;
+  /** When provided, renders the "New version" button in the header (the
+   *  parent gates it to owners viewing the latest version). Also lets the
+   *  module render its empty state instead of null. */
+  onNewVersion?: () => void;
 }
 
 const COLLAPSED_COUNT = 3;
@@ -61,6 +65,7 @@ export default function VersionHistory({
   recordsByVersion,
   viewingVersion,
   isOwner,
+  onNewVersion,
 }: Props) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
@@ -78,7 +83,9 @@ export default function VersionHistory({
     return Object.values(recordsByVersion).reduce((s, r) => s + r.w + r.l + r.d, 0);
   }, [recordsByVersion]);
 
-  if (versions.length === 0) return null;
+  // Decks predating versioning have no rows yet — show the empty state
+  // (with the commit button) to the owner instead of hiding the module.
+  if (versions.length === 0 && !onNewVersion) return null;
 
   function pickCompare(v: VersionSummary) {
     setError(null);
@@ -129,30 +136,60 @@ export default function VersionHistory({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold text-text-primary">Version History</h2>
-          <span className="inline-flex items-center rounded-full bg-black/5 px-2 py-0.5 text-[11px] font-semibold text-text-secondary">
-            {versions.length}
-          </span>
+          {versions.length > 0 && (
+            <span className="inline-flex items-center rounded-full bg-black/5 px-2 py-0.5 text-[11px] font-semibold text-text-secondary">
+              {versions.length}
+            </span>
+          )}
         </div>
-        {versions.length > COLLAPSED_COUNT && (
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            aria-label={expanded ? "Collapse version history" : "Expand version history"}
-            aria-expanded={expanded}
-            className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-text-muted hover:text-text-primary hover:bg-black/5 transition-colors"
-          >
-            {expanded ? "Less" : "More"}
-            <svg
-              className={`w-4 h-4 transition-transform ${expanded ? "rotate-180" : ""}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
+        <div className="flex items-center gap-2">
+          {versions.length > COLLAPSED_COUNT && (
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              aria-label={expanded ? "Collapse version history" : "Expand version history"}
+              aria-expanded={expanded}
+              className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-text-muted hover:text-text-primary hover:bg-black/5 transition-colors"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-            </svg>
-          </button>
-        )}
+              {expanded ? "Less" : "More"}
+              <svg
+                className={`w-4 h-4 transition-transform ${expanded ? "rotate-180" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+              </svg>
+            </button>
+          )}
+          {onNewVersion && (
+            <button
+              type="button"
+              onClick={onNewVersion}
+              className="inline-flex items-center gap-1 rounded-full bg-black border border-transparent px-3 py-1.5 text-xs font-semibold text-white hover:opacity-80 transition-opacity touch-manipulation"
+            >
+              <svg
+                className="w-3.5 h-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              New version
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* ── Empty state (owner, pre-versioning deck) ───────── */}
+      {versions.length === 0 && (
+        <p className="text-sm text-text-muted text-center rounded-xl border border-black/8 bg-white px-4 py-6">
+          No versions yet — commit the current list to start this deck&apos;s
+          history.
+        </p>
+      )}
 
       {/* ── Compare hint ───────────────────────────────────── */}
       {compareFrom && (
