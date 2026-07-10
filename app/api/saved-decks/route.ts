@@ -2,14 +2,23 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { track } from "@/lib/analytics/track";
 import { isTrustedCardImageUrl } from "@/lib/cardImages";
+import {
+  analyzeDeckList,
+  detectDeckArchetype,
+  DeckParseError,
+  type AnalysisResult,
+} from "@/lib/analyzeDeck";
+import { primaryPokemonCard } from "@/lib/primaryCardImage";
 
 /**
  * POST /api/saved-decks
  *
- * Saves a deck list + analysis snapshot to the authenticated user's
- * personal "My Decks" library. Sign-in required.
+ * Saves a deck to the authenticated user's library. The analysis snapshot
+ * is computed server-side (any client-sent `analysis` is ignored), the
+ * deck's archetype identity is auto-detected, and the deck's v1 version
+ * row is created alongside. Sign-in required.
  *
- * Body: { deckList: string, analysis?: object, name?: string }
+ * Body: { deckList: string, name?: string, coverUrl?, publish?, source?, metaArchetypeId? }
  */
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -69,12 +78,29 @@ export async function POST(req: Request) {
     );
   }
 
-  // Derive name if not provided
-  const analysisObj =
-    analysis && typeof analysis === "object"
-      ? (analysis as { metaMatch?: { archetypeName?: string | null } })
-      : null;
-  const archetype = analysisObj?.metaMatch?.archetypeName ?? null;
+  // Server-side analysis — the client-sent snapshot is never persisted.
+  // (`analysis` stays in the body type for older deployed clients.)
+  void analysis;
+  let analysisResult: AnalysisResult;
+  try {
+    analysisResult = analyzeDeckList(deckList);
+  } catch (err) {
+    if (err instanceof DeckParseError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
+    console.error("[saved-decks] analyze failed:", err);
+    return NextResponse.json(
+      { error: "Failed to save deck." },
+      { status: 500 }
+    );
+  }
+
+  // Deck-level archetype identity (repo = archetype), auto-detected.
+  const detected = detectDeckArchetype(analysisResult);
+  const archetype = detected.archetypeName;
+  const primaryPokemon =
+    primaryPokemonCard(analysisResult.cards)?.card.name ?? null;
+
   const finalName =
     (typeof name === "string" && name.trim()) || archetype || "Untitled Deck";
 
@@ -111,8 +137,12 @@ export async function POST(req: Request) {
       user_id: user.id,
       name: finalName,
       deck_list: deckList,
-      analysis: analysis ?? null,
+      analysis: analysisResult,
       is_public: publish === true,
+      archetype_id: detected.archetypeId,
+      archetype_name: detected.archetypeName,
+      archetype_source: "auto",
+      primary_pokemon_name: primaryPokemon,
       ...(coverUrl != null ? { cover_image_url: coverUrl } : {}),
     })
     .select("id, short_id, name, created_at")
@@ -124,6 +154,19 @@ export async function POST(req: Request) {
       { error: "Failed to save deck." },
       { status: 500 }
     );
+  }
+
+  // v1 — the deck's first version. Direct insert: the row above already
+  // carries the mirror, and a brand-new deck can't race on numbering.
+  const { error: verErr } = await supabase.from("deck_versions").insert({
+    deck_id: data.id,
+    version_number: 1,
+    deck_list: deckList,
+    analysis: analysisResult,
+  });
+  if (verErr) {
+    // Deck stays usable — the next commit becomes its v1.
+    console.error("[saved-decks] v1 insert failed:", verErr);
   }
 
   void track(req, "deck.saved", {

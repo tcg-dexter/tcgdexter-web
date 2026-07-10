@@ -2,15 +2,20 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { track } from "@/lib/analytics/track";
 import { isTrustedCardImageUrl } from "@/lib/cardImages";
+import { DeckParseError } from "@/lib/analyzeDeck";
+import { commitDeckVersion } from "@/lib/deck-versions";
 
 /**
  * DELETE /api/saved-decks/[id]
  * PATCH  /api/saved-decks/[id]
- *   body: { name?, notes?, is_public?, is_favorite?, is_pinned?, cover_image_url?, deck_list?, analysis? }
+ *   body: { name?, notes?, is_public?, is_favorite?, is_pinned?,
+ *           cover_image_url?, deck_list?, version_name?, changelog? }
  *   Setting is_pinned:true clears it on the caller's other decks first, so
  *   at most one deck is pinned per user.
- *   When deck_list changes the caller also sends a freshly-computed analysis
- *   (from POST /api/analyze) so the stored snapshot stays in sync.
+ *   A deck_list change is a version commit: the analysis snapshot is
+ *   recomputed server-side (any client-sent `analysis` is ignored) and a
+ *   new deck_versions row is created via create_deck_version() — unless the
+ *   list parses identical to the latest version, which is a no-op.
  *
  * Both require authentication. RLS on public.saved_decks ensures users
  * can only modify their own rows.
@@ -75,7 +80,10 @@ export async function PATCH(
     is_pinned?: boolean;
     cover_image_url?: string | null;
     deck_list?: string;
+    /** Ignored — the snapshot is recomputed server-side on deck_list change. */
     analysis?: unknown;
+    version_name?: string;
+    changelog?: string;
   };
   try {
     body = await req.json();
@@ -148,8 +156,20 @@ export async function PATCH(
     }
   }
 
-  // Deck list: replacing it also replaces the stored analysis snapshot, which
-  // the client recomputes via POST /api/analyze and sends alongside.
+  // Deck list: a content change is a version commit. commitDeckVersion
+  // re-analyzes server-side, skips no-op saves, and the RPC updates the
+  // deck_list/analysis mirror on saved_decks atomically with the version
+  // row — so deck_list never goes through the plain update below.
+  let committedVersion: {
+    id: string;
+    version_number: number;
+    name: string | null;
+    created: boolean;
+  } | null = null;
+  let archetypeSuggestion:
+    | { archetypeId: string | null; archetypeName: string }
+    | undefined;
+
   if (typeof body.deck_list === "string") {
     const dl = body.deck_list.trim();
     if (!dl) {
@@ -158,11 +178,50 @@ export async function PATCH(
         { status: 400 }
       );
     }
-    updates.deck_list = dl;
-    if ("analysis" in body) {
-      updates.analysis = body.analysis ?? null;
+
+    const { data: deckRow } = await supabase
+      .from("saved_decks")
+      .select("id, user_id, archetype_id, archetype_name")
+      .eq("id", id)
+      .maybeSingle();
+    if (!deckRow || deckRow.user_id !== user.id) {
+      return NextResponse.json({ error: "Deck not found." }, { status: 404 });
     }
+
+    try {
+      const commit = await commitDeckVersion(supabase, {
+        deckId: id,
+        deckList: dl,
+        name: typeof body.version_name === "string" ? body.version_name : null,
+        changelog: typeof body.changelog === "string" ? body.changelog : "",
+        currentArchetype: {
+          id: deckRow.archetype_id ?? null,
+          name: deckRow.archetype_name ?? null,
+        },
+      });
+      committedVersion = {
+        id: commit.version.id,
+        version_number: commit.version.version_number,
+        name: commit.version.name,
+        created: commit.created,
+      };
+      archetypeSuggestion = commit.archetypeSuggestion;
+    } catch (err) {
+      if (err instanceof DeckParseError) {
+        return NextResponse.json({ error: err.message }, { status: 400 });
+      }
+      console.error("[saved-decks] version commit failed:", err);
+      return NextResponse.json(
+        { error: "Failed to update deck." },
+        { status: 500 }
+      );
+    }
+    // Track the content edit under the pre-existing event name.
+    updates.deck_list = dl;
   }
+
+  const metadataUpdates = { ...updates };
+  delete metadataUpdates.deck_list;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json(
@@ -171,17 +230,19 @@ export async function PATCH(
     );
   }
 
-  const { error } = await supabase
-    .from("saved_decks")
-    .update(updates)
-    .eq("id", id);
+  if (Object.keys(metadataUpdates).length > 0) {
+    const { error } = await supabase
+      .from("saved_decks")
+      .update(metadataUpdates)
+      .eq("id", id);
 
-  if (error) {
-    console.error("[saved-decks] update failed:", error);
-    return NextResponse.json(
-      { error: "Failed to update deck." },
-      { status: 500 }
-    );
+    if (error) {
+      console.error("[saved-decks] update failed:", error);
+      return NextResponse.json(
+        { error: "Failed to update deck." },
+        { status: 500 }
+      );
+    }
   }
 
   // Pick the most meaningful event name for the update. Renames are common
@@ -208,5 +269,10 @@ export async function PATCH(
       : "deck.updated";
   void track(req, eventName, { id, fields: updatedFields });
 
-  return NextResponse.json({ success: true, ...updates });
+  return NextResponse.json({
+    success: true,
+    ...updates,
+    ...(committedVersion ? { version: committedVersion } : {}),
+    ...(archetypeSuggestion ? { archetypeSuggestion } : {}),
+  });
 }
