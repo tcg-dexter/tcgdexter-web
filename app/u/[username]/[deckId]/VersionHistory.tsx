@@ -342,7 +342,7 @@ export default function VersionHistory({
                 {isOpen && versionCards && (
                   <div className="px-3.5 pb-3.5">
                     <div className="rounded-lg bg-[var(--surface)]/60 p-2.5">
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap justify-center gap-1">
                         {versionCards.tiles.map((t) =>
                           t.imageUrl ? (
                             <div

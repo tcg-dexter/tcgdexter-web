@@ -62,16 +62,28 @@ function resolveEntry(card: Pick<AnalysisCard, "name" | "number" | "setCode">):
 
 /** Strict resolver — only returns an entry when set+number both match. Used
  *  for image URL lookups where a loose fallback would produce a wrong-card
- *  image (e.g. "Psychic Energy MEE 5" matching base1 Blastoise via number=5). */
+ *  image (e.g. "Psychic Energy MEE 5" matching base1 Blastoise via number=5).
+ *
+ *  The bundled DB files basic energies under two unrelated name keys (see
+ *  lib/basicEnergyAlias.ts) — a deck-list name landing on the key the DB
+ *  didn't happen to use for that printing would otherwise resolve to no
+ *  entry at all, silently dropping the card's image everywhere this
+ *  resolver is used (cover-image picker, meta-archetype pages, the
+ *  Alternates mini grid). Merge in every alias-key pool before matching
+ *  set+number, mirroring lib/deckTiles.ts's resolveEntry. */
 function resolveEntryExact(
   card: Pick<AnalysisCard, "name" | "number" | "setCode">,
 ): CardEntry | null {
-  const entries =
+  const primary =
     CARD_DB[card.name] ??
     CARD_DB_LOWER.get(card.name.toLowerCase()) ??
     [];
+  const aliasKeys = basicEnergyAliasKeys(card.name) ?? [];
+  const pool = aliasKeys.length
+    ? [...primary, ...aliasKeys.flatMap((k) => CARD_DB_LOWER.get(k) ?? [])]
+    : primary;
   return (
-    entries.find((e) => e.ptcgo_code === card.setCode && e.number === card.number) ??
+    pool.find((e) => e.ptcgo_code === card.setCode && e.number === card.number) ??
     null
   );
 }
