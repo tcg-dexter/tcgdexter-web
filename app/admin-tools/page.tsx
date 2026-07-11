@@ -31,6 +31,11 @@ const TOOLS: Tool[] = [
     description:
       "Step a parsed battle log through the engine on a board view.",
   },
+  {
+    href: "/admin-tools/ml",
+    title: "ML Pipeline",
+    description: "Training runs, data exports, and the model registry.",
+  },
 ];
 
 export default async function AdminToolsPage() {
