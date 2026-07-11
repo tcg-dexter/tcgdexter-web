@@ -802,8 +802,8 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   // Vertical mats are narrower and taller, so the grid packs fewer piles
   // per row but allows more rows — same local-override pattern as
   // matAspect, module-level MAX_PILES_PER_ROW/MAX_ROWS untouched.
-  const maxPilesPerRow = orientation === "vertical" ? 4 : MAX_PILES_PER_ROW;
-  const maxRowsForOrientation = orientation === "vertical" ? 5 : MAX_ROWS;
+  const maxPilesPerRow = orientation === "vertical" ? 5 : MAX_PILES_PER_ROW;
+  const maxRowsForOrientation = orientation === "vertical" ? 6 : MAX_ROWS;
 
   const rows = tiles ? computeRows(tiles, maxPilesPerRow, maxRowsForOrientation) : [];
   const cardWidth = computeCardWidth(rows, matWidth, matAspect);
