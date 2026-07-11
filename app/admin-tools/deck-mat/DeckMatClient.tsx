@@ -140,10 +140,14 @@ function proxied(url: string): string {
   return `/api/admin/social-studio/proxy-image?url=${encodeURIComponent(url)}`;
 }
 
-export function computeRows(tiles: ResolvedDeckTile[]): ResolvedDeckTile[][] {
+export function computeRows(
+  tiles: ResolvedDeckTile[],
+  maxPilesPerRow: number = MAX_PILES_PER_ROW,
+  maxRows: number = MAX_ROWS,
+): ResolvedDeckTile[][] {
   const rows: ResolvedDeckTile[][] = [];
-  for (let i = 0; i < tiles.length && rows.length < MAX_ROWS; i += MAX_PILES_PER_ROW) {
-    rows.push(tiles.slice(i, i + MAX_PILES_PER_ROW));
+  for (let i = 0; i < tiles.length && rows.length < maxRows; i += maxPilesPerRow) {
+    rows.push(tiles.slice(i, i + maxPilesPerRow));
   }
   return rows;
 }
@@ -795,8 +799,13 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   // so this is purely a local override for this component's own render +
   // export paths.
   const matAspect = orientation === "vertical" ? 1 / MAT_ASPECT : MAT_ASPECT;
+  // Vertical mats are narrower and taller, so the grid packs fewer piles
+  // per row but allows more rows — same local-override pattern as
+  // matAspect, module-level MAX_PILES_PER_ROW/MAX_ROWS untouched.
+  const maxPilesPerRow = orientation === "vertical" ? 4 : MAX_PILES_PER_ROW;
+  const maxRowsForOrientation = orientation === "vertical" ? 5 : MAX_ROWS;
 
-  const rows = tiles ? computeRows(tiles) : [];
+  const rows = tiles ? computeRows(tiles, maxPilesPerRow, maxRowsForOrientation) : [];
   const cardWidth = computeCardWidth(rows, matWidth, matAspect);
   const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
   const activeTex = TEXTURES.find((t) => t.key === textureKey) ?? null;
@@ -935,7 +944,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                       style={{ gap: ROW_GAP_X, justifyContent: rowIdx < rows.length - 1 ? "space-between" : "flex-start" }}
                     >
                       {row.map((t, colIdx) => (
-                        <CardPile key={t.key} tile={t} cardWidth={cardWidth} index={rowIdx * MAX_PILES_PER_ROW + colIdx} />
+                        <CardPile key={t.key} tile={t} cardWidth={cardWidth} index={rowIdx * maxPilesPerRow + colIdx} />
                       ))}
                     </div>
                   ))}
