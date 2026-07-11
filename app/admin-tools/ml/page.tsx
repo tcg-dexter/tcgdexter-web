@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { readRegistry, type MlRegistryModel } from "@/lib/ml/registry";
+import CoachPanel from "./CoachPanel";
 
 export const metadata: Metadata = {
   title: "ML Pipeline · Admin Tools",
@@ -122,6 +123,15 @@ export default async function MlPipelinePage() {
     .limit(50);
   const runs = (runRows ?? []) as MlRunRow[];
 
+  // The coach analyzes the caller's OWN matches (user client → RLS-scoped),
+  // matching the admin-gated-but-owner-only contract of /api/coach.
+  const { data: coachMatches } = await supabase
+    .from("matches")
+    .select("id, played_at, opponent_archetype, result")
+    .not("battle_log_raw", "is", null)
+    .order("played_at", { ascending: false })
+    .limit(25);
+
   return (
     <main className="min-h-dvh bg-bg pb-24">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 pt-8">
@@ -148,6 +158,13 @@ export default async function MlPipelinePage() {
               training run publishes to data/ml/registry.json.
             </div>
           )}
+        </section>
+
+        <section className="mb-8">
+          <h2 className="text-sm font-semibold text-text-primary mb-3">
+            Coach Preview
+          </h2>
+          <CoachPanel matches={coachMatches ?? []} />
         </section>
 
         <section>

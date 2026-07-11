@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-07-11T23:27:03.181857+00:00",
+  "models": {
+    "winprob": {
+      "model_version": "winprob-v1",
+      "trained_at": "2026-07-11T23:27:03.181857+00:00",
+      "n_samples": 1341,
+      "data_hash": "1dfff2726f04017a0254962ca25237b5e055529623dbdcfc4217150d731d0ddd",
+      "parser_version": 1,
+      "engine_version": 1,
+      "metrics": {
+        "brier": 0.2004,
+        "log_loss": 0.5888,
+        "accuracy": 0.7084,
+        "ece": 0.0497,
+        "baseline_brier": 0.2146
+      },
+      "artifacts": {
+        "path": "data/ml/winprob.json",
+        "sha256": "5d4429a2cbc0ad1b2a4d3c0e9b7e4b8b642deee86f3d61541ba0c85c26c25f43"
+      },
+      "enabled": true,
+      "gated": true
+    }
+  }
+}
