@@ -148,10 +148,14 @@ export function computeRows(tiles: ResolvedDeckTile[]): ResolvedDeckTile[][] {
   return rows;
 }
 
-export function computeCardWidth(rows: ResolvedDeckTile[][], containerWidth: number): number {
+export function computeCardWidth(
+  rows: ResolvedDeckTile[][],
+  containerWidth: number,
+  aspect: number = MAT_ASPECT,
+): number {
   if (!rows.length || containerWidth === 0) return 60;
   const innerW = containerWidth - MAT_PADDING * 2;
-  const innerH = containerWidth * MAT_ASPECT - MAT_PADDING * 2;
+  const innerH = containerWidth * aspect - MAT_PADDING * 2;
 
   // Vertical constraint: all rows must fit within mat height.
   const numRows = rows.length;
@@ -401,6 +405,7 @@ async function rasterizeMat({
   matImage,
   deckName,
   matWidth,
+  aspect,
 }: {
   rows: ResolvedDeckTile[][];
   cardWidth: number;
@@ -409,6 +414,7 @@ async function rasterizeMat({
   matImage: MatImage | null;
   deckName: string;
   matWidth: number;
+  aspect: number;
 }): Promise<string> {
   // ── 1. Pre-fetch all images as data URLs ──────────────────────────────────
   const uniqueCardUrls = Array.from(
@@ -441,7 +447,7 @@ async function rasterizeMat({
 
   // ── 3. Canvas dimensions ──────────────────────────────────────────────────
   const PR = 3; // pixel ratio
-  const matHeight = Math.round(matWidth * MAT_ASPECT);
+  const matHeight = Math.round(matWidth * aspect);
   const HEADER_H = 30; // logo height drives the header row
   const GAP = 12;
   const totalW = matWidth + EXPORT_PADDING * 2;
@@ -646,6 +652,57 @@ function downloadDataUrl(dataUrl: string, filename: string) {
   document.body.removeChild(a);
 }
 
+/** Two-state animated-slider toggle for the mat's orientation, matching the
+ *  visual language of the shared Grid/List toggle (GridListToggle) used
+ *  elsewhere in the app — same sliding pill mechanics — but kept local to
+ *  Playmat Studio since neither state here is a "primary" choice the way
+ *  List is on those toolbars. */
+function OrientationToggle({
+  value,
+  onChange,
+}: {
+  value: "horizontal" | "vertical";
+  onChange: (v: "horizontal" | "vertical") => void;
+}) {
+  return (
+    <div
+      className="relative flex items-center h-[34px] rounded-full bg-black/5 p-[3px]"
+      role="tablist"
+    >
+      <div
+        aria-hidden
+        className={`absolute inset-y-[3px] left-[3px] w-[calc(50%-3px)] rounded-full bg-white shadow-sm transition-all duration-300 ease-in-out ${
+          value === "vertical" ? "translate-x-full" : "translate-x-0"
+        }`}
+      />
+      <button
+        type="button"
+        role="tab"
+        aria-selected={value === "horizontal"}
+        aria-label="Horizontal playmat"
+        onClick={() => onChange("horizontal")}
+        className={`relative z-10 h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${
+          value === "horizontal" ? "text-text-primary" : "text-text-muted"
+        }`}
+      >
+        Horizontal
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={value === "vertical"}
+        aria-label="Vertical playmat"
+        onClick={() => onChange("vertical")}
+        className={`relative z-10 h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${
+          value === "vertical" ? "text-text-primary" : "text-text-muted"
+        }`}
+      >
+        Vertical
+      </button>
+    </div>
+  );
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 
 export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
@@ -655,6 +712,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [matStyle, setMatStyle] = useState<MatStyle>("brand");
+  const [orientation, setOrientation] = useState<"horizontal" | "vertical">("horizontal");
   const [textureKey, setTextureKey] = useState<string | null>(null);
   const [matImage, setMatImage] = useState<MatImage | null>(null);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
@@ -717,7 +775,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
       const deckName = decks.find((d) => d.id === selectedDeckId)?.name ?? "";
       const fileName = `${deckName.replace(/[^a-z0-9]/gi, "-").toLowerCase() || "deck-mat"}.png`;
       const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
-      const dataUrl = await rasterizeMat({ rows, cardWidth, activeGradient, textureKey, matImage, deckName, matWidth });
+      const dataUrl = await rasterizeMat({ rows, cardWidth, activeGradient, textureKey, matImage, deckName, matWidth, aspect: matAspect });
       downloadDataUrl(dataUrl, fileName);
       trackClient("playmat.exported", {
         style: matStyle,
@@ -731,12 +789,19 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
     }
   }
 
+  // Vertical is just the reciprocal of the standard landscape ratio — same
+  // mat, rotated. The module-level MAT_ASPECT constant itself stays
+  // untouched (PlaymatShowcase and the replay tool's mat both import it),
+  // so this is purely a local override for this component's own render +
+  // export paths.
+  const matAspect = orientation === "vertical" ? 1 / MAT_ASPECT : MAT_ASPECT;
+
   const rows = tiles ? computeRows(tiles) : [];
-  const cardWidth = computeCardWidth(rows, matWidth);
+  const cardWidth = computeCardWidth(rows, matWidth, matAspect);
   const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
   const activeTex = TEXTURES.find((t) => t.key === textureKey) ?? null;
   const texScale = matWidth > 0 ? matWidth / 600 : 1;
-  const matHeightPx = matWidth > 0 ? matWidth * MAT_ASPECT : 0;
+  const matHeightPx = matWidth > 0 ? matWidth * matAspect : 0;
   // A placed image replaces the gradient/pattern as the mat background.
   const imagePlacement =
     matImage && matWidth > 0
@@ -807,6 +872,11 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
               />
             </div>
 
+            {/* Orientation toggle — sits directly above the mat it controls. */}
+            <div className="flex justify-end">
+              <OrientationToggle value={orientation} onChange={setOrientation} />
+            </div>
+
             <div
               className="relative rounded-xl overflow-hidden"
               style={{
@@ -819,7 +889,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                 backgroundSize: !matImage && activeTex
                   ? `${activeTex.w * texScale}px ${activeTex.h * texScale}px, auto`
                   : "auto",
-                height: matWidth > 0 ? matWidth * MAT_ASPECT : undefined,
+                height: matWidth > 0 ? matWidth * matAspect : undefined,
                 boxShadow: "0 4px 4px rgba(0,0,0,0.66)",
               }}
             >
@@ -1034,7 +1104,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
         open={imageDialogOpen}
         initial={draftImage}
         placed={!!matImage}
-        aspect={MAT_ASPECT}
+        aspect={matAspect}
         onClose={() => {
           setImageDialogOpen(false);
           setDraftImage(null);
