@@ -161,6 +161,30 @@ export default async function MlPipelinePage() {
           )}
         </section>
 
+        {registry?.gates && (
+          <section className="mb-8">
+            <h2 className="text-sm font-semibold text-text-primary mb-3">
+              Data-Volume Gates
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(registry.gates).map(([name, gate]) => (
+                <div
+                  key={name}
+                  className="flex items-center gap-2 rounded-2xl border border-black/8 bg-white px-3 py-2 shadow-sm"
+                >
+                  <span
+                    className={`h-2 w-2 rounded-full ${gate.enabled ? "bg-green-500" : "bg-black/20"}`}
+                  />
+                  <span className="text-xs font-semibold text-text-primary">{name}</span>
+                  <span className="text-[10px] text-text-muted">
+                    {gate.n_matches}/{gate.threshold_matches} matches
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="mb-8">
           <h2 className="text-sm font-semibold text-text-primary mb-3">
             Coach Preview

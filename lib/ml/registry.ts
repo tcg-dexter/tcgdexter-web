@@ -23,10 +23,20 @@ export interface MlRegistryModel {
   gated: boolean;
 }
 
+/** Data-volume gate: which learned components the corpus currently
+ *  supports (spec thresholds). Written by every training run. */
+export interface MlRegistryGate {
+  enabled: boolean;
+  threshold_matches: number;
+  n_matches: number;
+}
+
 export interface MlRegistry {
   schema_version: number;
   updated_at: string;
   models: Record<string, MlRegistryModel>;
+  /** Absent in registries written before Phase 4. */
+  gates?: Record<string, MlRegistryGate>;
 }
 
 const REGISTRY_PATH = path.join(process.cwd(), "data", "ml", "registry.json");
