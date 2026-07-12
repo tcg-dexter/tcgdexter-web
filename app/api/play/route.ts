@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { cardImageUrlForAnyName } from "@/lib/primaryCardImage";
 import {
   applyHumanMove,
   humanOptions,
@@ -44,16 +45,40 @@ export interface PlayResponse {
   options: InteractiveMove[];
   ai_actions: AiAction[];
   outcome: GameOutcome | null;
+  /** Card name → image URL for everything visible in the view, so the
+   *  client renders art without shipping the card catalog. */
+  images: Record<string, string | null>;
+}
+
+function collectImages(view: ClientView): Record<string, string | null> {
+  const names = new Set<string>();
+  for (const c of view.hand) names.add(c.name);
+  for (const c of view.discard) names.add(c.name);
+  for (const c of view.opponent.discard) names.add(c.name);
+  for (const board of [view.board, view.opponent.board]) {
+    for (const mon of [board.active, ...board.bench]) {
+      if (!mon) continue;
+      names.add(mon.name);
+      for (const s of mon.stack) names.add(s);
+    }
+  }
+  const images: Record<string, string | null> = {};
+  names.forEach((name) => {
+    images[name] = cardImageUrlForAnyName(name);
+  });
+  return images;
 }
 
 function respond(session: GameSession): NextResponse {
+  const view = serializeView(viewFor(session.state, "player"));
   const payload: PlayResponse = {
     status: session.status,
     transcript: session.transcript,
-    view: serializeView(viewFor(session.state, "player")),
+    view,
     options: humanOptions(session),
     ai_actions: session.aiActions,
     outcome: session.outcome,
+    images: collectImages(view),
   };
   return NextResponse.json(payload);
 }

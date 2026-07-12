@@ -92,6 +92,26 @@ describe("interactive session", () => {
     );
   });
 
+  it("logs one feature row per completed turn with consistent accounting", () => {
+    const session = playFullGame(11);
+    expect(session.turnLog.length).toBe(session.outcome!.turns);
+    let lastPlayer = 0;
+    let lastOpponent = 0;
+    for (const row of session.turnLog) {
+      expect(row.prize_diff).toBe(row.prizes_player - row.prizes_opponent);
+      expect(row.prizes_player).toBeGreaterThanOrEqual(lastPlayer);
+      expect(row.prizes_opponent).toBeGreaterThanOrEqual(lastOpponent);
+      lastPlayer = row.prizes_player;
+      lastOpponent = row.prizes_opponent;
+      // Flags ride along on every row.
+      expect([0, 1]).toContain(row.flag_missed_energy_attach);
+    }
+    expect(lastPlayer).toBe(session.outcome!.prizesTaken.player);
+    expect(lastOpponent).toBe(session.outcome!.prizesTaken.opponent);
+    // Replay rebuilds the identical log.
+    expect(rebuildSession(session.transcript).turnLog).toEqual(session.turnLog);
+  });
+
   it("serialized client view redacts all hidden zones", () => {
     const session = startGame({ deckHuman: DECK, deckAi: DECK, skill: 0.5, seed: 7 });
     const view = serializeView(viewFor(session.state, "player"));

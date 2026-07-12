@@ -12,6 +12,8 @@
 // "over".
 
 import type { GameState } from "../types";
+import { turnQualityFlags } from "@/lib/ml/features/labels";
+import type { TurnFeatures, TurnQualityFlags } from "@/lib/ml/features/types";
 import {
   applyMove,
   beginTurn,
@@ -21,7 +23,7 @@ import {
   DEFAULT_MAX_TURNS,
   type GameOutcome,
 } from "./driver";
-import { legalMoves, type SimMove, type TurnContext } from "./moves";
+import { computeDamage, legalMoves, type SimMove, type TurnContext } from "./moves";
 import { PlannerPolicy } from "./planner";
 import { plannerParamsForSkill } from "./difficulty";
 import { promoteBest, type DecisionPolicy } from "./policy";
@@ -59,6 +61,28 @@ export interface AiAction {
   description: string;
 }
 
+/** One Phase-1 feature row (+ quality flags) per completed turn, from the
+ *  human's perspective — the post-game review feeds these straight into
+ *  buildCoachReport / winProbCurve. */
+export type LoggedTurn = TurnFeatures & TurnQualityFlags;
+
+interface TurnStats {
+  actor: "player" | "opponent";
+  turnNumber: number;
+  playerTurnNumber: number;
+  benchStart: number;
+  attacked: 0 | 1;
+  attackDamage: number;
+  energyAttached: number;
+  supporters: number;
+  items: number;
+  evolutions: number;
+  retreats: number;
+  retreatEnergy: number;
+  kos: number;
+  prizesTaken: number;
+}
+
 export interface GameSession {
   state: GameState;
   transcript: GameTranscript;
@@ -70,11 +94,106 @@ export interface GameSession {
   aiActions: AiAction[];
   turnCounts: { player: number; opponent: number };
   aiPolicy: DecisionPolicy;
+  /** Completed-turn feature rows for the post-game review. */
+  turnLog: LoggedTurn[];
+  turnStats: TurnStats | null;
 }
 
 export class IllegalMoveError extends Error {}
 
+/** Close the open turn's stats into a LoggedTurn row (post-KO-resolution
+ *  end-of-turn snapshot, matching Phase-1 extraction semantics). */
+function closeTurn(session: GameSession): void {
+  const s = session.turnStats;
+  if (!s) return;
+  session.turnStats = null;
+  const state = session.state;
+  const features: TurnFeatures = {
+    turn_number: s.turnNumber,
+    player_turn_number: s.playerTurnNumber,
+    actor: s.actor,
+    attacked: s.attacked,
+    attack_damage: s.attackDamage,
+    energy_attached: s.energyAttached,
+    supporter_played: s.supporters > 0 ? 1 : 0,
+    items_played: s.items,
+    tools_played: 0,
+    stadium_played: 0,
+    evolutions: s.evolutions,
+    retreats: s.retreats,
+    retreat_energy_discarded: s.retreatEnergy,
+    abilities_used: 0,
+    kos_scored: s.kos,
+    prizes_taken: s.prizesTaken,
+    prizes_player: state.prizesTaken.player,
+    prizes_opponent: state.prizesTaken.opponent,
+    prize_diff: state.prizesTaken.player - state.prizesTaken.opponent,
+    bench_player: state.sides.player.bench.length,
+    bench_opponent: state.sides.opponent.bench.length,
+    hand_player: state.sides.player.hand.length,
+    // Sim games have perfect own-hand knowledge (unlike parsed logs).
+    hand_player_known: state.sides.player.hand.length,
+    hand_opponent: state.sides.opponent.hand.length,
+    bench_delta: state.sides[s.actor].bench.length - s.benchStart,
+  };
+  session.turnLog.push({ ...features, ...turnQualityFlags(features, state) });
+}
+
+/** applyMove + turn-stat accounting (attack damage, KOs, prizes). */
+function applyTracked(
+  session: GameSession,
+  actor: "player" | "opponent",
+  move: SimMove,
+  ctx: TurnContext,
+) {
+  const state = session.state;
+  const s = session.turnStats;
+  if (s) {
+    const side = state.sides[actor];
+    switch (move.kind) {
+      case "attach":
+        s.energyAttached += 1;
+        break;
+      case "evolve":
+        s.evolutions += 1;
+        break;
+      case "retreat":
+        s.retreats += 1;
+        s.retreatEnergy += Math.min(
+          side.active?.card.catalog?.retreat_cost ?? 0,
+          side.active?.attachedEnergy.length ?? 0,
+        );
+        break;
+      case "cycle_supporter":
+        s.supporters += 1;
+        break;
+      case "cycle_item":
+        s.items += 1;
+        break;
+      case "attack": {
+        s.attacked = 1;
+        const attacker = side.active;
+        const defender = state.sides[otherActor(actor)].active;
+        const attack = attacker?.card.catalog?.attacks[move.attackIndex];
+        if (attacker && defender && attack) {
+          s.attackDamage += computeDamage(attacker, attack, defender);
+        }
+        break;
+      }
+    }
+  }
+  const prizesBefore = state.prizesTaken[actor];
+  const result = applyMove(state, actor, move, ctx);
+  if (s) {
+    const delta = state.prizesTaken[actor] - prizesBefore;
+    s.prizesTaken += delta;
+    if (delta > 0) s.kos += 1;
+  }
+  return result;
+}
+
 function finish(session: GameSession, winner: "player" | "opponent" | null): void {
+  closeTurn(session);
   const state = session.state;
   let finalWinner = winner ?? state.winner;
   if (finalWinner === null) {
@@ -94,6 +213,7 @@ function finish(session: GameSession, winner: "player" | "opponent" | null): voi
 /** Advance to the given actor's turn; ends the game on deck-out/turn cap.
  *  Returns true when the turn began normally. */
 function advanceTurn(session: GameSession, actor: "player" | "opponent"): boolean {
+  closeTurn(session);
   if (session.state.turn.number >= DEFAULT_MAX_TURNS) {
     finish(session, null);
     return false;
@@ -103,6 +223,22 @@ function advanceTurn(session: GameSession, actor: "player" | "opponent"): boolea
     finish(session, session.state.winner);
     return false;
   }
+  session.turnStats = {
+    actor,
+    turnNumber: session.state.turn.number,
+    playerTurnNumber: session.turnCounts[actor],
+    benchStart: session.state.sides[actor].bench.length,
+    attacked: 0,
+    attackDamage: 0,
+    energyAttached: 0,
+    supporters: 0,
+    items: 0,
+    evolutions: 0,
+    retreats: 0,
+    retreatEnergy: 0,
+    kos: 0,
+    prizesTaken: 0,
+  };
   if (actor === "player") {
     session.ctx = { retreated: false };
     session.status = "human_turn";
@@ -121,7 +257,7 @@ function runAiTurn(session: GameSession, record: boolean): void {
     const legal = legalMoves(state, "opponent", ctx);
     const move = session.aiPolicy.chooseMove(viewFor(state, "opponent"), legal, ctx);
     const description = describeMove(state, "opponent", move);
-    const result = applyMove(state, "opponent", move, ctx);
+    const result = applyTracked(session, "opponent", move, ctx);
     session.aiActions.push({ turn: state.turn.number, description });
     if (record) session.transcript.moves.push({ actor: "ai", move });
 
@@ -196,6 +332,8 @@ function bootSession(transcript: GameTranscript): GameSession {
     outcome: null,
     aiActions: [],
     turnCounts: { player: 0, opponent: 0 },
+    turnLog: [],
+    turnStats: null,
     aiPolicy: new PlannerPolicy({
       params: plannerParamsForSkill(transcript.skill),
       seed: (transcript.seed ^ 0x5eed) >>> 0,
@@ -237,7 +375,7 @@ export function applyHumanMove(session: GameSession, move: InteractiveMove, reco
     throw new IllegalMoveError(`Illegal move: ${encoded}`);
   }
 
-  const result = applyMove(state, "player", move, session.ctx);
+  const result = applyTracked(session, "player", move, session.ctx);
   if (record) session.transcript.moves.push({ actor: "human", move });
 
   if (state.winner !== null) {

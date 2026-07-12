@@ -33,6 +33,7 @@ export type {
   SessionStatus,
   AiAction,
   StartOptions,
+  LoggedTurn,
 } from "./interactive";
 export { serializeView, describeMove, describePromotion } from "./serialize";
 export type { ClientView, ClientCard, ClientMon, ClientBoard } from "./serialize";
