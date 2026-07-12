@@ -1,25 +1,29 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+// AI-player practice mode, rendered on the shared replay BoardKit — the
+// same mats, card holders, piles, prize stacks and card inspector as the
+// Replay viewer, with an interaction layer on top: tap a hand card to play
+// it, tap a highlighted Pokémon to target it, attack/retreat/end-turn from
+// the action bar. When no game action is pending, taps fall through to the
+// card inspector exactly like replay.
+
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { PlayResponse } from "@/app/api/play/route";
-import type { ClientMon, InteractiveMove } from "@/lib/engine/sim";
+import type { ClientMon, ClientView, InteractiveMove } from "@/lib/engine/sim";
 import type { GameReview } from "@/lib/ml/gameReview";
+import {
+  InspectContext,
+  PlayerMat,
+  ReplayCardInspector,
+  computeReplayCardWidth,
+  CARD_BACK_URL,
+  type InspectTarget,
+  type PokemonFrame,
+} from "@/app/admin-tools/replay/BoardKit";
 import type { DeckOption } from "./page";
 
-/* ─── Small shared bits ─────────────────────────────────────────── */
-
-const ENERGY_COLORS: Record<string, string> = {
-  Grass: "bg-green-500",
-  Fire: "bg-red-500",
-  Water: "bg-blue-500",
-  Lightning: "bg-yellow-400",
-  Psychic: "bg-purple-500",
-  Fighting: "bg-orange-600",
-  Darkness: "bg-gray-800",
-  Metal: "bg-gray-400",
-  Fairy: "bg-pink-400",
-  Colorless: "bg-gray-300",
-};
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 const SEVERITY_STYLES: Record<string, string> = {
   warning: "bg-red-100 text-red-800",
@@ -28,87 +32,32 @@ const SEVERITY_STYLES: Record<string, string> = {
 };
 
 const DIFFICULTIES = [
-  { key: "easy", label: "Easy", skill: 0.15 },
-  { key: "medium", label: "Medium", skill: 0.55 },
-  { key: "hard", label: "Hard", skill: 0.95 },
+  { key: "easy", label: "Easy" },
+  { key: "medium", label: "Medium" },
+  { key: "hard", label: "Hard" },
 ] as const;
 
-function EnergyPips({ types }: { types: string[] }) {
-  if (types.length === 0) return null;
-  return (
-    <span className="flex flex-wrap gap-0.5">
-      {types.map((t, i) => (
-        <span
-          key={i}
-          title={t}
-          className={`inline-block h-2.5 w-2.5 rounded-full border border-black/20 ${ENERGY_COLORS[t] ?? "bg-gray-300"}`}
-        />
-      ))}
-    </span>
-  );
+/* ─── ClientView → BoardKit frames ──────────────────────────────── */
+
+function toFrame(mon: ClientMon, images: Record<string, string | null>): PokemonFrame {
+  return {
+    id: mon.id,
+    name: mon.name,
+    damage: mon.damage,
+    hp: mon.hp,
+    energy: mon.energy,
+    energyTypes: mon.energyTypes,
+    conditions: [],
+    evolutionStack: mon.stack,
+    imageUrl: images[mon.name] ?? null,
+  };
 }
 
-/* ─── Board card tiles ──────────────────────────────────────────── */
-
-function MonTile({
-  mon,
-  image,
-  size,
-  highlight,
-  onClick,
-  facing,
-}: {
-  mon: ClientMon;
-  image: string | null;
-  size: "active" | "bench";
-  highlight?: boolean;
-  onClick?: () => void;
-  facing: "up" | "down";
-}) {
-  const width = size === "active" ? "w-24 sm:w-28" : "w-16 sm:w-20";
-  const hpLeft = mon.hp !== null ? Math.max(0, mon.hp - mon.damage) : null;
-  return (
-    <button
-      onClick={onClick}
-      disabled={!onClick}
-      className={`relative ${width} shrink-0 text-left ${onClick ? "cursor-pointer" : "cursor-default"} ${
-        highlight ? "ring-2 ring-accent rounded-lg" : ""
-      }`}
-    >
-      {image ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={image}
-          alt={mon.name}
-          className={`w-full rounded-lg shadow-sm ${facing === "down" ? "rotate-180" : ""}`}
-        />
-      ) : (
-        <div className="flex aspect-[5/7] w-full items-center justify-center rounded-lg border border-black/15 bg-surface p-1 text-center text-[9px] font-semibold text-text-secondary">
-          {mon.name}
-        </div>
-      )}
-      {mon.damage > 0 && (
-        <span className="absolute -top-1 -right-1 rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold text-white shadow">
-          -{mon.damage}
-        </span>
-      )}
-      <div className="mt-0.5 flex items-center justify-between gap-1">
-        <EnergyPips types={mon.energyTypes} />
-        {hpLeft !== null && (
-          <span className="text-[9px] font-semibold text-text-muted">{hpLeft}hp</span>
-        )}
-      </div>
-    </button>
-  );
+function discardTop(cards: { name: string }[]): string | null {
+  return cards.length > 0 ? cards[cards.length - 1].name : null;
 }
 
-function CountChip({ label, value }: { label: string; value: number }) {
-  return (
-    <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] text-text-secondary">
-      {label} <span className="font-semibold text-text-primary">{value}</span>
-    </span>
-  );
-}
+/* ─── Win-prob sparkline (review screen) ────────────────────────── */
 
 function WinProbSparkline({ curve }: { curve: NonNullable<GameReview["win_prob"]>["curve"] }) {
   if (curve.length === 0) return null;
@@ -136,7 +85,9 @@ function WinProbSparkline({ curve }: { curve: NonNullable<GameReview["win_prob"]
 
 export default function PlayClient({ decks }: { decks: DeckOption[] }) {
   const [humanDeckId, setHumanDeckId] = useState(decks[0]?.id ?? "");
-  const [aiDeckId, setAiDeckId] = useState(decks.find((d) => d.source === "meta")?.id ?? decks[0]?.id ?? "");
+  const [aiDeckId, setAiDeckId] = useState(
+    decks.find((d) => d.source === "meta")?.id ?? decks[0]?.id ?? "",
+  );
   const [difficulty, setDifficulty] = useState<(typeof DIFFICULTIES)[number]["key"]>("medium");
   const [game, setGame] = useState<PlayResponse | null>(null);
   const [log, setLog] = useState<string[]>([]);
@@ -145,8 +96,26 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
   const [review, setReview] = useState<GameReview | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inspect, setInspect] = useState<InspectTarget | null>(null);
 
   const deckById = useMemo(() => new Map(decks.map((d) => [d.id, d])), [decks]);
+
+  // Board width: same measurement pattern as the replay Board.
+  const matContainerRef = useRef<HTMLDivElement>(null);
+  const [matWidth, setMatWidth] = useState(300);
+  useIsomorphicLayoutEffect(() => {
+    const el = matContainerRef.current;
+    if (!el) return;
+    const measure = () => {
+      const w = el.getBoundingClientRect().width;
+      if (w > 0) setMatWidth(w);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [game != null]);
+  const cardWidth = computeReplayCardWidth(matWidth);
 
   const post = useCallback(async (body: Record<string, unknown>): Promise<PlayResponse> => {
     const res = await fetch("/api/play", {
@@ -242,27 +211,20 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     if (item) return void sendMove(item);
     const targets = [...attachTargets(cardId), ...evolveTargets(cardId)];
     if (targets.length === 1) {
-      const move = options.find((m) => "cardId" in m && m.cardId === cardId && "targetId" in m && m.targetId === targets[0]);
+      const move = options.find(
+        (m) => "cardId" in m && m.cardId === cardId && "targetId" in m && m.targetId === targets[0],
+      );
       if (move) return void sendMove(move);
     }
     if (targets.length > 1) setPendingCardId(pendingCardId === cardId ? null : cardId);
   }
 
-  function handleOwnMonClick(monId: string, benchIndex: number | null) {
-    if (!game) return;
-    if (game.status === "human_promotion" && benchIndex !== null) {
-      return void sendMove({ kind: "promote", benchIndex });
-    }
-    if (retreatMode && benchIndex !== null) {
-      const move = byKind("retreat").find((m) => m.benchIndex === benchIndex);
-      if (move) return void sendMove(move);
-    }
-    if (pendingCardId && pendingTargets.has(monId)) {
-      const move = options.find(
-        (m) => "cardId" in m && m.cardId === pendingCardId && "targetId" in m && m.targetId === monId,
-      );
-      if (move) return void sendMove(move);
-    }
+  function sendTargeted(monId: string) {
+    if (!pendingCardId) return;
+    const move = options.find(
+      (m) => "cardId" in m && m.cardId === pendingCardId && "targetId" in m && m.targetId === monId,
+    );
+    if (move) void sendMove(move);
   }
 
   /* ── Screens ── */
@@ -323,11 +285,6 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     );
   }
 
-  const view = game.view;
-  const images = game.images;
-  const attacks = byKind("attack");
-  const canRetreat = byKind("retreat").length > 0;
-
   if (review) {
     const won = review.outcome.winner === "player";
     return (
@@ -377,121 +334,139 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     );
   }
 
+  const view: ClientView = game.view;
+  const images = game.images;
+  const attacks = byKind("attack");
+  const canRetreat = byKind("retreat").length > 0;
+  const promoting = game.status === "human_promotion";
+  const humanActive = view.board.active ? toFrame(view.board.active, images) : null;
+  const humanBench = view.board.bench.map((m) => toFrame(m, images));
+  const aiActive = view.opponent.board.active ? toFrame(view.opponent.board.active, images) : null;
+  const aiBench = view.opponent.board.bench.map((m) => toFrame(m, images));
+
+  // Bench taps only act while a mode is live; otherwise the kit falls back
+  // to the inspector (tap any card to zoom, same as replay).
+  const benchActs = promoting || retreatMode || pendingCardId != null;
+  const humanInteract = {
+    onActiveClick:
+      pendingCardId && view.board.active && pendingTargets.has(view.board.active.id)
+        ? () => sendTargeted(view.board.active!.id)
+        : undefined,
+    highlightActive:
+      pendingCardId != null && view.board.active != null && pendingTargets.has(view.board.active.id),
+    onBenchClick: benchActs
+      ? (i: number) => {
+          if (promoting) return void sendMove({ kind: "promote", benchIndex: i });
+          if (retreatMode) {
+            const move = byKind("retreat").find((m) => m.benchIndex === i);
+            if (move) return void sendMove(move);
+            return;
+          }
+          const mon = view.board.bench[i];
+          if (mon && pendingTargets.has(mon.id)) sendTargeted(mon.id);
+        }
+      : undefined,
+    highlightBench: view.board.bench.map((mon, i) =>
+      promoting ||
+      (retreatMode && byKind("retreat").some((m) => m.benchIndex === i)) ||
+      (pendingCardId != null && pendingTargets.has(mon.id)),
+    ),
+  };
+
+  const statusLine = promoting
+    ? "Choose your new Active Pokémon"
+    : game.status === "human_turn"
+      ? pendingCardId
+        ? "Pick a target Pokémon"
+        : retreatMode
+          ? "Pick a benched Pokémon to retreat into"
+          : "Your move"
+      : game.outcome
+        ? game.outcome.winner === "player"
+          ? `You win! (${game.outcome.endReason})`
+          : game.outcome.winner === "opponent"
+            ? `You lose (${game.outcome.endReason})`
+            : `Draw (${game.outcome.endReason})`
+        : "";
+
   return (
-    <div className="flex flex-col gap-3">
-      {/* Opponent zone */}
-      <div className="rounded-2xl border border-black/8 bg-white p-3 shadow-sm">
-        <div className="mb-2 flex flex-wrap items-center gap-1.5">
-          <span className="text-xs font-semibold text-text-primary">Opponent</span>
-          <CountChip label="hand" value={view.opponent.handCount} />
-          <CountChip label="deck" value={view.opponent.deckCount} />
-          <CountChip label="prizes left" value={view.opponent.prizeCount} />
-          <CountChip label="taken" value={view.opponent.prizesTaken} />
-        </div>
-        <div className="flex items-end gap-2 overflow-x-auto pb-1">
-          {view.opponent.board.active && (
-            <MonTile mon={view.opponent.board.active} image={images[view.opponent.board.active.name] ?? null} size="active" facing="down" />
-          )}
-          <div className="flex gap-1.5">
-            {view.opponent.board.bench.map((mon) => (
-              <MonTile key={mon.id} mon={mon} image={images[mon.name] ?? null} size="bench" facing="down" />
-            ))}
-          </div>
-        </div>
-      </div>
+    <InspectContext.Provider value={setInspect}>
+      <div ref={matContainerRef} className="flex flex-col gap-3">
+        {/* ── AI mat (top orientation: bench top, active facing the gap) ── */}
+        <PlayerMat
+          side="player"
+          bench={aiBench}
+          active={aiActive}
+          discardCount={view.opponent.discard.length}
+          discardTop={discardTop(view.opponent.discard)}
+          discardTopImageUrl={
+            discardTop(view.opponent.discard)
+              ? images[discardTop(view.opponent.discard)!] ?? null
+              : null
+          }
+          deckCount={view.opponent.deckCount}
+          handCount={view.opponent.handCount}
+          prizesRemaining={view.opponent.prizeCount}
+          stadium={null}
+          lastPlayedTrainer={null}
+          cardWidth={cardWidth}
+          matWidth={matWidth}
+        />
 
-      {/* Status bar + AI feed */}
-      <div className="rounded-2xl border border-black/8 bg-white p-3 shadow-sm">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-text-primary">
-            Turn {view.turn.number} ·{" "}
-            {game.status === "human_turn"
-              ? "your move"
-              : game.status === "human_promotion"
-                ? "choose your new Active"
-                : "game over"}
-          </span>
-          {game.outcome && (
-            <span className={`text-xs font-bold ${game.outcome.winner === "player" ? "text-green-700" : "text-red-700"}`}>
-              {game.outcome.winner === "player" ? "You win!" : game.outcome.winner === "opponent" ? "You lose" : "Draw"} ({game.outcome.endReason})
+        {/* ── Between-mats strip: status left, turn pill right, AI feed. ── */}
+        <div className="flex flex-col gap-0.5 px-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="min-w-0 truncate text-sm font-bold text-text-primary">
+              {statusLine}
             </span>
-          )}
-        </div>
-        {log.length > 0 && (
-          <ul className="mt-1.5 max-h-24 overflow-y-auto text-[11px] leading-relaxed text-text-secondary">
-            {log.slice(-8).map((line, i) => (
-              <li key={i}>{line}</li>
-            ))}
-          </ul>
-        )}
-        {error && <p className="mt-1 text-xs text-red-700">{error}</p>}
-      </div>
-
-      {/* Own zone */}
-      <div className={`rounded-2xl border p-3 shadow-sm ${game.status === "human_promotion" ? "border-accent bg-red-50" : "border-black/8 bg-white"}`}>
-        <div className="mb-2 flex flex-wrap items-center gap-1.5">
-          <span className="text-xs font-semibold text-text-primary">You</span>
-          <CountChip label="deck" value={view.deckCount} />
-          <CountChip label="prizes left" value={view.prizeCount} />
-          <CountChip label="taken" value={view.prizesTaken} />
-          <CountChip label="discard" value={view.discard.length} />
-        </div>
-        <div className="flex items-end gap-2 overflow-x-auto pb-1">
-          {view.board.active && (
-            <div className="flex shrink-0 flex-col gap-1">
-              <MonTile
-                mon={view.board.active}
-                image={images[view.board.active.name] ?? null}
-                size="active"
-                facing="up"
-                highlight={pendingTargets.has(view.board.active.id)}
-                onClick={
-                  pendingTargets.has(view.board.active.id)
-                    ? () => handleOwnMonClick(view.board.active!.id, null)
-                    : undefined
-                }
-              />
-              {attacks.map((m) => {
-                const attack = view.board.active!.attacks[m.attackIndex];
-                return (
-                  <button
-                    key={m.attackIndex}
-                    onClick={() => sendMove(m)}
-                    disabled={loading}
-                    className="rounded-lg border border-transparent bg-black px-2 py-1 text-[10px] font-semibold text-white disabled:opacity-50"
-                  >
-                    {attack?.name ?? "Attack"} {attack?.damage ? `· ${attack.damage}` : ""}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          <div className="flex gap-1.5">
-            {view.board.bench.map((mon, i) => (
-              <MonTile
-                key={mon.id}
-                mon={mon}
-                image={images[mon.name] ?? null}
-                size="bench"
-                facing="up"
-                highlight={
-                  game.status === "human_promotion" || retreatMode || pendingTargets.has(mon.id)
-                }
-                onClick={() => handleOwnMonClick(mon.id, i)}
-              />
-            ))}
+            <span className="shrink-0 rounded-full bg-[#1a1a1a] px-2.5 py-0.5 text-[10px] font-bold tabular-nums text-white">
+              Turn {view.turn.number}
+            </span>
           </div>
+          <div className="min-h-[1.25rem] py-0.5 text-center text-xs leading-snug text-text-secondary">
+            {log.length > 0 ? log[log.length - 1] : ""}
+          </div>
+          {error && <p className="text-center text-xs text-red-700">{error}</p>}
         </div>
 
-        {/* Hand */}
-        {game.status !== "over" && (
-          <div className="mt-2 border-t border-black/8 pt-2">
+        {/* ── Human mat (bottom orientation: active facing the gap) ── */}
+        <PlayerMat
+          side="opponent"
+          bench={humanBench}
+          active={humanActive}
+          discardCount={view.discard.length}
+          discardTop={discardTop(view.discard)}
+          discardTopImageUrl={
+            discardTop(view.discard) ? images[discardTop(view.discard)!] ?? null : null
+          }
+          deckCount={view.deckCount}
+          handCount={view.hand.length}
+          prizesRemaining={view.prizeCount}
+          stadium={null}
+          lastPlayedTrainer={null}
+          cardWidth={cardWidth}
+          matWidth={matWidth}
+          interact={humanInteract}
+        />
+
+        {/* ── Hand + actions ── */}
+        {game.status !== "over" ? (
+          <div className="rounded-2xl border border-black/8 bg-white p-3 shadow-sm">
             <div className="mb-1 flex items-center gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">Hand</span>
-              {pendingCardId && (
-                <span className="text-[10px] text-accent">pick a target Pokémon…</span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
+                Hand · {view.hand.length}
+              </span>
+              {(pendingCardId || retreatMode) && (
+                <button
+                  onClick={() => {
+                    setPendingCardId(null);
+                    setRetreatMode(false);
+                  }}
+                  className="text-[10px] font-semibold text-accent"
+                >
+                  cancel
+                </button>
               )}
-              {retreatMode && <span className="text-[10px] text-accent">pick a benched Pokémon…</span>}
             </div>
             <div className="flex gap-1.5 overflow-x-auto pb-1">
               {view.hand.map((card) => {
@@ -500,10 +475,14 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                 return (
                   <button
                     key={card.id}
-                    onClick={() => handleHandClick(card.id)}
-                    disabled={!playable || loading}
-                    className={`w-14 shrink-0 sm:w-16 ${playable ? "" : "opacity-45"} ${
-                      pendingCardId === card.id ? "ring-2 ring-accent rounded-lg" : ""
+                    onClick={() =>
+                      playable
+                        ? handleHandClick(card.id)
+                        : setInspect({ kind: "card", name: card.name, imageUrl: image ?? null })
+                    }
+                    disabled={loading}
+                    className={`w-16 shrink-0 sm:w-20 ${playable ? "" : "opacity-45"} ${
+                      pendingCardId === card.id ? "rounded-md ring-2 ring-accent" : ""
                     }`}
                     title={card.name}
                   >
@@ -511,18 +490,39 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={image} alt={card.name} className="w-full rounded-md shadow-sm" />
                     ) : (
-                      <div className="flex aspect-[5/7] w-full items-center justify-center rounded-md border border-black/15 bg-surface p-1 text-center text-[8px] font-semibold text-text-secondary">
-                        {card.name}
+                      <div className="relative w-full overflow-hidden rounded-md" style={{ aspectRatio: "245 / 342" }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={CARD_BACK_URL} alt="" className="h-full w-full object-cover" />
+                        <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[8px] font-semibold leading-tight text-white line-clamp-2">
+                          {card.name}
+                        </div>
                       </div>
                     )}
                   </button>
                 );
               })}
             </div>
-            <div className="mt-2 flex items-center gap-2">
+            <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-black/8 pt-2">
+              {attacks.map((m) => {
+                const attack = view.board.active?.attacks[m.attackIndex];
+                return (
+                  <button
+                    key={m.attackIndex}
+                    onClick={() => sendMove(m)}
+                    disabled={loading}
+                    className="rounded-lg border border-transparent bg-black px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                  >
+                    {attack?.name ?? "Attack"}
+                    {attack?.damage ? ` · ${attack.damage}` : ""}
+                  </button>
+                );
+              })}
               {canRetreat && (
                 <button
-                  onClick={() => setRetreatMode(!retreatMode)}
+                  onClick={() => {
+                    setRetreatMode(!retreatMode);
+                    setPendingCardId(null);
+                  }}
                   disabled={loading}
                   className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
                     retreatMode
@@ -542,13 +542,11 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                   End Turn
                 </button>
               )}
+              {loading && <span className="text-[10px] text-text-muted">…</span>}
             </div>
           </div>
-        )}
-
-        {/* Game over actions */}
-        {game.status === "over" && (
-          <div className="mt-2 flex items-center gap-2 border-t border-black/8 pt-2">
+        ) : (
+          <div className="flex items-center gap-2 rounded-2xl border border-black/8 bg-white p-3 shadow-sm">
             <button
               onClick={fetchReview}
               disabled={loading}
@@ -565,6 +563,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
           </div>
         )}
       </div>
-    </div>
+      {inspect && <ReplayCardInspector target={inspect} onClose={() => setInspect(null)} />}
+    </InspectContext.Provider>
   );
 }
