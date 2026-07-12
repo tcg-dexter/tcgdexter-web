@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { readRegistry, type MlRegistryModel } from "@/lib/ml/registry";
 import CoachPanel from "./CoachPanel";
+import SimulatePanel from "./SimulatePanel";
 
 export const metadata: Metadata = {
   title: "ML Pipeline · Admin Tools",
@@ -165,6 +166,13 @@ export default async function MlPipelinePage() {
             Coach Preview
           </h2>
           <CoachPanel matches={coachMatches ?? []} />
+        </section>
+
+        <section className="mb-8">
+          <h2 className="text-sm font-semibold text-text-primary mb-3">
+            Deck-vs-Deck Simulator
+          </h2>
+          <SimulatePanel />
         </section>
 
         <section>
