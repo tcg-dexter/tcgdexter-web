@@ -32,16 +32,25 @@ export interface SimDeck {
 
 export class SimDeckError extends Error {}
 
-export function instantiateDeck(deckList: string): SimDeck {
+/**
+ * @param idPrefix When set, card ids are minted from a LOCAL counter
+ *   (`${idPrefix}1`, `${idPrefix}2`, …) so identical inputs yield identical
+ *   ids — required for transcript replay (interactive.ts), where recorded
+ *   moves reference card ids across process rebuilds. Callers must use
+ *   distinct prefixes per side. Defaults to globally-unique ids.
+ */
+export function instantiateDeck(deckList: string, idPrefix?: string): SimDeck {
   const parsed = parseDeckListCards(deckList);
   if (parsed.length === 0) throw new SimDeckError("Deck list could not be parsed");
   const cards: CardInstance[] = [];
   const unknown = new Set<string>();
+  let local = 0;
+  const mint = idPrefix ? () => `${idPrefix}${++local}` : () => mintInstanceId("sim");
   for (const entry of parsed) {
     const catalog = lookupCard(entry.name);
     if (!catalog) unknown.add(entry.name);
     for (let i = 0; i < entry.qty; i++) {
-      cards.push({ id: mintInstanceId("sim"), name: entry.name, catalog });
+      cards.push({ id: mint(), name: entry.name, catalog });
     }
   }
   const basics = cards.some(
@@ -80,7 +89,9 @@ export function prizeValue(name: string): number {
 
 export function toPokemonInPlay(card: CardInstance, turnNumber: number): PokemonInPlay {
   return {
-    id: mintInstanceId("mon"),
+    // Derived from the card id (a card enters play at most once), so mon
+    // ids are as deterministic as their cards — see instantiateDeck.
+    id: `mon_${card.id}`,
     card,
     stack: [],
     damage: 0,

@@ -2,11 +2,16 @@
 // GameState until someone wins. Unlike the replay reducer (which trusts
 // the log), this enforces outcomes itself — damage math, KOs, prizes,
 // promotion, deck-out, and the turn cap.
+//
+// Promotion after a KO is a CALLER decision (returned as pendingPromotion,
+// resolved via promote()): playGame answers it with the defender's policy
+// immediately; the interactive runner pauses and asks the human.
 
 import type { GameState, PokemonInPlay } from "../types";
 import { computeDamage, legalMoves, remainingHp, sideOf, type SimMove, type TurnContext } from "./moves";
 import type { DecisionPolicy } from "./policy";
 import { buildSimInitialState, prizeValue, toPokemonInPlay, type SimDeck } from "./setup";
+import { viewFor } from "./view";
 import type { Rng } from "./rng";
 
 export interface GameOptions {
@@ -25,23 +30,70 @@ export interface GameOutcome {
   firstKoTurn: number | null;
 }
 
-const DEFAULT_MAX_TURNS = 60;
-const DEFAULT_MAX_MOVES = 60;
+export const DEFAULT_MAX_TURNS = 60;
+export const DEFAULT_MAX_MOVES = 60;
 
-function other(actor: "player" | "opponent"): "player" | "opponent" {
+export function otherActor(actor: "player" | "opponent"): "player" | "opponent" {
   return actor === "player" ? "opponent" : "player";
 }
 
-/** Applies one move. Returns true when the move ends the turn. */
-function applyMove(
+export interface ApplyOutcome {
+  turnEnded: boolean;
+  /** Side whose active was knocked out and must promote from its bench. */
+  pendingPromotion: "player" | "opponent" | null;
+  /** Global turn number of a KO this move caused, else null. */
+  koTurn: number | null;
+}
+
+/** Advance to `actor`'s turn: bump counters, reset per-turn flags, draw.
+ *  Sets winner (deck-out) when the draw is impossible. Returns false when
+ *  the game ended at turn start. Shared by playGame and the interactive
+ *  runner so turn structure can't drift between them. */
+export function beginTurn(
+  state: GameState,
+  actor: "player" | "opponent",
+  playerTurnNumber: number,
+): boolean {
+  state.turn = {
+    number: state.turn.number + 1,
+    playerTurnNumber,
+    actor,
+    phase: "turn",
+  };
+  const side = sideOf(state, actor);
+  side.energyAttachedThisTurn = 0;
+  side.supporterPlayedThisTurn = false;
+  for (const mon of [side.active, ...side.bench]) {
+    if (mon) mon.evolvedThisTurn = false;
+  }
+  if (side.deck.length === 0) {
+    state.winner = otherActor(actor);
+    state.endReason = "deck_out";
+    return false;
+  }
+  side.hand.push(...side.deck.splice(0, 1));
+  return true;
+}
+
+/** Resolve a pending promotion: move bench[index] to the active spot. */
+export function promote(state: GameState, actor: "player" | "opponent", benchIndex: number): void {
+  const side = sideOf(state, actor);
+  if (side.active !== null || side.bench.length === 0) return;
+  const idx = Math.min(Math.max(0, benchIndex), side.bench.length - 1);
+  const [promoted] = side.bench.splice(idx, 1);
+  side.active = promoted;
+}
+
+/** Applies one move. Never promotes — see ApplyOutcome.pendingPromotion. */
+export function applyMove(
   state: GameState,
   actor: "player" | "opponent",
   move: SimMove,
   ctx: TurnContext,
-  policies: { player: DecisionPolicy; opponent: DecisionPolicy },
-  outcome: { firstKoTurn: number | null },
-): boolean {
+): ApplyOutcome {
   const side = sideOf(state, actor);
+  const done = (turnEnded: boolean, pendingPromotion: ApplyOutcome["pendingPromotion"] = null, koTurn: number | null = null): ApplyOutcome =>
+    ({ turnEnded, pendingPromotion, koTurn });
   const takeFromHand = (cardId: string) => {
     const idx = side.hand.findIndex((c) => c.id === cardId);
     return idx >= 0 ? side.hand.splice(idx, 1)[0] : null;
@@ -57,14 +109,14 @@ function applyMove(
         target.attachedEnergy.push(card);
         side.energyAttachedThisTurn += 1;
       }
-      return false;
+      return done(false);
     }
     case "bench": {
       const card = takeFromHand(move.cardId);
       if (card && side.bench.length < 5) {
         side.bench.push(toPokemonInPlay(card, state.turn.number));
       }
-      return false;
+      return done(false);
     }
     case "evolve": {
       const card = takeFromHand(move.cardId);
@@ -75,18 +127,18 @@ function applyMove(
         target.evolvedThisTurn = true;
         target.conditions = [];
       }
-      return false;
+      return done(false);
     }
     case "retreat": {
       const active = side.active;
       const promoted = side.bench[move.benchIndex];
-      if (!active || !promoted) return false;
+      if (!active || !promoted) return done(false);
       const cost = active.card.catalog?.retreat_cost ?? 0;
       side.discard.push(...active.attachedEnergy.splice(0, cost));
       side.bench[move.benchIndex] = active;
       side.active = promoted;
       ctx.retreated = true;
-      return false;
+      return done(false);
     }
     case "cycle_supporter": {
       const card = takeFromHand(move.cardId);
@@ -95,7 +147,7 @@ function applyMove(
         side.hand.push(...side.deck.splice(0, 2));
         side.supporterPlayedThisTurn = true;
       }
-      return false;
+      return done(false);
     }
     case "cycle_item": {
       const card = takeFromHand(move.cardId);
@@ -103,49 +155,47 @@ function applyMove(
         side.discard.push(card);
         side.hand.push(...side.deck.splice(0, 1));
       }
-      return false;
+      return done(false);
     }
     case "attack": {
       const attacker = side.active;
-      const defSide = sideOf(state, other(actor));
+      const defActor = otherActor(actor);
+      const defSide = sideOf(state, defActor);
       const defender = defSide.active;
-      if (!attacker || !defender) return true;
+      if (!attacker || !defender) return done(true);
       const attack = attacker.card.catalog?.attacks[move.attackIndex];
-      if (!attack) return true;
+      if (!attack) return done(true);
 
       defender.damage += computeDamage(attacker, attack, defender);
-      if (remainingHp(defender) <= 0) {
-        // KO: pile to discard, prizes to the attacker, promotion or loss.
-        defSide.discard.push(
-          defender.card,
-          ...defender.stack,
-          ...defender.attachedEnergy,
-          ...defender.attachedTools,
-        );
-        defSide.active = null;
-        if (outcome.firstKoTurn === null) outcome.firstKoTurn = state.turn.number;
+      if (remainingHp(defender) > 0) return done(true);
 
-        const taken = side.prizes.splice(0, prizeValue(defender.card.name));
-        side.hand.push(...taken);
-        state.prizesTaken[actor] += taken.length;
-        if (state.prizesTaken[actor] >= 6) {
-          state.winner = actor;
-          state.endReason = "prizes";
-          return true;
-        }
-        if (defSide.bench.length === 0) {
-          state.winner = actor;
-          state.endReason = "no_active";
-          return true;
-        }
-        const idx = policies[other(actor)].choosePromotion(defSide);
-        const [promoted] = defSide.bench.splice(Math.min(idx, defSide.bench.length - 1), 1);
-        defSide.active = promoted;
+      // KO: pile to discard, prizes to the attacker, promotion or loss.
+      defSide.discard.push(
+        defender.card,
+        ...defender.stack,
+        ...defender.attachedEnergy,
+        ...defender.attachedTools,
+      );
+      defSide.active = null;
+      const koTurn = state.turn.number;
+
+      const taken = side.prizes.splice(0, prizeValue(defender.card.name));
+      side.hand.push(...taken);
+      state.prizesTaken[actor] += taken.length;
+      if (state.prizesTaken[actor] >= 6) {
+        state.winner = actor;
+        state.endReason = "prizes";
+        return done(true, null, koTurn);
       }
-      return true;
+      if (defSide.bench.length === 0) {
+        state.winner = actor;
+        state.endReason = "no_active";
+        return done(true, null, koTurn);
+      }
+      return done(true, defActor, koTurn);
     }
     case "pass":
-      return true;
+      return done(true);
   }
 }
 
@@ -160,44 +210,29 @@ export function playGame(
   const maxTurns = options.maxTurns ?? DEFAULT_MAX_TURNS;
   const maxMoves = options.maxMovesPerTurn ?? DEFAULT_MAX_MOVES;
   const state = buildSimInitialState(deckA, deckB, rng, firstActor);
-  const outcome = { firstKoTurn: null as number | null };
+  let firstKoTurn: number | null = null;
 
   let actor = firstActor;
   const playerTurnCounts = { player: 0, opponent: 0 };
 
   while (state.winner === null && state.turn.number < maxTurns) {
-    // ── Turn start: advance, reset per-turn flags, draw. ──
-    state.turn.number += 1;
     playerTurnCounts[actor] += 1;
-    state.turn = {
-      number: state.turn.number,
-      playerTurnNumber: playerTurnCounts[actor],
-      actor,
-      phase: "turn",
-    };
-    const side = sideOf(state, actor);
-    side.energyAttachedThisTurn = 0;
-    side.supporterPlayedThisTurn = false;
-    for (const mon of [side.active, ...side.bench]) {
-      if (mon) mon.evolvedThisTurn = false;
-    }
-    if (side.deck.length === 0) {
-      state.winner = other(actor);
-      state.endReason = "deck_out";
-      break;
-    }
-    side.hand.push(...side.deck.splice(0, 1));
+    if (!beginTurn(state, actor, playerTurnCounts[actor])) break;
 
-    // ── Policy loop until the turn ends. ──
     const ctx: TurnContext = { retreated: false };
     for (let i = 0; i < maxMoves; i++) {
       const legal = legalMoves(state, actor, ctx);
-      const move = policies[actor].chooseMove(state, actor, legal, ctx);
-      const ended = applyMove(state, actor, move, ctx, policies, outcome);
-      if (ended || state.winner !== null) break;
+      const move = policies[actor].chooseMove(viewFor(state, actor), legal, ctx);
+      const result = applyMove(state, actor, move, ctx);
+      if (result.koTurn !== null && firstKoTurn === null) firstKoTurn = result.koTurn;
+      if (result.pendingPromotion && state.winner === null) {
+        const pending = result.pendingPromotion;
+        promote(state, pending, policies[pending].choosePromotion(viewFor(state, pending)));
+      }
+      if (result.turnEnded || state.winner !== null) break;
     }
 
-    actor = other(actor);
+    actor = otherActor(actor);
   }
 
   const endReason =
@@ -216,6 +251,6 @@ export function playGame(
     endReason,
     turns: state.turn.number,
     prizesTaken: { ...state.prizesTaken },
-    firstKoTurn: outcome.firstKoTurn,
+    firstKoTurn,
   };
 }
