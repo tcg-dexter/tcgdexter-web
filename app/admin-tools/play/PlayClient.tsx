@@ -48,7 +48,7 @@ function toFrame(mon: ClientMon, images: Record<string, string | null>): Pokemon
     hp: mon.hp,
     energy: mon.energy,
     energyTypes: mon.energyTypes,
-    conditions: [],
+    conditions: mon.conditions,
     evolutionStack: mon.stack,
     imageUrl: images[mon.name] ?? null,
   };
@@ -106,6 +106,19 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     need: number;
     picked: string[];
   } | null>(null);
+  /** Ability targeting: chosen ability's legal moves, awaiting an opponent
+   *  target tap (Munkidori, Dusknoir). */
+  const [abilityTargeting, setAbilityTargeting] = useState<{
+    label: string;
+    moves: Extract<InteractiveMove, { kind: "use_ability" }>[];
+  } | null>(null);
+  /** Counter-placement mode: an attack that drops N counters on the AI's
+   *  bench, placed one tap at a time. */
+  const [counterPlace, setCounterPlace] = useState<{
+    attackIndex: number;
+    total: number;
+    placed: string[];
+  } | null>(null);
   const [review, setReview] = useState<GameReview | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -149,6 +162,8 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     setBossMoves(null);
     setBenchPickMoves(null);
     setDiscardStage(null);
+    setAbilityTargeting(null);
+    setCounterPlace(null);
     if (next.ai_actions.length > 0) {
       setLog((old) => [...old.slice(-30), ...next.ai_actions.map((a) => `T${a.turn} · ${a.description}`)]);
     }
@@ -460,31 +475,89 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     ),
   };
 
-  // Boss's Orders: the AI's bench becomes the target surface.
+  // Distinct usable abilities (from the legal set), grouped for buttons.
+  const abilityOptions = options.filter(
+    (m): m is Extract<InteractiveMove, { kind: "use_ability" }> => m.kind === "use_ability",
+  );
+  const abilityGroups = Array.from(
+    abilityOptions.reduce((map, m) => {
+      const key = `${m.monId}:${m.abilityName}`;
+      if (!map.has(key)) map.set(key, { abilityName: m.abilityName, monId: m.monId, moves: [] as typeof abilityOptions });
+      map.get(key)!.moves.push(m);
+      return map;
+    }, new Map<string, { abilityName: string; monId: string; moves: typeof abilityOptions }>())
+    .values(),
+  );
+
+  // The AI mat is the target surface for Boss (bench), ability targeting
+  // (active + bench), and counter placement (bench). Highlight + tap route
+  // by whichever mode is live.
   const bossIndex = (i: number) =>
     bossMoves?.find((m) => m.kind === "play_trainer" && m.oppBenchIndex === i);
-  const aiInteract = bossMoves
-    ? {
-        onBenchClick: (i: number) => {
-          const move = bossIndex(i);
-          if (move) void sendMove(move);
-        },
-        highlightBench: view.opponent.board.bench.map((_, i) => bossIndex(i) != null),
-      }
-    : undefined;
+  const abilityTargetIds = new Set(
+    abilityTargeting?.moves.map((m) => m.targetMonId).filter((id): id is string => id != null) ?? [],
+  );
+  function sendAbilityAt(targetId: string) {
+    if (!abilityTargeting) return;
+    // Prefer the move whose source carries the most damage (Munkidori);
+    // Dusknoir has a single move per target.
+    const candidates = abilityTargeting.moves.filter((m) => m.targetMonId === targetId);
+    const best = candidates.sort((a, b) => (b.counters ?? 0) - (a.counters ?? 0))[0];
+    if (best) void sendMove(best);
+  }
+  const aiActiveTargetable =
+    (abilityTargeting != null && view.opponent.board.active != null && abilityTargetIds.has(view.opponent.board.active.id));
+
+  const aiInteract =
+    bossMoves || abilityTargeting || counterPlace
+      ? {
+          onActiveClick: aiActiveTargetable
+            ? () => sendAbilityAt(view.opponent.board.active!.id)
+            : undefined,
+          highlightActive: aiActiveTargetable,
+          onBenchClick: (i: number) => {
+            const mon = view.opponent.board.bench[i];
+            if (bossMoves) {
+              const move = bossIndex(i);
+              if (move) void sendMove(move);
+              return;
+            }
+            if (abilityTargeting && mon && abilityTargetIds.has(mon.id)) {
+              sendAbilityAt(mon.id);
+              return;
+            }
+            if (counterPlace && mon) {
+              setCounterPlace((cp) =>
+                cp && cp.placed.length < cp.total ? { ...cp, placed: [...cp.placed, mon.id] } : cp,
+              );
+            }
+          },
+          highlightBench: view.opponent.board.bench.map((mon, i) =>
+            bossMoves != null
+              ? bossIndex(i) != null
+              : abilityTargeting != null
+                ? abilityTargetIds.has(mon.id)
+                : counterPlace != null,
+          ),
+        }
+      : undefined;
 
   const statusLine = promoting
     ? "Choose your new Active Pokémon"
     : game.status === "human_turn"
-      ? bossMoves
-        ? "Pick the opponent's benched Pokémon to drag active"
-        : benchPickMoves
-          ? "Pick a benched Pokémon"
-          : pendingCardId
-            ? "Pick a target Pokémon"
-            : retreatMode
-              ? "Pick a benched Pokémon to retreat into"
-              : "Your move"
+      ? counterPlace
+        ? `Place damage counters — ${counterPlace.placed.length}/${counterPlace.total} on the opponent's Bench`
+        : abilityTargeting
+          ? `${abilityTargeting.label}: pick a target`
+          : bossMoves
+            ? "Pick the opponent's benched Pokémon to drag active"
+            : benchPickMoves
+              ? "Pick a benched Pokémon"
+              : pendingCardId
+                ? "Pick a target Pokémon"
+                : retreatMode
+                  ? "Pick a benched Pokémon to retreat into"
+                  : "Your move"
       : game.outcome
         ? game.outcome.winner === "player"
           ? `You win! (${game.outcome.endReason})`
@@ -561,13 +634,14 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
               <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
                 Hand · {view.hand.length}
               </span>
-              {(pendingCardId || retreatMode || bossMoves || benchPickMoves) && (
+              {(pendingCardId || retreatMode || bossMoves || benchPickMoves || abilityTargeting) && (
                 <button
                   onClick={() => {
                     setPendingCardId(null);
                     setRetreatMode(false);
                     setBossMoves(null);
                     setBenchPickMoves(null);
+                    setAbilityTargeting(null);
                   }}
                   className="text-[10px] font-semibold text-accent"
                 >
@@ -617,21 +691,81 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
               })}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-black/8 pt-2">
-              {attacks.map((m) => {
-                const attack = view.board.active?.attacks[m.attackIndex];
-                return (
+              {/* Ability buttons (Munkidori, Dusknoir, …). */}
+              {abilityGroups.map((g) => (
+                <button
+                  key={`${g.monId}:${g.abilityName}`}
+                  onClick={() => {
+                    // Single-target-free abilities send immediately; the rest
+                    // enter opponent-target selection.
+                    if (g.moves.length === 1 && g.moves[0].targetMonId == null) {
+                      void sendMove(g.moves[0]);
+                    } else {
+                      setAbilityTargeting({ label: g.abilityName, moves: g.moves });
+                      setCounterPlace(null);
+                    }
+                  }}
+                  disabled={loading}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                    abilityTargeting?.moves[0]?.abilityName === g.abilityName
+                      ? "border border-transparent bg-accent text-white"
+                      : "border border-purple-300 bg-purple-50 text-purple-800"
+                  }`}
+                >
+                  ⚡ {g.abilityName}
+                </button>
+              ))}
+              {counterPlace ? (
+                <>
                   <button
-                    key={m.attackIndex}
-                    onClick={() => sendMove(m)}
-                    disabled={loading}
-                    className="rounded-lg border border-transparent bg-black px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                    onClick={() =>
+                      sendMove({
+                        kind: "attack",
+                        attackIndex: counterPlace.attackIndex,
+                        benchCounters: counterPlace.placed,
+                      })
+                    }
+                    disabled={loading || counterPlace.placed.length !== counterPlace.total}
+                    className="rounded-lg border border-transparent bg-accent px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
                   >
-                    {attack?.name ?? "Attack"}
-                    {attack?.damage ? ` · ${attack.damage}` : ""}
+                    Confirm attack ({counterPlace.placed.length}/{counterPlace.total})
                   </button>
-                );
-              })}
-              {canRetreat && (
+                  <button
+                    onClick={() => setCounterPlace(null)}
+                    className="rounded-lg border border-black/15 bg-white px-3 py-1.5 text-xs font-semibold text-text-secondary"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                attacks.map((m) => {
+                  const attack = view.board.active?.attacks[m.attackIndex];
+                  const counters = attack?.benchCounters ?? 0;
+                  const hasBench = view.opponent.board.bench.length > 0;
+                  return (
+                    <button
+                      key={m.attackIndex}
+                      onClick={() => {
+                        // Attacks that place counters on a non-empty bench
+                        // enter tap-to-place mode; everything else fires now.
+                        if (counters > 0 && hasBench) {
+                          setCounterPlace({ attackIndex: m.attackIndex, total: counters, placed: [] });
+                          setAbilityTargeting(null);
+                        } else {
+                          void sendMove(m);
+                        }
+                      }}
+                      disabled={loading}
+                      className="rounded-lg border border-transparent bg-black px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                    >
+                      {attack?.name ?? "Attack"}
+                      {attack?.damage ? ` · ${attack.damage}` : ""}
+                      {counters > 0 ? ` · ${counters}◦` : ""}
+                    </button>
+                  );
+                })
+              )}
+              {canRetreat && !counterPlace && (
                 <button
                   onClick={() => {
                     setRetreatMode(!retreatMode);

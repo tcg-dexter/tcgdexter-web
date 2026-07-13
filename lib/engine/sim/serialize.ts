@@ -6,6 +6,7 @@
 import type { PokemonInPlay } from "../types";
 import type { GameState } from "../types";
 import { computeDamage, remainingHp, sideOf, type SimMove } from "./moves";
+import { attackBenchCounterCount, attackBenchDamageTargets } from "./attacks";
 import { energyProvides } from "./setup";
 import type { PlayerView } from "./view";
 
@@ -118,7 +119,18 @@ export interface ClientMon {
   /** Pre-evolution names under this mon. */
   stack: string[];
   retreatCost: number;
-  attacks: { name: string; cost: string[]; damage: string }[];
+  attacks: {
+    name: string;
+    cost: string[];
+    damage: string;
+    /** Damage counters this attack places on the opponent's bench (Phantom
+     *  Dive) — the UI enters placement mode when > 0. */
+    benchCounters?: number;
+    /** Benched Pokémon this attack deals raw damage to (Flamebody Cannon). */
+    benchDamageTargets?: number;
+  }[];
+  /** Special conditions on this Pokémon (Poisoned, Asleep, …). */
+  conditions: string[];
 }
 
 export interface ClientBoard {
@@ -160,11 +172,18 @@ function clientMon(mon: PokemonInPlay): ClientMon {
       .filter((t): t is string => t !== null),
     stack: mon.stack.map((c) => c.name),
     retreatCost: mon.card.catalog?.retreat_cost ?? 0,
-    attacks: (mon.card.catalog?.attacks ?? []).map((a) => ({
-      name: a.name,
-      cost: a.cost,
-      damage: a.damage,
-    })),
+    attacks: (mon.card.catalog?.attacks ?? []).map((a, i) => {
+      const counters = attackBenchCounterCount(mon, i);
+      const benchDmg = attackBenchDamageTargets(mon, i);
+      return {
+        name: a.name,
+        cost: a.cost,
+        damage: a.damage,
+        ...(counters > 0 ? { benchCounters: counters } : {}),
+        ...(benchDmg > 0 ? { benchDamageTargets: benchDmg } : {}),
+      };
+    }),
+    conditions: [...mon.conditions],
   };
 }
 
