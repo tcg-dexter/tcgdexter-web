@@ -11,6 +11,7 @@ import type { GameState, PokemonInPlay } from "../types";
 import { computeDamage, legalMoves, remainingHp, sideOf, type SimMove, type TurnContext } from "./moves";
 import type { DecisionPolicy } from "./policy";
 import { buildSimInitialState, prizeValue, toPokemonInPlay, type SimDeck } from "./setup";
+import { applyTrainer } from "./trainers";
 import { viewFor } from "./view";
 import type { Rng } from "./rng";
 
@@ -84,12 +85,16 @@ export function promote(state: GameState, actor: "player" | "opponent", benchInd
   side.active = promoted;
 }
 
-/** Applies one move. Never promotes — see ApplyOutcome.pendingPromotion. */
+/** Applies one move. Never promotes — see ApplyOutcome.pendingPromotion.
+ *  `rng` drives post-search/hand-shuffle effects; callers that replay a
+ *  fixed stream (game loop, sessions) must always pass the same instance
+ *  so transcripts stay deterministic. Ghost evaluations pass null. */
 export function applyMove(
   state: GameState,
   actor: "player" | "opponent",
   move: SimMove,
   ctx: TurnContext,
+  rng: Rng | null = null,
 ): ApplyOutcome {
   const side = sideOf(state, actor);
   const done = (turnEnded: boolean, pendingPromotion: ApplyOutcome["pendingPromotion"] = null, koTurn: number | null = null): ApplyOutcome =>
@@ -155,6 +160,10 @@ export function applyMove(
         side.discard.push(card);
         side.hand.push(...side.deck.splice(0, 1));
       }
+      return done(false);
+    }
+    case "play_trainer": {
+      applyTrainer(state, actor, move, rng);
       return done(false);
     }
     case "attack": {
@@ -223,7 +232,7 @@ export function playGame(
     for (let i = 0; i < maxMoves; i++) {
       const legal = legalMoves(state, actor, ctx);
       const move = policies[actor].chooseMove(viewFor(state, actor), legal, ctx);
-      const result = applyMove(state, actor, move, ctx);
+      const result = applyMove(state, actor, move, ctx, rng);
       if (result.koTurn !== null && firstKoTurn === null) firstKoTurn = result.koTurn;
       if (result.pendingPromotion && state.winner === null) {
         const pending = result.pendingPromotion;

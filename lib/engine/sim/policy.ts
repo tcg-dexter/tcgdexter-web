@@ -20,6 +20,7 @@ import {
   type TurnContext,
 } from "./moves";
 import { energyProvides } from "./setup";
+import { trainerSpec, type PlayTrainerMove, type TrainerSpec } from "./trainers";
 import type { PlayerView } from "./view";
 
 export interface DecisionPolicy {
@@ -30,6 +31,10 @@ export interface DecisionPolicy {
 }
 
 /* ─── Heuristic v1 ──────────────────────────────────────────────── */
+
+/** Stop spending deck on draws/searches below this (turn-start draws must
+ *  keep flowing — deck-out is a loss). Mirrors the planner's reserve. */
+const DECK_RESERVE = 8;
 
 /** Best printed damage this Pokémon could ever do (its attack ceiling). */
 function attackCeiling(mon: PokemonInPlay): number {
@@ -46,8 +51,23 @@ export class HeuristicPolicy implements DecisionPolicy {
     const defender = view.opponent.board.active;
     const byKind = <K extends SimMove["kind"]>(kind: K) =>
       legal.filter((m): m is Extract<SimMove, { kind: K }> => m.kind === kind);
+    const specOf = (m: SimMove): TrainerSpec | null => {
+      if (m.kind !== "play_trainer") return null;
+      const card = view.hand.find((c) => c.id === m.cardId);
+      return card ? trainerSpec(card) : null;
+    };
+    const trainersBySpec = (pred: (s: TrainerSpec) => boolean) =>
+      legal.filter((m): m is PlayTrainerMove => {
+        const s = specOf(m);
+        return s !== null && pred(s);
+      });
 
-    // 1. Evolve — active first (it's the one taking hits).
+    // 1. Evolve — Rare Candy first (skips a stage), then normal evolves,
+    //    active-target preferred (it's the one taking hits).
+    const candies = trainersBySpec((s) => s.effect.kind === "rare_candy");
+    if (candies.length > 0) {
+      return candies.find((m) => m.monId === active?.id) ?? candies[0];
+    }
     const evolves = byKind("evolve");
     if (evolves.length > 0) {
       const activeEvolve = evolves.find((m) => m.targetId === active?.id);
@@ -58,9 +78,35 @@ export class HeuristicPolicy implements DecisionPolicy {
     const bench = byKind("bench");
     if (bench.length > 0) return bench[0];
 
-    // 3. Draw fuel: supporter first (draws more), then items.
-    const supporter = byKind("cycle_supporter");
-    if (supporter.length > 0) return supporter[0];
+    // 3. Draw fuel + searches: real draw supporters and deck searches
+    //    before generic cycling — all deck-reserve guarded so we never
+    //    draw ourselves out while ahead.
+    if (view.deckCount > DECK_RESERVE) {
+      const drawSupporters = trainersBySpec((s) => s.phase === "draw");
+      if (drawSupporters.length > 0 && view.hand.length <= 5) return drawSupporters[0];
+      const searches = trainersBySpec((s) => s.phase === "search");
+      if (searches.length > 0) return searches[0];
+      const supporter = byKind("cycle_supporter");
+      if (supporter.length > 0) return supporter[0];
+    }
+
+    // 3b. Boss's Orders when it converts into a knockout our active can
+    //     take right now (and the standing defender can't be KO'd).
+    const gusts = trainersBySpec((s) => s.effect.kind === "gust");
+    if (gusts.length > 0 && active && defender) {
+      const bestVs = (target: PokemonInPlay) =>
+        Math.max(
+          0,
+          ...usableAttacks(active).map(({ attack }) => computeDamage(active, attack, target)),
+        );
+      if (bestVs(defender) < remainingHp(defender)) {
+        const killable = gusts.find((m) => {
+          const target = view.opponent.board.bench[m.oppBenchIndex ?? -1];
+          return target != null && bestVs(target) >= remainingHp(target);
+        });
+        if (killable) return killable;
+      }
+    }
 
     // 4. Attach toward the highest-ceiling attacker that can't attack yet
     //    (the active breaks ties so it comes online sooner).
@@ -94,12 +140,19 @@ export class HeuristicPolicy implements DecisionPolicy {
     }
 
     const items = byKind("cycle_item");
-    if (items.length > 0) return items[0];
+    if (items.length > 0 && view.deckCount > DECK_RESERVE) return items[0];
 
-    // 5. Retreat when trapped: active can't attack, a bench mon can.
-    const retreats = byKind("retreat");
+    // 5. Reposition when trapped: active can't attack, a bench mon can.
+    //    Switch (free) beats paying a retreat cost.
     const activeAttacks = active ? usableAttacks(active) : [];
-    if (retreats.length > 0 && active && activeAttacks.length === 0) {
+    if (active && activeAttacks.length === 0) {
+      const switches = trainersBySpec((s) => s.effect.kind === "switch_active");
+      const freeSwitch = switches.find((m) => {
+        const target = view.board.bench[m.benchIndex ?? -1];
+        return target != null && usableAttacks(target).length > 0;
+      });
+      if (freeSwitch) return freeSwitch;
+      const retreats = byKind("retreat");
       const ready = retreats.find(
         (m) => usableAttacks(view.board.bench[m.benchIndex]).length > 0,
       );

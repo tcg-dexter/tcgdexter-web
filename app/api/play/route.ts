@@ -50,7 +50,10 @@ export interface PlayResponse {
   images: Record<string, string | null>;
 }
 
-function collectImages(view: ClientView): Record<string, string | null> {
+function collectImages(
+  view: ClientView,
+  options: InteractiveMove[],
+): Record<string, string | null> {
   const names = new Set<string>();
   for (const c of view.hand) names.add(c.name);
   for (const c of view.discard) names.add(c.name);
@@ -62,6 +65,13 @@ function collectImages(view: ClientView): Record<string, string | null> {
       for (const s of mon.stack) names.add(s);
     }
   }
+  // Search-picker choices (trainer effects) need art too — the names ride
+  // on the moves themselves.
+  for (const m of options) {
+    if (m.kind !== "play_trainer") continue;
+    for (const n of m.deckCardNames ?? []) names.add(n);
+    if (m.discardPickName) names.add(m.discardPickName);
+  }
   const images: Record<string, string | null> = {};
   names.forEach((name) => {
     images[name] = cardImageUrlForAnyName(name);
@@ -71,14 +81,15 @@ function collectImages(view: ClientView): Record<string, string | null> {
 
 function respond(session: GameSession): NextResponse {
   const view = serializeView(viewFor(session.state, "player"));
+  const options = humanOptions(session);
   const payload: PlayResponse = {
     status: session.status,
     transcript: session.transcript,
     view,
-    options: humanOptions(session),
+    options,
     ai_actions: session.aiActions,
     outcome: session.outcome,
-    images: collectImages(view),
+    images: collectImages(view, options),
   };
   return NextResponse.json(payload);
 }

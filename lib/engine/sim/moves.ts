@@ -6,6 +6,7 @@
 
 import type { EngineAttack, GameState, PlayerSide, PokemonInPlay } from "../types";
 import { energyProvides, isBasic } from "./setup";
+import { isSupporter, trainerMoves, trainerSpec, type PlayTrainerMove } from "./trainers";
 
 export type SimMove =
   | { kind: "attach"; cardId: string; targetId: string }
@@ -14,6 +15,7 @@ export type SimMove =
   | { kind: "retreat"; benchIndex: number }
   | { kind: "cycle_supporter"; cardId: string }
   | { kind: "cycle_item"; cardId: string }
+  | PlayTrainerMove
   | { kind: "attack"; attackIndex: number }
   | { kind: "pass" };
 
@@ -138,14 +140,22 @@ export function legalMoves(
         moves.push({ kind: "attach", cardId: card.id, targetId: target.id });
       }
     }
-    // Generic trainer cycling.
-    if (card.catalog?.supertype === "Trainer" && side.deck.length > 0) {
-      if (card.catalog.subtypes.includes("Supporter")) {
-        if (!side.supporterPlayedThisTurn) {
-          moves.push({ kind: "cycle_supporter", cardId: card.id });
+    // Trainers: registered staples get their real effect; anything else
+    // keeps the generic draw-cycle behavior.
+    if (card.catalog?.supertype === "Trainer") {
+      const spec = trainerSpec(card);
+      if (spec) {
+        if (!isSupporter(card) || !side.supporterPlayedThisTurn) {
+          moves.push(...trainerMoves(state, actor, card, spec));
         }
-      } else {
-        moves.push({ kind: "cycle_item", cardId: card.id });
+      } else if (side.deck.length > 0) {
+        if (card.catalog.subtypes.includes("Supporter")) {
+          if (!side.supporterPlayedThisTurn) {
+            moves.push({ kind: "cycle_supporter", cardId: card.id });
+          }
+        } else {
+          moves.push({ kind: "cycle_item", cardId: card.id });
+        }
       }
     }
   }

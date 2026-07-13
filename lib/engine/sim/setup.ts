@@ -3,10 +3,11 @@
 // engine's types.ts header promised: same state shape as replay, but the
 // deck arrays are real (60 known cards), not log-inferred.
 //
-// v1 modelling notes (deliberate simplifications, see SIM_VERSION):
-//   * Trainers have no card-specific effects — the driver models them as
-//     generic cyclers (supporter: draw 2 once/turn; item/tool/stadium:
-//     draw 1), so trainer counts still buy consistency.
+// v2 modelling notes (deliberate simplifications, see SIM_VERSION):
+//   * Staple trainers have their real effects (see trainers.ts registry);
+//     unregistered trainers fall back to generic cycling (supporter:
+//     draw 2 once/turn; item/tool/stadium: draw 1), so trainer counts
+//     still buy consistency.
 //   * Abilities and attack side-effects are inert; damage is the printed
 //     number, plus weakness ×2 / resistance −30.
 //   * Special energy provides 1 Colorless.
@@ -18,8 +19,10 @@ import { ENGINE_VERSION } from "../types";
 import type { CardInstance, GameState, PlayerSide, PokemonInPlay } from "../types";
 import { shuffle, type Rng } from "./rng";
 
-/** Bump when sim behavior changes enough to invalidate cached results. */
-export const SIM_VERSION = 1;
+/** Bump when sim behavior changes enough to invalidate cached results
+ *  (v2: staple trainer effects replaced generic cycling for the registry
+ *  cards; transcripts and rollouts are not comparable across versions). */
+export const SIM_VERSION = 2;
 
 const MAX_MULLIGANS = 20;
 

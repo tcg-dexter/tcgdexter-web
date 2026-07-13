@@ -30,6 +30,8 @@ import {
 } from "./moves";
 import { HeuristicPolicy, promoteBest, type DecisionPolicy } from "./policy";
 import { energyProvides, prizeValue } from "./setup";
+import { isSupporter, trainerSpec, type PlayTrainerMove, type TrainerSpec } from "./trainers";
+import { lookupCard } from "../catalog";
 import { makeUnrevealed } from "../initial";
 import { mulberry32 } from "./rng";
 import type { PlayerView } from "./view";
@@ -76,10 +78,11 @@ export interface PlannerOptions {
   evaluate?: StateEvaluator;
 }
 
-/** Keep enough deck to survive a few more turn-start draws. Most games
- *  are decided well inside this horizon, so hoarding a bigger reserve
- *  just forfeits card advantage to opponents who keep drawing. */
-const CYCLE_DECK_RESERVE = 5;
+/** Keep enough deck to survive several more turn-start draws. Real search
+ *  effects (Milestone D) thin the deck much faster than generic cycling
+ *  did, so the reserve is the main deck-out guard — losing to deck-out
+ *  while ahead on prizes is the classic self-inflicted defeat. */
+const CYCLE_DECK_RESERVE = 8;
 const RETREAT_TEMPO_PENALTY = 0.05;
 const ACTIVE_READY_BONUS = 0.03;
 // The win-prob evaluator only sees prizes/board counts, so mid-KO progress
@@ -124,9 +127,23 @@ export class PlannerPolicy implements DecisionPolicy {
       this.plannedTurn = view.turn.number;
     }
 
-    // Phase 1 — free development (never part of the search).
+    const specOf = (m: SimMove): TrainerSpec | null => {
+      if (m.kind !== "play_trainer") return null;
+      const card = view.hand.find((c) => c.id === m.cardId);
+      return card ? trainerSpec(card) : null;
+    };
+
+    // Phase 1 — free development (never part of the search). Rare Candy
+    // is a strictly-better evolve, so it rides along here (active first).
     const bench = legal.find((m) => m.kind === "bench");
     if (bench) return bench;
+    const candies = legal.filter(
+      (m): m is PlayTrainerMove =>
+        m.kind === "play_trainer" && specOf(m)?.effect.kind === "rare_candy",
+    );
+    if (candies.length > 0) {
+      return candies.find((m) => m.monId === view.board.active?.id) ?? candies[0];
+    }
     const evolves = legal.filter((m) => m.kind === "evolve");
     if (evolves.length > 0) {
       const activeEvolve = evolves.find(
@@ -135,13 +152,32 @@ export class PlannerPolicy implements DecisionPolicy {
       return activeEvolve ?? evolves[0];
     }
 
-    // Phase 2 — draw before deciding (each cycle reveals cards; the
-    // consequential plan is recomputed on the post-draw hand).
+    // Phase 2 — reveal information before deciding (each play reveals
+    // cards; the consequential plan is recomputed on the post-draw hand).
+    // Draw supporters go first (a refreshed hand feeds the searches), and
+    // are held back when a tactical supporter (Boss) is in hand — the
+    // supporter slot is worth more in the plan search.
+    const tacticalSupporterInHand = view.hand.some((c) => {
+      const spec = trainerSpec(c);
+      return spec?.phase === "tactical" && isSupporter(c);
+    });
     if (view.deckCount > CYCLE_DECK_RESERVE) {
-      const supporter = legal.find((m) => m.kind === "cycle_supporter");
-      if (supporter) return supporter;
+      if (!tacticalSupporterInHand && view.hand.length <= 5) {
+        const drawMove = legal.find((m) => specOf(m)?.phase === "draw");
+        if (drawMove) return drawMove;
+        const supporter = legal.find((m) => m.kind === "cycle_supporter");
+        if (supporter) return supporter;
+      }
+      const searches = legal.filter(
+        (m): m is PlayTrainerMove => specOf(m)?.phase === "search",
+      );
+      if (searches.length > 0) return bestSearchMove(view, searches);
       const item = legal.find((m) => m.kind === "cycle_item");
       if (item) return item;
+      if (tacticalSupporterInHand === false) {
+        const supporter = legal.find((m) => m.kind === "cycle_supporter");
+        if (supporter) return supporter;
+      }
     }
 
     // Phase 3 — the searched plan.
@@ -183,6 +219,12 @@ export class PlannerPolicy implements DecisionPolicy {
     return candidates[candidates.length - 1].moves;
   }
 
+  private moveSpec(view: PlayerView, m: SimMove): TrainerSpec | null {
+    if (m.kind !== "play_trainer") return null;
+    const card = view.hand.find((c) => c.id === m.cardId);
+    return card ? trainerSpec(card) : null;
+  }
+
   private enumerate(view: PlayerView, legal: SimMove[]): CandidatePlan[] {
     // Ghost always models the acting side as sides.player (see
     // buildGhostState), so plans are applied from that fixed seat.
@@ -202,35 +244,55 @@ export class PlannerPolicy implements DecisionPolicy {
       }
     }
 
+    // Switch acts as a free retreat; both share the "reposition" slot.
     const retreatMoves: (SimMove | null)[] = [null];
     for (const m of legal) if (m.kind === "retreat") retreatMoves.push(m);
+    for (const m of legal) {
+      if (m.kind === "play_trainer" && this.moveSpec(view, m)?.effect.kind === "switch_active") {
+        retreatMoves.push(m);
+      }
+    }
+
+    // Boss's Orders (gust): a public-information tactical supporter —
+    // enumerated as an outermost dimension. Null-gust plans enumerate
+    // first so baseline lines always exist inside the candidate cap;
+    // gust plans skip the reposition slot (our own active is unaffected).
+    const gustMoves: (SimMove | null)[] = [null];
+    for (const m of legal) {
+      if (m.kind === "play_trainer" && this.moveSpec(view, m)?.effect.kind === "gust") {
+        gustMoves.push(m);
+      }
+    }
 
     const plans: CandidatePlan[] = [];
-    outer: for (const attach of attachMoves) {
-      for (const retreat of retreatMoves) {
-        // Attack options depend on the post-attach/post-retreat active,
-        // so expand them inside the ghost application.
-        const base: SimMove[] = [];
-        if (attach) base.push(attach);
-        if (retreat) base.push(retreat);
-        const afterBase = applyPlanToGhost(ghost, base);
-        if (!afterBase) continue;
+    outer: for (const gust of gustMoves) {
+      for (const attach of attachMoves) {
+        for (const retreat of gust ? [null] : retreatMoves) {
+          // Attack options depend on the post-gust/attach/retreat active,
+          // so expand them inside the ghost application.
+          const base: SimMove[] = [];
+          if (gust) base.push(gust);
+          if (attach) base.push(attach);
+          if (retreat) base.push(retreat);
+          const afterBase = applyPlanToGhost(ghost, base);
+          if (!afterBase) continue;
 
-        const active = afterBase.sides.player.active;
-        const attackOptions: (SimMove | null)[] = [null];
-        if (active && afterBase.turn.number > 1) {
-          for (const { index } of usableAttacks(active)) {
-            attackOptions.push({ kind: "attack", attackIndex: index });
+          const active = afterBase.sides.player.active;
+          const attackOptions: (SimMove | null)[] = [null];
+          if (active && afterBase.turn.number > 1) {
+            for (const { index } of usableAttacks(active)) {
+              attackOptions.push({ kind: "attack", attackIndex: index });
+            }
           }
-        }
 
-        for (const attack of attackOptions) {
-          const moves = [...base, ...(attack ? [attack] : []), ...(attack ? [] : [{ kind: "pass" } as SimMove])];
-          const end = applyPlanToGhost(ghost, moves);
-          if (!end) continue;
-          const tempo = retreat ? RETREAT_TEMPO_PENALTY : 0;
-          plans.push({ moves, score: this.scoreEndState(end, view) - tempo });
-          if (plans.length >= this.params.maxCandidates) break outer;
+          for (const attack of attackOptions) {
+            const moves = [...base, ...(attack ? [attack] : []), ...(attack ? [] : [{ kind: "pass" } as SimMove])];
+            const end = applyPlanToGhost(ghost, moves);
+            if (!end) continue;
+            const tempo = retreat && retreat.kind === "retreat" ? RETREAT_TEMPO_PENALTY : 0;
+            plans.push({ moves, score: this.scoreEndState(end, view) - tempo });
+            if (plans.length >= this.params.maxCandidates) break outer;
+          }
         }
       }
     }
@@ -321,6 +383,35 @@ export class PlannerPolicy implements DecisionPolicy {
 
 function isStillLegal(move: SimMove, legal: SimMove[]): boolean {
   return legal.some((m) => JSON.stringify(m) === JSON.stringify(move));
+}
+
+/** Heuristic pick among deck/discard search plays: fetch the card with the
+ *  best attack ceiling, with a big bonus for evolutions of Pokémon already
+ *  in play (they convert to board power immediately). Deterministic. */
+function bestSearchMove(view: PlayerView, moves: PlayTrainerMove[]): PlayTrainerMove {
+  const inPlayNames = new Set(
+    [view.board.active, ...view.board.bench].filter(Boolean).map((m) => m!.card.name),
+  );
+  const scoreName = (name: string): number => {
+    const card = lookupCard(name);
+    if (!card) return 0;
+    if (card.supertype === "Energy") return 25;
+    if (card.supertype === "Trainer") return 20;
+    const ceiling = Math.max(0, ...card.attacks.map((a) => parseInt(a.damage, 10) || 0));
+    const evolvesInPlay = card.evolves_from && inPlayNames.has(card.evolves_from) ? 200 : 0;
+    return ceiling + evolvesInPlay;
+  };
+  let best = moves[0];
+  let bestScore = -1;
+  for (const move of moves) {
+    const names = move.deckCardNames ?? (move.discardPickName ? [move.discardPickName] : []);
+    const score = names.reduce((s, n) => s + scoreName(n), names.length === 0 ? 10 : 0);
+    if (score > bestScore) {
+      bestScore = score;
+      best = move;
+    }
+  }
+  return best;
 }
 
 /** Mutate a ghost end-state with the opponent's best reply attack (public

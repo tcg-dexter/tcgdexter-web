@@ -29,7 +29,8 @@ import { plannerParamsForSkill } from "./difficulty";
 import { promoteBest, type DecisionPolicy } from "./policy";
 import { buildSimInitialState, instantiateDeck, SIM_VERSION } from "./setup";
 import { describeMove, describePromotion } from "./serialize";
-import { hashSeed, mulberry32 } from "./rng";
+import { isSupporter, trainerSpec } from "./trainers";
+import { hashSeed, mulberry32, type Rng } from "./rng";
 import { viewFor } from "./view";
 
 /* ─── Transcript ────────────────────────────────────────────────── */
@@ -97,6 +98,9 @@ export interface GameSession {
   /** Completed-turn feature rows for the post-game review. */
   turnLog: LoggedTurn[];
   turnStats: TurnStats | null;
+  /** The session's rng stream (setup + shuffle effects). Rebuilds consume
+   *  it in the same order, keeping transcripts deterministic. */
+  rng: Rng;
 }
 
 export class IllegalMoveError extends Error {}
@@ -170,6 +174,12 @@ function applyTracked(
       case "cycle_item":
         s.items += 1;
         break;
+      case "play_trainer": {
+        const card = side.hand.find((c) => c.id === move.cardId);
+        if (card && isSupporter(card)) s.supporters += 1;
+        else s.items += 1;
+        break;
+      }
       case "attack": {
         s.attacked = 1;
         const attacker = side.active;
@@ -183,7 +193,7 @@ function applyTracked(
     }
   }
   const prizesBefore = state.prizesTaken[actor];
-  const result = applyMove(state, actor, move, ctx);
+  const result = applyMove(state, actor, move, ctx, session.rng);
   if (s) {
     const delta = state.prizesTaken[actor] - prizesBefore;
     s.prizesTaken += delta;
@@ -334,6 +344,7 @@ function bootSession(transcript: GameTranscript): GameSession {
     turnCounts: { player: 0, opponent: 0 },
     turnLog: [],
     turnStats: null,
+    rng,
     aiPolicy: new PlannerPolicy({
       params: plannerParamsForSkill(transcript.skill),
       seed: (transcript.seed ^ 0x5eed) >>> 0,

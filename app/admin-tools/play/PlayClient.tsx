@@ -93,6 +93,12 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
   const [log, setLog] = useState<string[]>([]);
   const [pendingCardId, setPendingCardId] = useState<string | null>(null);
   const [retreatMode, setRetreatMode] = useState(false);
+  /** Search-picker modal (deck/discard fetch choices for one trainer). */
+  const [pickerMoves, setPickerMoves] = useState<InteractiveMove[] | null>(null);
+  /** Boss's Orders: pick the AI's benched Pokémon to drag active. */
+  const [bossMoves, setBossMoves] = useState<InteractiveMove[] | null>(null);
+  /** Switch etc.: pick one of our benched Pokémon. */
+  const [benchPickMoves, setBenchPickMoves] = useState<InteractiveMove[] | null>(null);
   const [review, setReview] = useState<GameReview | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -132,6 +138,9 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     setGame(next);
     setPendingCardId(null);
     setRetreatMode(false);
+    setPickerMoves(null);
+    setBossMoves(null);
+    setBenchPickMoves(null);
     if (next.ai_actions.length > 0) {
       setLog((old) => [...old.slice(-30), ...next.ai_actions.map((a) => `T${a.turn} · ${a.description}`)]);
     }
@@ -197,8 +206,21 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     byKind("evolve").filter((m) => m.cardId === cardId).map((m) => m.targetId);
   const cardIsPlayable = (cardId: string) =>
     options.some((m) => "cardId" in m && m.cardId === cardId);
+  const trainerMovesFor = (cardId: string) =>
+    options.filter(
+      (m): m is Extract<InteractiveMove, { kind: "play_trainer" }> =>
+        m.kind === "play_trainer" && m.cardId === cardId,
+    );
+  // Board targets for the selected hand card: attach/evolve targetIds plus
+  // trainer monIds (Rare Candy's basic, Crispin's attach target).
   const pendingTargets = pendingCardId
-    ? new Set([...attachTargets(pendingCardId), ...evolveTargets(pendingCardId)])
+    ? new Set([
+        ...attachTargets(pendingCardId),
+        ...evolveTargets(pendingCardId),
+        ...trainerMovesFor(pendingCardId)
+          .map((m) => m.monId)
+          .filter((id): id is string => id != null),
+      ])
     : new Set<string>();
 
   function handleHandClick(cardId: string) {
@@ -209,6 +231,23 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     if (supporter) return void sendMove(supporter);
     const item = byKind("cycle_item").find((m) => m.cardId === cardId);
     if (item) return void sendMove(item);
+
+    // Staple trainers: route by what the moves need.
+    const trainers = trainerMovesFor(cardId);
+    if (trainers.length > 0) {
+      const first = trainers[0];
+      if (first.deckCardIds || first.discardPickId) {
+        return void setPickerMoves(trainers); // search picker modal
+      }
+      if (first.oppBenchIndex != null) return void setBossMoves(trainers);
+      if (first.benchIndex != null) return void setBenchPickMoves(trainers);
+      if (first.monId != null) {
+        if (trainers.length === 1) return void sendMove(first);
+        return void setPendingCardId(pendingCardId === cardId ? null : cardId);
+      }
+      return void sendMove(first); // no choices (Iono, Research, …)
+    }
+
     const targets = [...attachTargets(cardId), ...evolveTargets(cardId)];
     if (targets.length === 1) {
       const move = options.find(
@@ -221,9 +260,10 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
 
   function sendTargeted(monId: string) {
     if (!pendingCardId) return;
-    const move = options.find(
-      (m) => "cardId" in m && m.cardId === pendingCardId && "targetId" in m && m.targetId === monId,
-    );
+    const move =
+      options.find(
+        (m) => "cardId" in m && m.cardId === pendingCardId && "targetId" in m && m.targetId === monId,
+      ) ?? trainerMovesFor(pendingCardId).find((m) => m.monId === monId);
     if (move) void sendMove(move);
   }
 
@@ -346,7 +386,9 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
 
   // Bench taps only act while a mode is live; otherwise the kit falls back
   // to the inspector (tap any card to zoom, same as replay).
-  const benchActs = promoting || retreatMode || pendingCardId != null;
+  const benchActs = promoting || retreatMode || pendingCardId != null || benchPickMoves != null;
+  const benchPickIndex = (i: number) =>
+    benchPickMoves?.find((m) => m.kind === "play_trainer" && m.benchIndex === i);
   const humanInteract = {
     onActiveClick:
       pendingCardId && view.board.active && pendingTargets.has(view.board.active.id)
@@ -357,6 +399,11 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     onBenchClick: benchActs
       ? (i: number) => {
           if (promoting) return void sendMove({ kind: "promote", benchIndex: i });
+          if (benchPickMoves) {
+            const move = benchPickIndex(i);
+            if (move) return void sendMove(move);
+            return;
+          }
           if (retreatMode) {
             const move = byKind("retreat").find((m) => m.benchIndex === i);
             if (move) return void sendMove(move);
@@ -368,19 +415,37 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
       : undefined,
     highlightBench: view.board.bench.map((mon, i) =>
       promoting ||
+      benchPickIndex(i) != null ||
       (retreatMode && byKind("retreat").some((m) => m.benchIndex === i)) ||
       (pendingCardId != null && pendingTargets.has(mon.id)),
     ),
   };
 
+  // Boss's Orders: the AI's bench becomes the target surface.
+  const bossIndex = (i: number) =>
+    bossMoves?.find((m) => m.kind === "play_trainer" && m.oppBenchIndex === i);
+  const aiInteract = bossMoves
+    ? {
+        onBenchClick: (i: number) => {
+          const move = bossIndex(i);
+          if (move) void sendMove(move);
+        },
+        highlightBench: view.opponent.board.bench.map((_, i) => bossIndex(i) != null),
+      }
+    : undefined;
+
   const statusLine = promoting
     ? "Choose your new Active Pokémon"
     : game.status === "human_turn"
-      ? pendingCardId
-        ? "Pick a target Pokémon"
-        : retreatMode
-          ? "Pick a benched Pokémon to retreat into"
-          : "Your move"
+      ? bossMoves
+        ? "Pick the opponent's benched Pokémon to drag active"
+        : benchPickMoves
+          ? "Pick a benched Pokémon"
+          : pendingCardId
+            ? "Pick a target Pokémon"
+            : retreatMode
+              ? "Pick a benched Pokémon to retreat into"
+              : "Your move"
       : game.outcome
         ? game.outcome.winner === "player"
           ? `You win! (${game.outcome.endReason})`
@@ -411,6 +476,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
           lastPlayedTrainer={null}
           cardWidth={cardWidth}
           matWidth={matWidth}
+          interact={aiInteract}
         />
 
         {/* ── Between-mats strip: status left, turn pill right, AI feed. ── */}
@@ -456,11 +522,13 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
               <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
                 Hand · {view.hand.length}
               </span>
-              {(pendingCardId || retreatMode) && (
+              {(pendingCardId || retreatMode || bossMoves || benchPickMoves) && (
                 <button
                   onClick={() => {
                     setPendingCardId(null);
                     setRetreatMode(false);
+                    setBossMoves(null);
+                    setBenchPickMoves(null);
                   }}
                   className="text-[10px] font-semibold text-accent"
                 >
@@ -563,6 +631,63 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
           </div>
         )}
       </div>
+      {/* Search picker — choose what a trainer fetches (deck or discard). */}
+      {pickerMoves && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center p-4"
+          style={{ background: "rgba(242,242,242,0.92)" }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Choose a card to fetch"
+          onClick={() => setPickerMoves(null)}
+        >
+          <div
+            className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-2xl border border-black/8 bg-white p-4 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-xs font-semibold text-text-primary">Choose what to fetch</span>
+              <button
+                onClick={() => setPickerMoves(null)}
+                className="text-[10px] font-semibold text-accent"
+              >
+                cancel
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {pickerMoves.map((m, i) => {
+                if (m.kind !== "play_trainer") return null;
+                const names = m.deckCardNames ?? (m.discardPickName ? [m.discardPickName] : []);
+                return (
+                  <button
+                    key={i}
+                    onClick={() => sendMove(m)}
+                    disabled={loading}
+                    className="flex flex-col items-center gap-1 rounded-lg border border-black/8 p-1.5 hover:border-accent disabled:opacity-50"
+                  >
+                    <div className="flex w-full justify-center gap-1">
+                      {names.map((n, j) => {
+                        const img = images[n];
+                        return img ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img key={j} src={img} alt={n} className="w-full min-w-0 rounded-md shadow-sm" style={{ maxWidth: names.length > 1 ? "48%" : "100%" }} />
+                        ) : (
+                          <div key={j} className="flex aspect-[5/7] w-full items-center justify-center rounded-md border border-black/15 bg-surface p-1 text-center text-[8px] font-semibold text-text-secondary">
+                            {n}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <span className="line-clamp-2 text-center text-[9px] font-semibold leading-tight text-text-secondary">
+                      {names.join(" + ")}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
       {inspect && <ReplayCardInspector target={inspect} onClose={() => setInspect(null)} />}
     </InspectContext.Provider>
   );

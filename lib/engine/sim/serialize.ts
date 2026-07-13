@@ -45,6 +45,31 @@ export function describeMove(
       return `Played ${cardName(state, actor, move.cardId)} (drew 2)`;
     case "cycle_item":
       return `Played ${cardName(state, actor, move.cardId)} (drew 1)`;
+    case "play_trainer": {
+      const name = cardName(state, actor, move.cardId);
+      if (move.deckCardNames?.length) {
+        return `Played ${name} — fetched ${move.deckCardNames.join(" and ")}`;
+      }
+      if (move.discardPickName) {
+        return `Played ${name} — recovered ${move.discardPickName}`;
+      }
+      if (move.oppBenchIndex != null) {
+        const target = sideOf(state, actor === "player" ? "opponent" : "player").bench[move.oppBenchIndex];
+        return `Played ${name} — switched in ${target?.card.name ?? "a benched Pokémon"}`;
+      }
+      if (move.benchIndex != null) {
+        const target = side.bench[move.benchIndex];
+        return `Played ${name} — ${target?.card.name ?? "a benched Pokémon"} to the Active Spot`;
+      }
+      if (move.handCardId != null) {
+        const target = [side.active, ...side.bench].find((m) => m?.id === move.monId);
+        return `Played ${name} — evolved ${target?.card.name ?? "a Pokémon"} into ${cardName(state, actor, move.handCardId)}`;
+      }
+      if (move.monId != null) {
+        return `Played ${name} on ${monName(state, actor, move.monId)}`;
+      }
+      return `Played ${name}`;
+    }
     case "attack": {
       const attacker = side.active;
       const defender = sideOf(state, actor === "player" ? "opponent" : "player").active;
