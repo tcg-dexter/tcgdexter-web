@@ -28,7 +28,7 @@ import {
   type SimMove,
   type TurnContext,
 } from "./moves";
-import { HeuristicPolicy, promoteBest, type DecisionPolicy } from "./policy";
+import { HeuristicPolicy, chooseAbilityMove, promoteBest, type DecisionPolicy } from "./policy";
 import { energyProvides, prizeValue } from "./setup";
 import { isSupporter, trainerSpec, type PlayTrainerMove, type TrainerSpec } from "./trainers";
 import { lookupCard } from "../catalog";
@@ -151,6 +151,14 @@ export class PlannerPolicy implements DecisionPolicy {
       );
       return activeEvolve ?? evolves[0];
     }
+
+    // Activated abilities (Munkidori, Dusknoir) — beneficial, don't end turn.
+    const ability = chooseAbilityMove(view, legal);
+    if (ability) return ability;
+
+    // Put a Stadium into play (free development).
+    const stadium = legal.find((m) => m.kind === "play_stadium");
+    if (stadium) return stadium;
 
     // Phase 2 — reveal information before deciding (each play reveals
     // cards; the consequential plan is recomputed on the post-draw hand).
@@ -565,6 +573,9 @@ function ghostView(ghost: GameState): PlayerView {
     mulligans: ghost.sides.player.mulligans,
     energyAttachedThisTurn: ghost.sides.player.energyAttachedThisTurn,
     supporterPlayedThisTurn: ghost.sides.player.supporterPlayedThisTurn,
+    stadium: ghost.stadium
+      ? { name: ghost.stadium.card.name, owner: ghost.stadium.owner }
+      : null,
     opponent: {
       board: { active: ghost.sides.opponent.active, bench: ghost.sides.opponent.bench },
       discard: ghost.sides.opponent.discard,

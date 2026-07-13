@@ -58,6 +58,7 @@ function collectImages(
   for (const c of view.hand) names.add(c.name);
   for (const c of view.discard) names.add(c.name);
   for (const c of view.opponent.discard) names.add(c.name);
+  if (view.stadium) names.add(view.stadium.name);
   for (const board of [view.board, view.opponent.board]) {
     for (const mon of [board.active, ...board.bench]) {
       if (!mon) continue;

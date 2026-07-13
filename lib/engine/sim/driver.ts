@@ -10,12 +10,13 @@
 import type { GameState, PokemonInPlay } from "../types";
 import { applyWeaknessResistance, legalMoves, sideOf, type SimMove, type TurnContext } from "./moves";
 import { attackBaseDamage, attackEffect, discardAllEnergy } from "./attacks";
+import { applyAbility, hasOnEvolveTrigger, onEvolve } from "./abilities";
 import { dealRawDamage, placeAttackCounters, placeBenchDamage, resolveKnockouts } from "./damage";
 import type { DecisionPolicy } from "./policy";
 import { buildSimInitialState, toPokemonInPlay, type SimDeck } from "./setup";
 import { applyTrainer } from "./trainers";
 import { viewFor } from "./view";
-import type { Rng } from "./rng";
+import { shuffle, type Rng } from "./rng";
 
 export interface GameOptions {
   /** Global turn cap; the game is scored on prizes if it hits this. */
@@ -133,8 +134,24 @@ export function applyMove(
         target.card = card;
         target.evolvedThisTurn = true;
         target.conditions = [];
+        // On-evolve abilities (Charizard ex's Infernal Reign) fire now.
+        if (hasOnEvolveTrigger(card)) {
+          onEvolve(state, actor, target, rng ? () => shuffle(side.deck, rng) : null);
+        }
       }
       return done(false);
+    }
+    case "use_ability": {
+      applyAbility(state, actor, move);
+      const ko = resolveKnockouts(state);
+      if (ko.winner) {
+        state.winner = ko.winner;
+        state.endReason = ko.endReason;
+        return done(false, null, ko.koTurn);
+      }
+      // Cursed Blast self-KOs the user; if it was our active, we promote.
+      const pending = ko.pendingPromotions.includes(actor) ? actor : null;
+      return done(false, pending, ko.koTurn);
     }
     case "retreat": {
       const active = side.active;
@@ -166,6 +183,17 @@ export function applyMove(
     }
     case "play_trainer": {
       applyTrainer(state, actor, move, rng);
+      return done(false);
+    }
+    case "play_stadium": {
+      const card = takeFromHand(move.cardId);
+      if (card) {
+        // The outgoing Stadium goes to its owner's discard.
+        if (state.stadium) {
+          state.sides[state.stadium.owner].discard.push(state.stadium.card);
+        }
+        state.stadium = { card, owner: actor };
+      }
       return done(false);
     }
     case "attack": {

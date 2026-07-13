@@ -7,6 +7,7 @@
 import type { EngineAttack, GameState, PlayerSide, PokemonInPlay } from "../types";
 import { energyProvides, isBasic } from "./setup";
 import { isSupporter, trainerMoves, trainerSpec, type PlayTrainerMove } from "./trainers";
+import { abilityMoves, type UseAbilityMove } from "./abilities";
 
 export type SimMove =
   | { kind: "attach"; cardId: string; targetId: string }
@@ -16,6 +17,8 @@ export type SimMove =
   | { kind: "cycle_supporter"; cardId: string }
   | { kind: "cycle_item"; cardId: string }
   | PlayTrainerMove
+  | UseAbilityMove
+  | { kind: "play_stadium"; cardId: string }
   | {
       kind: "attack";
       attackIndex: number;
@@ -167,6 +170,14 @@ export function legalMoves(
         moves.push({ kind: "attach", cardId: card.id, targetId: target.id });
       }
     }
+    // Stadium: into play, unless one of the same name already is (you may
+    // not replace a Stadium with an identical one).
+    if (card.catalog?.supertype === "Trainer" && card.catalog.subtypes.includes("Stadium")) {
+      if (state.stadium?.card.name !== card.name) {
+        moves.push({ kind: "play_stadium", cardId: card.id });
+      }
+      continue;
+    }
     // Trainers: registered staples get their real effect; anything else
     // keeps the generic draw-cycle behavior.
     if (card.catalog?.supertype === "Trainer") {
@@ -188,6 +199,9 @@ export function legalMoves(
       }
     }
   }
+
+  // Activated abilities (once per turn per Pokémon; conditions checked).
+  moves.push(...abilityMoves(state, actor));
 
   // Retreat (once per turn, cost payable, somewhere to go).
   if (

@@ -80,6 +80,16 @@ export function describeMove(
       const ko = dmg >= remainingHp(defender);
       return `Used ${attack.name} for ${dmg} damage${ko ? ` — Knocked Out ${defender.card.name}!` : ""}`;
     }
+    case "play_stadium":
+      return `Played Stadium ${cardName(state, actor, move.cardId)}`;
+    case "use_ability": {
+      const mon = [side.active, ...side.bench].find((m) => m?.id === move.monId);
+      const oppName = move.targetMonId
+        ? monName(state, actor === "player" ? "opponent" : "player", move.targetMonId)
+        : null;
+      const base = `Used ${mon?.card.name ?? "a Pokémon"}'s ${move.abilityName}`;
+      return oppName ? `${base} on ${oppName}` : base;
+    }
     case "pass":
       return "Ended turn";
   }
@@ -127,6 +137,7 @@ export interface ClientView {
   prizesTaken: number;
   energyAttachedThisTurn: number;
   supporterPlayedThisTurn: boolean;
+  stadium: { name: string; owner: "player" | "opponent" } | null;
   opponent: {
     board: ClientBoard;
     discard: ClientCard[];
@@ -180,6 +191,7 @@ export function serializeView(view: PlayerView): ClientView {
     prizesTaken: view.prizesTaken,
     energyAttachedThisTurn: view.energyAttachedThisTurn,
     supporterPlayedThisTurn: view.supporterPlayedThisTurn,
+    stadium: view.stadium,
     opponent: {
       board: clientBoard(view.opponent.board),
       discard: view.opponent.discard.map((c) => ({ id: c.id, name: c.name })),

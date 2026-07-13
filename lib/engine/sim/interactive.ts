@@ -81,6 +81,7 @@ interface TurnStats {
   evolutions: number;
   retreats: number;
   retreatEnergy: number;
+  abilities: number;
   kos: number;
   prizesTaken: number;
 }
@@ -127,7 +128,7 @@ function closeTurn(session: GameSession): void {
     evolutions: s.evolutions,
     retreats: s.retreats,
     retreat_energy_discarded: s.retreatEnergy,
-    abilities_used: 0,
+    abilities_used: s.abilities,
     kos_scored: s.kos,
     prizes_taken: s.prizesTaken,
     prizes_player: state.prizesTaken.player,
@@ -181,6 +182,9 @@ function applyTracked(
         else s.items += 1;
         break;
       }
+      case "use_ability":
+        s.abilities += 1;
+        break;
       case "attack": {
         s.attacked = 1;
         const attacker = side.active;
@@ -247,6 +251,7 @@ function advanceTurn(session: GameSession, actor: "player" | "opponent"): boolea
     evolutions: 0,
     retreats: 0,
     retreatEnergy: 0,
+    abilities: 0,
     kos: 0,
     prizesTaken: 0,
   };

@@ -55,5 +55,7 @@ export {
   attackBenchCounterCount,
   attackBenchDamageTargets,
 } from "./attacks";
+export { abilityMoves, applyAbility, onEvolve, hasOnEvolveTrigger } from "./abilities";
+export type { UseAbilityMove } from "./abilities";
 export { mulberry32, hashSeed, shuffle } from "./rng";
 export type { Rng } from "./rng";

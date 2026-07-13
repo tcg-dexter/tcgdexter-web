@@ -49,6 +49,25 @@ export function isLegalHumanMove(
     return true;
   }
 
+  // Abilities enumerate every target combination, but the human may pass a
+  // smaller `counters` (Munkidori "up to 3"); match on the core targets and
+  // clamp the count separately.
+  if (move.kind === "use_ability") {
+    const match = legal.find(
+      (m): m is Extract<SimMove, { kind: "use_ability" }> =>
+        m.kind === "use_ability" &&
+        m.monId === move.monId &&
+        m.abilityName === move.abilityName &&
+        m.sourceMonId === move.sourceMonId &&
+        m.targetMonId === move.targetMonId,
+    );
+    if (!match) return false;
+    if (move.counters != null && (move.counters < 1 || move.counters > (match.counters ?? move.counters))) {
+      return false;
+    }
+    return true;
+  }
+
   if (move.kind === "attack") {
     const match = legal.find(
       (m): m is Extract<SimMove, { kind: "attack" }> =>

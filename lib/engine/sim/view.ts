@@ -39,6 +39,8 @@ export interface PlayerView {
   mulligans: number;
   energyAttachedThisTurn: number;
   supporterPlayedThisTurn: boolean;
+  /** Stadium in play (public), with which side owns it. */
+  stadium: { name: string; owner: "player" | "opponent" } | null;
   opponent: OpponentView;
 }
 
@@ -59,6 +61,9 @@ export function viewFor(state: GameState, actor: "player" | "opponent"): PlayerV
     mulligans: self.mulligans,
     energyAttachedThisTurn: self.energyAttachedThisTurn,
     supporterPlayedThisTurn: self.supporterPlayedThisTurn,
+    stadium: state.stadium
+      ? { name: state.stadium.card.name, owner: state.stadium.owner }
+      : null,
     opponent: {
       board: { active: other.active, bench: other.bench },
       discard: other.discard,

@@ -416,6 +416,12 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
   const humanBench = view.board.bench.map((m) => toFrame(m, images));
   const aiActive = view.opponent.board.active ? toFrame(view.opponent.board.active, images) : null;
   const aiBench = view.opponent.board.bench.map((m) => toFrame(m, images));
+  const stadiumCard = view.stadium
+    ? { name: view.stadium.name, imageUrl: images[view.stadium.name] ?? null }
+    : null;
+  // The stadium sits on its owner's mat (AI = top, human = bottom).
+  const aiStadium = view.stadium?.owner === "opponent" ? stadiumCard : null;
+  const humanStadium = view.stadium?.owner === "player" ? stadiumCard : null;
 
   // Bench taps only act while a mode is live; otherwise the kit falls back
   // to the inspector (tap any card to zoom, same as replay).
@@ -505,7 +511,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
           deckCount={view.opponent.deckCount}
           handCount={view.opponent.handCount}
           prizesRemaining={view.opponent.prizeCount}
-          stadium={null}
+          stadium={aiStadium}
           lastPlayedTrainer={null}
           cardWidth={cardWidth}
           matWidth={matWidth}
@@ -541,7 +547,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
           deckCount={view.deckCount}
           handCount={view.hand.length}
           prizesRemaining={view.prizeCount}
-          stadium={null}
+          stadium={humanStadium}
           lastPlayedTrainer={null}
           cardWidth={cardWidth}
           matWidth={matWidth}

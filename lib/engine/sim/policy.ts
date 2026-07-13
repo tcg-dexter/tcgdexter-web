@@ -36,6 +36,38 @@ export interface DecisionPolicy {
  *  keep flowing — deck-out is a loss). Mirrors the planner's reserve. */
 const DECK_RESERVE = 8;
 
+/** Pick a beneficial activated ability from the legal set, or null.
+ *  Munkidori (move counters toward a KO) is almost always good; Dusknoir's
+ *  self-KO Cursed Blast only when its 13 counters (130) actually KO. */
+export function chooseAbilityMove(view: PlayerView, legal: SimMove[]): SimMove | null {
+  const abilities = legal.filter(
+    (m): m is Extract<SimMove, { kind: "use_ability" }> => m.kind === "use_ability",
+  );
+  if (abilities.length === 0) return null;
+  const oppMons = [view.opponent.board.active, ...view.opponent.board.bench].filter(
+    (m): m is PokemonInPlay => m !== null,
+  );
+  const hpLeft = (id: string | undefined) => {
+    const mon = oppMons.find((m) => m.id === id);
+    return mon ? (mon.card.catalog?.hp ?? 120) - mon.damage : Infinity;
+  };
+
+  // Cursed Blast: only when 130 damage knocks the target out.
+  const cursed = abilities.filter((m) => m.abilityName === "Cursed Blast");
+  const lethalCursed = cursed
+    .filter((m) => hpLeft(m.targetMonId) <= 130)
+    .sort((a, b) => hpLeft(a.targetMonId) - hpLeft(b.targetMonId));
+  if (lethalCursed.length > 0) return lethalCursed[0];
+
+  // Adrena-Brain: move counters onto the opponent mon closest to a KO.
+  const adrena = abilities
+    .filter((m) => m.abilityName === "Adrena-Brain")
+    .sort((a, b) => hpLeft(a.targetMonId) - hpLeft(b.targetMonId));
+  if (adrena.length > 0) return adrena[0];
+
+  return null;
+}
+
 /** Best printed damage this Pokémon could ever do (its attack ceiling). */
 function attackCeiling(mon: PokemonInPlay): number {
   return Math.max(0, ...(mon.card.catalog?.attacks ?? []).map(baseDamage));
@@ -77,6 +109,14 @@ export class HeuristicPolicy implements DecisionPolicy {
     // 2. Develop the bench.
     const bench = byKind("bench");
     if (bench.length > 0) return bench[0];
+
+    // 2b. Activated abilities (don't end the turn). Play the beneficial ones.
+    const ability = chooseAbilityMove(view, legal);
+    if (ability) return ability;
+
+    // 2c. Put a Stadium into play (replaces an opponent's; harmless to seat ours).
+    const stadium = byKind("play_stadium");
+    if (stadium.length > 0) return stadium[0];
 
     // 3. Draw fuel + searches: real draw supporters and deck searches
     //    before generic cycling — all deck-reserve guarded so we never
