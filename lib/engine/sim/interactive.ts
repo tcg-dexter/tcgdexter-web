@@ -25,6 +25,8 @@ import {
 } from "./driver";
 import { computeDamage, legalMoves, type SimMove, type TurnContext } from "./moves";
 import { isLegalHumanMove } from "./validate";
+import { runCheckup } from "./conditions";
+import { resolveKnockouts } from "./damage";
 import { PlannerPolicy } from "./planner";
 import { plannerParamsForSkill } from "./difficulty";
 import { promoteBest, type DecisionPolicy } from "./policy";
@@ -262,9 +264,36 @@ function advanceTurn(session: GameSession, actor: "player" | "opponent"): boolea
   return true;
 }
 
+/** Pokémon Checkup between turns: conditions on both actives, then KO
+ *  resolution. Both sides auto-promote here (a between-turns poison/burn KO
+ *  doesn't pause for a human promotion choice — a minor v1 simplification;
+ *  attack KOs still prompt). Returns false when the game ended. */
+function betweenTurns(session: GameSession, justActed: "player" | "opponent"): boolean {
+  const state = session.state;
+  if (state.turn.number === 0) return true; // no Checkup before the game's first turn
+  runCheckup(state, justActed, session.rng);
+  const ko = resolveKnockouts(state);
+  if (ko.winner) {
+    finish(session, ko.winner);
+    return false;
+  }
+  for (const side of ko.pendingPromotions) {
+    promote(state, side, session.aiPolicy.choosePromotion(viewFor(state, side)));
+    if (side === "opponent") {
+      session.aiActions.push({
+        turn: state.turn.number,
+        description: describePromotion(state.sides.opponent.active?.card.name ?? "a Pokémon"),
+      });
+    }
+  }
+  return true;
+}
+
 /** Run the AI's whole turn. Leaves status at "human_turn",
  *  "human_promotion" (its attack KO'd the human active) or "over". */
 function runAiTurn(session: GameSession, record: boolean): void {
+  // Checkup after the human's just-ended turn, before the AI begins.
+  if (!betweenTurns(session, "player")) return;
   if (!advanceTurn(session, "opponent")) return;
   const state = session.state;
   const ctx: TurnContext = { retreated: false };
@@ -293,6 +322,8 @@ function runAiTurn(session: GameSession, record: boolean): void {
     if (result.turnEnded) break;
   }
 
+  // Checkup after the AI's turn, before the human's begins.
+  if (!betweenTurns(session, "opponent")) return;
   advanceTurn(session, "player");
 }
 
@@ -378,8 +409,10 @@ export function applyHumanMove(session: GameSession, move: InteractiveMove, reco
     }
     promote(state, "player", move.benchIndex);
     if (record) session.transcript.moves.push({ actor: "human", move });
-    // The AI's attack ended its turn; play returns to the human.
+    // The AI's attack ended its turn; run the between-turns Checkup, then
+    // play returns to the human.
     session.aiActions = [];
+    if (!betweenTurns(session, "opponent")) return;
     advanceTurn(session, "player");
     return;
   }

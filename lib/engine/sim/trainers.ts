@@ -16,6 +16,7 @@
 
 import type { CardInstance, GameState, PlayerSide } from "../types";
 import { lookupCard } from "../catalog";
+import { clearConditions } from "./conditions";
 import { shuffle, type Rng } from "./rng";
 import { energyProvides, isBasic, prizeValue, toPokemonInPlay } from "./setup";
 
@@ -455,6 +456,7 @@ export function applyTrainer(
       const idx = move.oppBenchIndex ?? 0;
       const target = other.bench[Math.min(idx, other.bench.length - 1)];
       if (target && other.active) {
+        clearConditions(other.active); // leaving the Active Spot clears conditions
         other.bench[Math.min(idx, other.bench.length - 1)] = other.active;
         other.active = target;
       }
@@ -464,6 +466,7 @@ export function applyTrainer(
       const idx = move.benchIndex ?? 0;
       const target = side.bench[Math.min(idx, side.bench.length - 1)];
       if (target && side.active) {
+        clearConditions(side.active);
         side.bench[Math.min(idx, side.bench.length - 1)] = side.active;
         side.active = target;
       }

@@ -11,6 +11,15 @@ import type { GameState, PokemonInPlay } from "../types";
 import { applyWeaknessResistance, legalMoves, sideOf, type SimMove, type TurnContext } from "./moves";
 import { attackBaseDamage, attackEffect, discardAllEnergy } from "./attacks";
 import { applyAbility, hasOnEvolveTrigger, onEvolve } from "./abilities";
+import {
+  applyCondition,
+  attackInflictsCondition,
+  attackSelfClears,
+  cannotAct,
+  clearConditions,
+  hasCondition,
+  runCheckup,
+} from "./conditions";
 import { dealRawDamage, placeAttackCounters, placeBenchDamage, resolveKnockouts } from "./damage";
 import type { DecisionPolicy } from "./policy";
 import { buildSimInitialState, toPokemonInPlay, type SimDeck } from "./setup";
@@ -79,12 +88,14 @@ export function beginTurn(
   return true;
 }
 
-/** Resolve a pending promotion: move bench[index] to the active spot. */
+/** Resolve a pending promotion: move bench[index] to the active spot. The
+ *  newly-Active Pokémon starts free of Special Conditions. */
 export function promote(state: GameState, actor: "player" | "opponent", benchIndex: number): void {
   const side = sideOf(state, actor);
   if (side.active !== null || side.bench.length === 0) return;
   const idx = Math.min(Math.max(0, benchIndex), side.bench.length - 1);
   const [promoted] = side.bench.splice(idx, 1);
+  if (promoted.conditions.length > 0) promoted.conditions = [];
   side.active = promoted;
 }
 
@@ -159,6 +170,7 @@ export function applyMove(
       if (!active || !promoted) return done(false);
       const cost = active.card.catalog?.retreat_cost ?? 0;
       side.discard.push(...active.attachedEnergy.splice(0, cost));
+      clearConditions(active); // leaving the Active Spot clears conditions
       side.bench[move.benchIndex] = active;
       side.active = promoted;
       ctx.retreated = true;
@@ -205,9 +217,29 @@ export function applyMove(
       const attack = attacker.card.catalog?.attacks[move.attackIndex];
       if (!attack) return done(true);
 
+      // Confusion: flip on attacking; tails puts 30 on the attacker and the
+      // attack fails (the turn still ends).
+      if (hasCondition(attacker, "Confused") && rng && rng() < 0.5) {
+        dealRawDamage(attacker, 30);
+        const ko = resolveKnockouts(state);
+        if (ko.winner) {
+          state.winner = ko.winner;
+          state.endReason = ko.endReason;
+          return done(true, null, ko.koTurn);
+        }
+        return done(true, ko.pendingPromotions.includes(actor) ? actor : null, ko.koTurn);
+      }
+
+      // Miracle Force and the like: the attacker clears its own conditions.
+      if (attackSelfClears(attacker.card.name, attack.name)) clearConditions(attacker);
+
       // Damage to the active: state-scaled base (attacks.ts), then W/R.
       const base = attackBaseDamage(state, actor, attacker, move.attackIndex);
       dealRawDamage(defender, applyWeaknessResistance(base, attacker, defender));
+
+      // Attack-inflicted condition on the defending active (Mind Bend).
+      const inflict = attackInflictsCondition(attacker.card.name, attack.name);
+      if (inflict) applyCondition(defender, inflict);
 
       // Placement / self-cost side effects (no Weakness/Resistance on bench).
       const effect = attackEffect(attacker, move.attackIndex);
@@ -265,6 +297,22 @@ export function playGame(
         promote(state, pending, policies[pending].choosePromotion(viewFor(state, pending)));
       }
       if (result.turnEnded || state.winner !== null) break;
+    }
+
+    // Pokémon Checkup between turns: poison/burn/sleep/paralysis on both
+    // actives, then resolve any KOs (auto-promote via each side's policy).
+    if (state.winner === null) {
+      runCheckup(state, actor, rng);
+      const ko = resolveKnockouts(state);
+      if (ko.koTurn !== null && firstKoTurn === null) firstKoTurn = ko.koTurn;
+      if (ko.winner) {
+        state.winner = ko.winner;
+        state.endReason = ko.endReason;
+      } else {
+        for (const side of ko.pendingPromotions) {
+          promote(state, side, policies[side].choosePromotion(viewFor(state, side)));
+        }
+      }
     }
 
     actor = otherActor(actor);

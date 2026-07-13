@@ -8,6 +8,7 @@ import type { EngineAttack, GameState, PlayerSide, PokemonInPlay } from "../type
 import { energyProvides, isBasic } from "./setup";
 import { isSupporter, trainerMoves, trainerSpec, type PlayTrainerMove } from "./trainers";
 import { abilityMoves, type UseAbilityMove } from "./abilities";
+import { cannotAct } from "./conditions";
 
 export type SimMove =
   | { kind: "attach"; cardId: string; targetId: string }
@@ -203,8 +204,12 @@ export function legalMoves(
   // Activated abilities (once per turn per Pokémon; conditions checked).
   moves.push(...abilityMoves(state, actor));
 
+  // Asleep / Paralyzed active can neither attack nor retreat this turn.
+  const activeCanAct = side.active ? !cannotAct(side.active) : false;
+
   // Retreat (once per turn, cost payable, somewhere to go).
   if (
+    activeCanAct &&
     !ctx.retreated &&
     side.active &&
     side.bench.length > 0 &&
@@ -216,7 +221,7 @@ export function legalMoves(
   }
 
   // Attack (ends the turn). Nobody attacks on the game's very first turn.
-  if (side.active && state.turn.number > 1) {
+  if (activeCanAct && side.active && state.turn.number > 1) {
     for (const { index } of usableAttacks(side.active)) {
       moves.push({ kind: "attack", attackIndex: index });
     }

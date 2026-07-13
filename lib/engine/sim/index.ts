@@ -57,5 +57,13 @@ export {
 } from "./attacks";
 export { abilityMoves, applyAbility, onEvolve, hasOnEvolveTrigger } from "./abilities";
 export type { UseAbilityMove } from "./abilities";
+export {
+  applyCondition,
+  clearConditions,
+  cannotAct,
+  hasCondition,
+  runCheckup,
+  attackInflictsCondition,
+} from "./conditions";
 export { mulberry32, hashSeed, shuffle } from "./rng";
 export type { Rng } from "./rng";
