@@ -8,9 +8,11 @@
 // immediately; the interactive runner pauses and asks the human.
 
 import type { GameState, PokemonInPlay } from "../types";
-import { computeDamage, legalMoves, remainingHp, sideOf, type SimMove, type TurnContext } from "./moves";
+import { applyWeaknessResistance, legalMoves, sideOf, type SimMove, type TurnContext } from "./moves";
+import { attackBaseDamage, attackEffect, discardAllEnergy } from "./attacks";
+import { dealRawDamage, placeAttackCounters, placeBenchDamage, resolveKnockouts } from "./damage";
 import type { DecisionPolicy } from "./policy";
-import { buildSimInitialState, prizeValue, toPokemonInPlay, type SimDeck } from "./setup";
+import { buildSimInitialState, toPokemonInPlay, type SimDeck } from "./setup";
 import { applyTrainer } from "./trainers";
 import { viewFor } from "./view";
 import type { Rng } from "./rng";
@@ -175,33 +177,29 @@ export function applyMove(
       const attack = attacker.card.catalog?.attacks[move.attackIndex];
       if (!attack) return done(true);
 
-      defender.damage += computeDamage(attacker, attack, defender);
-      if (remainingHp(defender) > 0) return done(true);
+      // Damage to the active: state-scaled base (attacks.ts), then W/R.
+      const base = attackBaseDamage(state, actor, attacker, move.attackIndex);
+      dealRawDamage(defender, applyWeaknessResistance(base, attacker, defender));
 
-      // KO: pile to discard, prizes to the attacker, promotion or loss.
-      defSide.discard.push(
-        defender.card,
-        ...defender.stack,
-        ...defender.attachedEnergy,
-        ...defender.attachedTools,
-      );
-      defSide.active = null;
-      const koTurn = state.turn.number;
+      // Placement / self-cost side effects (no Weakness/Resistance on bench).
+      const effect = attackEffect(attacker, move.attackIndex);
+      if (effect?.kind === "bench_counters") {
+        placeAttackCounters(defSide, effect.counters, move.benchCounters);
+      } else if (effect?.kind === "bench_damage") {
+        if (effect.discardSelfEnergy) discardAllEnergy(attacker, side.discard);
+        placeBenchDamage(defSide, effect.amount, effect.targets, move.benchDamageTargets);
+      }
 
-      const taken = side.prizes.splice(0, prizeValue(defender.card.name));
-      side.hand.push(...taken);
-      state.prizesTaken[actor] += taken.length;
-      if (state.prizesTaken[actor] >= 6) {
-        state.winner = actor;
-        state.endReason = "prizes";
-        return done(true, null, koTurn);
+      const ko = resolveKnockouts(state);
+      if (ko.winner) {
+        state.winner = ko.winner;
+        state.endReason = ko.endReason;
+        return done(true, null, ko.koTurn);
       }
-      if (defSide.bench.length === 0) {
-        state.winner = actor;
-        state.endReason = "no_active";
-        return done(true, null, koTurn);
-      }
-      return done(true, defActor, koTurn);
+      // The attacking side's own active can't be promotion-pending from a
+      // normal attack; the defender promotes if its active fell.
+      const pending = ko.pendingPromotions.includes(defActor) ? defActor : null;
+      return done(true, pending, ko.koTurn);
     }
     case "pass":
       return done(true);

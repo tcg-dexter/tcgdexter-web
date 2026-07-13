@@ -40,5 +40,20 @@ export type { ClientView, ClientCard, ClientMon, ClientBoard } from "./serialize
 export { trainerDiscardCost, trainerDiscardCostByName, TRAINER_EFFECTS } from "./trainers";
 export type { PlayTrainerMove } from "./trainers";
 export { isLegalHumanMove } from "./validate";
+export {
+  placeCounters,
+  healCounters,
+  moveCounters,
+  dealRawDamage,
+  resolveKnockouts,
+  isKnockedOut,
+  maxHp,
+} from "./damage";
+export {
+  attackBaseDamage,
+  attackEffect,
+  attackBenchCounterCount,
+  attackBenchDamageTargets,
+} from "./attacks";
 export { mulberry32, hashSeed, shuffle } from "./rng";
 export type { Rng } from "./rng";

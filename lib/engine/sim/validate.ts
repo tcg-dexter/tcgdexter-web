@@ -7,6 +7,7 @@
 
 import type { GameState } from "../types";
 import { legalMoves, type SimMove, type TurnContext } from "./moves";
+import { attackBenchCounterCount, attackBenchDamageTargets } from "./attacks";
 import { trainerDiscardCost } from "./trainers";
 
 /** Core (non-selection) fields of a play_trainer move — everything the
@@ -44,6 +45,34 @@ export function isLegalHumanMove(
       if (ids.length !== need) return false;
       if (new Set(ids).size !== ids.length) return false;
       return ids.every((id) => id !== move.cardId && side.hand.some((c) => c.id === id));
+    }
+    return true;
+  }
+
+  if (move.kind === "attack") {
+    const match = legal.find(
+      (m): m is Extract<SimMove, { kind: "attack" }> =>
+        m.kind === "attack" && m.attackIndex === move.attackIndex,
+    );
+    if (!match) return false;
+    const attacker = state.sides[actor].active;
+    if (!attacker) return false;
+    const oppBench = state.sides[actor === "player" ? "opponent" : "player"].bench;
+    const onBench = (id: string) => oppBench.some((m) => m.id === id);
+    // Bench-counter allocation: one entry per counter (repeats allowed),
+    // every target on the opponent's bench. Full count required when the
+    // bench is non-empty; empty when there's no bench (the counters fizzle).
+    if (move.benchCounters != null) {
+      const need = attackBenchCounterCount(attacker, move.attackIndex);
+      const expected = oppBench.length > 0 ? need : 0;
+      if (move.benchCounters.length !== expected) return false;
+      if (!move.benchCounters.every(onBench)) return false;
+    }
+    if (move.benchDamageTargets != null) {
+      const targets = attackBenchDamageTargets(attacker, move.attackIndex);
+      if (move.benchDamageTargets.length > targets) return false;
+      if (new Set(move.benchDamageTargets).size !== move.benchDamageTargets.length) return false;
+      if (!move.benchDamageTargets.every(onBench)) return false;
     }
     return true;
   }

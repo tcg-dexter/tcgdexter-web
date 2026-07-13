@@ -16,7 +16,14 @@ export type SimMove =
   | { kind: "cycle_supporter"; cardId: string }
   | { kind: "cycle_item"; cardId: string }
   | PlayTrainerMove
-  | { kind: "attack"; attackIndex: number }
+  | {
+      kind: "attack";
+      attackIndex: number;
+      /** Opponent-bench monIds, one per counter placed (Phantom Dive). */
+      benchCounters?: string[];
+      /** Opponent-bench monIds hit by bench damage (Flamebody Cannon). */
+      benchDamageTargets?: string[];
+    }
   | { kind: "pass" };
 
 /** Per-turn bookkeeping the PlayerSide shape doesn't carry (replay never
@@ -73,15 +80,16 @@ export function remainingHp(mon: PokemonInPlay): number {
   return (mon.card.catalog?.hp ?? FALLBACK_HP) - mon.damage;
 }
 
-/** v1 damage model: printed number, weakness ×2, resistance −30, floor 0.
- *  Attack side-effects and ability modifiers are out of scope. */
-export function computeDamage(
+/** Apply Weakness (×2) / Resistance (−30) for the attacker's type against a
+ *  defending ACTIVE. Damage to Benched Pokémon and damage counters never
+ *  call this (core rule). Floored at 0. */
+export function applyWeaknessResistance(
+  base: number,
   attacker: PokemonInPlay,
-  attack: EngineAttack,
   defender: PokemonInPlay,
 ): number {
-  let dmg = baseDamage(attack);
-  if (dmg === 0) return 0;
+  if (base <= 0) return 0;
+  let dmg = base;
   const attackerType = attacker.card.catalog?.types[0];
   const defCatalog = defender.card.catalog;
   if (attackerType && defCatalog) {
@@ -89,6 +97,18 @@ export function computeDamage(
     if (defCatalog.resistances.some((r) => r.type === attackerType)) dmg = Math.max(0, dmg - 30);
   }
   return dmg;
+}
+
+/** v1 damage model: printed number + weakness/resistance. Attacks with
+ *  state-scaled damage (Burning Darkness, Back Draft) go through
+ *  attackBaseDamage in attacks.ts before this; plain attacks use the
+ *  printed number here. */
+export function computeDamage(
+  attacker: PokemonInPlay,
+  attack: EngineAttack,
+  defender: PokemonInPlay,
+): number {
+  return applyWeaknessResistance(baseDamage(attack), attacker, defender);
 }
 
 /* ─── Evolution eligibility ─────────────────────────────────────── */

@@ -71,6 +71,15 @@ export function isBasic(c: CardInstance): boolean {
   return c.catalog?.supertype === "Pokémon" && !c.catalog.evolves_from;
 }
 
+/** A Basic Energy card (not Special Energy). Shared across trainer/attack
+ *  effects that count or fetch basic energy. */
+export function isBasicEnergyCard(c: CardInstance): boolean {
+  return (
+    c.catalog?.supertype === "Energy" &&
+    (c.catalog.subtypes.includes("Basic") || c.name.startsWith("Basic "))
+  );
+}
+
 const ENERGY_TYPE_RE =
   /(Grass|Fire|Water|Lightning|Psychic|Fighting|Darkness|Metal|Fairy)/;
 
