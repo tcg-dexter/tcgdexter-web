@@ -98,6 +98,22 @@ export interface PlayTrainerMove {
   benchIndex?: number;
   /** Opponent bench target (Boss's Orders). */
   oppBenchIndex?: number;
+  /** Human-chosen cards to pay a discard cost (Ultra Ball). When absent,
+   *  the AI/auto path picks them (pickDiscards). Not part of the
+   *  enumerated legal set — validated separately (see validateTrainerCost). */
+  discardCardIds?: string[];
+}
+
+/** The number of cards a trainer requires discarding to play (0 = none).
+ *  Humans supply the choice via discardCardIds; the count must match. */
+export function trainerDiscardCost(card: CardInstance): number {
+  return trainerDiscardCostByName(card.name);
+}
+
+/** Name-keyed discard cost — for the client, which only knows card names. */
+export function trainerDiscardCostByName(name: string): number {
+  const spec = TRAINER_EFFECTS[name];
+  return spec?.effect.kind === "deck_search" ? (spec.effect.discardCost ?? 0) : 0;
 }
 
 /* ─── Filters ───────────────────────────────────────────────────── */
@@ -330,7 +346,15 @@ export function applyTrainer(
   switch (effect.kind) {
     case "deck_search": {
       if (effect.discardCost) {
-        for (const d of pickDiscards(side, effect.discardCost, "")) {
+        // Human-chosen discards when supplied and valid; else auto-pick.
+        const chosen =
+          move.discardCardIds?.length === effect.discardCost &&
+          move.discardCardIds.every((id) => side.hand.some((c) => c.id === id))
+            ? (move.discardCardIds
+                .map((id) => side.hand.find((c) => c.id === id))
+                .filter((c): c is CardInstance => c != null))
+            : pickDiscards(side, effect.discardCost, "");
+        for (const d of chosen) {
           takeFromHand(side, d.id);
           side.discard.push(d);
         }

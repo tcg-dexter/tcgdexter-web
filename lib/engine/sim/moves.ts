@@ -122,6 +122,13 @@ export function legalMoves(
     (m): m is PokemonInPlay => m !== null,
   );
 
+  // A player cannot evolve on their own first turn of the game (global
+  // turns 1 and 2). Per-mon "in play since last turn" is enforced in
+  // evolutionTargets; this is the additional game-opening ban.
+  const canEvolve = state.turn.playerTurnNumber > 1;
+  // The very first turn of the game bans Supporters outright.
+  const supporterBanned = state.turn.number === 1;
+
   for (const card of side.hand) {
     // Bench a basic.
     if (isBasic(card) && side.bench.length < 5) {
@@ -129,7 +136,7 @@ export function legalMoves(
     }
     // Evolve.
     const from = card.catalog?.evolves_from;
-    if (from) {
+    if (from && canEvolve) {
       for (const target of evolutionTargets(side, from, state.turn.number)) {
         moves.push({ kind: "evolve", cardId: card.id, targetId: target.id });
       }
@@ -143,14 +150,16 @@ export function legalMoves(
     // Trainers: registered staples get their real effect; anything else
     // keeps the generic draw-cycle behavior.
     if (card.catalog?.supertype === "Trainer") {
+      const supporter = isSupporter(card);
+      const supporterOk = !supporter || (!side.supporterPlayedThisTurn && !supporterBanned);
       const spec = trainerSpec(card);
       if (spec) {
-        if (!isSupporter(card) || !side.supporterPlayedThisTurn) {
+        if (supporterOk) {
           moves.push(...trainerMoves(state, actor, card, spec));
         }
       } else if (side.deck.length > 0) {
-        if (card.catalog.subtypes.includes("Supporter")) {
-          if (!side.supporterPlayedThisTurn) {
+        if (supporter) {
+          if (supporterOk) {
             moves.push({ kind: "cycle_supporter", cardId: card.id });
           }
         } else {

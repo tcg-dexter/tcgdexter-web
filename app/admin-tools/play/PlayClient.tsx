@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { PlayResponse } from "@/app/api/play/route";
 import type { ClientMon, ClientView, InteractiveMove } from "@/lib/engine/sim";
+import { trainerDiscardCostByName } from "@/lib/engine/sim";
 import type { GameReview } from "@/lib/ml/gameReview";
 import {
   InspectContext,
@@ -99,6 +100,12 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
   const [bossMoves, setBossMoves] = useState<InteractiveMove[] | null>(null);
   /** Switch etc.: pick one of our benched Pokémon. */
   const [benchPickMoves, setBenchPickMoves] = useState<InteractiveMove[] | null>(null);
+  /** Discard-cost stage (Ultra Ball): the chosen fetch move + running picks. */
+  const [discardStage, setDiscardStage] = useState<{
+    move: Extract<InteractiveMove, { kind: "play_trainer" }>;
+    need: number;
+    picked: string[];
+  } | null>(null);
   const [review, setReview] = useState<GameReview | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -141,6 +148,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     setPickerMoves(null);
     setBossMoves(null);
     setBenchPickMoves(null);
+    setDiscardStage(null);
     if (next.ai_actions.length > 0) {
       setLog((old) => [...old.slice(-30), ...next.ai_actions.map((a) => `T${a.turn} · ${a.description}`)]);
     }
@@ -256,6 +264,31 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
       if (move) return void sendMove(move);
     }
     if (targets.length > 1) setPendingCardId(pendingCardId === cardId ? null : cardId);
+  }
+
+  // Search-picker choice: if the trainer also has a discard cost (Ultra
+  // Ball), advance to the discard stage instead of sending immediately.
+  function choosePickerMove(m: InteractiveMove) {
+    if (m.kind !== "play_trainer" || !game) return;
+    const card = game.view.hand.find((c) => c.id === m.cardId);
+    const need = card ? trainerDiscardCostByName(card.name) : 0;
+    if (need > 0) {
+      setPickerMoves(null);
+      setDiscardStage({ move: m, need, picked: [] });
+      return;
+    }
+    void sendMove(m);
+  }
+
+  function toggleDiscard(cardId: string) {
+    setDiscardStage((st) => {
+      if (!st) return st;
+      if (st.picked.includes(cardId)) {
+        return { ...st, picked: st.picked.filter((id) => id !== cardId) };
+      }
+      if (st.picked.length >= st.need) return st;
+      return { ...st, picked: [...st.picked, cardId] };
+    });
   }
 
   function sendTargeted(monId: string) {
@@ -556,7 +589,14 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                   >
                     {image ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={image} alt={card.name} className="w-full rounded-md shadow-sm" />
+                      <img
+                        src={image}
+                        alt={card.name}
+                        className="w-full rounded-md shadow-sm"
+                        onError={(e) => {
+                          if (e.currentTarget.src !== CARD_BACK_URL) e.currentTarget.src = CARD_BACK_URL;
+                        }}
+                      />
                     ) : (
                       <div className="relative w-full overflow-hidden rounded-md" style={{ aspectRatio: "245 / 342" }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -661,7 +701,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                 return (
                   <button
                     key={i}
-                    onClick={() => sendMove(m)}
+                    onClick={() => choosePickerMove(m)}
                     disabled={loading}
                     className="flex flex-col items-center gap-1 rounded-lg border border-black/8 p-1.5 hover:border-accent disabled:opacity-50"
                   >
@@ -685,6 +725,70 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                 );
               })}
             </div>
+          </div>
+        </div>
+      )}
+      {/* Discard-cost stage (Ultra Ball): choose exactly N cards to discard. */}
+      {discardStage && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center p-4"
+          style={{ background: "rgba(242,242,242,0.92)" }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Choose cards to discard"
+          onClick={() => setDiscardStage(null)}
+        >
+          <div
+            className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-2xl border border-black/8 bg-white p-4 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-xs font-semibold text-text-primary">
+                Discard {discardStage.need} — chosen {discardStage.picked.length}/{discardStage.need}
+              </span>
+              <button onClick={() => setDiscardStage(null)} className="text-[10px] font-semibold text-accent">
+                cancel
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {view.hand
+                .filter((c) => c.id !== discardStage.move.cardId)
+                .map((card) => {
+                  const chosen = discardStage.picked.includes(card.id);
+                  const image = images[card.name];
+                  return (
+                    <button
+                      key={card.id}
+                      onClick={() => toggleDiscard(card.id)}
+                      className={`overflow-hidden rounded-md ${chosen ? "ring-2 ring-accent" : "opacity-80"}`}
+                      title={card.name}
+                    >
+                      {image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={image}
+                          alt={card.name}
+                          className="w-full"
+                          onError={(e) => {
+                            if (e.currentTarget.src !== CARD_BACK_URL) e.currentTarget.src = CARD_BACK_URL;
+                          }}
+                        />
+                      ) : (
+                        <div className="flex aspect-[5/7] items-center justify-center bg-surface p-1 text-center text-[8px] font-semibold text-text-secondary">
+                          {card.name}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+            </div>
+            <button
+              onClick={() => sendMove({ ...discardStage.move, discardCardIds: discardStage.picked })}
+              disabled={discardStage.picked.length !== discardStage.need || loading}
+              className="mt-3 w-full rounded-lg border border-transparent bg-accent px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"
+            >
+              Confirm discard &amp; play
+            </button>
           </div>
         </div>
       )}

@@ -100,14 +100,40 @@ describe("rules enforcement", () => {
 
   it("enforces the evolution lock (no evolving the turn a mon enters)", () => {
     const hoothoot = toPokemonInPlay(card("Hoothoot"), 5);
-    const fresh = { ...state, turn: { ...state.turn, number: 5 } };
+    // playerTurnNumber > 1 so the game-opening evolution ban doesn't apply.
+    const fresh = { ...state, turn: { ...state.turn, number: 5, playerTurnNumber: 3 } };
     fresh.sides.player.active = hoothoot;
     fresh.sides.player.hand = [card("Noctowl")];
     const locked = legalMoves(fresh, "player", { retreated: false });
     expect(locked.some((m) => m.kind === "evolve")).toBe(false);
-    fresh.turn.number = 6;
+    fresh.turn = { ...fresh.turn, number: 6 };
     const unlocked = legalMoves(fresh, "player", { retreated: false });
     expect(unlocked.some((m) => m.kind === "evolve")).toBe(true);
+  });
+
+  it("bans Supporters on the very first turn of the game only", () => {
+    const withSupporter = { ...state };
+    withSupporter.sides.player.active = toPokemonInPlay(card("Pikachu"), 0);
+    withSupporter.sides.player.hand = [card("Iono")];
+    const t1 = { ...withSupporter, turn: { number: 1, playerTurnNumber: 1, actor: "player" as const, phase: "turn" as const } };
+    expect(legalMoves(t1, "player", { retreated: false }).some((m) => m.kind === "play_trainer")).toBe(false);
+    // The second player's first turn (global turn 2) allows Supporters.
+    const t2 = { ...withSupporter, turn: { number: 2, playerTurnNumber: 1, actor: "player" as const, phase: "turn" as const } };
+    expect(legalMoves(t2, "player", { retreated: false }).some((m) => m.kind === "play_trainer")).toBe(true);
+  });
+
+  it("bans evolving on each player's first turn (global turns 1 and 2)", () => {
+    const s = { ...state };
+    const hoot = toPokemonInPlay(card("Hoothoot"), 0);
+    s.sides.player.active = hoot;
+    s.sides.player.hand = [card("Noctowl")];
+    for (const [number, playerTurnNumber] of [[1, 1], [2, 1]] as const) {
+      const turn = { ...s, turn: { number, playerTurnNumber, actor: "player" as const, phase: "turn" as const } };
+      expect(legalMoves(turn, "player", { retreated: false }).some((m) => m.kind === "evolve")).toBe(false);
+    }
+    // Player 1's second turn (global turn 3) can evolve an opening Basic.
+    const t3 = { ...s, turn: { number: 3, playerTurnNumber: 2, actor: "player" as const, phase: "turn" as const } };
+    expect(legalMoves(t3, "player", { retreated: false }).some((m) => m.kind === "evolve")).toBe(true);
   });
 
   it("checks typed energy costs", () => {

@@ -24,6 +24,7 @@ import {
   type GameOutcome,
 } from "./driver";
 import { computeDamage, legalMoves, type SimMove, type TurnContext } from "./moves";
+import { isLegalHumanMove } from "./validate";
 import { PlannerPolicy } from "./planner";
 import { plannerParamsForSkill } from "./difficulty";
 import { promoteBest, type DecisionPolicy } from "./policy";
@@ -380,10 +381,8 @@ export function applyHumanMove(session: GameSession, move: InteractiveMove, reco
 
   // human_turn
   if (move.kind === "promote") throw new IllegalMoveError("No promotion is pending");
-  const legal = legalMoves(state, "player", session.ctx);
-  const encoded = JSON.stringify(move);
-  if (!legal.some((m) => JSON.stringify(m) === encoded)) {
-    throw new IllegalMoveError(`Illegal move: ${encoded}`);
+  if (!isLegalHumanMove(state, "player", session.ctx, move)) {
+    throw new IllegalMoveError(`Illegal move: ${JSON.stringify(move)}`);
   }
 
   const result = applyTracked(session, "player", move, session.ctx);

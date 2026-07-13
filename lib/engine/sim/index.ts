@@ -37,5 +37,8 @@ export type {
 } from "./interactive";
 export { serializeView, describeMove, describePromotion } from "./serialize";
 export type { ClientView, ClientCard, ClientMon, ClientBoard } from "./serialize";
+export { trainerDiscardCost, trainerDiscardCostByName, TRAINER_EFFECTS } from "./trainers";
+export type { PlayTrainerMove } from "./trainers";
+export { isLegalHumanMove } from "./validate";
 export { mulberry32, hashSeed, shuffle } from "./rng";
 export type { Rng } from "./rng";
