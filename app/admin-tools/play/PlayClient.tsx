@@ -119,6 +119,12 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     total: number;
     placed: string[];
   } | null>(null);
+  /** Own-Pokémon target chooser (attach energy, evolve, Crispin, Rare
+   *  Candy) — an explicit list so targeting never depends on board taps. */
+  const [ownTargetChooser, setOwnTargetChooser] = useState<{
+    label: string;
+    choices: { move: InteractiveMove; monId: string }[];
+  } | null>(null);
   const [review, setReview] = useState<GameReview | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -164,6 +170,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     setDiscardStage(null);
     setAbilityTargeting(null);
     setCounterPlace(null);
+    setOwnTargetChooser(null);
     if (next.ai_actions.length > 0) {
       setLog((old) => [...old.slice(-30), ...next.ai_actions.map((a) => `T${a.turn} · ${a.description}`)]);
     }
@@ -246,8 +253,16 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
       ])
     : new Set<string>();
 
+  /** Open the own-Pokémon target chooser (or send directly if only one). */
+  function chooseOwnTarget(label: string, choices: { move: InteractiveMove; monId: string }[]) {
+    if (choices.length === 0) return;
+    if (choices.length === 1) return void sendMove(choices[0].move);
+    setOwnTargetChooser({ label, choices });
+  }
+
   function handleHandClick(cardId: string) {
     if (!game || game.status !== "human_turn") return;
+    const card = view.hand.find((c) => c.id === cardId);
     const bench = byKind("bench").find((m) => m.cardId === cardId);
     if (bench) return void sendMove(bench);
     const supporter = byKind("cycle_supporter").find((m) => m.cardId === cardId);
@@ -265,20 +280,36 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
       if (first.oppBenchIndex != null) return void setBossMoves(trainers);
       if (first.benchIndex != null) return void setBenchPickMoves(trainers);
       if (first.monId != null) {
-        if (trainers.length === 1) return void sendMove(first);
-        return void setPendingCardId(pendingCardId === cardId ? null : cardId);
+        // Crispin / Rare Candy: pick which own Pokémon.
+        return void chooseOwnTarget(
+          card?.name ?? "Play",
+          trainers
+            .filter((m) => m.monId != null)
+            .map((m) => ({ move: m as InteractiveMove, monId: m.monId! })),
+        );
       }
       return void sendMove(first); // no choices (Iono, Research, …)
     }
 
-    const targets = [...attachTargets(cardId), ...evolveTargets(cardId)];
-    if (targets.length === 1) {
-      const move = options.find(
-        (m) => "cardId" in m && m.cardId === cardId && "targetId" in m && m.targetId === targets[0],
+    // Attach energy / evolve / attach a Tool: choose which of your Pokémon
+    // via an explicit list (never depends on board taps).
+    const targeted = options.filter(
+      (m): m is Extract<InteractiveMove, { kind: "attach" | "evolve" | "attach_tool" }> =>
+        (m.kind === "attach" || m.kind === "evolve" || m.kind === "attach_tool") &&
+        m.cardId === cardId,
+    );
+    if (targeted.length > 0) {
+      const verb =
+        targeted[0].kind === "attach"
+          ? `Attach ${card?.name ?? "Energy"}`
+          : targeted[0].kind === "attach_tool"
+            ? `Attach ${card?.name ?? "Tool"}`
+            : `Evolve into ${card?.name ?? ""}`;
+      return void chooseOwnTarget(
+        verb,
+        targeted.map((m) => ({ move: m, monId: m.targetId })),
       );
-      if (move) return void sendMove(move);
     }
-    if (targets.length > 1) setPendingCardId(pendingCardId === cardId ? null : cardId);
   }
 
   // Search-picker choice: if the trainer also has a discard cost (Ultra
@@ -953,6 +984,68 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
             >
               Confirm discard &amp; play
             </button>
+          </div>
+        </div>
+      )}
+      {/* Own-Pokémon target chooser (attach energy, evolve, Crispin, Rare
+          Candy) — explicit list so targeting never relies on a board tap. */}
+      {ownTargetChooser && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center p-4"
+          style={{ background: "rgba(242,242,242,0.92)" }}
+          role="dialog"
+          aria-modal="true"
+          aria-label={ownTargetChooser.label}
+          onClick={() => setOwnTargetChooser(null)}
+        >
+          <div
+            className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-2xl border border-black/8 bg-white p-4 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-xs font-semibold text-text-primary">
+                {ownTargetChooser.label} — choose a Pokémon
+              </span>
+              <button onClick={() => setOwnTargetChooser(null)} className="text-[10px] font-semibold text-accent">
+                cancel
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {ownTargetChooser.choices.map((choice, i) => {
+                const mon = [view.board.active, ...view.board.bench].find((m) => m?.id === choice.monId);
+                const img = mon ? images[mon.name] : null;
+                const isActive = view.board.active?.id === choice.monId;
+                return (
+                  <button
+                    key={`${choice.monId}-${i}`}
+                    onClick={() => sendMove(choice.move)}
+                    disabled={loading}
+                    className="flex flex-col items-center gap-1 rounded-lg border border-black/8 p-1.5 hover:border-accent disabled:opacity-50"
+                  >
+                    {img ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={img}
+                        alt={mon?.name ?? ""}
+                        className="w-full rounded-md shadow-sm"
+                        onError={(e) => {
+                          if (e.currentTarget.src !== CARD_BACK_URL) e.currentTarget.src = CARD_BACK_URL;
+                        }}
+                      />
+                    ) : (
+                      <div className="flex aspect-[5/7] w-full items-center justify-center rounded-md border border-black/15 bg-surface p-1 text-center text-[8px] font-semibold text-text-secondary">
+                        {mon?.name ?? "?"}
+                      </div>
+                    )}
+                    <span className="text-center text-[9px] font-semibold leading-tight text-text-secondary">
+                      {mon?.name ?? "?"}
+                      {isActive ? " (Active)" : ""}
+                      {mon && mon.energy.length > 0 ? ` · ${mon.energy.length}⚡` : ""}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
