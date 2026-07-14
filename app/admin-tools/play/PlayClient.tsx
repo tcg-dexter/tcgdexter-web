@@ -284,13 +284,16 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
   // Search-picker choice: if the trainer also has a discard cost (Ultra
   // Ball), advance to the discard stage instead of sending immediately.
   function choosePickerMove(m: InteractiveMove) {
-    if (m.kind !== "play_trainer" || !game) return;
-    const card = game.view.hand.find((c) => c.id === m.cardId);
-    const need = card ? trainerDiscardCostByName(card.name) : 0;
-    if (need > 0) {
-      setPickerMoves(null);
-      setDiscardStage({ move: m, need, picked: [] });
-      return;
+    if (!game) return;
+    // Stadium search (Artazon) has no discard cost — send directly.
+    if (m.kind === "play_trainer") {
+      const card = game.view.hand.find((c) => c.id === m.cardId);
+      const need = card ? trainerDiscardCostByName(card.name) : 0;
+      if (need > 0) {
+        setPickerMoves(null);
+        setDiscardStage({ move: m, need, picked: [] });
+        return;
+      }
     }
     void sendMove(m);
   }
@@ -715,6 +718,22 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                   ⚡ {g.abilityName}
                 </button>
               ))}
+              {/* Activated Stadium effect (Artazon). */}
+              {(() => {
+                const stadiumMoves = options.filter(
+                  (m): m is Extract<InteractiveMove, { kind: "use_stadium" }> => m.kind === "use_stadium",
+                );
+                if (stadiumMoves.length === 0) return null;
+                return (
+                  <button
+                    onClick={() => setPickerMoves(stadiumMoves)}
+                    disabled={loading}
+                    className="rounded-lg border border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-800"
+                  >
+                    🏟 {stadiumMoves[0].stadiumName}
+                  </button>
+                );
+              })()}
               {counterPlace ? (
                 <>
                   <button
@@ -836,8 +855,13 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
             </div>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {pickerMoves.map((m, i) => {
-                if (m.kind !== "play_trainer") return null;
-                const names = m.deckCardNames ?? (m.discardPickName ? [m.discardPickName] : []);
+                const names =
+                  m.kind === "play_trainer"
+                    ? m.deckCardNames ?? (m.discardPickName ? [m.discardPickName] : [])
+                    : m.kind === "use_stadium" && m.deckCardName
+                      ? [m.deckCardName]
+                      : [];
+                if (names.length === 0) return null;
                 return (
                   <button
                     key={i}

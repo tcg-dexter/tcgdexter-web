@@ -16,6 +16,7 @@
 
 import type { CardInstance, GameState, PlayerSide } from "../types";
 import { lookupCard } from "../catalog";
+import { benchCap } from "./stadiums";
 import { clearConditions } from "./conditions";
 import { shuffle, type Rng } from "./rng";
 import { energyProvides, isBasic, prizeValue, toPokemonInPlay } from "./setup";
@@ -174,7 +175,7 @@ export function trainerMoves(
       if (effect.discardCost && side.hand.length < effect.discardCost + 1) return [];
       const eligible = side.deck.filter((c) => matchesFilter(c, effect.filter));
       if (eligible.length === 0) return [];
-      const benchSpace = 5 - side.bench.length;
+      const benchSpace = benchCap(state, actor) - side.bench.length;
       const take = Math.min(
         effect.count,
         eligible.length,
@@ -363,7 +364,7 @@ export function applyTrainer(
       for (const id of move.deckCardIds ?? []) {
         const fetched = takeFromDeckById(side, id);
         if (!fetched) continue;
-        if (effect.to === "bench" && side.bench.length < 5) {
+        if (effect.to === "bench" && side.bench.length < benchCap(state, actor)) {
           side.bench.push(toPokemonInPlay(fetched, state.turn.number));
         } else {
           side.hand.push(fetched);

@@ -105,7 +105,25 @@ export interface GameSession {
   /** The session's rng stream (setup + shuffle effects). Rebuilds consume
    *  it in the same order, keeping transcripts deterministic. */
   rng: Rng;
+  /** When status === "human_promotion", what to resume once the human
+   *  promotes. Re-derived deterministically during transcript replay
+   *  (set at the pause point, which regenerates identically). */
+  promotionResume: PromotionResume;
 }
+
+/** Where to resume after a human promotion choice:
+ *  - attack_ko           AI's attack KO'd the human active → Checkup(opp) then human turn.
+ *  - checkup_before_ai   Checkup after the human's turn KO'd them → run the AI turn body.
+ *  - checkup_before_human Checkup after the AI's turn KO'd them → begin the human turn.
+ *  - continue_human_turn Human's own ability self-KO (turn didn't end) → keep playing.
+ *  - self_ko_end_turn    Human's own attack/confusion self-KO ended the turn → run the AI turn. */
+type PromotionResume =
+  | "attack_ko"
+  | "checkup_before_ai"
+  | "checkup_before_human"
+  | "continue_human_turn"
+  | "self_ko_end_turn"
+  | null;
 
 export class IllegalMoveError extends Error {}
 
@@ -187,6 +205,11 @@ function applyTracked(
       case "use_ability":
         s.abilities += 1;
         break;
+      case "attach_tool":
+      case "play_stadium":
+      case "use_stadium":
+        s.items += 1;
+        break;
       case "attack": {
         s.attacked = 1;
         const attacker = side.active;
@@ -264,10 +287,21 @@ function advanceTurn(session: GameSession, actor: "player" | "opponent"): boolea
   return true;
 }
 
+/** Auto-promote the AI after a KO (via its policy), logging the promotion
+ *  to the action feed. */
+function autoPromoteAi(session: GameSession): void {
+  const state = session.state;
+  promote(state, "opponent", session.aiPolicy.choosePromotion(viewFor(state, "opponent")));
+  session.aiActions.push({
+    turn: state.turn.number,
+    description: describePromotion(state.sides.opponent.active?.card.name ?? "a Pokémon"),
+  });
+}
+
 /** Pokémon Checkup between turns: conditions on both actives, then KO
- *  resolution. Both sides auto-promote here (a between-turns poison/burn KO
- *  doesn't pause for a human promotion choice — a minor v1 simplification;
- *  attack KOs still prompt). Returns false when the game ended. */
+ *  resolution. The AI auto-promotes; if the HUMAN's active was KO'd, the
+ *  game pauses for their promotion choice (status → human_promotion, with
+ *  the resume recorded). Returns false when the game ended OR paused. */
 function betweenTurns(session: GameSession, justActed: "player" | "opponent"): boolean {
   const state = session.state;
   if (state.turn.number === 0) return true; // no Checkup before the game's first turn
@@ -277,23 +311,26 @@ function betweenTurns(session: GameSession, justActed: "player" | "opponent"): b
     finish(session, ko.winner);
     return false;
   }
-  for (const side of ko.pendingPromotions) {
-    promote(state, side, session.aiPolicy.choosePromotion(viewFor(state, side)));
-    if (side === "opponent") {
-      session.aiActions.push({
-        turn: state.turn.number,
-        description: describePromotion(state.sides.opponent.active?.card.name ?? "a Pokémon"),
-      });
-    }
+  if (ko.pendingPromotions.includes("opponent")) autoPromoteAi(session);
+  if (ko.pendingPromotions.includes("player")) {
+    session.status = "human_promotion";
+    session.promotionResume = justActed === "player" ? "checkup_before_ai" : "checkup_before_human";
+    return false; // pause for the human's choice
   }
   return true;
 }
 
 /** Run the AI's whole turn. Leaves status at "human_turn",
- *  "human_promotion" (its attack KO'd the human active) or "over". */
+ *  "human_promotion" or "over". */
 function runAiTurn(session: GameSession, record: boolean): void {
   // Checkup after the human's just-ended turn, before the AI begins.
   if (!betweenTurns(session, "player")) return;
+  runAiTurnBody(session, record);
+}
+
+/** The AI's turn proper (after the pre-turn Checkup has run). Split out so a
+ *  checkup-KO promotion before the AI's turn can resume here. */
+function runAiTurnBody(session: GameSession, record: boolean): void {
   if (!advanceTurn(session, "opponent")) return;
   const state = session.state;
   const ctx: TurnContext = { retreated: false };
@@ -311,8 +348,10 @@ function runAiTurn(session: GameSession, record: boolean): void {
       return;
     }
     if (result.pendingPromotion === "player") {
-      // Human decides; their turn begins after the promotion is applied.
+      // The AI's attack KO'd the human active; they choose the replacement,
+      // then the Checkup runs and their turn begins (resume: attack_ko).
       session.status = "human_promotion";
+      session.promotionResume = "attack_ko";
       return;
     }
     if (result.pendingPromotion === "opponent") {
@@ -382,6 +421,7 @@ function bootSession(transcript: GameTranscript): GameSession {
     turnLog: [],
     turnStats: null,
     rng,
+    promotionResume: null,
     aiPolicy: new PlannerPolicy({
       params: plannerParamsForSkill(transcript.skill),
       seed: (transcript.seed ^ 0x5eed) >>> 0,
@@ -409,12 +449,35 @@ export function applyHumanMove(session: GameSession, move: InteractiveMove, reco
     }
     promote(state, "player", move.benchIndex);
     if (record) session.transcript.moves.push({ actor: "human", move });
-    // The AI's attack ended its turn; run the between-turns Checkup, then
-    // play returns to the human.
-    session.aiActions = [];
-    if (!betweenTurns(session, "opponent")) return;
-    advanceTurn(session, "player");
-    return;
+    const resume = session.promotionResume;
+    session.promotionResume = null;
+    switch (resume) {
+      case "continue_human_turn":
+        // The human's own ability self-KO'd mid-turn; they keep playing.
+        session.status = "human_turn";
+        return;
+      case "checkup_before_ai":
+        // Checkup after the human's turn KO'd them; run the AI's turn.
+        session.aiActions = [];
+        runAiTurnBody(session, record);
+        return;
+      case "checkup_before_human":
+        // Checkup after the AI's turn KO'd them; begin the human's turn.
+        advanceTurn(session, "player");
+        return;
+      case "self_ko_end_turn":
+        // The human's own attack/confusion self-KO ended their turn.
+        session.aiActions = [];
+        runAiTurn(session, record);
+        return;
+      case "attack_ko":
+      default:
+        // The AI's attack ended its turn; Checkup, then the human's turn.
+        session.aiActions = [];
+        if (!betweenTurns(session, "opponent")) return;
+        advanceTurn(session, "player");
+        return;
+    }
   }
 
   // human_turn
@@ -439,6 +502,14 @@ export function applyHumanMove(session: GameSession, move: InteractiveMove, reco
       description: describePromotion(promoted?.card.name ?? "a Pokémon"),
     });
     if (record) session.transcript.moves.push({ actor: "ai", move: { kind: "promote", benchIndex: idx } });
+  }
+  if (result.pendingPromotion === "player") {
+    // The human's OWN effect KO'd their active (Dusknoir's Cursed Blast, a
+    // Confusion self-hit). They choose the replacement; if the move ended
+    // the turn, the AI plays next, otherwise the human keeps going.
+    session.status = "human_promotion";
+    session.promotionResume = result.turnEnded ? "self_ko_end_turn" : "continue_human_turn";
+    return;
   }
   if (result.turnEnded) {
     session.aiActions = [];

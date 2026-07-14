@@ -69,9 +69,12 @@ function collectImages(
   // Search-picker choices (trainer effects) need art too — the names ride
   // on the moves themselves.
   for (const m of options) {
-    if (m.kind !== "play_trainer") continue;
-    for (const n of m.deckCardNames ?? []) names.add(n);
-    if (m.discardPickName) names.add(m.discardPickName);
+    if (m.kind === "play_trainer") {
+      for (const n of m.deckCardNames ?? []) names.add(n);
+      if (m.discardPickName) names.add(m.discardPickName);
+    } else if (m.kind === "use_stadium" && m.deckCardName) {
+      names.add(m.deckCardName);
+    }
   }
   const images: Record<string, string | null> = {};
   names.forEach((name) => {

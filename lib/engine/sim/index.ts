@@ -57,6 +57,10 @@ export {
 } from "./attacks";
 export { abilityMoves, applyAbility, onEvolve, hasOnEvolveTrigger } from "./abilities";
 export type { UseAbilityMove } from "./abilities";
+export { energyUnits, totalEnergyUnits } from "./setup";
+export { retreatCost, canRetreat, effectiveMaxHp, isTool } from "./tools";
+export { benchCap, stadiumMoves, applyStadium, enforceBenchCap } from "./stadiums";
+export type { UseStadiumMove } from "./stadiums";
 export {
   applyCondition,
   clearConditions,

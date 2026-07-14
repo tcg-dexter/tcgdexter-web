@@ -160,6 +160,19 @@ export class PlannerPolicy implements DecisionPolicy {
     const stadium = legal.find((m) => m.kind === "play_stadium");
     if (stadium) return stadium;
 
+    // Attach a Tool (active preferred).
+    const tools = legal.filter((m) => m.kind === "attach_tool");
+    if (tools.length > 0) {
+      return (
+        tools.find((m) => m.kind === "attach_tool" && m.targetId === view.board.active?.id) ??
+        tools[0]
+      );
+    }
+
+    // Use an activated Stadium effect (Artazon).
+    const stadiumEffect = legal.find((m) => m.kind === "use_stadium");
+    if (stadiumEffect) return stadiumEffect;
+
     // Phase 2 — reveal information before deciding (each play reveals
     // cards; the consequential plan is recomputed on the post-draw hand).
     // Draw supporters go first (a refreshed hand feeds the searches), and

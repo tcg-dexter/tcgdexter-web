@@ -118,6 +118,16 @@ export class HeuristicPolicy implements DecisionPolicy {
     const stadium = byKind("play_stadium");
     if (stadium.length > 0) return stadium[0];
 
+    // 2d. Attach a Tool — prefer the active (the one taking hits / retreating).
+    const tools = byKind("attach_tool");
+    if (tools.length > 0) {
+      return tools.find((m) => m.targetId === active?.id) ?? tools[0];
+    }
+
+    // 2e. Use an activated Stadium effect (Artazon: bench a Basic).
+    const stadiumEffect = byKind("use_stadium");
+    if (stadiumEffect.length > 0) return stadiumEffect[0];
+
     // 3. Draw fuel + searches: real draw supporters and deck searches
     //    before generic cycling — all deck-reserve guarded so we never
     //    draw ourselves out while ahead.

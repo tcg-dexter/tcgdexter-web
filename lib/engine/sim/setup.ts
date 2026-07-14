@@ -83,11 +83,45 @@ export function isBasicEnergyCard(c: CardInstance): boolean {
 const ENERGY_TYPE_RE =
   /(Grass|Fire|Water|Lightning|Psychic|Fighting|Darkness|Metal|Fairy)/;
 
-/** Energy type a card provides when attached. Special energy → Colorless. */
+/** Energy type a card provides for DISPLAY (first unit). Special energy that
+ *  provides "every type" shows as Colorless; see energyUnits for cost logic. */
 export function energyProvides(c: CardInstance): string | null {
   if (c.catalog?.supertype !== "Energy") return null;
-  const m = c.name.match(ENERGY_TYPE_RE);
-  return m ? m[1] : "Colorless";
+  const units = energyUnits(c);
+  const first = units[0];
+  return first === "Any" ? "Colorless" : first ?? "Colorless";
+}
+
+/** A single energy provided by an attached card: a concrete type, or "Any"
+ *  (a wildcard that satisfies any typed cost). */
+export type EnergyUnit = string;
+
+/** Special energy that provides a wildcard "every type" unit. */
+const ANY_TYPE_SPECIAL = new Set(["Luminous Energy", "Legacy Energy", "Rainbow Energy", "V Guard Energy"]);
+/** Special energy providing 2+ Colorless from one card. */
+const MULTI_COLORLESS_SPECIAL: Record<string, number> = { "Double Turbo Energy": 2 };
+
+/**
+ * Energy units an attached card provides toward attack/retreat costs. One
+ * card can provide multiple units (Double Turbo = 2 Colorless) and can be a
+ * wildcard (Luminous = 1 Any). Basic energy provides one unit of its type.
+ * Unknown special energy provides a single Colorless (conservative default).
+ */
+export function energyUnits(c: CardInstance): EnergyUnit[] {
+  if (c.catalog?.supertype !== "Energy") return [];
+  if (isBasicEnergyCard(c)) {
+    const m = c.name.match(ENERGY_TYPE_RE);
+    return [m ? m[1] : "Colorless"];
+  }
+  if (ANY_TYPE_SPECIAL.has(c.name)) return ["Any"];
+  const multi = MULTI_COLORLESS_SPECIAL[c.name];
+  if (multi) return Array(multi).fill("Colorless");
+  return ["Colorless"];
+}
+
+/** Total energy units attached to a Pokémon (Double Turbo counts as 2). */
+export function totalEnergyUnits(mon: PokemonInPlay): number {
+  return mon.attachedEnergy.reduce((n, c) => n + energyUnits(c).length, 0);
 }
 
 /** Prize cards taken for knocking this Pokémon out. */

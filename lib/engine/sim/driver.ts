@@ -22,8 +22,10 @@ import {
 } from "./conditions";
 import { dealRawDamage, placeAttackCounters, placeBenchDamage, resolveKnockouts } from "./damage";
 import type { DecisionPolicy } from "./policy";
-import { buildSimInitialState, toPokemonInPlay, type SimDeck } from "./setup";
+import { buildSimInitialState, energyUnits, toPokemonInPlay, type SimDeck } from "./setup";
+import { retreatCost } from "./tools";
 import { applyTrainer } from "./trainers";
+import { applyStadium, benchCap, enforceBenchCap } from "./stadiums";
 import { viewFor } from "./view";
 import { shuffle, type Rng } from "./rng";
 
@@ -132,7 +134,7 @@ export function applyMove(
     }
     case "bench": {
       const card = takeFromHand(move.cardId);
-      if (card && side.bench.length < 5) {
+      if (card && side.bench.length < benchCap(state, actor)) {
         side.bench.push(toPokemonInPlay(card, state.turn.number));
       }
       return done(false);
@@ -168,12 +170,28 @@ export function applyMove(
       const active = side.active;
       const promoted = side.bench[move.benchIndex];
       if (!active || !promoted) return done(false);
-      const cost = active.card.catalog?.retreat_cost ?? 0;
-      side.discard.push(...active.attachedEnergy.splice(0, cost));
+      // Pay the (tool-reduced) retreat cost by discarding whole Energy
+      // cards until the units discarded meet the cost (Double Turbo = 2).
+      let owed = retreatCost(active);
+      while (owed > 0 && active.attachedEnergy.length > 0) {
+        const [card] = active.attachedEnergy.splice(0, 1);
+        side.discard.push(card);
+        owed -= energyUnits(card).length;
+      }
       clearConditions(active); // leaving the Active Spot clears conditions
       side.bench[move.benchIndex] = active;
       side.active = promoted;
       ctx.retreated = true;
+      return done(false);
+    }
+    case "attach_tool": {
+      const card = takeFromHand(move.cardId);
+      const target = findMon(move.targetId);
+      if (card && target && target.attachedTools.length === 0) {
+        target.attachedTools.push(card);
+      } else if (card) {
+        side.discard.push(card); // no legal target — shouldn't happen
+      }
       return done(false);
     }
     case "cycle_supporter": {
@@ -200,12 +218,19 @@ export function applyMove(
     case "play_stadium": {
       const card = takeFromHand(move.cardId);
       if (card) {
-        // The outgoing Stadium goes to its owner's discard.
+        // The outgoing Stadium goes to its owner's discard; the new one
+        // sits next to the board. A lower bench cap forces excess discards.
         if (state.stadium) {
           state.sides[state.stadium.owner].discard.push(state.stadium.card);
         }
         state.stadium = { card, owner: actor };
+        enforceBenchCap(state);
       }
+      return done(false);
+    }
+    case "use_stadium": {
+      applyStadium(state, actor, move, rng);
+      ctx.stadiumUsed = true;
       return done(false);
     }
     case "attack": {

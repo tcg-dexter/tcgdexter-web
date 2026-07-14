@@ -7,6 +7,7 @@ import type { PokemonInPlay } from "../types";
 import type { GameState } from "../types";
 import { computeDamage, remainingHp, sideOf, type SimMove } from "./moves";
 import { attackBenchCounterCount, attackBenchDamageTargets } from "./attacks";
+import { retreatCost } from "./tools";
 import { energyProvides } from "./setup";
 import type { PlayerView } from "./view";
 
@@ -83,6 +84,10 @@ export function describeMove(
     }
     case "play_stadium":
       return `Played Stadium ${cardName(state, actor, move.cardId)}`;
+    case "attach_tool":
+      return `Attached ${cardName(state, actor, move.cardId)} to ${monName(state, actor, move.targetId)}`;
+    case "use_stadium":
+      return `Used ${move.stadiumName}${move.deckCardName ? ` — benched ${move.deckCardName}` : ""}`;
     case "use_ability": {
       const mon = [side.active, ...side.bench].find((m) => m?.id === move.monId);
       const oppName = move.targetMonId
@@ -119,6 +124,8 @@ export interface ClientMon {
   /** Pre-evolution names under this mon. */
   stack: string[];
   retreatCost: number;
+  /** Attached Pokémon Tool names. */
+  tools: string[];
   attacks: {
     name: string;
     cost: string[];
@@ -171,7 +178,8 @@ function clientMon(mon: PokemonInPlay): ClientMon {
       .map(energyProvides)
       .filter((t): t is string => t !== null),
     stack: mon.stack.map((c) => c.name),
-    retreatCost: mon.card.catalog?.retreat_cost ?? 0,
+    retreatCost: retreatCost(mon),
+    tools: mon.attachedTools.map((t) => t.name),
     attacks: (mon.card.catalog?.attacks ?? []).map((a, i) => {
       const counters = attackBenchCounterCount(mon, i);
       const benchDmg = attackBenchDamageTargets(mon, i);

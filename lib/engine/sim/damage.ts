@@ -16,17 +16,15 @@
 
 import type { GameState, PlayerSide, PokemonInPlay } from "../types";
 import { prizeValue } from "./setup";
+import { effectiveMaxHp } from "./tools";
 
 // Local (avoids a driver ↔ damage import cycle).
 const opposite = (actor: "player" | "opponent"): "player" | "opponent" =>
   actor === "player" ? "opponent" : "player";
 
-/** HP fallback used when the catalog didn't resolve (mid-range so unknown
- *  Pokémon aren't unkillable). Mirrors remainingHp's fallback in moves.ts. */
-const FALLBACK_HP = 120;
-
+/** Max HP including Pokémon Tool bonuses (Bravery Charm, Binding Mochi). */
 export function maxHp(mon: PokemonInPlay): number {
-  return mon.card.catalog?.hp ?? FALLBACK_HP;
+  return effectiveMaxHp(mon);
 }
 
 export function isKnockedOut(mon: PokemonInPlay): boolean {

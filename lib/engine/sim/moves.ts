@@ -5,10 +5,12 @@
 // (see setup.ts header).
 
 import type { EngineAttack, GameState, PlayerSide, PokemonInPlay } from "../types";
-import { energyProvides, isBasic } from "./setup";
+import { energyProvides, energyUnits, isBasic } from "./setup";
 import { isSupporter, trainerMoves, trainerSpec, type PlayTrainerMove } from "./trainers";
 import { abilityMoves, type UseAbilityMove } from "./abilities";
 import { cannotAct } from "./conditions";
+import { canRetreat, effectiveMaxHp, isTool } from "./tools";
+import { benchCap, stadiumMoves, type UseStadiumMove } from "./stadiums";
 
 export type SimMove =
   | { kind: "attach"; cardId: string; targetId: string }
@@ -20,6 +22,8 @@ export type SimMove =
   | PlayTrainerMove
   | UseAbilityMove
   | { kind: "play_stadium"; cardId: string }
+  | { kind: "attach_tool"; cardId: string; targetId: string }
+  | UseStadiumMove
   | {
       kind: "attack";
       attackIndex: number;
@@ -34,6 +38,8 @@ export type SimMove =
  *  needed it): the acting side's single retreat per turn. */
 export interface TurnContext {
   retreated: boolean;
+  /** The current Stadium's activated effect was used this turn (Artazon). */
+  stadiumUsed?: boolean;
 }
 
 export function sideOf(state: GameState, actor: "player" | "opponent"): PlayerSide {
@@ -46,20 +52,21 @@ export function sideOf(state: GameState, actor: "player" | "opponent"): PlayerSi
  *  energy first, Colorless consumes whatever remains. */
 export function canPayCost(mon: PokemonInPlay, cost: string[]): boolean {
   if (cost.length === 0) return true;
-  const provides = mon.attachedEnergy
-    .map(energyProvides)
-    .filter((t): t is string => t !== null);
-  if (provides.length < cost.length) return false;
+  // One card can provide several units (Double Turbo = 2) and a unit can be
+  // a wildcard "Any" (Luminous) that pays any typed requirement.
+  const pool = mon.attachedEnergy.flatMap(energyUnits);
+  if (pool.length < cost.length) return false;
 
-  const pool = [...provides];
+  // Typed requirements first: prefer an exact-type unit, fall back to "Any".
   for (const req of cost) {
-    if (req === "Colorless") continue; // consumed after typed reqs
-    const idx = pool.indexOf(req);
+    if (req === "Colorless") continue;
+    let idx = pool.indexOf(req);
+    if (idx === -1) idx = pool.indexOf("Any");
     if (idx === -1) return false;
     pool.splice(idx, 1);
   }
   const colorless = cost.filter((c) => c === "Colorless").length;
-  return pool.length >= colorless;
+  return pool.length >= colorless; // Colorless pays from anything left
 }
 
 export function usableAttacks(mon: PokemonInPlay): { attack: EngineAttack; index: number }[] {
@@ -77,11 +84,8 @@ export function baseDamage(attack: EngineAttack): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-/** HP when the catalog missed — mid-range so unknowns aren't unkillable. */
-const FALLBACK_HP = 120;
-
 export function remainingHp(mon: PokemonInPlay): number {
-  return (mon.card.catalog?.hp ?? FALLBACK_HP) - mon.damage;
+  return effectiveMaxHp(mon) - mon.damage;
 }
 
 /** Apply Weakness (×2) / Resistance (−30) for the attacker's type against a
@@ -153,9 +157,10 @@ export function legalMoves(
   // The very first turn of the game bans Supporters outright.
   const supporterBanned = state.turn.number === 1;
 
+  const cap = benchCap(state, actor);
   for (const card of side.hand) {
     // Bench a basic.
-    if (isBasic(card) && side.bench.length < 5) {
+    if (isBasic(card) && side.bench.length < cap) {
       moves.push({ kind: "bench", cardId: card.id });
     }
     // Evolve.
@@ -176,6 +181,15 @@ export function legalMoves(
     if (card.catalog?.supertype === "Trainer" && card.catalog.subtypes.includes("Stadium")) {
       if (state.stadium?.card.name !== card.name) {
         moves.push({ kind: "play_stadium", cardId: card.id });
+      }
+      continue;
+    }
+    // Pokémon Tool: attach to a Pokémon that isn't already holding one.
+    if (isTool(card)) {
+      for (const target of inPlay) {
+        if (target.attachedTools.length === 0) {
+          moves.push({ kind: "attach_tool", cardId: card.id, targetId: target.id });
+        }
       }
       continue;
     }
@@ -204,6 +218,9 @@ export function legalMoves(
   // Activated abilities (once per turn per Pokémon; conditions checked).
   moves.push(...abilityMoves(state, actor));
 
+  // Activated Stadium effect (Artazon), once per turn.
+  moves.push(...stadiumMoves(state, actor, ctx.stadiumUsed ?? false));
+
   // Asleep / Paralyzed active can neither attack nor retreat this turn.
   const activeCanAct = side.active ? !cannotAct(side.active) : false;
 
@@ -213,7 +230,7 @@ export function legalMoves(
     !ctx.retreated &&
     side.active &&
     side.bench.length > 0 &&
-    side.active.attachedEnergy.length >= (side.active.card.catalog?.retreat_cost ?? 0)
+    canRetreat(side.active)
   ) {
     for (let i = 0; i < side.bench.length; i++) {
       moves.push({ kind: "retreat", benchIndex: i });
