@@ -31,7 +31,11 @@ export const ROW_GAP_X = 6;
 export const MAX_PILES_PER_ROW = 8;
 export const MAX_ROWS = 4;
 export const MAT_PADDING = 8;
-export const MAT_ASPECT = 13.5 / 24;
+// Standard playmat ratio: 24 (width) : 14 (height). Vertical orientation
+// uses the reciprocal (14:24) — see the local `matAspect` override in
+// DeckMatClient, which already inverts this constant when orientation is
+// "vertical".
+export const MAT_ASPECT = 14 / 24;
 const EXPORT_PADDING = 15;      // px, outer padding added around the exported image
 
 // The "dark" stop used at the bottom of each energy gradient (shade -22%).
