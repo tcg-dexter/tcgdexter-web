@@ -136,6 +136,15 @@ describe("rules enforcement", () => {
     expect(legalMoves(t3, "player", { retreated: false }).some((m) => m.kind === "evolve")).toBe(true);
   });
 
+  it("allows only one Stadium play per turn", () => {
+    const s = { ...state, turn: { number: 4, playerTurnNumber: 2, actor: "player" as const, phase: "turn" as const } };
+    s.sides.player.hand = [card("Artazon"), card("N's Castle")];
+    const fresh = legalMoves(s, "player", { retreated: false });
+    expect(fresh.filter((m) => m.kind === "play_stadium").length).toBe(2);
+    const spent = legalMoves(s, "player", { retreated: false, stadiumPlayed: true });
+    expect(spent.some((m) => m.kind === "play_stadium")).toBe(false);
+  });
+
   it("checks typed energy costs", () => {
     const pikachu = toPokemonInPlay(card("Pikachu"), 1);
     // Tiny Bolt costs Lightning/Colorless.

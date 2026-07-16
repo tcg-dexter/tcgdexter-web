@@ -15,3 +15,11 @@ export { extractMatchFeatures } from "./match";
 export type { MatchExtraction, TurnExtraction } from "./match";
 export { deriveMatchLabels, turnQualityFlags } from "./labels";
 export { findInvalidValues, num, numOrNull, bool01, mean } from "./guards";
+export {
+  POLICY_SCHEMA_VERSION,
+  POLICY_TOP_CARDS,
+  STATE_FEATURE_NAMES,
+  ACTION_FEATURE_NAMES,
+  encodeStateFeatures,
+  encodeActionFeatures,
+} from "./policy";

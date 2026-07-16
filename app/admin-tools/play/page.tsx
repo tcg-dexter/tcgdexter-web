@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import metaDecksData from "@/data/meta-decks.json";
+import { metaDeckToList, type MetaDeckEntry as MetaDeck } from "@/lib/metaDeckList";
 import PlayClient from "./PlayClient";
 
 export const metadata: Metadata = {
@@ -16,38 +17,6 @@ export interface DeckOption {
   deckList: string;
   archetype: string | null;
   source: "saved" | "meta";
-}
-
-interface MetaDeckCard {
-  qty: number;
-  name: string;
-  setCode: string;
-  number: string;
-  category: "pokemon" | "trainer" | "energy" | string;
-}
-
-interface MetaDeck {
-  id: string;
-  name: string;
-  cards: MetaDeckCard[];
-}
-
-/** Rebuild deck-list text from a meta deck's structured card list, in the
- *  sectioned format parseDeckListCards expects. */
-function metaDeckToList(deck: MetaDeck): string {
-  const sections: Record<string, MetaDeckCard[]> = { pokemon: [], trainer: [], energy: [] };
-  for (const card of deck.cards) {
-    (sections[card.category] ?? sections.trainer).push(card);
-  }
-  const lines: string[] = [];
-  const titles: Record<string, string> = { pokemon: "Pokémon", trainer: "Trainer", energy: "Energy" };
-  for (const key of ["pokemon", "trainer", "energy"]) {
-    const cards = sections[key];
-    if (cards.length === 0) continue;
-    lines.push(`${titles[key]}: ${cards.reduce((s, c) => s + c.qty, 0)}`);
-    for (const c of cards) lines.push(`${c.qty} ${c.name} ${c.setCode} ${c.number}`);
-  }
-  return lines.join("\n");
 }
 
 export default async function PlayPage() {

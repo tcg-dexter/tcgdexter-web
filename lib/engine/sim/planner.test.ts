@@ -65,6 +65,36 @@ describe("PlayerView information boundary", () => {
     expect(view.deckCount).toBe(state.sides.player.deck.length);
   });
 
+  it("unseenOwn is the deck ∪ prizes multiset, order-free", () => {
+    // The perfect-memory inference: 60-list minus every seen zone.
+    const expected: Record<string, number> = {};
+    for (const c of [...state.sides.player.deck, ...state.sides.player.prizes]) {
+      expected[c.name] = (expected[c.name] ?? 0) + 1;
+    }
+    expect(view.unseenOwn).toEqual(expected);
+    const total = Object.values(view.unseenOwn).reduce((a, b) => a + b, 0);
+    expect(total).toBe(view.deckCount + view.prizeCount);
+    // No unseenOwn for the opponent — their list isn't known.
+    expect((view.opponent as unknown as Record<string, unknown>).unseenOwn).toBeUndefined();
+  });
+
+  it("exposes Lost Zones (public) and per-turn flags from ctx", () => {
+    expect(view.lostZone).toEqual([]);
+    expect(view.opponent.lostZone).toEqual([]);
+    // Without ctx the flags default to false.
+    expect(view.retreatUsedThisTurn).toBe(false);
+    expect(view.stadiumPlayedThisTurn).toBe(false);
+    expect(view.stadiumEffectUsedThisTurn).toBe(false);
+    const withCtx = viewFor(state, "player", {
+      retreated: true,
+      stadiumPlayed: true,
+      stadiumUsed: true,
+    });
+    expect(withCtx.retreatUsedThisTurn).toBe(true);
+    expect(withCtx.stadiumPlayedThisTurn).toBe(true);
+    expect(withCtx.stadiumEffectUsedThisTurn).toBe(true);
+  });
+
   it("ghost states hold only placeholders in hidden zones", () => {
     const ghost = buildGhostState(view);
     for (const card of ghost.sides.player.deck) expect(card.unrevealed).toBe(true);

@@ -337,7 +337,7 @@ function runAiTurnBody(session: GameSession, record: boolean): void {
 
   for (let i = 0; i < DEFAULT_MAX_MOVES; i++) {
     const legal = legalMoves(state, "opponent", ctx);
-    const move = session.aiPolicy.chooseMove(viewFor(state, "opponent"), legal, ctx);
+    const move = session.aiPolicy.chooseMove(viewFor(state, "opponent", ctx), legal, ctx);
     const description = describeMove(state, "opponent", move);
     const result = applyTracked(session, "opponent", move, ctx);
     session.aiActions.push({ turn: state.turn.number, description });

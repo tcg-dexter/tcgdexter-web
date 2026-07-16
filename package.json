@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build:card-types": "node scripts/build_card_types.mjs",
-    "ml:extract": "tsx scripts/ml/extract.ts"
+    "ml:extract": "tsx scripts/ml/extract.ts",
+    "ml:selfplay": "tsx scripts/ml/selfplay.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.0",

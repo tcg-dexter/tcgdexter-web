@@ -224,6 +224,7 @@ export function applyMove(
           state.sides[state.stadium.owner].discard.push(state.stadium.card);
         }
         state.stadium = { card, owner: actor };
+        ctx.stadiumPlayed = true;
         enforceBenchCap(state);
       }
       return done(false);
@@ -314,7 +315,7 @@ export function playGame(
     const ctx: TurnContext = { retreated: false };
     for (let i = 0; i < maxMoves; i++) {
       const legal = legalMoves(state, actor, ctx);
-      const move = policies[actor].chooseMove(viewFor(state, actor), legal, ctx);
+      const move = policies[actor].chooseMove(viewFor(state, actor, ctx), legal, ctx);
       const result = applyMove(state, actor, move, ctx, rng);
       if (result.koTurn !== null && firstKoTurn === null) firstKoTurn = result.koTurn;
       if (result.pendingPromotion && state.winner === null) {
