@@ -51,6 +51,7 @@ function toFrame(mon: ClientMon, images: Record<string, string | null>): Pokemon
     conditions: mon.conditions,
     evolutionStack: mon.stack,
     imageUrl: images[mon.name] ?? null,
+    tools: mon.tools.map((t) => ({ name: t, imageUrl: images[t] ?? null })),
   };
 }
 
@@ -253,10 +254,16 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
       ])
     : new Set<string>();
 
-  /** Open the own-Pokémon target chooser (or send directly if only one). */
-  function chooseOwnTarget(label: string, choices: { move: InteractiveMove; monId: string }[]) {
+  /** Open the own-Pokémon target chooser. `alwaysAsk` forces the picker
+   *  even for a single candidate (energy attach, so the target is always an
+   *  explicit choice). */
+  function chooseOwnTarget(
+    label: string,
+    choices: { move: InteractiveMove; monId: string }[],
+    alwaysAsk = false,
+  ) {
     if (choices.length === 0) return;
-    if (choices.length === 1) return void sendMove(choices[0].move);
+    if (choices.length === 1 && !alwaysAsk) return void sendMove(choices[0].move);
     setOwnTargetChooser({ label, choices });
   }
 
@@ -265,6 +272,8 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     const card = view.hand.find((c) => c.id === cardId);
     const bench = byKind("bench").find((m) => m.cardId === cardId);
     if (bench) return void sendMove(bench);
+    const stadium = byKind("play_stadium").find((m) => m.cardId === cardId);
+    if (stadium) return void sendMove(stadium);
     const supporter = byKind("cycle_supporter").find((m) => m.cardId === cardId);
     if (supporter) return void sendMove(supporter);
     const item = byKind("cycle_item").find((m) => m.cardId === cardId);
@@ -299,15 +308,18 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
         m.cardId === cardId,
     );
     if (targeted.length > 0) {
-      const verb =
-        targeted[0].kind === "attach"
-          ? `Attach ${card?.name ?? "Energy"}`
-          : targeted[0].kind === "attach_tool"
-            ? `Attach ${card?.name ?? "Tool"}`
-            : `Evolve into ${card?.name ?? ""}`;
+      const isAttach = targeted[0].kind === "attach";
+      const verb = isAttach
+        ? `Attach ${card?.name ?? "Energy"}`
+        : targeted[0].kind === "attach_tool"
+          ? `Attach ${card?.name ?? "Tool"}`
+          : `Evolve into ${card?.name ?? ""}`;
+      // Energy attach always asks (target is an explicit choice, even with
+      // a single Pokémon in play).
       return void chooseOwnTarget(
         verb,
         targeted.map((m) => ({ move: m, monId: m.targetId })),
+        isAttach,
       );
     }
   }

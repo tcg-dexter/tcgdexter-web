@@ -64,6 +64,7 @@ function collectImages(
       if (!mon) continue;
       names.add(mon.name);
       for (const s of mon.stack) names.add(s);
+      for (const t of mon.tools) names.add(t);
     }
   }
   // Search-picker choices (trainer effects) need art too — the names ride

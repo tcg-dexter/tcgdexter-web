@@ -36,6 +36,9 @@ export interface PokemonFrame {
    *  names are common on a bench); replay frames omit it and fall back to
    *  the name, preserving existing behavior. */
   id?: string;
+  /** Attached Pokémon Tools, rendered behind the card with the title
+   *  peeking above. Omitted by replay frames. */
+  tools?: { name: string; imageUrl: string | null }[];
 }
 
 // pokemontcg.io serves the standard Pokémon card-back PNG as the body of
@@ -363,6 +366,11 @@ export function PokemonCardImage({
   const m = replayTrayMetrics(width);
   const barH = Math.max(3, Math.round(m.strip * 0.22));
   const hpFontSize = Math.max(6, Math.round((m.strip * 0.34) / CARD_IMAGE_BUMP));
+  // A tool sits behind the Pokémon card, shifted up so its title peeks
+  // above (a stack read). The peek height reserves space at the top of the
+  // black holder so it stays contained.
+  const tools = mon.tools ?? [];
+  const toolPeek = tools.length > 0 ? Math.round(m.cardH * 0.13) : 0;
 
   // HP as a percentage of the card's printed maximum.
   const hpPct =
@@ -394,11 +402,34 @@ export function PokemonCardImage({
           : undefined)
       }
     >
+      {/* Tool card(s) behind the Pokémon, shifted up so the title band shows
+          above the Pokémon card, still inside the black holder. */}
+      {tools.map((tool, i) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={`${tool.name}-${i}`}
+          src={tool.imageUrl ?? CARD_BACK_URL}
+          alt={tool.name}
+          title={tool.name}
+          className="pointer-events-none absolute object-cover shadow"
+          style={{
+            top: m.pad + i * Math.round(toolPeek * 0.5),
+            left: m.pad,
+            width: m.cardW,
+            height: m.cardH,
+            borderRadius: m.cardRadius,
+            zIndex: 0,
+          }}
+          onError={(e) => {
+            if (e.currentTarget.src !== CARD_BACK_URL) e.currentTarget.src = CARD_BACK_URL;
+          }}
+        />
+      ))}
       {/* Card image — full size (same as the stand-alone cards), inset by the
           holder padding for a concentric corner radius. */}
       <div
         className="relative w-full overflow-hidden bg-white"
-        style={{ height: m.cardH, borderRadius: m.cardRadius }}
+        style={{ height: m.cardH, borderRadius: m.cardRadius, marginTop: toolPeek, zIndex: 1 }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
