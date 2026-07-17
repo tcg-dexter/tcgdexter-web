@@ -37,34 +37,34 @@ import { StatCard, ResponsiveLabel } from "@/app/components/StatCard";
  * so the row always spans the full container regardless of how many
  * cards we actually have (1..7).
  *
- * Banner sizing is responsive. Both breakpoints' formulas are the
- * original derivation scaled by a flat ×0.8 (BANNER_HEIGHT_SCALE) so the
- * banner is exactly 20% shorter at every viewport, independent of the
- * card-size reduction below:
+ * Banner sizing is responsive, and the two size-reduction passes below are
+ * desktop-only — mobile keeps the original derivation untouched:
  *
- *   - Mobile (< `sm:`): explicit `h-[calc(27.2vw-9.6px)]`. The
- *     pre-scale formula targets a constant ~4px gap between the raised
- *     centre card's top edge and the banner top across common phone
- *     viewports, derived from `CARD_WIDTH_PCT`, the inner container's
- *     48px gutters (`mx-6` × 2), the pokemon-card aspect (~1.396), and
- *     the centre card's effective height fraction `1 − (BOTTOM_CLIP_PCT
- *     − CENTER_RAISE_CARD_PCT)/100 = 0.76`: `banner_h ≈ 0.76 ×
- *     CARD_WIDTH_PCT/100 × 1.396 × (vw − 48) + 4`, which simplifies to
- *     ≈ `0.34 × vw − 12 px` with the current constants — then ×0.8 for
- *     the 20% reduction.
- *   - `sm:` and up: `sm:h-auto sm:aspect-[3.75/1]` cancels the calc'd
- *     height and falls back to a 3.75:1 aspect (the original 3:1 aspect,
- *     ÷0.8, since a taller aspect-ratio denominator yields a shorter box
- *     at the same width).
+ *   - Mobile (< `sm:`): explicit `h-[calc(34vw-12px)]`. The formula
+ *     targets a constant ~4px gap between the raised centre card's top
+ *     edge and the banner top across common phone viewports. It is
+ *     derived from `CARD_WIDTH_PCT`, the inner container's 48px gutters
+ *     (`mx-6` × 2), the pokemon-card aspect (~1.396), and the centre
+ *     card's effective height fraction `1 − (BOTTOM_CLIP_PCT −
+ *     CENTER_RAISE_CARD_PCT)/100 = 0.76`. Re-derive if any of those
+ *     change: `banner_h ≈ 0.76 × CARD_WIDTH_PCT/100 × 1.396 × (vw − 48)
+ *     + 4`, which simplifies to ≈ `0.34 × vw − 12 px` with the current
+ *     constants.
+ *   - `sm:` and up: `sm:h-auto sm:aspect-[4.6875/1]` cancels the calc'd
+ *     height and falls back to a 4.6875:1 aspect — the original 3:1
+ *     aspect ÷0.64 (two successive 20% cuts: a taller aspect-ratio
+ *     denominator yields a shorter box at the same width).
  *
- * Card size shrinks independently via `CARD_WIDTH_PCT` (see below), which
- * only affects each card's width (and, by fixed image aspect, height) —
- * not the banner box itself. Because every other geometry constant
- * (CARDS_SPAN_PCT, BOTTOM_CLIP_PCT, CENTER_RAISE_CARD_PCT,
- * CARD_MAX_ROTATION_DEG) is still expressed as a fraction of container
- * width or the card's own height, the fan's span, bottom-anchor clip
- * fraction, and rotation are all unchanged — cards just render smaller
- * in the same relative positions.
+ * Card size is unchanged on mobile (`CARD_WIDTH_PCT` still drives the
+ * base layout at every breakpoint); the desktop-only shrink instead
+ * layers onto the existing `sm:scale-*` transform on the cards-layer
+ * wrapper — `sm:scale-[0.576]` combines the pre-existing 90%
+ * desktop-vs-mobile shrink with two more 20% cuts (0.9 × 0.64 = 0.576).
+ * Because it's a transform (not a layout resize), and BOTTOM_CLIP_PCT /
+ * CENTER_RAISE_CARD_PCT / CARD_MAX_ROTATION_DEG are all expressed as
+ * fractions of the card's own height or container width, the fan's span
+ * and each card's relative position inside the (now shorter) banner are
+ * unchanged on desktop — cards just render smaller, same as before.
  *
  * The centre card is the binding constraint because CENTER_RAISE_CARD_PCT
  * lifts it higher than the outer cards.
@@ -77,7 +77,7 @@ import { StatCard, ResponsiveLabel } from "@/app/components/StatCard";
  */
 
 const CARDS_SPAN_PCT = 80;      // % of inner container width — fan total span
-const CARD_WIDTH_PCT = 25.6;    // % of inner container width — per card (20% smaller than the original 32)
+const CARD_WIDTH_PCT = 32;      // % of inner container width — per card
 
 // Fan-like-a-playing-hand tuning. The center card sits
 // CENTER_RAISE_CARD_PCT higher (less clipped) than the outer cards;
@@ -184,7 +184,7 @@ export default function MetaProfileHeader({
           flush at the top of the page; the back button (preBanner)
           overlays the top-left. */}
       <div
-        className="relative w-full overflow-hidden h-[calc(27.2vw-9.6px)] sm:h-auto sm:aspect-[3.75/1]"
+        className="relative w-full overflow-hidden h-[calc(34vw-12px)] sm:h-auto sm:aspect-[4.6875/1]"
         style={{ background: bannerGradient }}
       >
         {/* Cards layer — constrained to the same max-w-6xl ± px-6 the
@@ -195,7 +195,7 @@ export default function MetaProfileHeader({
               keeping each card's bottom edge pinned to the banner's bottom
               via `origin-bottom`. Banner height is unaffected because the
               scale is purely a transform on the cards layer. */}
-          <div className="relative h-full mx-6 sm:scale-90 sm:origin-bottom sm:translate-y-[10px]">
+          <div className="relative h-full mx-6 sm:scale-[0.576] sm:origin-bottom sm:translate-y-[10px]">
             {bannerCards.map((url, i) => {
               const left =
                 cardCount === 1
