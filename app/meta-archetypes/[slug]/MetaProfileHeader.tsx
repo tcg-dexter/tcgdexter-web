@@ -76,7 +76,7 @@ import { StatCard, ResponsiveLabel } from "@/app/components/StatCard";
  *  - CARD_WIDTH_PCT        — % of inner container width; per-card display width
  */
 
-const CARDS_SPAN_PCT = 80;      // % of inner container width — fan total span
+const CARDS_SPAN_PCT = 92;      // % of inner container width — fan total span (15% wider than the original 80)
 const CARD_WIDTH_PCT = 32;      // % of inner container width — per card
 
 // Fan-like-a-playing-hand tuning. The center card sits
