@@ -29,7 +29,7 @@ import {
   type TurnContext,
 } from "./moves";
 import { HeuristicPolicy, chooseAbilityMove, promoteBest, type DecisionPolicy } from "./policy";
-import { energyProvides, prizeValue } from "./setup";
+import { energyProvides, energyUnits, prizeValue } from "./setup";
 import { isSupporter, trainerSpec, type PlayTrainerMove, type TrainerSpec } from "./trainers";
 import { lookupCard } from "../catalog";
 import { makeUnrevealed } from "../initial";
@@ -102,6 +102,27 @@ const ATTACK_INVESTMENT_WEIGHT = 0.1;
 // +0.06 progress bonus) — without this term the argmax bot learns to
 // stall instead of converting knockouts.
 const PRIZE_CONVERSION_BONUS = 0.15;
+// One-ply exchange pricing makes "do nothing" look free: against a
+// harmless active, pass scores as the zero-risk line (the reply term only
+// punishes attacking into a counter-KO), so standoffs stall for dozens of
+// turns and self-play games decayed into deck-out. Every plan that ends
+// the turn without attacking pays this flat tempo cost — when no attack
+// line exists all candidates pay it equally and the ordering is untouched,
+// so it only ever tips choices toward attacking.
+//   A/B-swept (see git history): the value trades off two things — a bigger
+// penalty shifts more decisions toward attacking, but too large a value
+// compresses the skill ladder (easy/medium/hard differ only in exploration
+// noise over the same greedy scores, so over-shaping the greedy policy
+// erodes their separation and breaks the difficulty-ladder tests). 0.04 is
+// the largest value that keeps the ladder intact with margin (medium beats
+// easy ~0.65) while cutting self-play deck-out ~46.7% → ~41.7% and raising
+// the attack share; ≥0.08 breaks the ladder for no extra deck-out gain.
+const NO_ATTACK_TEMPO_PENALTY = 0.04;
+// An energy that advances no attack scores identically to not attaching
+// (the investment term sees no progress), and the softmax splits exact
+// ties — so ~half of those turns silently wasted the attachment. Banked
+// energy is retreat fuel at worst; a hair of value breaks the tie.
+const ATTACH_TIEBREAK_BONUS = 0.01;
 
 interface CandidatePlan {
   moves: SimMove[];
@@ -310,7 +331,10 @@ export class PlannerPolicy implements DecisionPolicy {
             const moves = [...base, ...(attack ? [attack] : []), ...(attack ? [] : [{ kind: "pass" } as SimMove])];
             const end = applyPlanToGhost(ghost, moves);
             if (!end) continue;
-            const tempo = retreat && retreat.kind === "retreat" ? RETREAT_TEMPO_PENALTY : 0;
+            const tempo =
+              (retreat && retreat.kind === "retreat" ? RETREAT_TEMPO_PENALTY : 0) +
+              (attack ? 0 : NO_ATTACK_TEMPO_PENALTY) -
+              (attach ? ATTACH_TIEBREAK_BONUS : 0);
             plans.push({ moves, score: this.scoreEndState(end, view) - tempo });
             if (plans.length >= this.params.maxCandidates) break outer;
           }
@@ -325,7 +349,12 @@ export class PlannerPolicy implements DecisionPolicy {
     const shadow = heuristicShadowPlan(ghost);
     if (shadow.length > 0) {
       const end = applyPlanToGhost(ghost, shadow);
-      if (end) plans.push({ moves: shadow, score: this.scoreEndState(end, view) });
+      if (end) {
+        const tempo =
+          (shadow.some((m) => m.kind === "attack") ? 0 : NO_ATTACK_TEMPO_PENALTY) -
+          (shadow.some((m) => m.kind === "attach") ? ATTACH_TIEBREAK_BONUS : 0);
+        plans.push({ moves: shadow, score: this.scoreEndState(end, view) - tempo });
+      }
     }
     return plans;
   }
@@ -389,7 +418,7 @@ export class PlannerPolicy implements DecisionPolicy {
       for (const attack of mon.card.catalog?.attacks ?? []) {
         const dmg = baseDamage(attack);
         if (dmg <= 0 || attack.cost.length === 0) continue;
-        const progress = Math.min(mon.attachedEnergy.length, attack.cost.length) / attack.cost.length;
+        const progress = costProgress(mon, attack.cost);
         // Convex in progress: the marginal energy is worth more the closer
         // an attacker is to completion, so concentrating beats spreading —
         // this is what makes the bot COMMIT to one attacker across turns.
@@ -404,6 +433,27 @@ export class PlannerPolicy implements DecisionPolicy {
 
 function isStillLegal(move: SimMove, legal: SimMove[]): boolean {
   return legal.some((m) => JSON.stringify(m) === JSON.stringify(move));
+}
+
+/** Fraction of an attack's cost payable right now — the typed mirror of
+ *  canPayCost (moves.ts). Count-based progress credited dead energy: a
+ *  Psychic on a Lightning attacker read as investment, so the planner
+ *  happily banked energy its attacker could never spend. */
+function costProgress(mon: PokemonInPlay, cost: string[]): number {
+  if (cost.length === 0) return 0;
+  const pool = mon.attachedEnergy.flatMap(energyUnits);
+  let paid = 0;
+  for (const req of cost) {
+    if (req === "Colorless") continue;
+    let idx = pool.indexOf(req);
+    if (idx === -1) idx = pool.indexOf("Any");
+    if (idx === -1) continue;
+    pool.splice(idx, 1);
+    paid += 1;
+  }
+  const colorless = cost.filter((c) => c === "Colorless").length;
+  paid += Math.min(pool.length, colorless);
+  return paid / cost.length;
 }
 
 /** Heuristic pick among deck/discard search plays: fetch the card with the

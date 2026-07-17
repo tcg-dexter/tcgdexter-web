@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "build:card-types": "node scripts/build_card_types.mjs",
     "ml:extract": "tsx scripts/ml/extract.ts",
-    "ml:selfplay": "tsx scripts/ml/selfplay.ts"
+    "ml:selfplay": "tsx scripts/ml/selfplay.ts",
+    "ml:duel": "tsx scripts/ml/policy_duel.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.0",

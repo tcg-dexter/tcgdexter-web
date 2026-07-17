@@ -21,8 +21,11 @@ import { shuffle, type Rng } from "./rng";
 
 /** Bump when sim behavior changes enough to invalidate cached results
  *  (v2: staple trainer effects replaced generic cycling for the registry
- *  cards; transcripts and rollouts are not comparable across versions). */
-export const SIM_VERSION = 2;
+ *  cards; v3: planner tempo fix — flat no-attack penalty + corrected energy
+ *  cost-progress — changes which moves the planner chooses, so self-play
+ *  rollouts are not comparable across versions). Trainers must filter
+ *  policy data on this. */
+export const SIM_VERSION = 3;
 
 const MAX_MULLIGANS = 20;
 
