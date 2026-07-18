@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { shade } from "@/lib/color";
 import { StatCard, ResponsiveLabel } from "@/app/components/StatCard";
 
@@ -35,7 +35,13 @@ import { StatCard, ResponsiveLabel } from "@/app/components/StatCard";
  *
  * Per-card left offset is derived from `(SPAN - CARD_WIDTH) / (count-1)`
  * so the row always spans the full container regardless of how many
- * cards we actually have (1..7).
+ * cards we actually have (1..7). Desktop gets an extra 10% of spread on
+ * top of that (`DESKTOP_CARDS_SPAN_PCT`), applied via a per-card CSS
+ * custom property (`--left-sm`) consumed by a static
+ * `sm:[left:var(--left-sm)]` utility class — the actual percentages are
+ * runtime-computed per card and can't be baked into literal Tailwind
+ * class names, so the class stays static and only the variable's value
+ * changes.
  *
  * Banner sizing is responsive, and the two size-reduction passes below are
  * desktop-only — mobile keeps the original derivation untouched:
@@ -77,6 +83,7 @@ import { StatCard, ResponsiveLabel } from "@/app/components/StatCard";
  */
 
 const CARDS_SPAN_PCT = 110.4;   // % of inner container width — fan total span (80 -> 92 [+15%] -> 110.4 [+20%]). Exceeds 100, so the outermost cards bleed past the container edge and get clipped by the banner's overflow-hidden.
+const DESKTOP_CARDS_SPAN_PCT = CARDS_SPAN_PCT * 1.1; // sm:+ only — another 10% spread, desktop-only per request
 const CARD_WIDTH_PCT = 32;      // % of inner container width — per card
 
 // Fan-like-a-playing-hand tuning. The center card sits
@@ -177,6 +184,17 @@ export default function MetaProfileHeader({
       : 0;
   const singleCardLeft = (100 - CARD_WIDTH_PCT) / 2;
 
+  // Desktop-only wider spread — same math, run again against
+  // DESKTOP_CARDS_SPAN_PCT. Applied per-card via a CSS custom property
+  // (--left-sm) consumed by a static `sm:[left:var(--left-sm)]` utility
+  // class, since the actual percentages are computed at runtime and can't
+  // be baked into literal Tailwind class names.
+  const desktopCardsLeftStart = (100 - DESKTOP_CARDS_SPAN_PCT) / 2;
+  const desktopCardsStep =
+    cardCount > 1
+      ? (DESKTOP_CARDS_SPAN_PCT - CARD_WIDTH_PCT) / (cardCount - 1)
+      : 0;
+
   return (
     <header className="flex-shrink-0">
       {/* Banner — solid avatar-bg color with the top-7 cards fanned
@@ -201,6 +219,10 @@ export default function MetaProfileHeader({
                 cardCount === 1
                   ? singleCardLeft
                   : cardsLeftStart + i * cardsStep;
+              const leftDesktop =
+                cardCount === 1
+                  ? singleCardLeft
+                  : desktopCardsLeftStart + i * desktopCardsStep;
 
               // Fan geometry — per-card clip + rotation derived from the
               // card's signed distance from the row's center.
@@ -234,16 +256,17 @@ export default function MetaProfileHeader({
                   src={url}
                   alt=""
                   aria-hidden="true"
-                  className="absolute pointer-events-none select-none drop-shadow-md"
+                  className="absolute pointer-events-none select-none drop-shadow-md sm:[left:var(--left-sm)]"
                   style={{
                     bottom: 0,
                     left: `${left}%`,
+                    "--left-sm": `${leftDesktop}%`,
                     width: `${CARD_WIDTH_PCT}%`,
                     height: "auto",
                     transform: `translateY(${clipPct}%) rotate(${rotationDeg}deg)`,
                     transformOrigin: "50% 100%",
                     zIndex: i,
-                  }}
+                  } as CSSProperties}
                 />
               );
             })}
