@@ -540,6 +540,7 @@ export function UserDeckCard({
             <MatchEntry
               key={logKey}
               savedDeckId={id}
+              active={logOpen}
               onSubmitManual={handleQuickLog}
               onImported={() => {
                 setLogOpen(false);

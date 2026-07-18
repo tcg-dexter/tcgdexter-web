@@ -208,7 +208,7 @@ export default function HomeClient({
           />
         </div>
 
-        <h1 className="text-3xl md:text-7xl font-semibold tracking-tight leading-[1.02] max-w-4xl mx-auto">
+        <h1 className="text-3xl md:text-[54px] font-semibold tracking-tight leading-[1.02] max-w-4xl mx-auto">
           The deckbuilder&apos;s
           <br />
           <span className="bg-gradient-brand bg-clip-text text-transparent">
@@ -240,7 +240,7 @@ export default function HomeClient({
                 value={deckList}
                 onChange={(e) => setDeckList(e.target.value)}
                 placeholder={"Pokémon: 13\n3 N's Zoroark ex JTG 175\n2 N's Reshiram ASC 154\n..."}
-                className="w-full h-48 bg-transparent resize-none px-3 py-2 font-mono text-sm text-text-primary placeholder:text-text-muted/60 outline-none"
+                className="w-full h-36 md:h-48 bg-transparent resize-none px-3 py-2 font-mono text-sm text-text-primary placeholder:text-text-muted/60 outline-none"
                 spellCheck={false}
               />
               <div className="flex items-center justify-end gap-3 px-2 pb-2">

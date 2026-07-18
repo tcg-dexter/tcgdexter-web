@@ -273,6 +273,7 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
                 <MatchEntry
                   key={logKey}
                   savedDeckId={deck.id}
+                  active={logOpen}
                   onSubmitManual={handleQuickLog}
                   onImported={() => {
                     setLogOpen(false);
@@ -297,82 +298,6 @@ export default function MyDecksClient({ decks }: Props) {
   const [dir, setDir] = useState<SortDir>("desc");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [view, setView] = useState<ViewMode>("grid");
-
-  // Belt-and-suspenders alongside layout.tsx's inline script + style tag.
-  // Those cover the SSR + hard-refresh path; this effect covers the
-  // client-only case: an SPA transition INTO this route where the layout's
-  // parser-inserted script tag doesn't re-execute. Sets both
-  // overflow-anchor and scrollRestoration imperatively, and snaps to top
-  // so the previous route's scroll position doesn't leak in. See
-  // layout.tsx for the full write-up of the scroll-jump-to-bottom bug and
-  // why scroll anchoring needs to be opt-out on this route specifically.
-  useLayoutEffect(() => {
-    const html = document.documentElement;
-    const body = document.body;
-    const originalHtmlAnchor = html.style.overflowAnchor;
-    const originalBodyAnchor = body?.style.overflowAnchor ?? "";
-    const originalRestore = window.history.scrollRestoration;
-    html.style.overflowAnchor = "none";
-    if (body) body.style.overflowAnchor = "none";
-    if ("scrollRestoration" in window.history) {
-      window.history.scrollRestoration = "manual";
-    }
-    window.scrollTo(0, 0);
-    return () => {
-      html.style.overflowAnchor = originalHtmlAnchor;
-      if (body) body.style.overflowAnchor = originalBodyAnchor;
-      if ("scrollRestoration" in window.history) {
-        window.history.scrollRestoration = originalRestore;
-      }
-    };
-  }, []);
-
-  // Preserve scroll position across orientation changes.
-  //
-  // With scroll anchoring disabled (see the effect above and layout.tsx —
-  // required to fix the skeleton→content and grid↔list jump-to-bottom),
-  // the browser has nothing to grip onto during an orientation change:
-  // the viewport dimensions swap, media queries flip the grid from 1 col
-  // to 2/3 cols, the document height drops sharply, and the browser's
-  // fallback resize-scroll behavior can leave the viewport clamped near
-  // the bottom of the new, shorter content. Reported bug matches exactly.
-  //
-  // Capture the pre-rotation scroll ratio on the raw `orientationchange`
-  // event (fires before layout reflow, so scrollY is still the
-  // pre-rotation value) and restore it after the matching `resize` fires
-  // (which happens once the browser has finished laying out at the new
-  // dimensions). Ratio-based restore keeps the user roughly where they
-  // were in the document proportionally, which is the closest analog to
-  // what scroll anchoring would have done automatically.
-  useEffect(() => {
-    let capturedRatio: number | null = null;
-    const captureRatio = () => {
-      const doc = document.documentElement;
-      const maxScroll = doc.scrollHeight - window.innerHeight;
-      capturedRatio = maxScroll > 0 ? window.scrollY / maxScroll : 0;
-    };
-    const restoreRatio = () => {
-      if (capturedRatio === null) return;
-      const ratio = capturedRatio;
-      capturedRatio = null;
-      // Wait one animation frame for the browser to settle its own
-      // layout + scroll adjustment, then override with our ratio-based
-      // target. behavior:"instant" bypasses html{scroll-behavior:smooth}
-      // in globals.css — a smooth animation here reads as a glitch, not
-      // an intentional scroll.
-      requestAnimationFrame(() => {
-        const doc = document.documentElement;
-        const maxScroll = Math.max(0, doc.scrollHeight - window.innerHeight);
-        window.scrollTo({ top: ratio * maxScroll, behavior: "instant" });
-      });
-    };
-    window.addEventListener("orientationchange", captureRatio);
-    window.addEventListener("resize", restoreRatio);
-    return () => {
-      window.removeEventListener("orientationchange", captureRatio);
-      window.removeEventListener("resize", restoreRatio);
-    };
-  }, []);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(VIEW_MODE_KEY);
