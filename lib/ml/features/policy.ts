@@ -40,7 +40,8 @@ import { effectiveMaxHp, isTool } from "@/lib/engine/sim/tools";
 import { lookupCard } from "@/lib/engine/catalog";
 import { num } from "./guards";
 
-export const POLICY_SCHEMA_VERSION = 1;
+// v2: added the reposition_* action block (retreat/switch tactical value).
+export const POLICY_SCHEMA_VERSION = 2;
 
 /** Frozen top-of-meta card names (see header). Indicator slots below. */
 export const POLICY_TOP_CARDS: readonly string[] = [
@@ -308,6 +309,20 @@ function moveTarget(view: PlayerView, move: SimMove): PokemonInPlay | null {
   }
 }
 
+/** For a move that swaps the active Pokémon out, the (outgoing active,
+ *  incoming promoted mon) pair — retreat today, extensible to Switch-type
+ *  trainers later without a schema change (same features, wider coverage).
+ *  null for every other move, so the reposition block encodes as zeros. */
+function repositionSwap(
+  view: PlayerView,
+  move: SimMove,
+): { outgoing: PokemonInPlay | null; incoming: PokemonInPlay | null } | null {
+  if (move.kind === "retreat") {
+    return { outgoing: view.board.active, incoming: view.board.bench[move.benchIndex] ?? null };
+  }
+  return null;
+}
+
 function encodeAction(view: PlayerView, move: SimMove): Vec {
   const v = new Vec();
 
@@ -366,6 +381,30 @@ function encodeAction(view: PlayerView, move: SimMove): Vec {
   v.push("attack_ko_prizes", koNow && defender ? prizeValue(defender.card.name) : 0);
   v.push("attack_overkill", koNow && defender ? wr - remainingHp(defender) : 0);
   v.push("ends_turn", move.kind === "attack" || move.kind === "pass");
+
+  // Reposition tactics — the value of swapping the active out (retreat now,
+  // Switch-type effects later). A linear ranker cannot express the decisive
+  // comparisons (incoming attacker vs. the one pulled back, incoming threat
+  // vs. our remaining HP) from separate state features, and the target_*
+  // block above blends across every targeted kind, so these are encoded on
+  // the candidate itself for clean, retreat-specific weights.
+  const swap = repositionSwap(view, move);
+  const outgoing = swap?.outgoing ?? null;
+  const incoming = swap?.incoming ?? null;
+  const oppActive = view.opponent.board.active;
+  const incomingBest = incoming ? bestUsableDamage(incoming) : 0;
+  const outgoingBest = outgoing ? bestUsableDamage(outgoing) : 0;
+  const threat = oppActive ? bestUsableDamage(oppActive) : 0;
+  v.push("reposition_move", swap !== null);
+  v.push("reposition_incoming_can_attack", incoming ? usableAttacks(incoming).length > 0 : false);
+  v.push("reposition_incoming_best_damage", incomingBest);
+  v.push(
+    "reposition_incoming_energy_units",
+    incoming ? incoming.attachedEnergy.flatMap(energyUnits).length : 0,
+  );
+  v.push("reposition_clears_status", outgoing ? outgoing.conditions.length > 0 : false);
+  v.push("reposition_dodges_ko", outgoing !== null && threat > 0 && threat >= remainingHp(outgoing));
+  v.push("reposition_upgrades_attacker", swap !== null && incomingBest > outgoingBest);
 
   return v;
 }

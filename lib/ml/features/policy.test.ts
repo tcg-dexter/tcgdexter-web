@@ -15,6 +15,7 @@ import {
 import { instantiateDeck, legalMoves, viewFor } from "@/lib/engine/sim";
 import { buildSimInitialState } from "@/lib/engine/sim/setup";
 import { mulberry32 } from "@/lib/engine/sim/rng";
+import type { SimMove } from "@/lib/engine/sim/moves";
 
 const DECK = [
   "Pokémon: 12",
@@ -42,7 +43,7 @@ describe("policy feature encoding", () => {
   const { view, legal } = fixture();
 
   it("pins the schema version and vector shapes", () => {
-    expect(POLICY_SCHEMA_VERSION).toBe(1);
+    expect(POLICY_SCHEMA_VERSION).toBe(2);
     expect(encodeStateFeatures(view).length).toBe(STATE_FEATURE_NAMES.length);
     for (const move of legal) {
       expect(encodeActionFeatures(view, move).length).toBe(ACTION_FEATURE_NAMES.length);
@@ -90,6 +91,31 @@ describe("policy feature encoding", () => {
     expect(at("attack_base_damage")).toBe(0);
     expect(at("attack_would_ko")).toBe(0);
     expect(at("ends_turn")).toBe(1);
+  });
+
+  it("zeroes the reposition block for non-reposition moves", () => {
+    const REPO = [
+      "reposition_move",
+      "reposition_incoming_can_attack",
+      "reposition_incoming_best_damage",
+      "reposition_incoming_energy_units",
+      "reposition_clears_status",
+      "reposition_dodges_ko",
+      "reposition_upgrades_attacker",
+    ];
+    for (const n of REPO) expect(ACTION_FEATURE_NAMES).toContain(n);
+    const pass = legal.find((m) => m.kind === "pass")!;
+    const vec = encodeActionFeatures(view, pass);
+    for (const n of REPO) expect(vec[ACTION_FEATURE_NAMES.indexOf(n)]).toBe(0);
+  });
+
+  it("flags a retreat candidate as a reposition and reads the incoming mon", () => {
+    const retreat = { kind: "retreat", benchIndex: 0 } as SimMove;
+    const vec = encodeActionFeatures(view, retreat);
+    const at = (name: string) => vec[ACTION_FEATURE_NAMES.indexOf(name)];
+    expect(at("reposition_move")).toBe(1);
+    // Incoming = bench[0]; its readiness mirrors the standalone target block.
+    expect(at("reposition_incoming_can_attack")).toBe(at("target_can_attack"));
   });
 
   it("marks attach targets and card identity", () => {
