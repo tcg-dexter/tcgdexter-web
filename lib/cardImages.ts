@@ -40,6 +40,11 @@ const SET_IMAGE_OVERRIDES: Record<string, { small: string; large: string }> = {
     small: "https://images.scrydex.com/pokemon/me4-{n}/small",
     large: "https://images.scrydex.com/pokemon/me4-{n}/large",
   },
+  // Pitch Black — same scrydex routing as Chaos Rising above.
+  me5: {
+    small: "https://images.scrydex.com/pokemon/me5-{n}/small",
+    large: "https://images.scrydex.com/pokemon/me5-{n}/large",
+  },
 };
 
 function build(setId: string, number: string, variant: ImageVariant): string {

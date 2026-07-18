@@ -51,6 +51,8 @@ const SET_BRAND_OVERRIDES: Record<string, BrandImageOverride> = {
   me3: { logo: "/sets/me3.webp", symbol: null },
   // Chaos Rising (me4 / CRI)
   me4: { logo: "/sets/me4.webp", symbol: null },
+  // Pitch Black (me5 / PBL)
+  me5: { logo: "/sets/me5.webp", symbol: null },
 };
 
 export function setLogo(setId: string): string | null {
