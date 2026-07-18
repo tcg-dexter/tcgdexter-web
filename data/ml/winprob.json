@@ -1,0 +1,108 @@
+{
+  "model_type": "logistic_regression",
+  "model_version": "winprob-v1",
+  "trained_at": "2026-07-12T14:11:58.211313+00:00",
+  "feature_schema_version": 1,
+  "n_samples": 1341,
+  "n_matches": 119,
+  "data_hash": "1dfff2726f04017a0254962ca25237b5e055529623dbdcfc4217150d731d0ddd",
+  "features": [
+    "prize_diff",
+    "prizes_total",
+    "turn_number",
+    "bench_diff",
+    "hand_diff",
+    "went_first",
+    "is_player_turn",
+    "archetype_prior"
+  ],
+  "means": [
+    0.14392244593586875,
+    2.534675615212528,
+    8.64876957494407,
+    0.1528709917971663,
+    -4.662192393736018,
+    0.6263982102908278,
+    0.5070842654735273,
+    0.6965679562234308
+  ],
+  "stds": [
+    1.7355395888255025,
+    2.9385500673045613,
+    5.593858520445003,
+    1.7416384767382604,
+    5.292487123371512,
+    0.4837597466049399,
+    0.4999498106637311,
+    0.08715777448835584
+  ],
+  "coefficients": [
+    0.8112733917830647,
+    -0.2329252194456497,
+    0.023740796996441625,
+    0.27247527908366365,
+    -0.0545075935988511,
+    0.10005083143322369,
+    -0.13786013567956867,
+    0.2474064464273148
+  ],
+  "intercept": 0.9318690430305474,
+  "l2_lambda": 5.0,
+  "archetype_priors": {
+    "Cynthia's Garchomp": 0.8211,
+    "Greninja": 0.7839,
+    "Lillie's Clefairy": 0.6411,
+    "__unknown__": 0.6324
+  },
+  "global_prior": 0.6975,
+  "metrics": {
+    "brier": 0.1992,
+    "log_loss": 0.5854,
+    "accuracy": 0.7062,
+    "ece": 0.0452,
+    "baseline_brier": 0.2135,
+    "baseline_log_loss": 0.616,
+    "baseline_accuracy": 0.6793
+  },
+  "validation_examples": [
+    {
+      "features": {
+        "prize_diff": 0.0,
+        "prizes_total": 0.0,
+        "turn_number": 2.0,
+        "bench_diff": 0.0,
+        "hand_diff": -2.0,
+        "went_first": 1.0,
+        "is_player_turn": 1.0,
+        "archetype_prior": 0.6278950604632096
+      },
+      "expected_p": 0.6753240200851897
+    },
+    {
+      "features": {
+        "prize_diff": 0.0,
+        "prizes_total": 0.0,
+        "turn_number": 3.0,
+        "bench_diff": -1.0,
+        "hand_diff": -3.0,
+        "went_first": 1.0,
+        "is_player_turn": 0.0,
+        "archetype_prior": 0.6278950604632096
+      },
+      "expected_p": 0.7039561163629605
+    },
+    {
+      "features": {
+        "prize_diff": 0.0,
+        "prizes_total": 0.0,
+        "turn_number": 4.0,
+        "bench_diff": -1.0,
+        "hand_diff": -5.0,
+        "went_first": 1.0,
+        "is_player_turn": 1.0,
+        "archetype_prior": 0.6278950604632096
+      },
+      "expected_p": 0.6491494353953197
+    }
+  ]
+}

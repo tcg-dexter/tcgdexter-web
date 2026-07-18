@@ -186,6 +186,7 @@ export const SET_RELEASE_DATES: Record<string, string> = {
   me2pt5: "2026-01-30",
   me3: "2026-03-27",
   me4: "2026-05-22",
+  me5: "2026-07-17",
   mep: "2025-10-01",
 
   // McDonald's promotional collections

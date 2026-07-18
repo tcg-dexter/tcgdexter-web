@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import BackButton from "@/app/components/ui/BackButton";
 import DeckProfileView, {
@@ -15,6 +16,8 @@ import { WLCircles } from "@/app/components/DeckPostCard";
 import EditDeckDialog from "@/app/components/EditDeckDialog";
 import MatchLog from "@/app/my-decks/[id]/MatchLog";
 import DeckNotes from "@/app/my-decks/[id]/DeckNotes";
+import VersionHistory, { type VersionSummary } from "./VersionHistory";
+import NewVersionDialog from "./NewVersionDialog";
 import type { GamePrize } from "@/lib/bo3";
 import { primaryCardImageUrl, deckAvatarInfo, pokemonSlug } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
@@ -32,6 +35,13 @@ interface Match {
   prizes_taken_player?: number | null;
   prizes_taken_opponent?: number | null;
   game_prizes?: GamePrize[] | null;
+  saved_deck_version_id?: string | null;
+}
+
+interface ArchetypeSuggestion {
+  archetypeId: string | null;
+  archetypeName: string;
+  current: { archetypeId: string | null; archetypeName: string | null };
 }
 
 interface Props {
@@ -51,6 +61,12 @@ interface Props {
   isAuthenticated: boolean;
   creator: DeckCreator | null;
   initialCoverImageUrl: string | null;
+  /** Version history, newest first (empty for decks predating versioning). */
+  versions: VersionSummary[];
+  /** Set when the page is rendering an old version via ?v={n}. */
+  viewingVersion: number | null;
+  /** Canonical deck path (short_id form) — base for ?v= links and restore. */
+  deckPath: string;
 }
 
 export default function DeckDetailClient({
@@ -70,12 +86,19 @@ export default function DeckDetailClient({
   isAuthenticated,
   creator,
   initialCoverImageUrl,
+  versions,
+  viewingVersion,
+  deckPath,
 }: Props) {
   const router = useRouter();
   const [logOpen, setLogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(initialCoverImageUrl);
+  const [archetypeSuggestion, setArchetypeSuggestion] =
+    useState<ArchetypeSuggestion | null>(null);
+  const [archetypeBusy, setArchetypeBusy] = useState(false);
+  const [newVersionOpen, setNewVersionOpen] = useState(false);
 
   const [isPublic, setIsPublic] = useState(initialIsPublic);
   const [visibilityBusy, setVisibilityBusy] = useState(false);
@@ -163,6 +186,133 @@ export default function DeckDetailClient({
     />
   ) : null;
 
+  // Per-version W-L-D for the history module (owner only — visitors have
+  // no matches data).
+  const recordsByVersion = useMemo(() => {
+    if (!isOwner) return undefined;
+    const out: Record<string, { w: number; l: number; d: number }> = {};
+    for (const m of initialMatches) {
+      if (!m.saved_deck_version_id) continue;
+      const rec = (out[m.saved_deck_version_id] ??= { w: 0, l: 0, d: 0 });
+      if (m.result === "win") rec.w += 1;
+      else if (m.result === "loss") rec.l += 1;
+      else rec.d += 1;
+    }
+    return out;
+  }, [isOwner, initialMatches]);
+
+  const viewingLabel = useMemo(() => {
+    if (viewingVersion === null) return null;
+    const v = versions.find((x) => x.version_number === viewingVersion);
+    return v?.name ?? `v${viewingVersion}`;
+  }, [viewingVersion, versions]);
+
+  // Read-only banner shown while browsing an old version via ?v={n}.
+  const versionBanner =
+    viewingVersion !== null ? (
+      <div className="flex items-center gap-3 rounded-xl border border-accent/30 bg-accent/5 px-4 py-3">
+        <span className="shrink-0 inline-flex items-center justify-center rounded-full bg-accent px-2 py-0.5 text-[11px] font-mono font-semibold text-white">
+          v{viewingVersion}
+        </span>
+        <p className="flex-1 min-w-0 text-sm text-text-secondary">
+          Viewing <span className="font-semibold text-text-primary">{viewingLabel}</span> — an
+          older version of this deck, read-only.
+        </p>
+        <Link
+          href={deckPath}
+          className="shrink-0 inline-flex items-center justify-center rounded-full bg-black border border-transparent px-3 py-1.5 text-xs font-semibold text-white hover:opacity-80 transition-opacity touch-manipulation"
+        >
+          View latest
+        </Link>
+      </div>
+    ) : null;
+
+  async function setArchetype(mode: "auto" | "manual") {
+    if (archetypeBusy || !archetypeSuggestion) return;
+    setArchetypeBusy(true);
+    try {
+      const body =
+        mode === "auto"
+          ? { mode }
+          : {
+              mode,
+              archetype_id: archetypeSuggestion.current.archetypeId,
+              archetype_name: archetypeSuggestion.current.archetypeName,
+            };
+      await fetch(`/api/saved-decks/${savedDeckId}/archetype`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    } catch {
+      // Non-blocking — the suggestion just reappears on a future save.
+    } finally {
+      setArchetypeSuggestion(null);
+      setArchetypeBusy(false);
+    }
+  }
+
+  // Shown after a save whose detected archetype drifted from the deck's
+  // stored identity. Never auto-applied — the owner decides.
+  const driftBanner =
+    isOwner && archetypeSuggestion ? (
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-black/8 bg-white px-4 py-3">
+        <p className="flex-1 min-w-[12rem] text-sm text-text-secondary">
+          This deck now looks like{" "}
+          <span className="font-semibold text-text-primary">
+            {archetypeSuggestion.archetypeName}
+          </span>
+          {archetypeSuggestion.current.archetypeName ? (
+            <> (currently {archetypeSuggestion.current.archetypeName})</>
+          ) : null}
+          . Update its archetype?
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setArchetype("auto")}
+            disabled={archetypeBusy}
+            className="inline-flex items-center justify-center rounded-full bg-black border border-transparent px-3 py-1.5 text-xs font-semibold text-white hover:opacity-80 transition-opacity disabled:opacity-50 touch-manipulation"
+          >
+            Update
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              archetypeSuggestion.current.archetypeName
+                ? setArchetype("manual")
+                : setArchetypeSuggestion(null)
+            }
+            disabled={archetypeBusy}
+            className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-text-secondary hover:bg-black/5 transition disabled:opacity-50 touch-manipulation"
+          >
+            Keep
+            {archetypeSuggestion.current.archetypeName
+              ? ` ${archetypeSuggestion.current.archetypeName}`
+              : " as is"}
+          </button>
+        </div>
+      </div>
+    ) : null;
+
+  // Owners get the commit button (and the empty state for pre-versioning
+  // decks); visitors only see the module when history exists.
+  const canCommit = isOwner && viewingVersion === null;
+  const versionHistory =
+    versions.length > 0 || canCommit ? (
+      <div className="mt-6">
+        <VersionHistory
+          deckId={savedDeckId}
+          basePath={deckPath}
+          versions={versions}
+          recordsByVersion={recordsByVersion}
+          viewingVersion={viewingVersion}
+          isOwner={isOwner}
+          onNewVersion={canCommit ? () => setNewVersionOpen(true) : undefined}
+        />
+      </div>
+    ) : null;
+
   async function toggleVisibility() {
     if (visibilityBusy) return;
     const next = !isPublic;
@@ -186,61 +336,68 @@ export default function DeckDetailClient({
     name,
     coverUrl,
     deckList: nextDeckList,
+    versionName,
+    changelog,
   }: {
     name: string;
     coverUrl: string | null;
     deckList: string;
+    versionName?: string;
+    changelog?: string;
   }) {
     const payload: {
       name?: string;
       cover_image_url?: string | null;
-      deck_list?: string;
-      analysis?: unknown;
     } = {};
     if (name !== deckName) payload.name = name;
     if (coverUrl !== coverImageUrl) payload.cover_image_url = coverUrl;
 
-    // A new deck list needs a fresh analysis snapshot — compute it the same
-    // way the home page does, then persist both together.
+    // A changed deck list is a version commit — analyzed server-side; the
+    // response carries an archetype drift suggestion when detection moved.
     const deckListChanged =
       nextDeckList.trim().length > 0 && nextDeckList.trim() !== deckList.trim();
     if (deckListChanged) {
-      const aRes = await fetch("/api/analyze", {
+      const vRes = await fetch(`/api/saved-decks/${savedDeckId}/versions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deckList: nextDeckList }),
+        body: JSON.stringify({
+          deck_list: nextDeckList.trim(),
+          name: versionName,
+          changelog,
+        }),
       });
-      const aData = await aRes.json().catch(() => ({}));
-      if (!aRes.ok) {
-        throw new Error(aData?.error ?? "Failed to analyze the new deck list.");
+      const vData = await vRes.json().catch(() => ({}));
+      if (!vRes.ok) {
+        throw new Error(vData?.error ?? "Failed to save the new deck list.");
       }
-      payload.deck_list = nextDeckList.trim();
-      payload.analysis = aData;
+      if (vData.archetypeSuggestion) {
+        setArchetypeSuggestion(vData.archetypeSuggestion as ArchetypeSuggestion);
+      }
     }
 
-    if (Object.keys(payload).length === 0) return;
+    if (Object.keys(payload).length > 0) {
+      const prevName = deckName;
+      const prevCover = coverImageUrl;
+      if ("name" in payload) setDeckName(name);
+      if ("cover_image_url" in payload) setCoverImageUrl(coverUrl);
 
-    const prevName = deckName;
-    const prevCover = coverImageUrl;
-    if ("name" in payload) setDeckName(name);
-    if ("cover_image_url" in payload) setCoverImageUrl(coverUrl);
-
-    try {
-      const res = await fetch(`/api/saved-decks/${savedDeckId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
+      try {
+        const res = await fetch(`/api/saved-decks/${savedDeckId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          setDeckName(prevName);
+          setCoverImageUrl(prevCover);
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data?.error ?? "Failed to save changes.");
+        }
+      } catch (e) {
         setDeckName(prevName);
         setCoverImageUrl(prevCover);
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error ?? "Failed to save changes.");
+        throw e;
       }
-    } catch (e) {
-      setDeckName(prevName);
-      setCoverImageUrl(prevCover);
-      throw e;
     }
 
     // Deck-list changes alter every analysis-driven module (and price/rotation)
@@ -269,7 +426,8 @@ export default function DeckDetailClient({
       : undefined
     : canonicalShareUrl;
 
-  // Visitor rendering
+  // Visitor rendering — public decks expose their full version history
+  // (public repo commits), so the module and the ?v= banner render here too.
   if (!isOwner) {
     return (
       <DeckProfileView
@@ -297,6 +455,12 @@ export default function DeckDetailClient({
             />
             <CopyDeckListButton deckList={deckList} />
           </div>
+        }
+        postStatsSlot={
+          <>
+            {versionBanner}
+            {versionHistory}
+          </>
         }
         // "Profile your own deck" only makes sense for an anonymous
         // visitor — a signed-in user already has an account.
@@ -337,7 +501,17 @@ export default function DeckDetailClient({
         />
       }
       postStatsSlot={
+        viewingVersion !== null ? (
+          // Browsing an old version: read-only — no Log Match / settings /
+          // edit affordances. The history module stays for navigation and
+          // restore.
+          <>
+            {versionBanner}
+            {versionHistory}
+          </>
+        ) : (
         <>
+          {driftBanner}
           <div
             ref={actionRowRef}
             className={`relative flex items-center transition-all duration-300 ${
@@ -475,6 +649,17 @@ export default function DeckDetailClient({
             onSave={handleEditSave}
           />
 
+          <NewVersionDialog
+            open={newVersionOpen}
+            onClose={() => setNewVersionOpen(false)}
+            deckId={savedDeckId}
+            initialDeckList={deckList}
+            onCommitted={(suggestion) => {
+              if (suggestion) setArchetypeSuggestion(suggestion);
+              router.refresh();
+            }}
+          />
+
           {confirmingDelete && (
             <div
               role="dialog"
@@ -514,10 +699,15 @@ export default function DeckDetailClient({
               </div>
             </div>
           )}
+
+          {versionHistory}
         </>
+        )
       }
       topSlot={
-        <DeckNotes savedDeckId={savedDeckId} initialNotes={initialNotes} />
+        viewingVersion !== null ? null : (
+          <DeckNotes savedDeckId={savedDeckId} initialNotes={initialNotes} />
+        )
       }
       // The owner is viewing their own saved deck — never show
       // "Profile your own deck".

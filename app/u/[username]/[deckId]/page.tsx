@@ -42,6 +42,15 @@ interface MatchRecord {
   prizes_taken_player: number | null;
   prizes_taken_opponent: number | null;
   game_prizes: GamePrize[] | null;
+  saved_deck_version_id: string | null;
+}
+
+interface VersionSummaryRecord {
+  id: string;
+  version_number: number;
+  name: string | null;
+  changelog: string;
+  created_at: string;
 }
 
 /**
@@ -96,10 +105,13 @@ export async function generateMetadata({
 
 export default async function DeckPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ username: string; deckId: string }>;
+  searchParams: Promise<{ v?: string }>;
 }) {
   const { username, deckId } = await params;
+  const { v: versionParam } = await searchParams;
   const supabase = await createClient();
 
   // Fetch profile without is_public filter so owners can see their own page
@@ -146,10 +158,44 @@ export default async function DeckPage({
   const proto = headersList.get("x-forwarded-proto") ?? "https";
   const canonicalShareUrl = `${proto}://${host}/u/${profile.username}/${deck.short_id}`;
 
-  // Live reprice
-  const live = repriceDeck(deck.deck_list);
+  // Version history — RLS grants owners everything and visitors the
+  // history of public decks (public repo commits).
+  const { data: versionRows } = await supabase
+    .from("deck_versions")
+    .select("id, version_number, name, changelog, created_at")
+    .eq("deck_id", deck.id)
+    .order("version_number", { ascending: false });
+  const versions = (versionRows ?? []) as VersionSummaryRecord[];
+  const latestVersionNumber = versions[0]?.version_number ?? null;
+
+  // ?v={n} renders that version's content read-only — a shareable
+  // permalink into the deck's history for owner and visitors alike.
+  let viewingVersion: number | null = null;
+  let renderDeckList = deck.deck_list;
+  let renderAnalysis = deck.analysis;
+  const requestedVersion = versionParam ? Number.parseInt(versionParam, 10) : NaN;
+  if (
+    Number.isInteger(requestedVersion) &&
+    latestVersionNumber !== null &&
+    requestedVersion !== latestVersionNumber
+  ) {
+    const { data: versionRow } = await supabase
+      .from("deck_versions")
+      .select("version_number, deck_list, analysis")
+      .eq("deck_id", deck.id)
+      .eq("version_number", requestedVersion)
+      .maybeSingle();
+    if (versionRow) {
+      viewingVersion = versionRow.version_number;
+      renderDeckList = versionRow.deck_list;
+      renderAnalysis = (versionRow.analysis as AnalysisResult | null) ?? deck.analysis;
+    }
+  }
+
+  // Live reprice (runs on whichever version is being rendered)
+  const live = repriceDeck(renderDeckList);
   const analysis: AnalysisResult = {
-    ...deck.analysis,
+    ...renderAnalysis,
     deckPrice: live.deckPrice,
     rotation: live.rotation,
   };
@@ -159,7 +205,7 @@ export default async function DeckPage({
   if (isOwner) {
     const { data: matches } = await supabase
       .from("matches")
-      .select("id, result, opponent_name, opponent_archetype, opponent_deck_list, notes, played_at, source, game_results, prizes_taken_player, prizes_taken_opponent, game_prizes")
+      .select("id, result, opponent_name, opponent_archetype, opponent_deck_list, notes, played_at, source, game_results, prizes_taken_player, prizes_taken_opponent, game_prizes, saved_deck_version_id")
       .eq("saved_deck_id", deck.id)
       .order("played_at", { ascending: false });
     initialMatches = (matches ?? []) as MatchRecord[];
@@ -186,7 +232,7 @@ export default async function DeckPage({
       isOwner={isOwner}
       username={profile.username}
       savedDeckId={deck.id}
-      deckList={deck.deck_list}
+      deckList={renderDeckList}
       analysis={analysis}
       profiledAt={deck.updated_at}
       pageTitle={deck.name}
@@ -199,6 +245,9 @@ export default async function DeckPage({
       isAuthenticated={Boolean(viewer)}
       creator={creator}
       initialCoverImageUrl={deck.cover_image_url ?? null}
+      versions={versions}
+      viewingVersion={viewingVersion}
+      deckPath={`/u/${profile.username}/${deck.short_id}`}
     />
   );
 }

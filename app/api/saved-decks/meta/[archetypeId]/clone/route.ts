@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import archetypesRaw from "@/data/meta-archetypes.json";
 import metaDecksRaw from "@/data/meta-decks.json";
 import { buildMetaAnalysis } from "@/lib/buildMetaAnalysis";
+import { primaryPokemonCard } from "@/lib/primaryCardImage";
 
 /**
  * GET    /api/saved-decks/meta/[archetypeId]/clone — has the caller already
@@ -145,11 +146,13 @@ export async function POST(
 
   const deckList = serializeDeckList(cards);
   const analysis = buildMetaAnalysis(cards, {
+    id: archetypeId,
     name: arch.name,
     rank,
     conversionRate: arch.conversionRate ?? 0,
     representationPct: arch.representation_pct,
   });
+  const primaryPokemon = primaryPokemonCard(analysis.cards)?.card.name ?? null;
 
   const { data: cloned, error: insErr } = await supabase
     .from("saved_decks")
@@ -160,6 +163,10 @@ export async function POST(
       analysis,
       meta_archetype_id: archetypeId,
       is_public: false,
+      archetype_id: archetypeId,
+      archetype_name: arch.name,
+      archetype_source: "auto",
+      primary_pokemon_name: primaryPokemon,
     })
     .select("id")
     .single();
@@ -170,6 +177,17 @@ export async function POST(
       { error: "Failed to save deck." },
       { status: 500 },
     );
+  }
+
+  // The materialized meta deck's v1.
+  const { error: verErr } = await supabase.from("deck_versions").insert({
+    deck_id: cloned.id,
+    version_number: 1,
+    deck_list: deckList,
+    analysis,
+  });
+  if (verErr) {
+    console.error("[saved-decks/meta/clone] v1 insert failed:", verErr);
   }
 
   return NextResponse.json({ saved: true, savedId: cloned.id });
