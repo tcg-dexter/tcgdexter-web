@@ -144,6 +144,16 @@ interface Props {
    *  true (deck-profile behavior); grid preview cards pass false since
    *  the form sits inline in the page flow. */
   scrollToTopOnCancel?: boolean;
+  /**
+   * Whether this form is currently visible/open. Gates the new-match
+   * opponent-name autofocus. Defaults to true for callers that only mount
+   * the form when it's open. The deck-collection grid card and pinned
+   * hero keep the form permanently mounted inside a collapsed
+   * grid-rows-[0fr] drawer, so they pass `active={logOpen}` — otherwise
+   * every card's hidden form would grab focus on page load and the
+   * browser would scroll the last one (bottom of the page) into view.
+   */
+  active?: boolean;
 }
 
 /**
@@ -160,6 +170,7 @@ export default function MatchForm({
   bestOf3: bestOf3Prop,
   onBestOf3Change,
   scrollToTopOnCancel = true,
+  active = true,
 }: Props) {
   const [opponentName, setOpponentName] = useState(initial?.opponent_name ?? "");
   const [opponentArchetype, setOpponentArchetype] = useState(
@@ -237,11 +248,18 @@ export default function MatchForm({
   // Focus the opponent name field when logging a new match (not when
   // editing an existing one). The input carries [font-size:16px] so iOS
   // Safari doesn't zoom the viewport on focus.
+  //
+  // Gated on `active`: the grid card + pinned-hero drawers keep this form
+  // permanently mounted but collapsed (grid-rows-[0fr]), so without the
+  // gate every hidden form would call focus() on page load and the
+  // browser would scroll the last one — bottom of the page — into view.
+  // With active={logOpen} the focus fires only when the drawer opens
+  // (active flips false→true, re-running this effect).
   useEffect(() => {
-    if (initial) return;
+    if (initial || !active) return;
     const id = requestAnimationFrame(() => opponentNameRef.current?.focus());
     return () => cancelAnimationFrame(id);
-  }, [initial]);
+  }, [initial, active]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {

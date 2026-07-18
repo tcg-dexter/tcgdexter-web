@@ -13,6 +13,12 @@ interface Props {
   onCancel: () => void;
   /** Whether Cancel scrolls the page to top before closing. Defaults to true. */
   scrollToTopOnCancel?: boolean;
+  /** Whether the entry surface is currently open/visible. Forwarded to
+   *  MatchForm to gate its new-match autofocus — callers that keep this
+   *  mounted-but-collapsed (grid card / pinned hero drawers) must pass
+   *  `active={logOpen}` so the hidden form doesn't steal focus on page
+   *  load. Defaults to true for callers that only mount it when open. */
+  active?: boolean;
 }
 
 type Tab = "single" | "bo3" | "import";
@@ -39,6 +45,7 @@ export default function MatchEntry({
   onImported,
   onCancel,
   scrollToTopOnCancel = true,
+  active = true,
 }: Props) {
   const [tab, setTab] = useState<Tab>("single");
   const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({
@@ -138,6 +145,7 @@ export default function MatchEntry({
             bestOf3={tab === "bo3"}
             onBestOf3Change={(v) => setTab(v ? "bo3" : "single")}
             scrollToTopOnCancel={scrollToTopOnCancel}
+            active={active}
           />
         )}
       </div>

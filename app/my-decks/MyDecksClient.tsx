@@ -273,6 +273,7 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
                 <MatchEntry
                   key={logKey}
                   savedDeckId={deck.id}
+                  active={logOpen}
                   onSubmitManual={handleQuickLog}
                   onImported={() => {
                     setLogOpen(false);
