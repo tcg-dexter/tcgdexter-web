@@ -75,10 +75,13 @@ interface Props {
    *  they share the exact same `max-w-2xl px-6` parent as the stat grid
    *  and line up edge-to-edge with it. */
   belowStats?: ReactNode;
-  /** Centered overlay rendered in front of the banner — used for the
-   *  team-of-6 row. Sits *outside* the banner's `overflow-hidden` so
-   *  the picker popover can extend below the banner edge. */
-  bannerCenter?: ReactNode;
+  /** Fanned team-card spread rendered inside the banner's clipped
+   *  bounds (mirrors the meta archetype header's card fan). Unlike
+   *  `bannerOverlay`, this sits *inside* an `overflow-hidden` wrapper
+   *  matching the banner's exact geometry so each card's bottom edge
+   *  clips the same way — any popover the caller opens from a card
+   *  click needs to portal out to escape that clipping. */
+  bannerFan?: ReactNode;
 }
 
 export default function UserProfileHeader({
@@ -90,20 +93,25 @@ export default function UserProfileHeader({
   bannerAccent,
   actions,
   bannerOverlay,
-  bannerCenter,
+  bannerFan,
   stats,
   belowStats,
 }: Props) {
   const gradient = bannerGradientFor(bannerAccent);
   const initial = displayName.trim().charAt(0).toUpperCase() || "?";
 
+  // Shared banner box geometry — mirrors the meta archetype header
+  // exactly (down to the sm:+ aspect ratio) so the avatar overlap math
+  // (-mt-16 sm:-mt-20) and the team-card fan both read the same as on
+  // meta pages. bannerOverlay / bannerFan each get their own sibling
+  // wrapper reusing this class string so all three stay pixel-aligned.
+  const bannerBox = "h-[calc(34vw-12px)] sm:h-auto sm:aspect-[4.6875/1]";
+
   return (
     <header className="relative flex-shrink-0">
-      {/* Banner — solid gradient, matching the meta archetype banner's
-          sizing so the avatar overlap math (-mt-16 sm:-mt-20) lands at
-          the same visual offset. */}
+      {/* Banner — solid gradient. */}
       <div
-        className="relative w-full overflow-hidden h-[calc(34vw-12px)] sm:h-auto sm:aspect-[3/1]"
+        className={`relative w-full overflow-hidden ${bannerBox}`}
         style={{ background: gradient }}
       />
 
@@ -113,26 +121,22 @@ export default function UserProfileHeader({
           without being clipped by overflow-hidden. z-30 keeps the
           popover above the settings gear in the bio block. */}
       {bannerOverlay && (
-        <div className="absolute inset-x-0 top-0 h-[calc(34vw-12px)] sm:h-auto sm:aspect-[3/1] z-30 pointer-events-none">
+        <div className={`absolute inset-x-0 top-0 ${bannerBox} z-30 pointer-events-none`}>
           <div className="absolute bottom-3 right-6 pointer-events-auto">
             {bannerOverlay}
           </div>
         </div>
       )}
 
-      {/* Centered banner overlay (team-of-6). Sized to the banner so
-          flex centering aligns inside the banner's bounds, and
-          rendered as a sibling of the banner (not a child) so the
-          team picker's popover can overflow downward into the bio
-          area without being clipped by the banner's overflow-hidden.
-          Below lg the team sits at the upper-center of the banner
-          (clearing the avatar that straddles the bottom edge); at lg+
-          it centers vertically as well. */}
-      {bannerCenter && (
-        <div
-          className="absolute inset-x-0 top-0 h-[calc(34vw-12px)] sm:h-auto sm:aspect-[3/1] flex justify-center items-start lg:items-center z-20 pointer-events-none pt-3 sm:pt-5 lg:pt-0"
-        >
-          <div className="pointer-events-auto">{bannerCenter}</div>
+      {/* Team-card fan. Sized and clipped to the exact same box as the
+          banner (unlike bannerOverlay, this wrapper keeps
+          overflow-hidden) so each card's bottom edge crops flush with
+          the banner edge, matching the meta archetype header. The
+          caller is responsible for portaling any popover it opens out
+          of this subtree so it isn't clipped too. */}
+      {bannerFan && (
+        <div className={`absolute inset-x-0 top-0 ${bannerBox} overflow-hidden z-20 pointer-events-none`}>
+          {bannerFan}
         </div>
       )}
 

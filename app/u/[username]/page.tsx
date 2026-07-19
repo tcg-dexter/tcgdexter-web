@@ -9,7 +9,6 @@ import {
   pokemonSlug,
 } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
-import metaArchetypesRaw from "@/data/meta-archetypes.json";
 import MatchHeatMap from "@/app/profile/MatchHeatMap";
 import {
   CERTIFIED_TRAINER,
@@ -25,7 +24,7 @@ import UserProfileHeader, {
 import ThemeColor from "@/app/components/ThemeColor";
 import { ResponsiveLabel } from "@/app/components/StatCard";
 import AccentPicker from "./AccentPicker";
-import TeamOfSix from "./TeamOfSix";
+import TeamCards, { type TeamCardRef } from "./TeamCards";
 
 interface ProfileRow {
   id: string;
@@ -37,7 +36,7 @@ interface ProfileRow {
   tcg_live_handle: string | null;
   avatar_url: string | null;
   banner_accent: string | null;
-  team_of_6: (string | null)[] | null;
+  team_cards: (TeamCardRef | null)[] | null;
 }
 
 interface DeckRow {
@@ -122,7 +121,7 @@ export default async function ProfilePage({
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, display_name, username, bio, created_at, is_public, tcg_live_handle, avatar_url, banner_accent, team_of_6"
+      "id, display_name, username, bio, created_at, is_public, tcg_live_handle, avatar_url, banner_accent, team_cards"
     )
     .eq("username", username.toLowerCase())
     .maybeSingle<ProfileRow>();
@@ -204,44 +203,14 @@ export default async function ProfilePage({
   // up the same banner accent as the header.
   const bannerGradient = bannerGradientFor(profile.banner_accent);
 
-  // Render the team row for owners always (so they can start picking)
-  // and for visitors only when the user has chosen at least one
-  // Pokémon — otherwise the banner stays clean.
-  const teamArray: (string | null)[] = Array.isArray(profile.team_of_6)
-    ? profile.team_of_6
+  // Render the team fan for owners always (so they can start picking)
+  // and for visitors only when the user has chosen at least one card —
+  // otherwise the banner stays clean.
+  const teamArray: (TeamCardRef | null)[] = Array.isArray(profile.team_cards)
+    ? profile.team_cards
     : [];
   const hasAnyTeamPick = teamArray.some((slot) => !!slot);
   const showTeam = isOwner || hasAnyTeamPick;
-
-  // Default suggestions shown in the team picker before the user types.
-  // Owner with saved decks: the unique Pokémon driving each deck's
-  // avatar (a quick way to bring their actual roster into the picker).
-  // Owner with no decks: the top 10 meta archetypes by total entries
-  // — a reasonable starting roster when there's no personal signal.
-  // Visitors don't see the picker, so this stays empty for them.
-  let teamSuggestions: string[] = [];
-  if (isOwner) {
-    if (decks.length > 0) {
-      const seen = new Set<string>();
-      for (const deck of decks) {
-        const info = deckAvatarInfo(
-          deck.analysis?.cards ?? [],
-          deck.cover_image_url
-        );
-        if (info && !seen.has(info.name)) {
-          seen.add(info.name);
-          teamSuggestions.push(info.name);
-        }
-      }
-    } else {
-      const top10 = [
-        ...(metaArchetypesRaw as Array<{ name: string; total_entries: number }>),
-      ]
-        .sort((a, b) => b.total_entries - a.total_entries)
-        .slice(0, 10);
-      teamSuggestions = top10.map((a) => a.name);
-    }
-  }
 
   const belowStats = (
     <>
@@ -362,14 +331,8 @@ export default async function ProfilePage({
             />
           ) : undefined
         }
-        bannerCenter={
-          showTeam ? (
-            <TeamOfSix
-              initial={teamArray}
-              isOwner={isOwner}
-              defaultSuggestions={teamSuggestions}
-            />
-          ) : undefined
+        bannerFan={
+          showTeam ? <TeamCards initial={teamArray} isOwner={isOwner} /> : undefined
         }
         actions={
           isOwner ? (

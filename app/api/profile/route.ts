@@ -4,6 +4,15 @@ import { validateDisplayName } from "@/lib/display-name-rules";
 import { validateUsername } from "@/lib/username-rules";
 
 const BIO_MAX_LENGTH = 240;
+const TEAM_CARDS_MAX = 7;
+const TEAM_CARD_NAME_MAX = 60;
+const TEAM_CARD_ID_MAX = 20;
+
+interface TeamCardInput {
+  name?: unknown;
+  set_id?: unknown;
+  number?: unknown;
+}
 
 /**
  * GET /api/profile
@@ -69,7 +78,7 @@ export async function PATCH(req: Request) {
     avatar_url?: string | null;
     bio?: string | null;
     banner_accent?: string | null;
-    team_of_6?: (string | null)[] | null;
+    team_cards?: (TeamCardInput | null)[] | null;
   };
   try {
     body = await req.json();
@@ -190,34 +199,48 @@ export async function PATCH(req: Request) {
     updates.banner_accent = body.banner_accent;
   }
 
-  // ── team_of_6 ─────────────────────────────────────────────────
-  // 6-slot Pokémon roster for the banner. Each entry is a short
-  // display name (e.g. "Pikachu") or null for an empty slot. We don't
-  // validate against the names list — that's a build-time artifact and
-  // the column check constraint already caps array length at 6.
-  if (body.team_of_6 === null) {
-    updates.team_of_6 = null;
-  } else if (Array.isArray(body.team_of_6)) {
-    if (body.team_of_6.length > 6) {
+  // ── team_cards ────────────────────────────────────────────────
+  // 7-slot card roster fanned across the banner. Each entry is null
+  // (empty slot) or {name, set_id, number} identifying a specific
+  // printing. We don't validate the printing exists in the catalog —
+  // the column check constraint caps array length at 7, and a stale
+  // reference just fails to resolve an image client-side.
+  if (body.team_cards === null) {
+    updates.team_cards = null;
+  } else if (Array.isArray(body.team_cards)) {
+    if (body.team_cards.length > TEAM_CARDS_MAX) {
       return NextResponse.json(
-        { error: "Team of 6 cannot exceed 6 slots." },
+        { error: `Team cannot exceed ${TEAM_CARDS_MAX} slots.` },
         { status: 400 }
       );
     }
-    const cleaned: (string | null)[] = [];
-    for (const slot of body.team_of_6) {
-      if (slot === null || slot === undefined || slot === "") {
+    const cleaned: ({ name: string; set_id: string; number: string } | null)[] = [];
+    for (const slot of body.team_cards) {
+      if (slot === null || slot === undefined) {
         cleaned.push(null);
-      } else if (typeof slot === "string" && slot.length <= 60) {
-        cleaned.push(slot);
+        continue;
+      }
+      const { name, set_id, number } = slot;
+      if (
+        typeof name === "string" &&
+        name.length > 0 &&
+        name.length <= TEAM_CARD_NAME_MAX &&
+        typeof set_id === "string" &&
+        set_id.length > 0 &&
+        set_id.length <= TEAM_CARD_ID_MAX &&
+        typeof number === "string" &&
+        number.length > 0 &&
+        number.length <= TEAM_CARD_ID_MAX
+      ) {
+        cleaned.push({ name, set_id, number });
       } else {
         return NextResponse.json(
-          { error: "Invalid team slot." },
+          { error: "Invalid team card." },
           { status: 400 }
         );
       }
     }
-    updates.team_of_6 = cleaned;
+    updates.team_cards = cleaned;
   }
 
   // ── bio ───────────────────────────────────────────────────────
