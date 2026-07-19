@@ -4,17 +4,15 @@ import { primaryPokemonCard } from "@/lib/primaryCardImage";
 import type { AnalysisResult } from "@/lib/analyzeDeck";
 
 /**
- * The save/unsave TOGGLE flavor of forking. Route path and response shapes
- * ({ saved, savedId }) are unchanged so already-deployed DeckCardFooter
- * bundles keep working; internally this records fork lineage
- * (forked_from_deck_id). cloned_from_id is dual-written until a cleanup
- * migration drops it. One-shot (non-toggle) forking lives at /fork.
+ * The save/unsave TOGGLE flavor of copying a deck into your own library.
+ * Records clone lineage (cloned_from_id) so the "already saved" lookup
+ * below works.
  *
- * GET    /api/saved-decks/[id]/clone — does the caller already have a fork?
- * POST   /api/saved-decks/[id]/clone — fork into the caller's library
+ * GET    /api/saved-decks/[id]/clone — has the caller already saved this?
+ * POST   /api/saved-decks/[id]/clone — copy into the caller's library
  *                                      (idempotent — returns the existing
- *                                      fork if there is one).
- * DELETE /api/saved-decks/[id]/clone — drop the caller's fork(s) of it.
+ *                                      copy if there is one).
+ * DELETE /api/saved-decks/[id]/clone — drop the caller's copy/copies of it.
  *
  * RLS on saved_decks already gates public read (deck + owner both public)
  * and restricts owner-only writes, so we just operate through the user's
@@ -38,7 +36,7 @@ export async function GET(
   const { data } = await supabase
     .from("saved_decks")
     .select("id")
-    .eq("forked_from_deck_id", sourceId)
+    .eq("cloned_from_id", sourceId)
     .eq("user_id", user.id)
     .limit(1)
     .maybeSingle();
@@ -66,11 +64,11 @@ export async function POST(
     );
   }
 
-  // Don't create duplicate forks — return the existing one if present.
+  // Don't create duplicate copies — return the existing one if present.
   const { data: existing } = await supabase
     .from("saved_decks")
     .select("id")
-    .eq("forked_from_deck_id", sourceId)
+    .eq("cloned_from_id", sourceId)
     .eq("user_id", user.id)
     .limit(1)
     .maybeSingle();
@@ -107,7 +105,6 @@ export async function POST(
       deck_list: source.deck_list,
       analysis: source.analysis,
       is_public: false,
-      forked_from_deck_id: sourceId,
       cloned_from_id: sourceId,
       archetype_id: source.archetype_id ?? null,
       archetype_name: source.archetype_name ?? null,
@@ -149,7 +146,7 @@ export async function DELETE(
   const { error } = await supabase
     .from("saved_decks")
     .delete()
-    .eq("forked_from_deck_id", sourceId)
+    .eq("cloned_from_id", sourceId)
     .eq("user_id", user.id);
 
   if (error) {
