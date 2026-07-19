@@ -328,6 +328,7 @@ export default async function ProfilePage({
           isOwner ? (
             <AccentPicker
               current={(profile.banner_accent ?? null) as BannerAccent | null}
+              teamCards={teamArray}
             />
           ) : undefined
         }
