@@ -6,10 +6,9 @@ import type { AnalysisResult } from "@/lib/analyzeDeck";
 /**
  * The save/unsave TOGGLE flavor of forking. Route path and response shapes
  * ({ saved, savedId }) are unchanged so already-deployed DeckCardFooter
- * bundles keep working; internally this now records fork lineage
- * (forked_from_deck_id + forked_from_version_id) and creates the copy's v1
- * version row. cloned_from_id is dual-written until a cleanup migration
- * drops it. One-shot (non-toggle) forking lives at /fork.
+ * bundles keep working; internally this records fork lineage
+ * (forked_from_deck_id). cloned_from_id is dual-written until a cleanup
+ * migration drops it. One-shot (non-toggle) forking lives at /fork.
  *
  * GET    /api/saved-decks/[id]/clone — does the caller already have a fork?
  * POST   /api/saved-decks/[id]/clone — fork into the caller's library
@@ -95,24 +94,7 @@ export async function POST(
     );
   }
 
-  // Fork from the source's latest version — the lineage anchor. Decks
-  // whose edits landed in the migration→deploy window may lack a version
-  // row; fall back to the mirror with no version anchor.
-  const { data: latestVersion } = await supabase
-    .from("deck_versions")
-    .select("id, deck_list, analysis")
-    .eq("deck_id", sourceId)
-    .order("version_number", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const version = latestVersion ?? {
-    id: null,
-    deck_list: source.deck_list,
-    analysis: source.analysis,
-  };
-
-  const analysis = (version.analysis as AnalysisResult | null) ?? null;
+  const analysis = (source.analysis as AnalysisResult | null) ?? null;
   const primaryPokemon = analysis?.cards
     ? primaryPokemonCard(analysis.cards)?.card.name ?? null
     : null;
@@ -122,11 +104,10 @@ export async function POST(
     .insert({
       user_id: user.id,
       name: source.name,
-      deck_list: version.deck_list,
-      analysis: version.analysis,
+      deck_list: source.deck_list,
+      analysis: source.analysis,
       is_public: false,
       forked_from_deck_id: sourceId,
-      forked_from_version_id: version.id,
       cloned_from_id: sourceId,
       archetype_id: source.archetype_id ?? null,
       archetype_name: source.archetype_name ?? null,
@@ -143,17 +124,6 @@ export async function POST(
       { error: "Failed to save deck." },
       { status: 500 },
     );
-  }
-
-  const { error: verErr } = await supabase.from("deck_versions").insert({
-    deck_id: cloned.id,
-    version_number: 1,
-    deck_list: version.deck_list,
-    analysis: version.analysis,
-  });
-  if (verErr) {
-    // Fork stays usable — the next commit becomes its v1.
-    console.error("[saved-decks/clone] v1 insert failed:", verErr);
   }
 
   return NextResponse.json({ saved: true, savedId: cloned.id });

@@ -2,20 +2,19 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { track } from "@/lib/analytics/track";
 import { isTrustedCardImageUrl } from "@/lib/cardImages";
-import { DeckParseError } from "@/lib/analyzeDeck";
-import { commitDeckVersion } from "@/lib/deck-versions";
+import { analyzeDeckList, detectDeckArchetype, DeckParseError } from "@/lib/analyzeDeck";
 
 /**
  * DELETE /api/saved-decks/[id]
  * PATCH  /api/saved-decks/[id]
  *   body: { name?, notes?, is_public?, is_favorite?, is_pinned?,
- *           cover_image_url?, deck_list?, version_name?, changelog? }
+ *           cover_image_url?, deck_list? }
  *   Setting is_pinned:true clears it on the caller's other decks first, so
  *   at most one deck is pinned per user.
- *   A deck_list change is a version commit: the analysis snapshot is
- *   recomputed server-side (any client-sent `analysis` is ignored) and a
- *   new deck_versions row is created via create_deck_version() — unless the
- *   list parses identical to the latest version, which is a no-op.
+ *   A deck_list change is re-analyzed server-side (any client-sent
+ *   `analysis` is ignored) and, if the freshly detected archetype differs
+ *   from the deck's stored identity, the response carries an
+ *   `archetypeSuggestion` for the owner to act on.
  *
  * Both require authentication. RLS on public.saved_decks ensures users
  * can only modify their own rows.
@@ -82,8 +81,6 @@ export async function PATCH(
     deck_list?: string;
     /** Ignored — the snapshot is recomputed server-side on deck_list change. */
     analysis?: unknown;
-    version_name?: string;
-    changelog?: string;
   };
   try {
     body = await req.json();
@@ -156,18 +153,15 @@ export async function PATCH(
     }
   }
 
-  // Deck list: a content change is a version commit. commitDeckVersion
-  // re-analyzes server-side, skips no-op saves, and the RPC updates the
-  // deck_list/analysis mirror on saved_decks atomically with the version
-  // row — so deck_list never goes through the plain update below.
-  let committedVersion: {
-    id: string;
-    version_number: number;
-    name: string | null;
-    created: boolean;
-  } | null = null;
+  // Deck list: re-analyze server-side and, if the freshly detected
+  // archetype differs from the deck's stored identity, surface it as a
+  // suggestion — never auto-applied, the owner decides.
   let archetypeSuggestion:
-    | { archetypeId: string | null; archetypeName: string }
+    | {
+        archetypeId: string | null;
+        archetypeName: string;
+        current: { archetypeId: string | null; archetypeName: string | null };
+      }
     | undefined;
 
   if (typeof body.deck_list === "string") {
@@ -188,40 +182,39 @@ export async function PATCH(
       return NextResponse.json({ error: "Deck not found." }, { status: 404 });
     }
 
+    let analysisResult;
     try {
-      const commit = await commitDeckVersion(supabase, {
-        deckId: id,
-        deckList: dl,
-        name: typeof body.version_name === "string" ? body.version_name : null,
-        changelog: typeof body.changelog === "string" ? body.changelog : "",
-        currentArchetype: {
-          id: deckRow.archetype_id ?? null,
-          name: deckRow.archetype_name ?? null,
-        },
-      });
-      committedVersion = {
-        id: commit.version.id,
-        version_number: commit.version.version_number,
-        name: commit.version.name,
-        created: commit.created,
-      };
-      archetypeSuggestion = commit.archetypeSuggestion;
+      analysisResult = analyzeDeckList(dl);
     } catch (err) {
       if (err instanceof DeckParseError) {
         return NextResponse.json({ error: err.message }, { status: 400 });
       }
-      console.error("[saved-decks] version commit failed:", err);
+      console.error("[saved-decks] analyze failed:", err);
       return NextResponse.json(
         { error: "Failed to update deck." },
         { status: 500 }
       );
     }
-    // Track the content edit under the pre-existing event name.
-    updates.deck_list = dl;
-  }
 
-  const metadataUpdates = { ...updates };
-  delete metadataUpdates.deck_list;
+    const detected = detectDeckArchetype(analysisResult);
+    if (
+      detected.archetypeName &&
+      (detected.archetypeId ?? null) !== (deckRow.archetype_id ?? null) &&
+      detected.archetypeName !== deckRow.archetype_name
+    ) {
+      archetypeSuggestion = {
+        archetypeId: detected.archetypeId,
+        archetypeName: detected.archetypeName,
+        current: {
+          archetypeId: deckRow.archetype_id ?? null,
+          archetypeName: deckRow.archetype_name ?? null,
+        },
+      };
+    }
+
+    updates.deck_list = dl;
+    updates.analysis = analysisResult;
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json(
@@ -230,19 +223,17 @@ export async function PATCH(
     );
   }
 
-  if (Object.keys(metadataUpdates).length > 0) {
-    const { error } = await supabase
-      .from("saved_decks")
-      .update(metadataUpdates)
-      .eq("id", id);
+  const { error } = await supabase
+    .from("saved_decks")
+    .update(updates)
+    .eq("id", id);
 
-    if (error) {
-      console.error("[saved-decks] update failed:", error);
-      return NextResponse.json(
-        { error: "Failed to update deck." },
-        { status: 500 }
-      );
-    }
+  if (error) {
+    console.error("[saved-decks] update failed:", error);
+    return NextResponse.json(
+      { error: "Failed to update deck." },
+      { status: 500 }
+    );
   }
 
   // Pick the most meaningful event name for the update. Renames are common
@@ -272,7 +263,6 @@ export async function PATCH(
   return NextResponse.json({
     success: true,
     ...updates,
-    ...(committedVersion ? { version: committedVersion } : {}),
     ...(archetypeSuggestion ? { archetypeSuggestion } : {}),
   });
 }

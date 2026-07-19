@@ -45,10 +45,6 @@ interface Props {
     coverUrl: string | null;
     deckList: string;
     isPublic?: boolean;
-    /** Only set when the deck list changed (edit mode): optional title +
-     *  changelog for the version this save commits. */
-    versionName?: string;
-    changelog?: string;
   }) => Promise<void>;
 }
 
@@ -75,8 +71,6 @@ export default function EditDeckDialog({
   const [pendingCoverUrl, setPendingCoverUrl] = useState<string | null>(currentCoverUrl);
   const [deckListInput, setDeckListInput] = useState(initialDeckList);
   const [isPublic, setIsPublic] = useState(initialIsPublic);
-  const [versionNameInput, setVersionNameInput] = useState("");
-  const [changelogInput, setChangelogInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,8 +82,6 @@ export default function EditDeckDialog({
       setPendingCoverUrl(currentCoverUrl);
       setDeckListInput(initialDeckList);
       setIsPublic(initialIsPublic);
-      setVersionNameInput("");
-      setChangelogInput("");
       setError(null);
     }
   }, [open, initialName, currentCoverUrl, initialDeckList, initialIsPublic]);
@@ -142,12 +134,6 @@ export default function EditDeckDialog({
         coverUrl: pendingCoverUrl,
         deckList: trimmedDeckList,
         ...(mode === "save" ? { isPublic } : {}),
-        ...(mode === "edit" && deckListChanged
-          ? {
-              versionName: versionNameInput.trim() || undefined,
-              changelog: changelogInput.trim() || undefined,
-            }
-          : {}),
       });
       onClose();
     } catch (e) {
@@ -285,53 +271,10 @@ export default function EditDeckDialog({
               className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-xs font-mono text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 resize-y disabled:opacity-50 [font-size:16px] sm:text-xs"
             />
             {deckListChanged && (
-              <>
-                <p className="mt-1.5 text-[11px] text-text-secondary">
-                  Saving commits a new version to this deck&apos;s history and
-                  refreshes the profile. Pick a new cover below after it
-                  updates if needed.
-                </p>
-                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label
-                      htmlFor="edit-deck-version-name"
-                      className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5"
-                    >
-                      Version name{" "}
-                      <span className="normal-case font-medium tracking-normal">(optional)</span>
-                    </label>
-                    <input
-                      id="edit-deck-version-name"
-                      type="text"
-                      value={versionNameInput}
-                      onChange={(e) => setVersionNameInput(e.target.value)}
-                      disabled={busy}
-                      maxLength={60}
-                      placeholder="e.g. Worlds list"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 disabled:opacity-50 [font-size:16px] sm:text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="edit-deck-changelog"
-                      className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5"
-                    >
-                      What changed?{" "}
-                      <span className="normal-case font-medium tracking-normal">(optional)</span>
-                    </label>
-                    <input
-                      id="edit-deck-changelog"
-                      type="text"
-                      value={changelogInput}
-                      onChange={(e) => setChangelogInput(e.target.value)}
-                      disabled={busy}
-                      maxLength={200}
-                      placeholder="e.g. −2 Iono, +2 Judge"
-                      className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 disabled:opacity-50 [font-size:16px] sm:text-sm"
-                    />
-                  </div>
-                </div>
-              </>
+              <p className="mt-1.5 text-[11px] text-text-secondary">
+                Saving replaces the deck list and refreshes the profile. Pick
+                a new cover below after it updates if needed.
+              </p>
             )}
           </div>
         )}

@@ -41,7 +41,6 @@ export async function PATCH(
     prizes_taken_player?: number | null;
     prizes_taken_opponent?: number | null;
     game_prizes?: unknown;
-    saved_deck_version_id?: string | null;
   };
   try {
     body = await req.json();
@@ -86,36 +85,6 @@ export async function PATCH(
     updates.prizes_taken_opponent = sanitizePrize(body.prizes_taken_opponent);
   if (body.game_prizes !== undefined)
     updates.game_prizes = sanitizeGamePrizes(body.game_prizes);
-
-  // Re-attribute the match to a different version of its deck. Null clears
-  // the stamp; a version id must belong to the match's own deck.
-  if (body.saved_deck_version_id !== undefined) {
-    if (body.saved_deck_version_id === null) {
-      updates.saved_deck_version_id = null;
-    } else {
-      const { data: match } = await supabase
-        .from("matches")
-        .select("saved_deck_id")
-        .eq("id", id)
-        .maybeSingle();
-      if (!match) {
-        return NextResponse.json({ error: "Match not found." }, { status: 404 });
-      }
-      const { data: version } = await supabase
-        .from("deck_versions")
-        .select("id")
-        .eq("id", body.saved_deck_version_id)
-        .eq("deck_id", match.saved_deck_id)
-        .maybeSingle();
-      if (!version) {
-        return NextResponse.json(
-          { error: "saved_deck_version_id does not belong to this match's deck." },
-          { status: 400 }
-        );
-      }
-      updates.saved_deck_version_id = version.id;
-    }
-  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "Nothing to update." }, { status: 400 });
