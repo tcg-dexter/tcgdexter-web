@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { pokemonSlug } from "@/lib/primaryCardImage";
 import { normalizeForSearch } from "@/lib/searchNormalize";
+import AnimatedGradient from "@/app/components/AnimatedGradient";
 
 interface Props {
   avatarUrl: string | null;
@@ -134,26 +135,29 @@ export default function AvatarPicker({ avatarUrl, gradient }: Props) {
         onClick={() => setOpen((o) => !o)}
         aria-label={current ? "Change avatar" : "Add avatar"}
         disabled={saving}
-        className="rounded-full ring-4 ring-bg flex items-center justify-center overflow-hidden shrink-0 disabled:opacity-70"
-        style={{ background: gradient, width: "115px", height: "115px" }}
+        className="relative rounded-full ring-4 ring-bg flex items-center justify-center overflow-hidden shrink-0 disabled:opacity-70"
+        style={{ width: "115px", height: "115px" }}
       >
-        {current ? (
-          // Sprite sized to ~78% of the 115px circle so a ring of the
-          // avatar-bg gradient shows around the art, matching the meta
-          // archetype header's icon treatment.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={current} alt="" className="w-[90px] h-[90px] object-contain" />
-        ) : (
-          <svg
-            className="w-8 h-8 text-white"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m-7-7h14" />
-          </svg>
-        )}
+        <AnimatedGradient gradient={gradient} className="absolute inset-0" />
+        <span className="relative">
+          {current ? (
+            // Sprite sized to ~78% of the 115px circle so a ring of the
+            // avatar-bg gradient shows around the art, matching the meta
+            // archetype header's icon treatment.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={current} alt="" className="w-[90px] h-[90px] object-contain" />
+          ) : (
+            <svg
+              className="w-8 h-8 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m-7-7h14" />
+            </svg>
+          )}
+        </span>
       </button>
 
       {open && (

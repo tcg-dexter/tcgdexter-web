@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import AnimatedGradient from "@/app/components/AnimatedGradient";
 
 /**
  * Tile in a profile / archetype bio stat grid.
@@ -30,13 +31,23 @@ export function StatCard({
   gradientCss?: string;
 }) {
   if (tone === "gradient") {
+    // gradientCss changes at runtime (the profile page's Wins tile picks
+    // up the user's chosen banner accent) — dissolve into it rather than
+    // snapping. The static bg-gradient-brand fallback never changes, so
+    // it stays a plain div with no animation machinery.
+    if (gradientCss) {
+      return (
+        <AnimatedGradient
+          gradient={gradientCss}
+          className="relative rounded-2xl shadow-sm px-4 py-3 text-center text-white"
+        >
+          <p className="text-lg font-bold tabular-nums">{value}</p>
+          <p className="text-xs mt-0.5 opacity-90">{label}</p>
+        </AnimatedGradient>
+      );
+    }
     return (
-      <div
-        className={`rounded-2xl shadow-sm px-4 py-3 text-center text-white ${
-          gradientCss ? "" : "bg-gradient-brand"
-        }`}
-        style={gradientCss ? { background: gradientCss } : undefined}
-      >
+      <div className="rounded-2xl shadow-sm px-4 py-3 text-center text-white bg-gradient-brand">
         <p className="text-lg font-bold tabular-nums">{value}</p>
         <p className="text-xs mt-0.5 opacity-90">{label}</p>
       </div>

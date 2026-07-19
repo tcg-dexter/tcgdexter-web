@@ -3,6 +3,7 @@ import { shade } from "@/lib/color";
 import { ENERGY_HEX } from "@/app/components/DeckProfileView";
 import { StatCard } from "@/app/components/StatCard";
 import AvatarPicker from "./AvatarPicker";
+import AnimatedGradient from "@/app/components/AnimatedGradient";
 
 /**
  * Energy-accent keys the picker (and DB check constraint) accept.
@@ -113,10 +114,10 @@ export default function UserProfileHeader({
 
   return (
     <header className="relative flex-shrink-0">
-      {/* Banner — solid gradient. */}
-      <div
+      {/* Banner — solid gradient, dissolves into a new accent color. */}
+      <AnimatedGradient
+        gradient={gradient}
         className={`relative w-full overflow-hidden ${bannerBox}`}
-        style={{ background: gradient }}
       />
 
       {/* Banner bottom-right overlay (pencil edit button). Rendered as
@@ -152,13 +153,10 @@ export default function UserProfileHeader({
           {isOwner ? (
             <AvatarPicker avatarUrl={avatarUrl} gradient={gradient} />
           ) : (
-            <div
+            <AnimatedGradient
+              gradient={gradient}
               className="relative z-10 rounded-full ring-4 ring-bg flex items-center justify-center overflow-hidden shrink-0"
-              style={{
-                background: gradient,
-                width: "115px",
-                height: "115px",
-              }}
+              style={{ width: "115px", height: "115px" }}
             >
               {avatarUrl && (
                 // Sprite sized to ~78% of the 115px circle, matching the
@@ -170,7 +168,7 @@ export default function UserProfileHeader({
                   className="w-[90px] h-[90px] object-contain"
                 />
               )}
-            </div>
+            </AnimatedGradient>
           )}
           {actions && (
             // self-start + mt slightly larger than the row's negative
