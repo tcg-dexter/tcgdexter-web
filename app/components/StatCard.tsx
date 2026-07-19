@@ -39,7 +39,7 @@ export function StatCard({
       return (
         <AnimatedGradient
           gradient={gradientCss}
-          className="relative rounded-2xl shadow-sm px-4 py-3 text-center text-white"
+          className="relative rounded-2xl overflow-hidden shadow-sm px-4 py-3 text-center text-white"
         >
           <p className="text-lg font-bold tabular-nums">{value}</p>
           <p className="text-xs mt-0.5 opacity-90">{label}</p>
