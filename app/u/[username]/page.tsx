@@ -25,6 +25,8 @@ import ThemeColor from "@/app/components/ThemeColor";
 import { ResponsiveLabel } from "@/app/components/StatCard";
 import AccentPicker from "./AccentPicker";
 import TeamCards, { type TeamCardRef } from "./TeamCards";
+import { MatchCard } from "@/app/components/MatchCard";
+import { loadOwnerRecentMatches } from "@/lib/recent-matches";
 
 interface ProfileRow {
   id: string;
@@ -59,22 +61,11 @@ interface DeckRow {
 }
 
 interface MatchRow {
-  id: string;
   saved_deck_id: string | null;
   result: string;
-  opponent_name: string | null;
-  opponent_archetype: string | null;
   played_at: string | null;
   created_at: string;
 }
-
-// Mirrors MatchLog.tsx's RESULT_STYLE — kept as a local copy since that
-// file is a "use client" component and doesn't export it.
-const BATTLE_RESULT_STYLE: Record<string, { label: string; bg: string; text: string }> = {
-  win: { label: "W", bg: "bg-gradient-brand", text: "text-white" },
-  loss: { label: "L", bg: "bg-black", text: "text-white" },
-  draw: { label: "D", bg: "bg-white shadow-[inset_0_0_0_1px_black]", text: "text-text-primary" },
-};
 
 export async function generateMetadata({
   params,
@@ -164,7 +155,7 @@ export default async function ProfilePage({
   if (isOwner) {
     const { data: matches } = await supabase
       .from("matches")
-      .select("id, saved_deck_id, result, opponent_name, opponent_archetype, played_at, created_at");
+      .select("saved_deck_id, result, played_at, created_at");
     manualMatches = (matches ?? []) as MatchRow[];
   }
 
@@ -215,15 +206,12 @@ export default async function ProfilePage({
     ? [...decks].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 3)
     : decks;
 
-  // Recent Battles — owner-only (manual match data is private). 3 most
-  // recently played, falling back to created_at for matches with no
-  // explicit played_at.
+  // Recent Battles — owner-only (manual match data is private). Reuses
+  // the same MatchCard/RecentMatch pipeline as the public /matches feed,
+  // scoped to just this owner's own decks.
   const recentBattles = isOwner
-    ? [...manualMatches]
-        .sort((a, b) => (b.played_at ?? b.created_at).localeCompare(a.played_at ?? a.created_at))
-        .slice(0, 3)
+    ? await loadOwnerRecentMatches(supabase, profile.id, profile.username, 3)
     : [];
-  const deckNameById = new Map(decks.map((d) => [d.id, d.name]));
 
   // Visitor placeholder for owner-private cells.
   const ownerOnly = (value: string) => (isOwner ? value : "—");
@@ -479,7 +467,7 @@ export default async function ProfilePage({
         <div className="px-4 sm:px-8 mt-8">
           <div className="flex items-center justify-between gap-3 mb-3 px-1">
             <h2 className="text-lg font-semibold text-text-primary">Recent Battles</h2>
-            {manualMatches.length > 0 && (
+            {recentBattles.length > 0 && (
               <Link
                 href="/matches?filter=mine"
                 className="shrink-0 rounded-full bg-black border border-transparent px-3 py-1.5 text-xs font-semibold text-white hover:opacity-80 transition-opacity"
@@ -489,7 +477,7 @@ export default async function ProfilePage({
             )}
           </div>
 
-          {manualMatches.length === 0 ? (
+          {recentBattles.length === 0 ? (
             <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
               <p className="text-sm text-text-secondary">
                 No battles logged yet. Log a match from any of your decks to see it here.
@@ -497,33 +485,9 @@ export default async function ProfilePage({
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {recentBattles.map((battle) => {
-                const style = BATTLE_RESULT_STYLE[battle.result] ?? BATTLE_RESULT_STYLE.win;
-                const dateStr = new Date(battle.played_at ?? battle.created_at).toLocaleDateString(
-                  "en-US",
-                  { month: "short", day: "numeric" }
-                );
-                return (
-                  <div
-                    key={battle.id}
-                    className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-4 flex items-start gap-3"
-                  >
-                    <span
-                      className={`shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold ${style.bg} ${style.text}`}
-                    >
-                      {style.label}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-text-primary truncate">
-                        {(battle.saved_deck_id && deckNameById.get(battle.saved_deck_id)) ?? "Deck"}
-                      </p>
-                      <p className="text-xs text-text-muted truncate">
-                        {battle.opponent_archetype ?? battle.opponent_name ?? "Match logged"} · {dateStr}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
+              {recentBattles.map((battle) => (
+                <MatchCard key={battle.id} match={battle} />
+              ))}
             </div>
           )}
         </div>
