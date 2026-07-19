@@ -131,11 +131,13 @@ export default function UserProfileHeader({
       {/* Team-card fan. Sized and clipped to the exact same box as the
           banner (unlike bannerOverlay, this wrapper keeps
           overflow-hidden) so each card's bottom edge crops flush with
-          the banner edge, matching the meta archetype header. The
-          caller is responsible for portaling any popover it opens out
-          of this subtree so it isn't clipped too. */}
+          the banner edge, matching the meta archetype header. z-0 keeps
+          it behind the avatar (z-10), which overlaps the banner's
+          bottom-left corner via negative margin. The caller is
+          responsible for portaling any popover it opens out of this
+          subtree so it isn't clipped too. */}
       {bannerFan && (
-        <div className={`absolute inset-x-0 top-0 ${bannerBox} overflow-hidden z-20 pointer-events-none`}>
+        <div className={`absolute inset-x-0 top-0 ${bannerBox} overflow-hidden z-0 pointer-events-none`}>
           {bannerFan}
         </div>
       )}
