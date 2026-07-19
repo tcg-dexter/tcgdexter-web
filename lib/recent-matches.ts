@@ -5,6 +5,7 @@ import {
   cardImageUrlForName,
   primaryPokemonCard,
   cardTypesForName,
+  findPokemonNameInText,
 } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
 import { metaArchetypeCard } from "@/lib/metaArchetypeCards";
@@ -168,25 +169,37 @@ async function assembleRecentMatches(
     const playerPrimary = analysis?.cards ? primaryPokemonCard(analysis.cards) : null;
     const playerColor = typeColor(playerPrimary?.types);
 
+    // Opponent art cascade, most-confident signal first:
+    //   1. Battle-log top attacker (real card played, requires parsed actions)
+    //   2. opponent_archetype exact match against the top-30 meta list
+    //   3. A known Pokémon name pulled out of the free-text opponent_archetype
+    //      field — catches manually-typed archetypes that aren't an exact
+    //      top-30 match (typos, older/rotated-out decks, casing) but still
+    //      name a real card, e.g. "Charizard ex / Pidgeot ex".
     const topAttacker = topAttackerByMatch.get(m.id as string) ?? null;
+    const archetypeCard = m.opponent_archetype
+      ? metaArchetypeCard(m.opponent_archetype as string)
+      : null;
+    const fallbackPokemonName =
+      !topAttacker && !archetypeCard && m.opponent_archetype
+        ? findPokemonNameInText(m.opponent_archetype as string)
+        : null;
+
     let opponentImageUrl: string | null;
     let opponentColor: string;
-
-    if (m.source === "tcg_live_log") {
-      opponentImageUrl = topAttacker ? cardImageUrlForName(topAttacker) : null;
-      opponentColor = typeColor(topAttacker ? cardTypesForName(topAttacker) : undefined);
+    if (topAttacker) {
+      opponentImageUrl = cardImageUrlForName(topAttacker);
+      opponentColor = typeColor(cardTypesForName(topAttacker));
+    } else if (archetypeCard) {
+      opponentImageUrl = archetypeCard.imageUrl;
+      opponentColor = typeColor(archetypeCard.types);
+    } else if (fallbackPokemonName) {
+      opponentImageUrl = cardImageUrlForName(fallbackPokemonName);
+      opponentColor = typeColor(cardTypesForName(fallbackPokemonName));
     } else {
-      const archetypeCard = m.opponent_archetype
-        ? metaArchetypeCard(m.opponent_archetype as string)
-        : null;
-      if (!archetypeCard) {
-        if (dropIfNoOpponentArt) return [];
-        opponentImageUrl = null;
-        opponentColor = typeColor(undefined);
-      } else {
-        opponentImageUrl = archetypeCard.imageUrl;
-        opponentColor = typeColor(archetypeCard.types);
-      }
+      if (dropIfNoOpponentArt) return [];
+      opponentImageUrl = null;
+      opponentColor = typeColor(undefined);
     }
 
     const manualPrizes = manualPrizeTotals({

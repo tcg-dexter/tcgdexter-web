@@ -10,11 +10,6 @@ import {
 } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
 import MatchHeatMap from "@/app/profile/MatchHeatMap";
-import {
-  CERTIFIED_TRAINER,
-  listAchievements,
-} from "@/lib/learn/achievements";
-import CertifiedTrainerBadge from "@/app/learn/quiz/CertifiedTrainerBadge";
 import UserProfileHeader, {
   StatCard,
   bannerGradientFor,
@@ -182,17 +177,6 @@ export default async function ProfilePage({
   // Heatmap dates: manual played_at (owner only — manual match data is private).
   const heatmapMatches: MatchRow[] = isOwner ? manualMatches : [];
 
-  const achievements = await listAchievements(supabase, profile.id);
-  const certifiedTrainer = achievements.find((a) => a.key === CERTIFIED_TRAINER);
-  const certifiedDate = certifiedTrainer
-    ? new Date(certifiedTrainer.earned_at).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
-    : null;
-  const showAchievementsCard = isOwner || achievements.length > 0;
-
   // Public deck stats (visible to both owner and visitor).
   const publicDeckCount = decks.filter((d) => d.is_public).length;
   const totalLikes = decks.reduce((s, d) => s + (d.like_count ?? 0), 0);
@@ -234,41 +218,6 @@ export default async function ProfilePage({
       {/* Match Activity — owner-only (manual match data is private). */}
       {isOwner && heatmapMatches.length > 0 && (
         <MatchHeatMap matches={heatmapMatches} accent={profile.banner_accent} />
-      )}
-
-      {/* Achievements — earned badges; owner sees an empty-state nudge. */}
-      {showAchievementsCard && (
-        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5">
-          <h2 className="text-sm font-semibold text-text-primary mb-3">
-            Achievements
-          </h2>
-          {certifiedTrainer ? (
-            <div className="flex items-center gap-3">
-              <CertifiedTrainerBadge size="sm" />
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-text-primary">
-                  Certified Trainer
-                </p>
-                <p className="text-xs text-text-muted">
-                  Earned {certifiedDate}
-                </p>
-              </div>
-            </div>
-          ) : (
-            isOwner && (
-              <p className="text-sm text-text-secondary">
-                Pass the{" "}
-                <Link
-                  href="/learn/quiz"
-                  className="text-accent hover:underline"
-                >
-                  Trainer Quiz
-                </Link>{" "}
-                to earn your first badge.
-              </p>
-            )
-          )}
-        </div>
       )}
     </>
   );
