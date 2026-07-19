@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { shade } from "@/lib/color";
 import { ENERGY_HEX } from "@/app/components/DeckProfileView";
 import { StatCard } from "@/app/components/StatCard";
+import AvatarPicker from "./AvatarPicker";
 
 /**
  * Energy-accent keys the picker (and DB check constraint) accept.
@@ -60,6 +61,9 @@ interface Props {
   bio: string | null;
   tcgLiveHandle: string | null;
   avatarUrl: string | null;
+  /** Whether the viewer owns this profile — gates the avatar's
+   *  Pokémon-picker interactivity (see AvatarPicker). */
+  isOwner: boolean;
   bannerAccent: string | null;
   /** Owner-only actions (e.g. settings gear). Rendered inline on the
    *  right of the avatar overlap row, mirroring the meta header. */
@@ -90,6 +94,7 @@ export default function UserProfileHeader({
   bio,
   tcgLiveHandle,
   avatarUrl,
+  isOwner,
   bannerAccent,
   actions,
   bannerOverlay,
@@ -98,7 +103,6 @@ export default function UserProfileHeader({
   belowStats,
 }: Props) {
   const gradient = bannerGradientFor(bannerAccent);
-  const initial = displayName.trim().charAt(0).toUpperCase() || "?";
 
   // Shared banner box geometry — mirrors the meta archetype header
   // exactly (down to the sm:+ aspect ratio) so the avatar overlap math
@@ -145,25 +149,27 @@ export default function UserProfileHeader({
       {/* Bio section. Avatar overlaps the banner via negative margin. */}
       <div className="mx-auto max-w-2xl px-6">
         <div className="flex items-end justify-between gap-3 -mt-16 sm:-mt-20">
-          <div
-            className="relative z-10 rounded-full ring-4 ring-bg flex items-center justify-center overflow-hidden shrink-0"
-            style={{
-              background: gradient,
-              width: "128px",
-              height: "128px",
-            }}
-          >
-            {avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatarUrl}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-5xl font-bold text-white">{initial}</span>
-            )}
-          </div>
+          {isOwner ? (
+            <AvatarPicker avatarUrl={avatarUrl} gradient={gradient} />
+          ) : (
+            <div
+              className="relative z-10 rounded-full ring-4 ring-bg flex items-center justify-center overflow-hidden shrink-0"
+              style={{
+                background: gradient,
+                width: "128px",
+                height: "128px",
+              }}
+            >
+              {avatarUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </div>
+          )}
           {actions && (
             // self-start + mt slightly larger than the row's negative
             // top margin (mt-16/mt-20) leaves ~16px of breathing room

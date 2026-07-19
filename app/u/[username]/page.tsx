@@ -321,6 +321,7 @@ export default async function ProfilePage({
         bio={profile.bio}
         tcgLiveHandle={profile.tcg_live_handle}
         avatarUrl={profile.avatar_url}
+        isOwner={isOwner}
         bannerAccent={profile.banner_accent}
         stats={stats}
         belowStats={belowStats}
