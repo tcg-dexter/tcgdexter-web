@@ -156,16 +156,18 @@ export default function UserProfileHeader({
               className="relative z-10 rounded-full ring-4 ring-bg flex items-center justify-center overflow-hidden shrink-0"
               style={{
                 background: gradient,
-                width: "128px",
-                height: "128px",
+                width: "115px",
+                height: "115px",
               }}
             >
               {avatarUrl && (
+                // Sprite sized to ~78% of the 115px circle, matching the
+                // meta archetype header's icon treatment.
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={avatarUrl}
                   alt=""
-                  className="w-full h-full object-cover"
+                  className="w-[90px] h-[90px] object-contain"
                 />
               )}
             </div>

@@ -135,14 +135,17 @@ export default function AvatarPicker({ avatarUrl, gradient }: Props) {
         aria-label={current ? "Change avatar" : "Add avatar"}
         disabled={saving}
         className="rounded-full ring-4 ring-bg flex items-center justify-center overflow-hidden shrink-0 disabled:opacity-70"
-        style={{ background: gradient, width: "128px", height: "128px" }}
+        style={{ background: gradient, width: "115px", height: "115px" }}
       >
         {current ? (
+          // Sprite sized to ~78% of the 115px circle so a ring of the
+          // avatar-bg gradient shows around the art, matching the meta
+          // archetype header's icon treatment.
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={current} alt="" className="w-full h-full object-cover" />
+          <img src={current} alt="" className="w-[90px] h-[90px] object-contain" />
         ) : (
           <svg
-            className="w-10 h-10 text-white"
+            className="w-8 h-8 text-white"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
