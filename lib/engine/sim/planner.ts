@@ -51,8 +51,15 @@ export interface PlanSnapshot {
   is_player_turn: number;
 }
 
-/** Returns roughly P(win) in (0, 1) for the acting side. */
-export type StateEvaluator = (snapshot: PlanSnapshot) => number;
+/** Returns roughly P(win) in (0, 1) for the acting side.
+ *
+ *  `view` is the acting side's PlayerView of the evaluated end state — the
+ *  same redacted information set a real player would have. It carries the
+ *  board detail (HP, damage, energy, readiness, conditions) that
+ *  PlanSnapshot's handful of scalars cannot, which is what a board-aware
+ *  evaluator needs; snapshot-only evaluators simply ignore it. The sim
+ *  hands over a sim-native type, so lib/engine/sim stays ML-free. */
+export type StateEvaluator = (snapshot: PlanSnapshot, view?: PlayerView) => number;
 
 /** Fallback when no trained artifact is live: prize lead dominates, board
  *  and hand size break ties. Clamped away from certainty. */
@@ -72,10 +79,28 @@ export interface PlannerParams {
   maxCandidates: number;
 }
 
+/** Hand-tuned score adjustments layered on top of the evaluator. Several of
+ *  these exist only because the original 8-scalar evaluator was blind to the
+ *  board (damage, energy, readiness); a board-aware evaluator prices those
+ *  itself, so keeping both double-counts. Injectable so they can be A/B'd
+ *  against the mirror benchmark instead of guessed at. */
+export interface TacticalWeights {
+  damageProgress: number;
+  koThreat: number;
+  activeReady: number;
+  attackInvestment: number;
+  prizeConversion: number;
+  noAttackTempo: number;
+  retreatTempo: number;
+  attachTiebreak: number;
+}
+
 export interface PlannerOptions {
   params: PlannerParams;
   seed: number;
   evaluate?: StateEvaluator;
+  /** Overrides merged over DEFAULT_TACTICAL_WEIGHTS. */
+  tactical?: Partial<TacticalWeights>;
 }
 
 /** Keep enough deck to survive several more turn-start draws. Real search
@@ -124,6 +149,18 @@ const NO_ATTACK_TEMPO_PENALTY = 0.04;
 // energy is retreat fuel at worst; a hair of value breaks the tie.
 const ATTACH_TIEBREAK_BONUS = 0.01;
 
+/** The shipped values above, as an overridable bundle (see TacticalWeights). */
+export const DEFAULT_TACTICAL_WEIGHTS: TacticalWeights = {
+  damageProgress: DAMAGE_PROGRESS_WEIGHT,
+  koThreat: KO_THREAT_BONUS,
+  activeReady: ACTIVE_READY_BONUS,
+  attackInvestment: ATTACK_INVESTMENT_WEIGHT,
+  prizeConversion: PRIZE_CONVERSION_BONUS,
+  noAttackTempo: NO_ATTACK_TEMPO_PENALTY,
+  retreatTempo: RETREAT_TEMPO_PENALTY,
+  attachTiebreak: ATTACH_TIEBREAK_BONUS,
+};
+
 interface CandidatePlan {
   moves: SimMove[];
   score: number;
@@ -133,6 +170,7 @@ export class PlannerPolicy implements DecisionPolicy {
   private readonly params: PlannerParams;
   private readonly evaluate: StateEvaluator;
   private readonly seed: number;
+  private readonly tactical: TacticalWeights;
   private queue: SimMove[] = [];
   private plannedTurn = -1;
 
@@ -140,6 +178,7 @@ export class PlannerPolicy implements DecisionPolicy {
     this.params = options.params;
     this.evaluate = options.evaluate ?? heuristicEvaluator;
     this.seed = options.seed >>> 0;
+    this.tactical = { ...DEFAULT_TACTICAL_WEIGHTS, ...options.tactical };
   }
 
   chooseMove(view: PlayerView, legal: SimMove[], _ctx: TurnContext): SimMove {
@@ -332,9 +371,9 @@ export class PlannerPolicy implements DecisionPolicy {
             const end = applyPlanToGhost(ghost, moves);
             if (!end) continue;
             const tempo =
-              (retreat && retreat.kind === "retreat" ? RETREAT_TEMPO_PENALTY : 0) +
-              (attack ? 0 : NO_ATTACK_TEMPO_PENALTY) -
-              (attach ? ATTACH_TIEBREAK_BONUS : 0);
+              (retreat && retreat.kind === "retreat" ? this.tactical.retreatTempo : 0) +
+              (attack ? 0 : this.tactical.noAttackTempo) -
+              (attach ? this.tactical.attachTiebreak : 0);
             plans.push({ moves, score: this.scoreEndState(end, view) - tempo });
             if (plans.length >= this.params.maxCandidates) break outer;
           }
@@ -351,8 +390,8 @@ export class PlannerPolicy implements DecisionPolicy {
       const end = applyPlanToGhost(ghost, shadow);
       if (end) {
         const tempo =
-          (shadow.some((m) => m.kind === "attack") ? 0 : NO_ATTACK_TEMPO_PENALTY) -
-          (shadow.some((m) => m.kind === "attach") ? ATTACH_TIEBREAK_BONUS : 0);
+          (shadow.some((m) => m.kind === "attack") ? 0 : this.tactical.noAttackTempo) -
+          (shadow.some((m) => m.kind === "attach") ? this.tactical.attachTiebreak : 0);
         plans.push({ moves: shadow, score: this.scoreEndState(end, view) - tempo });
       }
     }
@@ -383,10 +422,13 @@ export class PlannerPolicy implements DecisionPolicy {
       went_first: view.wentFirst === null ? 0.5 : view.wentFirst ? 1 : 0,
       is_player_turn: 1,
     };
-    let score = this.evaluate(snapshot);
+    // The ghost seats the acting side at sides.player, so ghostView(end) is
+    // this plan's post-reply information set from our perspective — exactly
+    // what a board-aware evaluator scores.
+    let score = this.evaluate(snapshot, ghostView(end));
 
     // Banked prizes beat any positional bonus (see PRIZE_CONVERSION_BONUS).
-    score += PRIZE_CONVERSION_BONUS * Math.max(0, end.prizesTaken.player - view.prizesTaken);
+    score += this.tactical.prizeConversion * Math.max(0, end.prizesTaken.player - view.prizesTaken);
 
     // Tactical adjustments from public information only.
     const ourActive = self.active;
@@ -395,7 +437,7 @@ export class PlannerPolicy implements DecisionPolicy {
       // Progress toward knocking out their current active (chip damage is
       // invisible to the prize-based evaluator otherwise).
       const theirHp = theirActive.card.catalog?.hp ?? 120;
-      score += DAMAGE_PROGRESS_WEIGHT * Math.min(1, theirActive.damage / theirHp);
+      score += this.tactical.damageProgress * Math.min(1, theirActive.damage / theirHp);
 
       // Threat: our active could take the KO next turn as the board stands.
       const ourBest = Math.max(
@@ -404,9 +446,9 @@ export class PlannerPolicy implements DecisionPolicy {
           computeDamage(ourActive, attack, theirActive),
         ),
       );
-      if (ourBest >= remainingHp(theirActive)) score += KO_THREAT_BONUS;
+      if (ourBest >= remainingHp(theirActive)) score += this.tactical.koThreat;
     }
-    if (ourActive && usableAttacks(ourActive).length > 0) score += ACTIVE_READY_BONUS;
+    if (ourActive && usableAttacks(ourActive).length > 0) score += this.tactical.activeReady;
 
     // Energy investment: progress toward each mon's strongest attack.
     // Makes concentrating on a big attacker beat enabling a weak one, and
@@ -426,7 +468,7 @@ export class PlannerPolicy implements DecisionPolicy {
       }
       investment += best;
     }
-    score += ATTACK_INVESTMENT_WEIGHT * investment;
+    score += this.tactical.attackInvestment * investment;
     return score;
   }
 }
