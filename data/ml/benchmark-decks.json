@@ -1,0 +1,55 @@
+{
+  "name": "meta-top12",
+  "snapshot_date": "2026-07-20",
+  "note": "Frozen top-12 meta archetypes from data/meta-decks.json, resolved to list text. Immune to the daily meta refresh; edit deliberately with a new snapshot_date.",
+  "decks": [
+    {
+      "id": "dragapult-ex",
+      "list": "Pokémon: 19\n4 Dreepy TWM 128\n4 Drakloak TWM 129\n2 Dragapult ex TWM 130\n2 Duskull PRE 35\n2 Dusclops PRE 36\n1 Dusknoir PRE 37\n1 Budew ASC 16\n1 Fezandipiti ex ASC 142\n1 Meowth ex POR 62\n1 Munkidori TWM 95\nTrainer: 33\n4 Lillie's Determination MEG 119\n3 Crispin SCR 133\n2 Boss's Orders MEG 114\n1 Dawn PFL 87\n4 Ultra Ball MEG 131\n4 Poké Pad POR 81\n4 Buddy-Buddy Poffin TEF 144\n4 Crushing Hammer POR 71\n2 Night Stretcher ASC 196\n1 Unfair Stamp TWM 165\n1 Special Red Card CRI 82\n1 Handheld Fan TWM 150\n1 Team Rocket's Watchtower DRI 180\n1 Jamming Tower TWM 153\nEnergy: 8\n3 Psychic Energy MEE 5\n3 Fire Energy MEE 2\n2 Darkness Energy MEE 7"
+    },
+    {
+      "id": "n-s-zoroark-ex",
+      "list": "Pokémon: 19\n4 N's Zorua JTG 97\n4 N's Zoroark ex JTG 98\n2 N's Zekrom ASC 155\n1 N's Darumaka JTG 26\n1 N's Darmanitan JTG 27\n1 Tatsugiri TWM 131\n1 Budew ASC 16\n1 Yveltal MEG 88\n1 Munkidori TWM 95\n1 Pecharunt ex SFA 39\n1 Fezandipiti ex ASC 142\n1 Meowth ex POR 62\nTrainer: 34\n4 Lillie's Determination MEG 119\n3 Boss's Orders MEG 114\n2 Cyrano SSP 170\n1 Black Belt's Training JTG 143\n1 Ruffian JTG 157\n4 Buddy-Buddy Poffin TEF 144\n4 Transformation Tome CRI 83\n3 Ultra Ball MEG 131\n3 N's PP Up JTG 153\n2 Night Stretcher ASC 196\n1 Poké Pad POR 81\n1 Special Red Card CRI 82\n1 Secret Box TWM 163\n2 Binding Mochi PRE 95\n2 N's Castle JTG 152\nEnergy: 7\n7 Darkness Energy MEE 7"
+    },
+    {
+      "id": "festival-lead",
+      "list": "Pokémon: 23\n4 Grookey TWM 14\n4 Thwackey TWM 15\n1 Rillaboom TWM 16\n3 Applin TWM 17\n1 Applin TWM 126\n4 Dipplin TWM 18\n1 Petilil BLK 6\n1 Lilligant JTG 7\n1 Goldeen TWM 44\n1 Seaking PRE 21\n1 Shaymin DRI 10\n1 Psyduck ASC 39\nTrainer: 32\n4 Lillie's Determination MEG 119\n2 Kieran TWM 154\n2 Boss's Orders MEG 114\n1 Lana's Aid TWM 155\n1 Dawn PFL 87\n1 Drayton SSP 174\n4 Poké Pad POR 81\n4 Buddy-Buddy Poffin TEF 144\n4 Bug Catching Set TWM 143\n2 Night Stretcher ASC 196\n1 Secret Box TWM 163\n2 Brave Bangle WHT 80\n1 Air Balloon ASC 181\n3 Festival Grounds TWM 149\nEnergy: 5\n5 Grass Energy MEE 1"
+    },
+    {
+      "id": "slowking-seek-inspiration",
+      "list": "Pokémon: 20\n4 Slowpoke SCR 57\n3 Slowking SCR 58\n3 Mega Kangaskhan ex MEG 104\n2 Latias ex SSP 76\n2 Kyurem SFA 47\n2 Metagross CRI 61\n1 Meowth ex POR 62\n1 Zeraora DRI 78\n1 Lillie's Clefairy ex JTG 56\n1 Fezandipiti ex ASC 142\nTrainer: 29\n4 Lillie's Determination MEG 119\n4 Ciphermaniac's Codebreaking TEF 145\n4 Poké Pad POR 81\n4 Ultra Ball MEG 131\n3 Wondrous Patch PFL 94\n2 Night Stretcher ASC 196\n1 Secret Box TWM 163\n1 Switch MEG 130\n1 Brave Bangle WHT 80\n1 Lucky Helmet TWM 158\n4 Academy at Night SFA 54\nEnergy: 11\n4 Telepathic Psychic Energy POR 88\n4 Psychic Energy MEE 5\n3 Boomerang Energy TWM 166"
+    },
+    {
+      "id": "alakazam-powerful-hand",
+      "list": "Pokémon: 22\n4 Abra MEG 54\n4 Kadabra MEG 55\n3 Alakazam MEG 56\n3 Dunsparce JTG 120\n3 Dudunsparce TEF 129\n1 Dedenne SSP 87\n1 Elgyem BLK 40\n1 Genesect SFA 40\n1 Fezandipiti ex ASC 142\n1 Shaymin DRI 10\nTrainer: 32\n4 Dawn PFL 87\n3 Hilda WHT 84\n2 Boss's Orders MEG 114\n1 Lana's Aid TWM 155\n4 Buddy-Buddy Poffin TEF 144\n4 Poké Pad POR 81\n3 Rare Candy MEG 125\n2 Enhanced Hammer TWM 148\n1 Sacred Ash DRI 168\n1 Night Stretcher ASC 196\n1 Lucky Helmet TWM 158\n1 Handheld Fan TWM 150\n1 Air Balloon ASC 181\n4 Nighttime Mine ASC 197\nEnergy: 6\n4 Telepathic Psychic Energy POR 88\n1 Psychic Energy MEE 5\n1 Enriching Energy SSP 191"
+    },
+    {
+      "id": "mega-kangaskhan-ex",
+      "list": "Pokémon: 16\n2 Bouffalant SCR 119\n1 Bouffalant SSP 151\n2 Munkidori TWM 95\n2 Mega Kangaskhan ex MEG 104\n2 Latias ex SSP 76\n2 Smoochum SSP 75\n1 Bloodmoon Ursaluna ex TWM 141\n1 Psyduck ASC 39\n1 Lillie's Clefairy ex JTG 56\n1 Team Rocket's Articuno DRI 51\n1 Team Rocket's Kangaskhan ex ASC 162\nTrainer: 34\n4 Boss's Orders MEG 114\n4 Team Rocket's Petrel DRI 176\n2 Ciphermaniac's Codebreaking TEF 145\n2 Brock's Scouting JTG 146\n1 Crispin SCR 133\n4 Jumbo Ice Cream PFL 91\n3 Team Rocket's Transceiver DRI 178\n3 Pokégear 3.0 SVI 186\n2 Night Stretcher ASC 196\n1 Special Red Card CRI 82\n1 Energy Search POR 72\n1 Switch MEG 130\n1 Precious Trolley SSP 185\n2 Handheld Fan TWM 150\n3 Nighttime Mine ASC 197\nEnergy: 10\n5 Psychic Energy MEE 5\n3 Darkness Energy MEE 7\n2 Mist Energy TEF 161"
+    },
+    {
+      "id": "mega-lucario-ex",
+      "list": "Pokémon: 17\n3 Riolu PRE 50\n1 Riolu MEG 76\n3 Mega Lucario ex MEG 77\n3 Dunsparce JTG 120\n2 Dudunsparce TEF 129\n1 Dudunsparce ex JTG 121\n2 Solrock MEG 75\n2 Lunatone MEG 74\nTrainer: 30\n4 Boss's Orders MEG 114\n4 Lillie's Determination MEG 119\n2 Hilda WHT 84\n4 Fighting Gong MEG 116\n4 Premium Power Pro MEG 124\n4 Poké Pad POR 81\n2 Ultra Ball MEG 131\n2 Buddy-Buddy Poffin TEF 144\n1 Special Red Card CRI 82\n2 Gravity Mountain SSP 177\n1 Jamming Tower TWM 153\nEnergy: 13\n8 Fighting Energy MEE 6\n4 Rocky Fighting Energy POR 87\n1 Legacy Energy TWM 167"
+    },
+    {
+      "id": "marnie-s-grimmsnarl-ex",
+      "list": "Pokémon: 19\n4 Munkidori TWM 95\n3 Marnie's Impidimp DRI 134\n2 Marnie's Morgrem DRI 135\n3 Marnie's Grimmsnarl ex DRI 136\n2 Snorunt ASC 46\n2 Froslass TWM 53\n1 Budew ASC 16\n1 Tatsugiri TWM 131\n1 Yveltal MEG 88\nTrainer: 32\n4 Lillie's Determination MEG 119\n4 Team Rocket's Petrel DRI 176\n3 Boss's Orders MEG 114\n1 Iris's Fighting Spirit JTG 149\n4 Poké Pad POR 81\n3 Buddy-Buddy Poffin TEF 144\n3 Night Stretcher ASC 196\n2 Rare Candy MEG 125\n1 Energy Switch MEG 115\n1 Special Red Card CRI 82\n1 Secret Box TWM 163\n1 Air Balloon ASC 181\n4 Spikemuth Gym DRI 169\nEnergy: 9\n9 Darkness Energy MEE 7"
+    },
+    {
+      "id": "mega-absol-box",
+      "list": "Pokémon: 17\n3 Munkidori TWM 95\n2 Mega Absol ex MEG 86\n2 Mega Kangaskhan ex MEG 104\n2 Mega Audino ex ASC 172\n2 Yveltal MEG 88\n1 Bloodmoon Ursaluna ex TWM 141\n1 Latias ex SSP 76\n1 Pecharunt ex SFA 39\n1 Fezandipiti ex ASC 142\n1 Moltres PFL 14\n1 Psyduck ASC 39\nTrainer: 33\n4 Boss's Orders MEG 114\n4 Team Rocket's Petrel DRI 176\n2 Lillie's Determination MEG 119\n2 Lisia's Appeal SSP 179\n1 Brock's Scouting JTG 146\n4 Team Rocket's Transceiver DRI 178\n4 Transformation Tome CRI 83\n3 Night Stretcher ASC 196\n2 Special Red Card CRI 82\n1 Energy Switch MEG 115\n1 Precious Trolley SSP 185\n1 Ultra Ball MEG 131\n1 Energy Search POR 72\n2 Prism Tower CRI 80\n1 Team Rocket's Watchtower DRI 180\nEnergy: 10\n8 Darkness Energy MEE 7\n2 Fire Energy MEE 2"
+    },
+    {
+      "id": "rocket-s-honchkrow",
+      "list": "Pokémon: 12\n4 Team Rocket's Murkrow DRI 127\n3 Team Rocket's Honchkrow ASC 127\n2 Team Rocket's Porygon DRI 153\n1 Team Rocket's Porygon2 DRI 154\n2 Team Rocket's Articuno DRI 51\nTrainer: 40\n4 Team Rocket's Ariana DRI 171\n4 Team Rocket's Archer DRI 170\n4 Team Rocket's Giovanni DRI 174\n4 Team Rocket's Proton DRI 177\n4 Team Rocket's Petrel DRI 176\n4 Poké Pad POR 81\n4 Team Rocket's Transceiver DRI 178\n4 Roto-Stick PRE 127\n3 Night Stretcher ASC 196\n1 Ultra Ball MEG 131\n1 Miracle Headset SSP 183\n3 Team Rocket's Factory DRI 173\nEnergy: 8\n4 Team Rocket's Energy DRI 182\n4 Ignition Energy WHT 86"
+    },
+    {
+      "id": "lillie-s-clefairy-ex",
+      "list": "Pokémon: 22\n4 Mega Kangaskhan ex MEG 104\n4 Meowth ex POR 62\n4 Lillie's Clefairy ex JTG 56\n3 Latias ex SSP 76\n2 Wellspring Mask Ogerpon ex TWM 64\n2 Fezandipiti ex ASC 142\n1 Moltres PFL 14\n1 Chien-Pao SSP 56\n1 Koraidon ex ASC 121\nTrainer: 28\n4 Crispin SCR 133\n3 Boss's Orders MEG 114\n2 Ciphermaniac's Codebreaking TEF 145\n1 Cyrano SSP 170\n4 Ultra Ball MEG 131\n4 Dusk Ball SSP 175\n3 Wondrous Patch PFL 94\n1 Prime Catcher TEF 157\n2 Lillie's Pearl JTG 151\n4 Area Zero Underdepths SCR 131\nEnergy: 10\n4 Psychic Energy MEE 5\n2 Water Energy MEE 3\n2 Fighting Energy MEE 6\n1 Telepathic Psychic Energy POR 88\n1 Fire Energy MEE 2"
+    },
+    {
+      "id": "tera-box",
+      "list": "Pokémon: 22\n3 Hoothoot SCR 114\n3 Noctowl SCR 115\n3 Teal Mask Ogerpon ex TWM 25\n2 Fan Rotom SCR 118\n2 Mega Kangaskhan ex MEG 104\n2 Lillie's Clefairy ex JTG 56\n1 Wellspring Mask Ogerpon ex TWM 64\n1 Raging Bolt ex TEF 123\n1 Fezandipiti ex ASC 142\n1 Latias ex SSP 76\n1 Chien-Pao SSP 56\n1 Passimian SSP 111\n1 Iron Leaves ex TEF 25\nTrainer: 26\n4 Crispin SCR 133\n2 Boss's Orders MEG 114\n1 Cyrano SSP 170\n1 Brock's Scouting JTG 146\n4 Ultra Ball MEG 131\n2 Energy Switch MEG 115\n2 Night Stretcher ASC 196\n2 Poké Pad POR 81\n1 Energy Search POR 72\n1 Energy Retrieval SVI 171\n1 Glass Trumpet SCR 135\n1 Unfair Stamp TWM 165\n1 Special Red Card CRI 82\n3 Area Zero Underdepths SCR 131\nEnergy: 12\n5 Grass Energy MEE 1\n2 Fighting Energy MEE 6\n2 Lightning Energy MEE 4\n2 Psychic Energy MEE 5\n1 Water Energy MEE 3"
+    }
+  ]
+}

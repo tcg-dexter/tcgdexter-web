@@ -21,7 +21,11 @@
 //                          [--skills 0.35,0.65,1] [--max-turns T]
 //                          [--store PATH]
 //                          [--matchup meta|meta-vs-community|community]
-//                          [--community-decks N]
+//                          [--community-decks N] [--decks-file PATH]
+//
+// --decks-file swaps the live meta-archetype slice for a frozen benchmark
+// fixture (data/ml/benchmark-decks.json) so training decks match the duel
+// gauntlet exactly — no daily-meta drift between train and eval.
 //
 // --matchup controls which deck pools play each other (default meta, i.e.
 // today's meta-archetype-only behavior, unchanged run_hash for old
@@ -46,6 +50,7 @@ import {
 } from "@/lib/ml/features";
 import { DEFAULT_SKILLS, generateSelfPlayGames } from "@/lib/ml/selfplay";
 import { loadCommunityDecks } from "@/lib/ml/communityDecks";
+import { loadBenchmarkDecks } from "@/lib/ml/benchmarkDecks";
 import { readWinProbArtifact } from "@/lib/ml/winprob";
 import { numOrNull } from "@/lib/ml/features";
 
@@ -82,6 +87,7 @@ if (!MATCHUPS.includes(matchupArg as Matchup)) {
 }
 const matchup = matchupArg as Matchup;
 const communityDeckCount = numOrNull(argValue("--community-decks")) ?? 30;
+const decksFile = argValue("--decks-file");
 
 /* ─── Sparse encoding ───────────────────────────────────────────── */
 
@@ -153,15 +159,20 @@ CREATE TABLE IF NOT EXISTS policy_candidates (
 /* ─── Main ──────────────────────────────────────────────────────── */
 
 function main(): void {
-  const metaDecks = (metaDecksRaw as unknown as (MetaDeckEntry & {
-    variants?: { cards: MetaDeckEntry["cards"] }[];
-  })[])
-    .slice(0, deckCount)
-    .map((d) => ({
-      id: d.id,
-      list: metaDeckToList({ ...d, cards: d.cards?.length ? d.cards : d.variants?.[0]?.cards ?? [] }),
-    }))
-    .filter((d) => d.list.length > 0);
+  // The "meta" pool: a frozen benchmark fixture when --decks-file is given
+  // (drift-free, matches the duel gauntlet), else the top --decks live meta
+  // archetypes (which the daily refresh reorders).
+  const metaDecks = decksFile
+    ? loadBenchmarkDecks(path.resolve(REPO_ROOT, decksFile))
+    : (metaDecksRaw as unknown as (MetaDeckEntry & {
+        variants?: { cards: MetaDeckEntry["cards"] }[];
+      })[])
+        .slice(0, deckCount)
+        .map((d) => ({
+          id: d.id,
+          list: metaDeckToList({ ...d, cards: d.cards?.length ? d.cards : d.variants?.[0]?.cards ?? [] }),
+        }))
+        .filter((d) => d.list.length > 0);
 
   const needsCommunity = matchup !== "meta";
   const communityDecks = needsCommunity
