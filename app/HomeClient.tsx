@@ -294,7 +294,7 @@ export default function HomeClient({
         <>
           {/* Stats strip */}
           <section className="mx-auto max-w-2xl px-4 sm:px-6 pb-24">
-            <StatsStrip stats={stats} />
+            <StatsStrip stats={stats} compact />
           </section>
 
           {/* Meta ticker */}
