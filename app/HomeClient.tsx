@@ -216,7 +216,7 @@ export default function HomeClient({
             single-column, centered stack (no lg: classes apply). */}
         <div className="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-stretch">
           <div className="lg:flex lg:flex-col lg:justify-center">
-            <h2 className="text-3xl md:text-[54px] font-semibold tracking-tight leading-[1.02] max-w-4xl mx-auto lg:mx-0">
+            <h2 className="text-2xl md:text-5xl font-semibold tracking-tight leading-[1.02] max-w-4xl mx-auto lg:mx-0">
               The deckbuilder&apos;s
               <br />
               <span className="bg-gradient-brand bg-clip-text text-transparent">
@@ -312,7 +312,7 @@ export default function HomeClient({
 
           {/* Meta ticker */}
           <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
-            <h2 className="text-4xl font-semibold tracking-tight mb-8">Top Meta Archetypes</h2>
+            <h2 className="text-3xl font-semibold tracking-tight mb-8">Top Meta Archetypes</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {top3Cards.map((c) => (
                 <MetaDeckCard
@@ -345,7 +345,7 @@ export default function HomeClient({
           {/* Recent Matches */}
           {recentMatches.length > 0 && (
             <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
-              <h2 className="text-4xl font-semibold tracking-tight mb-8">Recent Battles</h2>
+              <h2 className="text-3xl font-semibold tracking-tight mb-8">Recent Battles</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {recentMatches.map((m) => (
                   <MatchCard key={m.id} match={m} />
@@ -362,7 +362,7 @@ export default function HomeClient({
           {/* Playmat Studio showcase */}
           <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
             <div className="mb-8">
-              <h2 className="text-4xl font-semibold tracking-tight">Playmat Studio</h2>
+              <h2 className="text-3xl font-semibold tracking-tight">Playmat Studio</h2>
             </div>
             <PlaymatShowcase tiles={showcaseTiles} />
           </section>
@@ -371,7 +371,7 @@ export default function HomeClient({
           {currentSpotlight && (
             <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
               <div className="mb-8">
-                <h2 className="text-4xl font-semibold tracking-tight">Trainer Spotlight</h2>
+                <h2 className="text-3xl font-semibold tracking-tight">Trainer Spotlight</h2>
               </div>
               <Link
                 href={`/spotlight/${currentSpotlight.slug}`}
@@ -412,7 +412,7 @@ export default function HomeClient({
             <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
               <InventoryProvider>
                 <div className="mb-8">
-                  <h2 className="text-4xl font-semibold tracking-tight">Card Catalog</h2>
+                  <h2 className="text-3xl font-semibold tracking-tight">Card Catalog</h2>
                 </div>
                 <CatalogSignInBanner />
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -446,7 +446,7 @@ export default function HomeClient({
             <div className="relative rounded-3xl overflow-hidden border border-black/8 shadow-xl">
               <div className="absolute inset-0 bg-gradient-brand opacity-20" />
               <div className="relative p-12 md:p-20 text-center">
-                <h2 className="text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05] max-w-3xl mx-auto text-text-primary">
+                <h2 className="text-3xl md:text-5xl font-semibold tracking-tight leading-[1.05] max-w-3xl mx-auto text-text-primary">
                   Ready to see what your deck is really made of?
                 </h2>
                 <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
