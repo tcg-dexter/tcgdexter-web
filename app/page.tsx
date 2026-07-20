@@ -8,10 +8,7 @@ import type { TrainerSpotlightRow } from "./spotlight/types";
 import { parseDeckListCards } from "@/lib/cardPrinting";
 import { resolveDeckTiles, type ResolvedDeckTile } from "@/lib/deckTiles";
 import { searchCards } from "@/lib/cardSearch";
-import { getAllSetStats, getCardById, getRawCard, type CardIndexEntry, type RawCard } from "@/lib/cardsIndex";
-
-/** Raging Bolt ex (Special Illustration Rare) — Temporal Forces. */
-const FEATURED_CARD_ID = "sv5-208";
+import { getAllSetStats, getRawCard, type CardIndexEntry, type RawCard } from "@/lib/cardsIndex";
 
 interface CardCatalogPreview {
   topCards: CardIndexEntry[];
@@ -21,14 +18,16 @@ interface CardCatalogPreview {
 function loadCardCatalogPreview(): CardCatalogPreview {
   const newestSet = getAllSetStats()[0] ?? null;
   // searchCards() clamps pageSize to a 12 minimum, so over-fetch and trim
-  // to the 4 we actually want here.
-  const topCards = newestSet
-    ? searchCards({ setId: [newestSet.id], sort: "price", dir: "desc" }).cards.slice(0, 4)
+  // to the top 5 by market price we actually want: #1-4 for the grid,
+  // #5 as the featured detail card below it.
+  const top5 = newestSet
+    ? searchCards({ setId: [newestSet.id], sort: "price", dir: "desc" }).cards.slice(0, 5)
     : [];
+  const topCards = top5.slice(0, 4);
 
-  const card = getCardById(FEATURED_CARD_ID);
-  const raw = card ? getRawCard(FEATURED_CARD_ID) : null;
-  const featuredCard = card && raw ? { card, raw } : null;
+  const fifth = top5[4] ?? null;
+  const raw = fifth ? getRawCard(fifth.id) : null;
+  const featuredCard = fifth && raw ? { card: fifth, raw } : null;
 
   return { topCards, featuredCard };
 }
