@@ -217,10 +217,9 @@ export default function HomeClient({
         <div className="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-stretch">
           <div className="lg:flex lg:flex-col lg:justify-start">
             <h2 className="text-[1.35rem] md:text-[2.7rem] font-semibold tracking-tight leading-[1.02] max-w-4xl mx-auto lg:mx-0">
-              The deckbuilder&apos;s{" "}
+              The deckbuilder&apos;s dex
+              <br />
               <span className="bg-gradient-brand bg-clip-text text-transparent">
-                dex
-                <br />
                 for Pokémon TCG.
               </span>
             </h2>
@@ -229,6 +228,16 @@ export default function HomeClient({
               <br />
               Save to take notes and track performance.
             </p>
+
+            {/* Desktop-only: the stats strip lives here, under the hero
+                copy, so the two-column hero flows straight into Top Meta
+                Archetypes below. Mobile/tablet keep it as its own
+                section further down (hidden here via hidden lg:block). */}
+            {!(result && profiledAt) && (
+              <div className="hidden lg:block mt-10">
+                <StatsStrip stats={stats} />
+              </div>
+            )}
           </div>
 
           {/* Deck input card — soft elevated glass on light bg. mx-auto is
@@ -306,12 +315,14 @@ export default function HomeClient({
         />
       ) : (
         <>
-          {/* Stats strip — pulled up toward the hero above (Hero's own
-              pb-24 is shared with the DeckProfileView path, so this
-              section counteracts part of it with a negative top margin
-              rather than shrinking Hero's padding directly) and given a
-              shorter pb-8 so Top Meta Archetypes below sits closer too. */}
-          <section className="mx-auto max-w-2xl px-4 sm:px-6 -mt-16 pb-8">
+          {/* Stats strip — mobile/tablet only; desktop shows it inside the
+              hero's left column instead (see above). Pulled up toward
+              the hero above (Hero's own pb-24 is shared with the
+              DeckProfileView path, so this section counteracts part of
+              it with a negative top margin rather than shrinking Hero's
+              padding directly) and given a shorter pb-8 so Top Meta
+              Archetypes below sits closer too. */}
+          <section className="lg:hidden mx-auto max-w-2xl px-4 sm:px-6 -mt-16 pb-8">
             <StatsStrip stats={stats} />
           </section>
 
