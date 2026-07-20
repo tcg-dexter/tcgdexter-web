@@ -7,6 +7,29 @@ import HomeClient, { type CurrentSpotlight } from "./HomeClient";
 import type { TrainerSpotlightRow } from "./spotlight/types";
 import { parseDeckListCards } from "@/lib/cardPrinting";
 import { resolveDeckTiles, type ResolvedDeckTile } from "@/lib/deckTiles";
+import { searchCards } from "@/lib/cardSearch";
+import { getAllSetStats, getCardById, getRawCard, type CardIndexEntry, type RawCard } from "@/lib/cardsIndex";
+
+/** Raging Bolt ex (Special Illustration Rare) — Temporal Forces. */
+const FEATURED_CARD_ID = "sv5-208";
+
+interface CardCatalogPreview {
+  topCards: CardIndexEntry[];
+  featuredCard: { card: CardIndexEntry; raw: RawCard } | null;
+}
+
+function loadCardCatalogPreview(): CardCatalogPreview {
+  const newestSet = getAllSetStats()[0] ?? null;
+  const topCards = newestSet
+    ? searchCards({ setId: [newestSet.id], sort: "rarity", dir: "desc", pageSize: 4 }).cards
+    : [];
+
+  const card = getCardById(FEATURED_CARD_ID);
+  const raw = card ? getRawCard(FEATURED_CARD_ID) : null;
+  const featuredCard = card && raw ? { card, raw } : null;
+
+  return { topCards, featuredCard };
+}
 
 // Revalidate the home page (and its stat counts) at most once per minute.
 export const revalidate = 60;
@@ -158,12 +181,15 @@ export default async function DeckProfilerPage() {
     loadCurrentSpotlight(),
   ]);
   const showcaseTiles = loadShowcaseTiles();
+  const cardCatalogPreview = loadCardCatalogPreview();
   return (
     <HomeClient
       stats={stats}
       recentMatches={recentMatches}
       currentSpotlight={currentSpotlight}
       showcaseTiles={showcaseTiles}
+      cardCatalogTopCards={cardCatalogPreview.topCards}
+      cardCatalogFeatured={cardCatalogPreview.featuredCard}
     />
   );
 }

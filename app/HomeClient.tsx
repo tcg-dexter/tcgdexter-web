@@ -23,6 +23,10 @@ import type {
 import PlaymatShowcase from "./PlaymatShowcase";
 import type { ResolvedDeckTile } from "@/lib/deckTiles";
 import UnifiedSearch from "@/app/leaderboard/UnifiedSearch";
+import type { CardIndexEntry, RawCard } from "@/lib/cardsIndex";
+import GridTile from "@/app/cards/GridTile";
+import CardDetailPanel from "@/app/cards/CardDetailPanel";
+import InventoryProvider, { useInventory } from "@/app/cards/InventoryContext";
 
 export type CurrentSpotlight = {
   id: string;
@@ -142,11 +146,15 @@ export default function HomeClient({
   recentMatches = [],
   currentSpotlight = null,
   showcaseTiles = [],
+  cardCatalogTopCards = [],
+  cardCatalogFeatured = null,
 }: {
   stats: Array<{ label: string; value: string }>;
   recentMatches?: RecentMatch[];
   currentSpotlight?: CurrentSpotlight | null;
   showcaseTiles?: ResolvedDeckTile[];
+  cardCatalogTopCards?: CardIndexEntry[];
+  cardCatalogFeatured?: { card: CardIndexEntry; raw: RawCard } | null;
 }) {
   const [deckList, setDeckList] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -198,16 +206,9 @@ export default function HomeClient({
     <>
       {/* Hero */}
       <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-[1.925rem] md:pt-14 pb-16 text-center">
-        {/* Logo */}
-        <div className="flex justify-center mb-7 md:mb-8">
-          <img
-            src="/logo-light.png"
-            alt="TCG Dexter"
-            className="max-w-full"
-            style={{ width: "240px", height: "auto" }}
-          />
-        </div>
-
+        {/* No logo here on any breakpoint — desktop already shows it in
+            the sidebar, mobile/tablet gets it from the sticky toolbar
+            (MobileToolbarLogo, home added to its top-level route set). */}
         <h1 className="text-3xl md:text-[54px] font-semibold tracking-tight leading-[1.02] max-w-4xl mx-auto">
           The deckbuilder&apos;s
           <br />
@@ -393,6 +394,46 @@ export default function HomeClient({
             </section>
           )}
 
+          {/* Card Catalog preview */}
+          {cardCatalogTopCards.length > 0 && (
+            <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
+              <InventoryProvider>
+                <div className="mb-8 flex items-end justify-between gap-3">
+                  <h2 className="text-4xl font-semibold tracking-tight">Card Catalog</h2>
+                  <Link
+                    href="/cards"
+                    className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition"
+                  >
+                    Browse all
+                  </Link>
+                </div>
+                <CatalogSignInBanner />
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  {cardCatalogTopCards.map((c, i) => (
+                    <GridTile key={c.id} card={c} index={i} />
+                  ))}
+                </div>
+
+                {cardCatalogFeatured && (
+                  <div className="mt-12">
+                    <CardDetailPanel
+                      card={cardCatalogFeatured.card}
+                      raw={cardCatalogFeatured.raw}
+                    />
+                    <div className="mt-6 flex justify-center">
+                      <Link
+                        href={`/cards/${encodeURIComponent(cardCatalogFeatured.card.id)}`}
+                        className="rounded-full border border-black/15 bg-white/80 backdrop-blur-sm text-text-primary font-semibold px-6 py-3 hover:bg-white transition"
+                      >
+                        View full card page →
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </InventoryProvider>
+            </section>
+          )}
+
           {/* Final CTA */}
           <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-24">
             <div className="relative rounded-3xl overflow-hidden border border-black/8 shadow-xl">
@@ -431,5 +472,22 @@ export default function HomeClient({
         </>
       )}
     </>
+  );
+}
+
+/** Signed-out CTA above the catalog preview grid — signed-in trainers see
+ *  nothing here since their +/- controls on each tile already work.
+ *  Renders inside InventoryProvider so it can read auth state. */
+function CatalogSignInBanner() {
+  const { signedIn, promptSignIn } = useInventory();
+  if (signedIn !== false) return null;
+  return (
+    <button
+      type="button"
+      onClick={promptSignIn}
+      className="mb-4 w-full rounded-2xl border border-black/8 bg-white/80 backdrop-blur-sm px-4 py-3 text-sm font-semibold text-text-primary hover:bg-white transition text-center"
+    >
+      Sign in to save cards to your collection
+    </button>
   );
 }
