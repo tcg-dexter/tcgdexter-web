@@ -52,6 +52,7 @@ import { DEFAULT_SKILLS, generateSelfPlayGames } from "@/lib/ml/selfplay";
 import { loadCommunityDecks } from "@/lib/ml/communityDecks";
 import { loadBenchmarkDecks } from "@/lib/ml/benchmarkDecks";
 import { readWinProbArtifact } from "@/lib/ml/winprob";
+import { readValueArtifact } from "@/lib/ml/botEvaluator";
 import { numOrNull } from "@/lib/ml/features";
 
 /* ─── CLI args ──────────────────────────────────────────────────── */
@@ -196,6 +197,13 @@ function main(): void {
 
   const effectiveSkills = skills.length ? skills : DEFAULT_SKILLS;
   const artifact = readWinProbArtifact();
+  // The evaluator that actually drives the planner during these games (see
+  // createBotEvaluator: board-aware value model when promoted, else winprob).
+  // It MUST be part of the run identity — otherwise regenerating after
+  // promoting a new value model collides with the old run_hash and the
+  // idempotency check silently returns stale data from a weaker planner.
+  // Omitted when absent so pre-value-model run hashes stay reproducible.
+  const valueArtifact = readValueArtifact();
   const listHash = (list: string) => createHash("sha256").update(list).digest("hex").slice(0, 16);
   const params = {
     seed,
@@ -213,6 +221,7 @@ function main(): void {
         }
       : {}),
     value_model: artifact ? artifact.model_version : null,
+    ...(valueArtifact ? { evaluator_model: valueArtifact.model_version } : {}),
   };
   const runHash = createHash("sha256")
     .update(
@@ -253,7 +262,7 @@ function main(): void {
     `[selfplay] schema v${POLICY_SCHEMA_VERSION} engine v${ENGINE_VERSION} sim v${SIM_VERSION} ` +
       `matchup=${matchup} seed=${seed} games=${games} meta_decks=${metaDecks.length} ` +
       `community_decks=${communityDecks.length} skills=${effectiveSkills.join("/")} ` +
-      `value_model=${params.value_model ?? "heuristic-only"}`,
+      `evaluator=${valueArtifact ? valueArtifact.model_version : params.value_model ?? "heuristic-only"}`,
   );
   const startedAt = Date.now();
   const records = generateSelfPlayGames({
