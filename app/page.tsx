@@ -20,8 +20,10 @@ interface CardCatalogPreview {
 
 function loadCardCatalogPreview(): CardCatalogPreview {
   const newestSet = getAllSetStats()[0] ?? null;
+  // searchCards() clamps pageSize to a 12 minimum, so over-fetch and trim
+  // to the 4 we actually want here.
   const topCards = newestSet
-    ? searchCards({ setId: [newestSet.id], sort: "rarity", dir: "desc", pageSize: 4 }).cards
+    ? searchCards({ setId: [newestSet.id], sort: "price", dir: "desc" }).cards.slice(0, 4)
     : [];
 
   const card = getCardById(FEATURED_CARD_ID);

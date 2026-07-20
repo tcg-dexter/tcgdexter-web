@@ -398,14 +398,8 @@ export default function HomeClient({
           {cardCatalogTopCards.length > 0 && (
             <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
               <InventoryProvider>
-                <div className="mb-8 flex items-end justify-between gap-3">
+                <div className="mb-8">
                   <h2 className="text-4xl font-semibold tracking-tight">Card Catalog</h2>
-                  <Link
-                    href="/cards"
-                    className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition"
-                  >
-                    Browse all
-                  </Link>
                 </div>
                 <CatalogSignInBanner />
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -422,10 +416,10 @@ export default function HomeClient({
                     />
                     <div className="mt-6 flex justify-center">
                       <Link
-                        href={`/cards/${encodeURIComponent(cardCatalogFeatured.card.id)}`}
-                        className="rounded-full border border-black/15 bg-white/80 backdrop-blur-sm text-text-primary font-semibold px-6 py-3 hover:bg-white transition"
+                        href="/cards"
+                        className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition"
                       >
-                        View full card page →
+                        Browse All Cards
                       </Link>
                     </div>
                   </div>
