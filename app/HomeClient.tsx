@@ -205,7 +205,7 @@ export default function HomeClient({
   return (
     <>
       {/* Hero */}
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-[2.1175rem] md:pt-14 pb-24 lg:pb-12 text-center lg:text-left">
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-[2.1175rem] md:pt-14 pb-24 lg:pb-16 text-center lg:text-left">
         {/* No logo here on any breakpoint — desktop already shows it in
             the sidebar, mobile/tablet gets it from the sticky toolbar
             (MobileToolbarLogo, home added to its top-level route set). */}
@@ -322,13 +322,13 @@ export default function HomeClient({
               it with a negative top margin rather than shrinking Hero's
               padding directly) and given a shorter pb-4 (half of pb-8)
               so Top Meta Archetypes below sits closer still. */}
-          <section className="lg:hidden mx-auto max-w-2xl px-4 sm:px-6 -mt-16 pb-4">
+          <section className="lg:hidden mx-auto max-w-2xl px-4 sm:px-6 -mt-16 pb-6">
             <StatsStrip stats={stats} />
           </section>
 
           {/* Meta ticker */}
           <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
-            <h2 className="text-3xl font-semibold tracking-tight mb-8">Top Meta Archetypes</h2>
+            <h2 className="text-3xl font-semibold tracking-tight mb-4">Top Meta Archetypes</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {top3Cards.map((c) => (
                 <MetaDeckCard
@@ -361,7 +361,7 @@ export default function HomeClient({
           {/* Recent Matches */}
           {recentMatches.length > 0 && (
             <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
-              <h2 className="text-3xl font-semibold tracking-tight mb-8">Recent Battles</h2>
+              <h2 className="text-3xl font-semibold tracking-tight mb-4">Recent Battles</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {recentMatches.map((m) => (
                   <MatchCard key={m.id} match={m} />
@@ -377,7 +377,7 @@ export default function HomeClient({
 
           {/* Playmat Studio showcase */}
           <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
-            <div className="mb-8">
+            <div className="mb-4">
               <h2 className="text-3xl font-semibold tracking-tight">Playmat Studio</h2>
             </div>
             <PlaymatShowcase tiles={showcaseTiles} />
@@ -386,7 +386,7 @@ export default function HomeClient({
           {/* Trainer Spotlight preview */}
           {currentSpotlight && (
             <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
-              <div className="mb-8">
+              <div className="mb-4">
                 <h2 className="text-3xl font-semibold tracking-tight">Trainer Spotlight</h2>
               </div>
               <Link
@@ -427,7 +427,7 @@ export default function HomeClient({
           {cardCatalogTopCards.length > 0 && (
             <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
               <InventoryProvider>
-                <div className="mb-8">
+                <div className="mb-4">
                   <h2 className="text-3xl font-semibold tracking-tight">Card Catalog</h2>
                 </div>
                 <CatalogSignInBanner />
