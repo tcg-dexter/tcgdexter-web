@@ -205,7 +205,7 @@ export default function HomeClient({
   return (
     <>
       {/* Hero */}
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-[1.925rem] md:pt-14 pb-24 text-center">
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-[2.1175rem] md:pt-14 pb-24 text-center">
         {/* No logo here on any breakpoint — desktop already shows it in
             the sidebar, mobile/tablet gets it from the sticky toolbar
             (MobileToolbarLogo, home added to its top-level route set). */}
