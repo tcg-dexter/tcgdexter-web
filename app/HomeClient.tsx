@@ -205,77 +205,86 @@ export default function HomeClient({
   return (
     <>
       {/* Hero */}
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-[2.1175rem] md:pt-14 pb-24 text-center">
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-[2.1175rem] md:pt-14 pb-24 text-center lg:text-left">
         {/* No logo here on any breakpoint — desktop already shows it in
             the sidebar, mobile/tablet gets it from the sticky toolbar
             (MobileToolbarLogo, home added to its top-level route set). */}
-        <h1 className="text-3xl md:text-[54px] font-semibold tracking-tight leading-[1.02] max-w-4xl mx-auto">
-          The deckbuilder&apos;s
-          <br />
-          <span className="bg-gradient-brand bg-clip-text text-transparent">
-            dex for Pokémon TCG.
-          </span>
-        </h1>
-        <p className="mt-6 text-sm md:text-xl font-semibold text-text-primary max-w-2xl mx-auto leading-relaxed">
-          Paste your list to create a Deck Profile.
-          <br />
-          Save to take notes and track performance.
-        </p>
 
-        {/* Deck input card — soft elevated glass on light bg */}
-        <div className="mt-12 max-w-3xl mx-auto">
-          <div className="relative group">
-            {/* Gradient glow */}
-            <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 group-focus-within:opacity-70 blur-xl transition-opacity" />
-            <div className="relative rounded-2xl bg-white/90 backdrop-blur-xl border border-black/5 p-2 shadow-brand-lg">
-              <div className="flex items-center justify-between px-3 pt-2 pb-1.5">
-                <span className="text-xs font-semibold text-text-primary">Deck List</span>
-                <button
-                  onClick={() => setDeckList(EXAMPLE_DECK)}
-                  className="text-xs text-text-muted hover:text-text-primary transition"
-                >
-                  Load example
-                </button>
-              </div>
-              <textarea
-                value={deckList}
-                onChange={(e) => setDeckList(e.target.value)}
-                placeholder={"Pokémon: 13\n3 N's Zoroark ex JTG 175\n2 N's Reshiram ASC 154\n..."}
-                className="w-full h-36 md:h-48 bg-transparent resize-none px-3 py-2 font-mono text-sm text-text-primary placeholder:text-text-muted/60 outline-none"
-                spellCheck={false}
-              />
-              <div className="flex items-center justify-end gap-3 px-2 pb-2">
-                {deckList.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setDeckList("")}
-                    className="text-xs text-text-muted hover:text-text-primary transition"
-                  >
-                    Clear
-                  </button>
-                )}
-                <GradientButton onClick={handleAnalyze} disabled={loading}>
-                  {loading ? (
-                    <>
-                      <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      Profiling…
-                    </>
-                  ) : (
-                    "Profile this deck"
-                  )}
-                </GradientButton>
-              </div>
-            </div>
+        {/* Desktop (lg:+) splits into two equal-width, equal-height
+            columns — heading/copy left-aligned on the left, the deck
+            input card on the right. Mobile/tablet keep the original
+            single-column, centered stack (no lg: classes apply). */}
+        <div className="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-stretch">
+          <div className="lg:flex lg:flex-col lg:justify-center">
+            <h2 className="text-3xl md:text-[54px] font-semibold tracking-tight leading-[1.02] max-w-4xl mx-auto lg:mx-0">
+              The deckbuilder&apos;s
+              <br />
+              <span className="bg-gradient-brand bg-clip-text text-transparent">
+                dex for Pokémon TCG.
+              </span>
+            </h2>
+            <p className="mt-6 text-sm md:text-xl font-semibold text-text-primary max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+              Paste your list to create a Deck Profile.
+              <br />
+              Save to take notes and track performance.
+            </p>
           </div>
 
-          {error && (
-            <p className="mt-3 text-sm text-rose-600" role="alert">
-              {error}
-            </p>
-          )}
+          {/* Deck input card — soft elevated glass on light bg */}
+          <div className="mt-12 lg:mt-0 max-w-3xl mx-auto lg:max-w-none lg:flex lg:flex-col lg:justify-center">
+            <div className="relative group">
+              {/* Gradient glow */}
+              <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 group-focus-within:opacity-70 blur-xl transition-opacity" />
+              <div className="relative rounded-2xl bg-white/90 backdrop-blur-xl border border-black/5 p-2 shadow-brand-lg">
+                <div className="flex items-center justify-between px-3 pt-2 pb-1.5">
+                  <span className="text-xs font-semibold text-text-primary">Deck List</span>
+                  <button
+                    onClick={() => setDeckList(EXAMPLE_DECK)}
+                    className="text-xs text-text-muted hover:text-text-primary transition"
+                  >
+                    Load example
+                  </button>
+                </div>
+                <textarea
+                  value={deckList}
+                  onChange={(e) => setDeckList(e.target.value)}
+                  placeholder={"Pokémon: 13\n3 N's Zoroark ex JTG 175\n2 N's Reshiram ASC 154\n..."}
+                  className="w-full h-36 md:h-48 bg-transparent resize-none px-3 py-2 font-mono text-sm text-text-primary placeholder:text-text-muted/60 outline-none"
+                  spellCheck={false}
+                />
+                <div className="flex items-center justify-end gap-3 px-2 pb-2">
+                  {deckList.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setDeckList("")}
+                      className="text-xs text-text-muted hover:text-text-primary transition"
+                    >
+                      Clear
+                    </button>
+                  )}
+                  <GradientButton onClick={handleAnalyze} disabled={loading}>
+                    {loading ? (
+                      <>
+                        <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Profiling…
+                      </>
+                    ) : (
+                      "Profile this deck"
+                    )}
+                  </GradientButton>
+                </div>
+              </div>
+            </div>
+
+            {error && (
+              <p className="mt-3 text-sm text-rose-600" role="alert">
+                {error}
+              </p>
+            )}
+          </div>
         </div>
       </section>
 
