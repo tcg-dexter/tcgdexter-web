@@ -292,9 +292,13 @@ export default function HomeClient({
         />
       ) : (
         <>
-          {/* Stats strip */}
-          <section className="mx-auto max-w-2xl px-4 sm:px-6 pb-24">
-            <StatsStrip stats={stats} compact />
+          {/* Stats strip — pulled up toward the hero above (Hero's own
+              pb-24 is shared with the DeckProfileView path, so this
+              section counteracts part of it with a negative top margin
+              rather than shrinking Hero's padding directly) and given a
+              shorter pb-8 so Top Meta Archetypes below sits closer too. */}
+          <section className="mx-auto max-w-2xl px-4 sm:px-6 -mt-16 pb-8">
+            <StatsStrip stats={stats} />
           </section>
 
           {/* Meta ticker */}
