@@ -205,7 +205,7 @@ export default function HomeClient({
   return (
     <>
       {/* Hero */}
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-[2.1175rem] md:pt-14 pb-24 text-center lg:text-left">
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-[2.1175rem] md:pt-14 pb-24 lg:pb-12 text-center lg:text-left">
         {/* No logo here on any breakpoint — desktop already shows it in
             the sidebar, mobile/tablet gets it from the sticky toolbar
             (MobileToolbarLogo, home added to its top-level route set). */}
@@ -320,9 +320,9 @@ export default function HomeClient({
               the hero above (Hero's own pb-24 is shared with the
               DeckProfileView path, so this section counteracts part of
               it with a negative top margin rather than shrinking Hero's
-              padding directly) and given a shorter pb-8 so Top Meta
-              Archetypes below sits closer too. */}
-          <section className="lg:hidden mx-auto max-w-2xl px-4 sm:px-6 -mt-16 pb-8">
+              padding directly) and given a shorter pb-4 (half of pb-8)
+              so Top Meta Archetypes below sits closer still. */}
+          <section className="lg:hidden mx-auto max-w-2xl px-4 sm:px-6 -mt-16 pb-4">
             <StatsStrip stats={stats} />
           </section>
 
