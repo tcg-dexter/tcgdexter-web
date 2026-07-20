@@ -217,11 +217,11 @@ export default function HomeClient({
         <div className="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-stretch">
           <div className="lg:flex lg:flex-col lg:justify-start">
             <h2 className="text-[1.35rem] md:text-[2.7rem] font-semibold tracking-tight leading-[1.02] max-w-4xl mx-auto lg:mx-0">
-              The deckbuilder&apos;s dex
-              <br />
               <span className="bg-gradient-brand bg-clip-text text-transparent">
-                for Pokémon TCG.
+                The deckbuilder&apos;s dex
               </span>
+              <br />
+              for Pokémon TCG.
             </h2>
             <p className="mt-6 text-sm md:text-xl font-semibold text-text-primary max-w-2xl mx-auto lg:mx-0 leading-relaxed">
               Paste your list to create a Deck Profile.
