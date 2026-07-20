@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-07-19T11:00:14.051490+00:00",
+  "updated_at": "2026-07-20T20:58:11.669495+00:00",
   "models": {
     "winprob": {
       "model_version": "winprob-v1",
@@ -22,6 +22,38 @@
       },
       "enabled": true,
       "gated": true
+    },
+    "value": {
+      "model_version": "value-v0",
+      "trained_at": "2026-07-20T20:58:11.669495+00:00",
+      "n_samples": 198345,
+      "data_hash": "459589a7a4a79611d7ef39018bd924cc071f8f7f625652e8a8c0ef15a87f5ea8",
+      "parser_version": 0,
+      "engine_version": 1,
+      "metrics": {
+        "cv_log_loss": 0.5374,
+        "cv_brier": 0.1827,
+        "cv_accuracy": 0.7143,
+        "cv_auc": 0.7982,
+        "cv_ece": 0.0082,
+        "baseline_blind_log_loss": 0.621,
+        "baseline_blind_brier": 0.2169,
+        "baseline_blind_accuracy": 0.6367,
+        "baseline_blind_auc": 0.7026,
+        "baseline_blind_ece": 0.0066,
+        "baseline_prior_log_loss": 0.6931,
+        "baseline_prior_brier": 0.25,
+        "baseline_prior_accuracy": 0.5015,
+        "baseline_prior_auc": 0.5,
+        "baseline_prior_ece": 0.0,
+        "in_sample_log_loss": 0.5301
+      },
+      "artifacts": {
+        "path": "data/ml/value.json",
+        "sha256": "31870c6ec4c835f4ea1f871f9fc2eb2af705566774c030da21411402d26a7b33"
+      },
+      "enabled": true,
+      "gated": false
     }
   },
   "gates": {
