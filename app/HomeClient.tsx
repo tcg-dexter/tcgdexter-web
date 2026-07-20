@@ -205,7 +205,7 @@ export default function HomeClient({
   return (
     <>
       {/* Hero */}
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-[1.925rem] md:pt-14 pb-16 text-center">
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-[1.925rem] md:pt-14 pb-24 text-center">
         {/* No logo here on any breakpoint — desktop already shows it in
             the sidebar, mobile/tablet gets it from the sticky toolbar
             (MobileToolbarLogo, home added to its top-level route set). */}
@@ -293,12 +293,12 @@ export default function HomeClient({
       ) : (
         <>
           {/* Stats strip */}
-          <section className="mx-auto max-w-2xl px-4 sm:px-6 pb-12">
+          <section className="mx-auto max-w-2xl px-4 sm:px-6 pb-24">
             <StatsStrip stats={stats} />
           </section>
 
           {/* Meta ticker */}
-          <section className="mx-auto max-w-6xl px-4 sm:px-6 py-6">
+          <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
             <h2 className="text-4xl font-semibold tracking-tight mb-8">Top Meta Archetypes</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {top3Cards.map((c) => (
@@ -323,7 +323,7 @@ export default function HomeClient({
           </section>
 
           {/* Secondary CTA */}
-          <section className="mx-auto max-w-4xl px-4 sm:px-6 py-24 text-center">
+          <section className="mx-auto max-w-4xl px-4 sm:px-6 pb-24 text-center">
             <div className="text-3xl md:text-4xl font-semibold tracking-tight leading-tight text-text-primary">
               A dex for your decks. Save your own lists, share with fellow trainers, and browse the top meta archetypes. Track your progress and earn badges.
             </div>
@@ -331,7 +331,7 @@ export default function HomeClient({
 
           {/* Recent Matches */}
           {recentMatches.length > 0 && (
-            <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-16">
+            <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
               <h2 className="text-4xl font-semibold tracking-tight mb-8">Recent Battles</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {recentMatches.map((m) => (
@@ -347,7 +347,7 @@ export default function HomeClient({
           )}
 
           {/* Playmat Studio showcase */}
-          <section className="mx-auto max-w-6xl px-4 sm:px-6 py-12">
+          <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
             <div className="mb-8">
               <h2 className="text-4xl font-semibold tracking-tight">Playmat Studio</h2>
             </div>
