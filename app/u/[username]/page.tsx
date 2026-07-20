@@ -9,13 +9,7 @@ import {
   pokemonSlug,
 } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
-import metaArchetypesRaw from "@/data/meta-archetypes.json";
 import MatchHeatMap from "@/app/profile/MatchHeatMap";
-import {
-  CERTIFIED_TRAINER,
-  listAchievements,
-} from "@/lib/learn/achievements";
-import CertifiedTrainerBadge from "@/app/learn/quiz/CertifiedTrainerBadge";
 import UserProfileHeader, {
   StatCard,
   bannerGradientFor,
@@ -25,7 +19,10 @@ import UserProfileHeader, {
 import ThemeColor from "@/app/components/ThemeColor";
 import { ResponsiveLabel } from "@/app/components/StatCard";
 import AccentPicker from "./AccentPicker";
-import TeamOfSix from "./TeamOfSix";
+import TeamCards, { type TeamCardRef } from "./TeamCards";
+import { MatchCard } from "@/app/components/MatchCard";
+import { loadOwnerRecentMatches } from "@/lib/recent-matches";
+import ProfileTabs from "./ProfileTabs";
 
 interface ProfileRow {
   id: string;
@@ -37,7 +34,7 @@ interface ProfileRow {
   tcg_live_handle: string | null;
   avatar_url: string | null;
   banner_accent: string | null;
-  team_of_6: (string | null)[] | null;
+  team_cards: (TeamCardRef | null)[] | null;
 }
 
 interface DeckRow {
@@ -122,7 +119,7 @@ export default async function ProfilePage({
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, display_name, username, bio, created_at, is_public, tcg_live_handle, avatar_url, banner_accent, team_of_6"
+      "id, display_name, username, bio, created_at, is_public, tcg_live_handle, avatar_url, banner_accent, team_cards"
     )
     .eq("username", username.toLowerCase())
     .maybeSingle<ProfileRow>();
@@ -181,21 +178,25 @@ export default async function ProfilePage({
   // Heatmap dates: manual played_at (owner only — manual match data is private).
   const heatmapMatches: MatchRow[] = isOwner ? manualMatches : [];
 
-  const achievements = await listAchievements(supabase, profile.id);
-  const certifiedTrainer = achievements.find((a) => a.key === CERTIFIED_TRAINER);
-  const certifiedDate = certifiedTrainer
-    ? new Date(certifiedTrainer.earned_at).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
-    : null;
-  const showAchievementsCard = isOwner || achievements.length > 0;
-
   // Public deck stats (visible to both owner and visitor).
   const publicDeckCount = decks.filter((d) => d.is_public).length;
   const totalLikes = decks.reduce((s, d) => s + (d.like_count ?? 0), 0);
   const joinedYear = new Date(profile.created_at).getFullYear();
+
+  // Owner sees a 3-most-recently-created preview with a "View All" link
+  // to /my-decks (their own saved-deck library — not meaningful for a
+  // visitor, so visitors keep the full unranked public-decks list as
+  // before). Sorted by created_at rather than the query's updated_at.
+  const previewDecks = isOwner
+    ? [...decks].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 3)
+    : decks;
+
+  // Recent Battles — owner-only (manual match data is private). Reuses
+  // the same MatchCard/RecentMatch pipeline as the public /matches feed,
+  // scoped to just this owner's own decks.
+  const recentBattles = isOwner
+    ? await loadOwnerRecentMatches(supabase, profile.id, profile.username, 3)
+    : [];
 
   // Visitor placeholder for owner-private cells.
   const ownerOnly = (value: string) => (isOwner ? value : "—");
@@ -204,85 +205,20 @@ export default async function ProfilePage({
   // up the same banner accent as the header.
   const bannerGradient = bannerGradientFor(profile.banner_accent);
 
-  // Render the team row for owners always (so they can start picking)
-  // and for visitors only when the user has chosen at least one
-  // Pokémon — otherwise the banner stays clean.
-  const teamArray: (string | null)[] = Array.isArray(profile.team_of_6)
-    ? profile.team_of_6
+  // Render the team fan for owners always (so they can start picking)
+  // and for visitors only when the user has chosen at least one card —
+  // otherwise the banner stays clean.
+  const teamArray: (TeamCardRef | null)[] = Array.isArray(profile.team_cards)
+    ? profile.team_cards
     : [];
   const hasAnyTeamPick = teamArray.some((slot) => !!slot);
   const showTeam = isOwner || hasAnyTeamPick;
-
-  // Default suggestions shown in the team picker before the user types.
-  // Owner with saved decks: the unique Pokémon driving each deck's
-  // avatar (a quick way to bring their actual roster into the picker).
-  // Owner with no decks: the top 10 meta archetypes by total entries
-  // — a reasonable starting roster when there's no personal signal.
-  // Visitors don't see the picker, so this stays empty for them.
-  let teamSuggestions: string[] = [];
-  if (isOwner) {
-    if (decks.length > 0) {
-      const seen = new Set<string>();
-      for (const deck of decks) {
-        const info = deckAvatarInfo(
-          deck.analysis?.cards ?? [],
-          deck.cover_image_url
-        );
-        if (info && !seen.has(info.name)) {
-          seen.add(info.name);
-          teamSuggestions.push(info.name);
-        }
-      }
-    } else {
-      const top10 = [
-        ...(metaArchetypesRaw as Array<{ name: string; total_entries: number }>),
-      ]
-        .sort((a, b) => b.total_entries - a.total_entries)
-        .slice(0, 10);
-      teamSuggestions = top10.map((a) => a.name);
-    }
-  }
 
   const belowStats = (
     <>
       {/* Match Activity — owner-only (manual match data is private). */}
       {isOwner && heatmapMatches.length > 0 && (
         <MatchHeatMap matches={heatmapMatches} accent={profile.banner_accent} />
-      )}
-
-      {/* Achievements — earned badges; owner sees an empty-state nudge. */}
-      {showAchievementsCard && (
-        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5">
-          <h2 className="text-sm font-semibold text-text-primary mb-3">
-            Achievements
-          </h2>
-          {certifiedTrainer ? (
-            <div className="flex items-center gap-3">
-              <CertifiedTrainerBadge size="sm" />
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-text-primary">
-                  Certified Trainer
-                </p>
-                <p className="text-xs text-text-muted">
-                  Earned {certifiedDate}
-                </p>
-              </div>
-            </div>
-          ) : (
-            isOwner && (
-              <p className="text-sm text-text-secondary">
-                Pass the{" "}
-                <Link
-                  href="/learn/quiz"
-                  className="text-accent hover:underline"
-                >
-                  Trainer Quiz
-                </Link>{" "}
-                to earn your first badge.
-              </p>
-            )
-          )}
-        </div>
       )}
     </>
   );
@@ -352,6 +288,7 @@ export default async function ProfilePage({
         bio={profile.bio}
         tcgLiveHandle={profile.tcg_live_handle}
         avatarUrl={profile.avatar_url}
+        isOwner={isOwner}
         bannerAccent={profile.banner_accent}
         stats={stats}
         belowStats={belowStats}
@@ -359,17 +296,12 @@ export default async function ProfilePage({
           isOwner ? (
             <AccentPicker
               current={(profile.banner_accent ?? null) as BannerAccent | null}
+              teamCards={teamArray}
             />
           ) : undefined
         }
-        bannerCenter={
-          showTeam ? (
-            <TeamOfSix
-              initial={teamArray}
-              isOwner={isOwner}
-              defaultSuggestions={teamSuggestions}
-            />
-          ) : undefined
+        bannerFan={
+          showTeam ? <TeamCards initial={teamArray} isOwner={isOwner} /> : undefined
         }
         actions={
           isOwner ? (
@@ -403,70 +335,141 @@ export default async function ProfilePage({
 
       {/* Deck feed — full-width within the layout's content column.
           Mobile keeps a tight 16px gutter; sm+ opens to 32px so the
-          grid breathes against the edges instead of sitting flush. */}
+          grid breathes against the edges instead of sitting flush.
+          Owner gets My Decks / Recent Battles as segmented tabs (both
+          are private-scoped previews with their own "View All");
+          visitors have nothing to tab between, so they keep the plain
+          public-decks list. */}
       <div className="px-4 sm:px-8 mt-6">
-        <h2 className="text-lg font-semibold text-text-primary mb-3 px-1">
-          Decks
-          {decks.length > 0 && (
-            <span className="ml-2 text-sm font-normal text-text-muted">({decks.length})</span>
-          )}
-        </h2>
-
-        {decks.length === 0 ? (
-          <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
-            <p className="text-sm text-text-secondary">
-              {isOwner ? (
-                <>
-                  No decks yet.{" "}
-                  <Link href="/" className="text-accent hover:underline">
-                    Create your first profile →
-                  </Link>
-                </>
+        {isOwner ? (
+          <ProfileTabs
+            accentColor={bannerTopColorFor(profile.banner_accent)}
+            decksCount={decks.length}
+            decksViewAllHref="/my-decks"
+            showDecksViewAll={decks.length > 0}
+            decksContent={
+              decks.length === 0 ? (
+                <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
+                  <p className="text-sm text-text-secondary">
+                    No decks yet.{" "}
+                    <Link href="/" className="text-accent hover:underline">
+                      Create your first profile →
+                    </Link>
+                  </p>
+                </div>
               ) : (
-                <>{profile.display_name} hasn&apos;t shared any decks yet.</>
-              )}
-            </p>
-          </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {previewDecks.map((deck, i) => {
+                    const cards = deck.analysis?.cards ?? [];
+                    const avatar = deckAvatarInfo(cards, deck.cover_image_url);
+                    const slug = avatar ? pokemonSlug(avatar.name) : "";
+                    return (
+                      <UserDeckCard
+                        key={deck.id}
+                        id={deck.id}
+                        name={deck.name}
+                        href={`/u/${profile.username}/${deck.short_id}`}
+                        username={profile.username}
+                        displayName={profile.display_name}
+                        price={deck.analysis?.deckPrice ?? null}
+                        counts={deck.analysis?.sections ?? null}
+                        wl={deckWL.get(deck.id) ?? null}
+                        likeCount={deck.like_count}
+                        isPrivate={isOwner && !deck.is_public}
+                        imageUrl={deck.cover_image_url ?? primaryCardImageUrl(cards)}
+                        ownerUserId={profile.id}
+                        createdAt={deck.created_at}
+                        iconUrl={
+                          slug
+                            ? `https://r2.limitlesstcg.net/pokemon/gen9/${slug}.png`
+                            : null
+                        }
+                        iconBg={avatar ? typeColor(avatar.types) : null}
+                        cards={cards}
+                        coverImageUrl={deck.cover_image_url}
+                        deckList={deck.deck_list}
+                        isPublic={deck.is_public}
+                        canManage={isOwner}
+                        index={i}
+                      />
+                    );
+                  })}
+                </div>
+              )
+            }
+            battlesCount={manualMatches.length}
+            battlesViewAllHref="/matches?filter=mine"
+            showBattlesViewAll={recentBattles.length > 0}
+            battlesContent={
+              recentBattles.length === 0 ? (
+                <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
+                  <p className="text-sm text-text-secondary">
+                    No battles logged yet. Log a match from any of your decks to see it here.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {recentBattles.map((battle) => (
+                    <MatchCard key={battle.id} match={battle} />
+                  ))}
+                </div>
+              )
+            }
+          />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {decks.map((deck, i) => {
-              const cards = deck.analysis?.cards ?? [];
-              const avatar = deckAvatarInfo(cards, deck.cover_image_url);
-              const slug = avatar ? pokemonSlug(avatar.name) : "";
-              return (
-                <UserDeckCard
-                  key={deck.id}
-                  id={deck.id}
-                  name={deck.name}
-                  href={`/u/${profile.username}/${deck.short_id}`}
-                  username={profile.username}
-                  displayName={profile.display_name}
-                  price={deck.analysis?.deckPrice ?? null}
-                  counts={deck.analysis?.sections ?? null}
-                  wl={deckWL.get(deck.id) ?? null}
-                  likeCount={deck.like_count}
-                  isPrivate={isOwner && !deck.is_public}
-                  imageUrl={
-                    deck.cover_image_url ?? primaryCardImageUrl(cards)
-                  }
-                  ownerUserId={profile.id}
-                  createdAt={deck.created_at}
-                  iconUrl={
-                    slug
-                      ? `https://r2.limitlesstcg.net/pokemon/gen9/${slug}.png`
-                      : null
-                  }
-                  iconBg={avatar ? typeColor(avatar.types) : null}
-                  cards={cards}
-                  coverImageUrl={deck.cover_image_url}
-                  deckList={deck.deck_list}
-                  isPublic={deck.is_public}
-                  canManage={isOwner}
-                  index={i}
-                />
-              );
-            })}
-          </div>
+          <>
+            <h2 className="text-lg font-semibold text-text-primary mb-3 px-1">
+              Decks
+              {decks.length > 0 && (
+                <span className="ml-2 text-sm font-normal text-text-muted">({decks.length})</span>
+              )}
+            </h2>
+            {decks.length === 0 ? (
+              <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
+                <p className="text-sm text-text-secondary">
+                  {profile.display_name} hasn&apos;t shared any decks yet.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {decks.map((deck, i) => {
+                  const cards = deck.analysis?.cards ?? [];
+                  const avatar = deckAvatarInfo(cards, deck.cover_image_url);
+                  const slug = avatar ? pokemonSlug(avatar.name) : "";
+                  return (
+                    <UserDeckCard
+                      key={deck.id}
+                      id={deck.id}
+                      name={deck.name}
+                      href={`/u/${profile.username}/${deck.short_id}`}
+                      username={profile.username}
+                      displayName={profile.display_name}
+                      price={deck.analysis?.deckPrice ?? null}
+                      counts={deck.analysis?.sections ?? null}
+                      wl={deckWL.get(deck.id) ?? null}
+                      likeCount={deck.like_count}
+                      isPrivate={false}
+                      imageUrl={deck.cover_image_url ?? primaryCardImageUrl(cards)}
+                      ownerUserId={profile.id}
+                      createdAt={deck.created_at}
+                      iconUrl={
+                        slug
+                          ? `https://r2.limitlesstcg.net/pokemon/gen9/${slug}.png`
+                          : null
+                      }
+                      iconBg={avatar ? typeColor(avatar.types) : null}
+                      cards={cards}
+                      coverImageUrl={deck.cover_image_url}
+                      deckList={deck.deck_list}
+                      isPublic={deck.is_public}
+                      canManage={false}
+                      index={i}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
     </main>

@@ -20,6 +20,20 @@
 //   npm run ml:selfplay -- [--games N] [--seed S] [--decks M]
 //                          [--skills 0.35,0.65,1] [--max-turns T]
 //                          [--store PATH]
+//                          [--matchup meta|meta-vs-community|community]
+//                          [--community-decks N] [--decks-file PATH]
+//
+// --decks-file swaps the live meta-archetype slice for a frozen benchmark
+// fixture (data/ml/benchmark-decks.json) so training decks match the duel
+// gauntlet exactly — no daily-meta drift between train and eval.
+//
+// --matchup controls which deck pools play each other (default meta, i.e.
+// today's meta-archetype-only behavior, unchanged run_hash for old
+// invocations). meta-vs-community and community draw from the PUBLIC,
+// legal, deduplicated community deck pool (see lib/ml/communityDecks.ts) —
+// user-saved decks, not the curated meta list. Community decks are content-
+// addressed (id = community:<hash>); no user_id/name ever reaches this
+// script's params/logs/store.
 
 import path from "node:path";
 import { createHash } from "node:crypto";
@@ -35,6 +49,8 @@ import {
   ACTION_FEATURE_NAMES,
 } from "@/lib/ml/features";
 import { DEFAULT_SKILLS, generateSelfPlayGames } from "@/lib/ml/selfplay";
+import { loadCommunityDecks } from "@/lib/ml/communityDecks";
+import { loadBenchmarkDecks } from "@/lib/ml/benchmarkDecks";
 import { readWinProbArtifact } from "@/lib/ml/winprob";
 import { numOrNull } from "@/lib/ml/features";
 
@@ -62,6 +78,16 @@ const skills = skillsArg
       .map(Number)
       .filter((n) => Number.isFinite(n) && n >= 0 && n <= 1)
   : [];
+
+type Matchup = "meta" | "meta-vs-community" | "community";
+const MATCHUPS: Matchup[] = ["meta", "meta-vs-community", "community"];
+const matchupArg = argValue("--matchup") ?? "meta";
+if (!MATCHUPS.includes(matchupArg as Matchup)) {
+  throw new Error(`--matchup must be one of ${MATCHUPS.join("/")}, got "${matchupArg}"`);
+}
+const matchup = matchupArg as Matchup;
+const communityDeckCount = numOrNull(argValue("--community-decks")) ?? 30;
+const decksFile = argValue("--decks-file");
 
 /* ─── Sparse encoding ───────────────────────────────────────────── */
 
@@ -93,6 +119,8 @@ CREATE TABLE IF NOT EXISTS policy_games (
   seed INTEGER NOT NULL,
   deck_a TEXT NOT NULL,
   deck_b TEXT NOT NULL,
+  deck_a_source TEXT,
+  deck_b_source TEXT,
   skill_a REAL NOT NULL,
   skill_b REAL NOT NULL,
   winner TEXT,
@@ -131,27 +159,59 @@ CREATE TABLE IF NOT EXISTS policy_candidates (
 /* ─── Main ──────────────────────────────────────────────────────── */
 
 function main(): void {
-  const metaDecks = (metaDecksRaw as unknown as (MetaDeckEntry & {
-    variants?: { cards: MetaDeckEntry["cards"] }[];
-  })[])
-    .slice(0, deckCount)
-    .map((d) => ({
-      id: d.id,
-      list: metaDeckToList({ ...d, cards: d.cards?.length ? d.cards : d.variants?.[0]?.cards ?? [] }),
-    }))
-    .filter((d) => d.list.length > 0);
+  // The "meta" pool: a frozen benchmark fixture when --decks-file is given
+  // (drift-free, matches the duel gauntlet), else the top --decks live meta
+  // archetypes (which the daily refresh reorders).
+  const metaDecks = decksFile
+    ? loadBenchmarkDecks(path.resolve(REPO_ROOT, decksFile))
+    : (metaDecksRaw as unknown as (MetaDeckEntry & {
+        variants?: { cards: MetaDeckEntry["cards"] }[];
+      })[])
+        .slice(0, deckCount)
+        .map((d) => ({
+          id: d.id,
+          list: metaDeckToList({ ...d, cards: d.cards?.length ? d.cards : d.variants?.[0]?.cards ?? [] }),
+        }))
+        .filter((d) => d.list.length > 0);
+
+  const needsCommunity = matchup !== "meta";
+  const communityDecks = needsCommunity
+    ? loadCommunityDecks(storePath).slice(0, communityDeckCount)
+    : [];
+  if (needsCommunity && communityDecks.length === 0) {
+    throw new Error(
+      `[selfplay] --matchup ${matchup} needs at least one public, legal community deck, but ` +
+        `none are available in ${storePath} (today's pool is small — check saved_decks.is_public ` +
+        `rows and re-run dexter-ml's ml_export.py if the store is stale)`,
+    );
+  }
+
+  // poolA/poolB: which deck pool plays which side, per matchup mode. "meta"
+  // and "community" use the SAME pool both sides (so schedule()'s built-in
+  // anti-mirror trick applies); "meta-vs-community" uses two distinct pools.
+  const poolA = matchup === "community" ? communityDecks : metaDecks;
+  const poolB = matchup === "meta-vs-community" ? communityDecks : poolA;
+  const sourceOf = (id: string): "meta" | "community" =>
+    id.startsWith("community:") ? "community" : "meta";
 
   const effectiveSkills = skills.length ? skills : DEFAULT_SKILLS;
   const artifact = readWinProbArtifact();
+  const listHash = (list: string) => createHash("sha256").update(list).digest("hex").slice(0, 16);
   const params = {
     seed,
     games,
     skills: effectiveSkills,
     max_turns: maxTurns ?? null,
-    decks: metaDecks.map((d) => ({
-      id: d.id,
-      list_hash: createHash("sha256").update(d.list).digest("hex").slice(0, 16),
-    })),
+    decks: metaDecks.map((d) => ({ id: d.id, list_hash: listHash(d.list) })),
+    // Only present for non-default matchups — keeps run_hash byte-identical
+    // to before this flag existed for the default `meta` mode, so old
+    // invocations stay idempotent against already-generated runs.
+    ...(matchup !== "meta"
+      ? {
+          matchup,
+          community_decks: communityDecks.map((d) => ({ id: d.id, list_hash: listHash(d.list) })),
+        }
+      : {}),
     value_model: artifact ? artifact.model_version : null,
   };
   const runHash = createHash("sha256")
@@ -167,6 +227,16 @@ function main(): void {
 
   const db = new DatabaseSync(storePath);
   db.exec(SCHEMA);
+  // policy_games predates deck_a_source/deck_b_source; CREATE TABLE IF NOT
+  // EXISTS won't add columns to an already-existing table, so add them here,
+  // guarded against re-running on a db that already has them.
+  for (const col of ["deck_a_source", "deck_b_source"]) {
+    try {
+      db.exec(`ALTER TABLE policy_games ADD COLUMN ${col} TEXT`);
+    } catch (e) {
+      if (!(e instanceof Error) || !/duplicate column/i.test(e.message)) throw e;
+    }
+  }
 
   const existing = db
     .prepare("SELECT decisions FROM policy_runs WHERE run_hash = ?")
@@ -181,12 +251,14 @@ function main(): void {
 
   console.log(
     `[selfplay] schema v${POLICY_SCHEMA_VERSION} engine v${ENGINE_VERSION} sim v${SIM_VERSION} ` +
-      `seed=${seed} games=${games} decks=${metaDecks.length} skills=${effectiveSkills.join("/")} ` +
+      `matchup=${matchup} seed=${seed} games=${games} meta_decks=${metaDecks.length} ` +
+      `community_decks=${communityDecks.length} skills=${effectiveSkills.join("/")} ` +
       `value_model=${params.value_model ?? "heuristic-only"}`,
   );
   const startedAt = Date.now();
   const records = generateSelfPlayGames({
-    decks: metaDecks,
+    decks: poolA,
+    opponentDecks: poolB === poolA ? undefined : poolB,
     games,
     seed,
     skills: effectiveSkills,
@@ -194,8 +266,8 @@ function main(): void {
   });
 
   const insertGame = db.prepare(
-    `INSERT INTO policy_games (run_hash, game_index, seed, deck_a, deck_b, skill_a, skill_b, winner, end_reason, turns, decisions)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO policy_games (run_hash, game_index, seed, deck_a, deck_b, deck_a_source, deck_b_source, skill_a, skill_b, winner, end_reason, turns, decisions)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   const insertDecision = db.prepare(
     `INSERT INTO policy_decisions (run_hash, game_index, decision_index, actor, turn_number, player_turn_number, skill, chosen_index, chosen_kind, n_candidates, value_estimate, outcome, state_sparse)
@@ -217,6 +289,8 @@ function main(): void {
         game.seed,
         game.deckAId,
         game.deckBId,
+        sourceOf(game.deckAId),
+        sourceOf(game.deckBId),
         game.skillA,
         game.skillB,
         game.winner,

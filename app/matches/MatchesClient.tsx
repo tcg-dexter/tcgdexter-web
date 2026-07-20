@@ -20,6 +20,10 @@ interface Props {
   featuredMatchStats?: MatchSideStats | null;
   leaderboard: LeaderboardPlayer[];
   currentUsername?: string | null;
+  /** Pre-select the "My Matches" filter on load — used by the "View All"
+   *  link from the profile page's Recent Battles section
+   *  (/matches?filter=mine). No-op when the viewer isn't signed in. */
+  initialMyMatches?: boolean;
 }
 
 type SortDir = "desc" | "asc";
@@ -75,14 +79,18 @@ export default function MatchesClient({
   featuredMatchStats = null,
   leaderboard,
   currentUsername = null,
+  initialMyMatches = false,
 }: Props) {
+  const preselectMyMatches = initialMyMatches && Boolean(currentUsername);
   const [mode, setMode] = useState<"matches" | "leaderboard">("matches");
   const [viewMode, setViewMode] = useState<ViewMode>("sections");
   const [query, setQuery] = useState("");
   const [dir, setDir] = useState<SortDir>("desc");
   const [page, setPage] = useState(1);
-  const [showFilters, setShowFilters] = useState(false);
-  const [activeFilters, setActiveFilters] = useState<Set<FilterKey>>(new Set());
+  const [showFilters, setShowFilters] = useState(preselectMyMatches);
+  const [activeFilters, setActiveFilters] = useState<Set<FilterKey>>(
+    () => new Set(preselectMyMatches ? (["myMatches"] as FilterKey[]) : []),
+  );
 
   const toggleFilter = (key: FilterKey) => {
     setActiveFilters((prev) => {

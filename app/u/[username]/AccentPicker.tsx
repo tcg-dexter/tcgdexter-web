@@ -9,6 +9,8 @@ import {
   BRAND_BANNER_GRADIENT,
   type BannerAccent,
 } from "./UserProfileHeader";
+import type { TeamCardRef } from "./TeamCards";
+import TeamCardsModal from "./TeamCardsModal";
 
 type SwatchValue = BannerAccent | null;
 
@@ -35,12 +37,14 @@ function swatchGradient(value: SwatchValue): string {
 
 interface Props {
   current: BannerAccent | null;
+  teamCards: (TeamCardRef | null)[];
 }
 
-export default function AccentPicker({ current }: Props) {
+export default function AccentPicker({ current, teamCards }: Props) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<SwatchValue>(current);
+  const [cardsModalOpen, setCardsModalOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -137,7 +141,22 @@ export default function AccentPicker({ current }: Props) {
               />
             ))}
           </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              setCardsModalOpen(true);
+            }}
+            className="mt-3 w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-black/10 text-text-primary hover:bg-bg transition-colors"
+          >
+            Select Banner Cards
+          </button>
         </div>
+      )}
+
+      {cardsModalOpen && (
+        <TeamCardsModal initial={teamCards} onClose={() => setCardsModalOpen(false)} />
       )}
     </div>
   );

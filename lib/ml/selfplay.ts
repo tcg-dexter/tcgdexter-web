@@ -70,6 +70,9 @@ export interface SelfPlayGameRecord {
 export interface SelfPlayOptions {
   /** Deck-list texts with stable ids (meta archetypes in production). */
   decks: { id: string; list: string }[];
+  /** Second pool for deck B (e.g. community decks for a meta-vs-community
+   *  matchup). Omit to draw both sides from `decks` (unchanged behavior). */
+  opponentDecks?: { id: string; list: string }[];
   games: number;
   seed: number;
   /** Planner skill levels to cycle through (0..1). */
@@ -142,15 +145,30 @@ class RecordingPolicy implements DecisionPolicy {
 /* ─── Generator ─────────────────────────────────────────────────── */
 
 /** Deterministic per-game schedule: deck pairing, skills, and first actor
- *  all derive from (seed, gameIndex) alone. */
-function schedule(opts: Required<Pick<SelfPlayOptions, "decks" | "skills">>, g: number) {
+ *  all derive from (seed, gameIndex) alone. `opponentDecks` defaults to
+ *  `decks` (same pool both sides — today's meta-vs-meta behavior,
+ *  byte-identical to before this existed). When the two pools are the same
+ *  array reference, deckB skips deckA's index (the "+1 mod" anti-mirror
+ *  trick); with distinct pools a plain independent round-robin is used, since
+ *  cross-pool self-matches aren't a concern. */
+function schedule(
+  opts: Required<Pick<SelfPlayOptions, "decks" | "skills">> & Pick<SelfPlayOptions, "opponentDecks">,
+  g: number,
+) {
+  const poolB = opts.opponentDecks ?? opts.decks;
+  const samePool = poolB === opts.decks;
   const d = opts.decks.length;
   const s = opts.skills.length;
   const a = g % d;
-  const b = d > 1 ? (a + 1 + (g % (d - 1))) % d : a;
+  let b: number;
+  if (samePool) {
+    b = d > 1 ? (a + 1 + (g % (d - 1))) % d : a;
+  } else {
+    b = g % poolB.length;
+  }
   return {
     deckA: opts.decks[a],
-    deckB: opts.decks[b],
+    deckB: poolB[b],
     skillA: opts.skills[g % s],
     skillB: opts.skills[(g + 1) % s],
     firstActor: (g % 2 === 0 ? "player" : "opponent") as "player" | "opponent",
@@ -164,8 +182,15 @@ export function generateSelfPlayGames(options: SelfPlayOptions): SelfPlayGameRec
     options.evaluator === undefined ? createBotEvaluator() : options.evaluator;
   const games: SelfPlayGameRecord[] = [];
 
+  if (options.opponentDecks && options.opponentDecks.length === 0) {
+    throw new Error("selfplay: opponentDecks provided but empty");
+  }
+
   for (let g = 0; g < options.games; g++) {
-    const plan = schedule({ decks: options.decks, skills }, g);
+    const plan = schedule(
+      { decks: options.decks, skills, opponentDecks: options.opponentDecks },
+      g,
+    );
     const gameSeed = hashSeed(`selfplay:${options.seed}:${g}`);
     const record: SelfPlayGameRecord = {
       gameIndex: g,

@@ -13,6 +13,8 @@ import { usePathname } from "next/navigation";
  * closed, and toggling the menu never shifts it.
  *
  * Where it shows up:
+ *  - Home (`/`) — the hero no longer has its own logo, so this is the
+ *    only logo mobile/tablet visitors see there.
  *  - The "front door" pages the nav menu links to (Card Catalog,
  *    Deck Collection, Meta Archetypes, Matches, Learn to Play).
  *  - Every page inside the Learn UX (`/learn/*`) — lessons, quiz, etc.
@@ -25,12 +27,13 @@ import { usePathname } from "next/navigation";
  * back-slot, so the logo and back button are mutually exclusive in
  * practice — when one is visible, the other is empty.
  *
- * Returns `null` for any other route (home, deck detail, card detail,
+ * Returns `null` for any other route (deck detail, card detail,
  * settings, etc.) so the closed toolbar's left side falls back to
  * whatever the page portals into `#mobile-back-slot`.
  */
 
 const TOP_LEVEL_EXACT = new Set<string>([
+  "/",
   "/cards",
   "/my-decks",
   "/meta-archetypes",

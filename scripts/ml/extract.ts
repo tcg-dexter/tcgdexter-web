@@ -3,7 +3,7 @@
 // Reads dexter-ml's feature_store.sqlite (the reproducible Phase 0 export)
 // and emits model-ready JSONL rows + a manifest:
 //
-//   decks.jsonl    — one row per saved_deck and per deck_version
+//   decks.jsonl    — one row per saved_deck
 //   matches.jsonl  — one row per match (log-derived features when a battle
 //                    log exists, stored-column fallback otherwise) + labels
 //   turns.jsonl    — one row per playable turn with quality flags
@@ -143,29 +143,16 @@ function main(): void {
 
   const errors: { kind: string; id: string; error: string }[] = [];
 
-  /* Decks — saved_decks (current list) + deck_versions (historical). */
+  /* Decks — one row per saved_deck (deck-versioning was removed 2026-07-19;
+   * saved_decks.deck_list/.analysis are now written directly by the app). */
   const deckRows: Row[] = [];
-  const deckSources: { deckId: string; versionId: string | null; deckList: string | null }[] = [];
   for (const d of db.prepare("SELECT id, deck_list FROM saved_decks ORDER BY id").all()) {
-    deckSources.push({ deckId: String(d.id), versionId: null, deckList: str(d.deck_list) });
-  }
-  for (const v of db.prepare("SELECT id, deck_id, deck_list FROM deck_versions ORDER BY id").all()) {
-    deckSources.push({ deckId: String(v.deck_id), versionId: String(v.id), deckList: str(v.deck_list) });
-  }
-  for (const src of deckSources) {
-    if (!src.deckList) continue;
-    const context = src.versionId ? `deck_version:${src.versionId}` : `saved_deck:${src.deckId}`;
+    const deckId = String(d.id);
+    const deckList = str(d.deck_list);
+    if (!deckList) continue;
+    const context = `saved_deck:${deckId}`;
     try {
-      deckRows.push(
-        sanitize(
-          {
-            deck_id: src.deckId,
-            deck_version_id: src.versionId,
-            ...extractDeckFeatures(src.deckList),
-          },
-          context,
-        ),
-      );
+      deckRows.push(sanitize({ deck_id: deckId, ...extractDeckFeatures(deckList) }, context));
     } catch (e) {
       errors.push({ kind: "deck_parse", id: context, error: e instanceof Error ? e.message : String(e) });
     }
@@ -233,7 +220,6 @@ function main(): void {
           match_id: matchId,
           user_id: str(m.user_id),
           saved_deck_id: str(m.saved_deck_id),
-          deck_version_id: str(m.saved_deck_version_id),
           source: str(m.source),
           played_at: str(m.played_at),
           opponent_archetype: str(m.opponent_archetype),

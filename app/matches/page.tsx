@@ -6,7 +6,11 @@ import MatchesClient from "./MatchesClient";
 
 export const revalidate = 60;
 
-export default async function MatchesPage() {
+export default async function MatchesPage({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -59,6 +63,7 @@ export default async function MatchesPage() {
         featuredMatchStats={featuredMatchStats}
         leaderboard={leaderboard}
         currentUsername={currentUsername}
+        initialMyMatches={searchParams.filter === "mine"}
       />
     </main>
   );

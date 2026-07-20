@@ -81,16 +81,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Deck not found." }, { status: 404 });
   }
 
-  // Stamp the deck's latest version at import time (null-safe for decks
-  // with no versions yet).
-  const { data: latestVersion } = await supabase
-    .from("deck_versions")
-    .select("id")
-    .eq("deck_id", saved_deck_id)
-    .order("version_number", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
   // Parse + normalize + summarize.
   const parsed = parseBattleLog(battle_log_raw);
   if (!parsed.handles.includes(player_handle)) {
@@ -117,7 +107,6 @@ export async function POST(req: Request) {
     .insert({
       user_id: user.id,
       saved_deck_id,
-      saved_deck_version_id: latestVersion?.id ?? null,
       result,
       opponent_name: opponent_name?.trim() || summary.opponent_handle || null,
       opponent_archetype: opponent_archetype?.trim() || null,

@@ -8,10 +8,10 @@ import {
   type AnalysisResult,
 } from "@/lib/analyzeDeck";
 
-/* The analysis computation lives in @/lib/analyzeDeck so server routes
- * (saved-decks versioning, forking) can recompute snapshots without an
- * HTTP round-trip. This route adds the request-scoped side effects:
- * submission capture and the analytics event. */
+/* The analysis computation lives in @/lib/analyzeDeck so other server
+ * routes (e.g. saved-decks writes) can recompute snapshots without an HTTP
+ * round-trip. This route adds the request-scoped side effects: submission
+ * capture and the analytics event. */
 
 export async function POST(req: NextRequest) {
   try {

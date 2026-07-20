@@ -14,9 +14,8 @@ import { primaryPokemonCard } from "@/lib/primaryCardImage";
  * POST /api/saved-decks
  *
  * Saves a deck to the authenticated user's library. The analysis snapshot
- * is computed server-side (any client-sent `analysis` is ignored), the
- * deck's archetype identity is auto-detected, and the deck's v1 version
- * row is created alongside. Sign-in required.
+ * is computed server-side (any client-sent `analysis` is ignored), and the
+ * deck's archetype identity is auto-detected. Sign-in required.
  *
  * Body: { deckList: string, name?: string, coverUrl?, publish?, source?, metaArchetypeId? }
  */
@@ -154,19 +153,6 @@ export async function POST(req: Request) {
       { error: "Failed to save deck." },
       { status: 500 }
     );
-  }
-
-  // v1 — the deck's first version. Direct insert: the row above already
-  // carries the mirror, and a brand-new deck can't race on numbering.
-  const { error: verErr } = await supabase.from("deck_versions").insert({
-    deck_id: data.id,
-    version_number: 1,
-    deck_list: deckList,
-    analysis: analysisResult,
-  });
-  if (verErr) {
-    // Deck stays usable — the next commit becomes its v1.
-    console.error("[saved-decks] v1 insert failed:", verErr);
   }
 
   void track(req, "deck.saved", {

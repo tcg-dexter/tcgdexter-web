@@ -7,6 +7,30 @@ import HomeClient, { type CurrentSpotlight } from "./HomeClient";
 import type { TrainerSpotlightRow } from "./spotlight/types";
 import { parseDeckListCards } from "@/lib/cardPrinting";
 import { resolveDeckTiles, type ResolvedDeckTile } from "@/lib/deckTiles";
+import { searchCards } from "@/lib/cardSearch";
+import { getAllSetStats, getRawCard, type CardIndexEntry, type RawCard } from "@/lib/cardsIndex";
+
+interface CardCatalogPreview {
+  topCards: CardIndexEntry[];
+  featuredCard: { card: CardIndexEntry; raw: RawCard } | null;
+}
+
+function loadCardCatalogPreview(): CardCatalogPreview {
+  const newestSet = getAllSetStats()[0] ?? null;
+  // searchCards() clamps pageSize to a 12 minimum, so over-fetch and trim
+  // to the top 5 by market price we actually want: #1-4 for the grid,
+  // #5 as the featured detail card below it.
+  const top5 = newestSet
+    ? searchCards({ setId: [newestSet.id], sort: "price", dir: "desc" }).cards.slice(0, 5)
+    : [];
+  const topCards = top5.slice(0, 4);
+
+  const fifth = top5[4] ?? null;
+  const raw = fifth ? getRawCard(fifth.id) : null;
+  const featuredCard = fifth && raw ? { card: fifth, raw } : null;
+
+  return { topCards, featuredCard };
+}
 
 // Revalidate the home page (and its stat counts) at most once per minute.
 export const revalidate = 60;
@@ -158,12 +182,15 @@ export default async function DeckProfilerPage() {
     loadCurrentSpotlight(),
   ]);
   const showcaseTiles = loadShowcaseTiles();
+  const cardCatalogPreview = loadCardCatalogPreview();
   return (
     <HomeClient
       stats={stats}
       recentMatches={recentMatches}
       currentSpotlight={currentSpotlight}
       showcaseTiles={showcaseTiles}
+      cardCatalogTopCards={cardCatalogPreview.topCards}
+      cardCatalogFeatured={cardCatalogPreview.featuredCard}
     />
   );
 }

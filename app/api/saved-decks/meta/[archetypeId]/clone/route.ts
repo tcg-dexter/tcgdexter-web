@@ -179,17 +179,6 @@ export async function POST(
     );
   }
 
-  // The materialized meta deck's v1.
-  const { error: verErr } = await supabase.from("deck_versions").insert({
-    deck_id: cloned.id,
-    version_number: 1,
-    deck_list: deckList,
-    analysis,
-  });
-  if (verErr) {
-    console.error("[saved-decks/meta/clone] v1 insert failed:", verErr);
-  }
-
   return NextResponse.json({ saved: true, savedId: cloned.id });
 }
 

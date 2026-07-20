@@ -10,12 +10,18 @@
 // Usage:
 //   npm run ml:duel -- [--artifact PATH] [--skill 1.0] [--games N]
 //                      [--seed S] [--decks M] [--max-turns T]
-//                      [--temperature T]
+//                      [--temperature T] [--decks-file PATH]
+//
+// --decks-file points at a frozen benchmark fixture (data/ml/benchmark-decks.json)
+// for a reproducible, drift-free gauntlet; without it, the top --decks meta
+// archetypes are used (which the daily meta refresh reorders — fine for a
+// quick check, not for comparing runs across days).
 
 import path from "node:path";
 
 import metaDecksRaw from "@/data/meta-decks.json";
 import { metaDeckToList, type MetaDeckEntry } from "@/lib/metaDeckList";
+import { loadBenchmarkDecks } from "@/lib/ml/benchmarkDecks";
 import {
   PlannerPolicy,
   hashSeed,
@@ -63,22 +69,26 @@ function main(): void {
     return;
   }
 
-  const decks = (metaDecksRaw as unknown as (MetaDeckEntry & {
-    variants?: { cards: MetaDeckEntry["cards"] }[];
-  })[])
-    .slice(0, deckCount)
-    .map((d) => ({
-      id: d.id,
-      list: metaDeckToList({ ...d, cards: d.cards?.length ? d.cards : d.variants?.[0]?.cards ?? [] }),
-    }))
-    .filter((d) => d.list.length > 0);
+  const decksFile = argValue("--decks-file");
+  const decks = decksFile
+    ? loadBenchmarkDecks(path.resolve(REPO_ROOT, decksFile))
+    : (metaDecksRaw as unknown as (MetaDeckEntry & {
+        variants?: { cards: MetaDeckEntry["cards"] }[];
+      })[])
+        .slice(0, deckCount)
+        .map((d) => ({
+          id: d.id,
+          list: metaDeckToList({ ...d, cards: d.cards?.length ? d.cards : d.variants?.[0]?.cards ?? [] }),
+        }))
+        .filter((d) => d.list.length > 0);
   if (decks.length === 0) throw new Error("duel: no usable meta decks");
 
   const evaluator = createBotEvaluator();
   console.log(
     `[duel] ${artifact.model_version} (ranker${temperature > 0 ? ` τ=${temperature}` : ""}) ` +
       `vs planner skill=${skill.toFixed(2)} — games=${games} seed=${seed} ` +
-      `decks=${decks.length} evaluator=${evaluator ? "winprob" : "heuristic"}`,
+      `decks=${decks.length}${decksFile ? ` (${path.basename(decksFile)})` : ""} ` +
+      `evaluator=${evaluator ? "winprob" : "heuristic"}`,
   );
 
   const startedAt = Date.now();

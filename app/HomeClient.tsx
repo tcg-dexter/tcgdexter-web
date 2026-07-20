@@ -23,6 +23,10 @@ import type {
 import PlaymatShowcase from "./PlaymatShowcase";
 import type { ResolvedDeckTile } from "@/lib/deckTiles";
 import UnifiedSearch from "@/app/leaderboard/UnifiedSearch";
+import type { CardIndexEntry, RawCard } from "@/lib/cardsIndex";
+import GridTile from "@/app/cards/GridTile";
+import CardDetailPanel from "@/app/cards/CardDetailPanel";
+import InventoryProvider, { useInventory } from "@/app/cards/InventoryContext";
 
 export type CurrentSpotlight = {
   id: string;
@@ -142,11 +146,15 @@ export default function HomeClient({
   recentMatches = [],
   currentSpotlight = null,
   showcaseTiles = [],
+  cardCatalogTopCards = [],
+  cardCatalogFeatured = null,
 }: {
   stats: Array<{ label: string; value: string }>;
   recentMatches?: RecentMatch[];
   currentSpotlight?: CurrentSpotlight | null;
   showcaseTiles?: ResolvedDeckTile[];
+  cardCatalogTopCards?: CardIndexEntry[];
+  cardCatalogFeatured?: { card: CardIndexEntry; raw: RawCard } | null;
 }) {
   const [deckList, setDeckList] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -197,84 +205,100 @@ export default function HomeClient({
   return (
     <>
       {/* Hero */}
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-[1.925rem] md:pt-14 pb-16 text-center">
-        {/* Logo */}
-        <div className="flex justify-center mb-7 md:mb-8">
-          <img
-            src="/logo-light.png"
-            alt="TCG Dexter"
-            className="max-w-full"
-            style={{ width: "240px", height: "auto" }}
-          />
-        </div>
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-[2.1175rem] md:pt-14 pb-24 text-center lg:text-left">
+        {/* No logo here on any breakpoint — desktop already shows it in
+            the sidebar, mobile/tablet gets it from the sticky toolbar
+            (MobileToolbarLogo, home added to its top-level route set). */}
 
-        <h1 className="text-3xl md:text-[54px] font-semibold tracking-tight leading-[1.02] max-w-4xl mx-auto">
-          The deckbuilder&apos;s
-          <br />
-          <span className="bg-gradient-brand bg-clip-text text-transparent">
-            dex for Pokémon TCG.
-          </span>
-        </h1>
-        <p className="mt-6 text-sm md:text-xl font-semibold text-text-primary max-w-2xl mx-auto leading-relaxed">
-          Paste your list to create a Deck Profile.
-          <br />
-          Save to take notes and track performance.
-        </p>
+        {/* Desktop (lg:+) splits into two equal-width, equal-height
+            columns — heading/copy left-aligned on the left, the deck
+            input card on the right. Mobile/tablet keep the original
+            single-column, centered stack (no lg: classes apply). */}
+        <div className="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-stretch">
+          <div className="lg:flex lg:flex-col lg:justify-start">
+            <h2 className="text-[1.35rem] md:text-[2.7rem] font-semibold tracking-tight leading-[1.02] max-w-4xl mx-auto lg:mx-0">
+              The deckbuilder&apos;s dex
+              <br />
+              <span className="bg-gradient-brand bg-clip-text text-transparent">
+                for Pokémon TCG.
+              </span>
+            </h2>
+            <p className="mt-6 text-sm md:text-xl font-semibold text-text-primary max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+              Paste your list to create a Deck Profile.
+              <br />
+              Save to take notes and track performance.
+            </p>
 
-        {/* Deck input card — soft elevated glass on light bg */}
-        <div className="mt-12 max-w-3xl mx-auto">
-          <div className="relative group">
-            {/* Gradient glow */}
-            <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 group-focus-within:opacity-70 blur-xl transition-opacity" />
-            <div className="relative rounded-2xl bg-white/90 backdrop-blur-xl border border-black/5 p-2 shadow-brand-lg">
-              <div className="flex items-center justify-between px-3 pt-2 pb-1.5">
-                <span className="text-xs font-semibold text-text-primary">Deck List</span>
-                <button
-                  onClick={() => setDeckList(EXAMPLE_DECK)}
-                  className="text-xs text-text-muted hover:text-text-primary transition"
-                >
-                  Load example
-                </button>
+            {/* Desktop-only: the stats strip lives here, under the hero
+                copy, so the two-column hero flows straight into Top Meta
+                Archetypes below. Mobile/tablet keep it as its own
+                section further down (hidden here via hidden lg:block). */}
+            {!(result && profiledAt) && (
+              <div className="hidden lg:block mt-10">
+                <StatsStrip stats={stats} />
               </div>
-              <textarea
-                value={deckList}
-                onChange={(e) => setDeckList(e.target.value)}
-                placeholder={"Pokémon: 13\n3 N's Zoroark ex JTG 175\n2 N's Reshiram ASC 154\n..."}
-                className="w-full h-36 md:h-48 bg-transparent resize-none px-3 py-2 font-mono text-sm text-text-primary placeholder:text-text-muted/60 outline-none"
-                spellCheck={false}
-              />
-              <div className="flex items-center justify-end gap-3 px-2 pb-2">
-                {deckList.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setDeckList("")}
-                    className="text-xs text-text-muted hover:text-text-primary transition"
-                  >
-                    Clear
-                  </button>
-                )}
-                <GradientButton onClick={handleAnalyze} disabled={loading}>
-                  {loading ? (
-                    <>
-                      <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      Profiling…
-                    </>
-                  ) : (
-                    "Profile this deck"
-                  )}
-                </GradientButton>
-              </div>
-            </div>
+            )}
           </div>
 
-          {error && (
-            <p className="mt-3 text-sm text-rose-600" role="alert">
-              {error}
-            </p>
-          )}
+          {/* Deck input card — soft elevated glass on light bg. mx-auto is
+              cancelled at lg: (via lg:mx-0) because auto margins on a
+              flex item's cross axis opt it out of the default stretch
+              behavior, which was leaving this narrower than the left
+              column instead of filling it edge-to-edge. */}
+          <div className="mt-12 lg:mt-0 max-w-3xl mx-auto lg:max-w-none lg:mx-0 lg:w-full lg:flex lg:flex-col lg:justify-start">
+            <div className="relative group">
+              {/* Gradient glow */}
+              <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 group-focus-within:opacity-70 blur-xl transition-opacity" />
+              <div className="relative rounded-2xl bg-white/90 backdrop-blur-xl border border-black/5 p-2 shadow-brand-lg">
+                <div className="flex items-center justify-between px-3 pt-2 pb-1.5">
+                  <span className="text-xs font-semibold text-text-primary">Deck List</span>
+                  <button
+                    onClick={() => setDeckList(EXAMPLE_DECK)}
+                    className="text-xs text-text-muted hover:text-text-primary transition"
+                  >
+                    Load example
+                  </button>
+                </div>
+                <textarea
+                  value={deckList}
+                  onChange={(e) => setDeckList(e.target.value)}
+                  placeholder={"Pokémon: 13\n3 N's Zoroark ex JTG 175\n2 N's Reshiram ASC 154\n..."}
+                  className="w-full h-36 md:h-48 bg-transparent resize-none px-3 py-2 font-mono text-sm text-text-primary placeholder:text-text-muted/60 outline-none"
+                  spellCheck={false}
+                />
+                <div className="flex items-center justify-end gap-3 px-2 pb-2">
+                  {deckList.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setDeckList("")}
+                      className="text-xs text-text-muted hover:text-text-primary transition"
+                    >
+                      Clear
+                    </button>
+                  )}
+                  <GradientButton onClick={handleAnalyze} disabled={loading}>
+                    {loading ? (
+                      <>
+                        <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Profiling…
+                      </>
+                    ) : (
+                      "Profile this deck"
+                    )}
+                  </GradientButton>
+                </div>
+              </div>
+            </div>
+
+            {error && (
+              <p className="mt-3 text-sm text-rose-600" role="alert">
+                {error}
+              </p>
+            )}
+          </div>
         </div>
       </section>
 
@@ -291,14 +315,20 @@ export default function HomeClient({
         />
       ) : (
         <>
-          {/* Stats strip */}
-          <section className="mx-auto max-w-2xl px-4 sm:px-6 pb-12">
+          {/* Stats strip — mobile/tablet only; desktop shows it inside the
+              hero's left column instead (see above). Pulled up toward
+              the hero above (Hero's own pb-24 is shared with the
+              DeckProfileView path, so this section counteracts part of
+              it with a negative top margin rather than shrinking Hero's
+              padding directly) and given a shorter pb-8 so Top Meta
+              Archetypes below sits closer too. */}
+          <section className="lg:hidden mx-auto max-w-2xl px-4 sm:px-6 -mt-16 pb-8">
             <StatsStrip stats={stats} />
           </section>
 
           {/* Meta ticker */}
-          <section className="mx-auto max-w-6xl px-4 sm:px-6 py-6">
-            <h2 className="text-4xl font-semibold tracking-tight mb-8">Top Meta Archetypes</h2>
+          <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
+            <h2 className="text-3xl font-semibold tracking-tight mb-8">Top Meta Archetypes</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {top3Cards.map((c) => (
                 <MetaDeckCard
@@ -322,7 +352,7 @@ export default function HomeClient({
           </section>
 
           {/* Secondary CTA */}
-          <section className="mx-auto max-w-4xl px-4 sm:px-6 py-24 text-center">
+          <section className="mx-auto max-w-4xl px-4 sm:px-6 pb-24 text-center">
             <div className="text-3xl md:text-4xl font-semibold tracking-tight leading-tight text-text-primary">
               A dex for your decks. Save your own lists, share with fellow trainers, and browse the top meta archetypes. Track your progress and earn badges.
             </div>
@@ -330,8 +360,8 @@ export default function HomeClient({
 
           {/* Recent Matches */}
           {recentMatches.length > 0 && (
-            <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-16">
-              <h2 className="text-4xl font-semibold tracking-tight mb-8">Recent Battles</h2>
+            <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
+              <h2 className="text-3xl font-semibold tracking-tight mb-8">Recent Battles</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {recentMatches.map((m) => (
                   <MatchCard key={m.id} match={m} />
@@ -346,9 +376,9 @@ export default function HomeClient({
           )}
 
           {/* Playmat Studio showcase */}
-          <section className="mx-auto max-w-6xl px-4 sm:px-6 py-12">
+          <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
             <div className="mb-8">
-              <h2 className="text-4xl font-semibold tracking-tight">Playmat Studio</h2>
+              <h2 className="text-3xl font-semibold tracking-tight">Playmat Studio</h2>
             </div>
             <PlaymatShowcase tiles={showcaseTiles} />
           </section>
@@ -357,7 +387,7 @@ export default function HomeClient({
           {currentSpotlight && (
             <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
               <div className="mb-8">
-                <h2 className="text-4xl font-semibold tracking-tight">Trainer Spotlight</h2>
+                <h2 className="text-3xl font-semibold tracking-tight">Trainer Spotlight</h2>
               </div>
               <Link
                 href={`/spotlight/${currentSpotlight.slug}`}
@@ -393,12 +423,46 @@ export default function HomeClient({
             </section>
           )}
 
+          {/* Card Catalog preview */}
+          {cardCatalogTopCards.length > 0 && (
+            <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
+              <InventoryProvider>
+                <div className="mb-8">
+                  <h2 className="text-3xl font-semibold tracking-tight">Card Catalog</h2>
+                </div>
+                <CatalogSignInBanner />
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  {cardCatalogTopCards.map((c, i) => (
+                    <GridTile key={c.id} card={c} index={i} />
+                  ))}
+                </div>
+
+                {cardCatalogFeatured && (
+                  <div className="mt-12">
+                    <CardDetailPanel
+                      card={cardCatalogFeatured.card}
+                      raw={cardCatalogFeatured.raw}
+                    />
+                    <div className="mt-6 flex justify-center">
+                      <Link
+                        href="/cards"
+                        className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition"
+                      >
+                        Browse All Cards
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </InventoryProvider>
+            </section>
+          )}
+
           {/* Final CTA */}
           <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-24">
             <div className="relative rounded-3xl overflow-hidden border border-black/8 shadow-xl">
               <div className="absolute inset-0 bg-gradient-brand opacity-20" />
               <div className="relative p-12 md:p-20 text-center">
-                <h2 className="text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05] max-w-3xl mx-auto text-text-primary">
+                <h2 className="text-3xl md:text-5xl font-semibold tracking-tight leading-[1.05] max-w-3xl mx-auto text-text-primary">
                   Ready to see what your deck is really made of?
                 </h2>
                 <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
@@ -431,5 +495,22 @@ export default function HomeClient({
         </>
       )}
     </>
+  );
+}
+
+/** Signed-out CTA above the catalog preview grid — signed-in trainers see
+ *  nothing here since their +/- controls on each tile already work.
+ *  Renders inside InventoryProvider so it can read auth state. */
+function CatalogSignInBanner() {
+  const { signedIn, promptSignIn } = useInventory();
+  if (signedIn !== false) return null;
+  return (
+    <button
+      type="button"
+      onClick={promptSignIn}
+      className="mb-4 w-full rounded-2xl border border-black/8 bg-white/80 backdrop-blur-sm px-4 py-3 text-sm font-semibold text-text-primary hover:bg-white transition text-center"
+    >
+      Sign in to save cards to your collection
+    </button>
   );
 }

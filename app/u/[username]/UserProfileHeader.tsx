@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { shade } from "@/lib/color";
 import { ENERGY_HEX } from "@/app/components/DeckProfileView";
 import { StatCard } from "@/app/components/StatCard";
+import AvatarPicker from "./AvatarPicker";
+import AnimatedGradient from "@/app/components/AnimatedGradient";
 
 /**
  * Energy-accent keys the picker (and DB check constraint) accept.
@@ -60,6 +62,9 @@ interface Props {
   bio: string | null;
   tcgLiveHandle: string | null;
   avatarUrl: string | null;
+  /** Whether the viewer owns this profile — gates the avatar's
+   *  Pokémon-picker interactivity (see AvatarPicker). */
+  isOwner: boolean;
   bannerAccent: string | null;
   /** Owner-only actions (e.g. settings gear). Rendered inline on the
    *  right of the avatar overlap row, mirroring the meta header. */
@@ -75,10 +80,13 @@ interface Props {
    *  they share the exact same `max-w-2xl px-6` parent as the stat grid
    *  and line up edge-to-edge with it. */
   belowStats?: ReactNode;
-  /** Centered overlay rendered in front of the banner — used for the
-   *  team-of-6 row. Sits *outside* the banner's `overflow-hidden` so
-   *  the picker popover can extend below the banner edge. */
-  bannerCenter?: ReactNode;
+  /** Fanned team-card spread rendered inside the banner's clipped
+   *  bounds (mirrors the meta archetype header's card fan). Unlike
+   *  `bannerOverlay`, this sits *inside* an `overflow-hidden` wrapper
+   *  matching the banner's exact geometry so each card's bottom edge
+   *  clips the same way — any popover the caller opens from a card
+   *  click needs to portal out to escape that clipping. */
+  bannerFan?: ReactNode;
 }
 
 export default function UserProfileHeader({
@@ -87,24 +95,29 @@ export default function UserProfileHeader({
   bio,
   tcgLiveHandle,
   avatarUrl,
+  isOwner,
   bannerAccent,
   actions,
   bannerOverlay,
-  bannerCenter,
+  bannerFan,
   stats,
   belowStats,
 }: Props) {
   const gradient = bannerGradientFor(bannerAccent);
-  const initial = displayName.trim().charAt(0).toUpperCase() || "?";
+
+  // Shared banner box geometry — mirrors the meta archetype header
+  // exactly (down to the sm:+ aspect ratio) so the avatar overlap math
+  // (-mt-16 sm:-mt-20) and the team-card fan both read the same as on
+  // meta pages. bannerOverlay / bannerFan each get their own sibling
+  // wrapper reusing this class string so all three stay pixel-aligned.
+  const bannerBox = "h-[calc(34vw-12px)] sm:h-auto sm:aspect-[4.6875/1]";
 
   return (
     <header className="relative flex-shrink-0">
-      {/* Banner — solid gradient, matching the meta archetype banner's
-          sizing so the avatar overlap math (-mt-16 sm:-mt-20) lands at
-          the same visual offset. */}
-      <div
-        className="relative w-full overflow-hidden h-[calc(34vw-12px)] sm:h-auto sm:aspect-[3/1]"
-        style={{ background: gradient }}
+      {/* Banner — solid gradient, dissolves into a new accent color. */}
+      <AnimatedGradient
+        gradient={gradient}
+        className={`relative w-full overflow-hidden ${bannerBox}`}
       />
 
       {/* Banner bottom-right overlay (pencil edit button). Rendered as
@@ -113,51 +126,50 @@ export default function UserProfileHeader({
           without being clipped by overflow-hidden. z-30 keeps the
           popover above the settings gear in the bio block. */}
       {bannerOverlay && (
-        <div className="absolute inset-x-0 top-0 h-[calc(34vw-12px)] sm:h-auto sm:aspect-[3/1] z-30 pointer-events-none">
+        <div className={`absolute inset-x-0 top-0 ${bannerBox} z-30 pointer-events-none`}>
           <div className="absolute bottom-3 right-6 pointer-events-auto">
             {bannerOverlay}
           </div>
         </div>
       )}
 
-      {/* Centered banner overlay (team-of-6). Sized to the banner so
-          flex centering aligns inside the banner's bounds, and
-          rendered as a sibling of the banner (not a child) so the
-          team picker's popover can overflow downward into the bio
-          area without being clipped by the banner's overflow-hidden.
-          Below lg the team sits at the upper-center of the banner
-          (clearing the avatar that straddles the bottom edge); at lg+
-          it centers vertically as well. */}
-      {bannerCenter && (
-        <div
-          className="absolute inset-x-0 top-0 h-[calc(34vw-12px)] sm:h-auto sm:aspect-[3/1] flex justify-center items-start lg:items-center z-20 pointer-events-none pt-3 sm:pt-5 lg:pt-0"
-        >
-          <div className="pointer-events-auto">{bannerCenter}</div>
+      {/* Team-card fan. Sized and clipped to the exact same box as the
+          banner (unlike bannerOverlay, this wrapper keeps
+          overflow-hidden) so each card's bottom edge crops flush with
+          the banner edge, matching the meta archetype header. z-0 keeps
+          it behind the avatar (z-10), which overlaps the banner's
+          bottom-left corner via negative margin. The caller is
+          responsible for portaling any popover it opens out of this
+          subtree so it isn't clipped too. */}
+      {bannerFan && (
+        <div className={`absolute inset-x-0 top-0 ${bannerBox} overflow-hidden z-0 pointer-events-none`}>
+          {bannerFan}
         </div>
       )}
 
       {/* Bio section. Avatar overlaps the banner via negative margin. */}
       <div className="mx-auto max-w-2xl px-6">
         <div className="flex items-end justify-between gap-3 -mt-16 sm:-mt-20">
-          <div
-            className="relative z-10 rounded-full ring-4 ring-bg flex items-center justify-center overflow-hidden shrink-0"
-            style={{
-              background: gradient,
-              width: "128px",
-              height: "128px",
-            }}
-          >
-            {avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatarUrl}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-5xl font-bold text-white">{initial}</span>
-            )}
-          </div>
+          {isOwner ? (
+            <AvatarPicker avatarUrl={avatarUrl} gradient={gradient} />
+          ) : (
+            <AnimatedGradient
+              gradient={gradient}
+              className="relative z-10 rounded-full ring-4 ring-bg flex items-center justify-center overflow-hidden shrink-0"
+              style={{ width: "115px", height: "115px" }}
+            >
+              {avatarUrl && (
+                // Sprite sized to ~78% of the 115px circle, matching the
+                // meta archetype header's icon treatment.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="w-[90px] h-[90px] object-contain"
+                />
+              )}
+            </AnimatedGradient>
+          )}
           {actions && (
             // self-start + mt slightly larger than the row's negative
             // top margin (mt-16/mt-20) leaves ~16px of breathing room
