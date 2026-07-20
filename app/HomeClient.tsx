@@ -215,8 +215,8 @@ export default function HomeClient({
             input card on the right. Mobile/tablet keep the original
             single-column, centered stack (no lg: classes apply). */}
         <div className="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-stretch">
-          <div className="lg:flex lg:flex-col lg:justify-center">
-            <h2 className="text-2xl md:text-5xl font-semibold tracking-tight leading-[1.02] max-w-4xl mx-auto lg:mx-0">
+          <div className="lg:flex lg:flex-col lg:justify-start">
+            <h2 className="text-[1.35rem] md:text-[2.7rem] font-semibold tracking-tight leading-[1.02] max-w-4xl mx-auto lg:mx-0">
               The deckbuilder&apos;s{" "}
               <span className="bg-gradient-brand bg-clip-text text-transparent">
                 dex
@@ -236,7 +236,7 @@ export default function HomeClient({
               flex item's cross axis opt it out of the default stretch
               behavior, which was leaving this narrower than the left
               column instead of filling it edge-to-edge. */}
-          <div className="mt-12 lg:mt-0 max-w-3xl mx-auto lg:max-w-none lg:mx-0 lg:w-full lg:flex lg:flex-col lg:justify-center">
+          <div className="mt-12 lg:mt-0 max-w-3xl mx-auto lg:max-w-none lg:mx-0 lg:w-full lg:flex lg:flex-col lg:justify-start">
             <div className="relative group">
               {/* Gradient glow */}
               <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 group-focus-within:opacity-70 blur-xl transition-opacity" />
