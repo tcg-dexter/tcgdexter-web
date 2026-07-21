@@ -60,40 +60,68 @@ const games = numOrNull(argValue("--games")) ?? 1440;
 const seed = numOrNull(argValue("--seed")) ?? 11;
 const artifactArg = argValue("--artifact");
 const skipControls = process.argv.includes("--skip-controls");
+const perDeck = process.argv.includes("--per-deck");
 const decksFile = argValue("--decks-file") ?? path.join("data", "ml", "benchmark-decks.json");
 
 type PolicyFactory = (gameSeed: number) => DecisionPolicy;
 
+interface PooledResult {
+  p: number;
+  lo: number;
+  hi: number;
+  /** A's score seated as sides.player vs as sides.opponent. */
+  bySeat: [number, number];
+  /** A's score when A acts first vs when B acts first. */
+  byInitiative: [number, number];
+  /** A's score per benchmark deck, in deck order. */
+  byDeck: number[];
+}
+
 /**
- * Play `games` true-mirror games, alternating which seat side A occupies so
- * both directions are covered, and report side A's pooled score with draws
- * counted as half.
+ * Play `games` true-mirror games and report side A's pooled score with draws
+ * counted as half, split three ways: by seat, by initiative, and by deck.
+ *
+ * SCHEDULING NOTE (a confound this harness used to have): with `deck = g % D`
+ * and `seat = g % 2`, an even deck count makes deck-index parity identical to
+ * seat — even-indexed decks are ALWAYS played from one seat — and a period-4
+ * first-actor cycle locks every deck to a single (seat, initiative) combo.
+ * The reported "seat split" was then really an even-decks-vs-odd-decks split.
+ * The fix: enumerate the full (seat × initiative) cross product per deck —
+ * consecutive blocks of 4 games hold the deck fixed and vary the combo.
  */
 function pooled(
   decks: { id: string; list: string }[],
   makeA: PolicyFactory,
   makeB: PolicyFactory,
   label: string,
-): { p: number; lo: number; hi: number; bySeat: [number, number] } {
+): PooledResult {
   let score = 0;
   const seatScore = [0, 0];
   const seatGames = [0, 0];
+  const initScore = [0, 0];
+  const initGames = [0, 0];
+  const deckScore = decks.map(() => 0);
+  const deckGames = decks.map(() => 0);
 
   for (let g = 0; g < games; g++) {
     const gameSeed = hashSeed(`${label}:${seed}:${g}`);
-    // TRUE MIRROR: one deck, both sides.
-    const deck = decks[g % decks.length];
-    const sim = instantiateDeck(deck.list);
-    // Alternate A's seat every game, and the first actor every two, so the
-    // (seat, initiative) combinations are balanced across the run.
-    const aSeat: "player" | "opponent" = g % 2 === 0 ? "player" : "opponent";
-    const firstActor: "player" | "opponent" =
-      Math.floor(g / 2) % 2 === 0 ? "player" : "opponent";
+    // TRUE MIRROR: one deck, both sides. Deck advances every 4 games while
+    // the inner combo index sweeps all (seat, initiative) pairs.
+    const deckIdx = Math.floor(g / 4) % decks.length;
+    const deck = decks[deckIdx];
+    const combo = g % 4;
+    const aSeat: "player" | "opponent" = combo < 2 ? "player" : "opponent";
+    const aFirst = combo % 2 === 0;
+    const firstActor: "player" | "opponent" = aFirst
+      ? aSeat
+      : aSeat === "player"
+        ? "opponent"
+        : "player";
 
     const a = makeA(gameSeed);
     const b = makeB(gameSeed);
     const outcome = playGame(
-      sim,
+      instantiateDeck(deck.list),
       instantiateDeck(deck.list),
       {
         player: aSeat === "player" ? a : b,
@@ -109,6 +137,11 @@ function pooled(
     const si = aSeat === "player" ? 0 : 1;
     seatScore[si] += s;
     seatGames[si] += 1;
+    const ii = aFirst ? 0 : 1;
+    initScore[ii] += s;
+    initGames[ii] += 1;
+    deckScore[deckIdx] += s;
+    deckGames[deckIdx] += 1;
   }
 
   const p = score / games;
@@ -118,16 +151,24 @@ function pooled(
     lo: Math.max(0, p - half),
     hi: Math.min(1, p + half),
     bySeat: [seatScore[0] / seatGames[0], seatScore[1] / seatGames[1]],
+    byInitiative: [initScore[0] / initGames[0], initScore[1] / initGames[1]],
+    byDeck: deckScore.map((v, i) => (deckGames[i] > 0 ? v / deckGames[i] : NaN)),
   };
 }
 
 const pct = (x: number) => `${(100 * x).toFixed(1)}%`;
 
-function report(label: string, r: ReturnType<typeof pooled>): void {
+function report(label: string, r: PooledResult, decks?: { id: string }[]): void {
   console.log(
     `  ${label.padEnd(34)} ${pct(r.p)}  [${pct(r.lo)}–${pct(r.hi)}]  ` +
-      `seats: ${pct(r.bySeat[0])} / ${pct(r.bySeat[1])}`,
+      `seats: ${pct(r.bySeat[0])} / ${pct(r.bySeat[1])}  ` +
+      `initiative: ${pct(r.byInitiative[0])} / ${pct(r.byInitiative[1])}`,
   );
+  if (perDeck && decks) {
+    for (let i = 0; i < decks.length; i++) {
+      console.log(`      ${decks[i].id.padEnd(30)} ${pct(r.byDeck[i])}`);
+    }
+  }
 }
 
 function main(): void {
@@ -176,13 +217,16 @@ function main(): void {
   const heuristic: PolicyFactory = () => new HeuristicPolicy();
 
   console.log("");
-  console.log("  matchup                            score   95% CI          player / opponent");
+  console.log(
+    "  matchup                            score   95% CI          " +
+      "seat: player/opp     init: first/second",
+  );
   const headline = pooled(decks, planner, heuristic, "gate");
-  report("planner+value vs heuristic", headline);
+  report("planner+value vs heuristic", headline, decks);
 
   if (!skipControls) {
-    report("CONTROL planner vs planner", pooled(decks, planner, plannerB, "ctl-p"));
-    report("CONTROL heuristic vs heuristic", pooled(decks, heuristic, heuristic, "ctl-h"));
+    report("CONTROL planner vs planner", pooled(decks, planner, plannerB, "ctl-p"), decks);
+    report("CONTROL heuristic vs heuristic", pooled(decks, heuristic, heuristic, "ctl-h"), decks);
   }
 
   console.log("");
