@@ -72,9 +72,7 @@ export default async function SiteNav() {
       >
         <div className="mx-auto max-w-6xl px-6 h-14 relative flex items-center justify-between">
           <div id="mobile-back-slot" className="flex items-center" />
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-            <MobileToolbarLogo />
-          </div>
+          <MobileToolbarLogo />
           <MobileNavMenu
             isAuthed={!!user}
             displayName={displayName}

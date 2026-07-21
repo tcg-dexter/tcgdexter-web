@@ -7,10 +7,15 @@ import { usePathname } from "next/navigation";
  * Persistent site-logo home button rendered on the mobile sticky toolbar
  * for top-level pages only. The markup mirrors the logo Link inside
  * `MobileNavMenu`'s open panel header exactly (same href, aria-label,
- * className, and `<img>` props), and both are absolutely centered in
- * the shared `h-14` toolbar row — so the logo sits at pixel-identical
- * coordinates whether the menu is open or closed, and toggling the menu
- * never shifts it.
+ * className, and `<img>` props) — both apply the absolute-centering
+ * classes directly on the `<Link>` itself, with no wrapping element, so
+ * the logo sits at pixel-identical coordinates whether the menu is open
+ * or closed. (An earlier version wrapped this in a plain `<div>` in the
+ * parent — that div's shrink-to-fit height included the block-vs-inline
+ * line-box gap below the inline-flex child, landing ~4px taller than
+ * the image itself and shifting the centered logo up by half that. Keep
+ * the absolute classes on the Link/img wrapper directly, not on an
+ * external block-level wrapper, to avoid reintroducing that.)
  *
  * Where it shows up:
  *  - Home (`/`) — the hero no longer has its own logo, so this is the
@@ -58,7 +63,7 @@ export default function MobileToolbarLogo() {
     <Link
       href="/"
       aria-label="TCG Dexter — home"
-      className="inline-flex items-center"
+      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex items-center"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
