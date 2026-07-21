@@ -147,15 +147,7 @@ export default function TermsOfServicePage() {
         </p>
       </LegalSection>
 
-      <LegalSection heading="13. Governing Law">
-        <p>
-          These Terms are governed by the laws of{" "}
-          <strong className="text-text-primary">[State/Country]</strong>,
-          without regard to its conflict-of-law principles.
-        </p>
-      </LegalSection>
-
-      <LegalSection heading="14. Contact Us">
+      <LegalSection heading="13. Contact Us">
         <p>
           Questions about these Terms? Email{" "}
           <a href="mailto:feedback@tcgdexter.com">feedback@tcgdexter.com</a>.

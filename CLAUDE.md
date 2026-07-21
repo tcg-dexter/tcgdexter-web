@@ -20,7 +20,7 @@ Pokémon TCG deck management web app. Core features: deck profiling (legality, p
   - Adds or changes cookies/tracking behavior (currently `dx_aid`, `dx_sid`, and Supabase session cookies — see the Privacy Policy's "Cookies" section).
   - Introduces payments, ads, or any data sale/sharing arrangement.
 - No self-service "delete my account" flow exists yet (deletion is handled manually via feedback@tcgdexter.com, per the Privacy Policy) — building one is a known follow-up; if you build it, update the Privacy Policy's "Your Rights & Choices" section to point users to it instead.
-- The Terms' governing-law clause has a literal `[State/Country]` placeholder — the entity isn't formally incorporated yet. Don't silently fill this in; flag it if it comes up.
+- The Terms have no governing-law clause (deliberately omitted — the entity isn't formally incorporated yet). Don't add one without asking first.
 
 ## Key Architecture
 
