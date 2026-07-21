@@ -109,6 +109,28 @@ export function applyWeaknessResistance(
   return dmg;
 }
 
+/** Fraction of an attack's cost payable right now — the typed mirror of
+ *  canPayCost. Count-based progress credited dead energy: a Psychic on a
+ *  Lightning attacker read as investment, so the planner happily banked
+ *  energy its attacker could never spend. Shared by the planner's
+ *  investment term and the ML state encoder (schema v3). */
+export function costProgress(mon: PokemonInPlay, cost: string[]): number {
+  if (cost.length === 0) return 0;
+  const pool = mon.attachedEnergy.flatMap(energyUnits);
+  let paid = 0;
+  for (const req of cost) {
+    if (req === "Colorless") continue;
+    let idx = pool.indexOf(req);
+    if (idx === -1) idx = pool.indexOf("Any");
+    if (idx === -1) continue;
+    pool.splice(idx, 1);
+    paid += 1;
+  }
+  const colorless = cost.filter((c) => c === "Colorless").length;
+  paid += Math.min(pool.length, colorless);
+  return paid / cost.length;
+}
+
 /** v1 damage model: printed number + weakness/resistance. Attacks with
  *  state-scaled damage (Burning Darkness, Back Draft) go through
  *  attackBaseDamage in attacks.ts before this; plain attacks use the

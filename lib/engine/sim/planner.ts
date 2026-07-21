@@ -22,6 +22,7 @@ import { applyMove, otherActor, promote } from "./driver";
 import {
   baseDamage,
   computeDamage,
+  costProgress,
   legalMoves,
   remainingHp,
   usableAttacks,
@@ -677,27 +678,6 @@ export class PlannerPolicy implements DecisionPolicy {
 
 function isStillLegal(move: SimMove, legal: SimMove[]): boolean {
   return legal.some((m) => JSON.stringify(m) === JSON.stringify(move));
-}
-
-/** Fraction of an attack's cost payable right now — the typed mirror of
- *  canPayCost (moves.ts). Count-based progress credited dead energy: a
- *  Psychic on a Lightning attacker read as investment, so the planner
- *  happily banked energy its attacker could never spend. */
-function costProgress(mon: PokemonInPlay, cost: string[]): number {
-  if (cost.length === 0) return 0;
-  const pool = mon.attachedEnergy.flatMap(energyUnits);
-  let paid = 0;
-  for (const req of cost) {
-    if (req === "Colorless") continue;
-    let idx = pool.indexOf(req);
-    if (idx === -1) idx = pool.indexOf("Any");
-    if (idx === -1) continue;
-    pool.splice(idx, 1);
-    paid += 1;
-  }
-  const colorless = cost.filter((c) => c === "Colorless").length;
-  paid += Math.min(pool.length, colorless);
-  return paid / cost.length;
 }
 
 /** Heuristic pick among deck/discard search plays: fetch the card with the

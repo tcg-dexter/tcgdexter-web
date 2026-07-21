@@ -25,6 +25,7 @@ import type { PlayerView } from "@/lib/engine/sim/view";
 import {
   applyWeaknessResistance,
   baseDamage,
+  costProgress,
   remainingHp,
   usableAttacks,
   type SimMove,
@@ -41,7 +42,13 @@ import { lookupCard } from "@/lib/engine/catalog";
 import { num } from "./guards";
 
 // v2: added the reposition_* action block (retreat/switch tactical value).
-export const POLICY_SCHEMA_VERSION = 2;
+// v3: added the state interaction block (KO threat both ways, attack cost
+//     progress, energy investment, prize-race tempo) — the comparisons the
+//     planner's hand-tuned tactical terms proxied because no model input
+//     expressed them. Every v2 name survives with unchanged meaning
+//     (positions shift — all scorers map by NAME), so the promoted v2
+//     value artifact keeps scoring correctly across the bump.
+export const POLICY_SCHEMA_VERSION = 3;
 
 /** Frozen top-of-meta card names (see header). Indicator slots below. */
 export const POLICY_TOP_CARDS: readonly string[] = [
@@ -206,6 +213,71 @@ function encodeState(view: PlayerView): Vec {
   pushMon(v, "opp_active", view.opponent.board.active);
   pushBench(v, "my_bench", view.board.bench);
   pushBench(v, "opp_bench", view.opponent.board.bench);
+
+  // Interaction block (v3) — cross-board comparisons the planner's
+  // hand-tuned tactical terms proxied (koThreat, attackInvestment,
+  // prizeConversion) because no single-side feature could express them.
+  // Damage uses the printed number + W/R, the same approximation as the
+  // *_best_damage features above and the attack_* action block below.
+  const myActive = view.board.active;
+  const oppActive = view.opponent.board.active;
+  const bestVs = (attacker: PokemonInPlay | null, defender: PokemonInPlay | null): number => {
+    if (!attacker || !defender) return 0;
+    let best = 0;
+    for (const { attack } of usableAttacks(attacker)) {
+      best = Math.max(best, applyWeaknessResistance(baseDamage(attack), attacker, defender));
+    }
+    return best;
+  };
+  const myHit = bestVs(myActive, oppActive);
+  const oppHit = bestVs(oppActive, myActive);
+  v.push("my_can_ko_opp_now", oppActive !== null && myHit > 0 && myHit >= remainingHp(oppActive));
+  v.push("opp_can_ko_me_now", myActive !== null && oppHit > 0 && oppHit >= remainingHp(myActive));
+
+  // Progress toward each active's best damaging attack, and the planner's
+  // convex "investment" sum over the whole board (progress² × damage cap —
+  // concentrating on one attacker beats spreading energy thin).
+  const bestCostProgress = (mon: PokemonInPlay | null): number => {
+    if (!mon) return 0;
+    let best = 0;
+    for (const attack of mon.card.catalog?.attacks ?? []) {
+      if (baseDamage(attack) <= 0 || attack.cost.length === 0) continue;
+      best = Math.max(best, costProgress(mon, attack.cost));
+    }
+    return best;
+  };
+  const investment = (board: PlayerView["board"]): number => {
+    let sum = 0;
+    for (const mon of inPlay(board)) {
+      let best = 0;
+      for (const attack of mon.card.catalog?.attacks ?? []) {
+        const dmg = baseDamage(attack);
+        if (dmg <= 0 || attack.cost.length === 0) continue;
+        const progress = costProgress(mon, attack.cost);
+        best = Math.max(best, progress * progress * Math.min(1, dmg / 150));
+      }
+      sum += best;
+    }
+    return sum;
+  };
+  v.push("my_active_cost_progress", bestCostProgress(myActive));
+  v.push("opp_active_cost_progress", bestCostProgress(oppActive));
+  v.push("my_board_attack_investment", investment(view.board));
+  v.push("opp_board_attack_investment", investment(view.opponent.board));
+
+  // Prize-race tempo: prizes per own turn so far, and the margin in
+  // turns-to-finish at current pace (positive = we close out first). Pace
+  // 0 pins turns-to-finish at the cap, so early turns read as neutral.
+  const TURN_CAP = 60;
+  const myTurns = Math.max(1, view.turn.playerTurnNumber);
+  const myPace = view.prizesTaken / myTurns;
+  const oppPace = view.opponent.prizesTaken / myTurns;
+  const toFinish = (remaining: number, pace: number): number =>
+    pace > 0 ? Math.min(TURN_CAP, remaining / pace) : TURN_CAP;
+  const myLeft = Math.max(0, 6 - view.prizesTaken);
+  const oppLeft = Math.max(0, 6 - view.opponent.prizesTaken);
+  v.push("my_prize_pace", myPace);
+  v.push("prize_race_margin", toFinish(oppLeft, oppPace) - toFinish(myLeft, myPace));
 
   // Own hand composition.
   const hand = view.hand;

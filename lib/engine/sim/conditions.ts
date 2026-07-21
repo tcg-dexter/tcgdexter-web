@@ -73,17 +73,45 @@ export function runCheckup(state: GameState, justActed: "player" | "opponent", r
 
 /* ─── Attack-applied conditions (registry) ──────────────────────── */
 
-/** Condition an attack inflicts on the DEFENDING active, keyed by
- *  "CardName::AttackName". */
-const ATTACK_CONDITIONS: Record<string, SpecialCondition> = {
-  "Munkidori::Mind Bend": "Confused",
+/** What an attack inflicts on the DEFENDING active. `always` applies
+ *  unconditionally; `onHeads`/`onTails` hang off a single coin flip. */
+interface AttackConditionEffect {
+  always?: SpecialCondition[];
+  onHeads?: SpecialCondition[];
+  onTails?: SpecialCondition[];
+}
+
+/** Keyed by "CardName::AttackName". Covers every condition-inflicting
+ *  attack in the benchmark meta (audited 2026-07-21) — extend when the
+ *  benchmark fixture rotates. */
+const ATTACK_CONDITIONS: Record<string, AttackConditionEffect> = {
+  "Munkidori::Mind Bend": { always: ["Confused"] },
+  // "Flip a coin. If heads, ... Paralyzed and Poisoned. If tails, ... Confused."
+  "Lilligant::Bemusing Aroma": { onHeads: ["Paralyzed", "Poisoned"], onTails: ["Confused"] },
+  // "Flip a coin. If heads, ... Paralyzed."
+  "Dedenne::Thunder Shock": { onHeads: ["Paralyzed"] },
 };
 
-export function attackInflictsCondition(
+/**
+ * Conditions this attack inflicts on the defender. Without an rng (ghost
+ * planning) the HEADS branch is assumed — the planner prices the attack's
+ * upside, mirroring how the Confused self-flip is skipped without an rng;
+ * the real driver always flips.
+ */
+export function attackInflictedConditions(
   attackerName: string,
   attackName: string,
-): SpecialCondition | null {
-  return ATTACK_CONDITIONS[`${attackerName}::${attackName}`] ?? null;
+  rng?: Rng,
+): SpecialCondition[] {
+  const effect = ATTACK_CONDITIONS[`${attackerName}::${attackName}`];
+  if (!effect) return [];
+  const out: SpecialCondition[] = [...(effect.always ?? [])];
+  if (effect.onHeads || effect.onTails) {
+    const heads = rng ? rng() < 0.5 : true;
+    const branch = heads ? effect.onHeads : effect.onTails;
+    if (branch) out.push(...branch);
+  }
+  return out;
 }
 
 /** Attacks whose user recovers from all Special Conditions on use. */

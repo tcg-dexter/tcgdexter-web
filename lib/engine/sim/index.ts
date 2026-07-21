@@ -67,7 +67,7 @@ export {
   cannotAct,
   hasCondition,
   runCheckup,
-  attackInflictsCondition,
+  attackInflictedConditions,
 } from "./conditions";
 export { mulberry32, hashSeed, shuffle } from "./rng";
 export type { Rng } from "./rng";

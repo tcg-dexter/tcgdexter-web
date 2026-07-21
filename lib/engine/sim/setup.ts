@@ -25,7 +25,10 @@ import { shuffle, type Rng } from "./rng";
  *  cost-progress — changes which moves the planner chooses, so self-play
  *  rollouts are not comparable across versions). Trainers must filter
  *  policy data on this. */
-export const SIM_VERSION = 3;
+// v4: coin-flip condition attacks implemented (Bemusing Aroma, Thunder
+// Shock) — conditions now actually occur in self-play, changing rollout
+// distributions for decks that carry them.
+export const SIM_VERSION = 4;
 
 const MAX_MULLIGANS = 20;
 
