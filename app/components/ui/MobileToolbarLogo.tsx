@@ -25,13 +25,17 @@ import { usePathname } from "next/navigation";
  *  - Every page inside the Learn UX (`/learn/*`) — lessons, quiz, etc.
  *    Lesson pages don't render a `BackButton` portaled into the mobile
  *    back-slot, so the logo sits centered with no conflict.
- *  - The root user-profile page (`/u/<username>`, not its sub-routes).
+ *  - The root user-profile page (`/u/<username>`) and its deck-detail
+ *    sub-route (`/u/<username>/<deckId>`) — this is the canonical URL
+ *    for a saved deck profile: `/my-decks/<id>` is a redirect-only
+ *    route (see its `page.tsx`) that immediately 302s here server-side
+ *    and never actually renders client-side, so matching it in
+ *    `isTopLevelPath` would be dead code.
  *  - Meta archetype detail pages (`/meta-archetypes/<slug>`) and their
  *    variant/decklist sub-route (`/meta-archetypes/<slug>/<variantIndex>`).
- *  - Saved deck profile pages (`/my-decks/<id>`).
- *  All four of the above DO render a `BackButton` portaled into
- *  `#mobile-back-slot`; the logo sits centered between it and the
- *  hamburger menu, same as everywhere else.
+ *  All of the above except the bare `/`-adjacent front-door pages DO
+ *  render a `BackButton` portaled into `#mobile-back-slot`; the logo
+ *  sits centered between it and the hamburger menu.
  *
  * Returns `null` for any other route (card detail, settings, etc.) so
  * the closed toolbar's left side falls back to whatever the page
@@ -51,13 +55,12 @@ function isTopLevelPath(pathname: string): boolean {
   if (TOP_LEVEL_EXACT.has(pathname)) return true;
   // Entire Learn UX — lesson detail (/learn/[slug]), quiz, etc.
   if (pathname.startsWith("/learn/")) return true;
-  // User profile root: /u/<username> with no further path segments.
-  if (/^\/u\/[^/]+$/.test(pathname)) return true;
+  // User profile root (/u/<username>) and its deck-detail sub-route
+  // (/u/<username>/<deckId>) — the canonical saved-deck-profile URL.
+  if (/^\/u\/[^/]+(\/[^/]+)?$/.test(pathname)) return true;
   // Meta archetype detail (banner page) and its variant/decklist
   // sub-route: /meta-archetypes/<slug> or /meta-archetypes/<slug>/<variantIndex>.
-  if (/^\/meta-archetypes\/[^/]+(\/[^/]+)?$/.test(pathname)) return true;
-  // Saved deck profile: /my-decks/<id>.
-  return /^\/my-decks\/[^/]+$/.test(pathname);
+  return /^\/meta-archetypes\/[^/]+(\/[^/]+)?$/.test(pathname);
 }
 
 export default function MobileToolbarLogo() {
