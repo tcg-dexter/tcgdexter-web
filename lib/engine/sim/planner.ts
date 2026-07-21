@@ -36,7 +36,7 @@ import { canRetreat } from "./tools";
 import { lookupCard } from "../catalog";
 import { makeUnrevealed } from "../initial";
 import { mulberry32 } from "./rng";
-import type { PlayerView } from "./view";
+import { viewFor, type PlayerView } from "./view";
 
 /* ─── Evaluator contract ────────────────────────────────────────── */
 
@@ -97,6 +97,16 @@ export interface TacticalWeights {
   attachTiebreak: number;
 }
 
+/**
+ * Chooses the opponent's reply among public-information options (attacks by
+ * their active; retreats to a battle-ready bench mon). Injected the same way
+ * as StateEvaluator so lib/engine stays ML-free — lib/ml supplies a learned
+ * chooser (the policy ranker). Return null to decline; the planner then
+ * falls back to its hardest-hit rule. The view passed is the OPPONENT'S
+ * information set of the ghost state (their hand is unrevealed placeholders).
+ */
+export type ReplyChooser = (view: PlayerView, options: SimMove[]) => SimMove | null;
+
 export interface PlannerOptions {
   params: PlannerParams;
   seed: number;
@@ -106,6 +116,8 @@ export interface PlannerOptions {
   /** How many of the best 1-ply candidates get re-scored at 3 ply (see
    *  deepen()). 0 disables deepening. Defaults to DEFAULT_DEEPEN_TOP_K. */
   deepenTopK?: number;
+  /** Learned opponent-reply model; omitted = the built-in hardest-hit rule. */
+  replyChooser?: ReplyChooser;
 }
 
 /** Keep enough deck to survive several more turn-start draws. Real search
@@ -234,6 +246,7 @@ export class PlannerPolicy implements DecisionPolicy {
   private readonly seed: number;
   private readonly tactical: TacticalWeights;
   private readonly deepenTopK: number;
+  private readonly replyChooser: ReplyChooser | null;
   private queue: SimMove[] = [];
   private plannedTurn = -1;
   /** Last leaf's raw evaluator output, for the probe. NaN when the leaf was a
@@ -246,6 +259,7 @@ export class PlannerPolicy implements DecisionPolicy {
     this.seed = options.seed >>> 0;
     this.tactical = { ...DEFAULT_TACTICAL_WEIGHTS, ...options.tactical };
     this.deepenTopK = options.deepenTopK ?? DEFAULT_DEEPEN_TOP_K;
+    this.replyChooser = options.replyChooser ?? null;
   }
 
   chooseMove(view: PlayerView, legal: SimMove[], _ctx: TurnContext): SimMove {
@@ -518,7 +532,7 @@ export class PlannerPolicy implements DecisionPolicy {
     // Materialize the opponent's reply (their board is public information) so
     // exchange races are priced — "if I stay, they KO me and bank prizes"
     // shows up in the evaluation instead of a hand-tuned dodge penalty.
-    simulateOpponentReply(end);
+    simulateOpponentReply(end, this.replyChooser);
     if (end.winner === "opponent") return -10;
     if (end.winner === "player") return 10;
     return this.leafScore(end, view);
@@ -669,7 +683,7 @@ export class PlannerPolicy implements DecisionPolicy {
     if (!end) return null;
     if (end.winner === "player") return 10;
     if (end.winner === "opponent") return -10;
-    simulateOpponentReply(end);
+    simulateOpponentReply(end, this.replyChooser);
     if (end.winner === "player") return 10;
     if (end.winner === "opponent") return -10;
     return this.followupScore(end, view);
@@ -730,10 +744,52 @@ function bestSearchMove(view: PlayerView, moves: PlayTrainerMove[]): PlayTrainer
  *
  *  Deliberately pessimistic — it assumes the opponent finds their best line.
  *  Over-optimism here is what walks a planner into counter-KOs. */
-function simulateOpponentReply(end: GameState): void {
+function simulateOpponentReply(end: GameState, chooser: ReplyChooser | null = null): void {
   const oppSide = end.sides.opponent;
   const defender = end.sides.player.active;
   if (!oppSide.active || !defender) return;
+
+  const ctx: TurnContext = { retreated: false };
+  const finish = (attackIndex: number): void => {
+    const result = applyMove(end, "opponent", { kind: "attack", attackIndex }, ctx);
+    if (result.pendingPromotion && end.winner === null) {
+      const side = result.pendingPromotion;
+      promote(end, side, promoteBest(end.sides[side].bench));
+    }
+  };
+
+  if (chooser) {
+    // Learned reply: offer every public-information option — all usable
+    // attacks (including 0-damage condition attacks the hardest-hit rule
+    // can't see the point of) plus retreats to any battle-ready bench mon —
+    // and let the ranker pick. A retreat pick gets one follow-up attack
+    // choice from the new active; a null/pass-shaped pick ends the reply.
+    const options: SimMove[] = usableAttacks(oppSide.active).map(({ index }) => ({
+      kind: "attack",
+      attackIndex: index,
+    }));
+    if (canRetreat(oppSide.active)) {
+      oppSide.bench.forEach((mon, i) => {
+        if (usableAttacks(mon).length > 0) options.push({ kind: "retreat", benchIndex: i });
+      });
+    }
+    if (options.length > 0) {
+      let choice = chooser(viewFor(end, "opponent"), options);
+      if (choice?.kind === "retreat") {
+        applyMove(end, "opponent", choice, ctx);
+        const active = oppSide.active;
+        const attacks: SimMove[] = active
+          ? usableAttacks(active).map(({ index }) => ({ kind: "attack", attackIndex: index }))
+          : [];
+        if (attacks.length === 0) return;
+        choice =
+          attacks.length === 1 ? attacks[0] : chooser(viewFor(end, "opponent"), attacks) ?? attacks[0];
+      }
+      if (choice?.kind === "attack") finish(choice.attackIndex);
+      if (choice !== null) return;
+      // chooser declined outright — fall through to the hardest-hit rule.
+    }
+  }
 
   const linesFrom = (mon: PokemonInPlay, benchIndex: number | null) =>
     usableAttacks(mon).map(({ attack, index }) => ({
@@ -756,15 +812,10 @@ function simulateOpponentReply(end: GameState): void {
       : a,
   );
 
-  const ctx: TurnContext = { retreated: false };
   if (best.benchIndex !== null) {
     applyMove(end, "opponent", { kind: "retreat", benchIndex: best.benchIndex }, ctx);
   }
-  const result = applyMove(end, "opponent", { kind: "attack", attackIndex: best.attackIndex }, ctx);
-  if (result.pendingPromotion && end.winner === null) {
-    const side = result.pendingPromotion;
-    promote(end, side, promoteBest(end.sides[side].bench));
-  }
+  finish(best.attackIndex);
 }
 
 /* ─── Ghost state (determinized sandbox from the view) ──────────── */

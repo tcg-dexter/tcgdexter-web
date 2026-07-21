@@ -48,6 +48,7 @@ import {
 } from "@/lib/engine/sim";
 import { numOrNull } from "@/lib/ml/features";
 import { createBoardEvaluator, readValueArtifact } from "@/lib/ml/botEvaluator";
+import { createReplyChooser } from "@/lib/ml/replyChooser";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 
@@ -68,6 +69,9 @@ const deepen = numOrNull(argValue("--deepen")) ?? 0;
 // promotion bar), or the SHALLOW planner with the same evaluator (the
 // sensitive head-to-head for search-depth experiments).
 const opponent = argValue("--opponent") ?? "heuristic";
+// Policy-ranker artifact wired in as side A's learned opponent-REPLY model
+// (replaces the hardest-hit rule inside scoreEndState). B never gets it.
+const replyArtifact = argValue("--reply");
 const decksFile = argValue("--decks-file") ?? path.join("data", "ml", "benchmark-decks.json");
 
 type PolicyFactory = (gameSeed: number) => DecisionPolicy;
@@ -208,12 +212,20 @@ function main(): void {
     );
   }
 
+  const replyChooser = replyArtifact ? createReplyChooser(replyArtifact) : null;
+  if (replyArtifact && !replyChooser) {
+    console.error(`[gate] --reply ${replyArtifact} did not load as a policy artifact`);
+    process.exitCode = 1;
+    return;
+  }
+
   const planner: PolicyFactory = (gameSeed) =>
     new PlannerPolicy({
       params: plannerParamsForSkill(1.0),
       seed: (gameSeed ^ 0x85ebca6b) >>> 0,
       evaluate: evaluator,
       ...(deepen > 0 ? { deepenTopK: deepen } : {}),
+      ...(replyChooser ? { replyChooser } : {}),
     });
   // Distinct seed salts, so same-policy controls are two INDEPENDENT
   // instances of the policy rather than a mirror of one RNG stream. Both
@@ -233,7 +245,11 @@ function main(): void {
     });
   const heuristic: PolicyFactory = () => new HeuristicPolicy();
 
-  const aLabel = deepen > 0 ? `planner(deepen=${deepen})` : "planner+value";
+  const aMods = [
+    ...(deepen > 0 ? [`deepen=${deepen}`] : []),
+    ...(replyChooser ? ["reply=ranker"] : []),
+  ];
+  const aLabel = aMods.length > 0 ? `planner(${aMods.join(",")})` : "planner+value";
   const bIsPlanner = opponent === "planner";
   const bLabel = bIsPlanner ? "planner(1-ply)" : "heuristic";
 
