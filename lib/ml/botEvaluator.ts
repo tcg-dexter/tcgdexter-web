@@ -24,9 +24,80 @@ import { readRegistry } from "./registry";
 import { readWinProbArtifact, scoreFeatures, type WinProbArtifact } from "./winprob";
 import { STATE_FEATURE_NAMES, encodeStateFeatures } from "./features/policy";
 
-/** The value artifact reuses the winprob artifact shape exactly, so the same
- *  scorer math applies; only the feature set and provenance differ. */
-export type ValueArtifact = WinProbArtifact & { policy_schema_version?: number };
+/** Linear value artifact: reuses the winprob artifact shape exactly, so the
+ *  same scorer math applies; only the feature set and provenance differ. */
+export type LinearValueArtifact = WinProbArtifact & { policy_schema_version?: number };
+
+/** One boosted tree, flattened into parallel arrays by the Python exporter
+ *  (dexter-ml ml_train_value_gbm.py flatten_trees).
+ *
+ *  Node i is INTERNAL when `feature[i] >= 0`: route left if the feature value
+ *  is `<= threshold[i]`, else right. Otherwise it is a leaf and `value[i]` is
+ *  its additive contribution to the logit. */
+export interface GbdtTree {
+  feature: number[];
+  threshold: number[];
+  left: number[];
+  right: number[];
+  value: number[];
+}
+
+/** Gradient-boosted value artifact. Exists because the discrimination probe
+ *  showed the linear model was already separating sibling plans well — the
+ *  remaining limit was capacity, not objective. Tree ensembles express the
+ *  interactions this domain is made of (damage matters only if the KO is
+ *  reachable; an attacker matters only if its energy cost is paid). */
+export interface GbdtValueArtifact {
+  model_type: "gbdt";
+  model_version: string;
+  trained_at: string;
+  feature_schema_version: number;
+  policy_schema_version?: number;
+  n_samples: number;
+  n_matches: number;
+  data_hash: string;
+  /** Ordered feature names; tree `feature` indices are columns of THIS array. */
+  features: string[];
+  trees: GbdtTree[];
+  params: Record<string, number>;
+  global_prior: number;
+  metrics: Record<string, number | null>;
+  validation_examples: { features: Record<string, number>; expected_p: number }[];
+}
+
+export type ValueArtifact = LinearValueArtifact | GbdtValueArtifact;
+
+/**
+ * Score a flattened tree ensemble. Mirrors LightGBM's numeric `<=` routing
+ * exactly — the trainer refuses to export any other split type, and embeds
+ * validation examples so a divergence fails a drift test rather than quietly
+ * steering the bot with a model it mis-evaluates.
+ */
+export function scoreGbdt(artifact: GbdtValueArtifact, x: ArrayLike<number>): number {
+  let z = 0;
+  for (const tree of artifact.trees) {
+    const { feature, threshold, left, right, value } = tree;
+    let i = 0;
+    while (feature[i] >= 0) {
+      i = x[feature[i]] <= threshold[i] ? left[i] : right[i];
+    }
+    z += value[i];
+  }
+  return 1 / (1 + Math.exp(-z));
+}
+
+/** Convenience wrapper for name-keyed inputs (drift tests, offline tools).
+ *  Absent features score as 0, matching the dense zero-filled training
+ *  matrix — the trainer sets `zero_as_missing=false` for the same reason. */
+export function scoreGbdtFeatures(
+  artifact: GbdtValueArtifact,
+  features: Record<string, number>,
+): number {
+  return scoreGbdt(
+    artifact,
+    artifact.features.map((n) => features[n] ?? 0),
+  );
+}
 
 /**
  * Load the board-aware value artifact. Resolution order:
@@ -48,6 +119,9 @@ export function readValueArtifact(explicitPath?: string): ValueArtifact | null {
   }
   try {
     const artifact = JSON.parse(readFileSync(abs, "utf8")) as ValueArtifact;
+    if (artifact.model_type === "gbdt") {
+      return Array.isArray(artifact.trees) && artifact.trees.length > 0 ? artifact : null;
+    }
     if (artifact.model_type !== "logistic_regression") return null;
     if (artifact.features.length !== artifact.coefficients.length) return null;
     return artifact;
@@ -71,6 +145,21 @@ export function createBoardEvaluator(explicitPath?: string): StateEvaluator | nu
   if (!artifact) return null;
   const nameIndex = new Map(STATE_FEATURE_NAMES.map((n, i) => [n, i]));
   const srcIdx = artifact.features.map((n) => nameIndex.get(n) ?? -1);
+
+  if (artifact.model_type === "gbdt") {
+    // A tree routes on exact thresholds, so an unknown feature is not a
+    // degraded input — it silently sends every state down a wrong branch.
+    // Refuse the model outright rather than score garbage confidently.
+    if (srcIdx.some((j) => j < 0)) return null;
+    const row = new Float64Array(srcIdx.length);
+    return (_snapshot: PlanSnapshot, view) => {
+      if (!view) return artifact.global_prior;
+      const vec = encodeStateFeatures(view);
+      for (let i = 0; i < srcIdx.length; i++) row[i] = vec[srcIdx[i]];
+      return scoreGbdt(artifact, row);
+    };
+  }
+
   const coef = artifact.coefficients;
   const means = artifact.means;
   const stds = artifact.stds;

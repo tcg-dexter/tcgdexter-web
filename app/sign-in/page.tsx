@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import GradientButton from "@/app/components/ui/GradientButton";
@@ -208,6 +209,18 @@ function SignInForm() {
           )}
         </div>
       </div>
+
+      <p className="mt-6 text-center text-xs text-text-muted">
+        By continuing, you agree to our{" "}
+        <Link href="/terms" className="text-accent hover:underline">
+          Terms
+        </Link>{" "}
+        and{" "}
+        <Link href="/privacy" className="text-accent hover:underline">
+          Privacy Policy
+        </Link>
+        .
+      </p>
     </section>
   );
 }
