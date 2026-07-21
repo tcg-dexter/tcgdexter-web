@@ -33,6 +33,8 @@ import { usePathname } from "next/navigation";
  *    `isTopLevelPath` would be dead code.
  *  - Meta archetype detail pages (`/meta-archetypes/<slug>`) and their
  *    variant/decklist sub-route (`/meta-archetypes/<slug>/<variantIndex>`).
+ *  - Playmat Studio (`/admin-tools/deck-mat`) — replaces the page's former
+ *    "Playmat Studio" mobile title text with the standard home logo.
  *  All of the above except the bare `/`-adjacent front-door pages DO
  *  render a `BackButton` portaled into `#mobile-back-slot`; the logo
  *  sits centered between it and the hamburger menu.
@@ -49,6 +51,7 @@ const TOP_LEVEL_EXACT = new Set<string>([
   "/meta-archetypes",
   "/matches",
   "/learn",
+  "/admin-tools/deck-mat",
 ]);
 
 function isTopLevelPath(pathname: string): boolean {
