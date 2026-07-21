@@ -160,21 +160,34 @@ export function createBoardEvaluator(explicitPath?: string): StateEvaluator | nu
     };
   }
 
+  return (_snapshot: PlanSnapshot, view) => {
+    if (!view) return artifact.global_prior;
+    return scoreLinearVector(artifact, srcIdx, encodeStateFeatures(view));
+  };
+}
+
+/**
+ * Standardized logistic dot product over an encoded state vector, with
+ * `srcIdx` mapping artifact-feature order to vector indices (−1 = absent,
+ * which falls back to the training mean — a zero contribution). Shared by
+ * the planner evaluator and the review-side value curve so the two paths
+ * can never diverge numerically.
+ */
+export function scoreLinearVector(
+  artifact: LinearValueArtifact,
+  srcIdx: number[],
+  vec: ArrayLike<number>,
+): number {
   const coef = artifact.coefficients;
   const means = artifact.means;
   const stds = artifact.stds;
-
-  return (_snapshot: PlanSnapshot, view) => {
-    if (!view) return artifact.global_prior;
-    const vec = encodeStateFeatures(view);
-    let z = artifact.intercept;
-    for (let i = 0; i < srcIdx.length; i++) {
-      const j = srcIdx[i];
-      const x = j >= 0 ? vec[j] : means[i];
-      z += coef[i] * ((x - means[i]) / (stds[i] || 1));
-    }
-    return 1 / (1 + Math.exp(-z));
-  };
+  let z = artifact.intercept;
+  for (let i = 0; i < srcIdx.length; i++) {
+    const j = srcIdx[i];
+    const x = j >= 0 ? vec[j] : means[i];
+    z += coef[i] * ((x - means[i]) / (stds[i] || 1));
+  }
+  return 1 / (1 + Math.exp(-z));
 }
 
 /** The original 8-scalar evaluator (winprob artifact), registry-gated. */
