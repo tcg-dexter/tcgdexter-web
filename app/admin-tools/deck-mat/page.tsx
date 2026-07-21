@@ -33,7 +33,7 @@ interface MatchRow {
 const shell = (children: React.ReactNode) => (
   <main className="min-h-dvh bg-bg pb-24">
     <MobilePageTitle href="/admin-tools" title="Playmat Studio" hideBack />
-    <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-4 xl:pt-8">
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-4 xl:pt-12">
       <header className="mb-6 hidden xl:block">
         <h1 className="text-2xl font-bold text-text-primary">Playmat Studio</h1>
       </header>

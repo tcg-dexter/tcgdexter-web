@@ -418,7 +418,7 @@ async function rasterizeMat({
   const uniqueCardUrls = Array.from(
     new Set(rows.flat().map((t) => t.smallImageUrl).filter(Boolean)),
   );
-  const urls = ["/logo-wordmark.png", ...uniqueCardUrls];
+  const urls = uniqueCardUrls;
   const dataUrlMap = new Map<string, string>();
   await Promise.all(
     urls.map(async (url) => {
@@ -462,15 +462,9 @@ async function rasterizeMat({
   ctx.fillStyle = "#f2f2f2";
   ctx.fillRect(0, 0, totalW, totalH);
 
-  // ── 5. Header: deck name + logo ───────────────────────────────────────────
+  // ── 5. Header: deck name ──────────────────────────────────────────────────
   const headerY = EXPORT_PADDING;
-  const logoImg = imageMap.get("/logo-wordmark.png");
-  const LOGO_H = 30;
-  const logoW = logoImg
-    ? Math.round(LOGO_H * (logoImg.naturalWidth / logoImg.naturalHeight))
-    : 0;
-  const nameMaxW =
-    totalW - EXPORT_PADDING * 2 - (logoW > 0 ? logoW + 16 : 0);
+  const nameMaxW = totalW - EXPORT_PADDING * 2;
 
   ctx.font =
     '600 20px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif';
@@ -485,10 +479,6 @@ async function rasterizeMat({
     displayName += "…";
   }
   ctx.fillText(displayName, EXPORT_PADDING, headerY + HEADER_H / 2);
-
-  if (logoImg) {
-    ctx.drawImage(logoImg, totalW - EXPORT_PADDING - logoW, headerY, logoW, LOGO_H);
-  }
 
   // ── 6. Mat background ─────────────────────────────────────────────────────
   const matX = EXPORT_PADDING;
@@ -796,19 +786,11 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
         {/* Right on desktop: Mat + controls */}
         <div ref={matColumnRef} className="flex flex-col gap-3 md:order-last">
           <div ref={exportRef} className="flex flex-col gap-3">
-            {/* Mat header: deck name left, site logo right */}
-            <div className="flex items-center justify-between gap-4">
+            {/* Mat header: deck name */}
+            <div className="flex items-center gap-4">
               <span className="text-lg sm:text-xl font-semibold text-text-primary truncate">
                 {decks.find((d) => d.id === selectedDeckId)?.name ?? ""}
               </span>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/logo-wordmark.png"
-                alt="TCG Dexter"
-                width={1920}
-                height={453}
-                className="h-[27px] sm:h-[30px] w-auto flex-shrink-0"
-              />
             </div>
 
             <div
@@ -973,7 +955,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
         </div>
 
         {/* Left on desktop: Deck list — sticky sidebar */}
-        <div className="flex flex-col gap-2 md:gap-0 md:order-first md:sticky md:top-16 xl:top-8 md:self-start">
+        <div className="flex flex-col gap-2 md:gap-0 md:order-first md:sticky md:top-16 xl:top-12 md:self-start">
           <label className="text-xs font-semibold uppercase tracking-wider text-text-muted md:h-[30px] md:flex md:items-end">
             Your decks
           </label>
