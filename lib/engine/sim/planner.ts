@@ -197,6 +197,36 @@ interface CandidatePlan {
   tempo: number;
 }
 
+/* ── Evaluator-discrimination probe ──────────────────────────────
+ * Diagnostic only, and OFF unless startPlannerProbe() is called. The
+ * question it answers: within a single turn, does the learned evaluator
+ * actually separate sibling candidate plans, or do the hand-tuned tactical
+ * terms do all the ordering? A near-flat evaluator was the blind snapshot
+ * model's fatal flaw; this measures whether the board-aware model still has
+ * a milder version of it. Inactive cost is one null check per candidate. */
+export interface ProbeCandidate {
+  /** The learned evaluator's raw output for this plan's leaf. */
+  evalPart: number;
+  /** Everything leafScore adds on top: prize/damage/KO/ready/investment. */
+  tacticalPart: number;
+  /** Final comparable score (leaf minus tempo) — what softmax ranks. */
+  total: number;
+}
+
+let PROBE: ProbeCandidate[][] | null = null;
+
+/** Begin collecting per-turn candidate breakdowns. */
+export function startPlannerProbe(): void {
+  PROBE = [];
+}
+
+/** Stop collecting and return one entry per planned turn. */
+export function collectPlannerProbe(): ProbeCandidate[][] {
+  const out = PROBE ?? [];
+  PROBE = null;
+  return out;
+}
+
 export class PlannerPolicy implements DecisionPolicy {
   private readonly params: PlannerParams;
   private readonly evaluate: StateEvaluator;
@@ -205,6 +235,9 @@ export class PlannerPolicy implements DecisionPolicy {
   private readonly deepenTopK: number;
   private queue: SimMove[] = [];
   private plannedTurn = -1;
+  /** Last leaf's raw evaluator output, for the probe. NaN when the leaf was a
+   *  terminal win/loss shortcut that never consulted the evaluator. */
+  private probeEval = Number.NaN;
 
   constructor(options: PlannerOptions) {
     this.params = options.params;
@@ -407,6 +440,16 @@ export class PlannerPolicy implements DecisionPolicy {
     }
 
     const plans: CandidatePlan[] = [];
+    const turnProbe: ProbeCandidate[] = [];
+    const record = (leaf: number, tempo: number) => {
+      if (PROBE) {
+        turnProbe.push({
+          evalPart: this.probeEval,
+          tacticalPart: leaf - this.probeEval,
+          total: leaf - tempo,
+        });
+      }
+    };
     outer: for (const gust of gustMoves) {
       for (const attach of attachMoves) {
         for (const retreat of gust ? [null] : retreatMoves) {
@@ -435,7 +478,9 @@ export class PlannerPolicy implements DecisionPolicy {
               (retreat && retreat.kind === "retreat" ? this.tactical.retreatTempo : 0) +
               (attack ? 0 : this.tactical.noAttackTempo) -
               (attach ? this.tactical.attachTiebreak : 0);
-            plans.push({ moves, score: this.scoreEndState(end, view) - tempo, tempo });
+            const leaf = this.scoreEndState(end, view);
+            plans.push({ moves, score: leaf - tempo, tempo });
+            record(leaf, tempo);
             if (plans.length >= this.params.maxCandidates) break outer;
           }
         }
@@ -453,14 +498,18 @@ export class PlannerPolicy implements DecisionPolicy {
         const tempo =
           (shadow.some((m) => m.kind === "attack") ? 0 : this.tactical.noAttackTempo) -
           (shadow.some((m) => m.kind === "attach") ? this.tactical.attachTiebreak : 0);
-        plans.push({ moves: shadow, score: this.scoreEndState(end, view) - tempo, tempo });
+        const leaf = this.scoreEndState(end, view);
+        plans.push({ moves: shadow, score: leaf - tempo, tempo });
+        record(leaf, tempo);
       }
     }
+    if (PROBE && turnProbe.length > 0) PROBE.push(turnProbe);
     return plans;
   }
 
   /** Ply 1 + opponent reply: our plan's end state, then their best answer. */
   private scoreEndState(end: GameState, view: PlayerView): number {
+    this.probeEval = Number.NaN;
     // Outright win/loss dominates every tactical adjustment.
     if (end.winner === "player") return 10;
     if (end.winner === "opponent") return -10;
@@ -494,6 +543,7 @@ export class PlannerPolicy implements DecisionPolicy {
     // this plan's post-reply information set from our perspective — exactly
     // what a board-aware evaluator scores.
     let score = this.evaluate(snapshot, ghostView(end));
+    if (PROBE) this.probeEval = score;
 
     // Banked prizes beat any positional bonus (see PRIZE_CONVERSION_BONUS).
     score += this.tactical.prizeConversion * Math.max(0, end.prizesTaken.player - view.prizesTaken);
