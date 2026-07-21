@@ -35,6 +35,9 @@ import { usePathname } from "next/navigation";
  *    variant/decklist sub-route (`/meta-archetypes/<slug>/<variantIndex>`).
  *  - Playmat Studio (`/admin-tools/deck-mat`) — replaces the page's former
  *    "Playmat Studio" mobile title text with the standard home logo.
+ *  - Trainer Spotlight archive (`/spotlight`) and detail pages
+ *    (`/spotlight/<slug>`) — the detail page paints the toolbar in the
+ *    banner's accent color, same overlay treatment as meta archetypes.
  *  All of the above except the bare `/`-adjacent front-door pages DO
  *  render a `BackButton` portaled into `#mobile-back-slot`; the logo
  *  sits centered between it and the hamburger menu.
@@ -52,6 +55,7 @@ const TOP_LEVEL_EXACT = new Set<string>([
   "/matches",
   "/learn",
   "/admin-tools/deck-mat",
+  "/spotlight",
 ]);
 
 function isTopLevelPath(pathname: string): boolean {
@@ -63,7 +67,9 @@ function isTopLevelPath(pathname: string): boolean {
   if (/^\/u\/[^/]+(\/[^/]+)?$/.test(pathname)) return true;
   // Meta archetype detail (banner page) and its variant/decklist
   // sub-route: /meta-archetypes/<slug> or /meta-archetypes/<slug>/<variantIndex>.
-  return /^\/meta-archetypes\/[^/]+(\/[^/]+)?$/.test(pathname);
+  if (/^\/meta-archetypes\/[^/]+(\/[^/]+)?$/.test(pathname)) return true;
+  // Trainer Spotlight detail page: /spotlight/<slug>.
+  return /^\/spotlight\/[^/]+$/.test(pathname);
 }
 
 export default function MobileToolbarLogo() {
