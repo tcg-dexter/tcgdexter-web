@@ -418,7 +418,7 @@ async function rasterizeMat({
   const uniqueCardUrls = Array.from(
     new Set(rows.flat().map((t) => t.smallImageUrl).filter(Boolean)),
   );
-  const urls = uniqueCardUrls;
+  const urls = ["/logo-wordmark.png", ...uniqueCardUrls];
   const dataUrlMap = new Map<string, string>();
   await Promise.all(
     urls.map(async (url) => {
@@ -557,7 +557,31 @@ async function rasterizeMat({
     }
   }
 
-  // ── 8. Card piles ─────────────────────────────────────────────────────────
+  // ── 8. Logo watermark ─────────────────────────────────────────────────────
+  // Export-only branding — never shown in the on-page preview. Drawn before
+  // the card piles so it only shows through in the empty mat space around
+  // them, not on top of card art.
+  const watermarkImg = imageMap.get("/logo-wordmark.png");
+  if (watermarkImg) {
+    const wmW = matWidth * 0.22;
+    const wmH = wmW * (watermarkImg.naturalHeight / watermarkImg.naturalWidth);
+    const wmMargin = 16;
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(matX, matY, matWidth, matHeight, 12);
+    ctx.clip();
+    ctx.globalAlpha = 0.12;
+    ctx.drawImage(
+      watermarkImg,
+      matX + matWidth - wmMargin - wmW,
+      matY + matHeight - wmMargin - wmH,
+      wmW,
+      wmH,
+    );
+    ctx.restore();
+  }
+
+  // ── 9. Card piles ─────────────────────────────────────────────────────────
   const innerX = matX + MAT_PADDING;
   const innerY = matY + MAT_PADDING;
   const innerW = matWidth - MAT_PADDING * 2;
