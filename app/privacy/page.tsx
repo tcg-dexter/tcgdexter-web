@@ -127,13 +127,12 @@ export default function PrivacyPolicyPage() {
         <p>
           You can review and update most of your profile information
           directly in{" "}
-          <Link href="/settings">Settings</Link>. You&rsquo;re also entitled
-          to request a copy of your data or ask us to delete your account
-          and associated data — email{" "}
+          <Link href="/settings">Settings</Link>, including permanently
+          deleting your account and all associated data yourself under the
+          &ldquo;Danger Zone&rdquo; section. You&rsquo;re also entitled to
+          request a copy of your data — email{" "}
           <a href="mailto:feedback@tcgdexter.com">feedback@tcgdexter.com</a>{" "}
-          and we&rsquo;ll handle it manually for now. We&rsquo;re working on
-          a self-service &ldquo;Delete my account&rdquo; option so this
-          won&rsquo;t require an email in the future.
+          and we&rsquo;ll handle that for you.
         </p>
       </LegalSection>
 

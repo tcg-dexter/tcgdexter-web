@@ -19,7 +19,7 @@ Pokémon TCG deck management web app. Core features: deck profiling (legality, p
   - Adds a new third-party service/vendor that touches user data (currently just Supabase + Vercel).
   - Adds or changes cookies/tracking behavior (currently `dx_aid`, `dx_sid`, and Supabase session cookies — see the Privacy Policy's "Cookies" section).
   - Introduces payments, ads, or any data sale/sharing arrangement.
-- No self-service "delete my account" flow exists yet (deletion is handled manually via feedback@tcgdexter.com, per the Privacy Policy) — building one is a known follow-up; if you build it, update the Privacy Policy's "Your Rights & Choices" section to point users to it instead.
+- Self-service account deletion lives at `/settings` ("Danger Zone" → `app/settings/DeleteAccountButton.tsx`), calling `POST /api/account/delete` (`app/api/account/delete/route.ts`). That route is the reference for which tables/storage buckets are user-scoped — update it if you add a new one (see the Legal & Privacy bullets above).
 - The Terms have no governing-law clause (deliberately omitted — the entity isn't formally incorporated yet). Don't add one without asking first.
 
 ## Key Architecture

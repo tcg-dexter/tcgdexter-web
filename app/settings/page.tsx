@@ -6,6 +6,7 @@ import EditUsername from "@/app/profile/EditUsername";
 import EditBio from "@/app/profile/EditBio";
 import EditPublicToggle from "@/app/profile/EditPublicToggle";
 import SignOutButton from "@/app/profile/SignOutButton";
+import DeleteAccountButton from "@/app/settings/DeleteAccountButton";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -84,6 +85,15 @@ export default async function SettingsPage() {
           Session
         </p>
         <SignOutButton />
+      </div>
+
+      <div className="mt-6">
+        <p className="text-xs font-semibold uppercase tracking-widest text-text-muted px-1 mb-2">
+          Danger Zone
+        </p>
+        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden">
+          <DeleteAccountButton />
+        </div>
       </div>
     </main>
   );
