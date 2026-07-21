@@ -462,9 +462,16 @@ async function rasterizeMat({
   ctx.fillStyle = "#f2f2f2";
   ctx.fillRect(0, 0, totalW, totalH);
 
-  // ── 5. Header: deck name ──────────────────────────────────────────────────
+  // ── 5. Header: deck name + logo ───────────────────────────────────────────
+  // Export-only — the on-page preview above the mat shows just the deck
+  // name (no logo there, per the site's dark-mode nav-logo pass).
   const headerY = EXPORT_PADDING;
-  const nameMaxW = totalW - EXPORT_PADDING * 2;
+  const logoImg = imageMap.get("/logo-wordmark.png");
+  const logoW = logoImg
+    ? Math.round(HEADER_H * (logoImg.naturalWidth / logoImg.naturalHeight))
+    : 0;
+  const nameMaxW =
+    totalW - EXPORT_PADDING * 2 - (logoW > 0 ? logoW + 16 : 0);
 
   ctx.font =
     '600 20px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif';
@@ -479,6 +486,10 @@ async function rasterizeMat({
     displayName += "…";
   }
   ctx.fillText(displayName, EXPORT_PADDING, headerY + HEADER_H / 2);
+
+  if (logoImg) {
+    ctx.drawImage(logoImg, totalW - EXPORT_PADDING - logoW, headerY, logoW, HEADER_H);
+  }
 
   // ── 6. Mat background ─────────────────────────────────────────────────────
   const matX = EXPORT_PADDING;
@@ -557,31 +568,7 @@ async function rasterizeMat({
     }
   }
 
-  // ── 8. Logo watermark ─────────────────────────────────────────────────────
-  // Export-only branding — never shown in the on-page preview. Drawn before
-  // the card piles so it only shows through in the empty mat space around
-  // them, not on top of card art.
-  const watermarkImg = imageMap.get("/logo-wordmark.png");
-  if (watermarkImg) {
-    const wmW = matWidth * 0.22;
-    const wmH = wmW * (watermarkImg.naturalHeight / watermarkImg.naturalWidth);
-    const wmMargin = 16;
-    ctx.save();
-    ctx.beginPath();
-    ctx.roundRect(matX, matY, matWidth, matHeight, 12);
-    ctx.clip();
-    ctx.globalAlpha = 0.12;
-    ctx.drawImage(
-      watermarkImg,
-      matX + matWidth - wmMargin - wmW,
-      matY + matHeight - wmMargin - wmH,
-      wmW,
-      wmH,
-    );
-    ctx.restore();
-  }
-
-  // ── 9. Card piles ─────────────────────────────────────────────────────────
+  // ── 8. Card piles ─────────────────────────────────────────────────────────
   const innerX = matX + MAT_PADDING;
   const innerY = matY + MAT_PADDING;
   const innerW = matWidth - MAT_PADDING * 2;
