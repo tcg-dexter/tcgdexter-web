@@ -11,7 +11,7 @@ const config: Config = {
       colors: {
         // Semantic design tokens (mapped to CSS custom properties)
         bg:      "var(--bg)",
-        surface: { DEFAULT: "var(--surface)", 2: "var(--surface-2)" },
+        surface: { DEFAULT: "var(--surface)", 2: "var(--surface-2)", elevated: "var(--surface-elevated)" },
         border:  "var(--border)",
         "text-primary":   "var(--text-primary)",
         "text-secondary": "var(--text-secondary)",

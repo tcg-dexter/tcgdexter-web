@@ -30,7 +30,7 @@
   .focus-gradient-border:focus {
     border-color: transparent;
     background:
-      linear-gradient(#fff, #fff) padding-box,
+      linear-gradient(var(--surface-elevated), var(--surface-elevated)) padding-box,
       var(--gradient-brand) border-box;
   }
 
@@ -59,17 +59,34 @@
 /* ─── Design tokens ───────────────────────────────────────────── */
 
 :root {
-  --bg:              #f2f2f2;
-  --surface:         #e8e8e8;
-  --surface-2:       #d8d8d8;
-  --border:          #d4d4d4;
-  --text-primary:    #1a1a1a;
-  --text-secondary:  #4a4a4a;
-  --text-muted:      #888888;
-  --accent:          #D91E0D;
-  --accent-light:    #e74c3c;
-  --accent-dark:     #A60D0D;
-  --gradient-brand:  linear-gradient(90deg, #F2A20C 0%, #D91E0D 50%, #A60D0D 100%);
+  --bg:               #f2f2f2;
+  --surface:          #e8e8e8;
+  --surface-2:        #d8d8d8;
+  --surface-elevated: #ffffff;
+  --border:           #d4d4d4;
+  --text-primary:     #1a1a1a;
+  --text-secondary:   #4a4a4a;
+  --text-muted:       #888888;
+  --accent:           #D91E0D;
+  --accent-light:     #e74c3c;
+  --accent-dark:      #A60D0D;
+  --gradient-brand:   linear-gradient(90deg, #F2A20C 0%, #D91E0D 50%, #A60D0D 100%);
+}
+
+/* Dark mode — same token names, new values. Surfaces ascend in
+   lightness from --bg (elevated = lighter), the inverse of light
+   mode's descent, matching standard dark-UI convention. Accent and
+   gradient tokens are deliberately unchanged — brand identity color
+   doesn't shift with theme. */
+.dark {
+  --bg:               #242424;
+  --surface:          #303030;
+  --surface-2:        #3c3c3c;
+  --surface-elevated: #2e2e2e;
+  --border:           #454545;
+  --text-primary:     #ffffff;
+  --text-secondary:   #b8b8b8;
+  --text-muted:       #808080;
 }
 
 @layer base {

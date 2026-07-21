@@ -33,7 +33,7 @@ export async function GET() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name, username, is_public, avatar_url, bio")
+    .select("display_name, username, is_public, avatar_url, bio, theme_preference")
     .eq("id", user.id)
     .single();
 
@@ -43,6 +43,7 @@ export async function GET() {
     is_public: profile?.is_public ?? false,
     avatar_url: profile?.avatar_url ?? null,
     bio: profile?.bio ?? null,
+    theme_preference: profile?.theme_preference ?? "light",
   });
 }
 
@@ -79,6 +80,7 @@ export async function PATCH(req: Request) {
     bio?: string | null;
     banner_accent?: string | null;
     team_cards?: (TeamCardInput | null)[] | null;
+    theme_preference?: string;
   };
   try {
     body = await req.json();
@@ -255,6 +257,17 @@ export async function PATCH(req: Request) {
       );
     }
     updates.bio = bio.length === 0 ? null : bio;
+  }
+
+  // ── theme_preference ─────────────────────────────────────────────
+  if (typeof body.theme_preference === "string") {
+    if (!["light", "dark", "system"].includes(body.theme_preference)) {
+      return NextResponse.json(
+        { error: "Invalid theme preference." },
+        { status: 400 }
+      );
+    }
+    updates.theme_preference = body.theme_preference;
   }
 
   if (Object.keys(updates).length === 0) {

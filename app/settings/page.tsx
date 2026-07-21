@@ -7,6 +7,7 @@ import EditBio from "@/app/profile/EditBio";
 import EditPublicToggle from "@/app/profile/EditPublicToggle";
 import SignOutButton from "@/app/profile/SignOutButton";
 import DeleteAccountButton from "@/app/settings/DeleteAccountButton";
+import AppearanceToggle from "@/app/settings/AppearanceToggle";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -55,7 +56,7 @@ export default async function SettingsPage() {
         <p className="text-xs font-semibold uppercase tracking-widest text-text-muted px-1 mb-2">
           Account
         </p>
-        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden">
+        <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden">
           <EditDisplayName
             initialName={profile?.display_name ?? "—"}
             joinedDate={joinedDate}
@@ -71,12 +72,21 @@ export default async function SettingsPage() {
         <p className="text-xs font-semibold uppercase tracking-widest text-text-muted px-1 mb-2">
           Profile
         </p>
-        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden">
+        <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden">
           <EditBio initialBio={profile?.bio ?? null} />
           <EditPublicToggle
             initialIsPublic={profile?.is_public ?? false}
             hasDisplayName={Boolean(profile?.display_name)}
           />
+        </div>
+      </div>
+
+      <div className="mt-6 mb-2">
+        <p className="text-xs font-semibold uppercase tracking-widest text-text-muted px-1 mb-2">
+          Appearance
+        </p>
+        <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden">
+          <AppearanceToggle />
         </div>
       </div>
 
@@ -91,7 +101,7 @@ export default async function SettingsPage() {
         <p className="text-xs font-semibold uppercase tracking-widest text-text-muted px-1 mb-2">
           Danger Zone
         </p>
-        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden">
+        <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden">
           <DeleteAccountButton />
         </div>
       </div>

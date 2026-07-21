@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import "./globals.css";
 import ThemeProvider from "./components/ThemeProvider";
 import SiteNav from "./components/ui/SiteNav";
@@ -8,6 +8,7 @@ import SiteFooter from "./components/ui/SiteFooter";
 import GlobalSearchHotkey from "./components/ui/GlobalSearchHotkey";
 import NavigationTracker from "./components/ui/NavigationTracker";
 import BrandGradientDefs from "./components/BrandGradientDefs";
+import { THEME_COOKIE, parseTheme } from "@/lib/theme";
 
 const DASHBOARD_HOST = "dashboard.tcgdexter.com";
 
@@ -60,13 +61,31 @@ export default function RootLayout({
   const host = headers().get("host") ?? "";
   const isDashboard = host === DASHBOARD_HOST;
 
+  // Resolved server-side so explicit light/dark renders with zero flash —
+  // only "system" needs the client-side script below, since SSR can't
+  // know the OS preference.
+  const theme = parseTheme(cookies().get(THEME_COOKIE)?.value);
+  const initialHtmlClass = theme === "dark" ? "dark" : "";
+
   return (
-    <html lang="en">
+    <html lang="en" className={initialHtmlClass}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased text-[var(--text-primary)]`}
       >
+        {theme === "system" && (
+          <script
+            // Blocking by design — must run before first paint to avoid a
+            // flash of the wrong theme. Only reachable when theme is
+            // "system", so it's absent from the response for the (much
+            // more common) explicit light/dark cases.
+            dangerouslySetInnerHTML={{
+              __html:
+                "if(window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.classList.add('dark')}",
+            }}
+          />
+        )}
         <BrandGradientDefs />
-        <ThemeProvider>
+        <ThemeProvider initialTheme={theme}>
           {isDashboard ? (
             <div className="min-h-dvh bg-bg text-text-primary antialiased overflow-x-hidden">
               {children}
