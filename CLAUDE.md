@@ -12,6 +12,16 @@ Pokémon TCG deck management web app. Core features: deck profiling (legality, p
 - **Main branch = production** on Vercel. Every push to `main` triggers a deploy.
 - Always run `npx tsc --noEmit` before pushing — Vercel runs a full type-check build and will fail on any TS error.
 
+## Legal & Privacy
+- Live docs: `/privacy` (`app/privacy/page.tsx`) and `/terms` (`app/terms/page.tsx`), built on the shared `LegalDoc`/`LegalSection` components (`app/components/ui/LegalDoc.tsx`). Linked from the footer and the sign-in page.
+- Both docs describe TCG Dexter's *actual* data practices — not generic boilerplate. When a change does any of the following, flag to the user that the Privacy Policy and/or Terms may need updating, and note which section:
+  - Collects a new category of personal data, or a new table/column that stores user-identifying info.
+  - Adds a new third-party service/vendor that touches user data (currently just Supabase + Vercel).
+  - Adds or changes cookies/tracking behavior (currently `dx_aid`, `dx_sid`, and Supabase session cookies — see the Privacy Policy's "Cookies" section).
+  - Introduces payments, ads, or any data sale/sharing arrangement.
+- No self-service "delete my account" flow exists yet (deletion is handled manually via feedback@tcgdexter.com, per the Privacy Policy) — building one is a known follow-up; if you build it, update the Privacy Policy's "Your Rights & Choices" section to point users to it instead.
+- The Terms' governing-law clause has a literal `[State/Country]` placeholder — the entity isn't formally incorporated yet. Don't silently fill this in; flag it if it comes up.
+
 ## Key Architecture
 
 ### Routes
