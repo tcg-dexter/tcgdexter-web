@@ -61,6 +61,13 @@ const seed = numOrNull(argValue("--seed")) ?? 11;
 const artifactArg = argValue("--artifact");
 const skipControls = process.argv.includes("--skip-controls");
 const perDeck = process.argv.includes("--per-deck");
+// Side A's selective-deepening budget (top-K plans re-scored at 3 ply).
+// 0 = the shipping 1-ply planner.
+const deepen = numOrNull(argValue("--deepen")) ?? 0;
+// Opponent for the headline matchup: the hand-written heuristic (the
+// promotion bar), or the SHALLOW planner with the same evaluator (the
+// sensitive head-to-head for search-depth experiments).
+const opponent = argValue("--opponent") ?? "heuristic";
 const decksFile = argValue("--decks-file") ?? path.join("data", "ml", "benchmark-decks.json");
 
 type PolicyFactory = (gameSeed: number) => DecisionPolicy;
@@ -192,7 +199,8 @@ function main(): void {
 
   console.log(
     `[gate] model=${meta?.model_version ?? "?"} (${meta?.model_type ?? "?"}) ` +
-      `games=${games} seed=${seed} decks=${decks.length} (${path.basename(decksFile)})`,
+      `games=${games} seed=${seed} decks=${decks.length} (${path.basename(decksFile)})` +
+      `${deepen > 0 ? ` deepen=${deepen}` : ""}${opponent !== "heuristic" ? ` opponent=${opponent}` : ""}`,
   );
   if (games < 1440) {
     console.log(
@@ -205,9 +213,18 @@ function main(): void {
       params: plannerParamsForSkill(1.0),
       seed: (gameSeed ^ 0x85ebca6b) >>> 0,
       evaluate: evaluator,
+      ...(deepen > 0 ? { deepenTopK: deepen } : {}),
     });
-  // A distinct seed salt, so the same-policy control is two INDEPENDENT
-  // instances of the policy rather than a mirror of one RNG stream.
+  // Distinct seed salts, so same-policy controls are two INDEPENDENT
+  // instances of the policy rather than a mirror of one RNG stream. Both
+  // always SHALLOW: plannerB is the fixed baseline for --deepen A/Bs, and
+  // the control must not inherit A's deepening.
+  const plannerShallowA: PolicyFactory = (gameSeed) =>
+    new PlannerPolicy({
+      params: plannerParamsForSkill(1.0),
+      seed: (gameSeed ^ 0x85ebca6b) >>> 0,
+      evaluate: evaluator,
+    });
   const plannerB: PolicyFactory = (gameSeed) =>
     new PlannerPolicy({
       params: plannerParamsForSkill(1.0),
@@ -216,16 +233,20 @@ function main(): void {
     });
   const heuristic: PolicyFactory = () => new HeuristicPolicy();
 
+  const aLabel = deepen > 0 ? `planner(deepen=${deepen})` : "planner+value";
+  const bIsPlanner = opponent === "planner";
+  const bLabel = bIsPlanner ? "planner(1-ply)" : "heuristic";
+
   console.log("");
   console.log(
     "  matchup                            score   95% CI          " +
       "seat: player/opp     init: first/second",
   );
-  const headline = pooled(decks, planner, heuristic, "gate");
-  report("planner+value vs heuristic", headline, decks);
+  const headline = pooled(decks, planner, bIsPlanner ? plannerB : heuristic, "gate");
+  report(`${aLabel} vs ${bLabel}`, headline, decks);
 
   if (!skipControls) {
-    report("CONTROL planner vs planner", pooled(decks, planner, plannerB, "ctl-p"), decks);
+    report("CONTROL planner vs planner", pooled(decks, plannerB, plannerB, "ctl-p"), decks);
     report("CONTROL heuristic vs heuristic", pooled(decks, heuristic, heuristic, "ctl-h"), decks);
   }
 
@@ -233,7 +254,7 @@ function main(): void {
   const beats = headline.lo > 0.5;
   console.log(
     beats
-      ? `  => PASS: beats HeuristicPolicy, CI excludes 50% (low end ${pct(headline.lo)}).`
+      ? `  => PASS: beats ${bLabel}, CI excludes 50% (low end ${pct(headline.lo)}).`
       : `  => NOT PROVEN: CI [${pct(headline.lo)}–${pct(headline.hi)}] includes 50%.`,
   );
   console.log("  Controls must sit near 50% for the headline to mean anything.");
