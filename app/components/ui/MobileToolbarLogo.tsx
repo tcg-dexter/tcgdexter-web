@@ -38,13 +38,14 @@ import { usePathname } from "next/navigation";
  *  - Trainer Spotlight archive (`/spotlight`) and detail pages
  *    (`/spotlight/<slug>`) — the detail page paints the toolbar in the
  *    banner's accent color, same overlay treatment as meta archetypes.
+ *  - Card detail pages (`/cards/<id>`).
  *  All of the above except the bare `/`-adjacent front-door pages DO
  *  render a `BackButton` portaled into `#mobile-back-slot`; the logo
  *  sits centered between it and the hamburger menu.
  *
- * Returns `null` for any other route (card detail, settings, etc.) so
- * the closed toolbar's left side falls back to whatever the page
- * portals into `#mobile-back-slot`.
+ * Returns `null` for any other route (settings, sign-in, etc.) so the
+ * closed toolbar's left side falls back to whatever the page portals
+ * into `#mobile-back-slot`.
  */
 
 const TOP_LEVEL_EXACT = new Set<string>([
@@ -69,7 +70,9 @@ function isTopLevelPath(pathname: string): boolean {
   // sub-route: /meta-archetypes/<slug> or /meta-archetypes/<slug>/<variantIndex>.
   if (/^\/meta-archetypes\/[^/]+(\/[^/]+)?$/.test(pathname)) return true;
   // Trainer Spotlight detail page: /spotlight/<slug>.
-  return /^\/spotlight\/[^/]+$/.test(pathname);
+  if (/^\/spotlight\/[^/]+$/.test(pathname)) return true;
+  // Card detail page: /cards/<id>.
+  return /^\/cards\/[^/]+$/.test(pathname);
 }
 
 export default function MobileToolbarLogo() {
