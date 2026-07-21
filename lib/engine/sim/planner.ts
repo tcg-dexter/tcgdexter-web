@@ -228,9 +228,16 @@ export interface ProbeCandidate {
 
 let PROBE: ProbeCandidate[][] | null = null;
 
+/** When probing with a learned ReplyChooser armed: how often its pick
+ *  matches what the built-in hardest-hit rule would have chosen for the
+ *  same options. Near-1 agreement means a reply-model swap has no lever. */
+export const REPLY_AGREEMENT = { total: 0, agree: 0 };
+
 /** Begin collecting per-turn candidate breakdowns. */
 export function startPlannerProbe(): void {
   PROBE = [];
+  REPLY_AGREEMENT.total = 0;
+  REPLY_AGREEMENT.agree = 0;
 }
 
 /** Stop collecting and return one entry per planned turn. */
@@ -775,6 +782,44 @@ function simulateOpponentReply(end: GameState, chooser: ReplyChooser | null = nu
     }
     if (options.length > 0) {
       let choice = chooser(viewFor(end, "opponent"), options);
+      if (PROBE && choice && options.length > 1) {
+        // Would the hardest-hit rule have made the same first pick? Map its
+        // best line onto the same option universe (retreat target or attack).
+        const dmg = (mon: PokemonInPlay, ai: number): number => {
+          const atk = mon.card.catalog?.attacks[ai];
+          return atk ? computeDamage(mon, atk, defender) : 0;
+        };
+        let bestDamage = -1;
+        let bestOption: SimMove | null = null;
+        for (const opt of options) {
+          const d =
+            opt.kind === "attack"
+              ? dmg(oppSide.active, opt.attackIndex)
+              : opt.kind === "retreat"
+                ? Math.max(0, ...usableAttacks(oppSide.bench[opt.benchIndex]).map(({ index }) =>
+                    dmg(oppSide.bench[opt.benchIndex], index)))
+                : 0;
+          // Strict > keeps the stay-in-place tie preference: attacks are
+          // enumerated before retreats in `options`.
+          if (d > bestDamage) {
+            bestDamage = d;
+            bestOption = opt;
+          }
+        }
+        REPLY_AGREEMENT.total += 1;
+        if (
+          bestOption &&
+          bestOption.kind === choice.kind &&
+          (choice.kind !== "attack" ||
+            (bestOption as { attackIndex: number }).attackIndex ===
+              (choice as { attackIndex: number }).attackIndex) &&
+          (choice.kind !== "retreat" ||
+            (bestOption as { benchIndex: number }).benchIndex ===
+              (choice as { benchIndex: number }).benchIndex)
+        ) {
+          REPLY_AGREEMENT.agree += 1;
+        }
+      }
       if (choice?.kind === "retreat") {
         applyMove(end, "opponent", choice, ctx);
         const active = oppSide.active;
