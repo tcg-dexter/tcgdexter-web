@@ -86,7 +86,9 @@ export default async function SettingsPage() {
           Appearance
         </p>
         <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden">
-          <AppearanceToggle />
+          <div className="px-4 py-3">
+            <AppearanceToggle />
+          </div>
         </div>
       </div>
 

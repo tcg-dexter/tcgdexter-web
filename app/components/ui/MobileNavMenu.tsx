@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import UnifiedSearch from "@/app/leaderboard/UnifiedSearch";
+import AppearanceToggle from "@/app/settings/AppearanceToggle";
 import {
   TrophyIcon,
   WrenchIcon,
@@ -307,11 +308,19 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/logo-wordmark.png"
+                src="/logo-wordmark-light.png"
                 alt="TCG Dexter"
                 width={1920}
                 height={453}
-                className="h-8 w-auto"
+                className="h-8 w-auto dark:hidden"
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo-wordmark-dark.png"
+                alt="TCG Dexter"
+                width={1920}
+                height={453}
+                className="h-8 w-auto hidden dark:block"
               />
             </Link>
             <button
@@ -392,6 +401,13 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
             )}
 
             <li role="separator" className="my-4" />
+
+            <li role="presentation" className="pb-3">
+              <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-text-muted mb-2">
+                Appearance
+              </span>
+              <AppearanceToggle />
+            </li>
 
             {/* Auth item — anchored at the bottom of the link list, above
                 the search bar. */}

@@ -62,11 +62,19 @@ export default function MobileToolbarLogo() {
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/logo-wordmark.png"
+        src="/logo-wordmark-light.png"
         alt="TCG Dexter"
         width={1920}
         height={453}
-        className="h-8 w-auto"
+        className="h-8 w-auto dark:hidden"
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/logo-wordmark-dark.png"
+        alt="TCG Dexter"
+        width={1920}
+        height={453}
+        className="h-8 w-auto hidden dark:block"
       />
     </Link>
   );
