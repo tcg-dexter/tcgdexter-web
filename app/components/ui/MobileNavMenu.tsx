@@ -292,15 +292,17 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
           toolbar, so only one toolbar is ever rendered at a time. */}
       <div className="flex-shrink-0 backdrop-blur-xl bg-bg/70">
         <div className="mx-auto max-w-6xl px-6">
-          {/* Header row: logo (home link) on the left, hamburger close on
-              the right. Both share the same h-14 baseline as the closed
-              toolbar so the hamburger doesn't shift between open and
+          {/* Header row: logo (home link) absolutely centered, hamburger
+              close pinned to the right. Both share the same h-14
+              baseline as the closed toolbar, and the logo shares its
+              exact centered position with the closed toolbar's
+              `MobileToolbarLogo`, so nothing shifts between open and
               closed states. */}
-          <div className="h-14 flex items-center justify-between">
+          <div className="h-14 relative flex items-center justify-end">
             <Link
               href="/"
               aria-label="TCG Dexter — home"
-              className="inline-flex items-center"
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex items-center"
               onClick={closeMenu}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
