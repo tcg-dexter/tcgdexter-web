@@ -26,14 +26,16 @@ import { usePathname } from "next/navigation";
  *    Lesson pages don't render a `BackButton` portaled into the mobile
  *    back-slot, so the logo sits centered with no conflict.
  *  - The root user-profile page (`/u/<username>`, not its sub-routes).
- *  - Meta archetype detail pages (`/meta-archetypes/<slug>`, not the
- *    variant/decklist sub-route) — these DO render a `BackButton`
- *    portaled into `#mobile-back-slot`, overlaying the banner; the logo
- *    sits centered between it and the hamburger menu.
+ *  - Meta archetype detail pages (`/meta-archetypes/<slug>`) and their
+ *    variant/decklist sub-route (`/meta-archetypes/<slug>/<variantIndex>`).
+ *  - Saved deck profile pages (`/my-decks/<id>`).
+ *  All four of the above DO render a `BackButton` portaled into
+ *  `#mobile-back-slot`; the logo sits centered between it and the
+ *  hamburger menu, same as everywhere else.
  *
- * Returns `null` for any other route (deck detail, card detail,
- * settings, etc.) so the closed toolbar's left side falls back to
- * whatever the page portals into `#mobile-back-slot`.
+ * Returns `null` for any other route (card detail, settings, etc.) so
+ * the closed toolbar's left side falls back to whatever the page
+ * portals into `#mobile-back-slot`.
  */
 
 const TOP_LEVEL_EXACT = new Set<string>([
@@ -51,9 +53,11 @@ function isTopLevelPath(pathname: string): boolean {
   if (pathname.startsWith("/learn/")) return true;
   // User profile root: /u/<username> with no further path segments.
   if (/^\/u\/[^/]+$/.test(pathname)) return true;
-  // Meta archetype detail (banner page), but not its variant/decklist
-  // sub-route (/meta-archetypes/<slug>/<variantIndex>).
-  return /^\/meta-archetypes\/[^/]+$/.test(pathname);
+  // Meta archetype detail (banner page) and its variant/decklist
+  // sub-route: /meta-archetypes/<slug> or /meta-archetypes/<slug>/<variantIndex>.
+  if (/^\/meta-archetypes\/[^/]+(\/[^/]+)?$/.test(pathname)) return true;
+  // Saved deck profile: /my-decks/<id>.
+  return /^\/my-decks\/[^/]+$/.test(pathname);
 }
 
 export default function MobileToolbarLogo() {
