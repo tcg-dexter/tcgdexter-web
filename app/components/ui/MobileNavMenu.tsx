@@ -186,8 +186,12 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
         ),
       );
 
-    // Move focus into panel immediately.
-    getFocusable()[0]?.focus({ preventScroll: true });
+    // Move focus into the panel immediately, landing on the dialog
+    // container itself (tabIndex={-1}) rather than the first focusable
+    // descendant — that first descendant is the logo link, and focusing
+    // it directly paints a visible focus ring on it (looking like an
+    // accidental "selection") even though the user never tabbed there.
+    panel.focus({ preventScroll: true });
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -275,10 +279,11 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
       role="dialog"
       aria-label="Site navigation"
       aria-modal="true"
+      tabIndex={-1}
       className={[
         // Full-screen takeover. overscroll-contain prevents momentum scroll
         // bleeding to the page behind on iOS Safari.
-        "fixed inset-0 z-[110] flex flex-col overscroll-contain",
+        "fixed inset-0 z-[110] flex flex-col overscroll-contain outline-none",
         // pointer-events toggles with isOpen so the page under the fading-
         // out body isn't interactable mid-transition.
         isOpen ? "pointer-events-auto" : "pointer-events-none",
