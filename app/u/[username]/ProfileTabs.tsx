@@ -92,7 +92,7 @@ export default function ProfileTabs({
         {showViewAll && (
           <Link
             href={viewAllHref}
-            className="shrink-0 rounded-full bg-black border border-transparent px-3 py-1.5 text-xs font-semibold text-white hover:opacity-80 transition-opacity"
+            className="shrink-0 rounded-full bg-black dark:bg-white border border-transparent px-3 py-1.5 text-xs font-semibold text-white dark:text-black hover:opacity-80 transition-opacity"
           >
             View All
           </Link>

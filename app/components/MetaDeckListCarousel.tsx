@@ -124,7 +124,7 @@ export default function MetaDeckListCarousel({
   if (lists.length === 1) {
     // Single variant — render the same card chrome without carousel affordances.
     return (
-      <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5">
+      <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-5">
         <div className="flex items-start justify-between mb-3">
           <div>
             <h2 className="text-sm font-semibold text-text-primary">Deck List</h2>
@@ -138,7 +138,7 @@ export default function MetaDeckListCarousel({
   }
 
   return (
-    <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5">
+    <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-5">
       <div className="flex items-start justify-between mb-3">
         <div>
           <div className="flex items-baseline gap-2">
@@ -178,7 +178,9 @@ export default function MetaDeckListCarousel({
             onClick={() => scrollTo(i)}
             aria-label={`Show variant ${i + 1}`}
             className={`h-1.5 rounded-full transition-all ${
-              i === active ? "w-1.5 bg-black" : "w-6 bg-black/70 hover:bg-black/85"
+              i === active
+                ? "w-1.5 bg-black dark:bg-white"
+                : "w-6 bg-black/70 dark:bg-white/70 hover:bg-black/85 dark:hover:bg-white/85"
             }`}
           />
         ))}

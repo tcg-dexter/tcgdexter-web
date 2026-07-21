@@ -41,7 +41,7 @@ function avatarBg(name: string): string {
 export function WLCircles({ wl }: { wl: WinLoss }) {
   if (wl.w + wl.l + wl.d === 0) return null;
   return (
-    <div className="inline-flex items-baseline tabular-nums font-bold text-[15px] leading-none bg-black rounded-full px-3 py-1.5 text-white">
+    <div className="inline-flex items-baseline tabular-nums font-bold text-[15px] leading-none bg-black dark:bg-white rounded-full px-3 py-1.5 text-white dark:text-black">
       <span>{wl.w}</span>
       <span className="mx-1.5">-</span>
       <span>{wl.l}</span>
@@ -94,7 +94,7 @@ export function MetaDeckCard({
   const accentDeep = shade(accentBg, -35);
   return (
     <div
-      className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+      className="relative rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       style={useFadeIn(index)}
     >
       {/* Banner — same treatment as the deck collection preview cards'
@@ -468,7 +468,7 @@ export function UserDeckCard({
   return (
     <div
       ref={cardRef}
-      className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+      className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       style={useFadeIn(index, skipEntranceAnimation)}
     >
       <DeckBanner
@@ -515,7 +515,7 @@ export function UserDeckCard({
         )}
       </Link>
 
-      <div className="flex items-stretch border-t border-black/5">
+      <div className="flex items-stretch border-t border-black/5 dark:border-white/10">
         <button
           type="button"
           onClick={(e) => {
@@ -528,7 +528,7 @@ export function UserDeckCard({
         </button>
         <QRCodeButton
           shareUrl={shareUrl ?? href}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 text-[13px] font-semibold text-text-primary hover:bg-black/[0.03] transition-colors border-l border-black/5"
+          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 text-[13px] font-semibold text-text-primary hover:bg-black/[0.03] transition-colors border-l border-black/5 dark:border-white/10"
         />
       </div>
 
@@ -536,7 +536,7 @@ export function UserDeckCard({
         className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${logOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
       >
         <div className="overflow-hidden">
-          <div className="border-t border-black/5 p-3.5">
+          <div className="border-t border-black/5 dark:border-white/10 p-3.5">
             <MatchEntry
               key={logKey}
               savedDeckId={id}

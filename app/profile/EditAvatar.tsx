@@ -69,7 +69,7 @@ export default function EditAvatar({ initialAvatarUrl, displayName }: Props) {
   const initial = displayName.trim().charAt(0).toUpperCase() || "?";
 
   return (
-    <div className="border-b border-black/5 px-4 py-4 bg-white">
+    <div className="border-b border-black/5 dark:border-white/10 px-4 py-4 bg-white dark:bg-surface-elevated">
       <p className="text-[11px] font-semibold uppercase tracking-widest text-text-muted mb-3">
         Avatar
       </p>
@@ -80,10 +80,10 @@ export default function EditAvatar({ initialAvatarUrl, displayName }: Props) {
             <img
               src={avatarUrl}
               alt="Avatar"
-              className="w-16 h-16 rounded-full object-cover border border-black/10"
+              className="w-16 h-16 rounded-full object-cover border border-black/10 dark:border-white/10"
             />
           ) : (
-            <div className="w-16 h-16 rounded-full bg-surface flex items-center justify-center text-xl font-bold text-text-secondary border border-black/10">
+            <div className="w-16 h-16 rounded-full bg-surface flex items-center justify-center text-xl font-bold text-text-secondary border border-black/10 dark:border-white/10">
               {initial}
             </div>
           )}

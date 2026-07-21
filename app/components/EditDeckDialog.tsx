@@ -155,11 +155,11 @@ export default function EditDeckDialog({
       onClick={() => !busy && onClose()}
     >
       <div
-        className="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl bg-white/95 backdrop-blur-xl border border-black/5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]"
+        className="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl bg-white/95 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-black/5">
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-black/5 dark:border-white/10">
           <h2
             id="edit-deck-title"
             className="text-base font-semibold text-text-primary"
@@ -186,7 +186,7 @@ export default function EditDeckDialog({
         </div>
 
         {/* Name */}
-        <div className="px-5 pt-4 pb-3 border-b border-black/5">
+        <div className="px-5 pt-4 pb-3 border-b border-black/5 dark:border-white/10">
           <label
             htmlFor="edit-deck-name"
             className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5"
@@ -211,7 +211,7 @@ export default function EditDeckDialog({
 
         {/* Visibility toggle — save mode only */}
         {mode === "save" && (
-          <div className="px-5 pt-4 pb-3 border-b border-black/5">
+          <div className="px-5 pt-4 pb-3 border-b border-black/5 dark:border-white/10">
             <p className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">
               Visibility
             </p>
@@ -224,7 +224,7 @@ export default function EditDeckDialog({
                 className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition disabled:opacity-50 ${
                   isPublic
                     ? "border-accent bg-accent/5 text-accent"
-                    : "border-black/10 bg-white text-text-secondary hover:bg-black/[0.02]"
+                    : "border-black/10 bg-white dark:bg-surface-2 text-text-secondary hover:bg-black/[0.02]"
                 }`}
               >
                 Public
@@ -237,7 +237,7 @@ export default function EditDeckDialog({
                 className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition disabled:opacity-50 ${
                   !isPublic
                     ? "border-accent bg-accent/5 text-accent"
-                    : "border-black/10 bg-white text-text-secondary hover:bg-black/[0.02]"
+                    : "border-black/10 bg-white dark:bg-surface-2 text-text-secondary hover:bg-black/[0.02]"
                 }`}
               >
                 Private
@@ -253,7 +253,7 @@ export default function EditDeckDialog({
 
         {/* Deck list — edit mode only */}
         {mode === "edit" && (
-          <div className="px-5 pt-4 pb-3 border-b border-black/5">
+          <div className="px-5 pt-4 pb-3 border-b border-black/5 dark:border-white/10">
             <label
               htmlFor="edit-deck-list"
               className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5"
@@ -292,7 +292,7 @@ export default function EditDeckDialog({
             className={`w-full flex items-center gap-3 rounded-xl border p-2.5 text-left transition disabled:opacity-50 ${
               pendingCoverUrl === null
                 ? "border-accent bg-accent/5"
-                : "border-black/10 bg-white hover:bg-black/[0.02]"
+                : "border-black/10 bg-white dark:bg-surface-2 hover:bg-black/[0.02]"
             }`}
           >
             <div
@@ -357,7 +357,7 @@ export default function EditDeckDialog({
                           loading="lazy"
                           className="w-full aspect-[5/7] object-cover bg-[var(--surface)]"
                         />
-                        <div className="px-1.5 py-1 bg-white">
+                        <div className="px-1.5 py-1 bg-white dark:bg-surface-elevated">
                           <p className="text-[11px] font-medium text-text-primary truncate">
                             {card.name}
                           </p>
@@ -392,7 +392,7 @@ export default function EditDeckDialog({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-black/5 flex items-center justify-end gap-2">
+        <div className="px-5 py-3 border-t border-black/5 dark:border-white/10 flex items-center justify-end gap-2">
           {error && (
             <p className="mr-auto text-xs text-accent">{error}</p>
           )}
@@ -400,7 +400,7 @@ export default function EditDeckDialog({
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-4 py-1.5 text-xs font-semibold text-text-secondary hover:bg-black/5 transition disabled:opacity-50 touch-manipulation"
+            className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white dark:bg-surface-2 px-4 py-1.5 text-xs font-semibold text-text-secondary hover:bg-black/5 transition disabled:opacity-50 touch-manipulation"
           >
             Cancel
           </button>

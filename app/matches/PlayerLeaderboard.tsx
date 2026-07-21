@@ -36,7 +36,7 @@ export default function PlayerLeaderboard({ players, currentUsername = null }: P
 
   if (players.length === 0) {
     return (
-      <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
+      <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center dark:bg-surface-elevated dark:border-white/10">
         <p className="text-sm text-text-secondary">
           No public players with recorded matches yet.
         </p>
@@ -73,14 +73,14 @@ export default function PlayerLeaderboard({ players, currentUsername = null }: P
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck={false}
-          className="w-full pl-10 pr-4 py-2 rounded-full border border-black/10 bg-white text-[16px] sm:text-sm focus:outline-none focus-gradient-border transition-colors"
+          className="w-full pl-10 pr-4 py-2 rounded-full border border-black/10 bg-white text-[16px] sm:text-sm focus:outline-none focus-gradient-border transition-colors dark:bg-surface-2"
         />
       </div>
 
       {/* Table — bare on the page, styled like the battle-stats table */}
       <div>
         {/* Header row */}
-        <div className="flex items-center gap-4 px-1 pb-2 border-b border-black/[0.08] text-[11px] font-semibold uppercase tracking-widest text-text-primary">
+        <div className="flex items-center gap-4 px-1 pb-2 border-b border-black/[0.08] text-[11px] font-semibold uppercase tracking-widest text-text-primary dark:border-white/10">
           <span className="w-6 shrink-0" aria-hidden="true" />
           <span className="flex-1 min-w-0">Player</span>
           <span className="w-20 shrink-0 text-right tabular-nums">Matches</span>
@@ -101,7 +101,7 @@ export default function PlayerLeaderboard({ players, currentUsername = null }: P
                   <Link
                     href={`/u/${p.username}`}
                     className={`flex items-center gap-4 px-1 py-2.5 transition-colors hover:bg-surface/70 ${
-                      i > 0 ? "border-t border-black/[0.08]" : ""
+                      i > 0 ? "border-t border-black/[0.08] dark:border-white/10" : ""
                     } ${isMe ? "bg-accent/5" : ""}`}
                   >
                     <span className="w-6 shrink-0 text-right text-sm font-bold tabular-nums text-text-secondary">
@@ -141,7 +141,7 @@ export default function PlayerLeaderboard({ players, currentUsername = null }: P
           <button
             onClick={() => setPage((n) => Math.max(1, n - 1))}
             disabled={page <= 1}
-            className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white disabled:opacity-40 hover:bg-surface transition-colors"
+            className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white disabled:opacity-40 hover:bg-surface transition-colors dark:bg-surface-2"
           >
             ← Prev
           </button>
@@ -151,7 +151,7 @@ export default function PlayerLeaderboard({ players, currentUsername = null }: P
           <button
             onClick={() => setPage((n) => Math.min(totalPages, n + 1))}
             disabled={page >= totalPages}
-            className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white disabled:opacity-40 hover:bg-surface transition-colors"
+            className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white disabled:opacity-40 hover:bg-surface transition-colors dark:bg-surface-2"
           >
             Next →
           </button>

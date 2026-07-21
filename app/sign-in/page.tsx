@@ -100,7 +100,7 @@ function SignInForm() {
 
       <div className="relative">
         <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-20 blur-xl" />
-        <div className="relative rounded-2xl bg-white/90 backdrop-blur-xl border border-black/8 shadow-brand-lg p-6">
+        <div className="relative rounded-2xl bg-white/90 dark:bg-surface-elevated backdrop-blur-xl border border-black/8 dark:border-white/10 shadow-brand-lg p-6">
           {status === "sent" ? (
             <div className="text-center">
               <svg
@@ -136,7 +136,7 @@ function SignInForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 disabled={status === "loading"}
-                className="w-full rounded-lg border border-black/10 bg-white px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-black/20 disabled:opacity-50 [font-size:16px] sm:text-sm"
+                className="w-full rounded-lg border border-black/10 bg-white dark:bg-surface-2 px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-black/20 disabled:opacity-50 [font-size:16px] sm:text-sm"
               />
               {errorMsg && <p className="mt-3 text-xs text-accent">{errorMsg}</p>}
               <GradientButton
@@ -163,9 +163,9 @@ function SignInForm() {
           {status !== "sent" && (
             <>
               <div className="flex items-center gap-3 my-5">
-                <div className="flex-1 h-px bg-black/10" />
+                <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
                 <span className="text-xs text-text-muted">or</span>
-                <div className="flex-1 h-px bg-black/10" />
+                <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
               </div>
               <button
                 onClick={handleDiscordSignIn}
@@ -188,7 +188,7 @@ function SignInForm() {
               <button
                 onClick={handleGoogleSignIn}
                 disabled={googleLoading || discordLoading || status === "loading"}
-                className="mt-3 w-full inline-flex items-center justify-center gap-2.5 rounded-full border border-black/10 bg-white px-5 py-3 text-sm font-semibold text-text-primary transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-3 w-full inline-flex items-center justify-center gap-2.5 rounded-full border border-black/10 bg-white dark:bg-surface-2 px-5 py-3 text-sm font-semibold text-text-primary transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {googleLoading ? (
                   <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">

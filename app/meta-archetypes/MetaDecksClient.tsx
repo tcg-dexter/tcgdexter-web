@@ -83,7 +83,7 @@ export default function MetaDecksClient({ items }: Props) {
             autoCorrect="off"
             autoCapitalize="off"
             spellCheck={false}
-            className="w-full pl-10 pr-4 py-2 rounded-full border border-black/10 bg-white text-[16px] sm:text-sm focus:outline-none focus-gradient-border transition-colors"
+            className="w-full pl-10 pr-4 py-2 rounded-full border border-black/10 bg-white text-[16px] sm:text-sm focus:outline-none focus-gradient-border transition-colors dark:bg-surface-2"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -112,7 +112,7 @@ export default function MetaDecksClient({ items }: Props) {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
+        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center dark:bg-surface-elevated dark:border-white/10">
           <p className="text-sm text-text-secondary">No decks match “{query}”.</p>
         </div>
       ) : (

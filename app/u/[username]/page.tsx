@@ -349,7 +349,7 @@ export default async function ProfilePage({
             showDecksViewAll={decks.length > 0}
             decksContent={
               decks.length === 0 ? (
-                <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
+                <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-8 text-center">
                   <p className="text-sm text-text-secondary">
                     No decks yet.{" "}
                     <Link href="/" className="text-accent hover:underline">
@@ -402,7 +402,7 @@ export default async function ProfilePage({
             showBattlesViewAll={recentBattles.length > 0}
             battlesContent={
               recentBattles.length === 0 ? (
-                <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
+                <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-8 text-center">
                   <p className="text-sm text-text-secondary">
                     No battles logged yet. Log a match from any of your decks to see it here.
                   </p>
@@ -425,7 +425,7 @@ export default async function ProfilePage({
               )}
             </h2>
             {decks.length === 0 ? (
-              <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
+              <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-8 text-center">
                 <p className="text-sm text-text-secondary">
                   {profile.display_name} hasn&apos;t shared any decks yet.
                 </p>

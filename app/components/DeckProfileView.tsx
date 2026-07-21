@@ -208,7 +208,7 @@ export default function DeckProfileView({
       add: deckCardAddTarget(c),
     }));
 
-  const CARD_CLS = "rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm";
+  const CARD_CLS = "rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm";
   const TRACK_CLS = "bg-black/5";
   const dateStr = new Date(profiledAt).toLocaleDateString("en-US", {
     month: "long",
@@ -328,7 +328,7 @@ export default function DeckProfileView({
                 analysis={result}
                 source={ctaSource}
                 metaArchetypeId={metaArchetypeId}
-                className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-black/85 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-black dark:bg-white px-5 py-2.5 text-sm font-semibold text-white dark:text-black transition-all hover:bg-black/85 dark:hover:bg-white/85 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <ShareButton
                 deckList={deckList}
@@ -465,7 +465,7 @@ export default function DeckProfileView({
               className="rounded-2xl p-[1.5px] bg-gradient-brand shadow-sm"
             >
             <details
-              className="rounded-[14.5px] bg-white/95 backdrop-blur-xl p-5 group"
+              className="rounded-[14.5px] bg-white/95 dark:bg-surface-elevated backdrop-blur-xl p-5 group"
             >
               <summary className="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden">
                 <div>
@@ -516,7 +516,7 @@ export default function DeckProfileView({
                         href={listing.listingUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-shrink-0 inline-flex items-center gap-1 rounded-full border border-black/10 bg-white px-3 py-1 text-xs font-semibold text-text-primary hover:border-accent/40 hover:text-accent transition-colors"
+                        className="flex-shrink-0 inline-flex items-center gap-1 rounded-full border border-black/10 bg-white dark:bg-surface-2 px-3 py-1 text-xs font-semibold text-text-primary hover:border-accent/40 hover:text-accent transition-colors"
                       >
                         View
                         <svg

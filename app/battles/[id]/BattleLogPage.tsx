@@ -243,7 +243,7 @@ export default function BattleLogPage({
             />
           </>
         ) : (
-          <div className="mt-4 rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5 text-sm text-text-muted text-center">
+          <div className="mt-4 rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5 text-sm text-text-muted text-center dark:bg-surface-elevated dark:border-white/10">
             No battle log available for this match.
           </div>
         )}
@@ -270,10 +270,10 @@ function StatCard({
     tone === "gradient"
       ? "rounded-2xl bg-gradient-brand shadow-sm px-4 py-3 text-center text-white"
       : tone === "dark"
-      ? "rounded-2xl bg-black shadow-sm px-4 py-3 text-center text-white"
+      ? "rounded-2xl bg-black dark:bg-white shadow-sm px-4 py-3 text-center text-white dark:text-black"
       : tone === "ringed"
-      ? "rounded-2xl bg-white/90 backdrop-blur-xl shadow-[inset_0_0_0_1px_black] px-4 py-3 text-center"
-      : "rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm px-4 py-3 text-center";
+      ? "rounded-2xl bg-white/90 backdrop-blur-xl shadow-[inset_0_0_0_1px_black] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35)] px-4 py-3 text-center dark:bg-surface-elevated"
+      : "rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm px-4 py-3 text-center dark:bg-surface-elevated dark:border-white/10";
 
   const valueClass =
     tone === "gradient" || tone === "dark"

@@ -4,6 +4,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import BackButton from "@/app/components/ui/BackButton";
+import { useTheme } from "@/app/components/ThemeProvider";
 import DeckProfileView, {
   type AnalysisResult,
   type DeckCreator,
@@ -78,6 +79,7 @@ export default function DeckDetailClient({
   initialCoverImageUrl,
 }: Props) {
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
   const [logOpen, setLogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -201,7 +203,7 @@ export default function DeckDetailClient({
   // stored identity. Never auto-applied — the owner decides.
   const driftBanner =
     isOwner && archetypeSuggestion ? (
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-black/8 bg-white px-4 py-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated px-4 py-3">
         <p className="flex-1 min-w-[12rem] text-sm text-text-secondary">
           This deck now looks like{" "}
           <span className="font-semibold text-text-primary">
@@ -217,7 +219,7 @@ export default function DeckDetailClient({
             type="button"
             onClick={() => setArchetype("auto")}
             disabled={archetypeBusy}
-            className="inline-flex items-center justify-center rounded-full bg-black border border-transparent px-3 py-1.5 text-xs font-semibold text-white hover:opacity-80 transition-opacity disabled:opacity-50 touch-manipulation"
+            className="inline-flex items-center justify-center rounded-full bg-black dark:bg-white border border-transparent px-3 py-1.5 text-xs font-semibold text-white dark:text-black hover:opacity-80 transition-opacity disabled:opacity-50 touch-manipulation"
           >
             Update
           </button>
@@ -229,7 +231,7 @@ export default function DeckDetailClient({
                 : setArchetypeSuggestion(null)
             }
             disabled={archetypeBusy}
-            className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-text-secondary hover:bg-black/5 transition disabled:opacity-50 touch-manipulation"
+            className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white dark:bg-surface-2 px-3 py-1.5 text-xs font-semibold text-text-secondary hover:bg-black/5 transition disabled:opacity-50 touch-manipulation"
           >
             Keep
             {archetypeSuggestion.current.archetypeName
@@ -413,11 +415,13 @@ export default function DeckDetailClient({
             <button
               onClick={() => setLogOpen((o) => !o)}
               className={`flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-[1px] py-2 text-sm font-semibold transition-all ${
-                logOpen ? "text-white" : "text-text-secondary"
+                logOpen ? (resolvedTheme === "dark" ? "text-black" : "text-white") : "text-text-secondary"
               }`}
               style={{
                 backgroundImage: logOpen
-                  ? "linear-gradient(black, black), linear-gradient(black, black)"
+                  ? resolvedTheme === "dark"
+                    ? "linear-gradient(white, white), linear-gradient(white, white)"
+                    : "linear-gradient(black, black), linear-gradient(black, black)"
                   : "linear-gradient(var(--bg), var(--bg)), var(--gradient-brand)",
                 backgroundOrigin: "border-box",
                 backgroundClip: "padding-box, border-box",
@@ -447,7 +451,7 @@ export default function DeckDetailClient({
                   aria-label="Deck settings"
                   aria-haspopup="menu"
                   aria-expanded={settingsOpen}
-                  className="w-full inline-flex items-center justify-center rounded-full bg-black border border-transparent px-[1px] py-[11px] text-white disabled:opacity-50 transition-opacity hover:opacity-80 touch-manipulation"
+                  className="w-full inline-flex items-center justify-center rounded-full bg-black dark:bg-white border border-transparent px-[1px] py-[11px] text-white dark:text-black disabled:opacity-50 transition-opacity hover:opacity-80 touch-manipulation"
                 >
                   <svg
                     className="w-3.5 h-3.5"
@@ -477,7 +481,7 @@ export default function DeckDetailClient({
                 ref={settingsMenuRef}
                 role="menu"
                 style={{ position: "fixed", top: menuPos.top, right: menuPos.right }}
-                className="w-44 rounded-xl bg-white border border-black/8 shadow-lg p-1 z-50"
+                className="w-44 rounded-xl bg-white dark:bg-surface-elevated border border-black/8 dark:border-white/10 shadow-lg p-1 z-50"
               >
                 <button
                   type="button"
@@ -550,7 +554,7 @@ export default function DeckDetailClient({
               onClick={() => setConfirmingDelete(false)}
             >
               <div
-                className="w-full max-w-sm rounded-2xl bg-white/95 backdrop-blur-xl border border-black/5 p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]"
+                className="w-full max-w-sm rounded-2xl bg-white/95 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]"
                 onClick={(e) => e.stopPropagation()}
               >
                 <h2
@@ -564,7 +568,7 @@ export default function DeckDetailClient({
                   <button
                     type="button"
                     onClick={() => setConfirmingDelete(false)}
-                    className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-4 py-1.5 text-xs font-semibold text-text-secondary hover:bg-black/5 transition touch-manipulation"
+                    className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white dark:bg-surface-2 px-4 py-1.5 text-xs font-semibold text-text-secondary hover:bg-black/5 transition touch-manipulation"
                   >
                     Cancel
                   </button>
@@ -572,7 +576,7 @@ export default function DeckDetailClient({
                     type="button"
                     onClick={performDelete}
                     disabled={deleting}
-                    className="inline-flex items-center justify-center rounded-full bg-black px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-50 hover:opacity-80 transition-opacity touch-manipulation"
+                    className="inline-flex items-center justify-center rounded-full bg-black dark:bg-white px-4 py-1.5 text-xs font-semibold text-white dark:text-black disabled:opacity-50 hover:opacity-80 transition-opacity touch-manipulation"
                   >
                     {deleting ? "Deleting…" : "Delete"}
                   </button>

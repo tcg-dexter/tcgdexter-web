@@ -18,7 +18,7 @@ export default function PillSelect({
       <select
         value={value}
         onChange={onChange}
-        className="appearance-none w-full text-xs font-semibold h-[38px] pl-3 pr-7 rounded-full border border-black/10 bg-white"
+        className="appearance-none w-full text-xs font-semibold h-[38px] pl-3 pr-7 rounded-full border border-black/10 bg-white dark:bg-surface-2"
       >
         {children}
       </select>

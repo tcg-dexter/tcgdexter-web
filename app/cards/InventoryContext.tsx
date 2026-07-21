@@ -233,7 +233,7 @@ function SignInPrompt({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+        className="w-full max-w-sm rounded-2xl bg-white dark:bg-surface-elevated p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-lg font-semibold text-text-primary">Sign in to track your collection</h2>
@@ -244,13 +244,13 @@ function SignInPrompt({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white hover:bg-surface"
+            className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white dark:bg-surface-2 hover:bg-surface"
           >
             Not now
           </button>
           <a
             href="/sign-in"
-            className="text-xs font-semibold px-3 py-1.5 rounded-full bg-black text-white border border-transparent"
+            className="text-xs font-semibold px-3 py-1.5 rounded-full bg-black dark:bg-white text-white dark:text-black border border-transparent"
           >
             Sign in
           </a>

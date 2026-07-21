@@ -139,14 +139,14 @@ export default async function LeaderboardPage() {
 
       {/* Top 3 list */}
       {top3.length > 0 && (
-        <div className="rounded-xl border border-black/8 bg-white shadow-sm overflow-hidden mb-8">
+        <div className="rounded-xl border border-black/8 bg-white shadow-sm overflow-hidden mb-8 dark:bg-surface-elevated dark:border-white/10">
           {top3.map((trainer, i) => {
             const initial = trainer.display_name.trim().charAt(0).toUpperCase();
             return (
               <Link
                 key={trainer.id}
                 href={`/u/${trainer.username}`}
-                className="flex items-center gap-3 px-5 py-4 hover:bg-black/[0.02] transition border-b border-black/5 last:border-b-0"
+                className="flex items-center gap-3 px-5 py-4 hover:bg-black/[0.02] transition border-b border-black/5 last:border-b-0 dark:border-white/10"
               >
                 <span className="text-xl w-7 flex-shrink-0">{rankMedal[i]}</span>
                 {trainer.avatar_url ? (
@@ -183,9 +183,9 @@ export default async function LeaderboardPage() {
       {topDecks.length > 0 && (
         <div className="mt-12">
           <div className="flex items-center gap-4 mb-6">
-            <div className="flex-1 h-px bg-black/10" />
+            <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
             <span className="text-sm font-semibold text-text-muted">Top decks</span>
-            <div className="flex-1 h-px bg-black/10" />
+            <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

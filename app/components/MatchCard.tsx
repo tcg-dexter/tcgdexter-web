@@ -99,7 +99,7 @@ export function MatchCard({ match }: { match: RecentMatch }) {
     : "absolute inset-0";
 
   const footer = (
-    <div className="grid grid-cols-2 gap-3 px-3.5 pt-3 pb-3.5 border-t border-black/[0.06]">
+    <div className="grid grid-cols-2 gap-3 px-3.5 pt-3 pb-3.5 border-t border-black/[0.06] dark:border-white/10">
       <div className="min-w-0">
         <p className="text-[11px] font-medium text-text-muted truncate">
           {leftSide.handleLabel}&rsquo;s
@@ -124,7 +124,7 @@ export function MatchCard({ match }: { match: RecentMatch }) {
     return (
       <Link
         href={`/battles/${match.id}`}
-        className="block rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+        className="block rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       >
         <div className="relative overflow-hidden">
           <div className={gradientClass} style={gradientStyle} />
@@ -219,7 +219,7 @@ export function MatchCard({ match }: { match: RecentMatch }) {
   return (
     <Link
       href={`/battles/${match.id}`}
-      className="block rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+      className="block rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
     >
       <div className="relative flex gap-3.5 p-3.5">
         <div className={gradientClass} style={gradientStyle} />

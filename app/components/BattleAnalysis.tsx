@@ -55,7 +55,7 @@ export default function BattleAnalysis({ matchId }: { matchId: string }) {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-black/8 bg-white/90 p-4 shadow-sm">
+      <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated p-4 shadow-sm">
         {curve && (
           <>
             <div className="mb-1 flex items-baseline justify-between">

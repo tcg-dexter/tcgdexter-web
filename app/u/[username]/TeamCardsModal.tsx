@@ -216,9 +216,9 @@ export default function TeamCardsModal({ initial, onClose }: Props) {
       <div
         role="dialog"
         aria-label="Select banner cards"
-        className="relative z-10 flex w-full max-w-lg max-h-[85vh] flex-col overflow-hidden rounded-2xl bg-white shadow-xl"
+        className="relative z-10 flex w-full max-w-lg max-h-[85vh] flex-col overflow-hidden rounded-2xl bg-white dark:bg-surface-elevated shadow-xl"
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-black/8 shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-black/8 dark:border-white/10 shrink-0">
           <h2 className="text-sm font-semibold text-text-primary">Select Banner Cards</h2>
           <button
             type="button"
@@ -267,9 +267,9 @@ export default function TeamCardsModal({ initial, onClose }: Props) {
               autoCorrect="off"
               autoCapitalize="off"
               spellCheck={false}
-              className="w-full rounded-lg border border-black/10 bg-bg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent/30 [font-size:16px] sm:text-sm"
+              className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-bg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent/30 [font-size:16px] sm:text-sm"
             />
-            <div className="mt-2 max-h-64 overflow-y-auto rounded-lg border border-black/8">
+            <div className="mt-2 max-h-64 overflow-y-auto rounded-lg border border-black/8 dark:border-white/10">
               {query.trim().length < 2 ? (
                 <p className="px-3 py-3 text-xs text-text-muted">Type at least 2 characters…</p>
               ) : searching ? (
@@ -309,13 +309,13 @@ export default function TeamCardsModal({ initial, onClose }: Props) {
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-black/8 shrink-0">
+        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-black/8 dark:border-white/10 shrink-0">
           {error && <p className="mr-auto text-xs text-accent">{error}</p>}
           <button
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-black/10 text-text-secondary hover:bg-bg transition-colors disabled:opacity-60"
+            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-black/10 dark:border-white/10 text-text-secondary hover:bg-bg transition-colors disabled:opacity-60"
           >
             Cancel
           </button>
@@ -409,7 +409,7 @@ function SlotThumb({
           type="button"
           onClick={onClick}
           aria-label="Empty slot"
-          className="absolute inset-0 rounded-lg border-2 border-dashed border-black/15 flex items-center justify-center text-text-muted hover:border-accent hover:text-accent transition-colors"
+          className="absolute inset-0 rounded-lg border-2 border-dashed border-black/15 dark:border-white/10 flex items-center justify-center text-text-muted hover:border-accent hover:text-accent transition-colors"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.25}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m-7-7h14" />

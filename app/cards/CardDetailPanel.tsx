@@ -88,7 +88,7 @@ export default function CardDetailPanel({ card, raw }: Props) {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-black/8 bg-white p-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-base">
+        <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated p-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-base">
           <Stat
             label="Type"
             value={
@@ -232,7 +232,7 @@ function TypeIcon({ type, size = 20 }: { type: string; size?: number }) {
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-black/8 bg-white p-4 space-y-3">
+    <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated p-4 space-y-3">
       <h2 className="text-base font-semibold text-text-primary">{title}</h2>
       {children}
     </div>

@@ -11,9 +11,9 @@ import { SkeletonBlock, SkeletonLine, SkeletonRow } from "./Skeleton";
 export default function LeaderboardSkeleton() {
   return (
     <>
-      <div className="rounded-xl border border-black/8 bg-white shadow-sm overflow-hidden mb-8">
+      <div className="rounded-xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated shadow-sm overflow-hidden mb-8">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className={i < 2 ? "border-b border-black/5" : ""}>
+          <div key={i} className={i < 2 ? "border-b border-black/5 dark:border-white/10" : ""}>
             <SkeletonRow />
           </div>
         ))}
@@ -21,16 +21,16 @@ export default function LeaderboardSkeleton() {
 
       <div className="mt-12">
         <div className="flex items-center gap-4 mb-6">
-          <div className="flex-1 h-px bg-black/10" />
+          <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
           <span className="text-sm font-semibold text-text-muted">Top decks</span>
-          <div className="flex-1 h-px bg-black/10" />
+          <div className="flex-1 h-px bg-black/10 dark:bg-white/10" />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden"
+              className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden"
             >
               <SkeletonBlock height="h-40" className="rounded-none" />
               <div className="p-4 space-y-3">

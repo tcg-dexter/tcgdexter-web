@@ -99,7 +99,7 @@ export default async function SpotlightIndex() {
         </header>
 
         {spotlights.length === 0 ? (
-          <div className="rounded-2xl border border-black/8 bg-white p-8 text-center text-sm text-text-secondary">
+          <div className="rounded-2xl border border-black/8 bg-white p-8 text-center text-sm text-text-secondary dark:bg-surface-elevated dark:border-white/10">
             No spotlights yet — check back soon.
           </div>
         ) : (

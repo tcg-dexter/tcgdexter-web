@@ -12,10 +12,19 @@ import { META_ARCHETYPE_NAMES } from "@/lib/metaArchetypes";
 // loss therefore ship pure bgs; the tie chip's 1 px black outline comes
 // from `shadow-[inset_0_0_0_1px_black]`, which doesn't grow the box
 // (so all three render at identical pixel dimensions).
+// Dark mode: loss and draw are opposite black/white pills in light mode, so
+// naively swapping loss's black to white (the usual solid-pill treatment)
+// while draw's white stays put would make both render as the same white
+// pill once .dark applies. Loss instead steps down to the surface-2 neutral
+// (still reads as the "heaviest" pill) while draw moves to surface-elevated
+// with its ring brightened so the two stay visually distinct.
 const RESULT_STYLE = {
-  win:  { bg: "bg-gradient-brand",                       text: "text-white"        },
-  loss: { bg: "bg-black",                                text: "text-white"        },
-  draw: { bg: "bg-white shadow-[inset_0_0_0_1px_black]", text: "text-text-primary" },
+  win: { bg: "bg-gradient-brand", text: "text-white" },
+  loss: { bg: "bg-black dark:bg-surface-2", text: "text-white" },
+  draw: {
+    bg: "bg-white shadow-[inset_0_0_0_1px_black] dark:bg-surface-elevated dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35)]",
+    text: "text-text-primary",
+  },
 };
 
 // `<input type="date">` can't be fully de-chromed across browsers (Safari in
@@ -488,8 +497,8 @@ export default function MatchForm({
             onClick={() => setShowDeckListField((v) => !v)}
             className={`h-9 flex-shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors ${
               showDeckListField
-                ? "bg-black/70 text-white"
-                : "bg-black text-white hover:bg-black/80"
+                ? "bg-black/70 text-white dark:bg-white/70 dark:text-black"
+                : "bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/80"
             }`}
           >
             <svg
@@ -590,8 +599,8 @@ export default function MatchForm({
           onClick={() => setShowNotesField((v) => !v)}
           className={`h-10 inline-flex items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors ${
             showNotesField
-              ? "bg-black/70 text-white"
-              : "bg-black text-white hover:bg-black/80"
+              ? "bg-black/70 text-white dark:bg-white/70 dark:text-black"
+              : "bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/80"
           }`}
         >
           <svg

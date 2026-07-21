@@ -61,7 +61,7 @@ export function InventoryCapsule({ setId, number, onOpenMenu }: CapsuleProps) {
 
   return (
     <div
-      className="inline-flex items-center gap-0 rounded-full border border-black/10 bg-white text-xs font-semibold select-none"
+      className="inline-flex items-center gap-0 rounded-full border border-black/10 bg-white dark:bg-surface-2 text-xs font-semibold select-none"
       onClick={(e) => e.stopPropagation()}
     >
       <button
@@ -163,7 +163,7 @@ export function InventoryOverlay({
         }}
       >
         <div
-          className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl"
+          className="w-full max-w-sm rounded-2xl bg-white dark:bg-surface-elevated p-5 shadow-xl"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="text-[10px] uppercase tracking-wider font-semibold text-text-muted">
@@ -196,7 +196,7 @@ export function InventoryOverlay({
                     handleAdjust(r.key, mode === "add" ? 1 : -1);
                   }}
                   aria-label={`${mode === "add" ? "Add" : "Remove"} ${r.label}`}
-                  className="h-8 w-8 flex items-center justify-center rounded-full bg-black text-white text-sm font-semibold hover:bg-text-primary transition-colors flex-shrink-0"
+                  className="h-8 w-8 flex items-center justify-center rounded-full bg-black dark:bg-white text-white dark:text-black text-sm font-semibold hover:bg-text-primary transition-colors flex-shrink-0"
                 >
                   <span aria-hidden="true" className="leading-none">
                     {mode === "add" ? "+" : "−"}
@@ -214,7 +214,7 @@ export function InventoryOverlay({
                 onClose();
               }}
               aria-label="Close"
-              className="h-8 w-8 flex items-center justify-center rounded-full border border-black/30 text-text-secondary hover:text-text-primary hover:border-black/60 hover:bg-surface transition-colors"
+              className="h-8 w-8 flex items-center justify-center rounded-full border border-black/30 dark:border-white/10 text-text-secondary hover:text-text-primary hover:border-black/60 dark:hover:border-white/20 hover:bg-surface transition-colors"
             >
               <span aria-hidden="true" className="leading-none text-base">×</span>
             </button>

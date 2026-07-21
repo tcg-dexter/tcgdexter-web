@@ -95,7 +95,7 @@ export default function AccentPicker({ current, teamCards }: Props) {
         onClick={() => setOpen((v) => !v)}
         aria-label="Edit banner color"
         aria-expanded={open}
-        className="flex items-center justify-center w-8 h-8 rounded-full bg-white/85 text-text-primary shadow-md ring-1 ring-black/10 backdrop-blur hover:bg-white transition-colors"
+        className="flex items-center justify-center w-8 h-8 rounded-full bg-white/85 dark:bg-surface-2 text-text-primary shadow-md ring-1 ring-black/10 backdrop-blur hover:bg-white transition-colors"
       >
         {/* Pencil icon — "edit banner". */}
         <svg
@@ -117,7 +117,7 @@ export default function AccentPicker({ current, teamCards }: Props) {
         <div
           role="dialog"
           aria-label="Choose banner color"
-          className="absolute right-0 top-full mt-3 z-30 w-56 rounded-2xl border border-black/8 bg-white/95 backdrop-blur-xl shadow-lg p-3"
+          className="absolute right-0 top-full mt-3 z-30 w-56 rounded-2xl border border-black/8 dark:border-white/10 bg-white/95 dark:bg-surface-elevated backdrop-blur-xl shadow-lg p-3"
         >
           <p className="text-xs font-semibold uppercase tracking-widest text-text-muted px-1 pb-2">
             Banner color
@@ -148,7 +148,7 @@ export default function AccentPicker({ current, teamCards }: Props) {
               setOpen(false);
               setCardsModalOpen(true);
             }}
-            className="mt-3 w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-black/10 text-text-primary hover:bg-bg transition-colors"
+            className="mt-3 w-full px-3 py-1.5 text-xs font-semibold rounded-lg border border-black/10 dark:border-white/10 text-text-primary hover:bg-bg transition-colors"
           >
             Select Banner Cards
           </button>

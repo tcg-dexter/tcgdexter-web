@@ -249,7 +249,7 @@ export default function HomeClient({
             <div className="relative group">
               {/* Gradient glow */}
               <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 group-focus-within:opacity-70 blur-xl transition-opacity" />
-              <div className="relative rounded-2xl bg-white/90 backdrop-blur-xl border border-black/5 p-2 shadow-brand-lg">
+              <div className="relative rounded-2xl bg-white/90 backdrop-blur-xl border border-black/5 p-2 shadow-brand-lg dark:bg-surface-elevated dark:border-white/10">
                 <div className="flex items-center justify-between px-3 pt-2 pb-1.5">
                   <span className="text-xs font-semibold text-text-primary">Deck List</span>
                   <button
@@ -345,7 +345,7 @@ export default function HomeClient({
               ))}
             </div>
             <div className="mt-6 flex justify-center">
-              <Link href="/meta-archetypes" className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition">
+              <Link href="/meta-archetypes" className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition dark:bg-white dark:text-black dark:hover:bg-white/85">
                 View all
               </Link>
             </div>
@@ -368,7 +368,7 @@ export default function HomeClient({
                 ))}
               </div>
               <div className="mt-6 flex justify-center">
-                <Link href="/matches" className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition">
+                <Link href="/matches" className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition dark:bg-white dark:text-black dark:hover:bg-white/85">
                   View all
                 </Link>
               </div>
@@ -391,7 +391,7 @@ export default function HomeClient({
               </div>
               <Link
                 href={`/spotlight/${currentSpotlight.slug}`}
-                className="block rounded-2xl overflow-hidden border border-black/8 shadow-sm hover:shadow-md transition-shadow"
+                className="block rounded-2xl overflow-hidden border border-black/8 shadow-sm hover:shadow-md transition-shadow dark:border-white/10"
               >
                 <SpotlightBanner
                   accentColors={currentSpotlight.accentColors}
@@ -415,7 +415,7 @@ export default function HomeClient({
               <div className="mt-10 flex justify-center">
                 <Link
                   href={`/spotlight/${currentSpotlight.slug}`}
-                  className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition shadow-lg"
+                  className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition shadow-lg dark:bg-white dark:text-black dark:hover:bg-white/85"
                 >
                   View Trainer Spotlight
                 </Link>
@@ -446,7 +446,7 @@ export default function HomeClient({
                     <div className="mt-6 flex justify-center">
                       <Link
                         href="/cards"
-                        className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition"
+                        className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition dark:bg-white dark:text-black dark:hover:bg-white/85"
                       >
                         Browse All Cards
                       </Link>
@@ -459,7 +459,7 @@ export default function HomeClient({
 
           {/* Final CTA */}
           <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-24">
-            <div className="relative rounded-3xl overflow-hidden border border-black/8 shadow-xl">
+            <div className="relative rounded-3xl overflow-hidden border border-black/8 shadow-xl dark:border-white/10">
               <div className="absolute inset-0 bg-gradient-brand opacity-20" />
               <div className="relative p-12 md:p-20 text-center">
                 <h2 className="text-3xl md:text-5xl font-semibold tracking-tight leading-[1.05] max-w-3xl mx-auto text-text-primary">
@@ -468,13 +468,13 @@ export default function HomeClient({
                 <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
                   <Link
                     href="/"
-                    className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition shadow-lg"
+                    className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition shadow-lg dark:bg-white dark:text-black dark:hover:bg-white/85"
                   >
                     Profile a deck now
                   </Link>
                   <Link
                     href="/meta-archetypes"
-                    className="rounded-full border border-black/15 bg-white/80 backdrop-blur-sm text-text-primary font-semibold px-6 py-3 hover:bg-white transition"
+                    className="rounded-full border border-black/15 bg-white/80 backdrop-blur-sm text-text-primary font-semibold px-6 py-3 hover:bg-white transition dark:bg-surface-elevated dark:border-white/10 dark:hover:bg-surface-elevated"
                   >
                     Browse the meta →
                   </Link>
@@ -508,7 +508,7 @@ function CatalogSignInBanner() {
     <button
       type="button"
       onClick={promptSignIn}
-      className="mb-4 w-full rounded-2xl border border-black/8 bg-white/80 backdrop-blur-sm px-4 py-3 text-sm font-semibold text-text-primary hover:bg-white transition text-center"
+      className="mb-4 w-full rounded-2xl border border-black/8 bg-white/80 backdrop-blur-sm px-4 py-3 text-sm font-semibold text-text-primary hover:bg-white transition text-center dark:bg-surface-elevated dark:border-white/10 dark:hover:bg-surface-elevated"
     >
       Sign in to save cards to your collection
     </button>

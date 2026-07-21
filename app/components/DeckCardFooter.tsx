@@ -263,7 +263,7 @@ export default function DeckCardFooter({
 
   return (
     <>
-      <div className="flex items-center justify-around border-t border-black/5">
+      <div className="flex items-center justify-around border-t border-black/5 dark:border-white/10">
         {deckId !== undefined && !hideLikes && (
           <button
             onClick={handleLike}
@@ -349,7 +349,7 @@ export default function DeckCardFooter({
           onClick={() => setPrompt(null)}
         >
           <div
-            className="w-full max-w-sm rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl p-6 shadow-2xl"
+            className="w-full max-w-sm rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between mb-4">
@@ -403,7 +403,7 @@ export default function DeckCardFooter({
           onClick={() => setShareOpen(false)}
         >
           <div
-            className="w-full max-w-sm rounded-2xl bg-white/90 backdrop-blur-xl border border-black/5 p-6 shadow-brand-lg"
+            className="w-full max-w-sm rounded-2xl bg-white/90 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 shadow-brand-lg"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-1">
@@ -427,7 +427,7 @@ export default function DeckCardFooter({
             <div className="flex justify-center mb-5">
               <div className="relative">
                 <div className="absolute -inset-px rounded-xl bg-gradient-brand opacity-60 blur-xl pointer-events-none" />
-                <div className="relative rounded-xl border border-black/5 bg-white p-3">
+                <div className="relative rounded-xl border border-black/5 dark:border-white/10 bg-white dark:bg-surface-elevated p-3">
                   {qrSrc && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -448,7 +448,7 @@ export default function DeckCardFooter({
                 readOnly
                 value={absoluteShareUrl}
                 onFocus={(e) => e.target.select()}
-                className="flex-1 min-w-0 rounded-lg border border-black/5 bg-white px-3 py-2 text-xs text-text-secondary focus:outline-none"
+                className="flex-1 min-w-0 rounded-lg border border-black/5 dark:border-white/10 bg-white dark:bg-surface-elevated px-3 py-2 text-xs text-text-secondary focus:outline-none"
               />
               <button
                 onClick={handleCopyShareUrl}

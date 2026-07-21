@@ -14,11 +14,11 @@ export default function CardsLoading() {
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
-        <div className="flex-1 h-[38px] rounded-full bg-black/5 animate-pulse" />
+        <div className="flex-1 h-[38px] rounded-full bg-black/5 dark:bg-white/10 animate-pulse" />
         <div className="flex items-center gap-2">
-          <div className="h-[38px] w-40 rounded-full bg-black/5 animate-pulse" />
-          <div className="h-[38px] w-20 rounded-full bg-black/5 animate-pulse" />
-          <div className="h-[38px] w-28 rounded-full bg-black/5 animate-pulse" />
+          <div className="h-[38px] w-40 rounded-full bg-black/5 dark:bg-white/10 animate-pulse" />
+          <div className="h-[38px] w-20 rounded-full bg-black/5 dark:bg-white/10 animate-pulse" />
+          <div className="h-[38px] w-28 rounded-full bg-black/5 dark:bg-white/10 animate-pulse" />
         </div>
       </div>
 

@@ -11,6 +11,7 @@ import QRCodeButton from "@/app/components/QRCodeButton";
 import { type MatchFormData } from "@/app/components/MatchForm";
 import MatchEntry from "@/app/components/MatchEntry";
 import DeckCardMenu from "@/app/components/DeckCardMenu";
+import { useTheme } from "@/app/components/ThemeProvider";
 import SavedDeckRow from "./SavedDeckRow";
 import { normalizeForSearch } from "@/lib/searchNormalize";
 import { buildAvatarItems } from "@/lib/deckAvatarItems";
@@ -68,6 +69,7 @@ function currentStreak(recentForm?: ("W" | "L" | "D")[]): string | null {
 
 function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
   const [logOpen, setLogOpen] = useState(false);
   // Bumped on every successful save/import so <MatchEntry> remounts fresh —
   // it's a persistently-mounted subtree (collapsed via grid-rows, not
@@ -165,7 +167,7 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
           with half the blur and half the shadow's blur-radius so it reads
           softer/tighter against the hero's larger footprint. */}
       <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 blur-md" />
-      <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-[0_20px_30px_-15px_rgba(217,30,13,0.3)] overflow-hidden flex flex-col md:flex-row">
+      <div className="relative rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-[0_20px_30px_-15px_rgba(217,30,13,0.3)] overflow-hidden flex flex-col md:flex-row">
         <div ref={bannerColRef} className="md:w-[360px] shrink-0">
           <DeckBanner
             imageUrl={deck.imageUrl ?? null}
@@ -233,11 +235,13 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
               type="button"
               onClick={() => setLogOpen((v) => !v)}
               className={`${TOOLBAR_ITEM_HEIGHT} flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-[1px] text-sm font-semibold transition-all ${
-                logOpen ? "text-white" : "text-text-secondary"
+                logOpen ? (resolvedTheme === "dark" ? "text-black" : "text-white") : "text-text-secondary"
               }`}
               style={{
                 backgroundImage: logOpen
-                  ? "linear-gradient(black, black), linear-gradient(black, black)"
+                  ? resolvedTheme === "dark"
+                    ? "linear-gradient(white, white), linear-gradient(white, white)"
+                    : "linear-gradient(black, black), linear-gradient(black, black)"
                   : "linear-gradient(var(--bg), var(--bg)), var(--gradient-brand)",
                 backgroundOrigin: "border-box",
                 backgroundClip: "padding-box, border-box",
@@ -258,7 +262,7 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
               />
               <Link
                 href={deck.href}
-                className={`${TOOLBAR_ITEM_HEIGHT} flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-black px-[1px] text-sm font-semibold text-white transition-opacity hover:opacity-80 touch-manipulation`}
+                className={`${TOOLBAR_ITEM_HEIGHT} flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-black dark:bg-white px-[1px] text-sm font-semibold text-white dark:text-black transition-opacity hover:opacity-80 touch-manipulation`}
               >
                 View deck
               </Link>
@@ -386,7 +390,7 @@ export default function MyDecksClient({ decks }: Props) {
             autoCorrect="off"
             autoCapitalize="off"
             spellCheck={false}
-            className="w-full pl-10 pr-4 py-2 rounded-full border border-black/10 bg-white text-[16px] sm:text-sm focus:outline-none focus-gradient-border transition-colors"
+            className="w-full pl-10 pr-4 py-2 rounded-full border border-black/10 bg-white dark:bg-surface-2 text-[16px] sm:text-sm focus:outline-none focus-gradient-border transition-colors"
           />
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
@@ -420,7 +424,7 @@ export default function MyDecksClient({ decks }: Props) {
             aria-pressed={favoritesOnly}
             title={favoritesOnly ? "Showing favorites only" : "Show favorites only"}
             className={`${TOOLBAR_ITEM_HEIGHT} inline-flex items-center justify-center gap-1.5 px-3 rounded-full text-xs font-semibold transition-colors ${
-              favoritesOnly ? "bg-black text-white" : "bg-white text-text-secondary border border-black/8"
+              favoritesOnly ? "bg-black dark:bg-white text-white dark:text-black" : "bg-white dark:bg-surface-2 text-text-secondary border border-black/8"
             }`}
           >
             <svg
@@ -446,7 +450,7 @@ export default function MyDecksClient({ decks }: Props) {
       </div>
 
       {decks.length === 0 ? (
-        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
+        <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-8 text-center">
           <p className="text-sm text-text-secondary">
             No decks yet.{" "}
             <Link href="/" className="text-accent hover:underline">
@@ -455,7 +459,7 @@ export default function MyDecksClient({ decks }: Props) {
           </p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
+        <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-8 text-center">
           <p className="text-sm text-text-secondary">No decks match “{query}”.</p>
         </div>
       ) : view === "grid" ? (
@@ -465,7 +469,7 @@ export default function MyDecksClient({ decks }: Props) {
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden">
+        <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden">
           {filtered.map((deck, i) => (
             <SavedDeckRow key={deck.id} {...deck} isLast={i === filtered.length - 1} />
           ))}

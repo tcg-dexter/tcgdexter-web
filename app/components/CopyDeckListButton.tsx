@@ -48,7 +48,7 @@ export default function CopyDeckListButton({
   return (
     <button
       onClick={handleCopy}
-      className="inline-flex items-center gap-1.5 rounded-full bg-black border border-transparent px-3 py-1.5 text-xs font-semibold text-white transition-colors"
+      className="inline-flex items-center gap-1.5 rounded-full bg-black dark:bg-white border border-transparent px-3 py-1.5 text-xs font-semibold text-white dark:text-black transition-colors"
     >
       {copied ? (
         <>{checkIcon} Copied!</>

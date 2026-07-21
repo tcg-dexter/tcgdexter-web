@@ -49,7 +49,7 @@ export function BattleStatChart({
         return (
           <Fragment key={row.label}>
             {!isFirst && (
-              <div className={`col-span-3 border-t ${isFooter ? "border-black" : "border-black/[0.08]"}`} />
+              <div className={`col-span-3 border-t ${isFooter ? "border-black dark:border-white/10" : "border-black/[0.08] dark:border-white/10"}`} />
             )}
             <div className={`font-semibold uppercase tracking-widest text-text-primary py-2.5 ${isFooter ? "text-[14px]" : "text-[11px]"}`}>
               {row.label}

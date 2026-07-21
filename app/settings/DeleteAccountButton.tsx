@@ -80,7 +80,7 @@ export default function DeleteAccountButton() {
             onClick={closeModal}
           >
             <div
-              className="w-full max-w-sm rounded-2xl bg-white/95 backdrop-blur-xl border border-black/5 p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]"
+              className="w-full max-w-sm rounded-2xl bg-white/95 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]"
               onClick={(e) => e.stopPropagation()}
             >
               <h2
@@ -104,7 +104,7 @@ export default function DeleteAccountButton() {
                   onChange={(e) => setConfirmText(e.target.value)}
                   disabled={deleting}
                   autoFocus
-                  className="mt-1 w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 disabled:opacity-50 [font-size:16px] sm:text-sm"
+                  className="mt-1 w-full rounded-lg border border-black/10 bg-white dark:bg-surface-2 px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 disabled:opacity-50 [font-size:16px] sm:text-sm"
                 />
               </label>
               {error && <p className="mt-2 text-xs text-accent">{error}</p>}
@@ -113,7 +113,7 @@ export default function DeleteAccountButton() {
                   type="button"
                   onClick={closeModal}
                   disabled={deleting}
-                  className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-4 py-1.5 text-xs font-semibold text-text-secondary hover:bg-black/5 transition disabled:opacity-50 touch-manipulation"
+                  className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white dark:bg-surface-2 px-4 py-1.5 text-xs font-semibold text-text-secondary hover:bg-black/5 transition disabled:opacity-50 touch-manipulation"
                 >
                   Cancel
                 </button>
@@ -121,7 +121,7 @@ export default function DeleteAccountButton() {
                   type="button"
                   onClick={performDelete}
                   disabled={deleting || confirmText !== "DELETE"}
-                  className="inline-flex items-center justify-center rounded-full bg-black px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-50 hover:opacity-80 transition-opacity touch-manipulation"
+                  className="inline-flex items-center justify-center rounded-full bg-black dark:bg-white px-4 py-1.5 text-xs font-semibold text-white dark:text-black disabled:opacity-50 hover:opacity-80 transition-opacity touch-manipulation"
                 >
                   {deleting ? "Deleting…" : "Delete account"}
                 </button>

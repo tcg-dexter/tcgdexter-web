@@ -19,7 +19,7 @@ export function SkeletonLine({
   return (
     <span
       aria-hidden
-      className={`block rounded bg-black/5 animate-pulse ${width} ${height} ${className}`}
+      className={`block rounded bg-black/5 dark:bg-white/10 animate-pulse ${width} ${height} ${className}`}
     />
   );
 }
@@ -34,7 +34,7 @@ export function SkeletonCircle({
   return (
     <span
       aria-hidden
-      className={`block rounded-full bg-black/5 animate-pulse flex-shrink-0 ${size} ${className}`}
+      className={`block rounded-full bg-black/5 dark:bg-white/10 animate-pulse flex-shrink-0 ${size} ${className}`}
     />
   );
 }
@@ -49,7 +49,7 @@ export function SkeletonBlock({
   return (
     <div
       aria-hidden
-      className={`rounded-lg bg-black/5 animate-pulse ${height} ${className}`}
+      className={`rounded-lg bg-black/5 dark:bg-white/10 animate-pulse ${height} ${className}`}
     />
   );
 }
@@ -70,7 +70,7 @@ export function SkeletonCard({
 }) {
   return (
     <div
-      className={`rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm ${padding} ${className}`}
+      className={`rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm ${padding} ${className}`}
     >
       {children}
     </div>

@@ -23,7 +23,7 @@ export default function SetLogo({ src, ptcgoCode, setName, className }: Props) {
   if (!src || failed) {
     return (
       <div
-        className={`${className ?? ""} flex items-center justify-center rounded-md border border-black/10 bg-surface text-[10px] font-bold tracking-wide text-text-secondary uppercase`}
+        className={`${className ?? ""} flex items-center justify-center rounded-md border border-black/10 dark:border-white/10 bg-surface text-[10px] font-bold tracking-wide text-text-secondary uppercase`}
         title={setName}
         aria-label={setName}
       >

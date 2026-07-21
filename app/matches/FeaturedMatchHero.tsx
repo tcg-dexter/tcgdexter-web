@@ -100,7 +100,7 @@ export default function FeaturedMatchHero({
     <div className="relative mb-4">
       {/* Gradient glow — matches PinnedDeckHero's treatment exactly. */}
       <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 blur-md" />
-      <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-[0_20px_30px_-15px_rgba(217,30,13,0.3)] overflow-hidden flex flex-col md:flex-row">
+      <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-[0_20px_30px_-15px_rgba(217,30,13,0.3)] overflow-hidden flex flex-col md:flex-row dark:bg-surface-elevated dark:border-white/10">
         {/* Banner column — the MatchCard versus imagery, sized for hero. */}
         <div className="md:w-[360px] shrink-0">
           <div className="relative h-[220px] md:h-full overflow-hidden">
@@ -156,7 +156,7 @@ export default function FeaturedMatchHero({
                   }}
                 >
                   <div
-                    className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]"
+                    className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)] dark:border-white/10"
                     style={{ width: 115, height: 161 }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -176,7 +176,7 @@ export default function FeaturedMatchHero({
                   }}
                 >
                   <div
-                    className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]"
+                    className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)] dark:border-white/10"
                     style={{ width: 115, height: 161 }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -280,11 +280,11 @@ export default function FeaturedMatchHero({
               aria-expanded={detailsOpen}
               aria-controls={`featured-match-details-${match.id}`}
               className={`h-[38px] flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-[1px] text-sm font-semibold transition-all ${
-                detailsOpen ? "text-white" : "text-text-secondary"
+                detailsOpen ? "text-white dark:text-black" : "text-text-secondary"
               }`}
               style={{
                 backgroundImage: detailsOpen
-                  ? "linear-gradient(black, black), linear-gradient(black, black)"
+                  ? "linear-gradient(var(--text-primary), var(--text-primary)), linear-gradient(var(--text-primary), var(--text-primary))"
                   : "linear-gradient(var(--bg), var(--bg)), var(--gradient-brand)",
                 backgroundOrigin: "border-box",
                 backgroundClip: "padding-box, border-box",
@@ -294,7 +294,7 @@ export default function FeaturedMatchHero({
             </button>
             <Link
               href={`/battles/${match.id}`}
-              className="h-[38px] flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-black px-[1px] text-sm font-semibold text-white transition-opacity hover:opacity-80 touch-manipulation"
+              className="h-[38px] flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-black px-[1px] text-sm font-semibold text-white transition-opacity hover:opacity-80 touch-manipulation dark:bg-white dark:text-black"
             >
               View battle
             </Link>
