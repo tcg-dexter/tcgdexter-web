@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-07-20T20:58:11.669495+00:00",
+  "updated_at": "2026-07-21T00:17:26.982757+00:00",
   "models": {
     "winprob": {
       "model_version": "winprob-v1",
@@ -24,18 +24,23 @@
       "gated": true
     },
     "value": {
-      "model_version": "value-v0",
-      "trained_at": "2026-07-20T20:58:11.669495+00:00",
+      "model_version": "value-gbm-v1",
+      "trained_at": "2026-07-21T00:17:26.982757+00:00",
       "n_samples": 198345,
       "data_hash": "459589a7a4a79611d7ef39018bd924cc071f8f7f625652e8a8c0ef15a87f5ea8",
       "parser_version": 0,
       "engine_version": 1,
       "metrics": {
-        "cv_log_loss": 0.5374,
-        "cv_brier": 0.1827,
-        "cv_accuracy": 0.7143,
-        "cv_auc": 0.7982,
-        "cv_ece": 0.0082,
+        "cv_log_loss": 0.4853,
+        "cv_brier": 0.1631,
+        "cv_accuracy": 0.7489,
+        "cv_auc": 0.84,
+        "cv_ece": 0.0075,
+        "baseline_logistic_log_loss": 0.5374,
+        "baseline_logistic_brier": 0.1827,
+        "baseline_logistic_accuracy": 0.7143,
+        "baseline_logistic_auc": 0.7982,
+        "baseline_logistic_ece": 0.0082,
         "baseline_blind_log_loss": 0.621,
         "baseline_blind_brier": 0.2169,
         "baseline_blind_accuracy": 0.6367,
@@ -46,11 +51,11 @@
         "baseline_prior_accuracy": 0.5015,
         "baseline_prior_auc": 0.5,
         "baseline_prior_ece": 0.0,
-        "in_sample_log_loss": 0.5301
+        "in_sample_log_loss": 0.4048
       },
       "artifacts": {
         "path": "data/ml/value.json",
-        "sha256": "31870c6ec4c835f4ea1f871f9fc2eb2af705566774c030da21411402d26a7b33"
+        "sha256": "be9027bcde1fa433cb7055570ffaf72cd92422ebc2369902fbf8414c7b5037dd"
       },
       "enabled": true,
       "gated": false

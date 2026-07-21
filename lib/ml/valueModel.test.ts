@@ -14,13 +14,22 @@ import { describe, it, expect } from "vitest";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { scoreFeatures } from "./winprob";
-import { createBoardEvaluator, readValueArtifact } from "./botEvaluator";
+import {
+  createBoardEvaluator,
+  readValueArtifact,
+  scoreGbdtFeatures,
+  type ValueArtifact,
+} from "./botEvaluator";
 import { STATE_FEATURE_NAMES, encodeStateFeatures } from "./features/policy";
 import { instantiateDeck, viewFor } from "@/lib/engine/sim";
 import { buildSimInitialState } from "@/lib/engine/sim/setup";
 import { mulberry32 } from "@/lib/engine/sim/rng";
 
-const ARTIFACT = path.join(process.cwd(), "data", "ml", "value.json");
+// Honours DEXTER_VALUE_ARTIFACT (same override readValueArtifact uses) so a
+// CANDIDATE model can be contract-checked before it is ever promoted.
+const ARTIFACT = process.env.DEXTER_VALUE_ARTIFACT
+  ? path.resolve(process.cwd(), process.env.DEXTER_VALUE_ARTIFACT)
+  : path.join(process.cwd(), "data", "ml", "value.json");
 
 const DECK = [
   "Pokémon: 12",
@@ -37,12 +46,35 @@ const DECK = [
 describe.skipIf(!existsSync(ARTIFACT))("value model contract", () => {
   const artifact = readValueArtifact(ARTIFACT)!;
 
-  it("loads with aligned coefficient/feature arrays", () => {
+  // The artifact may be either generation of value model (linear or boosted
+  // trees), so every check below routes through the matching scorer.
+  const score = (a: ValueArtifact, features: Record<string, number>) =>
+    a.model_type === "gbdt" ? scoreGbdtFeatures(a, features) : scoreFeatures(a, features);
+
+  it("loads with internally consistent arrays", () => {
     expect(artifact).not.toBeNull();
-    expect(artifact.model_type).toBe("logistic_regression");
-    expect(artifact.features.length).toBe(artifact.coefficients.length);
-    expect(artifact.features.length).toBe(artifact.means.length);
-    expect(artifact.features.length).toBe(artifact.stds.length);
+    if (artifact.model_type === "gbdt") {
+      expect(artifact.trees.length).toBeGreaterThan(0);
+      for (const t of artifact.trees) {
+        expect(t.feature.length).toBe(t.threshold.length);
+        expect(t.feature.length).toBe(t.left.length);
+        expect(t.feature.length).toBe(t.right.length);
+        expect(t.feature.length).toBe(t.value.length);
+        // Every split must index a real column, and every child a real node.
+        for (let i = 0; i < t.feature.length; i++) {
+          if (t.feature[i] < 0) continue;
+          expect(t.feature[i]).toBeLessThan(artifact.features.length);
+          expect(t.left[i]).toBeGreaterThanOrEqual(0);
+          expect(t.left[i]).toBeLessThan(t.feature.length);
+          expect(t.right[i]).toBeGreaterThanOrEqual(0);
+          expect(t.right[i]).toBeLessThan(t.feature.length);
+        }
+      }
+    } else {
+      expect(artifact.features.length).toBe(artifact.coefficients.length);
+      expect(artifact.features.length).toBe(artifact.means.length);
+      expect(artifact.features.length).toBe(artifact.stds.length);
+    }
   });
 
   it("names only features the state encoder actually produces", () => {
@@ -53,7 +85,7 @@ describe.skipIf(!existsSync(ARTIFACT))("value model contract", () => {
   it("reproduces the trainer's embedded validation examples to 8 dp", () => {
     expect(artifact.validation_examples.length).toBeGreaterThan(0);
     for (const ex of artifact.validation_examples) {
-      expect(scoreFeatures(artifact, ex.features)).toBeCloseTo(ex.expected_p, 8);
+      expect(score(artifact, ex.features)).toBeCloseTo(ex.expected_p, 8);
     }
   });
 
@@ -76,7 +108,7 @@ describe.skipIf(!existsSync(ARTIFACT))("value model contract", () => {
       prize_diff: 0, prizes_total: 0, turn_number: 1,
       bench_diff: 0, hand_diff: 0, went_first: 1, is_player_turn: 1,
     };
-    expect(evaluate(snapshot, view)).toBeCloseTo(scoreFeatures(artifact, asRecord), 8);
+    expect(evaluate(snapshot, view)).toBeCloseTo(score(artifact, asRecord), 8);
   });
 
   it("returns a probability in (0, 1)", () => {
