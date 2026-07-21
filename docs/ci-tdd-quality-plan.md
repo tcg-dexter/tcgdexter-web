@@ -50,7 +50,7 @@ The class of bugs you cannot catch with mocks: **RLS policy regressions**. The c
 
 What gets covered:
 
-- RLS policies on `saved_decks`, `profiles`, `shared_matches`, `user_card_collection`
+- RLS policies on `saved_decks`, `profiles`, `user_card_collection`
 - `POST /api/analyze` end-to-end with a real DB-backed lookup path
 - `/api/saved-decks/[id]/clone` and `/like` flows
 - `/api/deck-share` short-id generation + retrieval round-trip

@@ -41,35 +41,7 @@ export async function POST(req: Request) {
   const userId = user.id;
   const admin = createAdminClient();
 
-  // Storage cleanup — best-effort, logged but not fatal. Must run before
-  // the row deletes below, since deleting `profiles` cascades away the
-  // shared_matches/match_evidence rows we're reading paths from here.
-  const { data: evidenceRows, error: evidenceReadError } = await admin
-    .from("match_evidence")
-    .select("image_path")
-    .eq("submitted_by_user_id", userId);
-  if (evidenceReadError) {
-    console.error(
-      "[account-delete] failed to read match_evidence paths:",
-      evidenceReadError
-    );
-  } else if (evidenceRows && evidenceRows.length > 0) {
-    const paths = evidenceRows
-      .map((r) => r.image_path)
-      .filter((p): p is string => typeof p === "string" && p.length > 0);
-    if (paths.length > 0) {
-      const { error: removeEvidenceError } = await admin.storage
-        .from("match-evidence")
-        .remove(paths);
-      if (removeEvidenceError) {
-        console.error(
-          "[account-delete] failed to remove match-evidence objects:",
-          removeEvidenceError
-        );
-      }
-    }
-  }
-
+  // Storage cleanup — best-effort, logged but not fatal.
   const { data: avatarFiles, error: avatarListError } = await admin.storage
     .from("avatars")
     .list(userId);
