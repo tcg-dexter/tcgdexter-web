@@ -359,6 +359,29 @@ export function deckCardAddTarget(
   return { setId: entry.set_id, number: entry.number, variant };
 }
 
+/** Every Basic-stage Pokémon line in a deck list, each carrying its
+ *  deck-list quantity and small card-art URL for its resolved printing
+ *  (null when the printing can't be resolved). Powers the mulligan-risk
+ *  module's "Draw 7" hand simulator. */
+export interface DeckBasicPokemon {
+  name: string;
+  qty: number;
+  imageUrl: string | null;
+}
+export function basicPokemonCards(
+  cards: Pick<AnalysisCard, "name" | "number" | "setCode" | "qty" | "section">[],
+): DeckBasicPokemon[] {
+  const out: DeckBasicPokemon[] = [];
+  for (const c of cards) {
+    if (c.section !== "pokemon") continue;
+    const entry = resolveEntry(c);
+    if (!entry?.subtypes.includes("Basic")) continue;
+    const imageUrl = entry.set_id ? cardImageSmall(entry.set_id, entry.number) : null;
+    out.push({ name: c.name, qty: c.qty, imageUrl });
+  }
+  return out;
+}
+
 /** True for a basic Energy card. Basic energy is excluded from ownership math
  *  since it's freely obtainable. Reuses the canonical basicEnergyAliasKeys
  *  parser so every decklist form is caught — spelled-out ("Grass Energy",

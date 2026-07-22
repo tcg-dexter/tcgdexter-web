@@ -11,6 +11,7 @@ import StandardFormatInfo from "@/app/components/StandardFormatInfo";
 import StatsStrip from "@/app/components/ui/StatsStrip";
 import MatchLogModules from "@/app/components/MatchLogModules";
 import {
+  basicPokemonCards,
   cardPrintingsForName,
   deckCardAddTarget,
   isBasicEnergyCard,
@@ -364,6 +365,7 @@ export default function DeckProfileView({
           <DeckMulliganModule
             deckSize={result.deckSize}
             basicCount={result.pokemon.basicCount}
+            basics={basicPokemonCards(result.cards)}
           />
 
           {/* ── Top slot: deck notes (saved/public); stat cards + record (meta) ── */}
@@ -556,8 +558,7 @@ export default function DeckProfileView({
           paddingBottom: "calc(env(safe-area-inset-bottom) + 2rem)",
         }}
       >
-        <p>&copy; 2026 TCG Dexter &middot; tcgdexter.com</p>
-        <p className="mt-3 max-w-lg mx-auto text-xs text-text-muted/70 leading-relaxed">
+        <p className="max-w-lg mx-auto text-xs text-text-muted/70 leading-relaxed">
           TCG Dexter is an independent organization. The information presented
           on this website about the Pok&eacute;mon Trading Card Game,
           including images and text, is intellectual property of The Pokémon
