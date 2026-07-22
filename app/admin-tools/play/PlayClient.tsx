@@ -10,7 +10,14 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { PlayResponse } from "@/app/api/play/route";
 import type { ClientMon, ClientView, InteractiveMove } from "@/lib/engine/sim";
-import { trainerDiscardCostByName } from "@/lib/engine/sim";
+// Import the value directly from its leaf module rather than the
+// "@/lib/engine/sim" barrel — the barrel also re-exports interactive.ts
+// and planner.ts, which transitively pull in lib/ml/botEvaluator.ts
+// (a server-only module reading the trained model off disk via node:fs
+// / node:path). Importing anything from the barrel drags that whole
+// module graph into this client bundle and webpack can't handle the
+// node: scheme in the browser build.
+import { trainerDiscardCostByName } from "@/lib/engine/sim/trainers";
 import type { GameReview } from "@/lib/ml/gameReview";
 import {
   InspectContext,
