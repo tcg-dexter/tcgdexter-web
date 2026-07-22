@@ -27,7 +27,8 @@ import { computeDamage, legalMoves, type SimMove, type TurnContext } from "./mov
 import { isLegalHumanMove } from "./validate";
 import { runCheckup } from "./conditions";
 import { resolveKnockouts } from "./damage";
-import { PlannerPolicy } from "./planner";
+import { PlannerPolicy, type StateEvaluator } from "./planner";
+import { createBotEvaluator } from "@/lib/ml/botEvaluator";
 import { plannerParamsForSkill } from "./difficulty";
 import { promoteBest, type DecisionPolicy } from "./policy";
 import { buildSimInitialState, instantiateDeck, SIM_VERSION } from "./setup";
@@ -395,6 +396,21 @@ export function startGame(options: StartOptions): GameSession {
   return bootSession(transcript);
 }
 
+// The interactive AI opponent plays with the same promoted board-aware value
+// model as self-play and the duel harness — resolved once, lazily, and
+// memoized so rebuildSession (called per request to regenerate AI replies)
+// neither re-reads the ~650 KB artifact nor drifts from the model the human
+// is being scored against. `null` means no artifact is live, in which case
+// PlannerPolicy uses its built-in heuristic fallback (the previous behaviour).
+// Baking the current registry's model in at boot/rebuild time keeps replay
+// deterministic as long as the model isn't swapped mid-session; a swap is a
+// bigger break already guarded by sim_version.
+let cachedEvaluator: StateEvaluator | null | undefined;
+function botEvaluator(): StateEvaluator | null {
+  if (cachedEvaluator === undefined) cachedEvaluator = createBotEvaluator();
+  return cachedEvaluator;
+}
+
 function bootSession(transcript: GameTranscript): GameSession {
   // Canonical rng stream: one draw for the opening coin, then setup
   // shuffles. Any deviation would desync transcript replays.
@@ -425,6 +441,10 @@ function bootSession(transcript: GameTranscript): GameSession {
     aiPolicy: new PlannerPolicy({
       params: plannerParamsForSkill(transcript.skill),
       seed: (transcript.seed ^ 0x5eed) >>> 0,
+      ...((): { evaluate?: StateEvaluator } => {
+        const evaluate = botEvaluator();
+        return evaluate ? { evaluate } : {};
+      })(),
     }),
   };
   if (transcript.human_first) {
