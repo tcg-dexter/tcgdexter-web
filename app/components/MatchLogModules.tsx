@@ -24,7 +24,7 @@ export default function MatchLogModules({
       className="relative flex flex-col gap-4"
     >
       {dimBelow && (
-        <div className="absolute inset-0 z-20 bg-[#f2f2f2]/80" aria-hidden="true" />
+        <div className="absolute inset-0 z-20 bg-[#f2f2f2]/80 dark:bg-[#242424]/80" aria-hidden="true" />
       )}
       {children}
     </motion.div>
