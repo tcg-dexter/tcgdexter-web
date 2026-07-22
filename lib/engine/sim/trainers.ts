@@ -41,7 +41,8 @@ export type TrainerEffect =
   | { kind: "iono" }
   | { kind: "gust" }
   | { kind: "switch_active" }
-  | { kind: "rare_candy" };
+  | { kind: "rare_candy" }
+  | { kind: "black_belt" };
 
 export type TrainerPhase = "search" | "draw" | "tactical";
 
@@ -63,6 +64,7 @@ export const TRAINER_EFFECTS: Record<string, TrainerSpec> = {
   "Professor's Research": { effect: { kind: "discard_hand_draw", draw: 7 }, phase: "draw" },
   Judge: { effect: { kind: "judge" }, phase: "draw" },
   Iono: { effect: { kind: "iono" }, phase: "draw" },
+  "Black Belt's Training": { effect: { kind: "black_belt" }, phase: "tactical" },
   "Boss's Orders": { effect: { kind: "gust" }, phase: "tactical" },
   Switch: { effect: { kind: "switch_active" }, phase: "tactical" },
   "Rare Candy": { effect: { kind: "rare_candy" }, phase: "tactical" },
@@ -242,6 +244,7 @@ export function trainerMoves(
       return side.deck.length > 0 ? [base] : [];
     case "judge":
     case "iono":
+    case "black_belt":
       return [base];
     case "gust":
       return other.active
@@ -461,6 +464,12 @@ export function applyTrainer(
         other.bench[Math.min(idx, other.bench.length - 1)] = other.active;
         other.active = target;
       }
+      break;
+    }
+    case "black_belt": {
+      // Turn-scoped buff: mark the turn so activeDamageBonus can add +40 to
+      // the opponent's Active ex for the rest of this turn.
+      side.blackBeltTrainingTurn = state.turn.number;
       break;
     }
     case "switch_active": {

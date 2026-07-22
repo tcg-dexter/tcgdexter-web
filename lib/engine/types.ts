@@ -132,6 +132,10 @@ export interface PlayerSide {
    *  Fezandipiti ex's Flip the Script. Optional: treated as false when unset
    *  (older/ghost side literals don't need to carry it). */
   koedLastOppTurn?: boolean;
+  /** The global turn number on which this side played Black Belt's Training
+   *  (a turn-scoped +40 vs the opponent's Active ex). Compared against the
+   *  current turn number so the buff auto-expires. */
+  blackBeltTrainingTurn?: number;
 }
 
 /* ─── Stadium ───────────────────────────────────────────────────── */

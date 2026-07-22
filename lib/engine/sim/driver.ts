@@ -9,7 +9,7 @@
 
 import type { GameState, PokemonInPlay } from "../types";
 import { applyWeaknessResistance, legalMoves, sideOf, type SimMove, type TurnContext } from "./moves";
-import { attackBaseDamage, attackEffect, discardAllEnergy } from "./attacks";
+import { activeDamageBonus, attackBaseDamage, attackEffect, discardAllEnergy } from "./attacks";
 import { applyAbility, hasOnEvolveTrigger, onEvolve } from "./abilities";
 import {
   applyCondition,
@@ -262,8 +262,11 @@ export function applyMove(
       // Miracle Force and the like: the attacker clears its own conditions.
       if (attackSelfClears(attacker.card.name, attack.name)) clearConditions(attacker);
 
-      // Damage to the active: state-scaled base (attacks.ts), then W/R.
-      const base = attackBaseDamage(state, actor, attacker, move.attackIndex);
+      // Damage to the active: state-scaled base (attacks.ts) + flat bonuses
+      // (Black Belt's Training, Binding Mochi), then W/R.
+      const base =
+        attackBaseDamage(state, actor, attacker, move.attackIndex) +
+        activeDamageBonus(state, actor, attacker, defender);
       dealRawDamage(defender, applyWeaknessResistance(base, attacker, defender));
 
       // Attack-inflicted conditions on the defending active (Mind Bend,
