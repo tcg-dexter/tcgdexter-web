@@ -7,7 +7,6 @@ import {
   BookOpenIcon,
   DiscordIcon,
   GaugeIcon,
-  MailIcon,
   TikTokIcon,
   ShoppingBagIcon,
   WrenchIcon,
@@ -45,22 +44,21 @@ export default function SiteSidebarRight({ isAdmin = false }: Props) {
   ];
 
   // Admin destinations — only rendered when isAdmin. Dashboard targets the
-  // mission-control root; CRM targets the contacts/campaigns section;
-  // Admin Tools is the legacy tools index. Dashboard/CRM are internal Next
-  // routes; on dashboard.tcgdexter.com middleware rewrites them under the
-  // dashboard subdomain transparently.
+  // mission-control root; Admin Tools is the legacy tools index. Dashboard
+  // is an internal Next route; on dashboard.tcgdexter.com middleware
+  // rewrites it under the dashboard subdomain transparently.
   const ADMIN_LINKS = [
     { href: "/dashboard", label: "Dashboard", Icon: GaugeIcon, exact: true },
-    { href: "/dashboard/crm", label: "CRM", Icon: MailIcon, exact: false },
     { href: "/admin-tools", label: "Admin Tools", Icon: WrenchIcon, exact: false },
   ];
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
 
-  // Admin "Dashboard" sits at /dashboard; CRM lives under /dashboard/crm.
-  // Without an exact check, the Dashboard row would highlight on every CRM
-  // page too — match exactly when the link explicitly opts in.
+  // Admin "Dashboard" sits at /dashboard, and other admin routes nest
+  // under it (e.g. /dashboard/crm) — without an exact check, the
+  // Dashboard row would highlight on every nested page too. Match
+  // exactly when the link explicitly opts in.
   const isActiveExact = (href: string, exact: boolean) =>
     exact ? pathname === href : isActive(href);
 

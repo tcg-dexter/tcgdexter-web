@@ -16,7 +16,6 @@ import {
   UserIcon,
   DiscordIcon,
   GaugeIcon,
-  MailIcon,
   TikTokIcon,
   ShoppingBagIcon,
   VersusIcon,
@@ -253,7 +252,6 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
   // every admin destination lives under a single eyebrow.
   const ADMIN_LINKS = [
     { href: "/dashboard", label: "Dashboard", Icon: GaugeIcon },
-    { href: "/dashboard/crm", label: "CRM", Icon: MailIcon },
     { href: "/admin-tools", label: "Admin Tools", Icon: WrenchIcon },
   ];
 
