@@ -13,6 +13,7 @@
 //   * Special energy provides 1 Colorless.
 
 import { parseDeckListCards } from "@/lib/cardPrinting";
+import { basicEnergyAliasKeys } from "@/lib/basicEnergyAlias";
 import { lookupCard } from "../catalog";
 import { mintInstanceId } from "../initial";
 import { ENGINE_VERSION } from "../types";
@@ -48,6 +49,24 @@ export class SimDeckError extends Error {}
  *   moves reference card ids across process rebuilds. Callers must use
  *   distinct prefixes per side. Defaults to globally-unique ids.
  */
+/** Normalize a decklist card name to one the engine catalog understands.
+ *  The only real offender is TCG Live's basic-energy shorthand — a decklist
+ *  writes "Basic {D} Energy" where the catalog is keyed "Basic Darkness
+ *  Energy" / "Darkness Energy". Without this, basic energy resolves to a
+ *  null catalog: it can't be attached (no energyProvides) and shows a card
+ *  back (no image). Only rewrites names that don't already resolve, so
+ *  everything else is passed through untouched. */
+export function canonicalCardName(name: string): string {
+  if (lookupCard(name)) return name;
+  const keys = basicEnergyAliasKeys(name);
+  if (!keys) return name;
+  for (const key of keys) {
+    const proper = key.replace(/\b\w/g, (c) => c.toUpperCase()); // Title Case
+    if (lookupCard(proper)) return proper;
+  }
+  return name;
+}
+
 export function instantiateDeck(deckList: string, idPrefix?: string): SimDeck {
   const parsed = parseDeckListCards(deckList);
   if (parsed.length === 0) throw new SimDeckError("Deck list could not be parsed");
@@ -56,10 +75,11 @@ export function instantiateDeck(deckList: string, idPrefix?: string): SimDeck {
   let local = 0;
   const mint = idPrefix ? () => `${idPrefix}${++local}` : () => mintInstanceId("sim");
   for (const entry of parsed) {
-    const catalog = lookupCard(entry.name);
+    const name = canonicalCardName(entry.name);
+    const catalog = lookupCard(name);
     if (!catalog) unknown.add(entry.name);
     for (let i = 0; i < entry.qty; i++) {
-      cards.push({ id: mint(), name: entry.name, catalog });
+      cards.push({ id: mint(), name, catalog });
     }
   }
   const basics = cards.some(
