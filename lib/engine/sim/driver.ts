@@ -78,6 +78,9 @@ export function beginTurn(
   const side = sideOf(state, actor);
   side.energyAttachedThisTurn = 0;
   side.supporterPlayedThisTurn = false;
+  // The opponent's comeback window (were THEY KO'd during this turn?) opens
+  // fresh now — clear the flag they read at the start of their last turn.
+  state.sides[otherActor(actor)].koedLastOppTurn = false;
   for (const mon of [side.active, ...side.bench]) {
     if (mon) mon.evolvedThisTurn = false;
   }
@@ -172,7 +175,7 @@ export function applyMove(
       if (!active || !promoted) return done(false);
       // Pay the (tool-reduced) retreat cost by discarding whole Energy
       // cards until the units discarded meet the cost (Double Turbo = 2).
-      let owed = retreatCost(active);
+      let owed = retreatCost(active, state);
       while (owed > 0 && active.attachedEnergy.length > 0) {
         const [card] = active.attachedEnergy.splice(0, 1);
         side.discard.push(card);

@@ -77,6 +77,12 @@ export function isBasic(c: CardInstance): boolean {
   return c.catalog?.supertype === "Pokémon" && !c.catalog.evolves_from;
 }
 
+/** An "N's Pokémon" — the card name begins with the "N's " prefix. Shared by
+ *  N's PP Up (energy accel) and N's Castle (retreat-cost waiver). */
+export function isNsPokemon(c: CardInstance): boolean {
+  return c.catalog?.supertype === "Pokémon" && c.name.startsWith("N's ");
+}
+
 /** A Basic Energy card (not Special Energy). Shared across trainer/attack
  *  effects that count or fetch basic energy. */
 export function isBasicEnergyCard(c: CardInstance): boolean {

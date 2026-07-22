@@ -254,7 +254,7 @@ export function legalMoves(
     !ctx.retreated &&
     side.active &&
     side.bench.length > 0 &&
-    canRetreat(side.active)
+    canRetreat(side.active, state)
   ) {
     for (let i = 0; i < side.bench.length; i++) {
       moves.push({ kind: "retreat", benchIndex: i });

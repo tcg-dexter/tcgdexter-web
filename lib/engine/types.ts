@@ -126,6 +126,12 @@ export interface PlayerSide {
   energyAttachedThisTurn: number;
   /** Supporter played this turn (1/turn rule). Reset at turn end. */
   supporterPlayedThisTurn: boolean;
+  /** True when one of this side's Pokémon was Knocked Out during the
+   *  opponent's most recent turn (set in knockOut, cleared at the start of
+   *  the opponent's next turn). Read by comeback abilities like
+   *  Fezandipiti ex's Flip the Script. Optional: treated as false when unset
+   *  (older/ghost side literals don't need to carry it). */
+  koedLastOppTurn?: boolean;
 }
 
 /* ─── Stadium ───────────────────────────────────────────────────── */
