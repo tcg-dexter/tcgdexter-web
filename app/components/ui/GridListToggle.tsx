@@ -22,13 +22,13 @@ export default function GridListToggle({
 }) {
   return (
     <div
-      className={`relative flex items-center ${className} rounded-full bg-black/5 p-[3px]`}
+      className={`relative flex items-center ${className} rounded-full bg-black/5 dark:bg-white/5 p-[3px]`}
       role="tablist"
     >
       <div
         aria-hidden
         className={`absolute inset-y-[3px] left-[3px] w-[calc(50%-3px)] rounded-full shadow-sm transition-all duration-300 ease-in-out ${
-          value === "grid" ? "translate-x-0 bg-white" : "translate-x-full bg-black"
+          value === "grid" ? "translate-x-0 bg-white dark:bg-surface-2" : "translate-x-full bg-black dark:bg-white"
         }`}
       />
       <button
@@ -50,7 +50,7 @@ export default function GridListToggle({
         aria-label="List view"
         onClick={() => onChange("list")}
         className={`relative z-10 h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${
-          value === "list" ? "text-white" : "text-text-muted"
+          value === "list" ? "text-white dark:text-black" : "text-text-muted"
         }`}
       >
         List

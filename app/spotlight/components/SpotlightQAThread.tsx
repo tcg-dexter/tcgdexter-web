@@ -55,12 +55,12 @@ export default function SpotlightQAThread({ qa, trainer }: Props) {
   )} 100%)`;
 
   return (
-    <div className="rounded-2xl border border-black/8 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-2xl border border-black/8 bg-white shadow-sm overflow-hidden dark:bg-surface-elevated dark:border-white/10">
       <ul>
         {qa.map((item, i) => (
           <li
             key={i}
-            className={i < qa.length - 1 ? "border-b border-black/8" : ""}
+            className={i < qa.length - 1 ? "border-b border-black/8 dark:border-white/10" : ""}
           >
             {/* Question — TCG Dexter, the interviewer voice. */}
             <Post
@@ -122,7 +122,7 @@ function Post({ avatar, displayName, handle, body, showConnector }: PostProps) {
       <div className="flex flex-col items-center self-stretch shrink-0">
         {avatar}
         {showConnector && (
-          <div className="w-0.5 flex-1 min-h-[16px] bg-black/15 mt-1.5" />
+          <div className="w-0.5 flex-1 min-h-[16px] bg-black/15 dark:bg-white/15 mt-1.5" />
         )}
       </div>
       <div className={`flex-1 min-w-0 ${showConnector ? "pb-2" : "pb-4"}`}>

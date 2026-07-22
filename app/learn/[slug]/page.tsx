@@ -93,7 +93,7 @@ const mdxComponents = {
   ),
   pre: (props: React.HTMLAttributes<HTMLPreElement>) => (
     <pre
-      className="bg-white border border-border rounded-lg p-4 overflow-x-auto text-xs sm:text-sm font-mono text-text-primary mb-5 leading-relaxed"
+      className="bg-white border border-border rounded-lg p-4 overflow-x-auto text-xs sm:text-sm font-mono text-text-primary mb-5 leading-relaxed dark:bg-surface-2"
       {...props}
     />
   ),
@@ -228,7 +228,7 @@ export default async function LessonPage({
                   <li>
                     <Link
                       href={`/learn/${prev.slug}`}
-                      className="flex items-baseline gap-3 px-3 py-2 rounded-lg opacity-50 hover:opacity-100 hover:bg-white transition-all"
+                      className="flex items-baseline gap-3 px-3 py-2 rounded-lg opacity-50 hover:opacity-100 hover:bg-white transition-all dark:hover:bg-surface-2"
                     >
                       <span className="text-xs font-mono text-text-muted shrink-0 tabular-nums">
                         {String(prev.order).padStart(2, "0")}
@@ -240,7 +240,7 @@ export default async function LessonPage({
                   </li>
                 )}
                 <li>
-                  <div className="flex items-baseline gap-3 px-3 py-2 rounded-lg bg-white border border-border">
+                  <div className="flex items-baseline gap-3 px-3 py-2 rounded-lg bg-white border border-border dark:bg-surface-2">
                     <span className="text-xs font-mono text-text-muted shrink-0 tabular-nums">
                       {String(lesson.order).padStart(2, "0")}
                     </span>
@@ -255,7 +255,7 @@ export default async function LessonPage({
                 <li>
                   <Link
                     href={nextContextItem.href}
-                    className="flex items-baseline gap-3 px-3 py-2 rounded-lg opacity-50 hover:opacity-100 hover:bg-white transition-all"
+                    className="flex items-baseline gap-3 px-3 py-2 rounded-lg opacity-50 hover:opacity-100 hover:bg-white transition-all dark:hover:bg-surface-2"
                   >
                     <span className="text-xs font-mono text-text-muted shrink-0 tabular-nums">
                       {nextContextItem.order !== null
@@ -273,7 +273,7 @@ export default async function LessonPage({
             <div className="mt-6 grid grid-cols-2 gap-3">
               <Link
                 href={backHref}
-                className="relative flex items-center justify-center rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-black/85"
+                className="relative flex items-center justify-center rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-black/85 dark:bg-white dark:text-black dark:hover:bg-white/85"
               >
                 <svg
                   className="absolute left-5 w-4 h-4"

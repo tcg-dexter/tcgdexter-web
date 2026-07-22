@@ -26,7 +26,7 @@ interface Props {
  * so turning this back on is a UI-only change.
  */
 export default function DeckPriceModule({ deckPrice }: Props) {
-  const cardClass = "rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5";
+  const cardClass = "rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-5";
   // ── Alert sign-up state (disabled) ────────────────────────────────
   // const [alertThreshold, setAlertThreshold] = useState("");
   // const [alertStatus, setAlertStatus] = useState<

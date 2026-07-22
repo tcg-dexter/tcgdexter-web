@@ -164,7 +164,7 @@ export default function AvatarPicker({ avatarUrl, gradient }: Props) {
         <div
           role="dialog"
           aria-label="Pick an avatar"
-          className="absolute left-0 top-full mt-3 z-30 w-[min(20rem,calc(100vw-1.5rem))] rounded-2xl border border-black/8 bg-white/95 backdrop-blur-xl shadow-xl p-3"
+          className="absolute left-0 top-full mt-3 z-30 w-[min(20rem,calc(100vw-1.5rem))] rounded-2xl border border-black/8 dark:border-white/10 bg-white/95 dark:bg-surface-elevated backdrop-blur-xl shadow-xl p-3"
         >
           <input
             ref={inputRef}

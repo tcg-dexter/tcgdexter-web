@@ -43,7 +43,7 @@ describe("policy feature encoding", () => {
   const { view, legal } = fixture();
 
   it("pins the schema version and vector shapes", () => {
-    expect(POLICY_SCHEMA_VERSION).toBe(2);
+    expect(POLICY_SCHEMA_VERSION).toBe(3);
     expect(encodeStateFeatures(view).length).toBe(STATE_FEATURE_NAMES.length);
     for (const move of legal) {
       expect(encodeActionFeatures(view, move).length).toBe(ACTION_FEATURE_NAMES.length);

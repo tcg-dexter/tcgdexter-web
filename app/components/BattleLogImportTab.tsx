@@ -23,9 +23,9 @@ const META_ARCHETYPES = [
 
 // Same chip palette as MatchForm. Keep these in lockstep.
 const RESULT_STYLE = {
-  win:  { bg: "bg-gradient-brand",                       text: "text-white"        },
-  loss: { bg: "bg-black",                                text: "text-white"        },
-  draw: { bg: "bg-white shadow-[inset_0_0_0_1px_black]", text: "text-text-primary" },
+  win:  { bg: "bg-gradient-brand",                                            text: "text-white"        },
+  loss: { bg: "bg-black dark:bg-white",                                       text: "text-white dark:text-black" },
+  draw: { bg: "bg-white dark:bg-surface-2 shadow-[inset_0_0_0_1px_black]",    text: "text-text-primary" },
 } as const;
 
 /* ─── Component ───────────────────────────────────────────────── */

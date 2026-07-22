@@ -58,7 +58,7 @@ export default function EditBio({ initialBio }: Props) {
   }
 
   return (
-    <div className="border-b border-black/5 px-4 py-3 bg-white">
+    <div className="border-b border-black/5 dark:border-white/10 px-4 py-3 bg-white dark:bg-surface-elevated">
       <p className="text-[11px] font-semibold uppercase tracking-widest text-text-muted">
         Bio
       </p>

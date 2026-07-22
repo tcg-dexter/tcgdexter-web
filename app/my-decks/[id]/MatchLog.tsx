@@ -51,9 +51,13 @@ interface Props {
 // identical pixel dimensions). Mirrored in app/components/MatchForm.tsx
 // and app/meta-archetypes/[slug]/page.tsx — keep them in sync.
 const RESULT_STYLE = {
-  win:  { label: "W", bg: "bg-gradient-brand",                       text: "text-white"        },
-  loss: { label: "L", bg: "bg-black",                                text: "text-white"        },
-  draw: { label: "D", bg: "bg-white shadow-[inset_0_0_0_1px_black]", text: "text-text-primary" },
+  win: { label: "W", bg: "bg-gradient-brand", text: "text-white" },
+  loss: { label: "L", bg: "bg-black dark:bg-white", text: "text-white dark:text-black" },
+  draw: {
+    label: "D",
+    bg: "bg-white dark:bg-surface-elevated shadow-[inset_0_0_0_1px_black] dark:shadow-[inset_0_0_0_1px_white]",
+    text: "text-text-primary",
+  },
 };
 
 /* ─── Component ──────────────────────────────────────────────── */
@@ -324,7 +328,7 @@ export default function MatchLog({
                     {hasLog && (
                       <Link
                         href={`/battles/${match.id}`}
-                        className="inline-flex items-center gap-1 rounded-full border border-black/10 bg-white px-3 py-1 text-[11px] font-semibold text-text-primary hover:bg-black/5 transition-colors"
+                        className="inline-flex items-center gap-1 rounded-full border border-black/10 bg-white dark:bg-surface-2 px-3 py-1 text-[11px] font-semibold text-text-primary hover:bg-black/5 transition-colors"
                       >
                         View Battle
                       </Link>
@@ -362,7 +366,7 @@ export default function MatchLog({
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => { setEditingId(match.id); closeForm(); }}
-                          className="inline-flex items-center gap-1 rounded-full border border-black/10 px-3 py-1.5 text-xs font-semibold text-text-primary hover:bg-black/5 transition-colors"
+                          className="inline-flex items-center gap-1 rounded-full border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs font-semibold text-text-primary hover:bg-black/5 transition-colors"
                         >
                           Edit
                         </button>

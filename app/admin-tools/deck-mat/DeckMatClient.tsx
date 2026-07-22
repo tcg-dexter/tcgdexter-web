@@ -463,11 +463,12 @@ async function rasterizeMat({
   ctx.fillRect(0, 0, totalW, totalH);
 
   // ── 5. Header: deck name + logo ───────────────────────────────────────────
+  // Export-only — the on-page preview above the mat shows just the deck
+  // name (no logo there, per the site's dark-mode nav-logo pass).
   const headerY = EXPORT_PADDING;
   const logoImg = imageMap.get("/logo-wordmark.png");
-  const LOGO_H = 30;
   const logoW = logoImg
-    ? Math.round(LOGO_H * (logoImg.naturalWidth / logoImg.naturalHeight))
+    ? Math.round(HEADER_H * (logoImg.naturalWidth / logoImg.naturalHeight))
     : 0;
   const nameMaxW =
     totalW - EXPORT_PADDING * 2 - (logoW > 0 ? logoW + 16 : 0);
@@ -487,7 +488,7 @@ async function rasterizeMat({
   ctx.fillText(displayName, EXPORT_PADDING, headerY + HEADER_H / 2);
 
   if (logoImg) {
-    ctx.drawImage(logoImg, totalW - EXPORT_PADDING - logoW, headerY, logoW, LOGO_H);
+    ctx.drawImage(logoImg, totalW - EXPORT_PADDING - logoW, headerY, logoW, HEADER_H);
   }
 
   // ── 6. Mat background ─────────────────────────────────────────────────────
@@ -796,19 +797,11 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
         {/* Right on desktop: Mat + controls */}
         <div ref={matColumnRef} className="flex flex-col gap-3 md:order-last">
           <div ref={exportRef} className="flex flex-col gap-3">
-            {/* Mat header: deck name left, site logo right */}
-            <div className="flex items-center justify-between gap-4">
+            {/* Mat header: deck name */}
+            <div className="flex items-center gap-4">
               <span className="text-lg sm:text-xl font-semibold text-text-primary truncate">
                 {decks.find((d) => d.id === selectedDeckId)?.name ?? ""}
               </span>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/logo-wordmark.png"
-                alt="TCG Dexter"
-                width={1920}
-                height={453}
-                className="h-[27px] sm:h-[30px] w-auto flex-shrink-0"
-              />
             </div>
 
             <div
@@ -951,7 +944,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             <button
               type="button"
               onClick={handleImageButton}
-              className="w-full max-w-[368px] md:max-w-[445px] py-2.5 rounded-full border border-black/15 bg-white text-sm font-semibold text-text-primary hover:bg-black/[0.03] transition-colors inline-flex items-center justify-center gap-2"
+              className="w-full max-w-[368px] md:max-w-[445px] py-2.5 rounded-full border border-black/15 bg-white text-sm font-semibold text-text-primary dark:text-black hover:bg-black/[0.03] transition-colors inline-flex items-center justify-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                 <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -973,7 +966,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
         </div>
 
         {/* Left on desktop: Deck list — sticky sidebar */}
-        <div className="flex flex-col gap-2 md:gap-0 md:order-first md:sticky md:top-16 xl:top-8 md:self-start">
+        <div className="flex flex-col gap-2 md:gap-0 md:order-first md:sticky md:top-16 xl:top-12 md:self-start">
           <label className="text-xs font-semibold uppercase tracking-wider text-text-muted md:h-[30px] md:flex md:items-end">
             Your decks
           </label>
@@ -1026,7 +1019,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                 })}
                 </ul>
               </div>
-              <div className="pointer-events-none absolute bottom-0 inset-x-0 h-12 bg-gradient-to-b from-[#f2f2f2]/0 to-[#f2f2f2]" />
+              <div className="pointer-events-none absolute bottom-0 inset-x-0 h-12 bg-gradient-to-b from-[#f2f2f2]/0 to-[#f2f2f2] dark:from-[#242424]/0 dark:to-[#242424]" />
             </div>
           )}
 

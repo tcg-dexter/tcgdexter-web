@@ -52,7 +52,7 @@ export default async function QuizPage() {
           </p>
         </header>
 
-        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-6 text-center">
+        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-6 text-center dark:bg-surface-elevated dark:border-white/10">
           <div className="flex justify-center mb-4">
             <CertifiedTrainerBadge size="md" />
           </div>
@@ -88,7 +88,7 @@ export default async function QuizPage() {
           <span>Trainer Quiz</span>
         </nav>
 
-        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-6 text-center">
+        <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-6 text-center dark:bg-surface-elevated dark:border-white/10">
           <div className="flex justify-center mb-4">
             <CertifiedTrainerBadge size="lg" />
           </div>

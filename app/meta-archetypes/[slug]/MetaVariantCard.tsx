@@ -169,7 +169,7 @@ export default function MetaVariantCard({
 
   return (
     <div
-      className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+      className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow dark:bg-surface-elevated dark:border-white/10"
       style={useFadeIn(index)}
     >
       {/* Banner — same treatment as the main meta-archetype preview cards'
@@ -182,7 +182,7 @@ export default function MetaVariantCard({
         style={{ background: `linear-gradient(120deg, ${accentDeep} 0%, ${accentBg} 100%)` }}
       >
         <div
-          className="absolute rounded-lg overflow-hidden bg-white"
+          className="absolute rounded-lg overflow-hidden bg-white dark:bg-surface-elevated"
           style={{
             width: 166,
             height: 229,
@@ -199,7 +199,7 @@ export default function MetaVariantCard({
           ) : null}
         </div>
         <div
-          className="absolute rounded-lg overflow-hidden bg-white shadow-[0_8px_18px_rgba(0,0,0,0.3)]"
+          className="absolute rounded-lg overflow-hidden bg-white shadow-[0_8px_18px_rgba(0,0,0,0.3)] dark:bg-surface-elevated"
           style={{
             width: "var(--hero-card-w, 166px)",
             height: "var(--hero-card-h, 229px)",

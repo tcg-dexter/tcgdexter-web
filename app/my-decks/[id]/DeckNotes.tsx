@@ -120,7 +120,7 @@ export default function DeckNotes({ savedDeckId, initialNotes }: Props) {
   }, []);
 
   return (
-    <div ref={containerRef} className="rounded-xl bg-white p-5">
+    <div ref={containerRef} className="rounded-xl bg-white dark:bg-surface-elevated p-5">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold text-text-primary">Notes</h2>
         {status !== "idle" && (

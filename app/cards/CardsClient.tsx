@@ -175,8 +175,8 @@ export default function CardsClient({ initialResult, facets, setStats, initialPa
           title={mode === "data" ? "Switch to catalog view" : "Switch to data view"}
           className={`inline-flex items-center justify-center h-[38px] w-[38px] rounded-full border transition-colors shrink-0 ${
             mode === "data"
-              ? "border-transparent bg-black text-white"
-              : "border-black/10 bg-white text-text-primary hover:bg-surface"
+              ? "border-transparent bg-black dark:bg-white text-white dark:text-black"
+              : "border-black/10 bg-white dark:bg-surface-2 text-text-primary hover:bg-surface"
           }`}
         >
           <svg
@@ -283,7 +283,7 @@ function CatalogBody({
             autoCorrect="off"
             autoCapitalize="off"
             spellCheck={false}
-            className="w-full pl-10 pr-4 py-2 rounded-full border border-black/10 bg-white text-[16px] sm:text-sm focus:outline-none focus-gradient-border transition-colors"
+            className="w-full pl-10 pr-4 py-2 rounded-full border border-black/10 bg-white dark:bg-surface-2 text-[16px] sm:text-sm focus:outline-none focus-gradient-border transition-colors"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -310,7 +310,7 @@ function CatalogBody({
             className={`text-xs font-semibold h-[38px] px-3 rounded-full transition ${
               activeFilterCount > 0
                 ? "border border-transparent bg-gradient-brand bg-origin-border text-white shadow-brand hover:shadow-brand-lg"
-                : "border border-black/10 bg-white hover:bg-surface"
+                : "border border-black/10 bg-white dark:bg-surface-2 hover:bg-surface"
             }`}
           >
             Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
@@ -324,12 +324,12 @@ function CatalogBody({
 
       {/* Filter panel */}
       {showFilters && (
-        <div className="rounded-2xl border border-black/8 bg-white p-4 mb-4 space-y-4">
+        <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated p-4 mb-4 space-y-4">
           {activeFilterCount > 0 && (
-            <div className="pb-3 border-b border-black/8">
+            <div className="pb-3 border-b border-black/8 dark:border-white/10">
               <button
                 onClick={clearFilters}
-                className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white hover:bg-surface transition-colors"
+                className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white dark:bg-surface-2 hover:bg-surface transition-colors"
               >
                 Clear all filters
               </button>
@@ -455,7 +455,7 @@ function VariantFilteredView({
 
   if (displayed.length === 0) {
     return (
-      <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center">
+      <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-8 text-center">
         <p className="text-sm text-text-secondary">No cards match these filters.</p>
       </div>
     );
@@ -500,8 +500,8 @@ function OwnershipRadios({
               aria-hidden="true"
               className={`relative inline-flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${
                 selected
-                  ? "border-accent bg-white"
-                  : "border-black/25 bg-white peer-hover:border-black/50"
+                  ? "border-accent bg-white dark:bg-surface-elevated"
+                  : "border-black/25 dark:border-white/25 bg-white dark:bg-surface-elevated peer-hover:border-black/50 dark:peer-hover:border-white/50"
               }`}
             >
               {selected && <span className="h-2 w-2 rounded-full bg-accent" />}
@@ -538,8 +538,8 @@ function FacetGroup({
               onClick={() => onToggle(opt)}
               className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors ${
                 on
-                  ? "bg-black text-white border-transparent"
-                  : "bg-white text-text-secondary border-black/10 hover:bg-surface"
+                  ? "bg-black dark:bg-white text-white dark:text-black border-transparent"
+                  : "bg-white dark:bg-surface-2 text-text-secondary border-black/10 hover:bg-surface"
               }`}
             >
               {opt}
@@ -580,7 +580,7 @@ function SetFacet({
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           placeholder="Filter sets…"
-          className="text-xs px-2 py-1 rounded-full border border-black/10 bg-white w-40"
+          className="text-xs px-2 py-1 rounded-full border border-black/10 bg-white dark:bg-surface-2 w-40"
         />
       </div>
       <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
@@ -592,8 +592,8 @@ function SetFacet({
               onClick={() => onToggle(s.id)}
               className={`text-xs font-medium px-2.5 py-1 rounded-full border transition-colors ${
                 on
-                  ? "bg-black text-white border-transparent"
-                  : "bg-white text-text-secondary border-black/10 hover:bg-surface"
+                  ? "bg-black dark:bg-white text-white dark:text-black border-transparent"
+                  : "bg-white dark:bg-surface-2 text-text-secondary border-black/10 hover:bg-surface"
               }`}
               title={s.id}
             >
@@ -632,7 +632,7 @@ function RangeFacet({
           value={min ?? ""}
           onChange={(e) => onChange(e.target.value === "" ? undefined : Number(e.target.value), max)}
           placeholder="Min"
-          className="text-xs px-2 py-1 rounded-full border border-black/10 bg-white w-24"
+          className="text-xs px-2 py-1 rounded-full border border-black/10 bg-white dark:bg-surface-2 w-24"
         />
         <span className="text-xs text-text-muted">to</span>
         <input
@@ -641,7 +641,7 @@ function RangeFacet({
           value={max ?? ""}
           onChange={(e) => onChange(min, e.target.value === "" ? undefined : Number(e.target.value))}
           placeholder="Max"
-          className="text-xs px-2 py-1 rounded-full border border-black/10 bg-white w-24"
+          className="text-xs px-2 py-1 rounded-full border border-black/10 bg-white dark:bg-surface-2 w-24"
         />
       </div>
     </div>
@@ -660,8 +660,8 @@ function GridView({ cards }: { cards: CardIndexEntry[] }) {
 
 function ListView({ cards }: { cards: CardIndexEntry[] }) {
   return (
-    <div className="rounded-2xl border border-black/8 bg-white overflow-hidden">
-      <div className="hidden md:grid grid-cols-[64px_2fr_1.5fr_80px_80px_80px_80px_100px] gap-3 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-text-muted border-b border-black/8">
+    <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated overflow-hidden">
+      <div className="hidden md:grid grid-cols-[64px_2fr_1.5fr_80px_80px_80px_80px_100px] gap-3 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-text-muted border-b border-black/8 dark:border-white/10">
         <span></span>
         <span>Name</span>
         <span>Set</span>
@@ -691,7 +691,7 @@ function ListRow({
 }) {
   const [mode, setMode] = useState<InventoryMenuMode | null>(null);
   return (
-    <li className={`relative ${isFirst ? "" : "border-t border-black/8"}`}>
+    <li className={`relative ${isFirst ? "" : "border-t border-black/8 dark:border-white/10"}`}>
       <Link
         href={`/cards/${encodeURIComponent(c.id)}`}
         className="grid grid-cols-[48px_1fr_auto] md:grid-cols-[64px_2fr_1.5fr_80px_80px_80px_80px_100px] gap-3 px-4 py-2 items-center hover:bg-surface transition-colors"
@@ -764,7 +764,7 @@ function Pagination({
         <button
           onClick={() => onPage(page - 1)}
           disabled={!canPrev}
-          className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white disabled:opacity-40 hover:bg-surface transition-colors"
+          className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white dark:bg-surface-2 disabled:opacity-40 hover:bg-surface transition-colors"
         >
           ← Prev
         </button>
@@ -774,7 +774,7 @@ function Pagination({
         <button
           onClick={() => onPage(page + 1)}
           disabled={!canNext}
-          className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white disabled:opacity-40 hover:bg-surface transition-colors"
+          className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white dark:bg-surface-2 disabled:opacity-40 hover:bg-surface transition-colors"
         >
           Next →
         </button>

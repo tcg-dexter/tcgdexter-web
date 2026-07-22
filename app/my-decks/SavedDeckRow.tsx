@@ -34,7 +34,7 @@ function CompositionBar({ counts }: { counts: NonNullable<UserDeckCardProps["cou
 function RecordPill({ wl }: { wl?: UserDeckCardProps["wl"] }) {
   const hasRecord = !!wl && wl.w + wl.l + wl.d > 0;
   return hasRecord ? (
-    <span className="rounded-full bg-black px-[11px] py-1 text-[12.5px] font-extrabold text-white tabular-nums">
+    <span className="rounded-full bg-black dark:bg-white px-[11px] py-1 text-[12.5px] font-extrabold text-white dark:text-black tabular-nums">
       {wl!.w}–{wl!.l}
     </span>
   ) : (
@@ -55,7 +55,7 @@ function FormPips({ recentForm }: { recentForm?: ("W" | "L" | "D")[] }) {
             r === "W"
               ? "bg-[linear-gradient(135deg,#F2A20C_0%,#D91E0D_50%,#A60D0D_100%)] text-white"
               : r === "L"
-              ? "bg-black text-white"
+              ? "bg-black dark:bg-white text-white dark:text-black"
               : "bg-black/5 text-text-muted"
           }`}
         >
@@ -108,7 +108,7 @@ export default function SavedDeckRow({
     : null;
 
   return (
-    <div className={`bg-white${isLast ? "" : " border-b border-bg"}`}>
+    <div className={`bg-white dark:bg-surface-elevated${isLast ? "" : " border-b border-bg"}`}>
       <div className="flex items-center gap-3.5 px-4 py-3">
         <Link href={href} className="shrink-0">
           <div

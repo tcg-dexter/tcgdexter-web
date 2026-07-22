@@ -242,7 +242,7 @@ function CardViewerModal({
           {tile.entryId ? (
             <Link
               href={`/cards/${encodeURIComponent(tile.entryId)}`}
-              className="inline-flex items-center gap-1.5 rounded-full bg-black text-white text-sm font-semibold px-5 py-2 shadow-md hover:bg-black/85 transition"
+              className="inline-flex items-center gap-1.5 rounded-full bg-black dark:bg-white text-white dark:text-black text-sm font-semibold px-5 py-2 shadow-md hover:bg-black/85 dark:hover:bg-white/85 transition"
             >
               Details
             </Link>

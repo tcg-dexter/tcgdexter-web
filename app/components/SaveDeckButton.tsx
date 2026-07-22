@@ -113,7 +113,7 @@ export default function SaveDeckButton({
 
   const baseClasses =
     className ??
-    "inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-black/85 disabled:opacity-50 disabled:cursor-not-allowed";
+    "inline-flex items-center justify-center gap-2 rounded-full bg-black dark:bg-white px-5 py-2.5 text-sm font-semibold text-white dark:text-black transition-all hover:bg-black/85 dark:hover:bg-white/85 disabled:opacity-50 disabled:cursor-not-allowed";
 
   return (
     <>
@@ -161,7 +161,7 @@ export default function SaveDeckButton({
           onClick={() => setSignInPrompt(false)}
         >
           <div
-            className="w-full max-w-sm rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl p-6 shadow-2xl"
+            className="w-full max-w-sm rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between mb-4">

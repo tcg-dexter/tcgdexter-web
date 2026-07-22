@@ -11,6 +11,7 @@ import {
   VersusIcon,
   PlaymatIcon,
 } from "./nav-icons";
+import AppearanceToggle from "@/app/settings/AppearanceToggle";
 
 interface Props {
   /** Passed from the server component so the auth item renders correctly. */
@@ -95,11 +96,19 @@ export default function SiteSidebar({
         <Link href="/" aria-label="TCG Dexter — home" className="block w-full">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/logo-wordmark.png"
+            src="/logo-wordmark-light.png"
             alt="TCG Dexter"
             width={1920}
             height={453}
-            className="w-full h-auto"
+            className="w-full h-auto dark:hidden"
+          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo-wordmark-dark.png"
+            alt="TCG Dexter"
+            width={1920}
+            height={453}
+            className="w-full h-auto hidden dark:block"
           />
         </Link>
       </div>
@@ -122,29 +131,38 @@ export default function SiteSidebar({
           ))}
         </ul>
 
-        {/* Auth row — anchored to the bottom. Admin destinations live in
-            the trailing-edge sidebar's Admin section, not here. */}
-        <ul className="mt-auto flex flex-col gap-0.5 pt-4">
-          <li>
-            {isAuthed ? (
-              <Link
-                href={profileHref}
-                className={`${linkBase} ${profileActive ? linkActive : linkInactive}`}
-              >
-                <UserIcon />
-                <span>{displayName ?? "Profile"}</span>
-              </Link>
-            ) : (
-              <Link
-                href="/sign-in"
-                className={`${linkBase} ${isActive("/sign-in") ? linkActive : linkInactive}`}
-              >
-                <UserIcon />
-                <span>Sign in</span>
-              </Link>
-            )}
-          </li>
-        </ul>
+        {/* Appearance + auth row — anchored to the bottom. Admin
+            destinations live in the trailing-edge sidebar's Admin
+            section, not here. */}
+        <div className="mt-auto pt-4">
+          <div className="px-3 mb-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-muted mb-2">
+              Appearance
+            </p>
+            <AppearanceToggle />
+          </div>
+          <ul className="flex flex-col gap-0.5">
+            <li>
+              {isAuthed ? (
+                <Link
+                  href={profileHref}
+                  className={`${linkBase} ${profileActive ? linkActive : linkInactive}`}
+                >
+                  <UserIcon />
+                  <span>{displayName ?? "Profile"}</span>
+                </Link>
+              ) : (
+                <Link
+                  href="/sign-in"
+                  className={`${linkBase} ${isActive("/sign-in") ? linkActive : linkInactive}`}
+                >
+                  <UserIcon />
+                  <span>Sign in</span>
+                </Link>
+              )}
+            </li>
+          </ul>
+        </div>
       </nav>
     </aside>
   );

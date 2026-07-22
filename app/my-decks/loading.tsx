@@ -14,7 +14,7 @@ export default function MyDecksLoading() {
         <SectionHeader title="Deck Collection" />
       </div>
 
-      <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden mb-4 h-[170px] md:h-[220px]">
+      <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden mb-4 h-[170px] md:h-[220px]">
         <SkeletonBlock height="h-full" className="rounded-none" />
       </div>
 
@@ -22,7 +22,7 @@ export default function MyDecksLoading() {
         {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
-            className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden"
+            className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden"
           >
             <SkeletonBlock height="h-[150px]" className="rounded-none" />
             <div className="px-3.5 pt-3 pb-1">
@@ -36,7 +36,7 @@ export default function MyDecksLoading() {
                 <SkeletonLine width="w-20" height="h-3" />
               </div>
             </div>
-            <div className="flex border-t border-black/5">
+            <div className="flex border-t border-black/5 dark:border-white/10">
               <SkeletonLine width="w-full" height="h-9" className="rounded-none" />
             </div>
           </div>

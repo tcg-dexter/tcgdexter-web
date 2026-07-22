@@ -88,7 +88,7 @@ export default function DataView({
       />
 
       {signedIn === false && (
-        <div className="rounded-2xl border border-black/8 bg-white p-6 text-center">
+        <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated p-6 text-center">
           <p className="text-sm text-text-secondary">
             <Link href="/sign-in" className="font-semibold text-accent hover:underline">
               Sign in
@@ -173,8 +173,8 @@ function SetFilterRadios({
               aria-hidden="true"
               className={`relative inline-flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${
                 selected
-                  ? "border-accent bg-white"
-                  : "border-black/25 bg-white peer-hover:border-black/50"
+                  ? "border-accent bg-white dark:bg-surface-elevated"
+                  : "border-black/25 dark:border-white/25 bg-white dark:bg-surface-elevated peer-hover:border-black/50 dark:peer-hover:border-white/50"
               }`}
             >
               {selected && <span className="h-2 w-2 rounded-full bg-accent" />}
@@ -215,7 +215,7 @@ function StatRow({
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-black/8 bg-white p-4">
+    <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated p-4">
       <div className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
         {label}
       </div>
@@ -263,7 +263,7 @@ function SetCompletionRow({
             // the logo column undivided as requested.
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute -top-3 inset-x-0 h-px bg-black/8"
+              className="pointer-events-none absolute -top-3 inset-x-0 h-px bg-black/8 dark:bg-white/8"
             />
           )}
           <div className="flex items-start justify-between gap-3 mb-2">
@@ -329,7 +329,7 @@ function SetPagination({
       <button
         onClick={() => onPage(page - 1)}
         disabled={!canPrev}
-        className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white disabled:opacity-40 hover:bg-surface transition-colors"
+        className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white dark:bg-surface-2 disabled:opacity-40 hover:bg-surface transition-colors"
       >
         ← Prev
       </button>
@@ -339,7 +339,7 @@ function SetPagination({
       <button
         onClick={() => onPage(page + 1)}
         disabled={!canNext}
-        className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white disabled:opacity-40 hover:bg-surface transition-colors"
+        className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white dark:bg-surface-2 disabled:opacity-40 hover:bg-surface transition-colors"
       >
         Next →
       </button>

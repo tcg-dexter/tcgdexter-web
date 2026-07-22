@@ -30,7 +30,7 @@ export default function DeckMulliganModule({ deckSize, basicCount }: Props) {
     pct >= 10 ? `${pct.toFixed(0)}%` : pct >= 0.1 ? `${pct.toFixed(1)}%` : "<0.1%";
 
   const cardClass =
-    "rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5";
+    "rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-5";
 
   return (
     <div className={cardClass}>

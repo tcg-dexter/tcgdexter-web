@@ -63,9 +63,9 @@ export default function EditDisplayName({ initialName, joinedDate }: Props) {
   }
 
   return (
-    <div className={`border-b border-black/5 ${editing ? "" : "grid grid-cols-2"}`}>
+    <div className={`border-b border-black/5 dark:border-white/10 ${editing ? "" : "grid grid-cols-2"}`}>
       {/* Display name cell — spans full row when editing */}
-      <div className="px-4 py-3 bg-white">
+      <div className="px-4 py-3 bg-white dark:bg-surface-elevated">
         <p className="text-[11px] font-semibold uppercase tracking-widest text-text-muted">
           Display name
         </p>

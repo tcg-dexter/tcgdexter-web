@@ -70,7 +70,7 @@ export default async function AdminToolsPage() {
             <li key={tool.href}>
               <Link
                 href={tool.href}
-                className="block rounded-2xl border border-black/8 bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
+                className="block rounded-2xl border border-black/8 bg-white p-4 shadow-sm hover:shadow-md transition-shadow dark:bg-surface-elevated dark:border-white/10"
               >
                 <div className="text-sm font-semibold text-text-primary">
                   {tool.title}

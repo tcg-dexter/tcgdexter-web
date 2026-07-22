@@ -53,7 +53,7 @@ export default function EditPublicToggle({
   }
 
   return (
-    <div className="px-4 py-3 bg-white">
+    <div className="px-4 py-3 bg-white dark:bg-surface-elevated">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-text-muted">
@@ -74,7 +74,7 @@ export default function EditPublicToggle({
           onClick={handleToggle}
           disabled={busy}
           className={`flex-shrink-0 relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${
-            isPublic ? "bg-accent" : "bg-black/20"
+            isPublic ? "bg-accent" : "bg-black/20 dark:bg-white/20"
           }`}
         >
           <span

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import UnifiedSearch from "@/app/leaderboard/UnifiedSearch";
+import AppearanceToggle from "@/app/settings/AppearanceToggle";
 import {
   TrophyIcon,
   WrenchIcon,
@@ -15,7 +16,6 @@ import {
   UserIcon,
   DiscordIcon,
   GaugeIcon,
-  MailIcon,
   TikTokIcon,
   ShoppingBagIcon,
   VersusIcon,
@@ -185,8 +185,12 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
         ),
       );
 
-    // Move focus into panel immediately.
-    getFocusable()[0]?.focus({ preventScroll: true });
+    // Move focus into the panel immediately, landing on the dialog
+    // container itself (tabIndex={-1}) rather than the first focusable
+    // descendant — that first descendant is the logo link, and focusing
+    // it directly paints a visible focus ring on it (looking like an
+    // accidental "selection") even though the user never tabbed there.
+    panel.focus({ preventScroll: true });
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -248,7 +252,6 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
   // every admin destination lives under a single eyebrow.
   const ADMIN_LINKS = [
     { href: "/dashboard", label: "Dashboard", Icon: GaugeIcon },
-    { href: "/dashboard/crm", label: "CRM", Icon: MailIcon },
     { href: "/admin-tools", label: "Admin Tools", Icon: WrenchIcon },
   ];
 
@@ -274,10 +277,11 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
       role="dialog"
       aria-label="Site navigation"
       aria-modal="true"
+      tabIndex={-1}
       className={[
         // Full-screen takeover. overscroll-contain prevents momentum scroll
         // bleeding to the page behind on iOS Safari.
-        "fixed inset-0 z-[110] flex flex-col overscroll-contain",
+        "fixed inset-0 z-[110] flex flex-col overscroll-contain outline-none",
         // pointer-events toggles with isOpen so the page under the fading-
         // out body isn't interactable mid-transition.
         isOpen ? "pointer-events-auto" : "pointer-events-none",
@@ -292,24 +296,34 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
           toolbar, so only one toolbar is ever rendered at a time. */}
       <div className="flex-shrink-0 backdrop-blur-xl bg-bg/70">
         <div className="mx-auto max-w-6xl px-6">
-          {/* Header row: logo (home link) on the left, hamburger close on
-              the right. Both share the same h-14 baseline as the closed
-              toolbar so the hamburger doesn't shift between open and
+          {/* Header row: logo (home link) absolutely centered, hamburger
+              close pinned to the right. Both share the same h-14
+              baseline as the closed toolbar, and the logo shares its
+              exact centered position with the closed toolbar's
+              `MobileToolbarLogo`, so nothing shifts between open and
               closed states. */}
-          <div className="h-14 flex items-center justify-between">
+          <div className="h-14 relative flex items-center justify-end">
             <Link
               href="/"
               aria-label="TCG Dexter — home"
-              className="inline-flex items-center"
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex items-center"
               onClick={closeMenu}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/logo-wordmark.png"
+                src="/logo-wordmark-light.png"
                 alt="TCG Dexter"
                 width={1920}
                 height={453}
-                className="h-8 w-auto"
+                className="h-8 w-auto dark:hidden"
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo-wordmark-dark.png"
+                alt="TCG Dexter"
+                width={1920}
+                height={453}
+                className="h-8 w-auto hidden dark:block"
               />
             </Link>
             <button
@@ -390,6 +404,13 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
             )}
 
             <li role="separator" className="my-4" />
+
+            <li role="presentation" className="pb-3">
+              <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-text-muted mb-2">
+                Appearance
+              </span>
+              <AppearanceToggle />
+            </li>
 
             {/* Auth item — anchored at the bottom of the link list, above
                 the search bar. */}

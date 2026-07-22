@@ -118,7 +118,7 @@ export default function QuizClient({
   // here we only ever render Pass or Fail of a fresh attempt.
   return (
     <>
-      <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5">
+      <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5 dark:bg-surface-elevated dark:border-white/10">
         <div className="flex items-baseline justify-between mb-3">
           <h2 className="text-sm font-semibold text-text-primary">
             Trainer Quiz
@@ -151,7 +151,7 @@ export default function QuizClient({
                         className={`flex items-start gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors ${
                           checked
                             ? "border-accent bg-accent/5"
-                            : "border-border bg-white hover:bg-black/[0.02]"
+                            : "border-border bg-white hover:bg-black/[0.02] dark:bg-surface-2"
                         }`}
                       >
                         <input
@@ -185,7 +185,7 @@ export default function QuizClient({
             type="button"
             onClick={() => scrollTo(active - 1)}
             disabled={active === 0 || submitting}
-            className="relative flex items-center justify-center rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-black/85 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="relative flex items-center justify-center rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-black/85 disabled:opacity-40 disabled:cursor-not-allowed dark:bg-white dark:text-black dark:hover:bg-white/85"
           >
             <svg
               className="absolute left-5 w-4 h-4"
@@ -231,7 +231,7 @@ export default function QuizClient({
       {result && (
         <div
           ref={resultRef}
-          className="mt-6 rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-6 text-center"
+          className="mt-6 rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-6 text-center dark:bg-surface-elevated dark:border-white/10"
         >
           {result.passed ? (
             <>

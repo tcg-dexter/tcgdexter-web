@@ -365,7 +365,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
 
   if (!game) {
     return (
-      <div className="rounded-2xl border border-black/8 bg-white p-4 shadow-sm">
+      <div className="rounded-2xl border border-black/8 bg-white p-4 shadow-sm dark:bg-surface-elevated dark:border-white/10">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {[
             { label: "Your deck", value: humanDeckId, set: setHumanDeckId },
@@ -376,7 +376,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
               <select
                 value={value}
                 onChange={(e) => set(e.target.value)}
-                className="w-full rounded-lg border border-black/15 bg-white px-2 py-1.5 text-xs text-text-primary"
+                className="w-full rounded-lg border border-black/15 bg-white px-2 py-1.5 text-xs text-text-primary dark:bg-surface-2 dark:border-white/10"
               >
                 <optgroup label="My decks">
                   {decks.filter((d) => d.source === "saved").map((d) => (
@@ -399,8 +399,8 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
               onClick={() => setDifficulty(d.key)}
               className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
                 difficulty === d.key
-                  ? "border border-transparent bg-black text-white"
-                  : "border border-black/15 bg-white text-text-secondary"
+                  ? "border border-transparent bg-black text-white dark:bg-white dark:text-black"
+                  : "border border-black/15 bg-white text-text-secondary dark:bg-surface-2 dark:border-white/10"
               }`}
             >
               {d.label}
@@ -414,7 +414,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
             {loading ? "Setting up…" : "Start Game"}
           </button>
         </div>
-        {error && <p className="mt-3 text-xs text-red-700">{error}</p>}
+        {error && <p className="mt-3 text-xs text-accent">{error}</p>}
       </div>
     );
   }

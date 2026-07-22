@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
+import BattleAnalysis from "@/app/components/BattleAnalysis";
 import BattleLogDetail from "@/app/components/BattleLogDetail";
 import BackButton from "@/app/components/ui/BackButton";
 import ThemeColor from "@/app/components/ThemeColor";
@@ -209,6 +210,11 @@ export default function BattleLogPage({
         </div>
       </div>
 
+      {/* Game review — win-prob curve + coach insights from the value
+          model. Self-fetching and self-hiding: renders nothing when the
+          match has no log or the analysis endpoint declines. */}
+      {hasBattleLog && <BattleAnalysis matchId={matchId} />}
+
       {/* Battle log — full width. The heading sits above the thread
           as a strong section break: bold uppercase title flanked by a
           short accent rule, with a turn-count caption underneath. */}
@@ -237,7 +243,7 @@ export default function BattleLogPage({
             />
           </>
         ) : (
-          <div className="mt-4 rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5 text-sm text-text-muted text-center">
+          <div className="mt-4 rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5 text-sm text-text-muted text-center dark:bg-surface-elevated dark:border-white/10">
             No battle log available for this match.
           </div>
         )}
@@ -264,10 +270,10 @@ function StatCard({
     tone === "gradient"
       ? "rounded-2xl bg-gradient-brand shadow-sm px-4 py-3 text-center text-white"
       : tone === "dark"
-      ? "rounded-2xl bg-black shadow-sm px-4 py-3 text-center text-white"
+      ? "rounded-2xl bg-black dark:bg-white shadow-sm px-4 py-3 text-center text-white dark:text-black"
       : tone === "ringed"
-      ? "rounded-2xl bg-white/90 backdrop-blur-xl shadow-[inset_0_0_0_1px_black] px-4 py-3 text-center"
-      : "rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm px-4 py-3 text-center";
+      ? "rounded-2xl bg-white/90 backdrop-blur-xl shadow-[inset_0_0_0_1px_black] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35)] px-4 py-3 text-center dark:bg-surface-elevated"
+      : "rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm px-4 py-3 text-center dark:bg-surface-elevated dark:border-white/10";
 
   const valueClass =
     tone === "gradient" || tone === "dark"

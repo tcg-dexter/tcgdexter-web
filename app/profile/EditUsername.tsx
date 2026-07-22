@@ -66,7 +66,7 @@ export default function EditUsername({
   // Already set — render read-only.
   if (username && !editing) {
     return (
-      <div className="px-4 py-3 border-b border-black/5">
+      <div className="px-4 py-3 border-b border-black/5 dark:border-white/10">
         <p className="text-[11px] font-semibold uppercase tracking-widest text-text-muted">
           Username
         </p>
@@ -85,7 +85,7 @@ export default function EditUsername({
   // Not yet set — show inline editor (initially closed unless the user clicks Set).
   if (!editing) {
     return (
-      <div className="px-4 py-3 border-b border-black/5">
+      <div className="px-4 py-3 border-b border-black/5 dark:border-white/10">
         <p className="text-[11px] font-semibold uppercase tracking-widest text-text-muted">
           Username
         </p>
@@ -111,7 +111,7 @@ export default function EditUsername({
 
   // Editing — full input.
   return (
-    <div className="px-4 py-3 border-b border-black/5">
+    <div className="px-4 py-3 border-b border-black/5 dark:border-white/10">
       <p className="text-[11px] font-semibold uppercase tracking-widest text-text-muted">
         Username
       </p>

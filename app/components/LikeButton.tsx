@@ -69,7 +69,7 @@ export default function LikeButton({
         className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${
           liked
             ? "border-accent bg-accent/10 text-accent"
-            : "border-black/10 bg-white text-text-secondary hover:border-black/20"
+            : "border-black/10 bg-white dark:bg-surface-2 text-text-secondary hover:border-black/20"
         }`}
       >
         <svg

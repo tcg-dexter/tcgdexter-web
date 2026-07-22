@@ -162,7 +162,7 @@ export default function QRCodeButton({ shareUrl, deckList, analysis, className }
           onClick={() => setOpen(false)}
         >
           <div
-            className="w-full max-w-sm rounded-2xl bg-white/90 backdrop-blur-xl border border-black/5 p-6 shadow-brand-lg"
+            className="w-full max-w-sm rounded-2xl bg-white/90 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 shadow-brand-lg"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -216,7 +216,7 @@ export default function QRCodeButton({ shareUrl, deckList, analysis, className }
                 readOnly
                 value={resolvedUrl}
                 onFocus={(e) => e.target.select()}
-                className="flex-1 min-w-0 rounded-lg border border-black/5 bg-white px-3 py-2 text-xs text-text-secondary focus:outline-none"
+                className="flex-1 min-w-0 rounded-lg border border-black/5 bg-white dark:bg-surface-2 px-3 py-2 text-xs text-text-secondary focus:outline-none"
               />
               <button
                 onClick={handleCopy}

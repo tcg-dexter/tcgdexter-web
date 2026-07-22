@@ -13,7 +13,7 @@ import { attackBaseDamage, attackEffect, discardAllEnergy } from "./attacks";
 import { applyAbility, hasOnEvolveTrigger, onEvolve } from "./abilities";
 import {
   applyCondition,
-  attackInflictsCondition,
+  attackInflictedConditions,
   attackSelfClears,
   cannotAct,
   clearConditions,
@@ -263,9 +263,11 @@ export function applyMove(
       const base = attackBaseDamage(state, actor, attacker, move.attackIndex);
       dealRawDamage(defender, applyWeaknessResistance(base, attacker, defender));
 
-      // Attack-inflicted condition on the defending active (Mind Bend).
-      const inflict = attackInflictsCondition(attacker.card.name, attack.name);
-      if (inflict) applyCondition(defender, inflict);
+      // Attack-inflicted conditions on the defending active (Mind Bend,
+      // Bemusing Aroma, Thunder Shock — coin flips resolve via rng).
+      for (const c of attackInflictedConditions(attacker.card.name, attack.name, rng ?? undefined)) {
+        applyCondition(defender, c);
+      }
 
       // Placement / self-cost side effects (no Weakness/Resistance on bench).
       const effect = attackEffect(attacker, move.attackIndex);

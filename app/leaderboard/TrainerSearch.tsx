@@ -69,7 +69,7 @@ export default function TrainerSearch() {
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck={false}
-          className="w-full rounded-xl border border-black/10 bg-white pl-10 pr-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus-gradient-border [font-size:16px] sm:text-sm"
+          className="w-full rounded-xl border border-black/10 bg-white pl-10 pr-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus-gradient-border [font-size:16px] sm:text-sm dark:bg-surface-2"
         />
       </div>
 
@@ -78,7 +78,7 @@ export default function TrainerSearch() {
       )}
 
       {results.length > 0 && (
-        <ul className="mt-2 rounded-xl border border-black/8 bg-white shadow-sm overflow-hidden divide-y divide-black/5">
+        <ul className="mt-2 rounded-xl border border-black/8 bg-white shadow-sm overflow-hidden divide-y divide-black/5 dark:bg-surface-elevated dark:border-white/10">
           {results.map((p) => (
             <li key={p.username}>
               <Link

@@ -61,7 +61,7 @@ export default function DeckListCard({ deckList }: { deckList: string }) {
   const sections = parseDeckList(deckList);
   if (sections.length === 0) return null;
   return (
-    <details className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5 group">
+    <details className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-5 group">
       <summary className="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden">
         <h2 className="text-lg font-semibold">Deck List</h2>
         <div className="flex items-center gap-2">

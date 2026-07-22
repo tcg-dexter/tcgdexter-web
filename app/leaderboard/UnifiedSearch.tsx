@@ -170,13 +170,13 @@ export default function UnifiedSearch({ dropdownPosition = "below", placeholder 
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck={false}
-          className="w-full rounded-full border border-black/10 bg-white px-4 py-3 pl-10 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus-gradient-border [font-size:16px] sm:text-sm"
+          className="w-full rounded-full border border-black/10 bg-white px-4 py-3 pl-10 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus-gradient-border [font-size:16px] sm:text-sm dark:bg-surface-2"
         />
       </div>
 
       {searched && query.length >= 2 && (
         <div
-          className={`absolute left-0 right-0 z-30 rounded-xl border border-black/8 bg-white shadow-lg overflow-hidden ${
+          className={`absolute left-0 right-0 z-30 rounded-xl border border-black/8 bg-white shadow-lg overflow-hidden dark:bg-surface-elevated dark:border-white/10 ${
             dropdownPosition === "above" ? "bottom-full mb-2" : "top-full mt-2"
           }`}
         >
@@ -224,7 +224,7 @@ export default function UnifiedSearch({ dropdownPosition = "below", placeholder 
               )}
 
               {results.decks.length > 0 && (
-                <div className={results.trainers.length > 0 ? "border-t border-black/5" : ""}>
+                <div className={results.trainers.length > 0 ? "border-t border-black/5 dark:border-white/10" : ""}>
                   <p className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
                     Decks
                   </p>
@@ -277,7 +277,7 @@ export default function UnifiedSearch({ dropdownPosition = "below", placeholder 
                 <div
                   className={
                     results.trainers.length > 0 || results.decks.length > 0
-                      ? "border-t border-black/5"
+                      ? "border-t border-black/5 dark:border-white/10"
                       : ""
                   }
                 >

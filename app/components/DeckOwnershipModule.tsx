@@ -33,7 +33,7 @@ interface Props {
 }
 
 const CARD_CLS =
-  "rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5";
+  "rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-5";
 
 type State = "loading" | "signedOut" | "empty" | "owned";
 type AddMode = "off" | "options" | "manual";
@@ -319,7 +319,7 @@ export default function DeckOwnershipModule({ cards }: Props) {
             <button
               type="button"
               onClick={() => setAddMode("options")}
-              className="mb-4 w-full inline-flex items-center justify-center gap-2 rounded-full border border-black/15 bg-white py-2.5 text-sm font-semibold text-text-primary hover:bg-black/[0.03] transition-colors"
+              className="mb-4 w-full inline-flex items-center justify-center gap-2 rounded-full border border-black/15 bg-white dark:bg-surface-2 py-2.5 text-sm font-semibold text-text-primary hover:bg-black/[0.03] transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
                 <path d="M12 5v14M5 12h14" />
@@ -334,7 +334,7 @@ export default function DeckOwnershipModule({ cards }: Props) {
                 <button
                   type="button"
                   onClick={() => setConfirm("all")}
-                  className="flex-1 min-w-[8rem] rounded-full bg-black px-3 py-2 text-xs font-semibold text-white hover:bg-black/85 transition-colors"
+                  className="flex-1 min-w-[8rem] rounded-full bg-black dark:bg-white px-3 py-2 text-xs font-semibold text-white dark:text-black hover:bg-black/85 dark:hover:bg-white/85 transition-colors"
                 >
                   Add all cards
                 </button>
@@ -342,14 +342,14 @@ export default function DeckOwnershipModule({ cards }: Props) {
                   type="button"
                   onClick={() => setConfirm("unowned")}
                   disabled={unownedTotal === 0}
-                  className="flex-1 min-w-[8rem] rounded-full bg-black px-3 py-2 text-xs font-semibold text-white hover:bg-black/85 transition-colors disabled:opacity-40"
+                  className="flex-1 min-w-[8rem] rounded-full bg-black dark:bg-white px-3 py-2 text-xs font-semibold text-white dark:text-black hover:bg-black/85 dark:hover:bg-white/85 transition-colors disabled:opacity-40"
                 >
                   Add unowned cards
                 </button>
                 <button
                   type="button"
                   onClick={enterManual}
-                  className="flex-1 min-w-[8rem] rounded-full border border-black/15 bg-white px-3 py-2 text-xs font-semibold text-text-primary hover:bg-black/[0.03] transition-colors"
+                  className="flex-1 min-w-[8rem] rounded-full border border-black/15 bg-white dark:bg-surface-2 px-3 py-2 text-xs font-semibold text-text-primary hover:bg-black/[0.03] transition-colors"
                 >
                   Manually select
                 </button>
@@ -365,7 +365,7 @@ export default function DeckOwnershipModule({ cards }: Props) {
           )}
 
           {/* Column headers */}
-          <div className="flex items-center gap-3 pb-1.5 mb-1.5 border-b border-black/5 text-[11px] font-semibold uppercase tracking-wider text-black">
+          <div className="flex items-center gap-3 pb-1.5 mb-1.5 border-b border-black/5 dark:border-white/10 text-[11px] font-semibold uppercase tracking-wider text-black dark:text-white">
             <span className="flex-1" />
             {manualMode ? (
               <span className="w-[7.5rem] text-right">Add</span>
@@ -379,7 +379,7 @@ export default function DeckOwnershipModule({ cards }: Props) {
 
           <ul className="space-y-1.5">
             {rows.map((r, i) => {
-              const tone = r.owned >= r.qty ? "text-black" : "text-accent";
+              const tone = r.owned >= r.qty ? "text-black dark:text-white" : "text-accent";
               const canAdd = !!cards[i].add;
               return (
                 <li key={`${r.name}-${i}`} className="flex items-center gap-3 text-sm">
@@ -398,7 +398,7 @@ export default function DeckOwnershipModule({ cards }: Props) {
                         onClick={() => setQty(i, (manualQty[i] ?? 0) - 1)}
                         disabled={!canAdd || (manualQty[i] ?? 0) <= 0}
                         aria-label={`Remove one ${r.name}`}
-                        className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-full border border-black/15 bg-white text-text-primary hover:bg-black/[0.03] transition-colors disabled:opacity-30"
+                        className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-full border border-black/15 bg-white dark:bg-surface-2 text-text-primary hover:bg-black/[0.03] transition-colors disabled:opacity-30"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><path d="M5 12h14" /></svg>
                       </button>
@@ -407,7 +407,7 @@ export default function DeckOwnershipModule({ cards }: Props) {
                         onClick={() => setQty(i, (manualQty[i] ?? 0) + 1)}
                         disabled={!canAdd}
                         aria-label={`Add one ${r.name}`}
-                        className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-full border border-black/15 bg-white text-text-primary hover:bg-black/[0.03] transition-colors disabled:opacity-30"
+                        className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-full border border-black/15 bg-white dark:bg-surface-2 text-text-primary hover:bg-black/[0.03] transition-colors disabled:opacity-30"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
                       </button>
@@ -418,7 +418,7 @@ export default function DeckOwnershipModule({ cards }: Props) {
                         value={canAdd ? (manualQty[i] ?? 0) : 0}
                         disabled={!canAdd}
                         onChange={(e) => setQty(i, parseInt(e.target.value || "0", 10) || 0)}
-                        className="w-10 rounded-md border border-black/15 bg-bg px-1 py-1 text-right tabular-nums text-text-primary focus:outline-none focus:border-accent/40 disabled:opacity-40 [font-size:16px] sm:text-sm"
+                        className="w-10 rounded-md border border-black/15 dark:border-white/10 bg-bg px-1 py-1 text-right tabular-nums text-text-primary focus:outline-none focus:border-accent/40 disabled:opacity-40 [font-size:16px] sm:text-sm"
                       />
                     </div>
                   ) : (
@@ -475,7 +475,7 @@ export default function DeckOwnershipModule({ cards }: Props) {
             onClick={() => !adding && setConfirm(null)}
           >
             <div
-              className="w-full max-w-sm rounded-2xl bg-white/95 backdrop-blur-xl border border-black/5 p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]"
+              className="w-full max-w-sm rounded-2xl bg-white/95 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]"
               onClick={(e) => e.stopPropagation()}
             >
               <h2 className="text-base font-semibold text-text-primary">
@@ -491,7 +491,7 @@ export default function DeckOwnershipModule({ cards }: Props) {
                   type="button"
                   onClick={() => setConfirm(null)}
                   disabled={adding}
-                  className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-4 py-1.5 text-xs font-semibold text-text-secondary hover:bg-black/5 transition disabled:opacity-50"
+                  className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white dark:bg-surface-2 px-4 py-1.5 text-xs font-semibold text-text-secondary hover:bg-black/5 transition disabled:opacity-50"
                 >
                   Cancel
                 </button>

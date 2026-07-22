@@ -224,7 +224,7 @@ function ChevronButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={direction === "left" ? "Previous decks" : "Next decks"}
-      className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-black/10 bg-white text-text-primary disabled:text-text-muted disabled:bg-surface disabled:cursor-not-allowed hover:bg-surface transition-colors"
+      className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-black/10 bg-white dark:bg-surface-2 text-text-primary disabled:text-text-muted disabled:bg-surface disabled:cursor-not-allowed hover:bg-surface transition-colors"
     >
       <svg
         width="16"

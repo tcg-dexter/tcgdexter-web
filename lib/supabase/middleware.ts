@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { THEME_COOKIE, THEME_COOKIE_MAX_AGE } from "@/lib/theme";
 
 // Analytics identity cookies. dx_aid is a stable per-browser id used to
 // stitch pre- and post-signup behavior; dx_sid is a sliding 30-min session
@@ -96,7 +97,35 @@ export async function updateSession(request: NextRequest) {
 
     // IMPORTANT: This call refreshes the session if needed.
     // Must run on every request to keep the auth cookie fresh.
-    await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    // Cross-device theme sync: only on a device/browser that doesn't have
+    // a dx_theme cookie yet (a fresh sign-in, cleared cookies, etc.) — an
+    // existing cookie is trusted as-is so this doesn't add a profile
+    // fetch to every single request from an already-synced browser.
+    if (user && !request.cookies.get(THEME_COOKIE)) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("theme_preference")
+        .eq("id", user.id)
+        .single();
+      if (profile?.theme_preference) {
+        // Set on both the outgoing request (so this same render sees it
+        // via cookies() in the Server Component tree) and the response
+        // (so the browser persists it) — mirrors the Supabase session
+        // cookie pattern above.
+        request.cookies.set(THEME_COOKIE, profile.theme_preference);
+        supabaseResponse = NextResponse.next({ request });
+        supabaseResponse.cookies.set(THEME_COOKIE, profile.theme_preference, {
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+          path: "/",
+          maxAge: THEME_COOKIE_MAX_AGE,
+        });
+      }
+    }
   } catch (err) {
     console.error("[supabase/middleware] Auth refresh failed:", err);
     // Pass through — let the page handle the unauthenticated state.

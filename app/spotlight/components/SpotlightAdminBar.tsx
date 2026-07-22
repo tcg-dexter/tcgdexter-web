@@ -82,7 +82,7 @@ export default function SpotlightAdminBar({
   return (
     <div className="flex justify-start">
       <div
-        className="inline-flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-sm border border-black/10 shadow-sm px-2 py-1.5"
+        className="inline-flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-sm border border-black/10 shadow-sm px-2 py-1.5 dark:bg-surface-elevated dark:border-white/10"
         role="toolbar"
         aria-label="Spotlight admin actions"
       >
@@ -105,14 +105,14 @@ export default function SpotlightAdminBar({
             type="button"
             onClick={onReset}
             disabled={resetting}
-            className="text-xs font-semibold px-3 py-1 rounded-full border border-black/15 text-text-primary hover:bg-[var(--surface)] disabled:opacity-50"
+            className="text-xs font-semibold px-3 py-1 rounded-full border border-black/15 text-text-primary hover:bg-[var(--surface)] disabled:opacity-50 dark:border-white/10"
           >
             {resetting ? "…" : "Reset"}
           </button>
         )}
         <Link
           href={`/admin/spotlight/${spotlightId}/edit`}
-          className="text-xs font-semibold px-3 py-1 rounded-full border border-black text-text-primary hover:bg-[var(--surface)]"
+          className="text-xs font-semibold px-3 py-1 rounded-full border border-black text-text-primary hover:bg-[var(--surface)] dark:border-white"
         >
           Edit
         </Link>

@@ -144,7 +144,7 @@ export default function MatchHeatMap({
   const palette = heatPalette(accent);
 
   return (
-    <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5">
+    <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-5">
       <div className="flex items-baseline justify-between mb-3">
         <h2 className="text-lg font-semibold text-text-primary">Match Activity</h2>
         <span className="text-xs text-text-muted">Last 20 weeks</span>

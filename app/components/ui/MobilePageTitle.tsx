@@ -67,7 +67,7 @@ export default function MobilePageTitle({ href, title, hideBack = false }: Props
         aria-label={`Back to ${title}`}
         className="flex items-center gap-2 group"
       >
-        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-black/8 group-hover:bg-black/12 transition-colors">
+        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-black/8 dark:bg-white/8 group-hover:bg-black/12 dark:group-hover:bg-white/12 transition-colors">
           <svg
             className="w-3 h-3 text-text-primary"
             fill="none"

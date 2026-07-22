@@ -73,19 +73,19 @@ export default function CardDetailPage({ params }: Props) {
         />
       )}
 
-      {otherPrintings.length > 0 && (
+      {moreByArtist.length > 0 && (
         <div className="mt-10">
           <h2 className="text-lg font-semibold text-text-primary mb-3">
-            More {card.name}
+            More by {card.artist}
           </h2>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
-            {otherPrintings.map((c, i) => (
+            {moreByArtist.map((c, i) => (
               <Link
                 key={c.id}
                 href={`/cards/${encodeURIComponent(c.id)}`}
                 className="block rounded-lg overflow-hidden bg-surface hover:shadow-md transition-shadow"
                 style={{ aspectRatio: "245 / 342" }}
-                title={`${c.setName} ${c.number}`}
+                title={`${c.name} — ${c.setName} ${c.number}`}
               >
                 <CardImage
                   src={cardImageSmall(c.setId, c.number)}
@@ -102,19 +102,19 @@ export default function CardDetailPage({ params }: Props) {
         </div>
       )}
 
-      {moreByArtist.length > 0 && (
+      {otherPrintings.length > 0 && (
         <div className="mt-10">
           <h2 className="text-lg font-semibold text-text-primary mb-3">
-            More by {card.artist}
+            More {card.name}
           </h2>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
-            {moreByArtist.map((c, i) => (
+            {otherPrintings.map((c, i) => (
               <Link
                 key={c.id}
                 href={`/cards/${encodeURIComponent(c.id)}`}
                 className="block rounded-lg overflow-hidden bg-surface hover:shadow-md transition-shadow"
                 style={{ aspectRatio: "245 / 342" }}
-                title={`${c.name} — ${c.setName} ${c.number}`}
+                title={`${c.setName} ${c.number}`}
               >
                 <CardImage
                   src={cardImageSmall(c.setId, c.number)}

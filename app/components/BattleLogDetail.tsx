@@ -1060,7 +1060,7 @@ function ThreadPost({
 
       <div
         className={`flex-1 min-w-0 pb-3 ${
-          isLast ? "" : "border-b border-[#e2e8f0]"
+          isLast ? "" : "border-b border-black/[0.08] dark:border-white/10"
         }`}
       >
         <div className="flex items-center justify-between gap-2 min-h-[2.25rem]">
@@ -1381,7 +1381,7 @@ function ActionList({
           const capsule = prizeIdx !== undefined ? (
             <li
               key={a.id}
-              className="my-1.5 rounded-full px-3 py-2.5 text-xs font-bold text-white bg-[#1a1a1a] flex items-center justify-between gap-2"
+              className="my-1.5 rounded-full px-3 py-2.5 text-xs font-bold text-white dark:text-black bg-[#1a1a1a] dark:bg-white flex items-center justify-between gap-2"
             >
               <span>{label}</span>
               <span>{labelFor(actions[prizeIdx])}</span>
@@ -1389,7 +1389,7 @@ function ActionList({
           ) : (
             <li
               key={a.id}
-              className="my-1.5 rounded-full px-3 py-2.5 text-xs font-bold text-white text-center bg-[#1a1a1a]"
+              className="my-1.5 rounded-full px-3 py-2.5 text-xs font-bold text-white dark:text-black text-center bg-[#1a1a1a] dark:bg-white"
             >
               {label}
             </li>
