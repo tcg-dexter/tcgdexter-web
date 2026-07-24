@@ -1,0 +1,197 @@
+// Effect primitives (W2) — the apply-side library. Each op mutates game state
+// given already-resolved targets (the runtime resolves TargetSpecs into
+// concrete Pokémon/cards from the move's picks, then calls these). These
+// mirror the semantics of the hand-written applyTrainer/applyAbility switch
+// arms exactly, so the migration is behavior-preserving.
+
+import type { CardInstance, GameState, PlayerSide, PokemonInPlay } from "../../types";
+import { shuffle, type Rng } from "../rng";
+import { benchCap } from "../stadiums";
+import { toPokemonInPlay } from "../setup";
+import { applyCondition, clearConditions } from "../conditions";
+import { placeCounters, moveCounters } from "../damage";
+import type { EffectOp, Quantity } from "./types";
+
+type Actor = "player" | "opponent";
+const other = (a: Actor): Actor => (a === "player" ? "opponent" : "player");
+
+export interface ResolvedMon {
+  mon: PokemonInPlay;
+  side: Actor;
+}
+export interface ResolvedTarget {
+  mons: ResolvedMon[];
+  cards: CardInstance[];
+}
+export type ResolvedTargets = Record<string, ResolvedTarget>;
+
+export interface OpContext {
+  state: GameState;
+  actor: Actor;
+  targets: ResolvedTargets;
+  rng: Rng | null;
+}
+
+/* ─── Zone helpers (mirror trainers.ts semantics) ───────────────── */
+
+function draw(side: PlayerSide, n: number): void {
+  side.hand.push(...side.deck.splice(0, Math.max(0, n)));
+}
+function spliceById(zone: CardInstance[], id: string): CardInstance | null {
+  const i = zone.findIndex((c) => c.id === id);
+  return i >= 0 ? zone.splice(i, 1)[0] : null;
+}
+function resolveQty(q: Quantity, side: PlayerSide): number {
+  if (q === "own_prizes" || q === "opp_prizes") return side.prizes.length;
+  return q;
+}
+function mons(ctx: OpContext, ref: string): ResolvedMon[] {
+  return ctx.targets[ref]?.mons ?? [];
+}
+function cards(ctx: OpContext, ref: string): CardInstance[] {
+  return ctx.targets[ref]?.cards ?? [];
+}
+
+/** Move a Bench Pokémon into the Active Spot, swapping the old Active to the
+ *  vacated Bench slot. Leaving the Active Spot clears Special Conditions. */
+function promoteFromBench(side: PlayerSide, benchMon: PokemonInPlay): void {
+  const idx = side.bench.indexOf(benchMon);
+  if (idx < 0 || !side.active) return;
+  clearConditions(side.active);
+  side.bench[idx] = side.active;
+  side.active = benchMon;
+}
+
+/* ─── Op interpreter ────────────────────────────────────────────── */
+
+export function applyOp(op: EffectOp, ctx: OpContext): void {
+  const { state, actor, rng } = ctx;
+  const side = state.sides[actor];
+  const opp = state.sides[other(actor)];
+
+  switch (op.op) {
+    case "draw":
+      draw(side, resolveQty(op.n, side));
+      break;
+
+    case "shuffle_hand_draw": {
+      side.deck.push(...side.hand);
+      side.hand = [];
+      if (rng) shuffle(side.deck, rng);
+      draw(side, resolveQty(op.n, side));
+      break;
+    }
+
+    case "discard_hand_draw": {
+      side.discard.push(...side.hand);
+      side.hand = [];
+      draw(side, resolveQty(op.n, side));
+      break;
+    }
+
+    case "hand_to_bottom_draw": {
+      const sides: Actor[] =
+        op.who === "both" ? [actor, other(actor)] : op.who === "own" ? [actor] : [other(actor)];
+      for (const s of sides) {
+        const ps = state.sides[s];
+        const n = resolveQty(op.n, ps);
+        ps.deck.push(...ps.hand); // to the bottom (deck top is index 0)
+        ps.hand = [];
+        draw(ps, n);
+      }
+      break;
+    }
+
+    case "search":
+    case "retrieve": {
+      const zone = op.op === "search" ? side.deck : side.discard;
+      for (const card of cards(ctx, op.targetRef)) {
+        const pulled = spliceById(zone, card.id);
+        if (!pulled) continue;
+        if (op.to === "bench" && side.bench.length < benchCap(state, actor)) {
+          side.bench.push(toPokemonInPlay(pulled, state.turn.number));
+        } else {
+          side.hand.push(pulled);
+        }
+      }
+      if (op.op === "search" && rng) shuffle(side.deck, rng);
+      break;
+    }
+
+    case "attach_energy": {
+      const target = mons(ctx, op.monRef)[0];
+      const zone = op.from === "deck" ? side.deck : side.discard;
+      for (const energy of cards(ctx, op.energyRef)) {
+        const pulled = spliceById(zone, energy.id);
+        if (pulled && target) target.mon.attachedEnergy.push(pulled);
+      }
+      if (op.from === "deck" && rng) shuffle(side.deck, rng);
+      break;
+    }
+
+    case "shuffle_deck":
+      if (rng) shuffle(side.deck, rng);
+      break;
+
+    case "gust": {
+      const picked = mons(ctx, op.monRef)[0];
+      if (picked && picked.side === other(actor)) promoteFromBench(opp, picked.mon);
+      break;
+    }
+    case "switch": {
+      const picked = mons(ctx, op.monRef)[0];
+      if (picked && picked.side === actor) promoteFromBench(side, picked.mon);
+      break;
+    }
+
+    case "place_counters":
+      for (const { mon } of mons(ctx, op.monRef)) placeCounters(mon, op.n);
+      break;
+
+    case "move_counters": {
+      const from = mons(ctx, op.fromRef)[0];
+      const to = mons(ctx, op.toRef)[0];
+      if (from && to) moveCounters(from.mon, to.mon, op.n);
+      break;
+    }
+
+    case "apply_condition":
+      for (const { mon } of mons(ctx, op.monRef)) applyCondition(mon, op.condition);
+      break;
+
+    case "heal":
+      for (const { mon } of mons(ctx, op.monRef)) mon.damage = Math.max(0, mon.damage - op.n);
+      break;
+
+    case "discard_from_mon": {
+      for (const { mon, side: monSide } of mons(ctx, op.monRef)) {
+        const ownerDiscard = state.sides[monSide].discard;
+        if (op.category === "tool") {
+          if (mon.attachedTools.length > 0) ownerDiscard.push(...mon.attachedTools.splice(0, 1));
+        } else {
+          const i = mon.attachedEnergy.findIndex(
+            (c) => c.catalog?.supertype === "Energy" && !isBasicEnergyName(c),
+          );
+          if (i >= 0) ownerDiscard.push(...mon.attachedEnergy.splice(i, 1));
+        }
+      }
+      break;
+    }
+
+    case "buff_damage_this_turn":
+      side.blackBeltTrainingTurn = state.turn.number;
+      break;
+  }
+}
+
+function isBasicEnergyName(c: CardInstance): boolean {
+  return (
+    c.catalog?.supertype === "Energy" &&
+    (c.catalog.subtypes.includes("Basic") || c.name.startsWith("Basic "))
+  );
+}
+
+/** Apply a card effect's full op list in order. */
+export function applyOps(ops: EffectOp[], ctx: OpContext): void {
+  for (const op of ops) applyOp(op, ctx);
+}
