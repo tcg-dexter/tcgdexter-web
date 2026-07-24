@@ -373,8 +373,8 @@ export default function MyDecksClient({ decks, atRiskStreak = 0 }: Props) {
         <div className="mb-4 flex items-center gap-3 rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm px-4 py-3">
           <StreakFlame count={atRiskStreak} size="md" showCount={false} />
           <p className="text-sm text-text-primary">
-            <span className="font-semibold">Keep your {atRiskStreak}-day streak</span>
-            <span className="text-text-muted"> — log a match today before it resets.</span>
+            <span className="block font-semibold">Keep your {atRiskStreak}-day streak</span>
+            <span className="block text-text-muted">Log a match today before it resets.</span>
           </p>
         </div>
       )}
