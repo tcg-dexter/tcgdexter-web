@@ -45,7 +45,8 @@ export type TrainerEffect =
   | { kind: "black_belt" }
   | { kind: "ns_pp_up" }
   | { kind: "special_red_card" }
-  | { kind: "janine" };
+  | { kind: "janine" }
+  | { kind: "ruffian" };
 
 export type TrainerPhase = "search" | "draw" | "tactical";
 
@@ -74,7 +75,13 @@ export const TRAINER_EFFECTS: Record<string, TrainerSpec> = {
   "N's PP Up": { effect: { kind: "ns_pp_up" }, phase: "tactical" },
   "Special Red Card": { effect: { kind: "special_red_card" }, phase: "tactical" },
   "Janine's Secret Art": { effect: { kind: "janine" }, phase: "search" },
+  Ruffian: { effect: { kind: "ruffian" }, phase: "tactical" },
 };
+
+/** A Special Energy (Energy card that isn't a basic energy). */
+function isSpecialEnergy(c: CardInstance): boolean {
+  return c.catalog?.supertype === "Energy" && !isBasicEnergy(c);
+}
 
 export function trainerSpec(card: CardInstance): TrainerSpec | null {
   if (card.catalog?.supertype !== "Trainer") return null;
@@ -108,6 +115,9 @@ export interface PlayTrainerMove {
   benchIndex?: number;
   /** Opponent bench target (Boss's Orders). */
   oppBenchIndex?: number;
+  /** Any opponent Pokémon by id, Active or Bench (Ruffian). */
+  oppMonId?: string;
+  oppMonName?: string;
   /** Human-chosen cards to pay a discard cost (Ultra Ball). When absent,
    *  the AI/auto path picks them (pickDiscards). Not part of the
    *  enumerated legal set — validated separately (see validateTrainerCost). */
@@ -268,6 +278,14 @@ export function trainerMoves(
       return other.active
         ? other.bench.map((_, i) => ({ ...base, oppBenchIndex: i }))
         : [];
+    case "ruffian": {
+      // Any opponent Pokémon holding a Tool or a Special Energy is a target.
+      const targets = [other.active, ...other.bench].filter(
+        (m): m is NonNullable<typeof m> =>
+          !!m && (m.attachedTools.length > 0 || m.attachedEnergy.some(isSpecialEnergy)),
+      );
+      return targets.map((m) => ({ ...base, oppMonId: m.id, oppMonName: m.card.name }));
+    }
     case "switch_active":
       return side.active
         ? side.bench.map((_, i) => ({ ...base, benchIndex: i }))
@@ -542,6 +560,18 @@ export function applyTrainer(
         : -1;
       const target = side.bench.find((m) => m.id === move.monId && isNsPokemon(m.card));
       if (idx >= 0 && target) target.attachedEnergy.push(...side.discard.splice(idx, 1));
+      break;
+    }
+    case "ruffian": {
+      // Discard a Tool and a Special Energy from the chosen opponent Pokémon.
+      const target = [other.active, ...other.bench].find((m) => m?.id === move.oppMonId);
+      if (target) {
+        if (target.attachedTools.length > 0) {
+          other.discard.push(...target.attachedTools.splice(0, 1));
+        }
+        const si = target.attachedEnergy.findIndex(isSpecialEnergy);
+        if (si >= 0) other.discard.push(...target.attachedEnergy.splice(si, 1));
+      }
       break;
     }
     case "switch_active": {

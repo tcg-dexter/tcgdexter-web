@@ -280,6 +280,39 @@ describe("Janine's Secret Art", () => {
   });
 });
 
+describe("Ruffian", () => {
+  it("discards a Tool and a Special Energy from the chosen opponent Pokémon", () => {
+    const state = freshState();
+    const me = state.sides.player;
+    const opp = state.sides.opponent;
+    const victim = mon("N's Zoroark ex");
+    victim.attachedTools = [card("Binding Mochi")];
+    victim.attachedEnergy = [card("Jet Energy"), card("Basic Darkness Energy")]; // Jet = Special
+    opp.active = victim;
+    opp.bench = [mon("N's Zorua")]; // no tool/special energy ⇒ not a target
+    const src = card("Ruffian");
+    me.hand = [src];
+
+    const options = trainerOptions(state, src.id);
+    expect(options.map((m) => m.oppMonId)).toEqual([victim.id]); // only the victim
+    apply(state, options[0]);
+    expect(victim.attachedTools.length).toBe(0); // tool discarded
+    expect(victim.attachedEnergy.map((c) => c.name)).toEqual(["Basic Darkness Energy"]); // special gone, basic stays
+    expect(opp.discard.some((c) => c.name === "Binding Mochi")).toBe(true);
+    expect(opp.discard.some((c) => c.name === "Jet Energy")).toBe(true);
+  });
+
+  it("is unplayable when no opponent Pokémon holds a Tool or Special Energy", () => {
+    const state = freshState();
+    const me = state.sides.player;
+    state.sides.opponent.active = mon("N's Zorua");
+    state.sides.opponent.bench = [];
+    const src = card("Ruffian");
+    me.hand = [src];
+    expect(trainerOptions(state, src.id).length).toBe(0);
+  });
+});
+
 describe("N's PP Up", () => {
   it("attaches a Basic Energy from the discard onto a Benched N's Pokémon", () => {
     const state = freshState();
