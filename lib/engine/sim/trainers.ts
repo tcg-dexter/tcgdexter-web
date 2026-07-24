@@ -19,7 +19,7 @@ import { lookupCard } from "../catalog";
 import { benchCap } from "./stadiums";
 import { clearConditions } from "./conditions";
 import { shuffle, type Rng } from "./rng";
-import { energyProvides, isBasic, prizeValue, toPokemonInPlay } from "./setup";
+import { energyProvides, isBasic, isNsPokemon, prizeValue, toPokemonInPlay } from "./setup";
 
 /* ─── Registry ──────────────────────────────────────────────────── */
 
@@ -42,7 +42,8 @@ export type TrainerEffect =
   | { kind: "gust" }
   | { kind: "switch_active" }
   | { kind: "rare_candy" }
-  | { kind: "black_belt" };
+  | { kind: "black_belt" }
+  | { kind: "ns_pp_up" };
 
 export type TrainerPhase = "search" | "draw" | "tactical";
 
@@ -68,6 +69,7 @@ export const TRAINER_EFFECTS: Record<string, TrainerSpec> = {
   "Boss's Orders": { effect: { kind: "gust" }, phase: "tactical" },
   Switch: { effect: { kind: "switch_active" }, phase: "tactical" },
   "Rare Candy": { effect: { kind: "rare_candy" }, phase: "tactical" },
+  "N's PP Up": { effect: { kind: "ns_pp_up" }, phase: "tactical" },
 };
 
 export function trainerSpec(card: CardInstance): TrainerSpec | null {
@@ -254,6 +256,19 @@ export function trainerMoves(
       return side.active
         ? side.bench.map((_, i) => ({ ...base, benchIndex: i }))
         : [];
+    case "ns_pp_up": {
+      // Attach a Basic Energy from the discard pile to a Benched N's Pokémon.
+      const energies = dedupeByName(side.discard.filter(isBasicEnergy));
+      const targets = side.bench.filter((m) => isNsPokemon(m.card));
+      if (energies.length === 0 || targets.length === 0) return [];
+      const moves: PlayTrainerMove[] = [];
+      for (const e of energies) {
+        for (const t of targets) {
+          moves.push({ ...base, discardPickId: e.id, discardPickName: e.name, monId: t.id });
+        }
+      }
+      return moves;
+    }
     case "rare_candy": {
       if (state.turn.playerTurnNumber <= 1) return [];
       const moves: PlayTrainerMove[] = [];
@@ -470,6 +485,15 @@ export function applyTrainer(
       // Turn-scoped buff: mark the turn so activeDamageBonus can add +40 to
       // the opponent's Active ex for the rest of this turn.
       side.blackBeltTrainingTurn = state.turn.number;
+      break;
+    }
+    case "ns_pp_up": {
+      // Move a Basic Energy from discard onto a Benched N's Pokémon.
+      const idx = move.discardPickId
+        ? side.discard.findIndex((c) => c.id === move.discardPickId)
+        : -1;
+      const target = side.bench.find((m) => m.id === move.monId && isNsPokemon(m.card));
+      if (idx >= 0 && target) target.attachedEnergy.push(...side.discard.splice(idx, 1));
       break;
     }
     case "switch_active": {

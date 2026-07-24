@@ -290,6 +290,23 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     const trainers = trainerMovesFor(cardId);
     if (trainers.length > 0) {
       const first = trainers[0];
+      // N's PP Up: choose a discard-pile Energy, then a Benched target.
+      if (first.discardPickId != null && first.monId != null) {
+        const energyKeys = Array.from(
+          new Set(trainers.map((m) => m.discardPickName ?? m.discardPickId!)),
+        );
+        if (energyKeys.length <= 1) {
+          // Single Energy type ⇒ skip straight to the target chooser.
+          return void chooseOwnTarget(
+            card?.name ?? "Attach",
+            trainers.map((m) => ({ move: m as InteractiveMove, monId: m.monId! })),
+          );
+        }
+        const reps = energyKeys.map(
+          (k) => trainers.find((m) => (m.discardPickName ?? m.discardPickId) === k)!,
+        );
+        return void setPickerMoves(reps); // stage 1: pick which Energy
+      }
       if (first.deckCardIds || first.discardPickId) {
         return void setPickerMoves(trainers); // search picker modal
       }
@@ -342,6 +359,18 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
       if (need > 0) {
         setPickerMoves(null);
         setDiscardStage({ move: m, need, picked: [] });
+        return;
+      }
+      // N's PP Up stage 2: the chosen Energy still needs a Benched target.
+      if (m.monId != null && m.discardPickId != null) {
+        const targets = trainerMovesFor(m.cardId).filter(
+          (x) => x.discardPickId === m.discardPickId,
+        );
+        setPickerMoves(null);
+        chooseOwnTarget(
+          game.view.hand.find((c) => c.id === m.cardId)?.name ?? "Attach",
+          targets.map((x) => ({ move: x as InteractiveMove, monId: x.monId! })),
+        );
         return;
       }
     }

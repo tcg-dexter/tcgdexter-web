@@ -3,12 +3,17 @@
 // supporter-per-turn gate and evolution locks enforced.
 
 import { describe, it, expect } from "vitest";
-import { buildSimInitialState, instantiateDeck } from "./setup";
+import { buildSimInitialState, instantiateDeck, toPokemonInPlay } from "./setup";
 import { beginTurn, applyMove } from "./driver";
 import { legalMoves, type SimMove, type TurnContext } from "./moves";
 import { mulberry32 } from "./rng";
-import type { CardInstance, GameState, PlayerSide } from "../types";
+import { lookupCard } from "../catalog";
+import { mintInstanceId } from "../initial";
+import type { CardInstance, GameState, PlayerSide, PokemonInPlay } from "../types";
 import type { PlayTrainerMove } from "./trainers";
+
+const card = (n: string): CardInstance => ({ id: mintInstanceId("t"), name: n, catalog: lookupCard(n) });
+const mon = (n: string): PokemonInPlay => toPokemonInPlay(card(n), 0);
 
 // Set-code-less lines resolve by name via the catalog (parse pass 2).
 const STAPLE_DECK = [
@@ -227,5 +232,44 @@ describe("staple trainer effects", () => {
     const moves = legalMoves(state, "player", { retreated: false });
     expect(moves.some((m) => m.kind === "cycle_item" && m.cardId === fake.id)).toBe(true);
     expect(moves.some((m) => m.kind === "play_trainer" && m.cardId === fake.id)).toBe(false);
+  });
+});
+
+describe("N's PP Up", () => {
+  it("attaches a Basic Energy from the discard onto a Benched N's Pokémon", () => {
+    const state = freshState();
+    const side = state.sides.player;
+    side.active = mon("N's Zorua");
+    const zekrom = mon("N's Zekrom");
+    side.bench = [zekrom];
+    side.discard = [card("Basic Darkness Energy")];
+    const ppup = card("N's PP Up");
+    side.hand = [ppup];
+
+    const options = trainerOptions(state, ppup.id);
+    // One energy in discard × one benched N's Pokémon = one concrete play.
+    expect(options.length).toBe(1);
+    expect(options[0].monId).toBe(zekrom.id);
+    expect(options[0].discardPickName).toBe("Basic Darkness Energy");
+
+    apply(state, options[0]);
+    expect(zekrom.attachedEnergy.map((c) => c.name)).toContain("Basic Darkness Energy");
+    expect(side.discard.some((c) => c.name === "Basic Darkness Energy")).toBe(false);
+    expect(side.discard.some((c) => c.id === ppup.id)).toBe(true); // the item itself
+  });
+
+  it("is unplayable with no Basic Energy in discard or no Benched N's Pokémon", () => {
+    const state = freshState();
+    const side = state.sides.player;
+    side.active = mon("N's Zorua");
+    const ppup = card("N's PP Up");
+    side.hand = [ppup];
+    // No benched N's Pokémon, no energy in discard.
+    side.bench = [];
+    side.discard = [];
+    expect(trainerOptions(state, ppup.id).length).toBe(0);
+    // Energy present but still no benched N's Pokémon.
+    side.discard = [card("Basic Darkness Energy")];
+    expect(trainerOptions(state, ppup.id).length).toBe(0);
   });
 });
