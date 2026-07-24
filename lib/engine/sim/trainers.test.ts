@@ -235,6 +235,51 @@ describe("staple trainer effects", () => {
   });
 });
 
+describe("Special Red Card", () => {
+  it("is playable only at 3-or-fewer opponent Prizes; bottoms their hand and draws 3", () => {
+    const state = freshState();
+    const me = state.sides.player;
+    const opp = state.sides.opponent;
+    const src = card("Special Red Card");
+    me.hand = [src];
+
+    // Opponent still has 4+ Prizes ⇒ unplayable.
+    while (opp.prizes.length < 4) opp.prizes.push(card("Pikachu"));
+    expect(trainerOptions(state, src.id).length).toBe(0);
+
+    // Down to 3 Prizes ⇒ playable.
+    opp.prizes = opp.prizes.slice(0, 3);
+    opp.hand = [card("Pikachu"), card("Iono"), card("Ultra Ball"), card("Boss's Orders")];
+    const oppDeckBefore = opp.deck.length;
+    expect(trainerOptions(state, src.id).length).toBe(1);
+    apply(state, trainerOptions(state, src.id)[0]);
+    expect(opp.hand.length).toBe(3); // 4 bottomed, drew 3
+    expect(opp.deck.length).toBe(oppDeckBefore + 4 - 3);
+    expect(me.discard.some((c) => c.id === src.id)).toBe(true);
+  });
+});
+
+describe("Janine's Secret Art", () => {
+  it("attaches Basic Darkness from deck to Darkness Pokémon; poisons the Active if targeted", () => {
+    const state = freshState();
+    const me = state.sides.player;
+    me.active = mon("N's Zorua"); // Darkness
+    me.bench = [mon("N's Zoroark ex")]; // Darkness
+    // Make sure Basic Darkness Energy is available in the deck.
+    me.deck.unshift(card("Basic Darkness Energy"), card("Basic Darkness Energy"));
+    const src = card("Janine's Secret Art");
+    me.hand = [src];
+
+    expect(trainerOptions(state, src.id).length).toBe(1);
+    apply(state, trainerOptions(state, src.id)[0]);
+    const attachedActive = me.active!.attachedEnergy.length;
+    const attachedBench = me.bench[0].attachedEnergy.length;
+    expect(attachedActive + attachedBench).toBe(2); // up to 2 attached
+    // Active received energy ⇒ Poisoned.
+    if (attachedActive > 0) expect(me.active!.conditions).toContain("Poisoned");
+  });
+});
+
 describe("N's PP Up", () => {
   it("attaches a Basic Energy from the discard onto a Benched N's Pokémon", () => {
     const state = freshState();

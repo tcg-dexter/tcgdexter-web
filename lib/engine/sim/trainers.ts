@@ -17,7 +17,7 @@
 import type { CardInstance, GameState, PlayerSide } from "../types";
 import { lookupCard } from "../catalog";
 import { benchCap } from "./stadiums";
-import { clearConditions } from "./conditions";
+import { applyCondition, clearConditions } from "./conditions";
 import { shuffle, type Rng } from "./rng";
 import { energyProvides, isBasic, isNsPokemon, prizeValue, toPokemonInPlay } from "./setup";
 
@@ -43,7 +43,9 @@ export type TrainerEffect =
   | { kind: "switch_active" }
   | { kind: "rare_candy" }
   | { kind: "black_belt" }
-  | { kind: "ns_pp_up" };
+  | { kind: "ns_pp_up" }
+  | { kind: "special_red_card" }
+  | { kind: "janine" };
 
 export type TrainerPhase = "search" | "draw" | "tactical";
 
@@ -70,6 +72,8 @@ export const TRAINER_EFFECTS: Record<string, TrainerSpec> = {
   Switch: { effect: { kind: "switch_active" }, phase: "tactical" },
   "Rare Candy": { effect: { kind: "rare_candy" }, phase: "tactical" },
   "N's PP Up": { effect: { kind: "ns_pp_up" }, phase: "tactical" },
+  "Special Red Card": { effect: { kind: "special_red_card" }, phase: "tactical" },
+  "Janine's Secret Art": { effect: { kind: "janine" }, phase: "search" },
 };
 
 export function trainerSpec(card: CardInstance): TrainerSpec | null {
@@ -248,6 +252,18 @@ export function trainerMoves(
     case "iono":
     case "black_belt":
       return [base];
+    case "special_red_card":
+      // Usable only while the opponent has 3 or fewer Prizes remaining.
+      return other.prizes.length <= 3 ? [base] : [];
+    case "janine": {
+      const hasDarkEnergy = side.deck.some(
+        (c) => isBasicEnergy(c) && energyProvides(c) === "Darkness",
+      );
+      const hasDarkMon = [side.active, ...side.bench].some(
+        (m) => m?.card.catalog?.types.includes("Darkness"),
+      );
+      return hasDarkEnergy && hasDarkMon ? [base] : [];
+    }
     case "gust":
       return other.active
         ? other.bench.map((_, i) => ({ ...base, oppBenchIndex: i }))
@@ -485,6 +501,38 @@ export function applyTrainer(
       // Turn-scoped buff: mark the turn so activeDamageBonus can add +40 to
       // the opponent's Active ex for the rest of this turn.
       side.blackBeltTrainingTurn = state.turn.number;
+      break;
+    }
+    case "special_red_card": {
+      // Opponent shuffles their hand and puts it on the bottom of their deck;
+      // if any cards were put down, they draw 3.
+      const returned = other.hand.length;
+      if (returned > 0) {
+        if (rng) shuffle(other.hand, rng);
+        other.deck.push(...other.hand); // bottom (deck top is index 0)
+        other.hand = [];
+        draw(other, 3);
+      }
+      break;
+    }
+    case "janine": {
+      // Attach up to 2 Basic Darkness Energy from the deck to up to 2 of your
+      // Darkness Pokémon (v1 auto-picks: Active first, then the Bench). If an
+      // Energy lands on the Active, it becomes Poisoned.
+      const darkTargets = [side.active, ...side.bench].filter(
+        (m): m is NonNullable<typeof m> => !!m?.card.catalog?.types.includes("Darkness"),
+      );
+      let attachedToActive = false;
+      for (const target of darkTargets.slice(0, 2)) {
+        const idx = side.deck.findIndex(
+          (c) => isBasicEnergy(c) && energyProvides(c) === "Darkness",
+        );
+        if (idx < 0) break;
+        target.attachedEnergy.push(...side.deck.splice(idx, 1));
+        if (target === side.active) attachedToActive = true;
+      }
+      if (attachedToActive && side.active) applyCondition(side.active, "Poisoned");
+      maybeShuffleDeck(side, rng);
       break;
     }
     case "ns_pp_up": {
