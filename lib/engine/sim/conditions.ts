@@ -116,6 +116,13 @@ export function attackInflictedConditions(
 
 /** Attacks whose user recovers from all Special Conditions on use. */
 const SELF_CLEAR_ATTACKS = new Set(["Gardevoir ex::Miracle Force"]);
+/** Effect-coverage predicate (W1): does this attack have a modeled inflicted
+ *  condition or self-clear? */
+export function attackConditionModeled(attackerName: string, attackName: string): boolean {
+  const key = `${attackerName}::${attackName}`;
+  return key in ATTACK_CONDITIONS || SELF_CLEAR_ATTACKS.has(key);
+}
+
 export function attackSelfClears(attackerName: string, attackName: string): boolean {
   return SELF_CLEAR_ATTACKS.has(`${attackerName}::${attackName}`);
 }

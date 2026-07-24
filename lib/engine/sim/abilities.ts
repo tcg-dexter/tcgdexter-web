@@ -195,6 +195,13 @@ const ACTIVATED: Record<string, ActivatedSpec> = {
   },
 };
 
+/** Effect-coverage predicate (W1): is this Pokémon ability actually modeled,
+ *  either as an activated ability or an on-evolve trigger? */
+export function isAbilityModeled(cardName: string, abilityName: string): boolean {
+  if (`${cardName}::${abilityName}` in ACTIVATED) return true;
+  return cardName === "Charizard ex" && abilityName === "Infernal Reign";
+}
+
 /** Every activated-ability move available to `actor` this turn. */
 export function abilityMoves(state: GameState, actor: Actor): UseAbilityMove[] {
   const out: UseAbilityMove[] = [];

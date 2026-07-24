@@ -23,6 +23,11 @@ const TOOL_EFFECTS: Record<string, ToolEffect> = {
   "Bravery Charm": { hpBonus: 50 },
 };
 
+/** Effect-coverage predicate (W1): does this Tool have a modeled effect? */
+export function isToolModeled(name: string): boolean {
+  return name in TOOL_EFFECTS;
+}
+
 export function isTool(card: CardInstance): boolean {
   return (
     card.catalog?.supertype === "Trainer" &&

@@ -95,6 +95,14 @@ const ATTACK_EFFECTS: Record<string, AttackEffect> = {
   },
 };
 
+/** Effect-coverage predicate (W1): does this attack have a modeled damage
+ *  scaler or placement/side effect? (Attack-inflicted conditions and
+ *  self-clear are checked separately in conditions.ts.) */
+export function isAttackModeled(cardName: string, attackName: string): boolean {
+  const key = `${cardName}::${attackName}`;
+  return key in DAMAGE_SCALERS || key in ATTACK_EFFECTS;
+}
+
 export function attackEffect(attacker: PokemonInPlay, attackIndex: number): AttackEffect | null {
   const attack = attacker.card.catalog?.attacks[attackIndex];
   if (!attack) return null;

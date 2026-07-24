@@ -133,6 +133,12 @@ const ANY_TYPE_SPECIAL = new Set(["Luminous Energy", "Legacy Energy", "Rainbow E
 /** Special energy providing 2+ Colorless from one card. */
 const MULTI_COLORLESS_SPECIAL: Record<string, number> = { "Double Turbo Energy": 2 };
 
+/** Effect-coverage predicate (W1): is this Special Energy's output modeled?
+ *  Unmodeled special energy degrades to a single Colorless. */
+export function isSpecialEnergyModeled(name: string): boolean {
+  return ANY_TYPE_SPECIAL.has(name) || name in MULTI_COLORLESS_SPECIAL;
+}
+
 /**
  * Energy units an attached card provides toward attack/retreat costs. One
  * card can provide multiple units (Double Turbo = 2 Colorless) and can be a
