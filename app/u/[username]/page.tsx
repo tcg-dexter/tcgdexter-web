@@ -89,6 +89,22 @@ export async function generateMetadata({
   };
 }
 
+/** Stat-grid tile for a daily streak (flame + count). Matches the default
+ *  StatCard chrome; used for both Current and Longest streak. */
+function StreakStatTile({ label, count }: { label: string; count: number }) {
+  return (
+    <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm px-4 py-3 text-center">
+      <div className="flex items-center justify-center gap-1">
+        <StreakFlame count={count} size="md" showCount={false} />
+        <span className="text-lg font-bold tabular-nums text-text-primary">
+          {count.toLocaleString()}
+        </span>
+      </div>
+      <p className="text-xs text-text-muted mt-0.5">{label}</p>
+    </div>
+  );
+}
+
 export default async function ProfilePage({
   params,
 }: {
@@ -163,6 +179,9 @@ export default async function ProfilePage({
     .eq("user_id", profile.id)
     .maybeSingle();
   const dayStreak = displayCurrentStreak(streakRow as StreakRow | null);
+  // Longest is a historical high-water mark — not subject to the alive
+  // check, so it persists even after the current streak lapses.
+  const longestStreak = (streakRow as StreakRow | null)?.longest_streak ?? 0;
 
   // Heatmap dates: manual played_at (owner only — manual match data is private).
   const heatmapMatches: MatchRow[] = isOwner ? manualMatches : [];
@@ -170,7 +189,6 @@ export default async function ProfilePage({
   // Public deck stats (visible to both owner and visitor).
   const publicDeckCount = decks.filter((d) => d.is_public).length;
   const totalLikes = decks.reduce((s, d) => s + (d.like_count ?? 0), 0);
-  const joinedYear = new Date(profile.created_at).getFullYear();
 
   // Owner sees a 3-most-recently-created preview with a "View All" link
   // to /my-decks (their own saved-deck library — not meaningful for a
@@ -234,17 +252,8 @@ export default async function ProfilePage({
             : "text-text-secondary"
         }
       />
-      {/* Daily match-logging streak (public). Bespoke tile so the flame
-          sits with the count — the momentum cue the win-streak lacked. */}
-      <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm px-4 py-3 text-center">
-        <div className="flex items-center justify-center gap-1">
-          <StreakFlame count={dayStreak} size="md" showCount={false} />
-          <span className="text-lg font-bold tabular-nums text-text-primary">
-            {dayStreak.toLocaleString()}
-          </span>
-        </div>
-        <p className="text-xs text-text-muted mt-0.5">Day Streak</p>
-      </div>
+      {/* Daily match-logging streak (public) — current + all-time best. */}
+      <StreakStatTile label="Current Streak" count={dayStreak} />
       <StatCard label="Decks" value={decks.length.toLocaleString()} />
       <StatCard label="Public" value={publicDeckCount.toLocaleString()} />
       <StatCard
@@ -252,7 +261,7 @@ export default async function ProfilePage({
         value={totalLikes.toLocaleString()}
         valueClass="text-rose-600"
       />
-      <StatCard label="Joined" value={String(joinedYear)} />
+      <StreakStatTile label="Longest Streak" count={longestStreak} />
     </>
   );
 
