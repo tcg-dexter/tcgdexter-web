@@ -13,11 +13,16 @@ import MatchEntry from "@/app/components/MatchEntry";
 import DeckCardMenu from "@/app/components/DeckCardMenu";
 import { useTheme } from "@/app/components/ThemeProvider";
 import SavedDeckRow from "./SavedDeckRow";
+import StreakFlame from "@/app/components/StreakFlame";
+import { clientTz, celebrateStreak } from "@/lib/streak-client";
 import { normalizeForSearch } from "@/lib/searchNormalize";
 import { buildAvatarItems } from "@/lib/deckAvatarItems";
 
 interface Props {
   decks: UserDeckCardProps[];
+  /** >0 when the daily-logging streak is alive but today isn't logged yet —
+   *  renders the "keep your streak" nudge. */
+  atRiskStreak?: number;
 }
 
 type SortKey =
@@ -150,12 +155,13 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
     const res = await fetch("/api/matches", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ saved_deck_id: deck.id, ...data }),
+      body: JSON.stringify({ saved_deck_id: deck.id, ...data, tz: clientTz() }),
     });
+    const json = await res.json();
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error ?? "Failed to log match.");
+      throw new Error(json.error ?? "Failed to log match.");
     }
+    celebrateStreak(json.streak);
     setLogOpen(false);
     setLogKey((k) => k + 1);
     router.refresh();
@@ -296,7 +302,7 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
   );
 }
 
-export default function MyDecksClient({ decks }: Props) {
+export default function MyDecksClient({ decks, atRiskStreak = 0 }: Props) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("date");
   const [dir, setDir] = useState<SortDir>("desc");
@@ -362,6 +368,16 @@ export default function MyDecksClient({ decks }: Props) {
       <div className="mb-6">
         <SectionHeader title="Deck Collection" />
       </div>
+
+      {atRiskStreak > 0 && (
+        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm px-4 py-3">
+          <StreakFlame count={atRiskStreak} size="md" showCount={false} />
+          <p className="text-sm text-text-primary">
+            <span className="font-semibold">Keep your {atRiskStreak}-day streak</span>
+            <span className="text-text-muted"> — log a match today before it resets.</span>
+          </p>
+        </div>
+      )}
 
       {pinnedDeck && <PinnedDeckHero key={pinnedDeck.id} deck={pinnedDeck} />}
 

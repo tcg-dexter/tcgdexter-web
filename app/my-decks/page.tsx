@@ -5,6 +5,7 @@ import type { UserDeckCardProps } from "@/app/components/DeckPostCard";
 import { primaryCardImageUrl, deckAvatarInfo, pokemonSlug } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
 import { computeDeckRecords } from "@/lib/deck-record";
+import { isStreakAtRisk, displayCurrentStreak, type StreakRow } from "@/lib/streak";
 import MyDecksClient from "./MyDecksClient";
 
 interface DeckRow {
@@ -76,6 +77,17 @@ export default async function MyDecksPage() {
 
   const deckRecords = computeDeckRecords(manualMatches);
 
+  // Daily-logging streak nudge: when the streak is alive (logged yesterday)
+  // but today isn't logged yet, prompt the user to keep it before it lapses.
+  const { data: streakRow } = await supabase
+    .from("user_streaks")
+    .select("current_streak, longest_streak, last_logged_date, timezone")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const atRiskStreak = isStreakAtRisk(streakRow as StreakRow | null)
+    ? displayCurrentStreak(streakRow as StreakRow | null)
+    : 0;
+
   const deckCards: UserDeckCardProps[] = decks.map((deck) => {
     const cards = deck.analysis?.cards ?? [];
     const avatar = deckAvatarInfo(cards, deck.cover_image_url);
@@ -113,5 +125,5 @@ export default async function MyDecksPage() {
     };
   });
 
-  return <MyDecksClient decks={deckCards} />;
+  return <MyDecksClient decks={deckCards} atRiskStreak={atRiskStreak} />;
 }

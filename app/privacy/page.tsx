@@ -40,7 +40,8 @@ export default function PrivacyPolicyPage() {
           (including any opponent name, handle, or archetype you type or
           paste in — see &ldquo;Content You Share May Include Other
           Players&rsquo; Information&rdquo; below), your tracked card
-          collection, and any images you upload as evidence for a verified
+          collection, a daily activity streak that counts the days you log
+          matches, and any images you upload as evidence for a verified
           match.
         </p>
         <p>

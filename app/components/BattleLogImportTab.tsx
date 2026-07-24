@@ -7,6 +7,7 @@ import {
   summarize,
   type BattleLogSummary,
 } from "@/lib/battle-log";
+import { clientTz, celebrateStreak } from "@/lib/streak-client";
 
 /* ─── Meta archetypes (mirrored from MatchForm) ────────────────── */
 
@@ -206,10 +207,12 @@ export default function BattleLogImportTab({
           played_at: showDateField
             ? new Date(matchDate + "T12:00:00").toISOString()
             : null,
+          tz: clientTz(),
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Failed to import match.");
+      celebrateStreak(json.streak);
       onSuccess();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");

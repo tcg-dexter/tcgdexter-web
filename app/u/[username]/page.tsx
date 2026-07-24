@@ -18,6 +18,8 @@ import UserProfileHeader, {
 } from "./UserProfileHeader";
 import ThemeColor from "@/app/components/ThemeColor";
 import { ResponsiveLabel } from "@/app/components/StatCard";
+import StreakFlame from "@/app/components/StreakFlame";
+import { displayCurrentStreak, type StreakRow } from "@/lib/streak";
 import AccentPicker from "./AccentPicker";
 import TeamCards, { type TeamCardRef } from "./TeamCards";
 import { MatchCard } from "@/app/components/MatchCard";
@@ -87,27 +89,6 @@ export async function generateMetadata({
   };
 }
 
-/** Longest consecutive `win` run across matches sorted by played_at
- *  (falling back to created_at). Used by the Streak stat tile. */
-function computeLongestWinStreak(matches: MatchRow[]): number {
-  const sorted = [...matches].sort((a, b) => {
-    const ka = a.played_at ?? a.created_at;
-    const kb = b.played_at ?? b.created_at;
-    return ka.localeCompare(kb);
-  });
-  let best = 0;
-  let cur = 0;
-  for (const m of sorted) {
-    if (m.result === "win") {
-      cur++;
-      if (cur > best) best = cur;
-    } else {
-      cur = 0;
-    }
-  }
-  return best;
-}
-
 export default async function ProfilePage({
   params,
 }: {
@@ -173,7 +154,15 @@ export default async function ProfilePage({
     globalWins + globalLosses > 0
       ? Math.round((globalWins / (globalWins + globalLosses)) * 100)
       : null;
-  const longestStreak = isOwner ? computeLongestWinStreak(manualMatches) : null;
+
+  // Daily match-logging streak — public (shown to visitors too), reads as
+  // 0 once it lapses (see displayCurrentStreak). Backed by user_streaks.
+  const { data: streakRow } = await supabase
+    .from("user_streaks")
+    .select("current_streak, longest_streak, last_logged_date, timezone")
+    .eq("user_id", profile.id)
+    .maybeSingle();
+  const dayStreak = displayCurrentStreak(streakRow as StreakRow | null);
 
   // Heatmap dates: manual played_at (owner only — manual match data is private).
   const heatmapMatches: MatchRow[] = isOwner ? manualMatches : [];
@@ -245,11 +234,17 @@ export default async function ProfilePage({
             : "text-text-secondary"
         }
       />
-      <StatCard
-        label="Streak"
-        value={isOwner && longestStreak !== null ? longestStreak.toLocaleString() : "—"}
-        valueClass="text-emerald-600"
-      />
+      {/* Daily match-logging streak (public). Bespoke tile so the flame
+          sits with the count — the momentum cue the win-streak lacked. */}
+      <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm px-4 py-3 text-center">
+        <div className="flex items-center justify-center gap-1">
+          <StreakFlame count={dayStreak} size="md" showCount={false} />
+          <span className="text-lg font-bold tabular-nums text-text-primary">
+            {dayStreak.toLocaleString()}
+          </span>
+        </div>
+        <p className="text-xs text-text-muted mt-0.5">Day Streak</p>
+      </div>
       <StatCard label="Decks" value={decks.length.toLocaleString()} />
       <StatCard label="Public" value={publicDeckCount.toLocaleString()} />
       <StatCard

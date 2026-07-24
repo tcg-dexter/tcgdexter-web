@@ -6,6 +6,7 @@ import {
   summarize,
   PARSER_VERSION,
 } from "@/lib/battle-log";
+import { bumpMatchStreak, localDateInTz } from "@/lib/streak";
 
 /**
  * POST /api/matches/import
@@ -44,6 +45,8 @@ export async function POST(req: Request) {
     opponent_name?: string;
     notes?: string;
     played_at?: string;
+    /** Client IANA timezone, for bucketing the daily-logging streak. */
+    tz?: string;
   };
   try {
     body = await req.json();
@@ -197,10 +200,15 @@ export async function POST(req: Request) {
     }
   }
 
+  // One import = one logged day, same as a manual log. Non-fatal.
+  const tz = typeof body.tz === "string" ? body.tz : "UTC";
+  const streak = await bumpMatchStreak(supabase, localDateInTz(new Date(), tz), tz);
+
   return NextResponse.json({
     id: match.id,
     result,
     summary,
     unmatched_lines: parsed.unmatched.length,
+    streak,
   });
 }

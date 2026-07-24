@@ -8,6 +8,7 @@ import {
   sanitizeGamePrizes,
 } from "@/lib/bo3";
 import { track } from "@/lib/analytics/track";
+import { bumpMatchStreak, localDateInTz } from "@/lib/streak";
 
 /**
  * POST /api/matches
@@ -51,6 +52,8 @@ export async function POST(req: Request) {
     prizes_taken_player?: number | null;
     prizes_taken_opponent?: number | null;
     game_prizes?: unknown;
+    /** Client IANA timezone, for bucketing the daily-logging streak. */
+    tz?: string;
   };
   try {
     body = await req.json();
@@ -129,5 +132,12 @@ export async function POST(req: Request) {
     bo3: gameResults !== null,
   });
 
-  return NextResponse.json(data);
+  // Daily-logging streak. The client's timezone decides the calendar day;
+  // the day itself is the server's "now" in that zone (not a client-sent
+  // date), so it can't be spoofed. Non-fatal — a null streak never blocks
+  // the logged match from being returned.
+  const tz = typeof body.tz === "string" ? body.tz : "UTC";
+  const streak = await bumpMatchStreak(supabase, localDateInTz(new Date(), tz), tz);
+
+  return NextResponse.json({ ...data, streak });
 }
