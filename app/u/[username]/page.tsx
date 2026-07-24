@@ -253,7 +253,7 @@ export default async function ProfilePage({
         }
       />
       {/* Daily match-logging streak (public) — current + all-time best. */}
-      <StreakStatTile label="Current Streak" count={dayStreak} />
+      <StreakStatTile label="Current" count={dayStreak} />
       <StatCard label="Decks" value={decks.length.toLocaleString()} />
       <StatCard label="Public" value={publicDeckCount.toLocaleString()} />
       <StatCard
@@ -261,7 +261,7 @@ export default async function ProfilePage({
         value={totalLikes.toLocaleString()}
         valueClass="text-rose-600"
       />
-      <StreakStatTile label="Longest Streak" count={longestStreak} />
+      <StreakStatTile label="Longest" count={longestStreak} />
     </>
   );
 
