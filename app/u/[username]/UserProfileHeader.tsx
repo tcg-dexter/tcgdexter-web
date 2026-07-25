@@ -225,14 +225,14 @@ export default function UserProfileHeader({
         {sideModule ? (
           <div className="grid gap-4 lg:grid-cols-5 lg:items-start">
             <div className="lg:col-span-3 space-y-6">
-              <div className="grid grid-cols-4 xl:grid-cols-8 gap-3">{stats}</div>
+              <div className="grid grid-cols-4 gap-3">{stats}</div>
               {belowStats}
             </div>
             <div className="lg:col-span-2">{sideModule}</div>
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-4 xl:grid-cols-8 gap-3">{stats}</div>
+            <div className="grid grid-cols-4 gap-3">{stats}</div>
             {belowStats && <div className="mt-6 space-y-6">{belowStats}</div>}
           </>
         )}
