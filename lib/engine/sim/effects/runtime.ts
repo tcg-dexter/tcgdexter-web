@@ -25,6 +25,11 @@ export interface EffectPick {
   ref: string;
   monIds?: string[];
   cardIds?: string[];
+  /** Display names parallel to the ids (for the client UI, which labels picks
+   *  without seeing hidden zones — mirrors PlayTrainerMove.deckCardNames).
+   *  Ignored by validation (which fingerprints ids only) and by apply. */
+  monNames?: string[];
+  cardNames?: string[];
 }
 export interface EffectMove {
   kind: "effect";
@@ -143,16 +148,26 @@ export function guardsPass(
 function specOptions(state: GameState, actor: Actor, spec: TargetSpec): EffectPick[] {
   if (spec.select === "mon") {
     const cands = candidateMons(state, actor, spec);
-    if (cands.length === 0) return spec.upTo ? [{ ref: spec.ref, monIds: [] }] : [];
-    if (spec.chooser === "all") return [{ ref: spec.ref, monIds: cands.map((m) => m.mon.id) }];
-    if (spec.chooser === "auto") return [{ ref: spec.ref, monIds: [cands[0].mon.id] }];
-    return cands.map((m) => ({ ref: spec.ref, monIds: [m.mon.id] }));
+    if (cands.length === 0) return spec.upTo ? [{ ref: spec.ref, monIds: [], monNames: [] }] : [];
+    const pick = (ms: ResolvedMon[]): EffectPick => ({
+      ref: spec.ref,
+      monIds: ms.map((m) => m.mon.id),
+      monNames: ms.map((m) => m.mon.card.name),
+    });
+    if (spec.chooser === "all") return [pick(cands)];
+    if (spec.chooser === "auto") return [pick([cands[0]])];
+    return cands.map((m) => pick([m]));
   }
   const cands = candidateCards(state, actor, spec);
-  if (cands.length === 0) return spec.upTo ? [{ ref: spec.ref, cardIds: [] }] : [];
-  if (spec.chooser === "all") return [{ ref: spec.ref, cardIds: cands.map((c) => c.id) }];
-  if (spec.chooser === "auto") return [{ ref: spec.ref, cardIds: [cands[0].id] }];
-  return cands.map((c) => ({ ref: spec.ref, cardIds: [c.id] }));
+  if (cands.length === 0) return spec.upTo ? [{ ref: spec.ref, cardIds: [], cardNames: [] }] : [];
+  const pick = (cs: CardInstance[]): EffectPick => ({
+    ref: spec.ref,
+    cardIds: cs.map((c) => c.id),
+    cardNames: cs.map((c) => c.name),
+  });
+  if (spec.chooser === "all") return [pick(cands)];
+  if (spec.chooser === "auto") return [pick([cands[0]])];
+  return cands.map((c) => pick([c]));
 }
 
 /** All concrete moves for a card's effect (empty if guards fail or a required

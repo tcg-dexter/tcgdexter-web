@@ -11,7 +11,8 @@ import { abilityMoves, type UseAbilityMove } from "./abilities";
 import { cannotAct } from "./conditions";
 import { canRetreat, effectiveMaxHp, isTool } from "./tools";
 import { benchCap, stadiumMoves, type UseStadiumMove } from "./stadiums";
-import type { EffectMove } from "./effects/runtime";
+import { enumerateEffect, type EffectMove } from "./effects/runtime";
+import { effectsFor } from "./effects/cards";
 
 export type SimMove =
   | { kind: "attach"; cardId: string; targetId: string }
@@ -229,9 +230,22 @@ export function legalMoves(
       const supporter = isSupporter(card);
       const supporterOk = !supporter || (!side.supporterPlayedThisTurn && !supporterBanned);
       const spec = trainerSpec(card);
+      const effects = spec ? [] : effectsFor(card.name);
       if (spec) {
+        // Legacy staple registry takes precedence (tuned handling the AI
+        // policies already understand); declarative records are consulted
+        // only for cards the legacy registry doesn't cover.
         if (supporterOk) {
           moves.push(...trainerMoves(state, actor, card, spec));
+        }
+      } else if (effects.length > 0) {
+        // Declarative-effect trainer (W2). Enumerate concrete moves with the
+        // ORIGINAL effect index so validate/driver resolve the same record.
+        if (supporterOk) {
+          effects.forEach((effect, i) => {
+            if (effect.trigger.kind !== "trainer") return;
+            moves.push(...enumerateEffect(state, actor, { id: card.id, name: card.name }, effect, i));
+          });
         }
       } else if (side.deck.length > 0) {
         if (supporter) {
