@@ -233,23 +233,23 @@ export default async function ProfilePage({
   const hasAnyTeamPick = teamArray.some((slot) => !!slot);
   const showTeam = isOwner || hasAnyTeamPick;
 
-  const belowStats = (
-    <>
-      {/* Achievements — earned badges are public (visitors see them too);
-          the locked "goals" drawer is owner-only. Hidden entirely for a
-          visitor viewing a profile with no earned badges. */}
-      {(isOwner || earnedAchievements.length > 0) && (
-        <AchievementsModule
-          earnedKeys={earnedAchievements.map((a) => a.key)}
-          showLocked={isOwner}
-        />
-      )}
-      {/* Match Activity — owner-only (manual match data is private). */}
-      {isOwner && heatmapMatches.length > 0 && (
-        <MatchHeatMap matches={heatmapMatches} accent={profile.banner_accent} />
-      )}
-    </>
-  );
+  // Left column, under the stat grid — Match Activity (owner-only; manual
+  // match data is private).
+  const belowStats =
+    isOwner && heatmapMatches.length > 0 ? (
+      <MatchHeatMap matches={heatmapMatches} accent={profile.banner_accent} />
+    ) : undefined;
+
+  // Right column — Achievements. Earned badges are public (visitors see
+  // them too); the locked "goals" drawer is owner-only. Hidden entirely
+  // for a visitor viewing a profile with no earned badges.
+  const sideModule =
+    isOwner || earnedAchievements.length > 0 ? (
+      <AchievementsModule
+        earnedKeys={earnedAchievements.map((a) => a.key)}
+        showLocked={isOwner}
+      />
+    ) : undefined;
 
   const stats = (
     <>
@@ -317,6 +317,7 @@ export default async function ProfilePage({
         bannerAccent={profile.banner_accent}
         stats={stats}
         belowStats={belowStats}
+        sideModule={sideModule}
         bannerOverlay={
           isOwner ? (
             <AccentPicker

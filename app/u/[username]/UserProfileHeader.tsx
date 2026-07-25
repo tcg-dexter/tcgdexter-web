@@ -75,11 +75,15 @@ interface Props {
   /** 8 StatCard tiles. Caller-built so the page can wire in owner-vs-
    *  visitor data without duplicating the layout. */
   stats: ReactNode;
-  /** Content rendered inside the bio block, below the stat grid. Used
-   *  by the profile page for the match-activity + achievements cards so
-   *  they share the exact same `max-w-2xl px-6` parent as the stat grid
-   *  and line up edge-to-edge with it. */
+  /** Content rendered below the stat grid in the left column (desktop) —
+   *  the match-activity card. Shares the exact same `max-w-2xl px-6`
+   *  parent as the stat grid so it lines up edge-to-edge with it. */
   belowStats?: ReactNode;
+  /** Right-column module on desktop (the achievements/badges card). When
+   *  present, the top region splits into two columns at lg+ (stats +
+   *  belowStats on the left, this on the right); below lg everything
+   *  stacks. When absent, the stat grid spans full width as before. */
+  sideModule?: ReactNode;
   /** Fanned team-card spread rendered inside the banner's clipped
    *  bounds (mirrors the meta archetype header's card fan). Unlike
    *  `bannerOverlay`, this sits *inside* an `overflow-hidden` wrapper
@@ -102,6 +106,7 @@ export default function UserProfileHeader({
   bannerFan,
   stats,
   belowStats,
+  sideModule,
 }: Props) {
   const gradient = bannerGradientFor(bannerAccent);
 
@@ -206,13 +211,26 @@ export default function UserProfileHeader({
           </p>
         )}
 
-        {/* 8-cell stat grid — wired in by the page. */}
-        <div className="mt-4 grid grid-cols-4 gap-3">{stats}</div>
-
-        {/* Match activity, achievements, etc. Sit in the same bio
-         *  container as the stat grid so their card edges line up with
+        {/* Top modules. On desktop (lg+) they split into two columns: the
+         *  8-cell stat grid + match activity on the left, badges on the
+         *  right (3:2). Below lg they stack (stats → activity → badges).
+         *  With no side module the stat grid spans full width as before.
+         *  All of it shares the bio container so card edges line up with
          *  the stat row's outer edge. */}
-        {belowStats && <div className="mt-6 space-y-6">{belowStats}</div>}
+        {sideModule ? (
+          <div className="mt-4 grid gap-4 lg:grid-cols-5 lg:items-start">
+            <div className="lg:col-span-3 space-y-6">
+              <div className="grid grid-cols-4 gap-3">{stats}</div>
+              {belowStats}
+            </div>
+            <div className="lg:col-span-2">{sideModule}</div>
+          </div>
+        ) : (
+          <>
+            <div className="mt-4 grid grid-cols-4 gap-3">{stats}</div>
+            {belowStats && <div className="mt-6 space-y-6">{belowStats}</div>}
+          </>
+        )}
       </div>
     </header>
   );
