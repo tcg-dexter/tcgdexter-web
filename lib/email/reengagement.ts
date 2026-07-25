@@ -191,6 +191,7 @@ export async function runReengagement(
         continue;
       }
       const { subject, html } = streakAtRiskEmail({
+        siteUrl: baseUrl(),
         streak: c.streak,
         ctaUrl: `${baseUrl()}/my-decks`,
         unsubUrl: unsubUrlFor(c.userId),
@@ -241,7 +242,9 @@ export async function runReengagement(
         ? `save ${n} more deck${n === 1 ? "" : "s"}`
         : `log ${n} more match${n === 1 ? "" : "es"}`;
       const { subject, html } = nearBadgeEmail({
+        siteUrl: baseUrl(),
         badgeName: e.near.badgeName,
+        badgeImageUrl: `${baseUrl()}/badges/${e.near.key}.png`,
         remaining: n,
         action,
         ctaUrl: isDecks ? `${baseUrl()}/` : `${baseUrl()}/my-decks`,
