@@ -11,6 +11,7 @@ import { abilityMoves, type UseAbilityMove } from "./abilities";
 import { cannotAct } from "./conditions";
 import { canRetreat, effectiveMaxHp, isTool } from "./tools";
 import { benchCap, stadiumMoves, type UseStadiumMove } from "./stadiums";
+import type { EffectMove } from "./effects/runtime";
 
 export type SimMove =
   | { kind: "attach"; cardId: string; targetId: string }
@@ -21,6 +22,11 @@ export type SimMove =
   | { kind: "cycle_item"; cardId: string }
   | PlayTrainerMove
   | UseAbilityMove
+  // Universal declarative-effect move (W2 cutover). Card-agnostic: the source
+  // is a hand card (trainer) or an in-play Pokémon (ability); `picks` records
+  // the chosen ids per target slot. Enumerated by enumerateEffect for cards in
+  // the declarative registry (effects/cards.ts); applied by applyEffect.
+  | EffectMove
   | { kind: "play_stadium"; cardId: string }
   | { kind: "attach_tool"; cardId: string; targetId: string }
   | UseStadiumMove

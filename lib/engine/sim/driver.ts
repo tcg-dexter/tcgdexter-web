@@ -25,6 +25,8 @@ import type { DecisionPolicy } from "./policy";
 import { buildSimInitialState, energyUnits, toPokemonInPlay, type SimDeck } from "./setup";
 import { retreatCost } from "./tools";
 import { applyTrainer } from "./trainers";
+import { applyEffect } from "./effects/runtime";
+import { effectsFor } from "./effects/cards";
 import { applyStadium, benchCap, enforceBenchCap } from "./stadiums";
 import { viewFor } from "./view";
 import { shuffle, type Rng } from "./rng";
@@ -217,6 +219,21 @@ export function applyMove(
     case "play_trainer": {
       applyTrainer(state, actor, move, rng);
       return done(false);
+    }
+    case "effect": {
+      // Declarative-effect move (universal encoding). applyEffect does the
+      // trainer/ability housekeeping and runs the ops. Effects can place
+      // counters / conditions, so resolve KOs like an activated ability.
+      const effect = effectsFor(move.card)[move.effectIndex];
+      if (effect) applyEffect(state, actor, effect, move, rng);
+      const ko = resolveKnockouts(state);
+      if (ko.winner) {
+        state.winner = ko.winner;
+        state.endReason = ko.endReason;
+        return done(false, null, ko.koTurn);
+      }
+      const pending = ko.pendingPromotions.includes(actor) ? actor : null;
+      return done(false, pending, ko.koTurn);
     }
     case "play_stadium": {
       const card = takeFromHand(move.cardId);

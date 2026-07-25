@@ -203,6 +203,18 @@ function applyTracked(
         else s.items += 1;
         break;
       }
+      case "effect": {
+        // Trainer-triggered effects count as supporter/item plays; ability
+        // triggers (no hand card) fall through and are counted as abilities.
+        const card = side.hand.find((c) => c.id === move.sourceId);
+        if (card) {
+          if (isSupporter(card)) s.supporters += 1;
+          else s.items += 1;
+        } else {
+          s.abilities += 1;
+        }
+        break;
+      }
       case "use_ability":
         s.abilities += 1;
         break;

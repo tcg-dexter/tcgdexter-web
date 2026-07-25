@@ -18,6 +18,7 @@ import { attackConditionModeled } from "./conditions";
 import { isStadiumModeled } from "./stadiums";
 import { isToolModeled } from "./tools";
 import { TRAINER_EFFECTS } from "./trainers";
+import { effectsFor } from "./effects/cards";
 
 export type EffectSlotKind =
   | "ability"
@@ -83,8 +84,14 @@ export function classifyCardEffects(name: string): EffectSlot[] {
     } else if (card.subtypes.includes("Stadium")) {
       slots.push({ kind: "stadium", key: card.name, implemented: isStadiumModeled(card.name) });
     } else {
-      // Supporter / Item — effect-bearing by definition in Standard.
-      slots.push({ kind: "trainer", key: card.name, implemented: card.name in TRAINER_EFFECTS });
+      // Supporter / Item — effect-bearing by definition in Standard. Modeled
+      // by the legacy registry OR the declarative registry (they're mutually
+      // exclusive during the W2 migration; either counts as implemented).
+      slots.push({
+        kind: "trainer",
+        key: card.name,
+        implemented: card.name in TRAINER_EFFECTS || effectsFor(card.name).length > 0,
+      });
     }
     return slots;
   }
