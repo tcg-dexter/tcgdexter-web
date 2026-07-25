@@ -25,6 +25,8 @@ import TeamCards, { type TeamCardRef } from "./TeamCards";
 import { MatchCard } from "@/app/components/MatchCard";
 import { loadOwnerRecentMatches } from "@/lib/recent-matches";
 import ProfileTabs from "./ProfileTabs";
+import AchievementsModule from "./AchievementsModule";
+import { listAchievements, reconcileAchievements } from "@/lib/learn/achievements";
 
 interface ProfileRow {
   id: string;
@@ -183,6 +185,16 @@ export default async function ProfilePage({
   // check, so it persists even after the current streak lapses.
   const longestStreak = (streakRow as StreakRow | null)?.longest_streak ?? 0;
 
+  // Achievements — badges render on the public profile. For the owner we
+  // reconcile first: a self-healing backfill that awards any count-based
+  // badges earned before this feature shipped (or before their next
+  // log/save). RLS permits self-inserts only, so it's a no-op for visitors,
+  // who simply read the already-earned rows.
+  if (isOwner) {
+    await reconcileAchievements(supabase, profile.id);
+  }
+  const earnedAchievements = await listAchievements(supabase, profile.id);
+
   // Heatmap dates: manual played_at (owner only — manual match data is private).
   const heatmapMatches: MatchRow[] = isOwner ? manualMatches : [];
 
@@ -223,6 +235,15 @@ export default async function ProfilePage({
 
   const belowStats = (
     <>
+      {/* Achievements — earned badges are public (visitors see them too);
+          the locked "goals" drawer is owner-only. Hidden entirely for a
+          visitor viewing a profile with no earned badges. */}
+      {(isOwner || earnedAchievements.length > 0) && (
+        <AchievementsModule
+          earnedKeys={earnedAchievements.map((a) => a.key)}
+          showLocked={isOwner}
+        />
+      )}
       {/* Match Activity — owner-only (manual match data is private). */}
       {isOwner && heatmapMatches.length > 0 && (
         <MatchHeatMap matches={heatmapMatches} accent={profile.banner_accent} />

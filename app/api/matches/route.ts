@@ -9,6 +9,7 @@ import {
 } from "@/lib/bo3";
 import { track } from "@/lib/analytics/track";
 import { bumpMatchStreak, localDateInTz } from "@/lib/streak";
+import { reconcileAchievements } from "@/lib/learn/achievements";
 
 /**
  * POST /api/matches
@@ -138,6 +139,11 @@ export async function POST(req: Request) {
   // the logged match from being returned.
   const tz = typeof body.tz === "string" ? body.tz : "UTC";
   const streak = await bumpMatchStreak(supabase, localDateInTz(new Date(), tz), tz);
+
+  // Award any count-based badges this log just unlocked (First Match,
+  // match-grind milestones). Internally error-safe; awaited so it runs to
+  // completion before the serverless function freezes.
+  await reconcileAchievements(supabase, user.id);
 
   return NextResponse.json({ ...data, streak });
 }
