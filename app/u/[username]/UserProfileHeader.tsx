@@ -223,7 +223,10 @@ export default function UserProfileHeader({
        *  spans the full width. */}
       <div className="px-4 sm:px-8 mt-6">
         {sideModule ? (
-          <div className="grid gap-4 lg:grid-cols-5 lg:items-start">
+          // items-stretch (default) so the badges column matches the left
+          // column's height — the collapsed badges card fills it via
+          // lg:min-h-full, and still grows past it when its drawer opens.
+          <div className="grid gap-4 lg:grid-cols-5">
             <div className="lg:col-span-3 space-y-6">
               <div className="grid grid-cols-4 gap-3">{stats}</div>
               {belowStats}

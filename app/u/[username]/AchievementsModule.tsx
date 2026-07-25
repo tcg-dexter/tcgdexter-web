@@ -31,7 +31,7 @@ export default function AchievementsModule({
   const hasLocked = showLocked && lockedDefs.length > 0;
 
   return (
-    <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-4 sm:p-5">
+    <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-4 sm:p-5 lg:min-h-full">
       {/* Header — toggles the locked drawer when there are badges left to
           earn; otherwise it's a plain, non-interactive heading. */}
       <button
