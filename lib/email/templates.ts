@@ -129,6 +129,7 @@ export function nearBadgeEmail(opts: {
     opts;
   const noun = remaining === 1 ? "step" : "steps";
   const subject = `You're ${remaining} ${noun} from ${badgeName}`;
+  const actionSentence = action.charAt(0).toUpperCase() + action.slice(1);
   // The locked badge, previewed at ~40% via wrapper opacity so it reads as
   // "not yet earned". Inline styles only — email clients ignore <style>.
   const badgeHtml = `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 4px;"><tr><td align="center" style="opacity:0.4;filter:grayscale(100%);">
@@ -142,7 +143,7 @@ export function nearBadgeEmail(opts: {
       siteUrl,
       preheader: `${action} to unlock the ${badgeName} badge.`,
       headingHtml: `So close to ${gradientText(badgeName)}`,
-      bodyHtml: `${badgeHtml}<p style="margin:0 0 10px;">You're just <strong>${action}</strong> away from earning the ${gradientText(
+      bodyHtml: `${badgeHtml}<p style="margin:0 0 10px;"><strong>${actionSentence}</strong> to earn the ${gradientText(
         badgeName,
       )} badge. Nice work getting this far.</p>`,
       ctaLabel,
