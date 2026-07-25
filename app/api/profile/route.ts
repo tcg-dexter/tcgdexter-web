@@ -33,7 +33,7 @@ export async function GET() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name, username, is_public, avatar_url, bio, theme_preference")
+    .select("display_name, username, is_public, avatar_url, bio, theme_preference, email_reengagement")
     .eq("id", user.id)
     .single();
 
@@ -44,6 +44,7 @@ export async function GET() {
     avatar_url: profile?.avatar_url ?? null,
     bio: profile?.bio ?? null,
     theme_preference: profile?.theme_preference ?? "light",
+    email_reengagement: profile?.email_reengagement ?? true,
   });
 }
 
@@ -81,6 +82,7 @@ export async function PATCH(req: Request) {
     banner_accent?: string | null;
     team_cards?: (TeamCardInput | null)[] | null;
     theme_preference?: string;
+    email_reengagement?: boolean;
   };
   try {
     body = await req.json();
@@ -268,6 +270,12 @@ export async function PATCH(req: Request) {
       );
     }
     updates.theme_preference = body.theme_preference;
+  }
+
+  // ── email_reengagement ────────────────────────────────────────────
+  // Master opt-in for re-engagement emails (streak-at-risk, near-badge).
+  if (typeof body.email_reengagement === "boolean") {
+    updates.email_reengagement = body.email_reengagement;
   }
 
   if (Object.keys(updates).length === 0) {

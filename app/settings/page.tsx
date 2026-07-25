@@ -8,6 +8,7 @@ import EditPublicToggle from "@/app/profile/EditPublicToggle";
 import SignOutButton from "@/app/profile/SignOutButton";
 import DeleteAccountButton from "@/app/settings/DeleteAccountButton";
 import AppearanceToggle from "@/app/settings/AppearanceToggle";
+import EditEmailNotificationsToggle from "@/app/profile/EditEmailNotificationsToggle";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -18,7 +19,7 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name, username, bio, is_public, created_at")
+    .select("display_name, username, bio, is_public, created_at, email_reengagement")
     .eq("id", user.id)
     .single();
 
@@ -89,6 +90,17 @@ export default async function SettingsPage() {
           <div className="px-4 py-3">
             <AppearanceToggle />
           </div>
+        </div>
+      </div>
+
+      <div className="mt-6 mb-2">
+        <p className="text-xs font-semibold uppercase tracking-widest text-text-muted px-1 mb-2">
+          Notifications
+        </p>
+        <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden">
+          <EditEmailNotificationsToggle
+            initialEnabled={profile?.email_reengagement ?? true}
+          />
         </div>
       </div>
 

@@ -57,6 +57,7 @@ export default function PrivacyPolicyPage() {
         <ul>
           <li>Provide the core features — deck profiling, saved decks, match logging, collection tracking, and public profile pages.</li>
           <li>Keep your account secure and let you sign back in.</li>
+          <li>Send optional reminder emails — for example when your match-logging streak is about to lapse or you&rsquo;re close to earning a badge. You can turn these off anytime in Settings or via the unsubscribe link in any such email.</li>
           <li>Understand overall usage patterns so we can improve the site.</li>
           <li>Respond to support requests sent to feedback@tcgdexter.com.</li>
         </ul>
@@ -79,8 +80,13 @@ export default function PrivacyPolicyPage() {
             <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noreferrer">
               Vercel
             </a>{" "}
-            (hosting). They process data only to provide their service to
-            us, not for their own purposes.
+            (hosting), and{" "}
+            <a href="https://resend.com/legal/privacy-policy" target="_blank" rel="noreferrer">
+              Resend
+            </a>{" "}
+            (email delivery — receives your email address to send the
+            account and reminder emails described below). They process data
+            only to provide their service to us, not for their own purposes.
           </li>
           <li>What you make public. Content and profile fields you mark as public (e.g. a public deck, a public profile) are visible to anyone who visits that page.</li>
           <li>If required by law, or to protect the rights, safety, or property of TCG Dexter or our users.</li>
