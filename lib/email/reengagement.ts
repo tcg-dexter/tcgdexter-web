@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { isStreakAtRisk, localDateInTz, type StreakRow } from "@/lib/streak";
 import { nearBadgeFor } from "@/lib/email/near-badge";
 import { sendEmail } from "@/lib/email/send";
@@ -7,38 +6,42 @@ import { streakAtRiskEmail, nearBadgeEmail } from "@/lib/email/templates";
 import { signUnsubToken } from "@/lib/email/unsubscribe";
 
 /**
- * GET /api/cron/reengagement
+ * Re-engagement mailer — the core job, decoupled from any trigger.
  *
- * Scheduled re-engagement mailer (Vercel cron, hourly). Two passes:
- *   • streak-at-risk — every hour, timezone-aware: users with current_streak
- *     >= 2 whose streak is alive but today is unlogged, sent in their local
+ * Run by `scripts/reengagement.ts` on the mac mini (hourly via launchd),
+ * NOT by a Vercel cron. Two passes:
+ *   • streak-at-risk — every run, timezone-aware: users with current_streak
+ *     >= 2 whose streak is alive but today is unlogged, in their local
  *     evening. Once per user per local day (dedup on the local date).
  *   • near-next-badge — once per day (NEAR_BADGE_UTC_HOUR): users exactly
  *     one milestone-step away. Once per badge ever (dedup on the badge key).
  *
- * Auth: `Authorization: Bearer $CRON_SECRET` (Vercel sends this header for
- * scheduled invocations). `?dry=1` computes the target list and returns it
- * without claiming or sending — safe to run by hand on any environment.
- *
- * Sending is best-effort: `sendEmail` no-ops without a Resend key (so
- * preview/local send nothing), and every claim is rolled back if the send
- * doesn't succeed, so a transient failure retries on the next run.
+ * Best-effort: `sendEmail` no-ops without a Resend key, and every claim is
+ * rolled back if the send doesn't succeed, so a transient failure retries.
+ * Pass `{ dry: true }` to compute the target list without claiming/sending.
  */
-
-export const dynamic = "force-dynamic";
 
 const EVENING_START = 18; // local-hour window (inclusive) for streak sends
 const EVENING_END = 21; // exclusive
 const NEAR_BADGE_UTC_HOUR = 16; // near-badge pass runs once/day at this UTC hour
 const NEAR_BADGE_WINDOW = 1; // "1 away" from the next milestone
 
-type Target = {
+export type ReengagementTarget = {
   userId: string;
   kind: "streak_at_risk" | "near_badge";
   streak?: number;
   badge?: string;
   remaining?: number;
   localHour?: number;
+};
+
+export type ReengagementSummary = {
+  dry: boolean;
+  utcHour: number;
+  nearBadgePass: boolean;
+  targetCount: number;
+  sent: number;
+  targets?: ReengagementTarget[];
 };
 
 function baseUrl(): string {
@@ -71,25 +74,37 @@ function localHourInTz(now: Date, tz: string): number {
   }
 }
 
-export async function GET(req: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+/** userId → email map, paginated (one pass, matches the CRM contacts sync). */
+async function buildEmailMap(admin: SupabaseClient): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const perPage = 1000;
+  for (let page = 1; ; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
+    if (error || !data) break;
+    for (const u of data.users) if (u.email) map.set(u.id, u.email);
+    if (data.users.length < perPage) break;
   }
+  return map;
+}
 
-  const dry = new URL(req.url).searchParams.get("dry") === "1";
-  const admin = createAdminClient();
-  const now = new Date();
+export async function runReengagement(
+  admin: SupabaseClient,
+  opts: { now?: Date; dry?: boolean } = {},
+): Promise<ReengagementSummary> {
+  const now = opts.now ?? new Date();
+  const dry = opts.dry ?? false;
   const utcHour = now.getUTCHours();
 
-  const targets: Target[] = [];
+  const targets: ReengagementTarget[] = [];
   let sent = 0;
   const streakedUsers = new Set<string>();
 
+  // Emails are only needed for live sends — build the map lazily so a dry
+  // run (and a run with no eligible users) never lists the whole user base.
+  let emailMap: Map<string, string> | null = null;
   const emailFor = async (userId: string): Promise<string | null> => {
-    const { data, error } = await admin.auth.admin.getUserById(userId);
-    if (error || !data?.user?.email) return null;
-    return data.user.email;
+    if (!emailMap) emailMap = await buildEmailMap(admin);
+    return emailMap.get(userId) ?? null;
   };
 
   const optedIn = async (ids: string[]): Promise<Set<string>> => {
@@ -106,7 +121,7 @@ export async function GET(req: Request) {
   // null if this (user, kind, key) was already sent.
   const claim = async (
     userId: string,
-    kind: Target["kind"],
+    kind: ReengagementTarget["kind"],
     dedupKey: string,
   ): Promise<string | null> => {
     const { data, error } = await admin
@@ -117,7 +132,7 @@ export async function GET(req: Request) {
       )
       .select("id");
     if (error) {
-      console.error("[cron/reengagement] claim failed:", error);
+      console.error("[reengagement] claim failed:", error);
       return null;
     }
     return data && data.length > 0 ? (data[0] as { id: string }).id : null;
@@ -136,7 +151,7 @@ export async function GET(req: Request) {
     }
   };
 
-  // ── Streak-at-risk pass (every hour) ─────────────────────────────
+  // ── Streak-at-risk pass (every run) ──────────────────────────────
   {
     const { data: rows } = await admin
       .from("user_streaks")
@@ -238,13 +253,12 @@ export async function GET(req: Request) {
     }
   }
 
-  return NextResponse.json({
-    ok: true,
+  return {
     dry,
     utcHour,
     nearBadgePass: utcHour === NEAR_BADGE_UTC_HOUR,
     targetCount: targets.length,
     sent,
     ...(dry ? { targets } : {}),
-  });
+  };
 }

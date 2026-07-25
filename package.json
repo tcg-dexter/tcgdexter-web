@@ -13,7 +13,8 @@
     "build:card-types": "node scripts/build_card_types.mjs",
     "ml:extract": "tsx scripts/ml/extract.ts",
     "ml:selfplay": "tsx scripts/ml/selfplay.ts",
-    "ml:duel": "tsx scripts/ml/policy_duel.ts"
+    "ml:duel": "tsx scripts/ml/policy_duel.ts",
+    "reengagement": "tsx scripts/reengagement.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.0",
