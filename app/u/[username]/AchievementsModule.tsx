@@ -64,11 +64,10 @@ export default function AchievementsModule({
         )}
       </button>
 
-      {/* Earned badges (always visible). Grid drops back to 3-up at lg,
-          where this card sits in the narrower right rail of the profile's
-          two-column top region. */}
+      {/* Earned badges (always visible). Auto-fill medallions so the grid
+          packs to fit whatever width the right rail gets. */}
       {earnedDefs.length > 0 ? (
-        <div className="mt-4 grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-3 gap-3">
+        <div className="mt-4 grid gap-3 grid-cols-[repeat(auto-fill,minmax(4.5rem,1fr))]">
           {earnedDefs.map((def) => (
             <AchievementBadge key={def.key} def={def} earned size="md" />
           ))}
@@ -96,7 +95,7 @@ export default function AchievementsModule({
                     <p className="text-xs font-medium text-text-muted mb-2">
                       {cat}
                     </p>
-                    <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-3 gap-3">
+                    <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(4.5rem,1fr))]">
                       {locked.map((def) => (
                         <AchievementBadge
                           key={def.key}

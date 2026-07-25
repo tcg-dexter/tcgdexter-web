@@ -76,8 +76,9 @@ interface Props {
    *  visitor data without duplicating the layout. */
   stats: ReactNode;
   /** Content rendered below the stat grid in the left column (desktop) —
-   *  the match-activity card. Shares the exact same `max-w-2xl px-6`
-   *  parent as the stat grid so it lines up edge-to-edge with it. */
+   *  the match-activity card. Lives in the full-width modules region
+   *  (not the narrow bio column) so it lines up edge-to-edge with the
+   *  stat grid and the deck feed below. */
   belowStats?: ReactNode;
   /** Right-column module on desktop (the achievements/badges card). When
    *  present, the top region splits into two columns at lg+ (stats +
@@ -211,23 +212,27 @@ export default function UserProfileHeader({
           </p>
         )}
 
-        {/* Top modules. On desktop (lg+) they split into two columns: the
-         *  8-cell stat grid + match activity on the left, badges on the
-         *  right (3:2). Below lg they stack (stats → activity → badges).
-         *  With no side module the stat grid spans full width as before.
-         *  All of it shares the bio container so card edges line up with
-         *  the stat row's outer edge. */}
+      </div>
+
+      {/* Top modules — rendered at full content width (edge-aligned with
+       *  the deck feed below via the same px-4 sm:px-8 gutters) instead of
+       *  the narrow bio column, so the stat grid, match activity, and
+       *  badges get as much room as possible. On lg+ they split 3:2 (stats
+       *  + activity left, badges right); below lg they stack (stats →
+       *  activity → badges). With no side module the stat grid simply
+       *  spans the full width. */}
+      <div className="px-4 sm:px-8 mt-6">
         {sideModule ? (
-          <div className="mt-4 grid gap-4 lg:grid-cols-5 lg:items-start">
+          <div className="grid gap-4 lg:grid-cols-5 lg:items-start">
             <div className="lg:col-span-3 space-y-6">
-              <div className="grid grid-cols-4 gap-3">{stats}</div>
+              <div className="grid grid-cols-4 xl:grid-cols-8 gap-3">{stats}</div>
               {belowStats}
             </div>
             <div className="lg:col-span-2">{sideModule}</div>
           </div>
         ) : (
           <>
-            <div className="mt-4 grid grid-cols-4 gap-3">{stats}</div>
+            <div className="grid grid-cols-4 xl:grid-cols-8 gap-3">{stats}</div>
             {belowStats && <div className="mt-6 space-y-6">{belowStats}</div>}
           </>
         )}
