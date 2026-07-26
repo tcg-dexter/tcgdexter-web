@@ -100,6 +100,19 @@ export async function POST(req: Request) {
       label: "matches",
       run: () => admin.from("matches").delete().eq("user_id", userId),
     },
+    // Notifications addressed to the user AND ones the user generated for
+    // others (their name is snapshotted into those rows — purge both). Before
+    // saved_decks, since deck_liked rows reference saved_deck_id.
+    {
+      label: "notifications recipient",
+      run: () =>
+        admin.from("notifications").delete().eq("recipient_user_id", userId),
+    },
+    {
+      label: "notifications actor",
+      run: () =>
+        admin.from("notifications").delete().eq("actor_user_id", userId),
+    },
     {
       label: "saved_decks",
       run: () => admin.from("saved_decks").delete().eq("user_id", userId),

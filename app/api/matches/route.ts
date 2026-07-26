@@ -10,6 +10,7 @@ import {
 import { track } from "@/lib/analytics/track";
 import { bumpMatchStreak, localDateInTz } from "@/lib/streak";
 import { reconcileAchievements } from "@/lib/learn/achievements";
+import { notifyBadgesUnlocked } from "@/lib/notifications/notify";
 
 /**
  * POST /api/matches
@@ -143,7 +144,8 @@ export async function POST(req: Request) {
   // Award any count-based badges this log just unlocked (First Match,
   // match-grind milestones). Internally error-safe; awaited so it runs to
   // completion before the serverless function freezes.
-  await reconcileAchievements(supabase, user.id);
+  const newlyAwarded = await reconcileAchievements(supabase, user.id);
+  void notifyBadgesUnlocked(user.id, newlyAwarded);
 
   return NextResponse.json({ ...data, streak });
 }

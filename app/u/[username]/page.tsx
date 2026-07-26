@@ -31,6 +31,7 @@ import {
   reconcileAchievements,
   CERTIFIED_TRAINER,
 } from "@/lib/learn/achievements";
+import { notifyBadgesUnlocked } from "@/lib/notifications/notify";
 import GetStartedChecklist from "@/app/my-decks/GetStartedChecklist";
 
 interface ProfileRow {
@@ -197,7 +198,8 @@ export default async function ProfilePage({
   // log/save). RLS permits self-inserts only, so it's a no-op for visitors,
   // who simply read the already-earned rows.
   if (isOwner) {
-    await reconcileAchievements(supabase, profile.id);
+    const newlyAwarded = await reconcileAchievements(supabase, profile.id);
+    void notifyBadgesUnlocked(profile.id, newlyAwarded);
   }
   const earnedAchievements = await listAchievements(supabase, profile.id);
 

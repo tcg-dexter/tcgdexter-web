@@ -8,6 +8,7 @@ import {
 } from "@/lib/battle-log";
 import { bumpMatchStreak, localDateInTz } from "@/lib/streak";
 import { reconcileAchievements } from "@/lib/learn/achievements";
+import { notifyBadgesUnlocked } from "@/lib/notifications/notify";
 
 /**
  * POST /api/matches/import
@@ -207,7 +208,8 @@ export async function POST(req: Request) {
 
   // Award badges this import unlocked — a first-ever import earns both
   // First Match and First Battle Log. Internally error-safe.
-  await reconcileAchievements(supabase, user.id);
+  const newlyAwarded = await reconcileAchievements(supabase, user.id);
+  void notifyBadgesUnlocked(user.id, newlyAwarded);
 
   return NextResponse.json({
     id: match.id,

@@ -6,7 +6,7 @@ export const metadata = {
   description: "How TCG Dexter collects, uses, and protects your information.",
 };
 
-const LAST_UPDATED = "July 21, 2026";
+const LAST_UPDATED = "July 26, 2026";
 
 export default function PrivacyPolicyPage() {
   return (
@@ -43,6 +43,14 @@ export default function PrivacyPolicyPage() {
           collection, a daily activity streak that counts the days you log
           matches, and any images you upload as evidence for a verified
           match.
+        </p>
+        <p>
+          <strong className="text-text-primary">In-app notifications.</strong>{" "}
+          To power the notification bell, we record activity directed at you —
+          for example when another signed-in user likes one of your public
+          decks (storing who liked it and which deck) or when you earn a badge.
+          These are visible only to you and are deleted when you delete your
+          account.
         </p>
         <p>
           <strong className="text-text-primary">Usage and cookie data.</strong>{" "}

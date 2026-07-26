@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import MobileNavMenu from "./MobileNavMenu";
 import MobileToolbarLogo from "./MobileToolbarLogo";
+import NotificationBell from "./NotificationBell";
 import SiteSidebar from "./SiteSidebar";
 import SiteSidebarRight from "./SiteSidebarRight";
 
@@ -30,6 +31,7 @@ export default async function SiteNav() {
   let displayName: string | null = null;
   let username: string | null = null;
   let isAdmin = false;
+  let unreadCount = 0;
   if (user) {
     const { data } = await supabase
       .from("profiles")
@@ -39,6 +41,16 @@ export default async function SiteNav() {
     displayName = data?.display_name ?? null;
     username = data?.username ?? null;
     isAdmin = data?.is_admin ?? false;
+
+    // Unread notification count for the nav bell. head:true + count:exact
+    // transfers no rows and hits the partial notifications_unread_idx — cheap
+    // enough to run on every authed render. Anonymous visitors skip it.
+    const { count } = await supabase
+      .from("notifications")
+      .select("*", { count: "exact", head: true })
+      .eq("recipient_user_id", user.id)
+      .is("read_at", null);
+    unreadCount = count ?? 0;
   }
 
   // Latest published spotlight slug — drives the nav menu's
@@ -73,13 +85,17 @@ export default async function SiteNav() {
         <div className="mx-auto max-w-6xl px-6 h-14 relative flex items-center justify-between">
           <div id="mobile-back-slot" className="flex items-center" />
           <MobileToolbarLogo />
-          <MobileNavMenu
-            isAuthed={!!user}
-            displayName={displayName}
-            username={username}
-            isAdmin={isAdmin}
-            spotlightHref={spotlightHref}
-          />
+          <div className="flex items-center gap-4">
+            {user && <NotificationBell count={unreadCount} />}
+            <MobileNavMenu
+              isAuthed={!!user}
+              displayName={displayName}
+              username={username}
+              isAdmin={isAdmin}
+              unreadCount={unreadCount}
+              spotlightHref={spotlightHref}
+            />
+          </div>
         </div>
       </nav>
 
@@ -89,6 +105,7 @@ export default async function SiteNav() {
         displayName={displayName}
         username={username}
         isAdmin={isAdmin}
+        unreadCount={unreadCount}
         spotlightHref={spotlightHref}
       />
       <SiteSidebarRight isAdmin={isAdmin} />
