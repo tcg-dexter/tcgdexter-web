@@ -6,6 +6,7 @@ import { primaryCardImageUrl, deckAvatarInfo, pokemonSlug } from "@/lib/primaryC
 import { typeColor } from "@/lib/metaPrimaryCard";
 import { computeDeckRecords } from "@/lib/deck-record";
 import { isStreakAtRisk, displayCurrentStreak, type StreakRow } from "@/lib/streak";
+import { hasAchievement, CERTIFIED_TRAINER } from "@/lib/learn/achievements";
 import MyDecksClient from "./MyDecksClient";
 
 interface DeckRow {
@@ -48,7 +49,7 @@ export default async function MyDecksPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("username, display_name")
+    .select("username, display_name, onboarding_dismissed")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -125,5 +126,21 @@ export default async function MyDecksPage() {
     };
   });
 
-  return <MyDecksClient decks={deckCards} atRiskStreak={atRiskStreak} />;
+  // Get Started checklist signals (new-user activation). hasDeck is derived
+  // client-side from the deck list; the quiz badge and match presence are
+  // resolved here.
+  const hasQuiz = await hasAchievement(supabase, user.id, CERTIFIED_TRAINER);
+  const onboarding = {
+    hasMatch: manualMatches.length > 0,
+    hasQuiz,
+    dismissed: (profile as { onboarding_dismissed?: boolean }).onboarding_dismissed ?? false,
+  };
+
+  return (
+    <MyDecksClient
+      decks={deckCards}
+      atRiskStreak={atRiskStreak}
+      onboarding={onboarding}
+    />
+  );
 }

@@ -83,6 +83,7 @@ export async function PATCH(req: Request) {
     team_cards?: (TeamCardInput | null)[] | null;
     theme_preference?: string;
     email_reengagement?: boolean;
+    onboarding_dismissed?: boolean;
   };
   try {
     body = await req.json();
@@ -276,6 +277,13 @@ export async function PATCH(req: Request) {
   // Master opt-in for re-engagement emails (streak-at-risk, near-badge).
   if (typeof body.email_reengagement === "boolean") {
     updates.email_reengagement = body.email_reengagement;
+  }
+
+  // ── onboarding_dismissed ──────────────────────────────────────────
+  // Explicit "hide the Get Started checklist" flag (it also auto-hides
+  // once every step is complete).
+  if (typeof body.onboarding_dismissed === "boolean") {
+    updates.onboarding_dismissed = body.onboarding_dismissed;
   }
 
   if (Object.keys(updates).length === 0) {

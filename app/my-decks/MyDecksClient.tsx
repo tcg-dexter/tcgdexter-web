@@ -17,12 +17,15 @@ import StreakFlame from "@/app/components/StreakFlame";
 import { clientTz, celebrateStreak } from "@/lib/streak-client";
 import { normalizeForSearch } from "@/lib/searchNormalize";
 import { buildAvatarItems } from "@/lib/deckAvatarItems";
+import GetStartedChecklist from "./GetStartedChecklist";
 
 interface Props {
   decks: UserDeckCardProps[];
   /** >0 when the daily-logging streak is alive but today isn't logged yet —
    *  renders the "keep your streak" nudge. */
   atRiskStreak?: number;
+  /** New-user activation signals for the "Get Started" checklist. */
+  onboarding?: { hasMatch: boolean; hasQuiz: boolean; dismissed: boolean };
 }
 
 type SortKey =
@@ -72,10 +75,22 @@ function currentStreak(recentForm?: ("W" | "L" | "D")[]): string | null {
   return `${first}${count}`;
 }
 
-function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
+function PinnedDeckHero({
+  deck,
+  openSignal = 0,
+}: {
+  deck: UserDeckCardProps;
+  /** Bumped by the Get Started checklist's "Log a match" CTA to open the
+   *  log drawer (the scroll-into-view effect below then reveals it). */
+  openSignal?: number;
+}) {
   const router = useRouter();
   const { resolvedTheme } = useTheme();
   const [logOpen, setLogOpen] = useState(false);
+
+  useEffect(() => {
+    if (openSignal > 0) setLogOpen(true);
+  }, [openSignal]);
   // Bumped on every successful save/import so <MatchEntry> remounts fresh —
   // it's a persistently-mounted subtree (collapsed via grid-rows, not
   // conditionally rendered), so its internal MatchForm state would
@@ -302,12 +317,14 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
   );
 }
 
-export default function MyDecksClient({ decks, atRiskStreak = 0 }: Props) {
+export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: Props) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("date");
   const [dir, setDir] = useState<SortDir>("desc");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [view, setView] = useState<ViewMode>("grid");
+  // Bumped by the Get Started checklist to open the pinned deck's log drawer.
+  const [logSignal, setLogSignal] = useState(0);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(VIEW_MODE_KEY);
@@ -379,7 +396,19 @@ export default function MyDecksClient({ decks, atRiskStreak = 0 }: Props) {
         </div>
       )}
 
-      {pinnedDeck && <PinnedDeckHero key={pinnedDeck.id} deck={pinnedDeck} />}
+      {onboarding && (
+        <GetStartedChecklist
+          hasDeck={decks.length > 0}
+          hasMatch={onboarding.hasMatch}
+          hasQuiz={onboarding.hasQuiz}
+          initialDismissed={onboarding.dismissed}
+          onLogMatch={() => setLogSignal((s) => s + 1)}
+        />
+      )}
+
+      {pinnedDeck && (
+        <PinnedDeckHero key={pinnedDeck.id} deck={pinnedDeck} openSignal={logSignal} />
+      )}
 
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
