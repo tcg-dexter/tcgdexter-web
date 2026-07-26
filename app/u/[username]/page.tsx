@@ -338,6 +338,7 @@ export default async function ProfilePage({
         stats={stats}
         belowStats={belowStats}
         sideModule={sideModule}
+        aboveStats={getStarted}
         bannerOverlay={
           isOwner ? (
             <AccentPicker
@@ -387,7 +388,6 @@ export default async function ProfilePage({
           visitors have nothing to tab between, so they keep the plain
           public-decks list. */}
       <div className="px-4 sm:px-8 mt-6">
-        {getStarted}
         {isOwner ? (
           <ProfileTabs
             accentColor={bannerTopColorFor(profile.banner_accent)}
