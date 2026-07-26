@@ -400,6 +400,7 @@ export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: P
         <GetStartedChecklist
           hasDeck={decks.length > 0}
           hasMatch={onboarding.hasMatch}
+          hasPublicDeck={decks.some((d) => d.isPublic)}
           hasQuiz={onboarding.hasQuiz}
           initialDismissed={onboarding.dismissed}
           onLogMatch={() => setLogSignal((s) => s + 1)}

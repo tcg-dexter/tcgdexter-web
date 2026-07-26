@@ -25,6 +25,7 @@ import {
 export default function GetStartedChecklist({
   hasDeck,
   hasMatch,
+  hasPublicDeck,
   hasQuiz,
   initialDismissed,
   onLogMatch,
@@ -32,6 +33,7 @@ export default function GetStartedChecklist({
 }: {
   hasDeck: boolean;
   hasMatch: boolean;
+  hasPublicDeck: boolean;
   hasQuiz: boolean;
   initialDismissed: boolean;
   onLogMatch?: () => void;
@@ -39,7 +41,7 @@ export default function GetStartedChecklist({
 }) {
   const [hidden, setHidden] = useState(initialDismissed);
 
-  const state = computeOnboardingSteps({ hasDeck, hasMatch, hasQuiz });
+  const state = computeOnboardingSteps({ hasDeck, hasMatch, hasPublicDeck, hasQuiz });
 
   if (hidden || state.allComplete || (hideWhenNoDeck && !hasDeck)) return null;
 
@@ -139,7 +141,13 @@ function HeroCta({
       </Link>
     );
   }
-  const href = stepKey === "quiz" ? "/learn/quiz" : "/";
+  // share_deck → their library, where the deck menu's publish/share lives.
+  const href =
+    stepKey === "quiz"
+      ? "/learn/quiz"
+      : stepKey === "share_deck"
+        ? "/my-decks"
+        : "/";
   return (
     <Link href={href} className={cls}>
       {label}
