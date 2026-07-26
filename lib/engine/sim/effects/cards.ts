@@ -47,8 +47,50 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
       ops: [{ op: "attach_energy", energyRef: "e", monRef: "m", from: "discard" }],
     },
   ],
+
+  // First DECLARATIVE-ONLY card (not in the legacy registry) — the effect path
+  // goes live for it. Item: search deck for a "Team Rocket's" Supporter → hand,
+  // then shuffle (the `search` op shuffles). Fully expressed with existing ops.
+  "Team Rocket's Transceiver": [
+    {
+      card: "Team Rocket's Transceiver",
+      trigger: { kind: "trainer", subtype: "Item" },
+      targets: [
+        {
+          ref: "s",
+          select: "card",
+          card: {
+            zone: "deck",
+            filter: { supertype: "Trainer", subtype: "Supporter", namePrefix: "Team Rocket's " },
+          },
+          chooser: "player",
+        },
+      ],
+      ops: [{ op: "search", targetRef: "s", to: "hand" }],
+    },
+  ],
 };
 
 export function effectsFor(cardName: string): CardEffect[] {
   return EFFECT_CARDS[cardName] ?? [];
+}
+
+/** Coarse planner phase for a declarative effect, mirroring the legacy
+ *  TrainerPhase vocabulary so the AI policies can slot effect moves alongside
+ *  registry trainers: `draw` (hand refresh), `search` (reveals a hidden zone),
+ *  `tactical` (public board action). Derived from the effect's ops. */
+export function effectPhase(effect: CardEffect): "draw" | "search" | "tactical" {
+  const ops = new Set(effect.ops.map((o) => o.op));
+  if (ops.has("draw") || ops.has("shuffle_hand_draw") || ops.has("discard_hand_draw") || ops.has("hand_to_bottom_draw")) {
+    return "draw";
+  }
+  if (ops.has("search") || ops.has("retrieve")) return "search";
+  return "tactical";
+}
+
+/** The coarse phase of a declarative-effect move, or null for other moves.
+ *  The shared seam the AI policies use to handle effect moves generically. */
+export function effectMovePhase(cardName: string, effectIndex: number): "draw" | "search" | "tactical" | null {
+  const effect = effectsFor(cardName)[effectIndex];
+  return effect ? effectPhase(effect) : null;
 }

@@ -29,7 +29,11 @@ import { shuffle, type Rng } from "./rng";
 // v4: coin-flip condition attacks implemented (Bemusing Aroma, Thunder
 // Shock) — conditions now actually occur in self-play, changing rollout
 // distributions for decks that carry them.
-export const SIM_VERSION = 4;
+// v5: declarative-effect path goes live (W2). First declarative-only card
+// (Team Rocket's Transceiver) is now really played instead of silent cycle-
+// draw, and the AI policies select effect moves — rollouts change for decks
+// that carry it.
+export const SIM_VERSION = 5;
 
 const MAX_MULLIGANS = 20;
 

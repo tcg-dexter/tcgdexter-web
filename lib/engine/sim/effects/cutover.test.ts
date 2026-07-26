@@ -13,7 +13,9 @@ import type { CardInstance, GameState, PokemonInPlay } from "../../types";
 import { applyMove } from "../driver";
 import { isLegalHumanMove } from "../validate";
 import { describeMove } from "../serialize";
-import type { TurnContext } from "../moves";
+import { legalMoves, type SimMove, type TurnContext } from "../moves";
+import { HeuristicPolicy } from "../policy";
+import { viewFor } from "../view";
 import { enumerateEffect, type EffectMove } from "./runtime";
 import { effectsFor } from "./cards";
 
@@ -95,6 +97,33 @@ describe("W2 cutover — effect moves through validate + driver", () => {
     // src deliberately NOT placed in hand.
     const move: EffectMove = firstEffectMove(s, src);
     expect(isLegalHumanMove(s, "player", ctx(), move)).toBe(false);
+  });
+
+  it("Team Rocket's Transceiver: goes live through legalMoves → policy → driver", () => {
+    // The first DECLARATIVE-ONLY card (not in the legacy registry): legalMoves
+    // must now emit it, the AI policy must SELECT it, and the driver applies it.
+    const s = state();
+    const transceiver = card("Team Rocket's Transceiver");
+    s.sides.player.hand = [transceiver];
+    const petrel = card("Team Rocket's Petrel");
+    s.sides.player.deck.unshift(petrel); // a fetchable Team Rocket's Supporter
+
+    const legal = legalMoves(s, "player", ctx());
+    const effectMoves = legal.filter(
+      (m): m is EffectMove => m.kind === "effect" && m.card === "Team Rocket's Transceiver",
+    );
+    expect(effectMoves.length).toBeGreaterThan(0);
+    // The pick carries the fetched Supporter's display name (for the UI).
+    expect(effectMoves.some((m) => m.picks[0]?.cardNames?.includes("Team Rocket's Petrel"))).toBe(true);
+
+    // The heuristic AI selects it (a search card, played in the info phase).
+    const chosen = new HeuristicPolicy().chooseMove(viewFor(s, "player", ctx()), legal, ctx());
+    expect(chosen.kind).toBe("effect");
+    expect((chosen as EffectMove).card).toBe("Team Rocket's Transceiver");
+
+    applyMove(s, "player", chosen as SimMove, ctx(), mulberry32(9));
+    expect(s.sides.player.hand.some((c) => c.id === petrel.id)).toBe(true);
+    expect(s.sides.player.discard.some((c) => c.id === transceiver.id)).toBe(true);
   });
 
   it("enforces the supporter-per-turn gate on a declarative Supporter", () => {

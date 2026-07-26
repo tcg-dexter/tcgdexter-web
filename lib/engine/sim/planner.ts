@@ -32,6 +32,7 @@ import {
 import { HeuristicPolicy, chooseAbilityMove, promoteBest, type DecisionPolicy } from "./policy";
 import { energyProvides, energyUnits, prizeValue } from "./setup";
 import { isSupporter, trainerSpec, type PlayTrainerMove, type TrainerSpec } from "./trainers";
+import { effectMovePhase } from "./effects/cards";
 import { canRetreat } from "./tools";
 import { lookupCard } from "../catalog";
 import { makeUnrevealed } from "../initial";
@@ -334,6 +335,10 @@ export class PlannerPolicy implements DecisionPolicy {
       if (!tacticalSupporterInHand && view.hand.length <= 5) {
         const drawMove = legal.find((m) => specOf(m)?.phase === "draw");
         if (drawMove) return drawMove;
+        const drawEffect = legal.find(
+          (m) => m.kind === "effect" && effectMovePhase(m.card, m.effectIndex) === "draw",
+        );
+        if (drawEffect) return drawEffect;
         const supporter = legal.find((m) => m.kind === "cycle_supporter");
         if (supporter) return supporter;
       }
@@ -341,6 +346,11 @@ export class PlannerPolicy implements DecisionPolicy {
         (m): m is PlayTrainerMove => specOf(m)?.phase === "search",
       );
       if (searches.length > 0) return bestSearchMove(view, searches);
+      // Declarative search cards (Team Rocket's Transceiver, …) — info phase.
+      const searchEffect = legal.find(
+        (m) => m.kind === "effect" && effectMovePhase(m.card, m.effectIndex) === "search",
+      );
+      if (searchEffect) return searchEffect;
       const item = legal.find((m) => m.kind === "cycle_item");
       if (item) return item;
       if (tacticalSupporterInHand === false) {
