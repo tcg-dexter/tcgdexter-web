@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import DeckProfileView, {
   type AnalysisResult,
 } from "@/app/components/DeckProfileView";
-import { popDeckList } from "@/lib/home-restore";
+import { popDeckList, popDeckIntent } from "@/lib/home-restore";
+import { createClient } from "@/lib/supabase/client";
 import SectionHeader from "@/app/components/ui/SectionHeader";
 import GradientButton from "@/app/components/ui/GradientButton";
 import StatsStrip from "@/app/components/ui/StatsStrip";
@@ -161,14 +163,56 @@ export default function HomeClient({
   const [profiledAt, setProfiledAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
   const profileAnchor = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   // After a sign-in bounce, restore whatever the user pasted before. The
   // stash is cleared on read, so a manual refresh won't keep restoring it.
+  //
+  // If they'd clicked *Save* before the sign-in wall ("save" intent) and are
+  // back signed-in, finish the save for them — they already expressed intent,
+  // so a second click is friction. We hand the raw list to /api/saved-decks
+  // (which analyzes + names it server-side) and land them in their library.
+  // Any other case (share intent, signed-out, save failure) just pre-fills
+  // the textarea so nothing is lost.
   useEffect(() => {
     const restored = popDeckList();
-    if (restored) setDeckList(restored);
-  }, []);
+    if (!restored) return;
+    setDeckList(restored);
+
+    const intent = popDeckIntent();
+    if (intent !== "save") return;
+
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (cancelled || !user) return; // signed out → leave it pre-filled
+
+      setAutoSaving(true);
+      try {
+        const res = await fetch("/api/saved-decks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ deckList: restored }),
+        });
+        if (!cancelled && res.ok) {
+          router.push("/my-decks");
+          return;
+        }
+      } catch {
+        // fall through to the pre-filled fallback
+      }
+      if (!cancelled) setAutoSaving(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   async function handleAnalyze() {
     if (!deckList.trim()) {
@@ -204,6 +248,17 @@ export default function HomeClient({
 
   return (
     <>
+      {/* Auto-save overlay — shown while we finish the save the user started
+          before signing in, then redirect to their library. */}
+      {autoSaving && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-bg/80 backdrop-blur-sm">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          <p className="text-sm font-semibold text-text-secondary">
+            Adding your deck to your collection…
+          </p>
+        </div>
+      )}
+
       {/* Hero */}
       <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-[2.1175rem] md:pt-14 pb-24 lg:pb-16 text-center lg:text-left">
         {/* No logo here on any breakpoint — desktop already shows it in

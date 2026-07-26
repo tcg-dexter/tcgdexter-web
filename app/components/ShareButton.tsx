@@ -289,7 +289,7 @@ export default function ShareButton({
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => {
-                  stashDeckList(deckList);
+                  stashDeckList(deckList, "share");
                   const next =
                     publishMode || typeof window === "undefined"
                       ? "/"

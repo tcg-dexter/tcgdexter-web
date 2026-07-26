@@ -10,10 +10,19 @@
  */
 
 const KEY = "tcgdex.home.deckList";
+const INTENT_KEY = "tcgdex.home.deckIntent";
 
-export function stashDeckList(deckList: string) {
+/** What the user was trying to do when they hit the sign-in wall. Drives
+ *  what happens after they return to the home page with the deck restored:
+ *  "save" auto-completes the save they'd already clicked; anything else just
+ *  pre-fills the textarea. */
+export type DeckIntent = "save" | "share";
+
+export function stashDeckList(deckList: string, intent?: DeckIntent) {
   try {
     sessionStorage.setItem(KEY, deckList);
+    if (intent) sessionStorage.setItem(INTENT_KEY, intent);
+    else sessionStorage.removeItem(INTENT_KEY);
   } catch {
     // sessionStorage can throw in private mode; the worst case is the user
     // has to re-paste, which is acceptable.
@@ -36,6 +45,19 @@ export function popDeckList(): string | null {
     const value = sessionStorage.getItem(KEY);
     if (value !== null) sessionStorage.removeItem(KEY);
     return value;
+  } catch {
+    return null;
+  }
+}
+
+/** Reads and clears the stashed intent (see {@link DeckIntent}). Read this
+ *  alongside popDeckList when restoring so a stale intent can't leak into a
+ *  later, unrelated paste. */
+export function popDeckIntent(): DeckIntent | null {
+  try {
+    const value = sessionStorage.getItem(INTENT_KEY);
+    if (value !== null) sessionStorage.removeItem(INTENT_KEY);
+    return value === "save" || value === "share" ? value : null;
   } catch {
     return null;
   }
