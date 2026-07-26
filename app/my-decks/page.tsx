@@ -53,7 +53,7 @@ export default async function MyDecksPage() {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (!profile?.username) redirect("/settings");
+  if (!profile?.username) redirect("/welcome");
 
   // Absolute origin for share links — matches the deck profile page's own
   // canonicalShareUrl, so the QR/copy-link popup shows a full URL rather

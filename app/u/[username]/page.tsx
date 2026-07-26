@@ -26,7 +26,12 @@ import { MatchCard } from "@/app/components/MatchCard";
 import { loadOwnerRecentMatches } from "@/lib/recent-matches";
 import ProfileTabs from "./ProfileTabs";
 import AchievementsModule from "./AchievementsModule";
-import { listAchievements, reconcileAchievements } from "@/lib/learn/achievements";
+import {
+  listAchievements,
+  reconcileAchievements,
+  CERTIFIED_TRAINER,
+} from "@/lib/learn/achievements";
+import GetStartedChecklist from "@/app/my-decks/GetStartedChecklist";
 
 interface ProfileRow {
   id: string;
@@ -39,6 +44,7 @@ interface ProfileRow {
   avatar_url: string | null;
   banner_accent: string | null;
   team_cards: (TeamCardRef | null)[] | null;
+  onboarding_dismissed: boolean;
 }
 
 interface DeckRow {
@@ -118,7 +124,7 @@ export default async function ProfilePage({
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, display_name, username, bio, created_at, is_public, tcg_live_handle, avatar_url, banner_accent, team_cards"
+      "id, display_name, username, bio, created_at, is_public, tcg_live_handle, avatar_url, banner_accent, team_cards, onboarding_dismissed"
     )
     .eq("username", username.toLowerCase())
     .maybeSingle<ProfileRow>();
@@ -194,6 +200,20 @@ export default async function ProfilePage({
     await reconcileAchievements(supabase, profile.id);
   }
   const earnedAchievements = await listAchievements(supabase, profile.id);
+
+  // Get Started onboarding checklist — owner-only. Guides new users through
+  // the core loop (save a deck → log a match → ace the quiz). Shown even at
+  // zero decks here (leads with "save your first deck"); its "Log a match"
+  // CTA links to /my-decks (no in-place log drawer on the profile). Auto-hides
+  // once complete or dismissed.
+  const getStarted = isOwner ? (
+    <GetStartedChecklist
+      hasDeck={decks.length > 0}
+      hasMatch={manualMatches.length > 0}
+      hasQuiz={earnedAchievements.some((a) => a.key === CERTIFIED_TRAINER)}
+      initialDismissed={profile.onboarding_dismissed}
+    />
+  ) : null;
 
   // Heatmap dates: manual played_at (owner only — manual match data is private).
   const heatmapMatches: MatchRow[] = isOwner ? manualMatches : [];
@@ -367,6 +387,7 @@ export default async function ProfilePage({
           visitors have nothing to tab between, so they keep the plain
           public-decks list. */}
       <div className="px-4 sm:px-8 mt-6">
+        {getStarted}
         {isOwner ? (
           <ProfileTabs
             accentColor={bannerTopColorFor(profile.banner_accent)}

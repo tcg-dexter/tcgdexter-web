@@ -20,6 +20,17 @@ export function stashDeckList(deckList: string) {
   }
 }
 
+/** True when a deck list is stashed (read-only — does not consume it). Used
+ *  by onboarding to decide whether to send the user back to the home page to
+ *  finish the save they started, vs. their profile. */
+export function hasStashedDeckList(): boolean {
+  try {
+    return sessionStorage.getItem(KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
 export function popDeckList(): string | null {
   try {
     const value = sessionStorage.getItem(KEY);

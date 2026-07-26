@@ -35,11 +35,12 @@ export async function GET(request: NextRequest) {
 
   const forwardedHost = request.headers.get("x-forwarded-host");
   const isLocalEnv = process.env.NODE_ENV === "development";
-  const redirectUrl = isLocalEnv
-    ? `${origin}${next}`
+  const base = isLocalEnv
+    ? origin
     : forwardedHost
-    ? `https://${forwardedHost}${next}`
-    : `${origin}${next}`;
+    ? `https://${forwardedHost}`
+    : origin;
+  const redirectUrl = `${base}${next}`;
 
   // Build the redirect response BEFORE the auth call so the Supabase client
   // can write session cookies directly onto it. Using next/headers cookies()
@@ -104,7 +105,7 @@ export async function GET(request: NextRequest) {
       // side without a separate auth.users trigger.
       const { data: profile } = await supabase
         .from("profiles")
-        .select("created_at")
+        .select("created_at, username")
         .eq("id", user.id)
         .maybeSingle();
       const isSignup =
@@ -115,6 +116,14 @@ export async function GET(request: NextRequest) {
         flow,
         provider: type ? "email" : "oauth",
       });
+
+      // Onboarding gate: any signed-in user without a username goes to the
+      // welcome page to set one (first-time users, and anyone who abandoned
+      // onboarding earlier). Overriding the Location header keeps the session
+      // cookies already written onto `response`.
+      if (!profile?.username) {
+        response.headers.set("location", `${base}/welcome`);
+      }
     }
 
     return response;

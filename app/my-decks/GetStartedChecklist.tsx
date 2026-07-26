@@ -14,9 +14,13 @@ import {
  * full step list beneath. Auto-hides once every step is done; a Dismiss
  * control persists an early hide via profiles.onboarding_dismissed.
  *
- * The "Log a match" hero calls `onLogMatch`, which opens the pinned deck's
- * existing log drawer (the entry point already exists; this just surfaces
- * it). After a successful log the page refreshes and the step checks off.
+ * The "Log a match" hero calls `onLogMatch` when provided (on /my-decks it
+ * opens the pinned deck's log drawer); without it the CTA is a link to
+ * /my-decks (used on the profile page, where logging doesn't live).
+ *
+ * `hideWhenNoDeck` suppresses the module until the user has a deck — used on
+ * /my-decks, whose empty state already covers "save your first deck". On the
+ * profile it's left off so a brand-new user still gets that first step.
  */
 export default function GetStartedChecklist({
   hasDeck,
@@ -24,20 +28,20 @@ export default function GetStartedChecklist({
   hasQuiz,
   initialDismissed,
   onLogMatch,
+  hideWhenNoDeck = false,
 }: {
   hasDeck: boolean;
   hasMatch: boolean;
   hasQuiz: boolean;
   initialDismissed: boolean;
-  onLogMatch: () => void;
+  onLogMatch?: () => void;
+  hideWhenNoDeck?: boolean;
 }) {
   const [hidden, setHidden] = useState(initialDismissed);
 
   const state = computeOnboardingSteps({ hasDeck, hasMatch, hasQuiz });
 
-  // The empty-state on /my-decks already covers "save your first deck", so
-  // only surface this once they have a deck (past step 1).
-  if (hidden || state.allComplete || !hasDeck) return null;
+  if (hidden || state.allComplete || (hideWhenNoDeck && !hasDeck)) return null;
 
   const hero = state.steps.find((s) => s.key === state.heroKey) ?? null;
 
@@ -118,15 +122,21 @@ function HeroCta({
 }: {
   stepKey: OnboardingStep["key"];
   label: string;
-  onLogMatch: () => void;
+  onLogMatch?: () => void;
 }) {
   const cls =
     "inline-flex items-center justify-center rounded-full bg-gradient-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90";
   if (stepKey === "log_match") {
-    return (
+    // On /my-decks the callback opens the log drawer in place; elsewhere
+    // (the profile) fall back to a link to where logging lives.
+    return onLogMatch ? (
       <button type="button" onClick={onLogMatch} className={cls}>
         {label}
       </button>
+    ) : (
+      <Link href="/my-decks" className={cls}>
+        {label}
+      </Link>
     );
   }
   const href = stepKey === "quiz" ? "/learn/quiz" : "/";

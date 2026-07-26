@@ -403,6 +403,7 @@ export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: P
           hasQuiz={onboarding.hasQuiz}
           initialDismissed={onboarding.dismissed}
           onLogMatch={() => setLogSignal((s) => s + 1)}
+          hideWhenNoDeck
         />
       )}
 
@@ -497,11 +498,14 @@ export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: P
       {decks.length === 0 ? (
         <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-8 text-center">
           <p className="text-sm text-text-secondary">
-            No decks yet.{" "}
-            <Link href="/" className="text-accent hover:underline">
-              Create your first deck profile →
-            </Link>
+            No decks yet — profile a deck on the home page and save it to your collection.
           </p>
+          <Link
+            href="/"
+            className="mt-4 inline-flex items-center justify-center rounded-full bg-gradient-brand bg-origin-border px-4 py-2 text-sm font-semibold text-white shadow-brand hover:shadow-brand-lg transition"
+          >
+            + New Deck
+          </Link>
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-8 text-center">
