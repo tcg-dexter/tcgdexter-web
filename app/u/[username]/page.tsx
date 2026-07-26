@@ -210,6 +210,7 @@ export default async function ProfilePage({
     <GetStartedChecklist
       hasDeck={decks.length > 0}
       hasMatch={manualMatches.length > 0}
+      hasPublicDeck={decks.some((d) => d.is_public)}
       hasQuiz={earnedAchievements.some((a) => a.key === CERTIFIED_TRAINER)}
       initialDismissed={profile.onboarding_dismissed}
     />
