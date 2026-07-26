@@ -85,6 +85,10 @@ interface Props {
    *  belowStats on the left, this on the right); below lg everything
    *  stacks. When absent, the stat grid spans full width as before. */
   sideModule?: ReactNode;
+  /** Full-width content rendered at the very top of the modules region,
+   *  above the stat grid — used for the owner's Get Started checklist so
+   *  it's the first, most call-to-action thing they see. */
+  aboveStats?: ReactNode;
   /** Fanned team-card spread rendered inside the banner's clipped
    *  bounds (mirrors the meta archetype header's card fan). Unlike
    *  `bannerOverlay`, this sits *inside* an `overflow-hidden` wrapper
@@ -108,6 +112,7 @@ export default function UserProfileHeader({
   stats,
   belowStats,
   sideModule,
+  aboveStats,
 }: Props) {
   const gradient = bannerGradientFor(bannerAccent);
 
@@ -222,6 +227,7 @@ export default function UserProfileHeader({
        *  activity → badges). With no side module the stat grid simply
        *  spans the full width. */}
       <div className="px-4 sm:px-8 mt-6">
+        {aboveStats}
         {sideModule ? (
           // items-stretch (default) so the badges column matches the left
           // column's height — the collapsed badges card fills it via
