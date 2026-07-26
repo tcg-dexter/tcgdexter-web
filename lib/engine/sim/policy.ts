@@ -21,7 +21,21 @@ import {
 } from "./moves";
 import { energyProvides } from "./setup";
 import { trainerSpec, type PlayTrainerMove, type TrainerSpec } from "./trainers";
+import { effectMovePhase } from "./effects/cards";
+import type { EffectMove } from "./effects/runtime";
 import type { PlayerView } from "./view";
+
+/** Legal declarative-effect moves of a coarse phase (draw/search/tactical).
+ *  The generic seam by which the policies play declarative cards the legacy
+ *  registry doesn't cover — legacy staples keep their tuned handling. */
+function effectMovesOf(
+  legal: SimMove[],
+  phase: "draw" | "search" | "tactical",
+): EffectMove[] {
+  return legal.filter(
+    (m): m is EffectMove => m.kind === "effect" && effectMovePhase(m.card, m.effectIndex) === phase,
+  );
+}
 
 export interface DecisionPolicy {
   /** Pick one of the legal moves. Returning an attack or pass ends the turn. */
@@ -134,8 +148,13 @@ export class HeuristicPolicy implements DecisionPolicy {
     if (view.deckCount > DECK_RESERVE) {
       const drawSupporters = trainersBySpec((s) => s.phase === "draw");
       if (drawSupporters.length > 0 && view.hand.length <= 5) return drawSupporters[0];
+      const drawEffects = effectMovesOf(legal, "draw");
+      if (drawEffects.length > 0 && view.hand.length <= 5) return drawEffects[0];
       const searches = trainersBySpec((s) => s.phase === "search");
       if (searches.length > 0) return searches[0];
+      // Declarative search cards (Team Rocket's Transceiver, …) play here too.
+      const searchEffects = effectMovesOf(legal, "search");
+      if (searchEffects.length > 0) return searchEffects[0];
       const supporter = byKind("cycle_supporter");
       if (supporter.length > 0) return supporter[0];
     }
@@ -222,6 +241,12 @@ export class HeuristicPolicy implements DecisionPolicy {
       const best = scored.sort((a, b) => b.dmg - a.dmg)[0];
       if (best.dmg > 0) return best.move;
     }
+
+    // Stranding guard: a declarative-effect move (e.g. a tactical one) that
+    // no earlier branch consumed still beats passing — effect moves don't end
+    // the turn, so the policy keeps playing the turn out next call.
+    const anyEffect = legal.find((m): m is EffectMove => m.kind === "effect");
+    if (anyEffect) return anyEffect;
 
     return { kind: "pass" };
   }

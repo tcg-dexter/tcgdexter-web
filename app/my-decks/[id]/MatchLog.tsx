@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import MatchForm, { type MatchFormData } from "@/app/components/MatchForm";
 import MatchEntry from "@/app/components/MatchEntry";
 import type { GamePrize } from "@/lib/bo3";
+import { clientTz, celebrateStreak } from "@/lib/streak-client";
 
 /* ─── Types ──────────────────────────────────────────────────── */
 
@@ -101,12 +102,13 @@ export default function MatchLog({
     const res = await fetch("/api/matches", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ saved_deck_id: savedDeckId, ...data }),
+      body: JSON.stringify({ saved_deck_id: savedDeckId, ...data, tz: clientTz() }),
     });
     const json = await res.json();
     if (!res.ok) {
       throw new Error(json.error ?? "Failed to log match.");
     }
+    celebrateStreak(json.streak);
     const newMatch: Match = {
       id: json.id,
       result: data.result,

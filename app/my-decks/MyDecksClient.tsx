@@ -13,11 +13,19 @@ import MatchEntry from "@/app/components/MatchEntry";
 import DeckCardMenu from "@/app/components/DeckCardMenu";
 import { useTheme } from "@/app/components/ThemeProvider";
 import SavedDeckRow from "./SavedDeckRow";
+import StreakFlame from "@/app/components/StreakFlame";
+import { clientTz, celebrateStreak } from "@/lib/streak-client";
 import { normalizeForSearch } from "@/lib/searchNormalize";
 import { buildAvatarItems } from "@/lib/deckAvatarItems";
+import GetStartedChecklist from "./GetStartedChecklist";
 
 interface Props {
   decks: UserDeckCardProps[];
+  /** >0 when the daily-logging streak is alive but today isn't logged yet —
+   *  renders the "keep your streak" nudge. */
+  atRiskStreak?: number;
+  /** New-user activation signals for the "Get Started" checklist. */
+  onboarding?: { hasMatch: boolean; hasQuiz: boolean; dismissed: boolean };
 }
 
 type SortKey =
@@ -67,10 +75,22 @@ function currentStreak(recentForm?: ("W" | "L" | "D")[]): string | null {
   return `${first}${count}`;
 }
 
-function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
+function PinnedDeckHero({
+  deck,
+  openSignal = 0,
+}: {
+  deck: UserDeckCardProps;
+  /** Bumped by the Get Started checklist's "Log a match" CTA to open the
+   *  log drawer (the scroll-into-view effect below then reveals it). */
+  openSignal?: number;
+}) {
   const router = useRouter();
   const { resolvedTheme } = useTheme();
   const [logOpen, setLogOpen] = useState(false);
+
+  useEffect(() => {
+    if (openSignal > 0) setLogOpen(true);
+  }, [openSignal]);
   // Bumped on every successful save/import so <MatchEntry> remounts fresh —
   // it's a persistently-mounted subtree (collapsed via grid-rows, not
   // conditionally rendered), so its internal MatchForm state would
@@ -150,12 +170,13 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
     const res = await fetch("/api/matches", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ saved_deck_id: deck.id, ...data }),
+      body: JSON.stringify({ saved_deck_id: deck.id, ...data, tz: clientTz() }),
     });
+    const json = await res.json();
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error ?? "Failed to log match.");
+      throw new Error(json.error ?? "Failed to log match.");
     }
+    celebrateStreak(json.streak);
     setLogOpen(false);
     setLogKey((k) => k + 1);
     router.refresh();
@@ -296,12 +317,14 @@ function PinnedDeckHero({ deck }: { deck: UserDeckCardProps }) {
   );
 }
 
-export default function MyDecksClient({ decks }: Props) {
+export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: Props) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("date");
   const [dir, setDir] = useState<SortDir>("desc");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [view, setView] = useState<ViewMode>("grid");
+  // Bumped by the Get Started checklist to open the pinned deck's log drawer.
+  const [logSignal, setLogSignal] = useState(0);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(VIEW_MODE_KEY);
@@ -363,7 +386,29 @@ export default function MyDecksClient({ decks }: Props) {
         <SectionHeader title="Deck Collection" />
       </div>
 
-      {pinnedDeck && <PinnedDeckHero key={pinnedDeck.id} deck={pinnedDeck} />}
+      {atRiskStreak > 0 && (
+        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm px-4 py-3">
+          <StreakFlame count={atRiskStreak} size="md" showCount={false} />
+          <p className="text-sm text-text-primary">
+            <span className="block font-semibold">Keep your {atRiskStreak}-day streak</span>
+            <span className="block text-text-muted">Log a match today before it resets.</span>
+          </p>
+        </div>
+      )}
+
+      {onboarding && (
+        <GetStartedChecklist
+          hasDeck={decks.length > 0}
+          hasMatch={onboarding.hasMatch}
+          hasQuiz={onboarding.hasQuiz}
+          initialDismissed={onboarding.dismissed}
+          onLogMatch={() => setLogSignal((s) => s + 1)}
+        />
+      )}
+
+      {pinnedDeck && (
+        <PinnedDeckHero key={pinnedDeck.id} deck={pinnedDeck} openSignal={logSignal} />
+      )}
 
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">

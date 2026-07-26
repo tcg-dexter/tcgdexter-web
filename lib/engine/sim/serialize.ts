@@ -24,6 +24,17 @@ function monName(state: GameState, actor: "player" | "opponent", monId: string):
   return mon?.card.name ?? "a Pokémon";
 }
 
+/** A Pokémon's name by id, searched across both sides (effect picks may
+ *  target either board — gust hits the opponent, attach hits our own). */
+function monNameAnySide(state: GameState, monId: string): string | null {
+  for (const actor of ["player", "opponent"] as const) {
+    const side = sideOf(state, actor);
+    const mon = [side.active, ...side.bench].find((m) => m?.id === monId);
+    if (mon) return mon.card.name;
+  }
+  return null;
+}
+
 /** Describe a move from public info. Call BEFORE applying it. */
 export function describeMove(
   state: GameState,
@@ -88,6 +99,15 @@ export function describeMove(
       return `Attached ${cardName(state, actor, move.cardId)} to ${monName(state, actor, move.targetId)}`;
     case "use_stadium":
       return `Used ${move.stadiumName}${move.deckCardName ? ` — benched ${move.deckCardName}` : ""}`;
+    case "effect": {
+      // move.card is the exact card name; name in-play targets from public
+      // info (fetched deck cards aren't described until they surface).
+      const targets = move.picks
+        .flatMap((p) => p.monIds ?? [])
+        .map((id) => monNameAnySide(state, id))
+        .filter((n): n is string => n !== null);
+      return targets.length > 0 ? `Played ${move.card} on ${targets.join(", ")}` : `Played ${move.card}`;
+    }
     case "use_ability": {
       const mon = [side.active, ...side.bench].find((m) => m?.id === move.monId);
       const oppName = move.targetMonId

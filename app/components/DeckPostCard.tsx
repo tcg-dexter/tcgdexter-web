@@ -11,6 +11,7 @@ import { type MatchFormData } from "./MatchForm";
 import MatchEntry from "./MatchEntry";
 import QRCodeButton from "./QRCodeButton";
 import { buildAvatarItems } from "@/lib/deckAvatarItems";
+import { clientTz, celebrateStreak } from "@/lib/streak-client";
 import { shade } from "@/lib/color";
 import { useFadeIn } from "@/lib/useFadeIn";
 
@@ -454,12 +455,13 @@ export function UserDeckCard({
     const res = await fetch("/api/matches", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ saved_deck_id: id, ...data }),
+      body: JSON.stringify({ saved_deck_id: id, ...data, tz: clientTz() }),
     });
+    const json = await res.json();
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error ?? "Failed to log match.");
+      throw new Error(json.error ?? "Failed to log match.");
     }
+    celebrateStreak(json.streak);
     setLogOpen(false);
     setLogKey((k) => k + 1);
     router.refresh();

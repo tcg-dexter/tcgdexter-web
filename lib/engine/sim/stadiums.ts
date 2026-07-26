@@ -55,6 +55,18 @@ export function enforceBenchCap(state: GameState): void {
   }
 }
 
+/** Effect-coverage predicate (W1): stadiums with a modeled passive or
+ *  activated effect (others sit inertly). */
+const MODELED_STADIUMS = new Set([
+  "Artazon",
+  "Collapsed Stadium",
+  "Area Zero Underdepths",
+  "N's Castle",
+]);
+export function isStadiumModeled(name: string): boolean {
+  return MODELED_STADIUMS.has(name);
+}
+
 /* ─── Activated stadium effects ─────────────────────────────────── */
 
 /** A move to use the current Stadium's activated effect. `deckCardId` /

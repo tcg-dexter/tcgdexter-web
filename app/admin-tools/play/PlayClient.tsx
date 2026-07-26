@@ -290,10 +290,29 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     const trainers = trainerMovesFor(cardId);
     if (trainers.length > 0) {
       const first = trainers[0];
+      // N's PP Up: choose a discard-pile Energy, then a Benched target.
+      if (first.discardPickId != null && first.monId != null) {
+        const energyKeys = Array.from(
+          new Set(trainers.map((m) => m.discardPickName ?? m.discardPickId!)),
+        );
+        if (energyKeys.length <= 1) {
+          // Single Energy type ⇒ skip straight to the target chooser.
+          return void chooseOwnTarget(
+            card?.name ?? "Attach",
+            trainers.map((m) => ({ move: m as InteractiveMove, monId: m.monId! })),
+          );
+        }
+        const reps = energyKeys.map(
+          (k) => trainers.find((m) => (m.discardPickName ?? m.discardPickId) === k)!,
+        );
+        return void setPickerMoves(reps); // stage 1: pick which Energy
+      }
       if (first.deckCardIds || first.discardPickId) {
         return void setPickerMoves(trainers); // search picker modal
       }
-      if (first.oppBenchIndex != null) return void setBossMoves(trainers);
+      if (first.oppBenchIndex != null || first.oppMonId != null) {
+        return void setBossMoves(trainers); // pick an opponent Pokémon
+      }
       if (first.benchIndex != null) return void setBenchPickMoves(trainers);
       if (first.monId != null) {
         // Crispin / Rare Candy: pick which own Pokémon.
@@ -342,6 +361,18 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
       if (need > 0) {
         setPickerMoves(null);
         setDiscardStage({ move: m, need, picked: [] });
+        return;
+      }
+      // N's PP Up stage 2: the chosen Energy still needs a Benched target.
+      if (m.monId != null && m.discardPickId != null) {
+        const targets = trainerMovesFor(m.cardId).filter(
+          (x) => x.discardPickId === m.discardPickId,
+        );
+        setPickerMoves(null);
+        chooseOwnTarget(
+          game.view.hand.find((c) => c.id === m.cardId)?.name ?? "Attach",
+          targets.map((x) => ({ move: x as InteractiveMove, monId: x.monId! })),
+        );
         return;
       }
     }
@@ -547,6 +578,9 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
   // by whichever mode is live.
   const bossIndex = (i: number) =>
     bossMoves?.find((m) => m.kind === "play_trainer" && m.oppBenchIndex === i);
+  // Ruffian targets any opponent Pokémon (Active or Bench) by id.
+  const bossMoveForMon = (id: string) =>
+    bossMoves?.find((m) => m.kind === "play_trainer" && m.oppMonId === id);
   const abilityTargetIds = new Set(
     abilityTargeting?.moves.map((m) => m.targetMonId).filter((id): id is string => id != null) ?? [],
   );
@@ -558,20 +592,26 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     const best = candidates.sort((a, b) => (b.counters ?? 0) - (a.counters ?? 0))[0];
     if (best) void sendMove(best);
   }
+  const oppActive = view.opponent.board.active;
+  const bossActiveMove = bossMoves && oppActive ? bossMoveForMon(oppActive.id) : undefined;
   const aiActiveTargetable =
-    (abilityTargeting != null && view.opponent.board.active != null && abilityTargetIds.has(view.opponent.board.active.id));
+    (abilityTargeting != null && oppActive != null && abilityTargetIds.has(oppActive.id)) ||
+    bossActiveMove != null;
 
   const aiInteract =
     bossMoves || abilityTargeting || counterPlace
       ? {
           onActiveClick: aiActiveTargetable
-            ? () => sendAbilityAt(view.opponent.board.active!.id)
+            ? () => {
+                if (bossActiveMove) return void sendMove(bossActiveMove);
+                if (oppActive) sendAbilityAt(oppActive.id);
+              }
             : undefined,
           highlightActive: aiActiveTargetable,
           onBenchClick: (i: number) => {
             const mon = view.opponent.board.bench[i];
             if (bossMoves) {
-              const move = bossIndex(i);
+              const move = bossIndex(i) ?? (mon ? bossMoveForMon(mon.id) : undefined);
               if (move) void sendMove(move);
               return;
             }
@@ -587,7 +627,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
           },
           highlightBench: view.opponent.board.bench.map((mon, i) =>
             bossMoves != null
-              ? bossIndex(i) != null
+              ? bossIndex(i) != null || (mon != null && bossMoveForMon(mon.id) != null)
               : abilityTargeting != null
                 ? abilityTargetIds.has(mon.id)
                 : counterPlace != null,
@@ -603,7 +643,9 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
         : abilityTargeting
           ? `${abilityTargeting.label}: pick a target`
           : bossMoves
-            ? "Pick the opponent's benched Pokémon to drag active"
+            ? bossMoves.some((m) => m.kind === "play_trainer" && m.oppMonId != null)
+              ? "Pick an opponent's Pokémon to target"
+              : "Pick the opponent's benched Pokémon to drag active"
             : benchPickMoves
               ? "Pick a benched Pokémon"
               : pendingCardId

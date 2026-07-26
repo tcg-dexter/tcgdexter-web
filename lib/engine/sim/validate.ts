@@ -5,10 +5,26 @@
 // against constraints here. Keeping this in one place means the API layer
 // (which replays untrusted transcripts) has a single trust boundary.
 
-import type { GameState } from "../types";
+import type { GameState, PokemonInPlay } from "../types";
 import { legalMoves, type SimMove, type TurnContext } from "./moves";
 import { attackBenchCounterCount, attackBenchDamageTargets } from "./attacks";
-import { trainerDiscardCost } from "./trainers";
+import { isSupporter, trainerDiscardCost } from "./trainers";
+import { enumerateEffect, type EffectMove } from "./effects/runtime";
+import { effectsFor } from "./effects/cards";
+
+/** Order-insensitive fingerprint of an effect move's picks, so a human
+ *  selection matches an enumerated move regardless of id/slot ordering. */
+function effectPicks(m: EffectMove): string {
+  return JSON.stringify(
+    m.picks
+      .map((p) => ({
+        ref: p.ref,
+        mon: [...(p.monIds ?? [])].sort(),
+        card: [...(p.cardIds ?? [])].sort(),
+      }))
+      .sort((a, b) => (a.ref < b.ref ? -1 : a.ref > b.ref ? 1 : 0)),
+  );
+}
 
 /** Core (non-selection) fields of a play_trainer move — everything the
  *  enumerator produces. Selection fields (discardCardIds) are excluded so a
@@ -94,6 +110,36 @@ export function isLegalHumanMove(
       if (!move.benchDamageTargets.every(onBench)) return false;
     }
     return true;
+  }
+
+  // Declarative-effect move: re-enumerate the source card's effect and match
+  // the human's picks. Self-contained (doesn't depend on legalMoves emitting
+  // the effect kind), and re-checks the same gates enumeration relies on.
+  if (move.kind === "effect") {
+    const effect = effectsFor(move.card)[move.effectIndex];
+    if (!effect) return false;
+    const side = state.sides[actor];
+    let sourceMon: PokemonInPlay | null = null;
+    if (effect.trigger.kind === "trainer") {
+      // The source must be that named card, in hand, and the supporter gate
+      // (once per turn; banned on the game's first turn) must be clear.
+      const card = side.hand.find((c) => c.id === move.sourceId && c.name === move.card);
+      if (!card) return false;
+      if (isSupporter(card) && (side.supporterPlayedThisTurn || state.turn.number === 1)) return false;
+    } else {
+      sourceMon = [side.active, ...side.bench].find((m) => m?.id === move.sourceId) ?? null;
+      if (!sourceMon) return false;
+    }
+    const enumerated = enumerateEffect(
+      state,
+      actor,
+      { id: move.sourceId, name: move.card },
+      effect,
+      move.effectIndex,
+      sourceMon,
+    );
+    const want = effectPicks(move);
+    return enumerated.some((m) => effectPicks(m) === want);
   }
 
   const encoded = JSON.stringify(move);

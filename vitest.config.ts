@@ -7,7 +7,10 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["**/*.test.ts"],
-    exclude: ["node_modules/**", ".next/**"],
+    // `.claude/worktrees/**` holds stale duplicate checkouts (temporary agent
+    // worktrees) whose out-of-date test copies otherwise pollute full runs
+    // with phantom failures — exclude the whole `.claude` tree.
+    exclude: ["node_modules/**", ".next/**", "**/.claude/**"],
   },
   resolve: {
     alias: {

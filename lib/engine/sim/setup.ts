@@ -13,6 +13,7 @@
 //   * Special energy provides 1 Colorless.
 
 import { parseDeckListCards } from "@/lib/cardPrinting";
+import { basicEnergyAliasKeys } from "@/lib/basicEnergyAlias";
 import { lookupCard } from "../catalog";
 import { mintInstanceId } from "../initial";
 import { ENGINE_VERSION } from "../types";
@@ -28,7 +29,11 @@ import { shuffle, type Rng } from "./rng";
 // v4: coin-flip condition attacks implemented (Bemusing Aroma, Thunder
 // Shock) — conditions now actually occur in self-play, changing rollout
 // distributions for decks that carry them.
-export const SIM_VERSION = 4;
+// v5: declarative-effect path goes live (W2). First declarative-only card
+// (Team Rocket's Transceiver) is now really played instead of silent cycle-
+// draw, and the AI policies select effect moves — rollouts change for decks
+// that carry it.
+export const SIM_VERSION = 5;
 
 const MAX_MULLIGANS = 20;
 
@@ -48,6 +53,24 @@ export class SimDeckError extends Error {}
  *   moves reference card ids across process rebuilds. Callers must use
  *   distinct prefixes per side. Defaults to globally-unique ids.
  */
+/** Normalize a decklist card name to one the engine catalog understands.
+ *  The only real offender is TCG Live's basic-energy shorthand — a decklist
+ *  writes "Basic {D} Energy" where the catalog is keyed "Basic Darkness
+ *  Energy" / "Darkness Energy". Without this, basic energy resolves to a
+ *  null catalog: it can't be attached (no energyProvides) and shows a card
+ *  back (no image). Only rewrites names that don't already resolve, so
+ *  everything else is passed through untouched. */
+export function canonicalCardName(name: string): string {
+  if (lookupCard(name)) return name;
+  const keys = basicEnergyAliasKeys(name);
+  if (!keys) return name;
+  for (const key of keys) {
+    const proper = key.replace(/\b\w/g, (c) => c.toUpperCase()); // Title Case
+    if (lookupCard(proper)) return proper;
+  }
+  return name;
+}
+
 export function instantiateDeck(deckList: string, idPrefix?: string): SimDeck {
   const parsed = parseDeckListCards(deckList);
   if (parsed.length === 0) throw new SimDeckError("Deck list could not be parsed");
@@ -56,10 +79,11 @@ export function instantiateDeck(deckList: string, idPrefix?: string): SimDeck {
   let local = 0;
   const mint = idPrefix ? () => `${idPrefix}${++local}` : () => mintInstanceId("sim");
   for (const entry of parsed) {
-    const catalog = lookupCard(entry.name);
+    const name = canonicalCardName(entry.name);
+    const catalog = lookupCard(name);
     if (!catalog) unknown.add(entry.name);
     for (let i = 0; i < entry.qty; i++) {
-      cards.push({ id: mint(), name: entry.name, catalog });
+      cards.push({ id: mint(), name, catalog });
     }
   }
   const basics = cards.some(
@@ -75,6 +99,12 @@ export function instantiateDeck(deckList: string, idPrefix?: string): SimDeck {
 
 export function isBasic(c: CardInstance): boolean {
   return c.catalog?.supertype === "Pokémon" && !c.catalog.evolves_from;
+}
+
+/** An "N's Pokémon" — the card name begins with the "N's " prefix. Shared by
+ *  N's PP Up (energy accel) and N's Castle (retreat-cost waiver). */
+export function isNsPokemon(c: CardInstance): boolean {
+  return c.catalog?.supertype === "Pokémon" && c.name.startsWith("N's ");
 }
 
 /** A Basic Energy card (not Special Energy). Shared across trainer/attack
@@ -106,6 +136,12 @@ export type EnergyUnit = string;
 const ANY_TYPE_SPECIAL = new Set(["Luminous Energy", "Legacy Energy", "Rainbow Energy", "V Guard Energy"]);
 /** Special energy providing 2+ Colorless from one card. */
 const MULTI_COLORLESS_SPECIAL: Record<string, number> = { "Double Turbo Energy": 2 };
+
+/** Effect-coverage predicate (W1): is this Special Energy's output modeled?
+ *  Unmodeled special energy degrades to a single Colorless. */
+export function isSpecialEnergyModeled(name: string): boolean {
+  return ANY_TYPE_SPECIAL.has(name) || name in MULTI_COLORLESS_SPECIAL;
+}
 
 /**
  * Energy units an attached card provides toward attack/retreat costs. One

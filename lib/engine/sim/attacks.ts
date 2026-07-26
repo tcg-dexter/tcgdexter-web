@@ -45,6 +45,35 @@ export function attackBaseDamage(
   return scaler ? scaler(state, actor) : baseDamage(attack);
 }
 
+/* ─── Flat damage bonuses to the Active (before Weakness/Resistance) ─ */
+
+/** Extra damage added to the Active-spot hit before Weakness/Resistance,
+ *  from turn-scoped supporters and attacker-side tool/condition combos.
+ *  Never applies to Bench placement damage. */
+export function activeDamageBonus(
+  state: GameState,
+  actor: "player" | "opponent",
+  attacker: PokemonInPlay,
+  defender: PokemonInPlay,
+): number {
+  let bonus = 0;
+  // Black Belt's Training: +40 to the opponent's Active Pokémon ex, the turn
+  // it is played.
+  const defIsEx = defender.card.catalog?.subtypes.includes("ex") ?? false;
+  if (state.sides[actor].blackBeltTrainingTurn === state.turn.number && defIsEx) {
+    bonus += 40;
+  }
+  // Binding Mochi (PRE 95): while the attached attacker is Poisoned, its
+  // attacks do 40 more to the opponent's Active.
+  if (
+    attacker.conditions.includes("Poisoned") &&
+    attacker.attachedTools.some((t) => t.name === "Binding Mochi")
+  ) {
+    bonus += 40;
+  }
+  return bonus;
+}
+
 /* ─── Placement / side effects ──────────────────────────────────── */
 
 export type AttackEffect =
@@ -65,6 +94,14 @@ const ATTACK_EFFECTS: Record<string, AttackEffect> = {
     discardSelfEnergy: true,
   },
 };
+
+/** Effect-coverage predicate (W1): does this attack have a modeled damage
+ *  scaler or placement/side effect? (Attack-inflicted conditions and
+ *  self-clear are checked separately in conditions.ts.) */
+export function isAttackModeled(cardName: string, attackName: string): boolean {
+  const key = `${cardName}::${attackName}`;
+  return key in DAMAGE_SCALERS || key in ATTACK_EFFECTS;
+}
 
 export function attackEffect(attacker: PokemonInPlay, attackIndex: number): AttackEffect | null {
   const attack = attacker.card.catalog?.attacks[attackIndex];

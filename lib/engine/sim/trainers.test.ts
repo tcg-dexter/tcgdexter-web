@@ -3,12 +3,17 @@
 // supporter-per-turn gate and evolution locks enforced.
 
 import { describe, it, expect } from "vitest";
-import { buildSimInitialState, instantiateDeck } from "./setup";
+import { buildSimInitialState, instantiateDeck, toPokemonInPlay } from "./setup";
 import { beginTurn, applyMove } from "./driver";
 import { legalMoves, type SimMove, type TurnContext } from "./moves";
 import { mulberry32 } from "./rng";
-import type { CardInstance, GameState, PlayerSide } from "../types";
+import { lookupCard } from "../catalog";
+import { mintInstanceId } from "../initial";
+import type { CardInstance, GameState, PlayerSide, PokemonInPlay } from "../types";
 import type { PlayTrainerMove } from "./trainers";
+
+const card = (n: string): CardInstance => ({ id: mintInstanceId("t"), name: n, catalog: lookupCard(n) });
+const mon = (n: string): PokemonInPlay => toPokemonInPlay(card(n), 0);
 
 // Set-code-less lines resolve by name via the catalog (parse pass 2).
 const STAPLE_DECK = [
@@ -227,5 +232,122 @@ describe("staple trainer effects", () => {
     const moves = legalMoves(state, "player", { retreated: false });
     expect(moves.some((m) => m.kind === "cycle_item" && m.cardId === fake.id)).toBe(true);
     expect(moves.some((m) => m.kind === "play_trainer" && m.cardId === fake.id)).toBe(false);
+  });
+});
+
+describe("Special Red Card", () => {
+  it("is playable only at 3-or-fewer opponent Prizes; bottoms their hand and draws 3", () => {
+    const state = freshState();
+    const me = state.sides.player;
+    const opp = state.sides.opponent;
+    const src = card("Special Red Card");
+    me.hand = [src];
+
+    // Opponent still has 4+ Prizes ⇒ unplayable.
+    while (opp.prizes.length < 4) opp.prizes.push(card("Pikachu"));
+    expect(trainerOptions(state, src.id).length).toBe(0);
+
+    // Down to 3 Prizes ⇒ playable.
+    opp.prizes = opp.prizes.slice(0, 3);
+    opp.hand = [card("Pikachu"), card("Iono"), card("Ultra Ball"), card("Boss's Orders")];
+    const oppDeckBefore = opp.deck.length;
+    expect(trainerOptions(state, src.id).length).toBe(1);
+    apply(state, trainerOptions(state, src.id)[0]);
+    expect(opp.hand.length).toBe(3); // 4 bottomed, drew 3
+    expect(opp.deck.length).toBe(oppDeckBefore + 4 - 3);
+    expect(me.discard.some((c) => c.id === src.id)).toBe(true);
+  });
+});
+
+describe("Janine's Secret Art", () => {
+  it("attaches Basic Darkness from deck to Darkness Pokémon; poisons the Active if targeted", () => {
+    const state = freshState();
+    const me = state.sides.player;
+    me.active = mon("N's Zorua"); // Darkness
+    me.bench = [mon("N's Zoroark ex")]; // Darkness
+    // Make sure Basic Darkness Energy is available in the deck.
+    me.deck.unshift(card("Basic Darkness Energy"), card("Basic Darkness Energy"));
+    const src = card("Janine's Secret Art");
+    me.hand = [src];
+
+    expect(trainerOptions(state, src.id).length).toBe(1);
+    apply(state, trainerOptions(state, src.id)[0]);
+    const attachedActive = me.active!.attachedEnergy.length;
+    const attachedBench = me.bench[0].attachedEnergy.length;
+    expect(attachedActive + attachedBench).toBe(2); // up to 2 attached
+    // Active received energy ⇒ Poisoned.
+    if (attachedActive > 0) expect(me.active!.conditions).toContain("Poisoned");
+  });
+});
+
+describe("Ruffian", () => {
+  it("discards a Tool and a Special Energy from the chosen opponent Pokémon", () => {
+    const state = freshState();
+    const me = state.sides.player;
+    const opp = state.sides.opponent;
+    const victim = mon("N's Zoroark ex");
+    victim.attachedTools = [card("Binding Mochi")];
+    victim.attachedEnergy = [card("Jet Energy"), card("Basic Darkness Energy")]; // Jet = Special
+    opp.active = victim;
+    opp.bench = [mon("N's Zorua")]; // no tool/special energy ⇒ not a target
+    const src = card("Ruffian");
+    me.hand = [src];
+
+    const options = trainerOptions(state, src.id);
+    expect(options.map((m) => m.oppMonId)).toEqual([victim.id]); // only the victim
+    apply(state, options[0]);
+    expect(victim.attachedTools.length).toBe(0); // tool discarded
+    expect(victim.attachedEnergy.map((c) => c.name)).toEqual(["Basic Darkness Energy"]); // special gone, basic stays
+    expect(opp.discard.some((c) => c.name === "Binding Mochi")).toBe(true);
+    expect(opp.discard.some((c) => c.name === "Jet Energy")).toBe(true);
+  });
+
+  it("is unplayable when no opponent Pokémon holds a Tool or Special Energy", () => {
+    const state = freshState();
+    const me = state.sides.player;
+    state.sides.opponent.active = mon("N's Zorua");
+    state.sides.opponent.bench = [];
+    const src = card("Ruffian");
+    me.hand = [src];
+    expect(trainerOptions(state, src.id).length).toBe(0);
+  });
+});
+
+describe("N's PP Up", () => {
+  it("attaches a Basic Energy from the discard onto a Benched N's Pokémon", () => {
+    const state = freshState();
+    const side = state.sides.player;
+    side.active = mon("N's Zorua");
+    const zekrom = mon("N's Zekrom");
+    side.bench = [zekrom];
+    side.discard = [card("Basic Darkness Energy")];
+    const ppup = card("N's PP Up");
+    side.hand = [ppup];
+
+    const options = trainerOptions(state, ppup.id);
+    // One energy in discard × one benched N's Pokémon = one concrete play.
+    expect(options.length).toBe(1);
+    expect(options[0].monId).toBe(zekrom.id);
+    expect(options[0].discardPickName).toBe("Basic Darkness Energy");
+
+    apply(state, options[0]);
+    expect(zekrom.attachedEnergy.map((c) => c.name)).toContain("Basic Darkness Energy");
+    expect(side.discard.some((c) => c.name === "Basic Darkness Energy")).toBe(false);
+    expect(side.discard.some((c) => c.id === ppup.id)).toBe(true); // the item itself
+  });
+
+  it("is unplayable with no Basic Energy in discard or no Benched N's Pokémon", () => {
+    const state = freshState();
+    const side = state.sides.player;
+    side.active = mon("N's Zorua");
+    const ppup = card("N's PP Up");
+    side.hand = [ppup];
+    // No benched N's Pokémon, no energy in discard.
+    side.bench = [];
+    side.discard = [];
+    expect(trainerOptions(state, ppup.id).length).toBe(0);
+    // Energy present but still no benched N's Pokémon.
+    side.discard = [card("Basic Darkness Energy")];
+    expect(trainerOptions(state, ppup.id).length).toBe(0);
   });
 });

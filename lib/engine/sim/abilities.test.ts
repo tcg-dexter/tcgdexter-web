@@ -3,9 +3,9 @@
 
 import { describe, it, expect } from "vitest";
 import { buildSimInitialState, instantiateDeck, toPokemonInPlay } from "./setup";
-import { applyMove } from "./driver";
+import { applyMove, beginTurn } from "./driver";
 import { legalMoves, type SimMove } from "./moves";
-import { placeCounters } from "./damage";
+import { placeCounters, resolveKnockouts } from "./damage";
 import { lookupCard } from "../catalog";
 import { mintInstanceId } from "../initial";
 import { mulberry32 } from "./rng";
@@ -84,6 +84,108 @@ describe("Dusknoir — Cursed Blast", () => {
     // Dusknoir self-KO'd: gone from play, opponent took a prize for it.
     expect(s.prizesTaken.opponent).toBe(oppPrizesBefore + 1);
     expect(result.pendingPromotion).toBe("player");
+  });
+});
+
+describe("N's Zoroark ex — Trade", () => {
+  it("discards one card from hand and draws 2, once per turn", () => {
+    const s = state();
+    const zoro = mon("N's Zoroark ex");
+    s.sides.player.active = zoro;
+    s.sides.opponent.active = mon("Pikachu");
+    s.sides.player.hand = [card("Pikachu"), card("Basic Darkness Energy")];
+    const handBefore = s.sides.player.hand.length;
+    const deckBefore = s.sides.player.deck.length;
+    const discardBefore = s.sides.player.discard.length;
+
+    const move = abilityMovesFor(s).find((m) => m.abilityName === "Trade")!;
+    expect(move).toBeTruthy();
+    apply(s, move);
+
+    // −1 discarded, +2 drawn ⇒ net +1 hand; deck −2; discard +1.
+    expect(s.sides.player.hand.length).toBe(handBefore + 1);
+    expect(s.sides.player.deck.length).toBe(deckBefore - 2);
+    expect(s.sides.player.discard.length).toBe(discardBefore + 1);
+    // Used up for the turn.
+    expect(abilityMovesFor(s).some((m) => m.abilityName === "Trade")).toBe(false);
+  });
+
+  it("is unavailable with an empty hand or empty deck", () => {
+    const s = state();
+    const zoro = mon("N's Zoroark ex");
+    s.sides.player.active = zoro;
+    s.sides.opponent.active = mon("Pikachu");
+    s.sides.player.hand = [];
+    expect(abilityMovesFor(s).some((m) => m.abilityName === "Trade")).toBe(false);
+    s.sides.player.hand = [card("Pikachu")];
+    s.sides.player.deck = [];
+    expect(abilityMovesFor(s).some((m) => m.abilityName === "Trade")).toBe(false);
+  });
+});
+
+describe("Fezandipiti ex — Flip the Script", () => {
+  it("is available only after you were KO'd on the opponent's turn, then draws 3", () => {
+    const s = state();
+    const fez = mon("Fezandipiti ex");
+    s.sides.player.active = fez;
+    s.sides.opponent.active = mon("Pikachu");
+
+    // No comeback trigger yet ⇒ unavailable.
+    expect(abilityMovesFor(s).some((m) => m.abilityName === "Flip the Script")).toBe(false);
+
+    s.sides.player.koedLastOppTurn = true;
+    const move = abilityMovesFor(s).find((m) => m.abilityName === "Flip the Script")!;
+    expect(move).toBeTruthy();
+    const deckBefore = s.sides.player.deck.length;
+    const handBefore = s.sides.player.hand.length;
+    apply(s, move);
+    expect(s.sides.player.hand.length).toBe(handBefore + 3);
+    expect(s.sides.player.deck.length).toBe(deckBefore - 3);
+  });
+
+  it("the KO flag is set when the opponent KOs you on their turn, cleared at their next turn", () => {
+    const s = state();
+    s.turn.actor = "opponent"; // opponent's turn
+    const dying = mon("Snorlax");
+    placeCounters(dying, 100); // lethal for Snorlax's HP
+    s.sides.player.active = dying;
+    s.sides.player.bench = [mon("Pikachu")]; // avoid game end
+    s.sides.opponent.active = mon("Pikachu");
+
+    resolveKnockouts(s);
+    expect(s.sides.player.koedLastOppTurn).toBe(true);
+
+    // Cleared when the opponent's next turn begins (the player already read it).
+    beginTurn(s, "opponent", 3);
+    expect(s.sides.player.koedLastOppTurn).toBe(false);
+  });
+});
+
+describe("Tatsugiri — Attract Customers", () => {
+  it("pulls a Supporter from the top 6 to hand when Active", () => {
+    const s = state();
+    const tatsu = mon("Tatsugiri");
+    s.sides.player.active = tatsu;
+    s.sides.opponent.active = mon("Pikachu");
+    // Seed a Supporter within the top 6.
+    s.sides.player.deck.splice(3, 0, card("Iono"));
+    const handBefore = s.sides.player.hand.length;
+
+    const move = abilityMovesFor(s).find((m) => m.abilityName === "Attract Customers")!;
+    expect(move).toBeTruthy();
+    apply(s, move);
+    expect(s.sides.player.hand.some((c) => c.name === "Iono")).toBe(true);
+    expect(s.sides.player.hand.length).toBe(handBefore + 1);
+  });
+
+  it("is unavailable when Tatsugiri is on the Bench", () => {
+    const s = state();
+    const tatsu = mon("Tatsugiri");
+    s.sides.player.active = mon("Pikachu");
+    s.sides.player.bench = [tatsu];
+    s.sides.player.deck.splice(3, 0, card("Iono"));
+    s.sides.opponent.active = mon("Pikachu");
+    expect(abilityMovesFor(s).some((m) => m.abilityName === "Attract Customers")).toBe(false);
   });
 });
 

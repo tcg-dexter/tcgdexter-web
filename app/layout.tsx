@@ -6,6 +6,7 @@ import ThemeProvider from "./components/ThemeProvider";
 import SiteNav from "./components/ui/SiteNav";
 import SiteFooter from "./components/ui/SiteFooter";
 import GlobalSearchHotkey from "./components/ui/GlobalSearchHotkey";
+import StreakToast from "./components/StreakToast";
 import NavigationTracker from "./components/ui/NavigationTracker";
 import BrandGradientDefs from "./components/BrandGradientDefs";
 import { THEME_COOKIE, parseTheme } from "@/lib/theme";
@@ -101,6 +102,7 @@ export default function RootLayout({
               {children}
               <SiteFooter />
               <GlobalSearchHotkey />
+              <StreakToast />
             </div>
           )}
         </ThemeProvider>

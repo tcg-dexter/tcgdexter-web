@@ -9,7 +9,7 @@
 
 import type { GameState, PokemonInPlay } from "../types";
 import { applyWeaknessResistance, legalMoves, sideOf, type SimMove, type TurnContext } from "./moves";
-import { attackBaseDamage, attackEffect, discardAllEnergy } from "./attacks";
+import { activeDamageBonus, attackBaseDamage, attackEffect, discardAllEnergy } from "./attacks";
 import { applyAbility, hasOnEvolveTrigger, onEvolve } from "./abilities";
 import {
   applyCondition,
@@ -25,6 +25,8 @@ import type { DecisionPolicy } from "./policy";
 import { buildSimInitialState, energyUnits, toPokemonInPlay, type SimDeck } from "./setup";
 import { retreatCost } from "./tools";
 import { applyTrainer } from "./trainers";
+import { applyEffect } from "./effects/runtime";
+import { effectsFor } from "./effects/cards";
 import { applyStadium, benchCap, enforceBenchCap } from "./stadiums";
 import { viewFor } from "./view";
 import { shuffle, type Rng } from "./rng";
@@ -78,6 +80,9 @@ export function beginTurn(
   const side = sideOf(state, actor);
   side.energyAttachedThisTurn = 0;
   side.supporterPlayedThisTurn = false;
+  // The opponent's comeback window (were THEY KO'd during this turn?) opens
+  // fresh now — clear the flag they read at the start of their last turn.
+  state.sides[otherActor(actor)].koedLastOppTurn = false;
   for (const mon of [side.active, ...side.bench]) {
     if (mon) mon.evolvedThisTurn = false;
   }
@@ -172,7 +177,7 @@ export function applyMove(
       if (!active || !promoted) return done(false);
       // Pay the (tool-reduced) retreat cost by discarding whole Energy
       // cards until the units discarded meet the cost (Double Turbo = 2).
-      let owed = retreatCost(active);
+      let owed = retreatCost(active, state);
       while (owed > 0 && active.attachedEnergy.length > 0) {
         const [card] = active.attachedEnergy.splice(0, 1);
         side.discard.push(card);
@@ -214,6 +219,21 @@ export function applyMove(
     case "play_trainer": {
       applyTrainer(state, actor, move, rng);
       return done(false);
+    }
+    case "effect": {
+      // Declarative-effect move (universal encoding). applyEffect does the
+      // trainer/ability housekeeping and runs the ops. Effects can place
+      // counters / conditions, so resolve KOs like an activated ability.
+      const effect = effectsFor(move.card)[move.effectIndex];
+      if (effect) applyEffect(state, actor, effect, move, rng);
+      const ko = resolveKnockouts(state);
+      if (ko.winner) {
+        state.winner = ko.winner;
+        state.endReason = ko.endReason;
+        return done(false, null, ko.koTurn);
+      }
+      const pending = ko.pendingPromotions.includes(actor) ? actor : null;
+      return done(false, pending, ko.koTurn);
     }
     case "play_stadium": {
       const card = takeFromHand(move.cardId);
@@ -259,8 +279,11 @@ export function applyMove(
       // Miracle Force and the like: the attacker clears its own conditions.
       if (attackSelfClears(attacker.card.name, attack.name)) clearConditions(attacker);
 
-      // Damage to the active: state-scaled base (attacks.ts), then W/R.
-      const base = attackBaseDamage(state, actor, attacker, move.attackIndex);
+      // Damage to the active: state-scaled base (attacks.ts) + flat bonuses
+      // (Black Belt's Training, Binding Mochi), then W/R.
+      const base =
+        attackBaseDamage(state, actor, attacker, move.attackIndex) +
+        activeDamageBonus(state, actor, attacker, defender);
       dealRawDamage(defender, applyWeaknessResistance(base, attacker, defender));
 
       // Attack-inflicted conditions on the defending active (Mind Bend,

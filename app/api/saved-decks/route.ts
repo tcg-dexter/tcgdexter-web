@@ -9,6 +9,7 @@ import {
   type AnalysisResult,
 } from "@/lib/analyzeDeck";
 import { primaryPokemonCard } from "@/lib/primaryCardImage";
+import { reconcileAchievements } from "@/lib/learn/achievements";
 
 /**
  * POST /api/saved-decks
@@ -169,6 +170,10 @@ export async function POST(req: Request) {
       is_public: publish === true,
     });
   }
+
+  // Award any deck-count badges this save unlocked (First Save, Deck
+  // Builder milestones). Internally error-safe.
+  await reconcileAchievements(supabase, user.id);
 
   return NextResponse.json({
     id: data.id,

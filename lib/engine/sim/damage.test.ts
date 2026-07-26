@@ -8,6 +8,7 @@ import { buildSimInitialState, instantiateDeck, toPokemonInPlay } from "./setup"
 import { applyMove } from "./driver";
 import { placeCounters, moveCounters, isKnockedOut, resolveKnockouts, maxHp } from "./damage";
 import { applyWeaknessResistance } from "./moves";
+import { activeDamageBonus } from "./attacks";
 import { lookupCard } from "../catalog";
 import { mintInstanceId } from "../initial";
 import { mulberry32 } from "./rng";
@@ -30,6 +31,37 @@ function blankState(): GameState {
   state.turn = { number: 3, playerTurnNumber: 2, actor: "player", phase: "turn" };
   return state;
 }
+
+describe("flat damage bonuses to the Active (before W/R)", () => {
+  it("Black Belt's Training adds 40 vs an Active ex, only the turn it's played", () => {
+    const s = blankState();
+    const attacker = mon("Pikachu");
+    const defenderEx = mon("N's Zoroark ex"); // has the ex subtype
+    const defenderPlain = mon("Snorlax");
+    expect(activeDamageBonus(s, "player", attacker, defenderEx)).toBe(0);
+
+    s.sides.player.blackBeltTrainingTurn = s.turn.number;
+    expect(activeDamageBonus(s, "player", attacker, defenderEx)).toBe(40);
+    // Not an ex ⇒ no bonus.
+    expect(activeDamageBonus(s, "player", attacker, defenderPlain)).toBe(0);
+    // A later turn ⇒ the buff has expired.
+    s.turn.number += 1;
+    expect(activeDamageBonus(s, "player", attacker, defenderEx)).toBe(0);
+  });
+
+  it("Binding Mochi adds 40 only while the attached attacker is Poisoned", () => {
+    const s = blankState();
+    const attacker = mon("Pikachu");
+    const defender = mon("Snorlax");
+    attacker.attachedTools = [card("Binding Mochi")];
+    expect(activeDamageBonus(s, "player", attacker, defender)).toBe(0); // not poisoned
+    attacker.conditions = ["Poisoned"];
+    expect(activeDamageBonus(s, "player", attacker, defender)).toBe(40);
+    // Poisoned but no Binding Mochi ⇒ no bonus.
+    attacker.attachedTools = [];
+    expect(activeDamageBonus(s, "player", attacker, defender)).toBe(0);
+  });
+});
 
 describe("damage vs damage counters", () => {
   it("counters are 10 HP each and never apply weakness", () => {

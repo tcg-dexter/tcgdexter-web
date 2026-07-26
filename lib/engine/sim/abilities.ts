@@ -11,6 +11,7 @@
 import type { CardInstance, GameState, PlayerSide, PokemonInPlay } from "../types";
 import { moveCounters, placeCounters } from "./damage";
 import { energyProvides, isBasicEnergyCard } from "./setup";
+import { isSupporter, pickDiscards } from "./trainers";
 
 export interface UseAbilityMove {
   kind: "use_ability";
@@ -58,6 +59,76 @@ interface ActivatedSpec {
 }
 
 const ACTIVATED: Record<string, ActivatedSpec> = {
+  // N's Zoroark ex — Trade: discard a card from your hand, then draw 2.
+  // Once per turn. v1 auto-discards the least useful card (a human discard
+  // choice is a future refinement; the reserved move.cardId can carry it).
+  "N's Zoroark ex::Trade": {
+    available: (state, actor) => {
+      const side = state.sides[actor];
+      return side.deck.length > 0 && side.hand.length > 0;
+    },
+    moves: (state, actor, mon) => [
+      { kind: "use_ability", monId: mon.id, abilityName: "Trade" },
+    ],
+    apply: (state, actor, mon, move) => {
+      const side = state.sides[actor];
+      if (side.deck.length === 0 || side.hand.length === 0) return;
+      // Prefer a human-chosen discard (move.cardId) when supplied and in hand;
+      // otherwise auto-pick the least useful card.
+      const chosen =
+        (move.cardId ? side.hand.find((c) => c.id === move.cardId) : undefined) ??
+        pickDiscards(side, 1, "")[0];
+      if (chosen) {
+        const idx = side.hand.findIndex((c) => c.id === chosen.id);
+        if (idx >= 0) side.discard.push(...side.hand.splice(idx, 1));
+      }
+      side.hand.push(...side.deck.splice(0, 2));
+      mon.abilitiesUsedThisTurn.push("Trade");
+    },
+  },
+
+  // Fezandipiti ex — Flip the Script: once during your turn, if any of your
+  // Pokémon were Knocked Out during your opponent's last turn, draw 3.
+  // (v1 gates once-per-Pokémon; the "1 per turn across copies" cap is a
+  // future refinement — decks run a single copy.)
+  "Fezandipiti ex::Flip the Script": {
+    available: (state, actor) => {
+      const side = state.sides[actor];
+      return side.koedLastOppTurn === true && side.deck.length > 0;
+    },
+    moves: (state, actor, mon) => [
+      { kind: "use_ability", monId: mon.id, abilityName: "Flip the Script" },
+    ],
+    apply: (state, actor, mon) => {
+      const side = state.sides[actor];
+      side.hand.push(...side.deck.splice(0, 3));
+      mon.abilitiesUsedThisTurn.push("Flip the Script");
+    },
+  },
+
+  // Tatsugiri — Attract Customers: once during your turn, if this Pokémon is
+  // Active, look at the top 6 cards, reveal a Supporter and put it into your
+  // hand, then put the rest on the bottom of your deck. v1 auto-picks the
+  // first Supporter and returns the rest in order (deterministic for replay).
+  "Tatsugiri::Attract Customers": {
+    available: (state, actor, mon) => {
+      const side = state.sides[actor];
+      if (side.active !== mon || side.deck.length === 0) return false;
+      return side.deck.slice(0, 6).some(isSupporter);
+    },
+    moves: (state, actor, mon) => [
+      { kind: "use_ability", monId: mon.id, abilityName: "Attract Customers" },
+    ],
+    apply: (state, actor, mon) => {
+      const side = state.sides[actor];
+      const top = side.deck.splice(0, 6);
+      const idx = top.findIndex(isSupporter);
+      if (idx >= 0) side.hand.push(...top.splice(idx, 1));
+      side.deck.push(...top); // remainder to the bottom
+      mon.abilitiesUsedThisTurn.push("Attract Customers");
+    },
+  },
+
   // Munkidori — Adrena-Brain: if it has Darkness Energy, move up to 3 damage
   // counters from 1 of your Pokémon to 1 of your opponent's Pokémon.
   "Munkidori::Adrena-Brain": {
@@ -123,6 +194,13 @@ const ACTIVATED: Record<string, ActivatedSpec> = {
     },
   },
 };
+
+/** Effect-coverage predicate (W1): is this Pokémon ability actually modeled,
+ *  either as an activated ability or an on-evolve trigger? */
+export function isAbilityModeled(cardName: string, abilityName: string): boolean {
+  if (`${cardName}::${abilityName}` in ACTIVATED) return true;
+  return cardName === "Charizard ex" && abilityName === "Infernal Reign";
+}
 
 /** Every activated-ability move available to `actor` this turn. */
 export function abilityMoves(state: GameState, actor: Actor): UseAbilityMove[] {

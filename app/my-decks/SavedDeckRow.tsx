@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { type MatchFormData } from "@/app/components/MatchForm";
 import MatchEntry from "@/app/components/MatchEntry";
 import type { UserDeckCardProps } from "@/app/components/DeckPostCard";
+import { clientTz, celebrateStreak } from "@/lib/streak-client";
 
 /** Compact three-segment composition bar — the List-view counterpart to
  *  CompositionRing, sharing the same color scheme (black Pokémon, brand
@@ -93,12 +94,13 @@ export default function SavedDeckRow({
     const res = await fetch("/api/matches", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ saved_deck_id: id, ...data }),
+      body: JSON.stringify({ saved_deck_id: id, ...data, tz: clientTz() }),
     });
+    const json = await res.json();
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error ?? "Failed to log match.");
+      throw new Error(json.error ?? "Failed to log match.");
     }
+    celebrateStreak(json.streak);
     setLogOpen(false);
     router.refresh();
   }

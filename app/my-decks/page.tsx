@@ -5,6 +5,8 @@ import type { UserDeckCardProps } from "@/app/components/DeckPostCard";
 import { primaryCardImageUrl, deckAvatarInfo, pokemonSlug } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
 import { computeDeckRecords } from "@/lib/deck-record";
+import { isStreakAtRisk, displayCurrentStreak, type StreakRow } from "@/lib/streak";
+import { hasAchievement, CERTIFIED_TRAINER } from "@/lib/learn/achievements";
 import MyDecksClient from "./MyDecksClient";
 
 interface DeckRow {
@@ -47,7 +49,7 @@ export default async function MyDecksPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("username, display_name")
+    .select("username, display_name, onboarding_dismissed")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -75,6 +77,17 @@ export default async function MyDecksPage() {
   const manualMatches = (matchesRaw ?? []) as MatchRow[];
 
   const deckRecords = computeDeckRecords(manualMatches);
+
+  // Daily-logging streak nudge: when the streak is alive (logged yesterday)
+  // but today isn't logged yet, prompt the user to keep it before it lapses.
+  const { data: streakRow } = await supabase
+    .from("user_streaks")
+    .select("current_streak, longest_streak, last_logged_date, timezone")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const atRiskStreak = isStreakAtRisk(streakRow as StreakRow | null)
+    ? displayCurrentStreak(streakRow as StreakRow | null)
+    : 0;
 
   const deckCards: UserDeckCardProps[] = decks.map((deck) => {
     const cards = deck.analysis?.cards ?? [];
@@ -113,5 +126,21 @@ export default async function MyDecksPage() {
     };
   });
 
-  return <MyDecksClient decks={deckCards} />;
+  // Get Started checklist signals (new-user activation). hasDeck is derived
+  // client-side from the deck list; the quiz badge and match presence are
+  // resolved here.
+  const hasQuiz = await hasAchievement(supabase, user.id, CERTIFIED_TRAINER);
+  const onboarding = {
+    hasMatch: manualMatches.length > 0,
+    hasQuiz,
+    dismissed: (profile as { onboarding_dismissed?: boolean }).onboarding_dismissed ?? false,
+  };
+
+  return (
+    <MyDecksClient
+      decks={deckCards}
+      atRiskStreak={atRiskStreak}
+      onboarding={onboarding}
+    />
+  );
 }

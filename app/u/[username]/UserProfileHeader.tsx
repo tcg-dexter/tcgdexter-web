@@ -75,11 +75,16 @@ interface Props {
   /** 8 StatCard tiles. Caller-built so the page can wire in owner-vs-
    *  visitor data without duplicating the layout. */
   stats: ReactNode;
-  /** Content rendered inside the bio block, below the stat grid. Used
-   *  by the profile page for the match-activity + achievements cards so
-   *  they share the exact same `max-w-2xl px-6` parent as the stat grid
-   *  and line up edge-to-edge with it. */
+  /** Content rendered below the stat grid in the left column (desktop) —
+   *  the match-activity card. Lives in the full-width modules region
+   *  (not the narrow bio column) so it lines up edge-to-edge with the
+   *  stat grid and the deck feed below. */
   belowStats?: ReactNode;
+  /** Right-column module on desktop (the achievements/badges card). When
+   *  present, the top region splits into two columns at lg+ (stats +
+   *  belowStats on the left, this on the right); below lg everything
+   *  stacks. When absent, the stat grid spans full width as before. */
+  sideModule?: ReactNode;
   /** Fanned team-card spread rendered inside the banner's clipped
    *  bounds (mirrors the meta archetype header's card fan). Unlike
    *  `bannerOverlay`, this sits *inside* an `overflow-hidden` wrapper
@@ -102,6 +107,7 @@ export default function UserProfileHeader({
   bannerFan,
   stats,
   belowStats,
+  sideModule,
 }: Props) {
   const gradient = bannerGradientFor(bannerAccent);
 
@@ -206,13 +212,33 @@ export default function UserProfileHeader({
           </p>
         )}
 
-        {/* 8-cell stat grid — wired in by the page. */}
-        <div className="mt-4 grid grid-cols-4 gap-3">{stats}</div>
+      </div>
 
-        {/* Match activity, achievements, etc. Sit in the same bio
-         *  container as the stat grid so their card edges line up with
-         *  the stat row's outer edge. */}
-        {belowStats && <div className="mt-6 space-y-6">{belowStats}</div>}
+      {/* Top modules — rendered at full content width (edge-aligned with
+       *  the deck feed below via the same px-4 sm:px-8 gutters) instead of
+       *  the narrow bio column, so the stat grid, match activity, and
+       *  badges get as much room as possible. On lg+ they split 3:2 (stats
+       *  + activity left, badges right); below lg they stack (stats →
+       *  activity → badges). With no side module the stat grid simply
+       *  spans the full width. */}
+      <div className="px-4 sm:px-8 mt-6">
+        {sideModule ? (
+          // items-stretch (default) so the badges column matches the left
+          // column's height — the collapsed badges card fills it via
+          // lg:min-h-full, and still grows past it when its drawer opens.
+          <div className="grid gap-4 lg:grid-cols-5">
+            <div className="lg:col-span-3 space-y-6">
+              <div className="grid grid-cols-4 gap-3">{stats}</div>
+              {belowStats}
+            </div>
+            <div className="lg:col-span-2">{sideModule}</div>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-4 gap-3">{stats}</div>
+            {belowStats && <div className="mt-6 space-y-6">{belowStats}</div>}
+          </>
+        )}
       </div>
     </header>
   );

@@ -17,9 +17,9 @@
 import type { CardInstance, GameState, PlayerSide } from "../types";
 import { lookupCard } from "../catalog";
 import { benchCap } from "./stadiums";
-import { clearConditions } from "./conditions";
+import { applyCondition, clearConditions } from "./conditions";
 import { shuffle, type Rng } from "./rng";
-import { energyProvides, isBasic, prizeValue, toPokemonInPlay } from "./setup";
+import { energyProvides, isBasic, isNsPokemon, prizeValue, toPokemonInPlay } from "./setup";
 
 /* ─── Registry ──────────────────────────────────────────────────── */
 
@@ -41,7 +41,12 @@ export type TrainerEffect =
   | { kind: "iono" }
   | { kind: "gust" }
   | { kind: "switch_active" }
-  | { kind: "rare_candy" };
+  | { kind: "rare_candy" }
+  | { kind: "black_belt" }
+  | { kind: "ns_pp_up" }
+  | { kind: "special_red_card" }
+  | { kind: "janine" }
+  | { kind: "ruffian" };
 
 export type TrainerPhase = "search" | "draw" | "tactical";
 
@@ -63,10 +68,20 @@ export const TRAINER_EFFECTS: Record<string, TrainerSpec> = {
   "Professor's Research": { effect: { kind: "discard_hand_draw", draw: 7 }, phase: "draw" },
   Judge: { effect: { kind: "judge" }, phase: "draw" },
   Iono: { effect: { kind: "iono" }, phase: "draw" },
+  "Black Belt's Training": { effect: { kind: "black_belt" }, phase: "tactical" },
   "Boss's Orders": { effect: { kind: "gust" }, phase: "tactical" },
   Switch: { effect: { kind: "switch_active" }, phase: "tactical" },
   "Rare Candy": { effect: { kind: "rare_candy" }, phase: "tactical" },
+  "N's PP Up": { effect: { kind: "ns_pp_up" }, phase: "tactical" },
+  "Special Red Card": { effect: { kind: "special_red_card" }, phase: "tactical" },
+  "Janine's Secret Art": { effect: { kind: "janine" }, phase: "search" },
+  Ruffian: { effect: { kind: "ruffian" }, phase: "tactical" },
 };
+
+/** A Special Energy (Energy card that isn't a basic energy). */
+function isSpecialEnergy(c: CardInstance): boolean {
+  return c.catalog?.supertype === "Energy" && !isBasicEnergy(c);
+}
 
 export function trainerSpec(card: CardInstance): TrainerSpec | null {
   if (card.catalog?.supertype !== "Trainer") return null;
@@ -100,6 +115,9 @@ export interface PlayTrainerMove {
   benchIndex?: number;
   /** Opponent bench target (Boss's Orders). */
   oppBenchIndex?: number;
+  /** Any opponent Pokémon by id, Active or Bench (Ruffian). */
+  oppMonId?: string;
+  oppMonName?: string;
   /** Human-chosen cards to pay a discard cost (Ultra Ball). When absent,
    *  the AI/auto path picks them (pickDiscards). Not part of the
    *  enumerated legal set — validated separately (see validateTrainerCost). */
@@ -242,15 +260,49 @@ export function trainerMoves(
       return side.deck.length > 0 ? [base] : [];
     case "judge":
     case "iono":
+    case "black_belt":
       return [base];
+    case "special_red_card":
+      // Usable only while the opponent has 3 or fewer Prizes remaining.
+      return other.prizes.length <= 3 ? [base] : [];
+    case "janine": {
+      const hasDarkEnergy = side.deck.some(
+        (c) => isBasicEnergy(c) && energyProvides(c) === "Darkness",
+      );
+      const hasDarkMon = [side.active, ...side.bench].some(
+        (m) => m?.card.catalog?.types.includes("Darkness"),
+      );
+      return hasDarkEnergy && hasDarkMon ? [base] : [];
+    }
     case "gust":
       return other.active
         ? other.bench.map((_, i) => ({ ...base, oppBenchIndex: i }))
         : [];
+    case "ruffian": {
+      // Any opponent Pokémon holding a Tool or a Special Energy is a target.
+      const targets = [other.active, ...other.bench].filter(
+        (m): m is NonNullable<typeof m> =>
+          !!m && (m.attachedTools.length > 0 || m.attachedEnergy.some(isSpecialEnergy)),
+      );
+      return targets.map((m) => ({ ...base, oppMonId: m.id, oppMonName: m.card.name }));
+    }
     case "switch_active":
       return side.active
         ? side.bench.map((_, i) => ({ ...base, benchIndex: i }))
         : [];
+    case "ns_pp_up": {
+      // Attach a Basic Energy from the discard pile to a Benched N's Pokémon.
+      const energies = dedupeByName(side.discard.filter(isBasicEnergy));
+      const targets = side.bench.filter((m) => isNsPokemon(m.card));
+      if (energies.length === 0 || targets.length === 0) return [];
+      const moves: PlayTrainerMove[] = [];
+      for (const e of energies) {
+        for (const t of targets) {
+          moves.push({ ...base, discardPickId: e.id, discardPickName: e.name, monId: t.id });
+        }
+      }
+      return moves;
+    }
     case "rare_candy": {
       if (state.turn.playerTurnNumber <= 1) return [];
       const moves: PlayTrainerMove[] = [];
@@ -460,6 +512,65 @@ export function applyTrainer(
         clearConditions(other.active); // leaving the Active Spot clears conditions
         other.bench[Math.min(idx, other.bench.length - 1)] = other.active;
         other.active = target;
+      }
+      break;
+    }
+    case "black_belt": {
+      // Turn-scoped buff: mark the turn so activeDamageBonus can add +40 to
+      // the opponent's Active ex for the rest of this turn.
+      side.blackBeltTrainingTurn = state.turn.number;
+      break;
+    }
+    case "special_red_card": {
+      // Opponent shuffles their hand and puts it on the bottom of their deck;
+      // if any cards were put down, they draw 3.
+      const returned = other.hand.length;
+      if (returned > 0) {
+        if (rng) shuffle(other.hand, rng);
+        other.deck.push(...other.hand); // bottom (deck top is index 0)
+        other.hand = [];
+        draw(other, 3);
+      }
+      break;
+    }
+    case "janine": {
+      // Attach up to 2 Basic Darkness Energy from the deck to up to 2 of your
+      // Darkness Pokémon (v1 auto-picks: Active first, then the Bench). If an
+      // Energy lands on the Active, it becomes Poisoned.
+      const darkTargets = [side.active, ...side.bench].filter(
+        (m): m is NonNullable<typeof m> => !!m?.card.catalog?.types.includes("Darkness"),
+      );
+      let attachedToActive = false;
+      for (const target of darkTargets.slice(0, 2)) {
+        const idx = side.deck.findIndex(
+          (c) => isBasicEnergy(c) && energyProvides(c) === "Darkness",
+        );
+        if (idx < 0) break;
+        target.attachedEnergy.push(...side.deck.splice(idx, 1));
+        if (target === side.active) attachedToActive = true;
+      }
+      if (attachedToActive && side.active) applyCondition(side.active, "Poisoned");
+      maybeShuffleDeck(side, rng);
+      break;
+    }
+    case "ns_pp_up": {
+      // Move a Basic Energy from discard onto a Benched N's Pokémon.
+      const idx = move.discardPickId
+        ? side.discard.findIndex((c) => c.id === move.discardPickId)
+        : -1;
+      const target = side.bench.find((m) => m.id === move.monId && isNsPokemon(m.card));
+      if (idx >= 0 && target) target.attachedEnergy.push(...side.discard.splice(idx, 1));
+      break;
+    }
+    case "ruffian": {
+      // Discard a Tool and a Special Energy from the chosen opponent Pokémon.
+      const target = [other.active, ...other.bench].find((m) => m?.id === move.oppMonId);
+      if (target) {
+        if (target.attachedTools.length > 0) {
+          other.discard.push(...target.attachedTools.splice(0, 1));
+        }
+        const si = target.attachedEnergy.findIndex(isSpecialEnergy);
+        if (si >= 0) other.discard.push(...target.attachedEnergy.splice(si, 1));
       }
       break;
     }

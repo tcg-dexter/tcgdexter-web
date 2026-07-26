@@ -13,7 +13,9 @@
     "build:card-types": "node scripts/build_card_types.mjs",
     "ml:extract": "tsx scripts/ml/extract.ts",
     "ml:selfplay": "tsx scripts/ml/selfplay.ts",
-    "ml:duel": "tsx scripts/ml/policy_duel.ts"
+    "ml:duel": "tsx scripts/ml/policy_duel.ts",
+    "reengagement": "node --env-file=.env.local --import tsx scripts/reengagement.ts",
+    "email:preview": "tsx scripts/email-preview.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.0",
@@ -28,7 +30,8 @@
     "next-mdx-remote": "^6.0.0",
     "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "resend": "^6.18.0"
   },
   "devDependencies": {
     "@types/node": "^20",

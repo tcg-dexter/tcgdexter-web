@@ -6,6 +6,8 @@ import {
   summarize,
   PARSER_VERSION,
 } from "@/lib/battle-log";
+import { bumpMatchStreak, localDateInTz } from "@/lib/streak";
+import { reconcileAchievements } from "@/lib/learn/achievements";
 
 /**
  * POST /api/matches/import
@@ -44,6 +46,8 @@ export async function POST(req: Request) {
     opponent_name?: string;
     notes?: string;
     played_at?: string;
+    /** Client IANA timezone, for bucketing the daily-logging streak. */
+    tz?: string;
   };
   try {
     body = await req.json();
@@ -197,10 +201,19 @@ export async function POST(req: Request) {
     }
   }
 
+  // One import = one logged day, same as a manual log. Non-fatal.
+  const tz = typeof body.tz === "string" ? body.tz : "UTC";
+  const streak = await bumpMatchStreak(supabase, localDateInTz(new Date(), tz), tz);
+
+  // Award badges this import unlocked — a first-ever import earns both
+  // First Match and First Battle Log. Internally error-safe.
+  await reconcileAchievements(supabase, user.id);
+
   return NextResponse.json({
     id: match.id,
     result,
     summary,
     unmatched_lines: parsed.unmatched.length,
+    streak,
   });
 }

@@ -18,11 +18,15 @@ import UserProfileHeader, {
 } from "./UserProfileHeader";
 import ThemeColor from "@/app/components/ThemeColor";
 import { ResponsiveLabel } from "@/app/components/StatCard";
+import StreakFlame from "@/app/components/StreakFlame";
+import { displayCurrentStreak, type StreakRow } from "@/lib/streak";
 import AccentPicker from "./AccentPicker";
 import TeamCards, { type TeamCardRef } from "./TeamCards";
 import { MatchCard } from "@/app/components/MatchCard";
 import { loadOwnerRecentMatches } from "@/lib/recent-matches";
 import ProfileTabs from "./ProfileTabs";
+import AchievementsModule from "./AchievementsModule";
+import { listAchievements, reconcileAchievements } from "@/lib/learn/achievements";
 
 interface ProfileRow {
   id: string;
@@ -87,25 +91,20 @@ export async function generateMetadata({
   };
 }
 
-/** Longest consecutive `win` run across matches sorted by played_at
- *  (falling back to created_at). Used by the Streak stat tile. */
-function computeLongestWinStreak(matches: MatchRow[]): number {
-  const sorted = [...matches].sort((a, b) => {
-    const ka = a.played_at ?? a.created_at;
-    const kb = b.played_at ?? b.created_at;
-    return ka.localeCompare(kb);
-  });
-  let best = 0;
-  let cur = 0;
-  for (const m of sorted) {
-    if (m.result === "win") {
-      cur++;
-      if (cur > best) best = cur;
-    } else {
-      cur = 0;
-    }
-  }
-  return best;
+/** Stat-grid tile for a daily streak (flame + count). Matches the default
+ *  StatCard chrome; used for both Current and Longest streak. */
+function StreakStatTile({ label, count }: { label: string; count: number }) {
+  return (
+    <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm px-4 py-3 text-center">
+      <div className="flex items-center justify-center gap-1">
+        <StreakFlame count={count} size="md" showCount={false} />
+        <span className="text-lg font-bold tabular-nums text-text-primary">
+          {count.toLocaleString()}
+        </span>
+      </div>
+      <p className="text-xs text-text-muted mt-0.5">{label}</p>
+    </div>
+  );
 }
 
 export default async function ProfilePage({
@@ -173,7 +172,28 @@ export default async function ProfilePage({
     globalWins + globalLosses > 0
       ? Math.round((globalWins / (globalWins + globalLosses)) * 100)
       : null;
-  const longestStreak = isOwner ? computeLongestWinStreak(manualMatches) : null;
+
+  // Daily match-logging streak — public (shown to visitors too), reads as
+  // 0 once it lapses (see displayCurrentStreak). Backed by user_streaks.
+  const { data: streakRow } = await supabase
+    .from("user_streaks")
+    .select("current_streak, longest_streak, last_logged_date, timezone")
+    .eq("user_id", profile.id)
+    .maybeSingle();
+  const dayStreak = displayCurrentStreak(streakRow as StreakRow | null);
+  // Longest is a historical high-water mark — not subject to the alive
+  // check, so it persists even after the current streak lapses.
+  const longestStreak = (streakRow as StreakRow | null)?.longest_streak ?? 0;
+
+  // Achievements — badges render on the public profile. For the owner we
+  // reconcile first: a self-healing backfill that awards any count-based
+  // badges earned before this feature shipped (or before their next
+  // log/save). RLS permits self-inserts only, so it's a no-op for visitors,
+  // who simply read the already-earned rows.
+  if (isOwner) {
+    await reconcileAchievements(supabase, profile.id);
+  }
+  const earnedAchievements = await listAchievements(supabase, profile.id);
 
   // Heatmap dates: manual played_at (owner only — manual match data is private).
   const heatmapMatches: MatchRow[] = isOwner ? manualMatches : [];
@@ -181,7 +201,6 @@ export default async function ProfilePage({
   // Public deck stats (visible to both owner and visitor).
   const publicDeckCount = decks.filter((d) => d.is_public).length;
   const totalLikes = decks.reduce((s, d) => s + (d.like_count ?? 0), 0);
-  const joinedYear = new Date(profile.created_at).getFullYear();
 
   // Owner sees a 3-most-recently-created preview with a "View All" link
   // to /my-decks (their own saved-deck library — not meaningful for a
@@ -214,14 +233,23 @@ export default async function ProfilePage({
   const hasAnyTeamPick = teamArray.some((slot) => !!slot);
   const showTeam = isOwner || hasAnyTeamPick;
 
-  const belowStats = (
-    <>
-      {/* Match Activity — owner-only (manual match data is private). */}
-      {isOwner && heatmapMatches.length > 0 && (
-        <MatchHeatMap matches={heatmapMatches} accent={profile.banner_accent} />
-      )}
-    </>
-  );
+  // Left column, under the stat grid — Match Activity (owner-only; manual
+  // match data is private).
+  const belowStats =
+    isOwner && heatmapMatches.length > 0 ? (
+      <MatchHeatMap matches={heatmapMatches} accent={profile.banner_accent} />
+    ) : undefined;
+
+  // Right column — Achievements. Earned badges are public (visitors see
+  // them too); the locked "goals" drawer is owner-only. Hidden entirely
+  // for a visitor viewing a profile with no earned badges.
+  const sideModule =
+    isOwner || earnedAchievements.length > 0 ? (
+      <AchievementsModule
+        earnedKeys={earnedAchievements.map((a) => a.key)}
+        showLocked={isOwner}
+      />
+    ) : undefined;
 
   const stats = (
     <>
@@ -245,11 +273,8 @@ export default async function ProfilePage({
             : "text-text-secondary"
         }
       />
-      <StatCard
-        label="Streak"
-        value={isOwner && longestStreak !== null ? longestStreak.toLocaleString() : "—"}
-        valueClass="text-emerald-600"
-      />
+      {/* Daily match-logging streak (public) — current + all-time best. */}
+      <StreakStatTile label="Current" count={dayStreak} />
       <StatCard label="Decks" value={decks.length.toLocaleString()} />
       <StatCard label="Public" value={publicDeckCount.toLocaleString()} />
       <StatCard
@@ -257,7 +282,7 @@ export default async function ProfilePage({
         value={totalLikes.toLocaleString()}
         valueClass="text-rose-600"
       />
-      <StatCard label="Joined" value={String(joinedYear)} />
+      <StreakStatTile label="Longest" count={longestStreak} />
     </>
   );
 
@@ -292,6 +317,7 @@ export default async function ProfilePage({
         bannerAccent={profile.banner_accent}
         stats={stats}
         belowStats={belowStats}
+        sideModule={sideModule}
         bannerOverlay={
           isOwner ? (
             <AccentPicker

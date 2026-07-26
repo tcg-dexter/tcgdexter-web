@@ -141,6 +141,12 @@ function knockOut(state: GameState, side: PlayerSide, mon: PokemonInPlay, ownerA
     const idx = side.bench.indexOf(mon);
     if (idx >= 0) side.bench.splice(idx, 1);
   }
+  // Record a comeback trigger: this side lost a Pokémon during the
+  // opponent's turn (not its own turn / system checkup). Read next turn by
+  // Fezandipiti ex's Flip the Script; cleared at the opponent's next turn.
+  if (state.turn.actor === opposite(ownerActor)) {
+    side.koedLastOppTurn = true;
+  }
   // The player facing this side takes the Prize cards.
   const taker = opposite(ownerActor);
   const taken = state.sides[taker].prizes.splice(0, prizeValue(mon.card.name));
