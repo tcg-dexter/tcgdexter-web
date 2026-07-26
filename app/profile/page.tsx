@@ -14,5 +14,5 @@ export default async function ProfilePage() {
     .eq("id", user.id)
     .maybeSingle();
 
-  redirect(profile?.username ? `/u/${profile.username}` : "/settings");
+  redirect(profile?.username ? `/u/${profile.username}` : "/welcome");
 }
