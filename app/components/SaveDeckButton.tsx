@@ -186,7 +186,9 @@ export default function SaveDeckButton({
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => {
-                  stashDeckList(deckList);
+                  // "save" intent → the home page auto-completes the save
+                  // once they're back and signed in (no second click).
+                  stashDeckList(deckList, "save");
                   router.push(`/sign-in?next=${encodeURIComponent("/")}`);
                 }}
                 className="inline-flex items-center justify-center rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent-light"

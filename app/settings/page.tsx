@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import EditDisplayName from "@/app/profile/EditDisplayName";
-import EditUsername from "@/app/profile/EditUsername";
 import EditBio from "@/app/profile/EditBio";
 import EditPublicToggle from "@/app/profile/EditPublicToggle";
 import SignOutButton from "@/app/profile/SignOutButton";
@@ -61,10 +60,6 @@ export default async function SettingsPage() {
           <EditDisplayName
             initialName={profile?.display_name ?? "—"}
             joinedDate={joinedDate}
-          />
-          <EditUsername
-            initialUsername={profile?.username ?? null}
-            displayNameForSuggestion={profile?.display_name ?? ""}
           />
         </div>
       </div>

@@ -53,8 +53,8 @@ export function validateUsername(raw: string): ValidationResult {
 /**
  * Best-effort slug derived from any string (e.g. a display_name). The output
  * is a *candidate* — the caller must still pass it through validateUsername
- * and then check DB uniqueness. Used by the EditUsername UI to suggest a
- * default when a user picks their handle.
+ * and then check DB uniqueness. Used by the /welcome onboarding form to
+ * suggest a default when a user picks their handle.
  */
 export function slugifyToUsername(input: string): string {
   let slug = input.toLowerCase();

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { validateDisplayName } from "@/lib/display-name-rules";
 import { validateUsername } from "@/lib/username-rules";
+import { track } from "@/lib/analytics/track";
 
 const BIO_MAX_LENGTH = 240;
 const TEAM_CARDS_MAX = 7;
@@ -54,7 +55,7 @@ export async function GET() {
  * Updates the authenticated user's profile. Each field is independently
  * optional — the client may send any subset.
  *   - display_name: 2–30 chars, alphanumeric + spaces/hyphens/underscores,
- *     blocklisted, unique case-insensitively
+ *     blocklisted (not unique — username is the unique handle)
  *   - is_public:    boolean — opts the profile in to public surfaces
  *   - avatar_url:   string | null — set after a successful avatar upload, or
  *     null to clear
@@ -108,20 +109,8 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
-    // Friendly uniqueness check; the unique index is the real guard.
-    const { data: existing } = await supabase
-      .from("profiles")
-      .select("id")
-      .ilike("display_name", displayName)
-      .maybeSingle();
-
-    if (existing && existing.id !== user.id) {
-      return NextResponse.json(
-        { error: "That display name is already taken." },
-        { status: 409 }
-      );
-    }
-
+    // Display names are not unique — two trainers can share one (username is
+    // the unique, disambiguating handle). We only validate format here.
     updates.display_name = displayName;
   }
 
@@ -297,10 +286,10 @@ export async function PATCH(req: Request) {
 
   if (error) {
     if (error.code === "23505") {
-      // Could be either display_name or username — message reads naturally
-      // for both.
+      // Only username carries a unique index now (display names may repeat),
+      // so a 23505 here is a lost race on the username handle.
       return NextResponse.json(
-        { error: "That handle is already taken." },
+        { error: "That username is already taken." },
         { status: 409 }
       );
     }
@@ -309,6 +298,15 @@ export async function PATCH(req: Request) {
       { error: "Failed to update profile." },
       { status: 500 }
     );
+  }
+
+  // Setting the username is the terminal step of first-sign-in onboarding
+  // (the /welcome form). Emit a funnel event so activation can be measured
+  // without threading a flag through the RPC.
+  if (typeof updates.username === "string") {
+    void track(req, "onboarding.completed", {
+      has_display_name: typeof updates.display_name === "string",
+    });
   }
 
   return NextResponse.json(updates);
