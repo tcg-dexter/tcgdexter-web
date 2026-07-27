@@ -33,6 +33,7 @@ import {
 } from "@/lib/learn/achievements";
 import { notifyBadgesUnlocked } from "@/lib/notifications/notify";
 import GetStartedChecklist from "@/app/my-decks/GetStartedChecklist";
+import FollowButton from "./FollowButton";
 
 interface ProfileRow {
   id: string;
@@ -46,6 +47,8 @@ interface ProfileRow {
   banner_accent: string | null;
   team_cards: (TeamCardRef | null)[] | null;
   onboarding_dismissed: boolean;
+  follower_count: number;
+  following_count: number;
 }
 
 interface DeckRow {
@@ -125,7 +128,7 @@ export default async function ProfilePage({
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, display_name, username, bio, created_at, is_public, tcg_live_handle, avatar_url, banner_accent, team_cards, onboarding_dismissed"
+      "id, display_name, username, bio, created_at, is_public, tcg_live_handle, avatar_url, banner_accent, team_cards, onboarding_dismissed, follower_count, following_count"
     )
     .eq("username", username.toLowerCase())
     .maybeSingle<ProfileRow>();
@@ -137,6 +140,19 @@ export default async function ProfilePage({
   const isOwner = viewer?.id === profile.id;
 
   if (!isOwner && !profile.is_public) notFound();
+
+  // Does the signed-in visitor already follow this profile? Drives the
+  // Follow/Following button's initial state. Owner never sees the button.
+  let viewerFollows = false;
+  if (viewer && !isOwner) {
+    const { data: followRow } = await supabase
+      .from("user_follows")
+      .select("follower_user_id")
+      .eq("follower_user_id", viewer.id)
+      .eq("following_user_id", profile.id)
+      .maybeSingle();
+    viewerFollows = !!followRow;
+  }
 
   const { data: decksRaw } = isOwner
     ? await supabase
@@ -309,6 +325,23 @@ export default async function ProfilePage({
     </>
   );
 
+  // Compact follower/following counts under the @handle (owner + visitor).
+  const followStats = (
+    <p className="text-sm text-text-secondary">
+      <span className="font-semibold text-text-primary tabular-nums">
+        {(profile.follower_count ?? 0).toLocaleString()}
+      </span>{" "}
+      <span className="text-text-muted">
+        {profile.follower_count === 1 ? "Follower" : "Followers"}
+      </span>
+      <span className="mx-2 text-text-muted/60">·</span>
+      <span className="font-semibold text-text-primary tabular-nums">
+        {(profile.following_count ?? 0).toLocaleString()}
+      </span>{" "}
+      <span className="text-text-muted">Following</span>
+    </p>
+  );
+
   return (
     <main className="min-h-dvh flex flex-col bg-bg pb-24">
       {/* Paint the mobile sticky toolbar in the banner's top stop so
@@ -338,6 +371,7 @@ export default async function ProfilePage({
         avatarUrl={profile.avatar_url}
         isOwner={isOwner}
         bannerAccent={profile.banner_accent}
+        followStats={followStats}
         stats={stats}
         belowStats={belowStats}
         sideModule={sideModule}
@@ -379,7 +413,13 @@ export default async function ProfilePage({
                   />
                 </svg>
             </Link>
-          ) : undefined
+          ) : (
+            <FollowButton
+              targetUserId={profile.id}
+              initialFollowing={viewerFollows}
+              isAuthenticated={!!viewer}
+            />
+          )
         }
       />
 

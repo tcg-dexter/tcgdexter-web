@@ -113,6 +113,19 @@ export async function POST(req: Request) {
       run: () =>
         admin.from("notifications").delete().eq("actor_user_id", userId),
     },
+    // Follows in both directions. Deleting these rows fires the
+    // user_follows_count_sync trigger, keeping the surviving other party's
+    // follower_count / following_count correct.
+    {
+      label: "user_follows follower",
+      run: () =>
+        admin.from("user_follows").delete().eq("follower_user_id", userId),
+    },
+    {
+      label: "user_follows following",
+      run: () =>
+        admin.from("user_follows").delete().eq("following_user_id", userId),
+    },
     {
       label: "saved_decks",
       run: () => admin.from("saved_decks").delete().eq("user_id", userId),

@@ -4,6 +4,7 @@ import {
   type NotificationRow,
   type DeckLikedData,
   type BadgeUnlockedData,
+  type NewFollowerData,
 } from "@/lib/notifications/notify";
 import { shade } from "@/lib/color";
 
@@ -25,8 +26,8 @@ export default function NotificationList({
     return (
       <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-8 text-center">
         <p className="text-sm text-text-secondary">
-          No notifications yet. Likes on your public decks and badges you earn
-          will show up here.
+          No notifications yet. Likes on your public decks, new followers, and
+          badges you earn will show up here.
         </p>
       </div>
     );
@@ -89,6 +90,23 @@ function NotificationRowItem({
 }
 
 function NotificationIcon({ n }: { n: NotificationRow }) {
+  if (n.type === "new_follower") {
+    const d = n.data as unknown as NewFollowerData;
+    if (d.actor_avatar_url) {
+      return (
+        <span className="shrink-0 w-10 h-10 rounded-full overflow-hidden bg-surface inline-flex items-center justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={d.actor_avatar_url} alt="" className="w-full h-full object-cover" />
+        </span>
+      );
+    }
+    const who = d.actor_display_name || d.actor_username || "?";
+    return (
+      <span className="shrink-0 w-10 h-10 rounded-full bg-surface inline-flex items-center justify-center text-sm font-semibold text-text-secondary">
+        {who.charAt(0).toUpperCase()}
+      </span>
+    );
+  }
   if (n.type === "badge_unlocked") {
     const d = n.data as unknown as BadgeUnlockedData;
     return (
@@ -139,6 +157,10 @@ function notificationHref(
   }
   if (n.type === "badge_unlocked") {
     return viewerUsername ? `/u/${viewerUsername}` : "/my-decks";
+  }
+  if (n.type === "new_follower") {
+    const d = n.data as unknown as NewFollowerData;
+    return d.actor_username ? `/u/${d.actor_username}` : null;
   }
   return null;
 }

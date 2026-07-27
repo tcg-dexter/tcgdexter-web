@@ -12,6 +12,12 @@ Pokémon TCG deck management web app. Core features: deck profiling (legality, p
 - **Main branch = production** on Vercel. Every push to `main` triggers a deploy.
 - Always run `npx tsc --noEmit` before pushing — Vercel runs a full type-check build and will fail on any TS error.
 
+## Migrations & the `ON CONFLICT` / partial-index trap
+- Migrations live in `supabase/migrations/` and are applied **manually via Supabase MCP `apply_migration`** — there is no CI migration runner. Each file's header says so.
+- **Hard-won gotcha:** a bare `.upsert({ onConflict: "col_a,col_b" })` (supabase-js) or `ON CONFLICT (col_a, col_b)` **cannot** target a **PARTIAL** unique index (one with a `WHERE`). Postgres can't infer it and raises **42P10**. Because the notify helpers swallow write errors, this fails *silently* — it's exactly how `deck_liked` notifications broke (fixed in `20260727_notifications_dedup_fix.sql` by making the index full/non-partial).
+  - If you need a partial dedup index, **don't** use `ON CONFLICT` inference against it — insert and, on the `23505`, update the existing row (see `notifyNewFollower` in `lib/notifications/notify.ts`, whose `notifications_follow_dedup_idx` is intentionally partial and safe).
+- **Regression guard:** `lib/notifications/notifications-dedup.test.ts` boots an in-process real Postgres (PGlite — no external service), applies the real `*notifications*` migrations, and asserts the `deck_liked` upsert dedups to one row. It runs as part of `npm run test` (and thus CI). Re-partialing that index turns the second upsert back into a 42P10 and fails the test.
+
 ## Legal & Privacy
 - Live docs: `/privacy` (`app/privacy/page.tsx`) and `/terms` (`app/terms/page.tsx`), built on the shared `LegalDoc`/`LegalSection` components (`app/components/ui/LegalDoc.tsx`). Linked from the footer and the sign-in page.
 - Both docs describe TCG Dexter's *actual* data practices — not generic boilerplate. When a change does any of the following, flag to the user that the Privacy Policy and/or Terms may need updating, and note which section:

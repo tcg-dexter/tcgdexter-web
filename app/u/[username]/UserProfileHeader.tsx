@@ -69,6 +69,9 @@ interface Props {
   /** Owner-only actions (e.g. settings gear). Rendered inline on the
    *  right of the avatar overlap row, mirroring the meta header. */
   actions?: ReactNode;
+  /** Compact "N Followers · M Following" row rendered under the @handle
+   *  (before the bio). Present for owner and visitor alike. */
+  followStats?: ReactNode;
   /** Owner-only overlay rendered absolutely at the bottom-right of the
    *  banner (typically the accent picker). */
   bannerOverlay?: ReactNode;
@@ -107,6 +110,7 @@ export default function UserProfileHeader({
   isOwner,
   bannerAccent,
   actions,
+  followStats,
   bannerOverlay,
   bannerFan,
   stats,
@@ -210,6 +214,8 @@ export default function UserProfileHeader({
             </div>
           )}
         </div>
+
+        {followStats && <div className="mt-2">{followStats}</div>}
 
         {bio && (
           <p className="text-base text-text-secondary leading-relaxed mt-3 whitespace-pre-wrap">
