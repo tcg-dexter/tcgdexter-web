@@ -34,6 +34,9 @@ import {
 import { notifyBadgesUnlocked } from "@/lib/notifications/notify";
 import GetStartedChecklist from "@/app/my-decks/GetStartedChecklist";
 import FollowButton from "./FollowButton";
+import { FollowPanelProvider } from "./FollowPanel";
+import FollowStats from "./FollowStats";
+import FollowPanelBody from "./FollowPanelBody";
 
 interface ProfileRow {
   id: string;
@@ -326,20 +329,13 @@ export default async function ProfilePage({
   );
 
   // Compact follower/following counts under the @handle (owner + visitor).
+  // Each count is clickable and swaps the profile body for the matching
+  // list in place (see FollowStats / FollowPanelBody).
   const followStats = (
-    <p className="text-sm text-text-secondary">
-      <span className="font-semibold text-text-primary tabular-nums">
-        {(profile.follower_count ?? 0).toLocaleString()}
-      </span>{" "}
-      <span className="text-text-muted">
-        {profile.follower_count === 1 ? "Follower" : "Followers"}
-      </span>
-      <span className="mx-2 text-text-muted/60">·</span>
-      <span className="font-semibold text-text-primary tabular-nums">
-        {(profile.following_count ?? 0).toLocaleString()}
-      </span>{" "}
-      <span className="text-text-muted">Following</span>
-    </p>
+    <FollowStats
+      followerCount={profile.follower_count ?? 0}
+      followingCount={profile.following_count ?? 0}
+    />
   );
 
   return (
@@ -363,6 +359,7 @@ export default async function ProfilePage({
           continuous surface from the device notch down through the
           banner. */}
       <ThemeColor color={bannerTopColorFor(profile.banner_accent)} />
+      <FollowPanelProvider>
       <UserProfileHeader
         displayName={profile.display_name}
         username={profile.username}
@@ -372,10 +369,6 @@ export default async function ProfilePage({
         isOwner={isOwner}
         bannerAccent={profile.banner_accent}
         followStats={followStats}
-        stats={stats}
-        belowStats={belowStats}
-        sideModule={sideModule}
-        aboveStats={getStarted}
         bannerOverlay={
           isOwner ? (
             <AccentPicker
@@ -422,6 +415,33 @@ export default async function ProfilePage({
           )
         }
       />
+
+      <FollowPanelBody
+        targetUserId={profile.id}
+        username={profile.username}
+        displayName={profile.display_name}
+      >
+        {/* Top modules (stat grid, match activity, achievements) — lifted
+            out of the header so this whole region can be swapped for the
+            followers/following list. On lg+ stats+activity and badges split
+            3:2; below lg they stack. */}
+        <div className="px-4 sm:px-8 mt-6">
+          {getStarted}
+          {sideModule ? (
+            <div className="grid gap-4 lg:grid-cols-5">
+              <div className="lg:col-span-3 space-y-6">
+                <div className="grid grid-cols-4 gap-3">{stats}</div>
+                {belowStats}
+              </div>
+              <div className="lg:col-span-2">{sideModule}</div>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-4 gap-3">{stats}</div>
+              {belowStats && <div className="mt-6 space-y-6">{belowStats}</div>}
+            </>
+          )}
+        </div>
 
       {/* Deck feed — full-width within the layout's content column.
           Mobile keeps a tight 16px gutter; sm+ opens to 32px so the
@@ -562,6 +582,8 @@ export default async function ProfilePage({
           </>
         )}
       </div>
+      </FollowPanelBody>
+      </FollowPanelProvider>
     </main>
   );
 }
