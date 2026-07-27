@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
+import BattleAnalysis from "@/app/components/BattleAnalysis";
 import BattleLogDetail from "@/app/components/BattleLogDetail";
 import BackButton from "@/app/components/ui/BackButton";
 import ThemeColor from "@/app/components/ThemeColor";
@@ -208,6 +209,11 @@ export default function BattleLogPage({
           />
         </div>
       </div>
+
+      {/* Game review — win-prob curve + coach insights from the value
+          model. Self-fetching and self-hiding: renders nothing when the
+          match has no log or the analysis endpoint declines. */}
+      {hasBattleLog && <BattleAnalysis matchId={matchId} />}
 
       {/* Battle log — full width. The heading sits above the thread
           as a strong section break: bold uppercase title flanked by a

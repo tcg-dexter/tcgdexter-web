@@ -10,6 +10,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { PlayResponse } from "@/app/api/play/route";
 import type { ClientMon, ClientView, InteractiveMove } from "@/lib/engine/sim";
+
+/** A universal declarative-effect move (W2). Carries `sourceId` (the hand card)
+ *  and `picks` with display names, so the UI can label choices generically. */
+type EffectMove = Extract<InteractiveMove, { kind: "effect" }>;
 // Import the value directly from its leaf module rather than the
 // "@/lib/engine/sim" barrel — the barrel also re-exports interactive.ts
 // and planner.ts, which transitively pull in lib/ml/botEvaluator.ts
@@ -108,6 +112,13 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
   const [bossMoves, setBossMoves] = useState<InteractiveMove[] | null>(null);
   /** Switch etc.: pick one of our benched Pokémon. */
   const [benchPickMoves, setBenchPickMoves] = useState<InteractiveMove[] | null>(null);
+  /** Declarative-effect card with more than one enumerated option (e.g. which
+   *  card to fetch / which Pokémon to target) — a generic chooser driven by
+   *  the moves' pick display names. */
+  const [effectChooser, setEffectChooser] = useState<{
+    label: string;
+    moves: EffectMove[];
+  } | null>(null);
   /** Discard-cost stage (Ultra Ball): the chosen fetch move + running picks. */
   const [discardStage, setDiscardStage] = useState<{
     move: Extract<InteractiveMove, { kind: "play_trainer" }>;
@@ -179,6 +190,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     setAbilityTargeting(null);
     setCounterPlace(null);
     setOwnTargetChooser(null);
+    setEffectChooser(null);
     if (next.ai_actions.length > 0) {
       setLog((old) => [...old.slice(-30), ...next.ai_actions.map((a) => `T${a.turn} · ${a.description}`)]);
     }
@@ -243,7 +255,14 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
   const evolveTargets = (cardId: string) =>
     byKind("evolve").filter((m) => m.cardId === cardId).map((m) => m.targetId);
   const cardIsPlayable = (cardId: string) =>
-    options.some((m) => "cardId" in m && m.cardId === cardId);
+    options.some(
+      (m) =>
+        ("cardId" in m && m.cardId === cardId) ||
+        (m.kind === "effect" && m.sourceId === cardId),
+    );
+  /** Declarative-effect moves sourced from a given hand card. */
+  const effectMovesFor = (cardId: string) =>
+    options.filter((m): m is EffectMove => m.kind === "effect" && m.sourceId === cardId);
   const trainerMovesFor = (cardId: string) =>
     options.filter(
       (m): m is Extract<InteractiveMove, { kind: "play_trainer" }> =>
@@ -324,6 +343,14 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
         );
       }
       return void sendMove(first); // no choices (Iono, Research, …)
+    }
+
+    // Declarative-effect cards (Team Rocket's Transceiver, …). One enumerated
+    // option ⇒ play it; several ⇒ a generic chooser over the picks.
+    const effectMoves = effectMovesFor(cardId);
+    if (effectMoves.length > 0) {
+      if (effectMoves.length === 1) return void sendMove(effectMoves[0]);
+      return void setEffectChooser({ label: card?.name ?? "Play", moves: effectMoves });
     }
 
     // Attach energy / evolve / attach a Tool: choose which of your Pokémon
@@ -1102,6 +1129,66 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                       {mon?.name ?? "?"}
                       {isActive ? " (Active)" : ""}
                       {mon && mon.energy.length > 0 ? ` · ${mon.energy.length}⚡` : ""}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Generic declarative-effect chooser — one option per enumerated move,
+          labelled by the picks' display names (fetched card / targeted mon). */}
+      {effectChooser && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center p-4"
+          style={{ background: "rgba(242,242,242,0.92)" }}
+          role="dialog"
+          aria-modal="true"
+          aria-label={effectChooser.label}
+          onClick={() => setEffectChooser(null)}
+        >
+          <div
+            className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-2xl border border-black/8 bg-white p-4 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-xs font-semibold text-text-primary">{effectChooser.label} — choose</span>
+              <button onClick={() => setEffectChooser(null)} className="text-[10px] font-semibold text-accent">
+                cancel
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {effectChooser.moves.map((m, i) => {
+                const names = m.picks.flatMap((p) => [...(p.cardNames ?? []), ...(p.monNames ?? [])]);
+                return (
+                  <button
+                    key={i}
+                    onClick={() => sendMove(m)}
+                    disabled={loading}
+                    className="flex flex-col items-center gap-1 rounded-lg border border-black/8 p-1.5 hover:border-accent disabled:opacity-50"
+                  >
+                    <div className="flex w-full justify-center gap-1">
+                      {names.length > 0 ? (
+                        names.map((n, j) => {
+                          const img = images[n];
+                          return img ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img key={j} src={img} alt={n} className="w-full min-w-0 rounded-md shadow-sm" style={{ maxWidth: names.length > 1 ? "48%" : "100%" }} />
+                          ) : (
+                            <div key={j} className="flex aspect-[5/7] w-full items-center justify-center rounded-md border border-black/15 bg-surface p-1 text-center text-[8px] font-semibold text-text-secondary">
+                              {n}
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="flex aspect-[5/7] w-full items-center justify-center rounded-md border border-black/15 bg-surface p-1 text-center text-[8px] font-semibold text-text-secondary">
+                          Play
+                        </div>
+                      )}
+                    </div>
+                    <span className="line-clamp-2 text-center text-[9px] font-semibold leading-tight text-text-secondary">
+                      {names.join(" + ") || "Play"}
                     </span>
                   </button>
                 );

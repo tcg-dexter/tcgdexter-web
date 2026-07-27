@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { notifyDeckLiked } from "@/lib/notifications/notify";
 
 /**
  * POST   /api/saved-decks/[id]/like   — like a public deck (idempotent)
@@ -42,6 +43,13 @@ export async function POST(
       { error: insertError.message },
       { status: insertError.code === "42501" ? 403 : 400 },
     );
+  }
+
+  // Notify the deck owner — only on a GENUINE new like (a true insert, no
+  // error). A 23505 no-op re-like must not re-notify; the notify helper also
+  // suppresses self-likes. Fire-and-forget like the analytics tracker.
+  if (!insertError) {
+    void notifyDeckLiked({ deckId, actorId: user.id });
   }
 
   const count = await readLikeCount(supabase, deckId);

@@ -10,6 +10,7 @@ import {
   UserIcon,
   VersusIcon,
   PlaymatIcon,
+  BellIcon,
 } from "./nav-icons";
 import AppearanceToggle from "@/app/settings/AppearanceToggle";
 
@@ -22,6 +23,8 @@ interface Props {
   username: string | null;
   /** Whether the user has admin/judge privileges. */
   isAdmin?: boolean;
+  /** Unread in-app notification count for the bell row badge (authed only). */
+  unreadCount?: number;
   /** Resolved by SiteNav to the latest published spotlight's URL
    *  (or /spotlight when none are published yet). */
   spotlightHref: string;
@@ -49,20 +52,30 @@ export default function SiteSidebar({
   displayName,
   username,
   isAdmin,
+  unreadCount = 0,
   spotlightHref,
 }: Props) {
   const pathname = usePathname();
 
   // Each row pairs a route with the icon that fronts its label. Adding a
   // new internal route? Pick an icon from ./nav-icons (or add one there)
-  // and append below.
+  // and append below. `badge` renders a trailing count pill (Notifications).
   // My Decks shows for everyone — the /my-decks route redirects anon
   // visitors to /sign-in, so the nav row doubles as a sign-in funnel.
-  const INTERNAL_LINKS = [
+  const INTERNAL_LINKS: Array<{
+    href: string;
+    label: string;
+    Icon: (props: { className?: string }) => JSX.Element;
+    badge?: number;
+  }> = [
     { href: "/cards", label: "Card Catalog", Icon: CardsIcon },
     { href: "/my-decks", label: "Deck Collection", Icon: BookmarkIcon },
     { href: "/meta-archetypes", label: "Meta Archetypes", Icon: ChartBarIcon },
     { href: "/matches", label: "Matches", Icon: VersusIcon },
+    // Notifications — authed only; badge shows unread count.
+    ...(isAuthed
+      ? [{ href: "/notifications", label: "Notifications", Icon: BellIcon, badge: unreadCount }]
+      : []),
     ...(isAdmin ? [{ href: "/admin-tools/deck-mat", label: "Playmat Studio", Icon: PlaymatIcon }] : []),
     // { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
     { href: spotlightHref, label: "Spotlight", Icon: TrophyIcon },
@@ -118,14 +131,19 @@ export default function SiteSidebar({
           what lets `mt-auto` do its work. */}
       <nav className="flex-1 flex flex-col overflow-y-auto px-3 pt-4 pb-4">
         <ul className="flex flex-col gap-0.5">
-          {INTERNAL_LINKS.map(({ href, label, Icon }) => (
+          {INTERNAL_LINKS.map(({ href, label, Icon, badge }) => (
             <li key={href}>
               <Link
                 href={href}
                 className={`${linkBase} ${isActive(href) ? linkActive : linkInactive}`}
               >
                 <Icon />
-                <span>{label}</span>
+                <span className="flex-1">{label}</span>
+                {badge != null && badge > 0 && (
+                  <span className="ml-auto min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full bg-accent text-white text-[11px] font-bold leading-none tabular-nums">
+                    {badge > 9 ? "9+" : badge}
+                  </span>
+                )}
               </Link>
             </li>
           ))}

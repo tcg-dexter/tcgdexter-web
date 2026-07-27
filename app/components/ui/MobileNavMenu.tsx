@@ -20,6 +20,7 @@ import {
   ShoppingBagIcon,
   VersusIcon,
   PlaymatIcon,
+  BellIcon,
 } from "./nav-icons";
 
 /** Must match the CSS transition-duration on the panel div below. */
@@ -34,6 +35,8 @@ interface Props {
   username: string | null;
   /** Whether the user has admin/judge privileges. */
   isAdmin?: boolean;
+  /** Unread in-app notification count for the Notifications row badge. */
+  unreadCount?: number;
   /** Resolved by SiteNav to the latest published spotlight's URL
    *  (or /spotlight when none are published yet). */
   spotlightHref: string;
@@ -58,7 +61,7 @@ interface Props {
  * so there is zero layout shift on open or close. scrollLockedRef guards
  * against double-lock/unlock so unlockScroll() is safe from any code path.
  */
-export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin, spotlightHref }: Props) {
+export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin, unreadCount = 0, spotlightHref }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -225,11 +228,19 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
   // Icons are shared with the desktop sidebars (see ./nav-icons). Keep the
   // icon assignments in sync with SiteSidebar / SiteSidebarRight so the two
   // surfaces tell the same visual story.
-  const INTERNAL_LINKS = [
+  const INTERNAL_LINKS: Array<{
+    href: string;
+    label: string;
+    Icon: (props: { className?: string }) => JSX.Element;
+    badge?: number;
+  }> = [
     { href: "/cards", label: "Card Catalog", Icon: CardsIcon },
     { href: "/my-decks", label: "Deck Collection", Icon: BookmarkIcon },
     { href: "/meta-archetypes", label: "Meta Archetypes", Icon: ChartBarIcon },
     { href: "/matches", label: "Matches", Icon: VersusIcon },
+    ...(isAuthed
+      ? [{ href: "/notifications", label: "Notifications", Icon: BellIcon, badge: unreadCount }]
+      : []),
     ...(isAdmin ? [{ href: "/admin-tools/deck-mat", label: "Playmat Studio", Icon: PlaymatIcon }] : []),
     // { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
     { href: spotlightHref, label: "Spotlight", Icon: TrophyIcon },
@@ -350,11 +361,16 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
       >
         <nav className="mx-auto max-w-6xl w-full px-6 pt-4 pb-6">
           <ul className="flex flex-col gap-1">
-            {INTERNAL_LINKS.map(({ href, label, Icon }) => (
+            {INTERNAL_LINKS.map(({ href, label, Icon, badge }) => (
               <li key={href}>
                 <Link href={href} className={linkClass} onClick={closeMenu}>
                   <Icon />
-                  <span>{label}</span>
+                  <span className="flex-1">{label}</span>
+                  {badge != null && badge > 0 && (
+                    <span className="ml-auto min-w-[20px] h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-accent text-white text-xs font-bold leading-none tabular-nums">
+                      {badge > 9 ? "9+" : badge}
+                    </span>
+                  )}
                 </Link>
               </li>
             ))}

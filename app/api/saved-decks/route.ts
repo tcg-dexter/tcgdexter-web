@@ -10,6 +10,7 @@ import {
 } from "@/lib/analyzeDeck";
 import { primaryPokemonCard } from "@/lib/primaryCardImage";
 import { reconcileAchievements } from "@/lib/learn/achievements";
+import { notifyBadgesUnlocked } from "@/lib/notifications/notify";
 
 /**
  * POST /api/saved-decks
@@ -173,7 +174,8 @@ export async function POST(req: Request) {
 
   // Award any deck-count badges this save unlocked (First Save, Deck
   // Builder milestones). Internally error-safe.
-  await reconcileAchievements(supabase, user.id);
+  const newlyAwarded = await reconcileAchievements(supabase, user.id);
+  void notifyBadgesUnlocked(user.id, newlyAwarded);
 
   return NextResponse.json({
     id: data.id,
