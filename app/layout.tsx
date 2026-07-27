@@ -96,10 +96,10 @@ export default function RootLayout({
                 desktop sidebars rendered inside <SiteNav /> (each at 230 px,
                 kicking in at 1280 px). Mobile, portrait tablet, and landscape
                 iPad / smaller laptops keep the original mobile-nav layout. */
-            <div className="min-h-dvh bg-bg text-text-primary antialiased overflow-x-hidden xl:pl-[230px] xl:pr-[230px]">
+            <div className="min-h-dvh flex flex-col bg-bg text-text-primary antialiased overflow-x-hidden xl:pl-[230px] xl:pr-[230px]">
               <NavigationTracker />
               <SiteNav />
-              {children}
+              <div className="flex-1">{children}</div>
               <SiteFooter />
               <GlobalSearchHotkey />
               <StreakToast />
