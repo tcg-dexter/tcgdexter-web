@@ -1,5 +1,39 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CATALOG, type AchievementKey } from "@/lib/learn/achievements";
+import { deckAvatarInfo, pokemonSlug } from "@/lib/primaryCardImage";
+import { typeColor } from "@/lib/metaPrimaryCard";
+
+/** Limitless sprite host — same source the deck-collection avatars use. */
+const SPRITE_BASE = "https://r2.limitlesstcg.net/pokemon/gen9";
+
+interface DeckAvatarCard {
+  qty: number;
+  name: string;
+  number: string;
+  setCode: string;
+  section: "pokemon" | "trainer" | "energy";
+}
+
+/**
+ * Resolve a saved deck's hero Pokémon to a sprite URL + type-colored
+ * background, mirroring the deck-collection avatar (deckAvatarInfo → same
+ * primary-card pick, honoring an explicit cover override). Snapshotted into
+ * the notification so the feed shows the deck's face — not the liker's —
+ * without a re-derive at read time. Returns nulls when the deck has no
+ * resolvable Pokémon (renderer falls back to an initial).
+ */
+function deckHeroSprite(
+  analysis: unknown,
+  coverUrl: string | null,
+): { url: string | null; bg: string | null } {
+  const cards = (analysis as { cards?: unknown } | null)?.cards;
+  if (!Array.isArray(cards)) return { url: null, bg: null };
+  const info = deckAvatarInfo(cards as DeckAvatarCard[], coverUrl);
+  if (!info) return { url: null, bg: null };
+  const slug = pokemonSlug(info.name);
+  if (!slug) return { url: null, bg: null };
+  return { url: `${SPRITE_BASE}/${slug}.png`, bg: typeColor(info.types) };
+}
 
 /**
  * In-app notification writers. Fire-and-forget, mirroring lib/analytics/track.ts:
@@ -25,6 +59,10 @@ export interface DeckLikedData {
   actor_avatar_url: string | null;
   deck_name: string;
   deck_short_id: string | null;
+  /** Deck's hero-Pokémon sprite + type-colored bg, snapshotted so the feed
+   *  icon shows the liked deck's face. Null when unresolvable. */
+  deck_hero_image_url: string | null;
+  deck_hero_bg: string | null;
 }
 
 export interface BadgeUnlockedData {
@@ -58,7 +96,7 @@ export async function notifyDeckLiked(args: {
 
     const { data: deck } = await admin
       .from("saved_decks")
-      .select("user_id, name, short_id")
+      .select("user_id, name, short_id, analysis, cover_image_url")
       .eq("id", args.deckId)
       .maybeSingle();
 
@@ -72,12 +110,19 @@ export async function notifyDeckLiked(args: {
       .eq("id", args.actorId)
       .maybeSingle();
 
+    const hero = deckHeroSprite(
+      deck?.analysis,
+      (deck?.cover_image_url as string | null) ?? null,
+    );
+
     const data: DeckLikedData = {
       actor_display_name: actor?.display_name ?? null,
       actor_username: actor?.username ?? null,
       actor_avatar_url: actor?.avatar_url ?? null,
       deck_name: (deck?.name as string) ?? "your deck",
       deck_short_id: (deck?.short_id as string | null) ?? null,
+      deck_hero_image_url: hero.url,
+      deck_hero_bg: hero.bg,
     };
 
     const { error } = await admin.from("notifications").upsert(

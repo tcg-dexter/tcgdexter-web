@@ -120,6 +120,40 @@ describe("notifyDeckLiked", () => {
     expect((w.row.data as Record<string, unknown>).deck_name).toBe("Miraidon");
   });
 
+  it("snapshots the deck's hero sprite + type bg from its analysis", async () => {
+    h.deckRow = {
+      user_id: "owner",
+      name: "Charizard ex Blitz",
+      short_id: "xyz",
+      cover_image_url: null,
+      analysis: {
+        cards: [
+          { qty: 2, name: "Charizard ex", number: "125", setCode: "OBF", section: "pokemon" },
+          { qty: 1, name: "Charmander", number: "26", setCode: "MEW", section: "pokemon" },
+        ],
+      },
+    };
+    await notifyDeckLiked({ deckId: "d1", actorId: "liker" });
+
+    const data = h.writes[0].row.data as Record<string, unknown>;
+    // Highest-stage pick → Charizard ex; suffix stripped → "charizard" slug.
+    expect(data.deck_hero_image_url).toBe(
+      "https://r2.limitlesstcg.net/pokemon/gen9/charizard.png",
+    );
+    // OBF 125 Charizard ex is a Darkness-type card (not Fire) — bg follows the
+    // resolved card's actual type, confirming we read real card data.
+    expect(data.deck_hero_bg).toBe("#0d9488"); // Darkness
+  });
+
+  it("leaves hero fields null when the deck has no resolvable cards", async () => {
+    h.deckRow = { user_id: "owner", name: "Deck", short_id: "xyz" };
+    await notifyDeckLiked({ deckId: "d1", actorId: "liker" });
+
+    const data = h.writes[0].row.data as Record<string, unknown>;
+    expect(data.deck_hero_image_url).toBeNull();
+    expect(data.deck_hero_bg).toBeNull();
+  });
+
   it("upserts on the dedup conflict target and clears read_at", async () => {
     h.deckRow = { user_id: "owner", name: "Deck", short_id: "xyz" };
     await notifyDeckLiked({ deckId: "d1", actorId: "liker" });

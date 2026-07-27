@@ -5,6 +5,7 @@ import {
   type DeckLikedData,
   type BadgeUnlockedData,
 } from "@/lib/notifications/notify";
+import { shade } from "@/lib/color";
 
 /**
  * Renders the recipient's notification feed. Server component — no
@@ -101,19 +102,23 @@ function NotificationIcon({ n }: { n: NotificationRow }) {
       />
     );
   }
-  // deck_liked → actor avatar (Pokémon sprite) or initial fallback.
+  // deck_liked → the liked deck's hero Pokémon on a type-colored circle
+  // (mirrors the deck-collection avatar), falling back to the deck's initial.
   const d = n.data as unknown as DeckLikedData;
-  const initial = (d.actor_display_name || d.actor_username || "?")
-    .charAt(0)
-    .toUpperCase();
-  return d.actor_avatar_url ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={d.actor_avatar_url}
-      alt=""
-      className="shrink-0 w-10 h-10 rounded-full object-cover bg-surface"
-    />
-  ) : (
+  if (d.deck_hero_image_url) {
+    const bg = d.deck_hero_bg ?? "#B0A89E";
+    return (
+      <span
+        className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center overflow-hidden"
+        style={{ background: `linear-gradient(120deg, ${bg} 0%, ${shade(bg, -35)} 100%)` }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={d.deck_hero_image_url} alt="" className="w-8 h-8 object-contain" />
+      </span>
+    );
+  }
+  const initial = (d.deck_name || "?").charAt(0).toUpperCase();
+  return (
     <span className="shrink-0 w-10 h-10 rounded-full bg-surface inline-flex items-center justify-center text-sm font-semibold text-text-secondary">
       {initial}
     </span>
