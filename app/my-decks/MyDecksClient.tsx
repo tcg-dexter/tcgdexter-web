@@ -13,6 +13,7 @@ import MatchEntry from "@/app/components/MatchEntry";
 import DeckCardMenu from "@/app/components/DeckCardMenu";
 import { useTheme } from "@/app/components/ThemeProvider";
 import SavedDeckRow from "./SavedDeckRow";
+import NewDeckDialog from "./NewDeckDialog";
 import StreakFlame from "@/app/components/StreakFlame";
 import { clientTz, celebrateStreak } from "@/lib/streak-client";
 import { normalizeForSearch } from "@/lib/searchNormalize";
@@ -318,11 +319,13 @@ function PinnedDeckHero({
 }
 
 export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: Props) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("date");
   const [dir, setDir] = useState<SortDir>("desc");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [view, setView] = useState<ViewMode>("grid");
+  const [newDeckOpen, setNewDeckOpen] = useState(false);
   // Bumped by the Get Started checklist to open the pinned deck's log drawer.
   const [logSignal, setLogSignal] = useState(0);
 
@@ -487,26 +490,28 @@ export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: P
             </svg>
             Favorites
           </button>
-          <Link
-            href="/"
+          <button
+            type="button"
+            onClick={() => setNewDeckOpen(true)}
             className="text-xs font-semibold h-[38px] inline-flex items-center justify-center px-3 rounded-full border border-transparent bg-gradient-brand bg-origin-border text-white shadow-brand hover:shadow-brand-lg transition"
           >
             + New Deck
-          </Link>
+          </button>
         </div>
       </div>
 
       {decks.length === 0 ? (
         <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-8 text-center">
           <p className="text-sm text-text-secondary">
-            No decks yet — profile a deck on the home page and save it to your collection.
+            No decks yet — create one to start your collection.
           </p>
-          <Link
-            href="/"
+          <button
+            type="button"
+            onClick={() => setNewDeckOpen(true)}
             className="mt-4 inline-flex items-center justify-center rounded-full bg-gradient-brand bg-origin-border px-4 py-2 text-sm font-semibold text-white shadow-brand hover:shadow-brand-lg transition"
           >
             + New Deck
-          </Link>
+          </button>
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-8 text-center">
@@ -525,6 +530,12 @@ export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: P
           ))}
         </div>
       )}
+
+      <NewDeckDialog
+        open={newDeckOpen}
+        onClose={() => setNewDeckOpen(false)}
+        onCreated={() => router.refresh()}
+      />
     </main>
   );
 }
