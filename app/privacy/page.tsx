@@ -6,7 +6,7 @@ export const metadata = {
   description: "How TCG Dexter collects, uses, and protects your information.",
 };
 
-const LAST_UPDATED = "July 26, 2026";
+const LAST_UPDATED = "July 27, 2026";
 
 export default function PrivacyPolicyPage() {
   return (
@@ -45,12 +45,20 @@ export default function PrivacyPolicyPage() {
           match.
         </p>
         <p>
+          <strong className="text-text-primary">Social connections.</strong>{" "}
+          If you follow another user, we record that follow relationship (who
+          you follow and who follows you) to power the Follow button and the
+          follower and following counts shown on profiles. Follows are visible
+          to other signed-in users, and you can unfollow at any time to remove
+          the relationship.
+        </p>
+        <p>
           <strong className="text-text-primary">In-app notifications.</strong>{" "}
           To power the notification bell, we record activity directed at you —
           for example when another signed-in user likes one of your public
-          decks (storing who liked it and which deck) or when you earn a badge.
-          These are visible only to you and are deleted when you delete your
-          account.
+          decks (storing who liked it and which deck), follows you, or when you
+          earn a badge. These are visible only to you and are deleted when you
+          delete your account.
         </p>
         <p>
           <strong className="text-text-primary">Usage and cookie data.</strong>{" "}
