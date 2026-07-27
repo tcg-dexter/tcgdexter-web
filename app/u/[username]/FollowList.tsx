@@ -69,10 +69,11 @@ export default function FollowList({
       : `${displayName} isn't following anyone yet.`;
 
   return (
-    <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden">
-      {/* Panel header — title + @handle context, with a close button that
-          restores the profile body. */}
-      <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-black/8 dark:border-white/10">
+    <div>
+      {/* Header — title + @handle context, with an inline close button that
+          restores the profile body. No card container: just a header row
+          over a plain list. */}
+      <div className="flex items-center justify-between gap-3 pb-3 border-b border-black/8 dark:border-white/10">
         <div className="min-w-0">
           <h2 className="text-base font-semibold text-text-primary leading-tight">
             {title}
@@ -98,17 +99,17 @@ export default function FollowList({
       </div>
 
       {state.status === "loading" && (
-        <div className="p-8 text-center text-sm text-text-muted">Loading…</div>
+        <div className="py-10 text-center text-sm text-text-muted">Loading…</div>
       )}
 
       {state.status === "error" && (
-        <div className="p-8 text-center">
+        <div className="py-10 text-center">
           <p className="text-sm text-text-secondary">{state.message}</p>
         </div>
       )}
 
       {state.status === "ready" && state.users.length === 0 && (
-        <div className="p-8 text-center">
+        <div className="py-10 text-center">
           <p className="text-sm text-text-secondary">{emptyCopy}</p>
         </div>
       )}
@@ -120,7 +121,7 @@ export default function FollowList({
               <Link
                 href={`/u/${u.username}`}
                 onClick={onClose}
-                className="flex items-center gap-3 px-4 sm:px-5 py-3 hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors"
+                className="flex items-center gap-3 -mx-2 px-2 py-3 rounded-lg hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors"
               >
                 <Avatar url={u.avatar_url} name={u.display_name} />
                 <div className="min-w-0">
