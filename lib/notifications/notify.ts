@@ -49,7 +49,7 @@ function deckHeroSprite(
  * top of each notify* function; v1 is always-on (low volume).
  */
 
-export type NotificationType = "deck_liked" | "badge_unlocked";
+export type NotificationType = "deck_liked" | "badge_unlocked" | "new_follower";
 
 /** Shape of the `data` jsonb, discriminated by notification type. Snapshotted
  *  at write time so the feed renders without joins. */
@@ -68,6 +68,12 @@ export interface DeckLikedData {
 export interface BadgeUnlockedData {
   badge_key: string;
   badge_name: string;
+}
+
+export interface NewFollowerData {
+  actor_display_name: string | null;
+  actor_username: string | null;
+  actor_avatar_url: string | null;
 }
 
 export interface NotificationRow {
@@ -195,6 +201,76 @@ export async function notifyBadgesUnlocked(
 }
 
 /**
+ * Someone followed a user → notify the followed user. Suppressed on a
+ * self-follow (also blocked by the user_follows CHECK constraint). Snapshots
+ * the follower's name/handle/avatar so the feed renders without a join.
+ *
+ * Dedup — one row per (recipient, actor, 'new_follower'): a genuine refollow
+ * (unfollow then follow again) should REFRESH that row, not stack a second.
+ * We deliberately do NOT upsert-on-conflict here: the dedup index is PARTIAL
+ * (where type = 'new_follower'), and Postgres can't infer a partial index from
+ * a bare ON CONFLICT (cols) — the trap that silently broke deck_liked (see
+ * 20260727_notifications_dedup_fix.sql). Instead we insert and, on the 23505
+ * that the partial unique index raises for a duplicate, update the existing
+ * row. Race-safe (the index enforces uniqueness) and never touches inference.
+ */
+export async function notifyNewFollower(args: {
+  recipientId: string; // the user who was followed
+  actorId: string; // the follower
+}): Promise<void> {
+  try {
+    // Defensive: never notify yourself (the CHECK constraint blocks the
+    // follow row too, so this should be unreachable from the route).
+    if (args.recipientId === args.actorId) return;
+
+    const admin = createAdminClient();
+
+    const { data: actor } = await admin
+      .from("profiles")
+      .select("display_name, username, avatar_url")
+      .eq("id", args.actorId)
+      .maybeSingle();
+
+    const data: NewFollowerData = {
+      actor_display_name: actor?.display_name ?? null,
+      actor_username: actor?.username ?? null,
+      actor_avatar_url: actor?.avatar_url ?? null,
+    };
+
+    const createdAt = new Date().toISOString();
+    const { error } = await admin.from("notifications").insert({
+      recipient_user_id: args.recipientId,
+      actor_user_id: args.actorId,
+      type: "new_follower" satisfies NotificationType,
+      saved_deck_id: null,
+      data,
+      read_at: null,
+      created_at: createdAt,
+    });
+
+    if (error) {
+      if (error.code === "23505") {
+        // A prior new_follower row exists (they refollowed) — refresh it so
+        // it re-surfaces as unread rather than leaving a stale read entry.
+        const { error: updateError } = await admin
+          .from("notifications")
+          .update({ data, read_at: null, created_at: createdAt })
+          .eq("recipient_user_id", args.recipientId)
+          .eq("actor_user_id", args.actorId)
+          .eq("type", "new_follower");
+        if (updateError) {
+          console.error("[notify] new_follower refresh failed:", updateError);
+        }
+      } else {
+        console.error("[notify] new_follower insert failed:", error);
+      }
+    }
+  } catch (err) {
+    console.error("[notify] notifyNewFollower threw:", err);
+  }
+}
+
+/**
  * Human-readable one-line message for a notification. Pure (no DB) so it's
  * shared by the list UI and unit tests. Renders from the snapshotted `data`.
  */
@@ -210,6 +286,11 @@ export function formatNotificationMessage(n: {
   if (n.type === "badge_unlocked") {
     const d = n.data as unknown as BadgeUnlockedData;
     return `You earned the ${d.badge_name} badge`;
+  }
+  if (n.type === "new_follower") {
+    const d = n.data as unknown as NewFollowerData;
+    const who = d.actor_display_name || d.actor_username || "Someone";
+    return `${who} started following you`;
   }
   return "You have a new notification";
 }
