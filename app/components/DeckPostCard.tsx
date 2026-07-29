@@ -14,6 +14,7 @@ import { buildAvatarItems } from "@/lib/deckAvatarItems";
 import { clientTz, celebrateStreak } from "@/lib/streak-client";
 import { shade } from "@/lib/color";
 import { useFadeIn } from "@/lib/useFadeIn";
+import { createClient } from "@/lib/supabase/client";
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
@@ -400,6 +401,7 @@ export function UserDeckCard({
   deckList,
   isPublic = true,
   canManage = false,
+  ownerUserId,
   index,
   skipEntranceAnimation = false,
 }: UserDeckCardProps) {
@@ -409,6 +411,75 @@ export function UserDeckCard({
   const coverImageUrl = initialCoverImageUrl ?? null;
   const [isFavorite, setIsFavorite] = useState(initialIsFavorite);
   const [logOpen, setLogOpen] = useState(false);
+
+  // Save-to-library state — only relevant when !canManage (a visitor
+  // browsing someone else's deck, e.g. on their profile, the leaderboard,
+  // or a spotlight). Logging a match is owner-only (that's the whole bug
+  // this replaces); visitors get a Save toggle instead, backed by the same
+  // clone endpoint DeckCardFooter uses for the public deck feed.
+  const [saved, setSaved] = useState(false);
+  const [savingPending, setSavingPending] = useState(false);
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [viewerIsOwner, setViewerIsOwner] = useState(false);
+
+  useEffect(() => {
+    if (canManage) return;
+    const supabase = createClient();
+    let cancelled = false;
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (cancelled) return;
+      setSignedIn(!!user);
+      if (!user) return;
+
+      // Viewer owns this deck (e.g. their own entry on the leaderboard, where
+      // canManage isn't threaded through) — it's already in their library by
+      // definition, so short-circuit instead of hitting the clone endpoint.
+      if (ownerUserId && ownerUserId === user.id) {
+        setViewerIsOwner(true);
+        setSaved(true);
+        return;
+      }
+
+      fetch(`/api/saved-decks/${id}/clone`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (!cancelled) setSaved(!!data.saved);
+        })
+        .catch(() => {});
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canManage, id, ownerUserId]);
+
+  async function handleSaveToggle(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (viewerIsOwner || savingPending) return;
+    if (signedIn === null) return; // auth state still resolving
+    if (!signedIn) {
+      router.push(`/sign-in?next=${encodeURIComponent(href)}`);
+      return;
+    }
+
+    const nextSaved = !saved;
+    setSaved(nextSaved);
+    setSavingPending(true);
+    try {
+      const res = await fetch(`/api/saved-decks/${id}/clone`, {
+        method: nextSaved ? "POST" : "DELETE",
+      });
+      if (!res.ok) throw new Error();
+      router.refresh();
+    } catch {
+      setSaved(!nextSaved);
+    } finally {
+      setSavingPending(false);
+    }
+  }
+
   // Bumped on every successful save/import so <MatchEntry> remounts fresh —
   // it's a persistently-mounted subtree (collapsed via grid-rows, not
   // conditionally rendered), so its internal MatchForm state would
@@ -518,43 +589,58 @@ export function UserDeckCard({
       </Link>
 
       <div className="flex items-stretch border-t border-black/5 dark:border-white/10">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            setLogOpen((v) => !v);
-          }}
-          className="flex-1 py-2.5 text-[13px] font-semibold text-text-primary hover:bg-black/[0.03] transition-colors"
-        >
-          Log match
-        </button>
+        {canManage ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              setLogOpen((v) => !v);
+            }}
+            className="flex-1 py-2.5 text-[13px] font-semibold text-text-primary hover:bg-black/[0.03] transition-colors"
+          >
+            Log match
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleSaveToggle}
+            disabled={savingPending}
+            aria-pressed={saved}
+            aria-label={saved ? "Remove from your library" : "Save to your library"}
+            className="flex-1 py-2.5 text-[13px] font-semibold text-text-primary hover:bg-black/[0.03] transition-colors disabled:opacity-60"
+          >
+            {saved ? "Saved" : "Save Deck"}
+          </button>
+        )}
         <QRCodeButton
           shareUrl={shareUrl ?? href}
           className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 text-[13px] font-semibold text-text-primary hover:bg-black/[0.03] transition-colors border-l border-black/5 dark:border-white/10"
         />
       </div>
 
-      <div
-        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${logOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
-      >
-        <div className="overflow-hidden">
-          <div className="border-t border-black/5 dark:border-white/10 p-3.5">
-            <MatchEntry
-              key={logKey}
-              savedDeckId={id}
-              active={logOpen}
-              onSubmitManual={handleQuickLog}
-              onImported={() => {
-                setLogOpen(false);
-                setLogKey((k) => k + 1);
-                router.refresh();
-              }}
-              onCancel={() => setLogOpen(false)}
-              scrollToTopOnCancel={false}
-            />
+      {canManage && (
+        <div
+          className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${logOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+        >
+          <div className="overflow-hidden">
+            <div className="border-t border-black/5 dark:border-white/10 p-3.5">
+              <MatchEntry
+                key={logKey}
+                savedDeckId={id}
+                active={logOpen}
+                onSubmitManual={handleQuickLog}
+                onImported={() => {
+                  setLogOpen(false);
+                  setLogKey((k) => k + 1);
+                  router.refresh();
+                }}
+                onCancel={() => setLogOpen(false)}
+                scrollToTopOnCancel={false}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
