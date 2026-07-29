@@ -77,13 +77,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "player_handle is required." }, { status: 400 });
   }
 
+  // Matches are owner-only: RLS on saved_decks lets this SELECT through for
+  // any PUBLIC deck (not just the caller's own), so it alone doesn't stop
+  // someone from logging a match against another trainer's deck — the
+  // explicit user_id check below does.
   const { data: deck } = await supabase
     .from("saved_decks")
-    .select("id")
+    .select("id, user_id")
     .eq("id", saved_deck_id)
     .maybeSingle();
   if (!deck) {
     return NextResponse.json({ error: "Deck not found." }, { status: 404 });
+  }
+  if (deck.user_id !== user.id) {
+    return NextResponse.json(
+      { error: "You can only log matches for your own decks." },
+      { status: 403 },
+    );
   }
 
   // Parse + normalize + summarize.
