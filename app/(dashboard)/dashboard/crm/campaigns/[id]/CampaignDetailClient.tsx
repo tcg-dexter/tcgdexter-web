@@ -37,8 +37,8 @@ function formatDateTime(iso: string | null): string {
 function StatusBadge({ status }: { status: CampaignStatus }) {
   const styles: Record<CampaignStatus, string> = {
     draft: "bg-[var(--surface)] text-[var(--text-secondary)]",
-    sending: "bg-yellow-100 text-yellow-800",
-    complete: "bg-green-100 text-green-800",
+    sending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-300",
+    complete: "bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-300",
   };
   return (
     <span
@@ -340,7 +340,7 @@ export default function CampaignDetailClient({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="rounded-md border border-black/10 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-black/30"
+              className="rounded-md border border-black/10 dark:border-white/15 bg-white dark:bg-surface-elevated px-2.5 py-1.5 text-xs outline-none focus:border-black/30 dark:focus:border-white/30"
             />
           </label>
           <label className="flex flex-col gap-1">
@@ -351,7 +351,7 @@ export default function CampaignDetailClient({
               type="text"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              className="rounded-md border border-black/10 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-black/30"
+              className="rounded-md border border-black/10 dark:border-white/15 bg-white dark:bg-surface-elevated px-2.5 py-1.5 text-xs outline-none focus:border-black/30 dark:focus:border-white/30"
             />
           </label>
           <label className="flex flex-col gap-1">
@@ -362,14 +362,14 @@ export default function CampaignDetailClient({
               value={body}
               onChange={(e) => setBody(e.target.value)}
               rows={10}
-              className="rounded-md border border-black/10 bg-white px-2.5 py-1.5 text-xs font-mono outline-none focus:border-black/30"
+              className="rounded-md border border-black/10 dark:border-white/15 bg-white dark:bg-surface-elevated px-2.5 py-1.5 text-xs font-mono outline-none focus:border-black/30 dark:focus:border-white/30"
             />
           </label>
 
           {/* Recipient rule. Editing the rule re-syncs on the server: the
               PATCH handler calls syncCampaignRecipients() after the update,
               and router.refresh() below pulls the new recipient set. */}
-          <fieldset className="flex flex-col gap-2 border-t border-black/10 pt-3">
+          <fieldset className="flex flex-col gap-2 border-t border-black/10 dark:border-white/15 pt-3">
             <legend className="px-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
               Recipients
             </legend>
@@ -413,7 +413,7 @@ export default function CampaignDetailClient({
                     type="date"
                     value={windowStart}
                     onChange={(e) => setWindowStart(e.target.value)}
-                    className="rounded-md border border-black/10 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-black/30"
+                    className="rounded-md border border-black/10 dark:border-white/15 bg-white dark:bg-surface-elevated px-2.5 py-1.5 text-xs outline-none focus:border-black/30 dark:focus:border-white/30"
                   />
                 </label>
                 <label className="flex flex-col gap-1">
@@ -424,7 +424,7 @@ export default function CampaignDetailClient({
                     type="date"
                     value={windowEnd}
                     onChange={(e) => setWindowEnd(e.target.value)}
-                    className="rounded-md border border-black/10 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-black/30"
+                    className="rounded-md border border-black/10 dark:border-white/15 bg-white dark:bg-surface-elevated px-2.5 py-1.5 text-xs outline-none focus:border-black/30 dark:focus:border-white/30"
                   />
                 </label>
                 <span className="text-[11px] text-[var(--text-muted)]">
@@ -444,7 +444,7 @@ export default function CampaignDetailClient({
             type="button"
             disabled={!dirtyMeta || savingMeta || windowInvalid}
             onClick={saveMeta}
-            className="rounded-md bg-black px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+            className="rounded-md bg-black dark:bg-white px-3 py-1.5 text-xs font-semibold text-white dark:text-black disabled:opacity-50"
           >
             {savingMeta ? "Saving…" : "Save changes"}
           </button>
@@ -481,7 +481,7 @@ export default function CampaignDetailClient({
               onChange={(e) =>
                 setRecipientSort(e.target.value as RecipientSortKey)
               }
-              className="rounded-md border border-black/10 bg-white px-2 py-1 text-[11px]"
+              className="rounded-md border border-black/10 dark:border-white/15 bg-white dark:bg-surface-elevated px-2 py-1 text-[11px]"
             >
               {RECIPIENT_SORTS.map((s) => (
                 <option key={s.key} value={s.key}>
@@ -494,7 +494,7 @@ export default function CampaignDetailClient({
                 type="button"
                 disabled={bulkPending}
                 onClick={markSelectedSent}
-                className="rounded-md bg-black px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+                className="rounded-md bg-black dark:bg-white px-2.5 py-1 text-[11px] font-semibold text-white dark:text-black disabled:opacity-50"
               >
                 {bulkPending ? "Marking…" : `Mark ${selected.size} sent`}
               </button>
@@ -548,7 +548,7 @@ export default function CampaignDetailClient({
               </thead>
               <tbody>
                 {sortedRecipients.map((r) => (
-                  <tr key={r.send_id} className="border-t border-black/5 hover:bg-[var(--surface)]/40">
+                  <tr key={r.send_id} className="border-t border-black/5 dark:border-white/10 hover:bg-[var(--surface)]/40">
                     <td className="px-2 py-2 align-top">
                       <input
                         type="checkbox"
@@ -576,8 +576,8 @@ export default function CampaignDetailClient({
                         onClick={() => toggleSent(r.send_id, r.sent_at)}
                         className={`rounded-md px-2 py-1 text-[11px] font-semibold ${
                           r.sent_at
-                            ? "bg-green-100 text-green-800 hover:bg-green-200"
-                            : "border border-black/10 bg-white hover:bg-[var(--surface)]"
+                            ? "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-500/20 dark:text-green-300 dark:hover:bg-green-500/30"
+                            : "border border-black/10 dark:border-white/15 bg-white dark:bg-surface-elevated hover:bg-[var(--surface)]"
                         }`}
                       >
                         {r.sent_at ? `Sent · ${formatDateTime(r.sent_at)}` : "Mark sent"}

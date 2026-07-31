@@ -28,9 +28,9 @@ export default function NorthStarHero({
 
   const tone =
     delta > 0
-      ? "bg-emerald-50 text-emerald-700"
+      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400"
       : delta < 0
-        ? "bg-rose-50 text-rose-700"
+        ? "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-400"
         : "bg-[var(--surface)] text-[var(--text-muted)]";
   const arrow = delta > 0 ? "▲" : delta < 0 ? "▼" : "–";
 

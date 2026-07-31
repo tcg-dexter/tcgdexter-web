@@ -10,17 +10,17 @@ const KIND_META: Record<
 > = {
   signup: {
     label: "signup",
-    chip: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    chip: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:ring-emerald-500/25",
     verb: "joined",
   },
   saved_deck: {
     label: "deck saved",
-    chip: "bg-sky-50 text-sky-700 ring-sky-200",
+    chip: "bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-500/15 dark:text-sky-400 dark:ring-sky-500/25",
     verb: "saved a deck",
   },
   match: {
     label: "match",
-    chip: "bg-amber-50 text-amber-700 ring-amber-200",
+    chip: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:ring-amber-500/25",
     verb: "logged a match",
   },
 };
@@ -55,7 +55,7 @@ export default function ActivityFeed({ data }: Props) {
           No activity yet — once users sign up, save decks, or log matches it will appear here.
         </div>
       ) : (
-        <ul className="-mx-1 divide-y divide-black/5 text-xs">
+        <ul className="-mx-1 divide-y divide-black/5 dark:divide-white/10 text-xs">
           {data.events.map((ev, i) => {
             const meta = KIND_META[ev.kind];
             return (

@@ -10,8 +10,8 @@ function formatDate(iso: string): string {
 function StatusBadge({ status }: { status: "draft" | "sending" | "complete" }) {
   const styles: Record<typeof status, string> = {
     draft: "bg-[var(--surface)] text-[var(--text-secondary)]",
-    sending: "bg-yellow-100 text-yellow-800",
-    complete: "bg-green-100 text-green-800",
+    sending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-300",
+    complete: "bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-300",
   };
   return (
     <span
@@ -33,7 +33,7 @@ export default async function CampaignsPage() {
         </h1>
         <Link
           href="/dashboard/crm/campaigns/new"
-          className="rounded-md bg-black px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+          className="rounded-md bg-black dark:bg-white px-3 py-1.5 text-xs font-semibold text-white dark:text-black hover:opacity-90"
         >
           New campaign
         </Link>
@@ -68,7 +68,7 @@ export default async function CampaignsPage() {
             </thead>
             <tbody>
               {campaigns.map((c) => (
-                <tr key={c.id} className="border-t border-black/5 hover:bg-[var(--surface)]/40">
+                <tr key={c.id} className="border-t border-black/5 dark:border-white/10 hover:bg-[var(--surface)]/40">
                   <td className="px-3 py-2">
                     <Link
                       href={`/dashboard/crm/campaigns/${c.id}`}

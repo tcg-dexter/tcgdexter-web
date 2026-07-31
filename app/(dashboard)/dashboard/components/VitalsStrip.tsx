@@ -98,7 +98,7 @@ export default function VitalsStrip({
           label="Ops · last run"
           value={<span className="text-[var(--text-muted)]">—</span>}
           hint="Waiting for first run"
-          accent={<span className="h-2 w-2 rounded-full bg-gray-300" />}
+          accent={<span className="h-2 w-2 rounded-full bg-gray-300 dark:bg-white/20" />}
         />
       );
     }

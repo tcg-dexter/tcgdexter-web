@@ -124,9 +124,9 @@ const TONE_BAR: Record<Tone, string> = {
 };
 
 const TONE_LABEL: Record<Tone, string> = {
-  positive: "text-emerald-700",
-  negative: "text-rose-700",
-  neutral: "text-amber-700",
+  positive: "text-emerald-700 dark:text-emerald-400",
+  negative: "text-rose-700 dark:text-rose-400",
+  neutral: "text-amber-700 dark:text-amber-400",
 };
 
 export default function InsightsStrip({

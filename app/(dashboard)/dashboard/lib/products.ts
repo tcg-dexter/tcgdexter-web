@@ -73,13 +73,13 @@ export const PRODUCTS: ProductMeta[] = [
 // Per-product palette — chip + bar + sparkline stroke share a hue so each
 // Product card reads as a single colour identity.
 export const PRODUCT_CHIP: Record<ProductKey, string> = {
-  card_catalog: "bg-emerald-100 text-emerald-700",
-  deck_collection: "bg-sky-100 text-sky-700",
-  meta_archetypes: "bg-violet-100 text-violet-700",
-  playmat_studio: "bg-amber-100 text-amber-700",
-  spotlight: "bg-rose-100 text-rose-700",
-  learn_to_play: "bg-indigo-100 text-indigo-700",
-  other: "bg-gray-100 text-gray-700",
+  card_catalog: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
+  deck_collection: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300",
+  meta_archetypes: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300",
+  playmat_studio: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
+  spotlight: "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300",
+  learn_to_play: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300",
+  other: "bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-white/70",
 };
 
 export const PRODUCT_BAR: Record<ProductKey, string> = {

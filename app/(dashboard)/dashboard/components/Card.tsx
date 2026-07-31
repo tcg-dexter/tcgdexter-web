@@ -27,7 +27,7 @@ function ArrowIcon() {
  *  text to the site accent — the same secondary-action hover treatment used
  *  site-wide, just tuned to the dashboard's muted palette. */
 const PILL_LINK_CLASS =
-  "inline-flex items-center gap-1 rounded-full border border-black/10 px-2.5 py-1 text-[11px] font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--accent)]/40 hover:text-[var(--accent)]";
+  "inline-flex items-center gap-1 rounded-full border border-black/10 dark:border-white/15 px-2.5 py-1 text-[11px] font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--accent)]/40 hover:text-[var(--accent)]";
 
 /** Capsule link out to an external resource (Supabase, GitHub, Vercel, prod/preview). */
 export function ExternalLinkPill({
@@ -104,7 +104,7 @@ export function SectionCard({
 }) {
   return (
     <div
-      className={`rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-5 ${className ?? ""}`}
+      className={`rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-5 ${className ?? ""}`}
     >
       {children}
     </div>
@@ -158,7 +158,9 @@ export function Delta({ value, suffix }: { value: number; suffix?: string }) {
   return (
     <span
       className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
-        up ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
+        up
+          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400"
+          : "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-400"
       }`}
     >
       <span aria-hidden>{up ? "▲" : "▼"}</span>
@@ -300,12 +302,12 @@ export function Initials({ from }: { from: string }) {
   let hash = 0;
   for (let i = 0; i < from.length; i++) hash = (hash * 31 + from.charCodeAt(i)) >>> 0;
   const palette = [
-    "bg-rose-100 text-rose-700",
-    "bg-amber-100 text-amber-700",
-    "bg-emerald-100 text-emerald-700",
-    "bg-sky-100 text-sky-700",
-    "bg-violet-100 text-violet-700",
-    "bg-fuchsia-100 text-fuchsia-700",
+    "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300",
+    "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
+    "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300",
+    "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300",
+    "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-500/20 dark:text-fuchsia-300",
   ];
   const tone = palette[hash % palette.length];
   return (

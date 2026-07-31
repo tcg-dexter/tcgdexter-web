@@ -154,7 +154,7 @@ export default function DevCard({ data }: Props) {
             </div>
             <ExternalLinkPill href={links.github.prs}>all</ExternalLinkPill>
           </div>
-          <ul className="divide-y divide-black/5 text-xs">
+          <ul className="divide-y divide-black/5 dark:divide-white/10 text-xs">
             {data.recentPrs.slice(0, 8).map((i) => (
               <IssueRow key={`${i.repo}-${i.number}`} item={i} />
             ))}
@@ -176,7 +176,7 @@ export default function DevCard({ data }: Props) {
             </div>
             <ExternalLinkPill href={links.github.issues}>all</ExternalLinkPill>
           </div>
-          <ul className="divide-y divide-black/5 text-xs">
+          <ul className="divide-y divide-black/5 dark:divide-white/10 text-xs">
             {data.recentIssues.slice(0, 10).map((i) => (
               <IssueRow key={`${i.repo}-${i.number}`} item={i} />
             ))}

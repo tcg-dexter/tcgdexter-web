@@ -11,9 +11,9 @@ import type { RetentionData } from "../lib/analytics";
  */
 function cellTone(pct: number | null): string {
   if (pct == null) return "bg-transparent text-[var(--text-muted)]";
-  if (pct >= 60) return "bg-emerald-100 text-emerald-800";
-  if (pct >= 30) return "bg-amber-100 text-amber-800";
-  if (pct > 0) return "bg-rose-100 text-rose-800";
+  if (pct >= 60) return "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300";
+  if (pct >= 30) return "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300";
+  if (pct > 0) return "bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300";
   return "bg-[var(--surface)] text-[var(--text-muted)]";
 }
 
@@ -48,7 +48,7 @@ export default function RetentionMatrix({ data }: { data: RetentionData }) {
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-black/5">
+        <tbody className="divide-y divide-black/5 dark:divide-white/10">
           {data.cohorts.map((cohort) => (
             <tr key={cohort.weekStart}>
               <td className="py-2 pr-4 text-left tabular-nums text-[var(--text-secondary)]">
