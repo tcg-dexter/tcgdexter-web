@@ -140,7 +140,7 @@ export type EffectOp =
   | { op: "hand_to_bottom_draw"; n: Quantity; who: "own" | "opponent" | "both" }
   // Route resolved picks (a card TargetSpec) into a destination zone. `search`
   // pulls from the deck (then shuffles), `retrieve` from the discard pile.
-  | { op: "search"; targetRef: string; to: "hand" | "bench" }
+  | { op: "search"; targetRef: string; to: "hand" | "bench" | "deck_top" }
   | { op: "retrieve"; targetRef: string; to: "hand" | "bench" }
   // Move resolved energy cards (a card TargetSpec) onto a resolved mon.
   | { op: "attach_energy"; energyRef: string; monRef: string; from: "deck" | "discard" }

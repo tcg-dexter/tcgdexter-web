@@ -48,7 +48,10 @@ import { shuffle, type Rng } from "./rng";
 // v9: coin-flip / top-N-reveal / discard-cost ops land (W2-fin.4). Crushing
 // Hammer, Dawn, Pokégear 3.0, Bug Catching Set and Secret Box are really
 // played instead of generic cycle-draw, and coin_flip consumes the rng.
-export const SIM_VERSION = 9;
+// v10: multi-pick within a single target slot (W2-fin.5) — Cyrano, Arven and
+// Ciphermaniac's Codebreaking are really played, and a pick may take several
+// copies of the same card. Enumeration is capped per slot and per effect.
+export const SIM_VERSION = 10;
 
 const MAX_MULLIGANS = 20;
 

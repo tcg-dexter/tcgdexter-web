@@ -111,16 +111,22 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
     case "search":
     case "retrieve": {
       const zone = op.op === "search" ? side.deck : side.discard;
+      const pulledCards: CardInstance[] = [];
       for (const card of cards(ctx, op.targetRef)) {
         const pulled = spliceById(zone, card.id);
         if (!pulled) continue;
         if (op.to === "bench" && side.bench.length < benchCap(state, actor)) {
           side.bench.push(toPokemonInPlay(pulled, state.turn.number));
+        } else if (op.to === "deck_top") {
+          pulledCards.push(pulled); // placed AFTER the shuffle, below
         } else {
           side.hand.push(pulled);
         }
       }
       if (op.op === "search" && rng) shuffle(side.deck, rng);
+      // "Shuffle your deck, THEN put those cards on top" (Ciphermaniac's
+      // Codebreaking) — the order matters, or the setup gets shuffled away.
+      if (pulledCards.length > 0) side.deck.unshift(...pulledCards);
       break;
     }
 

@@ -213,6 +213,79 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
     },
   ],
 
+  /* ── Multi-pick searches (W2-fin.5) ──────────────────────────── */
+
+  // Cyrano: search your deck for up to 3 Pokémon ex. The first true multi-pick
+  // slot — count 3 with upTo, so the enumerator offers 3/2/1/0 and may take
+  // several copies of the SAME ex (legal, and often what you want).
+  Cyrano: [
+    {
+      card: "Cyrano",
+      trigger: { kind: "trainer", subtype: "Supporter" },
+      targets: [
+        {
+          ref: "p",
+          select: "card",
+          count: 3,
+          upTo: true,
+          card: { zone: "deck", filter: { supertype: "Pokémon", subtype: "ex" } },
+          chooser: "player",
+        },
+      ],
+      ops: [{ op: "search", targetRef: "p", to: "hand" }],
+    },
+  ],
+
+  // Ciphermaniac's Codebreaking: search for 2 cards, shuffle, then put them on
+  // TOP of the deck. No filter — any 2 cards — so the slot is capped by
+  // MAX_SLOT_OPTIONS rather than by the filter.
+  "Ciphermaniac's Codebreaking": [
+    {
+      card: "Ciphermaniac's Codebreaking",
+      trigger: { kind: "trainer", subtype: "Supporter" },
+      targets: [
+        {
+          ref: "c",
+          select: "card",
+          count: 2,
+          upTo: true,
+          card: { zone: "deck", filter: {} },
+          chooser: "player",
+        },
+      ],
+      ops: [{ op: "search", targetRef: "c", to: "deck_top" }],
+    },
+  ],
+
+  // Arven: search for an Item AND a Pokémon Tool. Two slots rather than a
+  // multi-pick — the categories differ, so the cartesian product is right.
+  Arven: [
+    {
+      card: "Arven",
+      trigger: { kind: "trainer", subtype: "Supporter" },
+      targets: [
+        {
+          ref: "i",
+          upTo: true,
+          select: "card",
+          card: { zone: "deck", filter: { supertype: "Trainer", subtype: "Item" } },
+          chooser: "player",
+        },
+        {
+          ref: "t",
+          upTo: true,
+          select: "card",
+          card: { zone: "deck", filter: { supertype: "Trainer", subtype: "Pokémon Tool" } },
+          chooser: "player",
+        },
+      ],
+      ops: [
+        { op: "search", targetRef: "i", to: "hand" },
+        { op: "search", targetRef: "t", to: "hand" },
+      ],
+    },
+  ],
+
   /* ── State-dependent damage (damage_scale) ───────────────────── */
 
   // MIGRATED from the legacy DAMAGE_SCALERS registry (attacks.ts). Behavior is

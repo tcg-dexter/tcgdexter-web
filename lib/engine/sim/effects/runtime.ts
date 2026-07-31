@@ -195,34 +195,134 @@ export function evalDamageFormula(
 /** Options for one target slot: each option is one EffectPick. A `player`
  *  chooser yields one option per candidate; `auto` collapses to the first;
  *  `all` yields a single option covering every candidate. */
+/** Ceiling on the options ONE target slot may produce. "Up to 3" over a wide
+ *  deck is genuinely large, and slots multiply through the cartesian product,
+ *  so an uncapped enumeration would blow up legalMoves (and every policy that
+ *  scores it). Truncation is deterministic — zone order — so replay is stable. */
+const MAX_SLOT_OPTIONS = 60;
+
+/** Ceiling on the moves ONE effect may enumerate across all its slots. The
+ *  per-slot cap alone isn't enough: three slots at 60 each is 216,000. */
+const MAX_EFFECT_MOVES = 200;
+
+/** Choose `k` items, allowing an item to repeat up to `copies` times.
+ *  Multi-pick of the SAME NAME is legal and often correct (Cyrano taking two
+ *  copies of one Pokémon ex), which is exactly what the by-name candidate
+ *  dedupe would otherwise forbid — so repeats are modelled by copy count
+ *  rather than by listing every physical card. Combinations, not permutations:
+ *  picking A then B is the same choice as B then A. */
+function combinationsWithCopies<T>(
+  groups: { item: T; copies: number }[],
+  k: number,
+  limit: number,
+): T[][] {
+  if (k <= 0) return [[]];
+  const out: T[][] = [];
+  const walk = (start: number, left: number, acc: T[]): void => {
+    if (out.length >= limit) return;
+    if (left === 0) {
+      out.push([...acc]);
+      return;
+    }
+    for (let i = start; i < groups.length; i++) {
+      const { item, copies } = groups[i];
+      // Take 1..copies of this item, then move on to strictly later items —
+      // that ordering is what makes these combinations rather than orderings.
+      for (let take = 1; take <= Math.min(copies, left); take++) {
+        for (let n = 0; n < take; n++) acc.push(item);
+        walk(i + 1, left - take, acc);
+        acc.length -= take;
+        if (out.length >= limit) return;
+      }
+    }
+  };
+  walk(0, k, []);
+  return out;
+}
+
+/** Sizes a slot may resolve to: exactly `count`, or 0..count when `upTo`. */
+function slotSizes(spec: TargetSpec, available: number): number[] {
+  const want = Math.max(0, spec.count ?? 1);
+  const capped = Math.min(want, available);
+  if (!spec.upTo) return [capped];
+  // Largest first: "up to N" is usually best taken in full, and if the cap
+  // truncates we keep the most useful options.
+  const sizes: number[] = [];
+  for (let n = capped; n >= 0; n--) sizes.push(n);
+  return sizes;
+}
+
 function specOptions(state: GameState, actor: Actor, spec: TargetSpec): EffectPick[] {
   if (spec.select === "mon") {
     const cands = candidateMons(state, actor, spec);
-    if (cands.length === 0) return spec.upTo ? [{ ref: spec.ref, monIds: [], monNames: [] }] : [];
     const pick = (ms: ResolvedMon[]): EffectPick => ({
       ref: spec.ref,
       monIds: ms.map((m) => m.mon.id),
       monNames: ms.map((m) => m.mon.card.name),
     });
+    if (cands.length === 0) return spec.upTo ? [pick([])] : [];
     if (spec.chooser === "all") return [pick(cands)];
-    if (spec.chooser === "auto") return [pick([cands[0]])];
-    return cands.map((m) => pick([m]));
+    const wanted = Math.max(1, spec.count ?? 1);
+    if (spec.chooser === "auto") return [pick(cands.slice(0, wanted))];
+    // Each Pokémon in play is a distinct entity — no copies to collapse.
+    const groups = cands.map((m) => ({ item: m, copies: 1 }));
+    const out: EffectPick[] = [];
+    for (const size of slotSizes(spec, cands.length)) {
+      for (const combo of combinationsWithCopies(groups, size, MAX_SLOT_OPTIONS - out.length)) {
+        out.push(pick(combo));
+      }
+      if (out.length >= MAX_SLOT_OPTIONS) break;
+    }
+    return out;
   }
-  const cands = candidateCards(state, actor, spec);
-  if (cands.length === 0) return spec.upTo ? [{ ref: spec.ref, cardIds: [], cardNames: [] }] : [];
+
+  const zone = zoneOf(state, actor, spec);
+  const matching = zone.filter((c) => cardMatches(c, spec.card!.filter));
   const pick = (cs: CardInstance[]): EffectPick => ({
     ref: spec.ref,
     cardIds: cs.map((c) => c.id),
     cardNames: cs.map((c) => c.name),
   });
-  if (spec.chooser === "all") return [pick(cands)];
-  if (spec.chooser === "auto") return [pick([cands[0]])];
-  return cands.map((c) => pick([c]));
+  if (matching.length === 0) return spec.upTo ? [pick([])] : [];
+  if (spec.chooser === "all") return [pick(matching)];
+  const wanted = Math.max(1, spec.count ?? 1);
+  if (spec.chooser === "auto") return [pick(dedupeByName(matching).slice(0, wanted))];
+
+  // Group the physical cards by name: the CHOICE is which names to take and
+  // how many of each; which specific copy is irrelevant and would only
+  // multiply identical moves.
+  const byName = new Map<string, CardInstance[]>();
+  for (const c of matching) {
+    const bucket = byName.get(c.name);
+    if (bucket) bucket.push(c);
+    else byName.set(c.name, [c]);
+  }
+  const groups = Array.from(byName.values()).map((cs) => ({ item: cs, copies: cs.length }));
+
+  const out: EffectPick[] = [];
+  for (const size of slotSizes(spec, matching.length)) {
+    const combos = combinationsWithCopies(groups, size, MAX_SLOT_OPTIONS - out.length);
+    for (const combo of combos) {
+      // combo holds one bucket entry per copy taken; hand back distinct cards.
+      const used = new Map<CardInstance[], number>();
+      const cards: CardInstance[] = [];
+      for (const bucket of combo) {
+        const i = used.get(bucket) ?? 0;
+        used.set(bucket, i + 1);
+        cards.push(bucket[i]);
+      }
+      out.push(pick(cards));
+    }
+    if (out.length >= MAX_SLOT_OPTIONS) break;
+  }
+  return out;
 }
 
 /** All concrete moves for a card's effect (empty if guards fail or a required
- *  target has no candidate). v1 enumerates a single pick per slot; the
- *  cartesian product spans multiple target slots (e.g. energy × mon). */
+ *  target has no candidate). Each slot enumerates its own combinations
+ *  (including multi-pick and same-name repeats); the cartesian product then
+ *  spans slots (e.g. energy × mon). Both are capped — per slot by
+ *  MAX_SLOT_OPTIONS, and across slots by MAX_EFFECT_MOVES. */
 export function enumerateEffect(
   state: GameState,
   actor: Actor,
@@ -239,7 +339,13 @@ export function enumerateEffect(
     const opts = specOptions(state, actor, spec);
     if (opts.length === 0) return []; // a required slot with no candidate
     const next: EffectPick[][] = [];
-    for (const combo of combos) for (const opt of opts) next.push([...combo, opt]);
+    for (const combo of combos) {
+      for (const opt of opts) {
+        if (next.length >= MAX_EFFECT_MOVES) break;
+        next.push([...combo, opt]);
+      }
+      if (next.length >= MAX_EFFECT_MOVES) break;
+    }
     combos = next;
   }
   return combos.map((picks) => ({ ...base, picks }));

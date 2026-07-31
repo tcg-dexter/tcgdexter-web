@@ -512,6 +512,90 @@ describe("W2-fin — new primitive ops", () => {
   });
 });
 
+describe("W2-fin — multi-pick within one target slot", () => {
+  function movesFor(s: GameState, name: string): EffectMove[] {
+    s.sides.player.hand = [card(name)];
+    return legalMoves(s, "player", ctx()).filter(
+      (m): m is EffectMove => m.kind === "effect" && m.card === name,
+    );
+  }
+
+  it("Cyrano: enumerates 3/2/1/0 picks and can take MULTIPLE COPIES of one ex", () => {
+    const s = state();
+    // Three copies of one ex + one of another: taking 2x the same card is legal.
+    s.sides.player.deck.splice(
+      0,
+      0,
+      card("Fezandipiti ex"),
+      card("Fezandipiti ex"),
+      card("Fezandipiti ex"),
+      card("Pecharunt ex"),
+    );
+    const moves = movesFor(s, "Cyrano");
+    const sizes = new Set(moves.map((m) => m.picks[0].cardIds?.length ?? 0));
+    expect(sizes.has(3)).toBe(true);
+    expect(sizes.has(0)).toBe(true); // "up to" includes declining
+
+    // The key behavior: a pick naming the same card twice, with DISTINCT ids.
+    const doubled = moves.find(
+      (m) =>
+        (m.picks[0].cardNames ?? []).filter((n) => n === "Fezandipiti ex").length >= 2,
+    );
+    expect(doubled, "no multi-copy pick was enumerated").toBeDefined();
+    const ids = doubled!.picks[0].cardIds!;
+    expect(new Set(ids).size).toBe(ids.length); // distinct physical cards
+
+    // And it really fetches them all.
+    expect(isLegalHumanMove(s, "player", ctx(), doubled!)).toBe(true);
+    const before = s.sides.player.hand.length;
+    applyMove(s, "player", doubled!, ctx(), mulberry32(9));
+    // Hand: -1 for Cyrano itself, +N fetched.
+    expect(s.sides.player.hand.length).toBe(before - 1 + ids.length);
+  });
+
+  it("Ciphermaniac's Codebreaking: puts the 2 found cards on TOP, after the shuffle", () => {
+    const s = state();
+    const moves = movesFor(s, "Ciphermaniac's Codebreaking");
+    const two = moves.find((m) => (m.picks[0].cardIds?.length ?? 0) === 2);
+    expect(two, "no 2-card pick enumerated").toBeDefined();
+    const wantedIds = two!.picks[0].cardIds!;
+
+    applyMove(s, "player", two!, ctx(), mulberry32(9));
+    // Both are on top of the deck — not shuffled back in.
+    expect(s.sides.player.deck.slice(0, 2).map((c) => c.id).sort()).toEqual([...wantedIds].sort());
+  });
+
+  it("Arven: two DIFFERENT category slots multiply (Item × Tool), not multi-pick", () => {
+    const s = state();
+    const item = card("Nest Ball");
+    s.sides.player.deck.splice(0, 0, item);
+    const moves = movesFor(s, "Arven");
+    expect(moves.length).toBeGreaterThan(0);
+    const withItem = moves.find((m) => m.picks.some((p) => p.cardIds?.includes(item.id)));
+    expect(withItem).toBeDefined();
+    applyMove(s, "player", withItem!, ctx(), mulberry32(9));
+    expect(s.sides.player.hand.some((c) => c.id === item.id)).toBe(true);
+  });
+
+  it("caps enumeration so a wide unfiltered multi-pick can't explode legalMoves", () => {
+    const s = state();
+    // Codebreaking has NO filter: every one of ~50 deck cards is a candidate,
+    // and choose-2 over that is ~1000+ combinations uncapped.
+    const moves = movesFor(s, "Ciphermaniac's Codebreaking");
+    expect(moves.length).toBeGreaterThan(1);
+    expect(moves.length).toBeLessThanOrEqual(200);
+  });
+
+  it("multi-pick enumeration is deterministic (same state ⇒ same moves)", () => {
+    const sig = () => {
+      const s = state();
+      s.sides.player.deck.splice(0, 0, card("Fezandipiti ex"), card("Fezandipiti ex"));
+      return JSON.stringify(movesFor(s, "Cyrano").map((m) => m.picks[0].cardNames));
+    };
+    expect(sig()).toBe(sig());
+  });
+});
+
 describe("W2 cutover — the interactive/API path the play UI drives", () => {
   // A legal 60-card deck built around the declarative card, so a human can be
   // dealt it. Team Rocket's Transceiver (Item) fetches a Team Rocket's Supporter.
