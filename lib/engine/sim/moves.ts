@@ -11,8 +11,8 @@ import { abilityMoves, hasLegacyActivated, type UseAbilityMove } from "./abiliti
 import { cannotAct } from "./conditions";
 import { canRetreat, effectiveMaxHp, isTool } from "./tools";
 import { benchCap, stadiumMoves, type UseStadiumMove } from "./stadiums";
-import { enumerateEffect, type EffectMove } from "./effects/runtime";
-import { abilityEffects, effectsFor } from "./effects/cards";
+import { enumerateEffect, type EffectMove, type EffectPick } from "./effects/runtime";
+import { abilityEffects, attackRiderEffect, effectsFor } from "./effects/cards";
 
 export type SimMove =
   | { kind: "attach"; cardId: string; targetId: string }
@@ -38,6 +38,10 @@ export type SimMove =
       benchCounters?: string[];
       /** Opponent-bench monIds hit by bench damage (Flamebody Cannon). */
       benchDamageTargets?: string[];
+      /** Target picks for this attack's DECLARATIVE rider (Cruel Arrow's
+       *  "1 of your opponent's Pokémon"). Enumerated alongside the attack —
+       *  a rider is never a move of its own; it resolves after damage. */
+      riderPicks?: EffectPick[];
     }
   | { kind: "pass" };
 
@@ -301,8 +305,30 @@ export function legalMoves(
 
   // Attack (ends the turn). Nobody attacks on the game's very first turn.
   if (activeCanAct && side.active && state.turn.number > 1) {
-    for (const { index } of usableAttacks(side.active)) {
-      moves.push({ kind: "attack", attackIndex: index });
+    for (const { index, attack } of usableAttacks(side.active)) {
+      // A declarative rider with target slots multiplies the attack into one
+      // move per pick combination; riderPicks rides on the attack move so the
+      // whole attack (damage + rider) stays a single atomic decision.
+      const rider = attackRiderEffect(side.active.card.name, attack.name);
+      const combos = rider
+        ? enumerateEffect(
+            state,
+            actor,
+            { id: side.active.id, name: side.active.card.name },
+            rider.effect,
+            rider.index,
+            side.active,
+          )
+        : [];
+      if (rider && combos.length > 0 && (rider.effect.targets?.length ?? 0) > 0) {
+        for (const combo of combos) {
+          moves.push({ kind: "attack", attackIndex: index, riderPicks: combo.picks });
+        }
+      } else {
+        // No rider, a target-less rider (resolved via `self`), or a rider whose
+        // required target has no candidate — the attack itself is still legal.
+        moves.push({ kind: "attack", attackIndex: index });
+      }
     }
   }
 

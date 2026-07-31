@@ -10,7 +10,7 @@ import { legalMoves, type SimMove, type TurnContext } from "./moves";
 import { attackBenchCounterCount, attackBenchDamageTargets } from "./attacks";
 import { isSupporter, trainerDiscardCost } from "./trainers";
 import { enumerateEffect, type EffectMove } from "./effects/runtime";
-import { effectsFor } from "./effects/cards";
+import { attackRiderEffect, effectsFor } from "./effects/cards";
 
 /** Order-insensitive fingerprint of an effect move's picks, so a human
  *  selection matches an enumerated move regardless of id/slot ordering. */
@@ -108,6 +108,42 @@ export function isLegalHumanMove(
       if (move.benchDamageTargets.length > targets) return false;
       if (new Set(move.benchDamageTargets).size !== move.benchDamageTargets.length) return false;
       if (!move.benchDamageTargets.every(onBench)) return false;
+    }
+    // Declarative rider picks (Cruel Arrow's target). The rider resolves inside
+    // this attack, so a forged pick here would hit an arbitrary Pokémon —
+    // re-enumerate and require an exact match, same as a standalone effect move.
+    const attack = attacker.card.catalog?.attacks[move.attackIndex];
+    const rider = attack ? attackRiderEffect(attacker.card.name, attack.name) : null;
+    const wantsPicks = (rider?.effect.targets?.length ?? 0) > 0;
+    if (move.riderPicks != null && move.riderPicks.length > 0) {
+      if (!rider || !wantsPicks) return false; // picks supplied for a rider that takes none
+      const enumerated = enumerateEffect(
+        state,
+        actor,
+        { id: attacker.id, name: attacker.card.name },
+        rider.effect,
+        rider.index,
+        attacker,
+      );
+      const supplied = effectPicks({
+        kind: "effect",
+        sourceId: attacker.id,
+        card: attacker.card.name,
+        effectIndex: rider.index,
+        picks: move.riderPicks,
+      });
+      if (!enumerated.some((m) => effectPicks(m) === supplied)) return false;
+    } else if (wantsPicks) {
+      // A rider that needs a target must carry one whenever a candidate exists.
+      const enumerated = enumerateEffect(
+        state,
+        actor,
+        { id: attacker.id, name: attacker.card.name },
+        rider!.effect,
+        rider!.index,
+        attacker,
+      );
+      if (enumerated.length > 0) return false;
     }
     return true;
   }

@@ -18,7 +18,7 @@ import { attackConditionModeled } from "./conditions";
 import { isStadiumModeled } from "./stadiums";
 import { isToolModeled } from "./tools";
 import { TRAINER_EFFECTS } from "./trainers";
-import { effectsFor, hasDeclarativeAbility } from "./effects/cards";
+import { attackRiderEffect, effectsFor, hasDeclarativeAbility } from "./effects/cards";
 
 export type EffectSlotKind =
   | "ability"
@@ -72,7 +72,8 @@ export function classifyCardEffects(name: string): EffectSlot[] {
       if (!scaled && !hasRider) continue; // vanilla attack — just damage
       const implemented =
         isAttackModeled(card.name, attack.name) ||
-        attackConditionModeled(card.name, attack.name);
+        attackConditionModeled(card.name, attack.name) ||
+        attackRiderEffect(card.name, attack.name) !== null;
       slots.push({
         kind: scaled ? "damage_scale" : "attack_rider",
         key: `${card.name}::${attack.name}`,

@@ -26,7 +26,7 @@ import { buildSimInitialState, energyUnits, toPokemonInPlay, type SimDeck } from
 import { retreatCost } from "./tools";
 import { applyTrainer } from "./trainers";
 import { applyEffect } from "./effects/runtime";
-import { effectsFor } from "./effects/cards";
+import { attackRiderEffect, effectsFor } from "./effects/cards";
 import { applyStadium, benchCap, enforceBenchCap } from "./stadiums";
 import { viewFor } from "./view";
 import { shuffle, type Rng } from "./rng";
@@ -301,14 +301,35 @@ export function applyMove(
         placeBenchDamage(defSide, effect.amount, effect.targets, move.benchDamageTargets);
       }
 
+      // Declarative attack rider (W2-fin): resolves AFTER damage and placement,
+      // BEFORE knockouts — so rider damage can contribute to a KO this turn.
+      const rider = attackRiderEffect(attacker.card.name, attack.name);
+      if (rider) {
+        applyEffect(
+          state,
+          actor,
+          rider.effect,
+          {
+            kind: "effect",
+            sourceId: attacker.id,
+            card: attacker.card.name,
+            effectIndex: rider.index,
+            picks: move.riderPicks ?? [],
+          },
+          rng,
+          attacker,
+        );
+      }
+
       const ko = resolveKnockouts(state);
       if (ko.winner) {
         state.winner = ko.winner;
         state.endReason = ko.endReason;
         return done(true, null, ko.koTurn);
       }
-      // The attacking side's own active can't be promotion-pending from a
-      // normal attack; the defender promotes if its active fell.
+      // The defender promotes if its active fell. (A self-damaging rider could
+      // in principle leave the ATTACKER promotion-pending too, but `done` can
+      // only carry one — no such rider is modeled yet; revisit when one lands.)
       const pending = ko.pendingPromotions.includes(defActor) ? defActor : null;
       return done(true, pending, ko.koTurn);
     }

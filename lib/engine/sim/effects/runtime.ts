@@ -13,6 +13,7 @@ import { prizeValue } from "../setup";
 import { energyProvides } from "../setup";
 import { applyOps, type OpContext, type ResolvedMon, type ResolvedTargets } from "./primitives";
 import { isSupporter } from "../trainers";
+import { SELF_REF } from "./types";
 import type { CardEffect, CardFilter, Guard, MonFilter, TargetSpec } from "./types";
 
 type Actor = "player" | "opponent";
@@ -244,6 +245,9 @@ export function applyEffect(
   effect: CardEffect,
   move: EffectMove,
   rng: Rng | null,
+  /** The source Pokémon for non-trainer triggers. Defaults to a lookup by
+   *  `move.sourceId`; pass explicitly for `attack_rider` (the attacker). */
+  sourceMon: PokemonInPlay | null = null,
 ): void {
   const side = state.sides[actor];
 
@@ -256,12 +260,16 @@ export function applyEffect(
     side.discard.push(cardInstance); // the trainer itself
   }
 
-  const targets = resolveTargets(state, actor, effect, move);
-  const ctx: OpContext = { state, actor, targets, rng };
+  const source =
+    effect.trigger.kind === "trainer"
+      ? null
+      : (sourceMon ?? [side.active, ...side.bench].find((m) => m?.id === move.sourceId) ?? null);
+
+  const targets = resolveTargets(state, actor, effect, move, source);
+  const ctx: OpContext = { state, actor, targets, rng, source };
   applyOps(effect.ops, ctx);
 
   if (effect.trigger.kind === "activated" || effect.trigger.kind === "on_play") {
-    const mon = [side.active, ...side.bench].find((m) => m?.id === move.sourceId);
-    if (mon && effect.ability) mon.abilitiesUsedThisTurn.push(effect.ability);
+    if (source && effect.ability) source.abilitiesUsedThisTurn.push(effect.ability);
   }
 }

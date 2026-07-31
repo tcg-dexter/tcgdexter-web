@@ -214,6 +214,100 @@ describe("W2-fin — declarative `activated` ability trigger", () => {
   });
 });
 
+describe("W2-fin — declarative `attack_rider` trigger", () => {
+  /** Put `attackerName` Active with `energy` copies of a basic energy that can
+   *  actually pay its attack cost (Cruel Arrow is Colorless, Mini Drain Grass,
+   *  Tail Smack Lightning — the wrong type simply yields no legal attack). */
+  function attackReady(
+    s: GameState,
+    attackerName: string,
+    energy: number,
+    type = "Darkness",
+  ): PokemonInPlay {
+    const atk = mon(attackerName);
+    for (let i = 0; i < energy; i++) atk.attachedEnergy.push(card(`Basic ${type} Energy`));
+    s.sides.player.active = atk;
+    return atk;
+  }
+
+  it("Cruel Arrow: the attack enumerates one move per target and damages the pick", () => {
+    const s = state();
+    const fez = attackReady(s, "Fezandipiti ex", 3);
+    s.sides.opponent.active = mon("Pikachu");
+    const benched = mon("Snorlax");
+    s.sides.opponent.bench = [benched];
+
+    const attacks = legalMoves(s, "player", ctx()).filter(
+      (m): m is Extract<SimMove, { kind: "attack" }> => m.kind === "attack",
+    );
+    const cruel = attacks.filter((m) => m.riderPicks && m.riderPicks.length > 0);
+    // One move per opponent Pokémon in play (active + bench).
+    expect(cruel.length).toBe(2);
+    expect(
+      cruel.some((m) => m.riderPicks![0].monIds?.includes(benched.id)),
+    ).toBe(true);
+
+    // Pick the BENCHED target — this is what a rider makes possible and what
+    // the old inert path could never do.
+    const atBench = cruel.find((m) => m.riderPicks![0].monIds?.includes(benched.id))!;
+    expect(isLegalHumanMove(s, "player", ctx(), atBench)).toBe(true);
+    applyMove(s, "player", atBench, ctx(), mulberry32(9));
+    expect(benched.damage).toBe(100); // no W/R on the bench
+    expect(fez.card.name).toBe("Fezandipiti ex");
+  });
+
+  it("rejects a forged rider target that enumeration never produced", () => {
+    const s = state();
+    attackReady(s, "Fezandipiti ex", 3);
+    s.sides.opponent.active = mon("Pikachu");
+
+    const attack = legalMoves(s, "player", ctx()).find(
+      (m): m is Extract<SimMove, { kind: "attack" }> => m.kind === "attack",
+    )!;
+    const forged = { ...attack, riderPicks: [{ ref: "t", monIds: ["not-a-real-mon-id"] }] };
+    expect(isLegalHumanMove(s, "player", ctx(), forged)).toBe(false);
+  });
+
+  it("rejects an attack that omits picks its rider requires", () => {
+    const s = state();
+    attackReady(s, "Fezandipiti ex", 3);
+    s.sides.opponent.active = mon("Pikachu");
+
+    // Candidates exist, so a bare attack (no rider target) must not validate.
+    expect(isLegalHumanMove(s, "player", ctx(), { kind: "attack", attackIndex: 0 })).toBe(false);
+  });
+
+  it("Mini Drain: a target-less rider heals the attacker via the reserved `self` ref", () => {
+    const s = state();
+    const applin = attackReady(s, "Applin", 1, "Grass");
+    applin.damage = 50;
+    s.sides.opponent.active = mon("Snorlax");
+
+    const attack = legalMoves(s, "player", ctx()).find(
+      (m): m is Extract<SimMove, { kind: "attack" }> => m.kind === "attack",
+    )!;
+    // No target slot, so no picks are enumerated — the attack stands alone.
+    expect(attack.riderPicks).toBeUndefined();
+    expect(isLegalHumanMove(s, "player", ctx(), attack)).toBe(true);
+
+    applyMove(s, "player", attack, ctx(), mulberry32(9));
+    expect(applin.damage).toBe(40); // healed 10 from itself
+  });
+
+  it("attacks without a declarative rider are unchanged (no picks, still legal)", () => {
+    const s = state();
+    attackReady(s, "Pikachu", 3, "Lightning");
+    s.sides.opponent.active = mon("Snorlax");
+
+    const attacks = legalMoves(s, "player", ctx()).filter(
+      (m): m is Extract<SimMove, { kind: "attack" }> => m.kind === "attack",
+    );
+    expect(attacks.length).toBeGreaterThan(0);
+    expect(attacks.every((m) => m.riderPicks === undefined)).toBe(true);
+    expect(isLegalHumanMove(s, "player", ctx(), attacks[0])).toBe(true);
+  });
+});
+
 describe("W2 cutover — the interactive/API path the play UI drives", () => {
   // A legal 60-card deck built around the declarative card, so a human can be
   // dealt it. Team Rocket's Transceiver (Item) fetches a Team Rocket's Supporter.

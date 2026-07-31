@@ -5,6 +5,7 @@
 // the legacy TRAINER_EFFECTS/ACTIVATED registries — the two are mutually
 // exclusive during cutover so nothing double-lists.
 
+import { SELF_REF } from "./types";
 import type { CardEffect } from "./types";
 
 export const EFFECT_CARDS: Record<string, CardEffect[]> = {
@@ -84,6 +85,32 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
       ops: [{ op: "draw", n: 2 }],
     },
   ],
+
+  // Fezandipiti ex — Cruel Arrow: this attack does 100 damage to 1 of your
+  // opponent's Pokémon. (No Weakness/Resistance for Benched Pokémon — the
+  // damage_mon op applies W/R in the Active spot only.) The attack has no
+  // printed damage, so the rider IS the whole attack. Highest-impact
+  // unmodeled rider in the field (17 decks). Fezandipiti ex's Flip the Script
+  // ABILITY stays in the legacy registry — different slot, no conflict.
+  "Fezandipiti ex": [
+    {
+      card: "Fezandipiti ex",
+      trigger: { kind: "attack_rider", attackName: "Cruel Arrow" },
+      targets: [{ ref: "t", select: "mon", mon: { side: "opponent", zone: "in_play" }, chooser: "player" }],
+      ops: [{ op: "damage_mon", monRef: "t", amount: 100 }],
+    },
+  ],
+
+  // Applin — Mini Drain: heal 10 damage from this Pokémon. The simplest
+  // possible rider: no target slot, resolved entirely through the reserved
+  // `self` ref.
+  Applin: [
+    {
+      card: "Applin",
+      trigger: { kind: "attack_rider", attackName: "Mini Drain" },
+      ops: [{ op: "heal", monRef: SELF_REF, n: 10 }],
+    },
+  ],
 };
 
 export function effectsFor(cardName: string): CardEffect[] {
@@ -103,6 +130,23 @@ export function abilityEffects(
     if (effect.trigger.kind === trigger && effect.ability) out.push({ effect, index });
   });
   return out;
+}
+
+/** The declarative rider for an attack, with its ORIGINAL index in
+ *  effectsFor(card) so validate/driver resolve the same record. Riders are not
+ *  moves of their own — they resolve inside the attack that names them. */
+export function attackRiderEffect(
+  cardName: string,
+  attackName: string,
+): { effect: CardEffect; index: number } | null {
+  const effects = effectsFor(cardName);
+  for (let index = 0; index < effects.length; index++) {
+    const { trigger } = effects[index];
+    if (trigger.kind === "attack_rider" && trigger.attackName === attackName) {
+      return { effect: effects[index], index };
+    }
+  }
+  return null;
 }
 
 /** Effect-coverage predicate (W1): is this ability covered declaratively?

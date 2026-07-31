@@ -37,7 +37,11 @@ import { shuffle, type Rng } from "./rng";
 // outside the legacy ACTIVATED registry can now be real instead of inert —
 // Mega Kangaskhan ex's Run Errand draws 2 — so rollouts change for decks that
 // carry them.
-export const SIM_VERSION = 6;
+// v7: the declarative `attack_rider` trigger goes live (W2-fin). Riders resolve
+// after damage inside the attack (Fezandipiti ex's Cruel Arrow now really does
+// 100 to a chosen Pokémon instead of nothing), so rollouts change for the many
+// decks carrying rider attacks.
+export const SIM_VERSION = 7;
 
 const MAX_MULLIGANS = 20;
 
