@@ -45,3 +45,8 @@ next-env.d.ts
 
 # Local email design previews (generated)
 .email-preview/
+
+# Python bytecode from the scripts/ data exporters (regenerated on every run,
+# and version-specific — cpython-314.pyc churns the tree for no benefit)
+__pycache__/
+*.py[cod]
