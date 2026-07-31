@@ -7,12 +7,12 @@
 import type { EngineAttack, GameState, PlayerSide, PokemonInPlay } from "../types";
 import { energyProvides, energyUnits, isBasic } from "./setup";
 import { isSupporter, trainerMoves, trainerSpec, type PlayTrainerMove } from "./trainers";
-import { abilityMoves, type UseAbilityMove } from "./abilities";
+import { abilityMoves, hasLegacyActivated, type UseAbilityMove } from "./abilities";
 import { cannotAct } from "./conditions";
 import { canRetreat, effectiveMaxHp, isTool } from "./tools";
 import { benchCap, stadiumMoves, type UseStadiumMove } from "./stadiums";
 import { enumerateEffect, type EffectMove } from "./effects/runtime";
-import { effectsFor } from "./effects/cards";
+import { abilityEffects, effectsFor } from "./effects/cards";
 
 export type SimMove =
   | { kind: "attach"; cardId: string; targetId: string }
@@ -261,6 +261,24 @@ export function legalMoves(
 
   // Activated abilities (once per turn per Pokémon; conditions checked).
   moves.push(...abilityMoves(state, actor));
+
+  // Declarative activated abilities (W2) — same precedence rule as trainers:
+  // the legacy ACTIVATED registry wins (its tuned moves are what the policies'
+  // use_ability branches understand), and declarative records cover only the
+  // abilities it doesn't. Source id is the MON's id, which is what validate
+  // and applyEffect resolve the ability against.
+  for (const mon of inPlay) {
+    for (const ability of mon.card.catalog?.abilities ?? []) {
+      if (hasLegacyActivated(mon.card.name, ability.name)) continue;
+      for (const { effect, index } of abilityEffects(mon.card.name)) {
+        if (effect.ability !== ability.name) continue;
+        if (mon.abilitiesUsedThisTurn.includes(ability.name)) continue; // once per turn
+        moves.push(
+          ...enumerateEffect(state, actor, { id: mon.id, name: mon.card.name }, effect, index, mon),
+        );
+      }
+    }
+  }
 
   // Activated Stadium effect (Artazon), once per turn.
   moves.push(...stadiumMoves(state, actor, ctx.stadiumUsed ?? false));

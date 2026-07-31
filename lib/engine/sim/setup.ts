@@ -33,7 +33,11 @@ import { shuffle, type Rng } from "./rng";
 // (Team Rocket's Transceiver) is now really played instead of silent cycle-
 // draw, and the AI policies select effect moves — rollouts change for decks
 // that carry it.
-export const SIM_VERSION = 5;
+// v6: the declarative `activated` ability trigger goes live (W2-fin). Abilities
+// outside the legacy ACTIVATED registry can now be real instead of inert —
+// Mega Kangaskhan ex's Run Errand draws 2 — so rollouts change for decks that
+// carry them.
+export const SIM_VERSION = 6;
 
 const MAX_MULLIGANS = 20;
 

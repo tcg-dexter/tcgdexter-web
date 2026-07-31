@@ -129,6 +129,13 @@ export function isLegalHumanMove(
     } else {
       sourceMon = [side.active, ...side.bench].find((m) => m?.id === move.sourceId) ?? null;
       if (!sourceMon) return false;
+      // Activated abilities are once per turn per Pokémon, and applyEffect can
+      // only spend one that names an ability — both gates must hold here too,
+      // or a human could replay the ability indefinitely.
+      if (effect.trigger.kind === "activated") {
+        if (!effect.ability) return false;
+        if (sourceMon.abilitiesUsedThisTurn.includes(effect.ability)) return false;
+      }
     }
     const enumerated = enumerateEffect(
       state,

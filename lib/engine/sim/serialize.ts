@@ -9,6 +9,7 @@ import { computeDamage, remainingHp, sideOf, type SimMove } from "./moves";
 import { attackBenchCounterCount, attackBenchDamageTargets } from "./attacks";
 import { retreatCost } from "./tools";
 import { energyProvides } from "./setup";
+import { effectsFor } from "./effects/cards";
 import type { PlayerView } from "./view";
 
 /* ─── Action descriptions (for the AI move feed) ────────────────── */
@@ -106,7 +107,13 @@ export function describeMove(
         .flatMap((p) => p.monIds ?? [])
         .map((id) => monNameAnySide(state, id))
         .filter((n): n is string => n !== null);
-      return targets.length > 0 ? `Played ${move.card} on ${targets.join(", ")}` : `Played ${move.card}`;
+      // An ability reads "Used <Card>'s <Ability>"; a trainer reads "Played".
+      const effect = effectsFor(move.card)[move.effectIndex];
+      const verb =
+        effect && effect.trigger.kind !== "trainer" && effect.ability
+          ? `Used ${move.card}'s ${effect.ability}`
+          : `Played ${move.card}`;
+      return targets.length > 0 ? `${verb} on ${targets.join(", ")}` : verb;
     }
     case "use_ability": {
       const mon = [side.active, ...side.bench].find((m) => m?.id === move.monId);

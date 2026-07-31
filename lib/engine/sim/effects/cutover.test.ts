@@ -139,6 +139,81 @@ describe("W2 cutover — effect moves through validate + driver", () => {
   });
 });
 
+describe("W2-fin — declarative `activated` ability trigger", () => {
+  /** Put a Mega Kangaskhan ex into the Active spot and return it. */
+  function withKangaskhan(s: GameState): PokemonInPlay {
+    const kanga = mon("Mega Kangaskhan ex");
+    s.sides.player.active = kanga;
+    return kanga;
+  }
+
+  it("Run Errand: legalMoves emits it, the driver draws 2, and it is spent for the turn", () => {
+    const s = state();
+    const kanga = withKangaskhan(s);
+    const handBefore = s.sides.player.hand.length;
+    const deckBefore = s.sides.player.deck.length;
+
+    const legal = legalMoves(s, "player", ctx());
+    const abilityMove = legal.find(
+      (m): m is EffectMove => m.kind === "effect" && m.card === "Mega Kangaskhan ex",
+    );
+    expect(abilityMove, "Run Errand was not enumerated").toBeDefined();
+    // The source is the MON, not a hand card — that's what applyEffect resolves.
+    expect(abilityMove!.sourceId).toBe(kanga.id);
+    expect(describeMove(s, "player", abilityMove!)).toContain("Run Errand");
+    expect(isLegalHumanMove(s, "player", ctx(), abilityMove!)).toBe(true);
+
+    applyMove(s, "player", abilityMove!, ctx(), mulberry32(9));
+    expect(s.sides.player.hand.length).toBe(handBefore + 2);
+    expect(s.sides.player.deck.length).toBe(deckBefore - 2);
+
+    // Once per turn per Pokémon: gone from legalMoves AND rejected by validate
+    // (the human path must not be able to replay it).
+    expect(kanga.abilitiesUsedThisTurn).toContain("Run Errand");
+    const after = legalMoves(s, "player", ctx());
+    expect(after.some((m) => m.kind === "effect" && m.card === "Mega Kangaskhan ex")).toBe(false);
+    expect(isLegalHumanMove(s, "player", ctx(), abilityMove!)).toBe(false);
+  });
+
+  it("respects the is_active guard — benched Mega Kangaskhan ex cannot Run Errand", () => {
+    const s = state();
+    s.sides.player.active = mon("Pikachu");
+    s.sides.player.bench = [mon("Mega Kangaskhan ex")];
+
+    const legal = legalMoves(s, "player", ctx());
+    expect(legal.some((m) => m.kind === "effect" && m.card === "Mega Kangaskhan ex")).toBe(false);
+  });
+
+  it("legacy ACTIVATED abilities keep their tuned use_ability moves (precedence)", () => {
+    // Munkidori is in the legacy registry: it must still produce use_ability,
+    // and must NOT be double-listed as a declarative effect move.
+    const s = state();
+    const munkidori = mon("Munkidori");
+    munkidori.attachedEnergy = [card("Basic Darkness Energy")];
+    s.sides.player.active = munkidori;
+    const damaged = mon("Snorlax");
+    damaged.damage = 30;
+    s.sides.player.bench = [damaged];
+    s.sides.opponent.active = mon("Pikachu");
+
+    const legal = legalMoves(s, "player", ctx());
+    expect(legal.some((m) => m.kind === "use_ability" && m.abilityName === "Adrena-Brain")).toBe(true);
+    expect(legal.some((m) => m.kind === "effect" && m.card === "Munkidori")).toBe(false);
+  });
+
+  it("the heuristic AI selects a declarative draw ability", () => {
+    const s = state();
+    withKangaskhan(s);
+    s.sides.player.hand = []; // hand-starved: the draw branch should fire
+    s.sides.opponent.active = mon("Pikachu");
+
+    const legal = legalMoves(s, "player", ctx());
+    const chosen = new HeuristicPolicy().chooseMove(viewFor(s, "player", ctx()), legal, ctx());
+    expect(chosen.kind).toBe("effect");
+    expect((chosen as EffectMove).card).toBe("Mega Kangaskhan ex");
+  });
+});
+
 describe("W2 cutover — the interactive/API path the play UI drives", () => {
   // A legal 60-card deck built around the declarative card, so a human can be
   // dealt it. Team Rocket's Transceiver (Item) fetches a Team Rocket's Supporter.

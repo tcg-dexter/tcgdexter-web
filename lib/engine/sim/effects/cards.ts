@@ -69,10 +69,47 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
       ops: [{ op: "search", targetRef: "s", to: "hand" }],
     },
   ],
+
+  // Mega Kangaskhan ex — Run Errand: once during your turn, if this Pokémon
+  // is in the Active Spot, draw 2. (The printed "no more than 1 Run Errand
+  // per turn" cap across copies is not modeled — the per-Pokémon once-per-turn
+  // gate covers the single-copy case decks actually run. First ACTIVATED-
+  // trigger record: proves the ability path end to end.)
+  "Mega Kangaskhan ex": [
+    {
+      card: "Mega Kangaskhan ex",
+      ability: "Run Errand",
+      trigger: { kind: "activated" },
+      guards: [{ cond: "is_active" }],
+      ops: [{ op: "draw", n: 2 }],
+    },
+  ],
 };
 
 export function effectsFor(cardName: string): CardEffect[] {
   return EFFECT_CARDS[cardName] ?? [];
+}
+
+/** Declarative ability effects for a card, paired with their ORIGINAL index in
+ *  effectsFor(card) so validate/driver resolve the same record. Only effects
+ *  that NAME an ability qualify: applyEffect marks `effect.ability` as spent,
+ *  so an unnamed one could never be used up and would loop forever. */
+export function abilityEffects(
+  cardName: string,
+  trigger: "activated" | "on_play" | "on_evolve" = "activated",
+): { effect: CardEffect; index: number }[] {
+  const out: { effect: CardEffect; index: number }[] = [];
+  effectsFor(cardName).forEach((effect, index) => {
+    if (effect.trigger.kind === trigger && effect.ability) out.push({ effect, index });
+  });
+  return out;
+}
+
+/** Effect-coverage predicate (W1): is this ability covered declaratively?
+ *  Lives here rather than abilities.ts to keep that module free of an
+ *  effects-registry import. */
+export function hasDeclarativeAbility(cardName: string, abilityName: string): boolean {
+  return effectsFor(cardName).some((e) => e.ability === abilityName);
 }
 
 /** Coarse planner phase for a declarative effect, mirroring the legacy

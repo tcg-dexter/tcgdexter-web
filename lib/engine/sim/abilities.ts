@@ -195,10 +195,20 @@ const ACTIVATED: Record<string, ActivatedSpec> = {
   },
 };
 
+/** Is this ability handled by the LEGACY activated registry? The precedence
+ *  check the declarative path uses (moves.ts): legacy specs keep their tuned
+ *  handling and the policies' `use_ability` branches; declarative records only
+ *  cover abilities the legacy registry does NOT. */
+export function hasLegacyActivated(cardName: string, abilityName: string): boolean {
+  return `${cardName}::${abilityName}` in ACTIVATED;
+}
+
 /** Effect-coverage predicate (W1): is this Pokémon ability actually modeled,
- *  either as an activated ability or an on-evolve trigger? */
+ *  either as an activated ability or an on-evolve trigger? Declarative records
+ *  count too — see classifyCardEffects (coverage.ts), which ORs this with the
+ *  effects registry (kept there to avoid an abilities → effects import cycle). */
 export function isAbilityModeled(cardName: string, abilityName: string): boolean {
-  if (`${cardName}::${abilityName}` in ACTIVATED) return true;
+  if (hasLegacyActivated(cardName, abilityName)) return true;
   return cardName === "Charizard ex" && abilityName === "Infernal Reign";
 }
 

@@ -18,7 +18,7 @@ import { attackConditionModeled } from "./conditions";
 import { isStadiumModeled } from "./stadiums";
 import { isToolModeled } from "./tools";
 import { TRAINER_EFFECTS } from "./trainers";
-import { effectsFor } from "./effects/cards";
+import { effectsFor, hasDeclarativeAbility } from "./effects/cards";
 
 export type EffectSlotKind =
   | "ability"
@@ -59,7 +59,11 @@ export function classifyCardEffects(name: string): EffectSlot[] {
       slots.push({
         kind: "ability",
         key: `${card.name}::${ability.name}`,
-        implemented: isAbilityModeled(card.name, ability.name),
+        // Legacy ACTIVATED / on-evolve registry OR a declarative record —
+        // mutually exclusive during cutover; either counts as implemented.
+        implemented:
+          isAbilityModeled(card.name, ability.name) ||
+          hasDeclarativeAbility(card.name, ability.name),
       });
     }
     for (const attack of card.attacks ?? []) {
