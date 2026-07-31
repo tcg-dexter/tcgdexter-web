@@ -54,7 +54,7 @@ export default function AutoRefresh({
         setLastTickAt(Date.now());
       }}
       title="Click to refresh now"
-      className="group inline-flex items-center gap-1.5 rounded-full border border-black/10 bg-white px-2.5 py-1 text-[11px] text-[var(--text-secondary)] shadow-sm transition hover:border-black/25"
+      className="group inline-flex items-center gap-1.5 rounded-full border border-black/10 dark:border-white/15 bg-white dark:bg-surface-elevated px-2.5 py-1 text-[11px] text-[var(--text-secondary)] shadow-sm transition hover:border-black/25 dark:hover:border-white/30"
     >
       <span className="relative flex h-1.5 w-1.5">
         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60"></span>

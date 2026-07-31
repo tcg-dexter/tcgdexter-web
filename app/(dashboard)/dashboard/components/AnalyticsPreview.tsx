@@ -123,7 +123,7 @@ function BehaviorBlock({ data }: { data: Maybe<BehaviorData> }) {
           first session
         </div>
         {topFeatures.length > 0 ? (
-          <ul className="text-[11px] divide-y divide-black/5">
+          <ul className="text-[11px] divide-y divide-black/5 dark:divide-white/10">
             {topFeatures.map((f) => (
               <li key={f.eventName} className="flex items-center justify-between py-1">
                 <code className="font-mono text-[var(--text-secondary)] truncate pr-2">

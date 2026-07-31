@@ -5,9 +5,9 @@ import { ErrorBox, ExternalLinkPill, relTime } from "./Card";
 type Props = { data: OpsData | { error: string } };
 
 const STATUS_TONE: Record<string, string> = {
-  ok: "bg-emerald-100 text-emerald-700 ring-emerald-200",
-  partial: "bg-amber-100 text-amber-700 ring-amber-200",
-  failed: "bg-rose-100 text-rose-700 ring-rose-200",
+  ok: "bg-emerald-100 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:ring-emerald-500/25",
+  partial: "bg-amber-100 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:ring-amber-500/25",
+  failed: "bg-rose-100 text-rose-700 ring-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:ring-rose-500/25",
 };
 
 const STATUS_DOT: Record<string, string> = {
@@ -27,7 +27,7 @@ export default function OpsCard({ data }: Props) {
         <div className="flex items-center gap-3">
           {latest ? (
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ring-1 ${STATUS_TONE[latest.status] ?? "bg-gray-100 text-gray-700 ring-gray-200"}`}
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ring-1 ${STATUS_TONE[latest.status] ?? "bg-gray-100 text-gray-700 ring-gray-200 dark:bg-white/10 dark:text-white/70 dark:ring-white/15"}`}
             >
               <span className="relative flex h-1.5 w-1.5">
                 <span
@@ -40,7 +40,7 @@ export default function OpsCard({ data }: Props) {
               {latest.status}
             </span>
           ) : (
-            <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-gray-700 ring-1 ring-gray-200">
+            <span className="rounded-full bg-gray-100 dark:bg-white/10 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-gray-700 dark:text-white/70 ring-1 ring-gray-200 dark:ring-white/15">
               no runs
             </span>
           )}
@@ -67,7 +67,7 @@ export default function OpsCard({ data }: Props) {
                 <span
                   key={`${h.run_date}-${i}`}
                   title={`${h.run_date} · ${h.status} · ${Math.round(Number(h.total_seconds))}s`}
-                  className={`h-2.5 w-2.5 rounded-sm ring-1 ring-white/40 ${STATUS_DOT[h.status] ?? "bg-gray-300"}`}
+                  className={`h-2.5 w-2.5 rounded-sm ring-1 ring-white/40 ${STATUS_DOT[h.status] ?? "bg-gray-300 dark:bg-white/20"}`}
                 />
               ))}
             </div>
@@ -100,7 +100,7 @@ export default function OpsCard({ data }: Props) {
                   <th className="font-medium py-1 text-right">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-black/5">
+              <tbody className="divide-y divide-black/5 dark:divide-white/10">
                 {latest.steps.map((s) => (
                   <tr key={s.n}>
                     <td className="py-1.5 text-[var(--text-muted)] tabular-nums">{s.n}</td>
@@ -111,9 +111,9 @@ export default function OpsCard({ data }: Props) {
                     <td className="py-1.5 text-right tabular-nums">{s.seconds.toFixed(1)}s</td>
                     <td className="py-1.5 text-right">
                       {s.ok ? (
-                        <span className="text-emerald-600">✓</span>
+                        <span className="text-emerald-600 dark:text-emerald-400">✓</span>
                       ) : (
-                        <span className="text-rose-600">✗</span>
+                        <span className="text-rose-600 dark:text-rose-400">✗</span>
                       )}
                     </td>
                   </tr>
@@ -124,7 +124,7 @@ export default function OpsCard({ data }: Props) {
         </details>
       )}
 
-      <div className="flex flex-wrap items-center gap-2 border-t border-black/5 pt-3 text-xs">
+      <div className="flex flex-wrap items-center gap-2 border-t border-black/5 dark:border-white/10 pt-3 text-xs">
         <ExternalLinkPill href={links.supabase.table("ops_runs")}>
           ops_runs table
         </ExternalLinkPill>

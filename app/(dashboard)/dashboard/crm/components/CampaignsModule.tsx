@@ -36,13 +36,13 @@ export default function CampaignsModule({ campaigns }: { campaigns: CrmCampaign[
             <span>No active campaigns.</span>
             <Link
               href="/dashboard/crm/campaigns/new"
-              className="rounded-md bg-black px-2.5 py-1 text-[11px] font-semibold text-white hover:opacity-90"
+              className="rounded-md bg-black dark:bg-white px-2.5 py-1 text-[11px] font-semibold text-white dark:text-black hover:opacity-90"
             >
               New campaign
             </Link>
           </div>
         ) : (
-          <ul className="divide-y divide-black/5">
+          <ul className="divide-y divide-black/5 dark:divide-white/10">
             {active.map((c) => {
               const total = c.recipient_count;
               const sent = c.sent_count;

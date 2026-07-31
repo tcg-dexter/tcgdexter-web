@@ -5,16 +5,18 @@ import { ExternalLinkPill, relTime } from "./Card";
 type Props = { data: DeploysData };
 
 const STATE_TONE: Record<string, string> = {
-  READY: "bg-emerald-100 text-emerald-700 ring-emerald-200",
-  ERROR: "bg-rose-100 text-rose-700 ring-rose-200",
-  CANCELED: "bg-gray-100 text-gray-600 ring-gray-200",
-  BUILDING: "bg-sky-100 text-sky-700 ring-sky-200",
-  QUEUED: "bg-amber-100 text-amber-700 ring-amber-200",
-  INITIALIZING: "bg-amber-100 text-amber-700 ring-amber-200",
+  READY: "bg-emerald-100 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:ring-emerald-500/25",
+  ERROR: "bg-rose-100 text-rose-700 ring-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:ring-rose-500/25",
+  CANCELED: "bg-gray-100 text-gray-600 ring-gray-200 dark:bg-white/10 dark:text-white/60 dark:ring-white/15",
+  BUILDING: "bg-sky-100 text-sky-700 ring-sky-200 dark:bg-sky-500/15 dark:text-sky-400 dark:ring-sky-500/25",
+  QUEUED: "bg-amber-100 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:ring-amber-500/25",
+  INITIALIZING: "bg-amber-100 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:ring-amber-500/25",
 };
 
 function StatePill({ state }: { state: string }) {
-  const tone = STATE_TONE[state] ?? "bg-gray-100 text-gray-600 ring-gray-200";
+  const tone =
+    STATE_TONE[state] ??
+    "bg-gray-100 text-gray-600 ring-gray-200 dark:bg-white/10 dark:text-white/60 dark:ring-white/15";
   return (
     <span
       className={`shrink-0 rounded-full px-1.5 py-[1px] text-[10px] font-semibold uppercase tracking-wider ring-1 ${tone}`}
@@ -31,7 +33,7 @@ function DeployRow({ d }: { d: Deploy }) {
       <div className="flex items-center gap-2 text-xs">
         <StatePill state={d.state} />
         {isProd ? (
-          <span className="shrink-0 rounded-full bg-black/85 px-1.5 py-[1px] text-[10px] font-semibold uppercase tracking-wider text-white">
+          <span className="shrink-0 rounded-full bg-black/85 dark:bg-white/90 px-1.5 py-[1px] text-[10px] font-semibold uppercase tracking-wider text-white dark:text-black">
             prod
           </span>
         ) : null}
@@ -101,7 +103,7 @@ export default function DeploysCard({ data }: Props) {
           No recent deployments returned.
         </div>
       ) : (
-        <ul className="-mx-2 divide-y divide-black/5">
+        <ul className="-mx-2 divide-y divide-black/5 dark:divide-white/10">
           {data.deploys.map((d) => (
             <DeployRow key={d.id} d={d} />
           ))}

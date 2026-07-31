@@ -278,8 +278,8 @@ export default function CrmContactsClient({
               title={v.hint}
               className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                 active
-                  ? "bg-black text-white"
-                  : "border border-black/10 bg-white text-[var(--text-secondary)] hover:bg-[var(--surface)]"
+                  ? "bg-black dark:bg-white text-white dark:text-black"
+                  : "border border-black/10 dark:border-white/15 bg-white dark:bg-surface-elevated text-[var(--text-secondary)] hover:bg-[var(--surface)]"
               }`}
             >
               {v.label}
@@ -292,11 +292,11 @@ export default function CrmContactsClient({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search name, username or email"
-            className="min-w-[220px] rounded-md border border-black/10 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-black/30"
+            className="min-w-[220px] rounded-md border border-black/10 dark:border-white/15 bg-white dark:bg-surface-elevated px-2.5 py-1.5 text-xs outline-none focus:border-black/30 dark:focus:border-white/30"
           />
           <Link
             href="/dashboard/crm/campaigns/new"
-            className="rounded-md bg-black px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+            className="rounded-md bg-black dark:bg-white px-3 py-1.5 text-xs font-semibold text-white dark:text-black hover:opacity-90"
           >
             New campaign
           </Link>
@@ -304,7 +304,7 @@ export default function CrmContactsClient({
       </div>
 
       {selected.size > 0 ? (
-        <div className="sticky top-2 z-10 flex flex-wrap items-center gap-2 rounded-xl border border-black/10 bg-white/95 p-2.5 shadow-[0_2px_8px_-2px_rgba(15,15,15,0.18)] backdrop-blur-sm">
+        <div className="sticky top-2 z-10 flex flex-wrap items-center gap-2 rounded-xl border border-black/10 dark:border-white/15 bg-white/95 dark:bg-surface-elevated/95 p-2.5 shadow-[0_2px_8px_-2px_rgba(15,15,15,0.18)] backdrop-blur-sm">
           <span className="text-xs font-semibold">{selected.size} selected</span>
           <span className="text-[11px] text-[var(--text-muted)]">Add to campaign:</span>
           {campaignTargets.length === 0 ? (
@@ -316,7 +316,7 @@ export default function CrmContactsClient({
               <select
                 value={targetCampaign}
                 onChange={(e) => setTargetCampaign(e.target.value)}
-                className="rounded-md border border-black/10 bg-white px-2 py-1 text-xs"
+                className="rounded-md border border-black/10 dark:border-white/15 bg-white dark:bg-surface-elevated px-2 py-1 text-xs"
               >
                 {campaignTargets.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -328,7 +328,7 @@ export default function CrmContactsClient({
                 type="button"
                 disabled={pending}
                 onClick={addToCampaign}
-                className="rounded-md bg-black px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                className="rounded-md bg-black dark:bg-white px-3 py-1 text-xs font-semibold text-white dark:text-black disabled:opacity-50"
               >
                 {pending ? "Adding…" : "Add"}
               </button>
@@ -378,7 +378,7 @@ export default function CrmContactsClient({
               </tr>
             ) : (
               filtered.map((c) => (
-                <tr key={c.id} className="border-t border-black/5 hover:bg-[var(--surface)]/40">
+                <tr key={c.id} className="border-t border-black/5 dark:border-white/10 hover:bg-[var(--surface)]/40">
                   <td className="px-2 py-2 align-top">
                     <input
                       type="checkbox"
@@ -429,8 +429,8 @@ export default function CrmContactsClient({
                               }
                               className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] transition disabled:opacity-50 ${
                                 isSent
-                                  ? "bg-green-100 text-green-800 hover:bg-green-200"
-                                  : "border border-black/10 bg-white text-[var(--text-secondary)] hover:bg-[var(--surface)]"
+                                  ? "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-500/20 dark:text-green-300 dark:hover:bg-green-500/30"
+                                  : "border border-black/10 dark:border-white/15 bg-white dark:bg-surface-elevated text-[var(--text-secondary)] hover:bg-[var(--surface)]"
                               }`}
                             >
                               <span aria-hidden>{isSent ? "✓" : "○"}</span>

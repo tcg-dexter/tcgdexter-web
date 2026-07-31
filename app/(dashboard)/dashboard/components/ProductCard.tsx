@@ -63,7 +63,7 @@ export default function ProductCard({ data }: Props) {
             <div className="flex items-baseline gap-2 text-[11px] tabular-nums">
               <span className="text-[var(--text-secondary)]">{signupTotal} total</span>
               <span
-                className={`font-semibold ${signupDelta > 0 ? "text-emerald-600" : signupDelta < 0 ? "text-rose-600" : "text-[var(--text-muted)]"}`}
+                className={`font-semibold ${signupDelta > 0 ? "text-emerald-600 dark:text-emerald-400" : signupDelta < 0 ? "text-rose-600 dark:text-rose-400" : "text-[var(--text-muted)]"}`}
               >
                 {signupDelta >= 0 ? "▲" : "▼"} {Math.abs(signupDelta)} vs prior 7d
               </span>
