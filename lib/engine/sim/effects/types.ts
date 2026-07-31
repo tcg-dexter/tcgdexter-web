@@ -39,6 +39,13 @@ export interface MonFilter {
 
 /* ─── Targets ───────────────────────────────────────────────────── */
 
+/** Reserved target ref, always bound by the runtime (never declared as a
+ *  TargetSpec): the effect's SOURCE Pokémon — the ability's owner, or the
+ *  attacker for an `attack_rider`. Riders lean on it constantly ("heal this
+ *  Pokémon", "switch this Pokémon"), and binding it avoids enumerating a
+ *  one-candidate target slot on every attack. */
+export const SELF_REF = "self";
+
 /** A named target slot the interpreter resolves. `player` choosers enumerate
  *  concrete moves; `auto` collapses to a heuristic pick; `all` hits every
  *  match with no choice. */
@@ -91,6 +98,10 @@ export type EffectOp =
   | { op: "shuffle_deck" }
   | { op: "gust"; monRef: string } // swap opponent's chosen Bench mon to Active
   | { op: "switch"; monRef: string } // swap own chosen Bench mon to Active
+  // Raw damage to the resolved Pokémon ("this attack does N damage to 1 of
+  // your opponent's Pokémon"). Weakness/Resistance apply only in the Active
+  // spot, matching the printed reminder text on these attacks.
+  | { op: "damage_mon"; monRef: string; amount: number }
   | { op: "place_counters"; monRef: string; n: number }
   | { op: "move_counters"; fromRef: string; toRef: string; n: number }
   | { op: "apply_condition"; monRef: string; condition: SpecialCondition }

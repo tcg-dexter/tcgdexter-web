@@ -9,7 +9,8 @@ import { shuffle, type Rng } from "../rng";
 import { benchCap } from "../stadiums";
 import { toPokemonInPlay } from "../setup";
 import { applyCondition, clearConditions } from "../conditions";
-import { placeCounters, moveCounters } from "../damage";
+import { placeCounters, moveCounters, dealRawDamage } from "../damage";
+import { applyWeaknessResistance } from "../moves";
 import type { EffectOp, Quantity } from "./types";
 
 type Actor = "player" | "opponent";
@@ -30,6 +31,9 @@ export interface OpContext {
   actor: Actor;
   targets: ResolvedTargets;
   rng: Rng | null;
+  /** The effect's source Pokémon (ability owner / attacker), when there is
+   *  one. Also bound as the reserved `self` target ref. */
+  source?: PokemonInPlay | null;
 }
 
 /* ─── Zone helpers (mirror trainers.ts semantics) ───────────────── */
@@ -143,6 +147,19 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
       if (picked && picked.side === actor) promoteFromBench(side, picked.mon);
       break;
     }
+
+    case "damage_mon":
+      for (const { mon, side: monSide } of mons(ctx, op.monRef)) {
+        // W/R applies in the Active spot only — Benched Pokémon take the raw
+        // number (the parenthetical on Cruel Arrow and its kin).
+        const isActive = state.sides[monSide].active === mon;
+        const amount =
+          isActive && ctx.source
+            ? applyWeaknessResistance(op.amount, ctx.source, mon)
+            : op.amount;
+        dealRawDamage(mon, amount);
+      }
+      break;
 
     case "place_counters":
       for (const { mon } of mons(ctx, op.monRef)) placeCounters(mon, op.n);

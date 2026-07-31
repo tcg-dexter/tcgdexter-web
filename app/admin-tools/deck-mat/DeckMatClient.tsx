@@ -25,14 +25,29 @@ export interface DeckSummary {
   draws: number;
 }
 
-// Each fanned copy is offset by FAN_OVERLAP × the card's width.
-export const FAN_OVERLAP = 0.20;
-export const ROW_GAP_X = 6;
-export const MAX_PILES_PER_ROW = 8;
-export const MAX_ROWS = 4;
-export const MAT_PADDING = 8;
-// Standard playmat ratio: 24 (width) : 14 (height).
-export const MAT_ASPECT = 14 / 24;
+// Layout primitives live in a DOM-free module so the server-side email
+// renderer can share them; imported for local use and re-exported for
+// existing importers.
+import {
+  FAN_OVERLAP,
+  ROW_GAP_X,
+  MAX_PILES_PER_ROW,
+  MAX_ROWS,
+  MAT_PADDING,
+  MAT_ASPECT,
+  computeRows,
+  computeCardWidth,
+} from "@/lib/playmat-layout";
+export {
+  FAN_OVERLAP,
+  ROW_GAP_X,
+  MAX_PILES_PER_ROW,
+  MAX_ROWS,
+  MAT_PADDING,
+  MAT_ASPECT,
+  computeRows,
+  computeCardWidth,
+};
 const EXPORT_PADDING = 15;      // px, outer padding added around the exported image
 
 // The "dark" stop used at the bottom of each energy gradient (shade -22%).
@@ -139,40 +154,6 @@ export const TEXTURES: ReadonlyArray<{ key: string; w: number; h: number; svg: s
 function proxied(url: string): string {
   if (!url || url.startsWith("/") || url.startsWith("data:")) return url;
   return `/api/admin/social-studio/proxy-image?url=${encodeURIComponent(url)}`;
-}
-
-export function computeRows(tiles: ResolvedDeckTile[]): ResolvedDeckTile[][] {
-  const rows: ResolvedDeckTile[][] = [];
-  for (let i = 0; i < tiles.length && rows.length < MAX_ROWS; i += MAX_PILES_PER_ROW) {
-    rows.push(tiles.slice(i, i + MAX_PILES_PER_ROW));
-  }
-  return rows;
-}
-
-export function computeCardWidth(
-  rows: ResolvedDeckTile[][],
-  containerWidth: number,
-): number {
-  if (!rows.length || containerWidth === 0) return 60;
-  const innerW = containerWidth - MAT_PADDING * 2;
-  const innerH = containerWidth * MAT_ASPECT - MAT_PADDING * 2;
-
-  // Vertical constraint: all rows must fit within mat height.
-  const numRows = rows.length;
-  const maxCardH = innerH / numRows;
-  const maxWidthFromHeight = maxCardH * (245 / 342);
-
-  // Horizontal constraint: piles must fit within mat width.
-  let minCardWidth = maxWidthFromHeight;
-  for (const row of rows) {
-    const widthUnits = row.reduce(
-      (sum, t) => sum + 1 + (Math.max(t.copyCount, 1) - 1) * FAN_OVERLAP,
-      0,
-    );
-    const gaps = (row.length - 1) * ROW_GAP_X;
-    minCardWidth = Math.min(minCardWidth, (innerW - gaps) / widthUnits);
-  }
-  return Math.floor(minCardWidth);
 }
 
 // ── Canvas export ────────────────────────────────────────────────────────────

@@ -202,9 +202,12 @@ function resolveTargets(
   actor: Actor,
   effect: CardEffect,
   move: EffectMove,
+  source: PokemonInPlay | null,
 ): ResolvedTargets {
   const specByRef = new Map((effect.targets ?? []).map((s) => [s.ref, s]));
   const resolved: ResolvedTargets = {};
+  // The reserved `self` ref: always the source Pokémon, never enumerated.
+  if (source) resolved[SELF_REF] = { mons: [{ mon: source, side: actor }], cards: [] };
   for (const pick of move.picks) {
     const spec = specByRef.get(pick.ref);
     if (!spec) continue;

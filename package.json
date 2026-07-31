@@ -15,7 +15,9 @@
     "ml:selfplay": "tsx scripts/ml/selfplay.ts",
     "ml:duel": "tsx scripts/ml/policy_duel.ts",
     "reengagement": "node --env-file=.env.local --import tsx scripts/reengagement.ts",
-    "email:preview": "tsx scripts/email-preview.ts"
+    "email:preview": "tsx scripts/email-preview.ts",
+    "digest:test": "node --env-file=.env.local --import tsx scripts/weekly-digest-test.ts",
+    "digest": "node --env-file=.env.local --import tsx scripts/weekly-digest.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.0",
