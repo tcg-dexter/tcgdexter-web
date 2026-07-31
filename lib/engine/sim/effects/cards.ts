@@ -84,6 +84,14 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
       guards: [{ cond: "is_active" }],
       ops: [{ op: "draw", n: 2 }],
     },
+    // Rapid-Fire Combo: 200+, flip a coin until tails, 50 more per heads.
+    // (Appended AFTER Run Errand so that ability keeps effect index 0.)
+    {
+      card: "Mega Kangaskhan ex",
+      trigger: { kind: "damage_scale", attackName: "Rapid-Fire Combo" },
+      damage: { base: 200, per: 50, count: { of: "coin_flips_until_tails" } },
+      ops: [],
+    },
   ],
 
   // Fezandipiti ex — Cruel Arrow: this attack does 100 damage to 1 of your
@@ -98,6 +106,122 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
       trigger: { kind: "attack_rider", attackName: "Cruel Arrow" },
       targets: [{ ref: "t", select: "mon", mon: { side: "opponent", zone: "in_play" }, chooser: "player" }],
       ops: [{ op: "damage_mon", monRef: "t", amount: 100 }],
+    },
+  ],
+
+  /* ── State-dependent damage (damage_scale) ───────────────────── */
+
+  // MIGRATED from the legacy DAMAGE_SCALERS registry (attacks.ts). Behavior is
+  // identical — the existing damage tests are the regression net.
+  "Charizard ex": [
+    {
+      card: "Charizard ex",
+      trigger: { kind: "damage_scale", attackName: "Burning Darkness" },
+      // 180 + 30 for each Prize the opponent has taken.
+      damage: { base: 180, per: 30, count: { of: "opp_prizes_taken" } },
+      ops: [],
+    },
+  ],
+
+  "N's Darmanitan": [
+    {
+      card: "N's Darmanitan",
+      trigger: { kind: "damage_scale", attackName: "Back Draft" },
+      // 30 for each Basic Energy in the opponent's discard pile.
+      damage: {
+        base: 0,
+        per: 30,
+        count: { of: "cards_in_zone", zone: "discard", side: "opponent", filter: { basicEnergy: true } },
+      },
+      ops: [],
+    },
+  ],
+
+  // Full Moon Rondo: 20+, 20 more for each Benched Pokémon (BOTH sides').
+  "Lillie's Clefairy ex": [
+    {
+      card: "Lillie's Clefairy ex",
+      trigger: { kind: "damage_scale", attackName: "Full Moon Rondo" },
+      damage: { base: 20, per: 20, count: { of: "bench_count", side: "both" } },
+      ops: [],
+    },
+  ],
+
+  // Myriad Leaf Shower: 30+, 30 more for each Energy attached to BOTH Actives.
+  "Teal Mask Ogerpon ex": [
+    {
+      card: "Teal Mask Ogerpon ex",
+      trigger: { kind: "damage_scale", attackName: "Myriad Leaf Shower" },
+      damage: { base: 30, per: 30, count: { of: "energy_on_active", side: "both" } },
+      ops: [],
+    },
+  ],
+
+  // Irritated Outburst: 60× — 60 for each Prize the opponent has taken.
+  "Pecharunt ex": [
+    {
+      card: "Pecharunt ex",
+      trigger: { kind: "damage_scale", attackName: "Irritated Outburst" },
+      damage: { base: 0, per: 60, count: { of: "opp_prizes_taken" } },
+      ops: [],
+    },
+  ],
+
+  // Tenacious Tail: 60× — 60 for each of your opponent's Pokémon ex in play.
+  "Dudunsparce ex": [
+    {
+      card: "Dudunsparce ex",
+      trigger: { kind: "damage_scale", attackName: "Tenacious Tail" },
+      damage: {
+        base: 0,
+        per: 60,
+        count: { of: "mons_in_play", side: "opponent", filter: { side: "opponent", zone: "in_play", isEx: true } },
+      },
+      ops: [],
+    },
+  ],
+
+  // Rising Blade: 80+, 80 more if the opponent's Active is a Pokémon ex.
+  "Chien-Pao": [
+    {
+      card: "Chien-Pao",
+      trigger: { kind: "damage_scale", attackName: "Rising Blade" },
+      damage: {
+        base: 80,
+        bonuses: [{ amount: 80, when: { cond: "opp_active_is", filter: { side: "opponent", zone: "active", isEx: true } } }],
+      },
+      ops: [],
+    },
+  ],
+
+  // Fighting Wings: 20+, 90 more if the opponent's Active is a Pokémon ex.
+  Moltres: [
+    {
+      card: "Moltres",
+      trigger: { kind: "damage_scale", attackName: "Fighting Wings" },
+      damage: {
+        base: 20,
+        bonuses: [{ amount: 90, when: { cond: "opp_active_is", filter: { side: "opponent", zone: "active", isEx: true } } }],
+      },
+      ops: [],
+    },
+  ],
+
+  // Dark Frost: 60+, 60 more if this Pokémon has any Team Rocket's Energy.
+  "Team Rocket's Articuno": [
+    {
+      card: "Team Rocket's Articuno",
+      trigger: { kind: "damage_scale", attackName: "Dark Frost" },
+      damage: {
+        base: 60,
+        bonuses: [
+          {
+            amount: 60,
+            when: { cond: "self_has_energy", filter: { supertype: "Energy", namePrefix: "Team Rocket's " } },
+          },
+        ],
+      },
+      ops: [],
     },
   ],
 
@@ -144,6 +268,18 @@ export function attackRiderEffect(
     const { trigger } = effects[index];
     if (trigger.kind === "attack_rider" && trigger.attackName === attackName) {
       return { effect: effects[index], index };
+    }
+  }
+  return null;
+}
+
+/** The declarative damage-scaling record for an attack, or null. Read by
+ *  attackBaseDamage before damage is dealt — not a move and not an op. */
+export function damageScaleEffect(cardName: string, attackName: string): CardEffect | null {
+  for (const effect of effectsFor(cardName)) {
+    const { trigger } = effect;
+    if (trigger.kind === "damage_scale" && trigger.attackName === attackName && effect.damage) {
+      return effect;
     }
   }
   return null;

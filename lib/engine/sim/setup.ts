@@ -41,7 +41,11 @@ import { shuffle, type Rng } from "./rng";
 // after damage inside the attack (Fezandipiti ex's Cruel Arrow now really does
 // 100 to a chosen Pokémon instead of nothing), so rollouts change for the many
 // decks carrying rider attacks.
-export const SIM_VERSION = 7;
+// v8: state-dependent attack damage becomes data (W2-fin.3). The legacy
+// DAMAGE_SCALERS registry is retired into declarative `damage_scale` records,
+// and 8 more scaling attacks are modeled — including flip-until-tails, which
+// consumes the rng mid-attack and so shifts the stream for decks carrying it.
+export const SIM_VERSION = 8;
 
 const MAX_MULLIGANS = 20;
 

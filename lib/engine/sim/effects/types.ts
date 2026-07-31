@@ -31,6 +31,7 @@ export interface MonFilter {
   type?: string; // catalog type (Darkness, …)
   namePrefix?: string; // "N's "
   basic?: boolean;
+  isEx?: boolean; // a Pokémon ex (rule-box; Rising Blade's "+80 vs ex")
   hasTool?: boolean;
   hasSpecialEnergy?: boolean;
   damaged?: boolean; // damage >= 10
@@ -67,6 +68,10 @@ export type Trigger =
   | { kind: "on_play" } // played from hand onto the Bench (Meowth ex)
   | { kind: "on_evolve" }
   | { kind: "attack_rider"; attackName: string } // resolves after the attack's damage
+  // Computes the attack's BASE damage when the printed value is state-dependent
+  // ("180+", "60×"). Carries `damage`, not `ops` — it returns a number rather
+  // than mutating, and is read before damage is dealt.
+  | { kind: "damage_scale"; attackName: string }
   | { kind: "static" }; // passive; read where the rule applies
 
 /** Availability conditions, all public-information. */
@@ -77,7 +82,41 @@ export type Guard =
   | { cond: "koed_last_opp_turn" }
   | { cond: "has_energy_type"; type: string } // source has this energy attached
   | { cond: "deck_has"; filter: CardFilter }
-  | { cond: "discard_has"; filter: CardFilter };
+  | { cond: "discard_has"; filter: CardFilter }
+  /** The OPPONENT's Active matches (Rising Blade / Fighting Wings vs an ex). */
+  | { cond: "opp_active_is"; filter: MonFilter }
+  /** The source Pokémon has a matching Energy attached (Dark Frost's
+   *  "Team Rocket's Energy"); broader than has_energy_type, which is by type. */
+  | { cond: "self_has_energy"; filter: CardFilter };
+
+/* ─── State-dependent damage ────────────────────────────────────── */
+
+/** A quantity the board supplies, counted at damage time. */
+export type DamageCount =
+  /** Prizes the OPPONENT has taken (Burning Darkness, Irritated Outburst). */
+  | { of: "opp_prizes_taken" }
+  /** Benched Pokémon (Full Moon Rondo counts both sides'). */
+  | { of: "bench_count"; side: "own" | "opponent" | "both" }
+  /** Energy attached to the Active(s) (Myriad Leaf Shower counts both). */
+  | { of: "energy_on_active"; side: "own" | "opponent" | "both" }
+  /** Pokémon in play matching a filter (Tenacious Tail: opponent's ex). */
+  | { of: "mons_in_play"; side: "own" | "opponent"; filter?: MonFilter }
+  /** Cards in a zone matching a filter (Back Draft: basic energy in the
+   *  opponent's discard). */
+  | { of: "cards_in_zone"; zone: "discard" | "hand"; side: "own" | "opponent"; filter: CardFilter }
+  /** Heads on "flip a coin until you get tails" (Rapid-Fire Combo). Consumes
+   *  the rng — only ever evaluated once, at real damage resolution. */
+  | { of: "coin_flips_until_tails" };
+
+/** Base damage for an attack whose printed value is state-dependent ("180+",
+ *  "60×"): `base + per × count`, plus each bonus whose guard holds. */
+export interface DamageFormula {
+  base: number;
+  per?: number;
+  count?: DamageCount;
+  /** Flat conditional additions (Rising Blade's "+80 if the Active is an ex"). */
+  bonuses?: { amount: number; when: Guard }[];
+}
 
 /* ─── Effect primitives ─────────────────────────────────────────── */
 
@@ -120,4 +159,6 @@ export interface CardEffect {
   guards?: Guard[];
   targets?: TargetSpec[];
   ops: EffectOp[];
+  /** Required by (and only meaningful for) the `damage_scale` trigger. */
+  damage?: DamageFormula;
 }

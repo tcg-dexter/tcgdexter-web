@@ -14,7 +14,15 @@ import { energyProvides } from "../setup";
 import { applyOps, type OpContext, type ResolvedMon, type ResolvedTargets } from "./primitives";
 import { isSupporter } from "../trainers";
 import { SELF_REF } from "./types";
-import type { CardEffect, CardFilter, Guard, MonFilter, TargetSpec } from "./types";
+import type {
+  CardEffect,
+  CardFilter,
+  DamageCount,
+  DamageFormula,
+  Guard,
+  MonFilter,
+  TargetSpec,
+} from "./types";
 
 type Actor = "player" | "opponent";
 const other = (a: Actor): Actor => (a === "player" ? "opponent" : "player");
@@ -72,6 +80,7 @@ export function monMatches(mon: PokemonInPlay, f: MonFilter): boolean {
   if (f.type && !(cat?.types.includes(f.type) ?? false)) return false;
   if (f.namePrefix && !mon.card.name.startsWith(f.namePrefix)) return false;
   if (f.basic && !(cat?.supertype === "Pokémon" && !cat.evolves_from)) return false;
+  if (f.isEx && !(cat?.subtypes.includes("ex") ?? false)) return false;
   if (f.hasTool && mon.attachedTools.length === 0) return false;
   if (f.hasSpecialEnergy && !hasSpecialEnergy(mon)) return false;
   if (f.damaged && mon.damage < 10) return false;
@@ -137,8 +146,81 @@ export function guardsPass(
         return side.deck.some((c) => cardMatches(c, g.filter));
       case "discard_has":
         return side.discard.some((c) => cardMatches(c, g.filter));
+      case "opp_active_is":
+        return opp.active != null && monMatches(opp.active, g.filter);
+      case "self_has_energy":
+        return source != null && source.attachedEnergy.some((c) => cardMatches(c, g.filter));
     }
   });
+}
+
+/* ─── State-dependent damage ────────────────────────────────────── */
+
+const MAX_COIN_FLIPS = 50; // guard against a pathological rng stream
+
+/** Evaluate a DamageCount against the board. `rng` is consumed only by the
+ *  coin-flip count, and only at real damage resolution (the AI's move
+ *  evaluation uses the printed number via baseDamage). */
+function evalCount(
+  state: GameState,
+  actor: Actor,
+  source: PokemonInPlay | null,
+  count: DamageCount,
+  rng: Rng | null,
+): number {
+  const side = state.sides[actor];
+  const opp = state.sides[other(actor)];
+  const sidesFor = (which: "own" | "opponent" | "both") =>
+    which === "own" ? [side] : which === "opponent" ? [opp] : [side, opp];
+
+  switch (count.of) {
+    case "opp_prizes_taken":
+      // Prizes the opponent has TAKEN — indexed by the side that took them.
+      return state.prizesTaken[other(actor)];
+    case "bench_count":
+      return sidesFor(count.side).reduce((n, s) => n + s.bench.length, 0);
+    case "energy_on_active":
+      return sidesFor(count.side).reduce(
+        (n, s) => n + (s.active ? s.active.attachedEnergy.length : 0),
+        0,
+      );
+    case "mons_in_play": {
+      const s = count.side === "opponent" ? opp : side;
+      const pool = [s.active, ...s.bench].filter((m): m is PokemonInPlay => m !== null);
+      return count.filter ? pool.filter((m) => monMatches(m, count.filter!)).length : pool.length;
+    }
+    case "cards_in_zone": {
+      const s = count.side === "opponent" ? opp : side;
+      const zone = count.zone === "discard" ? s.discard : s.hand;
+      return zone.filter((c) => cardMatches(c, count.filter)).length;
+    }
+    case "coin_flips_until_tails": {
+      if (!rng) return 0; // ghost evaluation: no rng, no flips
+      let heads = 0;
+      while (heads < MAX_COIN_FLIPS && rng() < 0.5) heads++;
+      return heads;
+    }
+  }
+  void source;
+  return 0;
+}
+
+/** Base damage from a declarative formula: base + per × count + bonuses. */
+export function evalDamageFormula(
+  state: GameState,
+  actor: Actor,
+  source: PokemonInPlay | null,
+  formula: DamageFormula,
+  rng: Rng | null,
+): number {
+  let total = formula.base;
+  if (formula.count && formula.per) {
+    total += formula.per * evalCount(state, actor, source, formula.count, rng);
+  }
+  for (const bonus of formula.bonuses ?? []) {
+    if (guardsPass(state, actor, source, [bonus.when])) total += bonus.amount;
+  }
+  return Math.max(0, total);
 }
 
 /* ─── Enumeration ───────────────────────────────────────────────── */

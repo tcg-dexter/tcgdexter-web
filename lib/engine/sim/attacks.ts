@@ -12,37 +12,34 @@
 
 import type { CardInstance, GameState, PokemonInPlay } from "../types";
 import { baseDamage } from "./moves";
-import { isBasicEnergyCard } from "./setup";
+import type { Rng } from "./rng";
+import { damageScaleEffect } from "./effects/cards";
+import { evalDamageFormula } from "./effects/runtime";
 
 /* ─── Damage scaling ────────────────────────────────────────────── */
 
-type DamageScaler = (state: GameState, actor: "player" | "opponent") => number;
+// The hand-written DAMAGE_SCALERS registry is GONE (W2-fin.3): Burning
+// Darkness and Back Draft now live in effects/cards.ts as `damage_scale`
+// records, alongside the rest of the field. Scaling is data, not a closure.
 
-const DAMAGE_SCALERS: Record<string, DamageScaler> = {
-  // Burning Darkness: 180 + 30 for each Prize the opponent has taken.
-  "Charizard ex::Burning Darkness": (state, actor) => {
-    const oppTaken = state.prizesTaken[actor === "player" ? "opponent" : "player"];
-    return 180 + 30 * oppTaken;
-  },
-  // Back Draft: 30 for each Basic Energy in the opponent's discard pile.
-  "N's Darmanitan::Back Draft": (state, actor) => {
-    const opp = state.sides[actor === "player" ? "opponent" : "player"];
-    return 30 * opp.discard.filter(isBasicEnergyCard).length;
-  },
-};
-
-/** Base damage to the active before Weakness/Resistance — scaled when the
- *  attack's damage depends on game state, else the printed number. */
+/** Base damage to the active before Weakness/Resistance — computed from the
+ *  attack's declarative damage formula when it has one, else the printed
+ *  number. `rng` is consumed only by flip-until-tails formulas, and this is
+ *  called once, at real damage resolution (the AI's move evaluation uses the
+ *  printed number via baseDamage, so the rng stream stays deterministic). */
 export function attackBaseDamage(
   state: GameState,
   actor: "player" | "opponent",
   attacker: PokemonInPlay,
   attackIndex: number,
+  rng: Rng | null = null,
 ): number {
   const attack = attacker.card.catalog?.attacks[attackIndex];
   if (!attack) return 0;
-  const scaler = DAMAGE_SCALERS[`${attacker.card.name}::${attack.name}`];
-  return scaler ? scaler(state, actor) : baseDamage(attack);
+  const scaled = damageScaleEffect(attacker.card.name, attack.name);
+  return scaled?.damage
+    ? evalDamageFormula(state, actor, attacker, scaled.damage, rng)
+    : baseDamage(attack);
 }
 
 /* ─── Flat damage bonuses to the Active (before Weakness/Resistance) ─ */
@@ -99,8 +96,10 @@ const ATTACK_EFFECTS: Record<string, AttackEffect> = {
  *  scaler or placement/side effect? (Attack-inflicted conditions and
  *  self-clear are checked separately in conditions.ts.) */
 export function isAttackModeled(cardName: string, attackName: string): boolean {
-  const key = `${cardName}::${attackName}`;
-  return key in DAMAGE_SCALERS || key in ATTACK_EFFECTS;
+  return (
+    `${cardName}::${attackName}` in ATTACK_EFFECTS ||
+    damageScaleEffect(cardName, attackName) !== null
+  );
 }
 
 export function attackEffect(attacker: PokemonInPlay, attackIndex: number): AttackEffect | null {

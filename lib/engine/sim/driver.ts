@@ -282,7 +282,7 @@ export function applyMove(
       // Damage to the active: state-scaled base (attacks.ts) + flat bonuses
       // (Black Belt's Training, Binding Mochi), then W/R.
       const base =
-        attackBaseDamage(state, actor, attacker, move.attackIndex) +
+        attackBaseDamage(state, actor, attacker, move.attackIndex, rng) +
         activeDamageBonus(state, actor, attacker, defender);
       dealRawDamage(defender, applyWeaknessResistance(base, attacker, defender));
 

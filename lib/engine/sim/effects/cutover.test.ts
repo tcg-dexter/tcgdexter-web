@@ -11,6 +11,7 @@ import { mintInstanceId } from "../../initial";
 import { mulberry32 } from "../rng";
 import type { CardInstance, GameState, PokemonInPlay } from "../../types";
 import { applyMove } from "../driver";
+import { attackBaseDamage } from "../attacks";
 import { isLegalHumanMove } from "../validate";
 import { describeMove } from "../serialize";
 import { legalMoves, type SimMove, type TurnContext } from "../moves";
@@ -305,6 +306,84 @@ describe("W2-fin — declarative `attack_rider` trigger", () => {
     expect(attacks.length).toBeGreaterThan(0);
     expect(attacks.every((m) => m.riderPicks === undefined)).toBe(true);
     expect(isLegalHumanMove(s, "player", ctx(), attacks[0])).toBe(true);
+  });
+});
+
+describe("W2-fin — declarative `damage_scale` trigger", () => {
+  const dmg = (
+    s: GameState,
+    attackerName: string,
+    attackName: string,
+    rngSeed: number | null = null,
+  ) => {
+    const atk = mon(attackerName);
+    s.sides.player.active = atk;
+    const idx = (atk.card.catalog?.attacks ?? []).findIndex((a) => a.name === attackName);
+    expect(idx, `${attackerName} has no attack ${attackName}`).toBeGreaterThanOrEqual(0);
+    return attackBaseDamage(s, "player", atk, idx, rngSeed == null ? null : mulberry32(rngSeed));
+  };
+
+  it("MIGRATED Burning Darkness matches the retired legacy scaler (180 + 30/prize)", () => {
+    const s = state();
+    expect(dmg(s, "Charizard ex", "Burning Darkness")).toBe(180);
+    s.prizesTaken.opponent = 3; // the OPPONENT has taken 3
+    expect(dmg(s, "Charizard ex", "Burning Darkness")).toBe(180 + 90);
+  });
+
+  it("MIGRATED Back Draft matches the retired legacy scaler (30/basic energy in opp discard)", () => {
+    const s = state();
+    expect(dmg(s, "N's Darmanitan", "Back Draft")).toBe(0);
+    s.sides.opponent.discard = [
+      card("Basic Darkness Energy"),
+      card("Basic Darkness Energy"),
+      card("Nest Ball"), // not energy — must not count
+    ];
+    expect(dmg(s, "N's Darmanitan", "Back Draft")).toBe(60);
+  });
+
+  it("counts benched Pokémon on BOTH sides (Full Moon Rondo)", () => {
+    const s = state();
+    s.sides.player.bench = [mon("Pikachu"), mon("Snorlax")];
+    s.sides.opponent.bench = [mon("Pikachu")];
+    // 20 + 20 × 3 benched
+    expect(dmg(s, "Lillie's Clefairy ex", "Full Moon Rondo")).toBe(80);
+  });
+
+  it("counts energy on BOTH Actives (Myriad Leaf Shower)", () => {
+    const s = state();
+    const opp = mon("Snorlax");
+    opp.attachedEnergy = [card("Basic Darkness Energy")];
+    s.sides.opponent.active = opp;
+    const atk = mon("Teal Mask Ogerpon ex");
+    atk.attachedEnergy = [card("Basic Grass Energy"), card("Basic Grass Energy")];
+    s.sides.player.active = atk;
+    const idx = (atk.card.catalog?.attacks ?? []).findIndex((a) => a.name === "Myriad Leaf Shower");
+    // 30 + 30 × (2 own + 1 opp)
+    expect(attackBaseDamage(s, "player", atk, idx, null)).toBe(120);
+  });
+
+  it("applies a conditional bonus only against a Pokémon ex (Rising Blade)", () => {
+    const s = state();
+    s.sides.opponent.active = mon("Snorlax"); // not an ex
+    expect(dmg(s, "Chien-Pao", "Rising Blade")).toBe(80);
+    s.sides.opponent.active = mon("Fezandipiti ex"); // an ex
+    expect(dmg(s, "Chien-Pao", "Rising Blade")).toBe(160);
+  });
+
+  it("flip-until-tails scales with the rng and is deterministic per seed", () => {
+    const s = state();
+    const a = dmg(s, "Mega Kangaskhan ex", "Rapid-Fire Combo", 4);
+    const b = dmg(s, "Mega Kangaskhan ex", "Rapid-Fire Combo", 4);
+    expect(a).toBe(b); // same seed ⇒ same damage
+    expect(a).toBeGreaterThanOrEqual(200); // 200 + 50 per heads
+    expect((a - 200) % 50).toBe(0);
+    // No rng (ghost evaluation) ⇒ no flips, just the base.
+    expect(dmg(s, "Mega Kangaskhan ex", "Rapid-Fire Combo", null)).toBe(200);
+  });
+
+  it("attacks with no formula still use the printed damage", () => {
+    const s = state();
+    expect(dmg(s, "Pikachu", "Tail Smack")).toBe(10);
   });
 });
 
