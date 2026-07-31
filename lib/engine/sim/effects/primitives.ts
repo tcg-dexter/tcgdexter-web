@@ -11,6 +11,8 @@ import { toPokemonInPlay } from "../setup";
 import { applyCondition, clearConditions } from "../conditions";
 import { placeCounters, moveCounters, dealRawDamage } from "../damage";
 import { applyWeaknessResistance } from "../moves";
+import { pickDiscards } from "../trainers";
+import { cardMatches } from "./match";
 import type { EffectOp, Quantity } from "./types";
 
 type Actor = "player" | "opponent";
@@ -185,6 +187,9 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
         const ownerDiscard = state.sides[monSide].discard;
         if (op.category === "tool") {
           if (mon.attachedTools.length > 0) ownerDiscard.push(...mon.attachedTools.splice(0, 1));
+        } else if (op.category === "energy") {
+          // Any Energy (Crushing Hammer) — take the first attached.
+          if (mon.attachedEnergy.length > 0) ownerDiscard.push(...mon.attachedEnergy.splice(0, 1));
         } else {
           const i = mon.attachedEnergy.findIndex(
             (c) => c.catalog?.supertype === "Energy" && !isBasicEnergyName(c),
@@ -192,6 +197,43 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
           if (i >= 0) ownerDiscard.push(...mon.attachedEnergy.splice(i, 1));
         }
       }
+      break;
+    }
+
+    case "reveal_top": {
+      // Look at the top n, take up to `count` matches, rest back to the deck
+      // (then shuffled, matching "shuffle the other cards back into your deck").
+      const top = side.deck.splice(0, Math.max(0, op.n));
+      let taken = 0;
+      const rest: CardInstance[] = [];
+      for (const c of top) {
+        if (taken < op.count && cardMatches(c, op.filter)) {
+          side.hand.push(c);
+          taken++;
+        } else {
+          rest.push(c);
+        }
+      }
+      side.deck.unshift(...rest);
+      if (rng) shuffle(side.deck, rng);
+      break;
+    }
+
+    case "discard_hand_cards": {
+      // A cost: the played card has already left the hand by this point, so
+      // every remaining card is fair game.
+      for (const c of pickDiscards(side, op.n, "")) {
+        const pulled = spliceById(side.hand, c.id);
+        if (pulled) side.discard.push(pulled);
+      }
+      break;
+    }
+
+    case "coin_flip": {
+      // No rng (ghost evaluation) reads as tails — the conservative branch,
+      // so a speculative evaluation never over-credits the flip.
+      const heads = rng ? rng() < 0.5 : false;
+      applyOps(heads ? op.heads : (op.tails ?? []), ctx);
       break;
     }
 

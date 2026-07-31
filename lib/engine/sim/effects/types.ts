@@ -17,8 +17,15 @@ export interface CardFilter {
   supertype?: "Pokémon" | "Trainer" | "Energy";
   subtype?: string; // e.g. "Supporter", "Item", "Basic", "ex"
   basicPokemon?: boolean; // Basic (no evolves_from)
+  /** Evolution stage (Dawn asks for one of each). */
+  stage?: "Basic" | "Stage 1" | "Stage 2";
+  /** Matches when ANY sub-filter matches. The rest of this filter's fields
+   *  still apply (AND), so `anyOf` is the one disjunctive escape hatch —
+   *  Bug Catching Set's "Grass Pokémon OR Basic Grass Energy". */
+  anyOf?: CardFilter[];
   basicEnergy?: boolean; // a Basic Energy card
-  energyType?: string; // provides this type (Darkness, Fire, …)
+  energyType?: string; // ENERGY card providing this type (Darkness, Fire, …)
+  pokemonType?: string; // POKÉMON card of this type (Bug Catching Set's Grass)
   namePrefix?: string; // e.g. "N's "
   maxHp?: number;
   singlePrize?: boolean; // prizeValue === 1 (no rule box)
@@ -87,7 +94,10 @@ export type Guard =
   | { cond: "opp_active_is"; filter: MonFilter }
   /** The source Pokémon has a matching Energy attached (Dark Frost's
    *  "Team Rocket's Energy"); broader than has_energy_type, which is by type. */
-  | { cond: "self_has_energy"; filter: CardFilter };
+  | { cond: "self_has_energy"; filter: CardFilter }
+  /** Enough cards in hand BESIDES the card being played, for a discard cost
+   *  ("you can use this only if you discard 3 other cards" — Secret Box). */
+  | { cond: "hand_size_gte"; n: number };
 
 /* ─── State-dependent damage ────────────────────────────────────── */
 
@@ -145,7 +155,18 @@ export type EffectOp =
   | { op: "move_counters"; fromRef: string; toRef: string; n: number }
   | { op: "apply_condition"; monRef: string; condition: SpecialCondition }
   | { op: "heal"; monRef: string; n: number }
-  | { op: "discard_from_mon"; monRef: string; category: "tool" | "special_energy" }
+  | { op: "discard_from_mon"; monRef: string; category: "tool" | "special_energy" | "energy" }
+  /** Look at the top `n` of your own deck, take up to `count` matching cards
+   *  to hand, shuffle the rest back (Pokégear 3.0, Bug Catching Set). v1
+   *  auto-picks the first matches — a real reveal choice is a W4 chooser. */
+  | { op: "reveal_top"; n: number; count: number; filter: CardFilter; to: "hand" }
+  /** Discard `n` cards from your own hand as a COST (Secret Box). Auto-picks
+   *  the least useful cards via the shared pickDiscards heuristic. */
+  | { op: "discard_hand_cards"; n: number }
+  /** Flip a coin and branch. The nested ops run in the same target context,
+   *  so a heads branch can use the same picks the parent enumerated
+   *  (Crushing Hammer's chosen Pokémon). Consumes the rng. */
+  | { op: "coin_flip"; heads: EffectOp[]; tails?: EffectOp[] }
   | { op: "buff_damage_this_turn"; amount: number; vsTarget?: "ex" }; // Black Belt's Training
 
 /* ─── Card effect ───────────────────────────────────────────────── */

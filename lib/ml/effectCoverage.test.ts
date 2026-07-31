@@ -13,13 +13,21 @@ describe("deckEffectCoverage", () => {
   });
 
   it("counts a registered trainer as implemented and an unregistered one as a gap", () => {
+    // NOTE: the "unregistered" card here is a moving target — as W2/W3 model
+    // more of the field, whichever card this test names will eventually become
+    // implemented and the assertion will flip. That's the metric working, not
+    // a bug: swap in any card still absent from the registries (check with
+    // `npx tsx scripts/ml/effect_gap_report.ts`). Crushing Hammer held this
+    // slot until W2-fin.4 implemented it.
     const cov = deckEffectCoverage(
-      ["Trainer: 5", "3 Boss's Orders", "2 Crushing Hammer"].join("\n"),
+      ["Trainer: 5", "3 Boss's Orders", "2 Ciphermaniac's Codebreaking"].join("\n"),
     );
-    expect(cov.gaps.some((g) => g.key === "Crushing Hammer" && g.kind === "trainer")).toBe(true);
+    expect(
+      cov.gaps.some((g) => g.key === "Ciphermaniac's Codebreaking" && g.kind === "trainer"),
+    ).toBe(true);
     expect(cov.gaps.some((g) => g.key === "Boss's Orders")).toBe(false);
-    // Crushing Hammer contributes 2 unmodeled copies.
-    expect(cov.gaps.find((g) => g.key === "Crushing Hammer")?.copies).toBe(2);
+    // Ciphermaniac's Codebreaking contributes 2 unmodeled copies.
+    expect(cov.gaps.find((g) => g.key === "Ciphermaniac's Codebreaking")?.copies).toBe(2);
   });
 
   it("distinguishes a modeled Special Energy from an unmodeled one", () => {

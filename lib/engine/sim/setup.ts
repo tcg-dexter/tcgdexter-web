@@ -45,7 +45,10 @@ import { shuffle, type Rng } from "./rng";
 // DAMAGE_SCALERS registry is retired into declarative `damage_scale` records,
 // and 8 more scaling attacks are modeled — including flip-until-tails, which
 // consumes the rng mid-attack and so shifts the stream for decks carrying it.
-export const SIM_VERSION = 8;
+// v9: coin-flip / top-N-reveal / discard-cost ops land (W2-fin.4). Crushing
+// Hammer, Dawn, Pokégear 3.0, Bug Catching Set and Secret Box are really
+// played instead of generic cycle-draw, and coin_flip consumes the rng.
+export const SIM_VERSION = 9;
 
 const MAX_MULLIGANS = 20;
 

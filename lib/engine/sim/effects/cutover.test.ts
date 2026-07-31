@@ -387,6 +387,131 @@ describe("W2-fin — declarative `damage_scale` trigger", () => {
   });
 });
 
+describe("W2-fin — new primitive ops", () => {
+  /** Play the first enumerated move for a trainer put into hand. */
+  function playTrainer(s: GameState, name: string, seed = 9): EffectMove | null {
+    const src = card(name);
+    s.sides.player.hand = [src];
+    const moves = legalMoves(s, "player", ctx()).filter(
+      (m): m is EffectMove => m.kind === "effect" && m.card === name,
+    );
+    if (moves.length === 0) return null;
+    expect(isLegalHumanMove(s, "player", ctx(), moves[0])).toBe(true);
+    applyMove(s, "player", moves[0], ctx(), mulberry32(seed));
+    return moves[0];
+  }
+
+  it("coin_flip: Crushing Hammer discards energy on heads, nothing on tails", () => {
+    // Same board, two rng seeds — the flip must actually branch.
+    const outcomes = new Set<number>();
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+      const s = state();
+      const target = mon("Snorlax");
+      target.attachedEnergy = [card("Basic Darkness Energy")];
+      s.sides.opponent.active = target;
+      playTrainer(s, "Crushing Hammer", seed);
+      outcomes.add(target.attachedEnergy.length);
+    }
+    // Across seeds we must see BOTH a discard (0 left) and a whiff (1 left).
+    expect(outcomes).toEqual(new Set([0, 1]));
+  });
+
+  it("coin_flip: the target is picked before the flip, so it is always enumerated", () => {
+    const s = state();
+    const target = mon("Snorlax");
+    target.attachedEnergy = [card("Basic Darkness Energy")];
+    s.sides.opponent.active = target;
+    s.sides.player.hand = [card("Crushing Hammer")];
+
+    const moves = legalMoves(s, "player", ctx()).filter(
+      (m): m is EffectMove => m.kind === "effect" && m.card === "Crushing Hammer",
+    );
+    expect(moves.length).toBe(1);
+    expect(moves[0].picks[0].monIds).toEqual([target.id]);
+  });
+
+  it("reveal_top: Pokégear 3.0 pulls a Supporter out of the top 7 only", () => {
+    const s = state();
+    const supporter = card("Professor's Research");
+    // Put the Supporter 3 deep — inside the window.
+    s.sides.player.deck.splice(3, 0, supporter);
+    playTrainer(s, "Pokégear 3.0");
+    expect(s.sides.player.hand.some((c) => c.id === supporter.id)).toBe(true);
+  });
+
+  it("reveal_top: leaves a Supporter buried DEEPER than the window alone", () => {
+    const s = state();
+    const supporter = card("Professor's Research");
+    s.sides.player.deck.splice(30, 0, supporter); // well past the top 7
+    playTrainer(s, "Pokégear 3.0");
+    expect(s.sides.player.hand.some((c) => c.id === supporter.id)).toBe(false);
+    // And the untaken cards went back — the deck only lost nothing.
+    expect(s.sides.player.deck.some((c) => c.id === supporter.id)).toBe(true);
+  });
+
+  it("anyOf: Bug Catching Set takes Grass Pokémon OR Basic Grass Energy, up to 2", () => {
+    const s = state();
+    const grassMon = card("Applin"); // a Grass Pokémon
+    const grassEnergy = card("Basic Grass Energy");
+    const decoy = card("Basic Darkness Energy"); // wrong type — must be left
+    s.sides.player.deck.splice(0, 0, grassMon, decoy, grassEnergy);
+    playTrainer(s, "Bug Catching Set");
+    const hand = s.sides.player.hand;
+    expect(hand.some((c) => c.id === grassMon.id)).toBe(true);
+    expect(hand.some((c) => c.id === grassEnergy.id)).toBe(true);
+    expect(hand.some((c) => c.id === decoy.id)).toBe(false);
+  });
+
+  it("multi-slot search: Dawn fetches a Basic, a Stage 1 and a Stage 2", () => {
+    const s = state();
+    // Dratini/Dragonair/Dragonite is a clean Basic/Stage1/Stage2 line.
+    const basic = card("Dratini");
+    const stage1 = card("Dragonair");
+    const stage2 = card("Dragonite");
+    s.sides.player.deck.splice(0, 0, basic, stage1, stage2);
+    const played = playTrainer(s, "Dawn");
+    expect(played, "Dawn produced no legal move").not.toBeNull();
+    const hand = s.sides.player.hand;
+    expect(hand.some((c) => c.id === basic.id)).toBe(true);
+    expect(hand.some((c) => c.id === stage1.id)).toBe(true);
+    expect(hand.some((c) => c.id === stage2.id)).toBe(true);
+  });
+
+  it("discard_hand_cards: Secret Box needs 3 other cards and pays them", () => {
+    const s = state();
+    const box = card("Secret Box");
+    // Only 2 other cards — the cost can't be paid, so it must not be legal.
+    s.sides.player.hand = [box, card("Nest Ball"), card("Nest Ball")];
+    expect(
+      legalMoves(s, "player", ctx()).some((m) => m.kind === "effect" && m.card === "Secret Box"),
+    ).toBe(false);
+
+    // With 3 others it's legal, the discard is really paid, and the four
+    // categories are fetched out of the deck.
+    s.sides.player.hand = [box, card("Nest Ball"), card("Nest Ball"), card("Nest Ball")];
+    const supporter = card("Professor's Research");
+    s.sides.player.deck.splice(0, 0, supporter);
+    const moves = legalMoves(s, "player", ctx()).filter(
+      (m): m is EffectMove => m.kind === "effect" && m.card === "Secret Box",
+    );
+    expect(moves.length).toBeGreaterThan(0);
+    const discardBefore = s.sides.player.discard.length;
+    applyMove(s, "player", moves[0], ctx(), mulberry32(9));
+    // Secret Box itself + exactly 3 discarded cards.
+    expect(s.sides.player.discard.length).toBe(discardBefore + 4);
+    // The Supporter it could find is in hand; the categories it couldn't find
+    // simply fizzle rather than making the card unplayable.
+    expect(s.sides.player.hand.some((c) => c.id === supporter.id)).toBe(true);
+  });
+
+  it("a search that finds nothing fizzles instead of blocking the card (Dawn, empty deck)", () => {
+    const s = state();
+    s.sides.player.deck = [card("Basic Darkness Energy")]; // no Pokémon at all
+    const played = playTrainer(s, "Dawn");
+    expect(played, "Dawn must still be playable with nothing to find").not.toBeNull();
+  });
+});
+
 describe("W2 cutover — the interactive/API path the play UI drives", () => {
   // A legal 60-card deck built around the declarative card, so a human can be
   // dealt it. Team Rocket's Transceiver (Item) fetches a Team Rocket's Supporter.

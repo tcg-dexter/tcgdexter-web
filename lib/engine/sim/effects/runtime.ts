@@ -9,11 +9,14 @@
 
 import type { CardInstance, GameState, PokemonInPlay } from "../../types";
 import type { Rng } from "../rng";
-import { prizeValue } from "../setup";
+
 import { energyProvides } from "../setup";
 import { applyOps, type OpContext, type ResolvedMon, type ResolvedTargets } from "./primitives";
 import { isSupporter } from "../trainers";
 import { SELF_REF } from "./types";
+// Matchers live in match.ts so primitives.ts can share them without a cycle.
+export { cardMatches, monMatches } from "./match";
+import { cardMatches, monMatches } from "./match";
 import type {
   CardEffect,
   CardFilter,
@@ -46,46 +49,6 @@ export interface EffectMove {
   card: string;
   effectIndex: number;
   picks: EffectPick[];
-}
-
-/* ─── Filters ───────────────────────────────────────────────────── */
-
-function isBasicEnergyCard(c: CardInstance): boolean {
-  return (
-    c.catalog?.supertype === "Energy" &&
-    (c.catalog.subtypes.includes("Basic") || c.name.startsWith("Basic "))
-  );
-}
-
-export function cardMatches(c: CardInstance, f: CardFilter): boolean {
-  const cat = c.catalog;
-  if (!cat) return false;
-  if (f.supertype && cat.supertype !== f.supertype) return false;
-  if (f.subtype && !cat.subtypes.includes(f.subtype)) return false;
-  if (f.basicPokemon && !(cat.supertype === "Pokémon" && !cat.evolves_from)) return false;
-  if (f.basicEnergy && !isBasicEnergyCard(c)) return false;
-  if (f.energyType && energyProvides(c) !== f.energyType) return false;
-  if (f.namePrefix && !c.name.startsWith(f.namePrefix)) return false;
-  if (f.maxHp != null && (cat.hp ?? Infinity) > f.maxHp) return false;
-  if (f.singlePrize && prizeValue(c.name) !== 1) return false;
-  return true;
-}
-
-function hasSpecialEnergy(mon: PokemonInPlay): boolean {
-  return mon.attachedEnergy.some((c) => c.catalog?.supertype === "Energy" && !isBasicEnergyCard(c));
-}
-
-export function monMatches(mon: PokemonInPlay, f: MonFilter): boolean {
-  const cat = mon.card.catalog;
-  if (f.type && !(cat?.types.includes(f.type) ?? false)) return false;
-  if (f.namePrefix && !mon.card.name.startsWith(f.namePrefix)) return false;
-  if (f.basic && !(cat?.supertype === "Pokémon" && !cat.evolves_from)) return false;
-  if (f.isEx && !(cat?.subtypes.includes("ex") ?? false)) return false;
-  if (f.hasTool && mon.attachedTools.length === 0) return false;
-  if (f.hasSpecialEnergy && !hasSpecialEnergy(mon)) return false;
-  if (f.damaged && mon.damage < 10) return false;
-  if (f.excludeName && mon.card.name === f.excludeName) return false;
-  return true;
 }
 
 /* ─── Candidate resolution ──────────────────────────────────────── */
@@ -150,6 +113,10 @@ export function guardsPass(
         return opp.active != null && monMatches(opp.active, g.filter);
       case "self_has_energy":
         return source != null && source.attachedEnergy.some((c) => cardMatches(c, g.filter));
+      case "hand_size_gte":
+        // Checked while the card is still IN hand (enumeration time), so a
+        // "discard N OTHER cards" cost needs N+1.
+        return side.hand.length >= g.n;
     }
   });
 }

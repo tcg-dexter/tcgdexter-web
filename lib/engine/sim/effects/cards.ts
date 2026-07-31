@@ -109,6 +109,110 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
     },
   ],
 
+  // Crushing Hammer: flip a coin; if heads, discard an Energy from 1 of your
+  // opponent's Pokémon. The TARGET is chosen before the flip (that's how the
+  // card plays), so the pick is enumerated normally and the coin_flip op
+  // gates only the discard.
+  "Crushing Hammer": [
+    {
+      card: "Crushing Hammer",
+      trigger: { kind: "trainer", subtype: "Item" },
+      targets: [{ ref: "t", select: "mon", mon: { side: "opponent", zone: "in_play" }, chooser: "player" }],
+      ops: [{ op: "coin_flip", heads: [{ op: "discard_from_mon", monRef: "t", category: "energy" }] }],
+    },
+  ],
+
+  // Dawn: search your deck for a Basic, a Stage 1, AND a Stage 2. Three target
+  // slots — the enumerator's cartesian product across slots handles this; each
+  // is `auto` because the full cross-product of three deck slots would be
+  // hundreds of moves per play (a real 3-way choice is a W4 chooser).
+  // `upTo` on every slot because a search may legally FAIL to find: without it
+  // a required empty slot would make the whole card unplayable.
+  Dawn: [
+    {
+      card: "Dawn",
+      trigger: { kind: "trainer", subtype: "Supporter" },
+      targets: [
+        { ref: "b", upTo: true, select: "card", card: { zone: "deck", filter: { stage: "Basic" } }, chooser: "auto" },
+        { ref: "s1", upTo: true, select: "card", card: { zone: "deck", filter: { stage: "Stage 1" } }, chooser: "auto" },
+        { ref: "s2", upTo: true, select: "card", card: { zone: "deck", filter: { stage: "Stage 2" } }, chooser: "auto" },
+      ],
+      ops: [
+        { op: "search", targetRef: "b", to: "hand" },
+        { op: "search", targetRef: "s1", to: "hand" },
+        { op: "search", targetRef: "s2", to: "hand" },
+      ],
+    },
+  ],
+
+  // Pokégear 3.0: look at the top 7, reveal a Supporter and take it, shuffle
+  // the rest back.
+  "Pokégear 3.0": [
+    {
+      card: "Pokégear 3.0",
+      trigger: { kind: "trainer", subtype: "Item" },
+      ops: [
+        {
+          op: "reveal_top",
+          n: 7,
+          count: 1,
+          filter: { supertype: "Trainer", subtype: "Supporter" },
+          to: "hand",
+        },
+      ],
+    },
+  ],
+
+  // Bug Catching Set: top 7, take up to 2 in any combination of Grass Pokémon
+  // and Basic Grass Energy. The one disjunctive filter in the schema (anyOf).
+  "Bug Catching Set": [
+    {
+      card: "Bug Catching Set",
+      trigger: { kind: "trainer", subtype: "Item" },
+      ops: [
+        {
+          op: "reveal_top",
+          n: 7,
+          count: 2,
+          filter: {
+            anyOf: [
+              { supertype: "Pokémon", pokemonType: "Grass" },
+              { basicEnergy: true, energyType: "Grass" },
+            ],
+          },
+          to: "hand",
+        },
+      ],
+    },
+  ],
+
+  // Secret Box (ACE SPEC): discard 3 OTHER cards from hand, then search for an
+  // Item, a Tool, a Supporter, and a Stadium. Four `auto`/`upTo` slots for the
+  // same reasons as Dawn. The guard needs 4 (3 to discard + Secret Box itself,
+  // which is still in hand when guards are checked).
+  "Secret Box": [
+    {
+      card: "Secret Box",
+      trigger: { kind: "trainer", subtype: "Item" },
+      guards: [{ cond: "hand_size_gte", n: 4 }],
+      targets: [
+        { ref: "i", upTo: true, select: "card", card: { zone: "deck", filter: { supertype: "Trainer", subtype: "Item" } }, chooser: "auto" },
+        { ref: "t", upTo: true, select: "card", card: { zone: "deck", filter: { supertype: "Trainer", subtype: "Pokémon Tool" } }, chooser: "auto" },
+        { ref: "s", upTo: true, select: "card", card: { zone: "deck", filter: { supertype: "Trainer", subtype: "Supporter" } }, chooser: "auto" },
+        { ref: "st", upTo: true, select: "card", card: { zone: "deck", filter: { supertype: "Trainer", subtype: "Stadium" } }, chooser: "auto" },
+      ],
+      // Discard cost FIRST, then the searches (order matters: the cost must
+      // not be able to discard a card the search just fetched).
+      ops: [
+        { op: "discard_hand_cards", n: 3 },
+        { op: "search", targetRef: "i", to: "hand" },
+        { op: "search", targetRef: "t", to: "hand" },
+        { op: "search", targetRef: "s", to: "hand" },
+        { op: "search", targetRef: "st", to: "hand" },
+      ],
+    },
+  ],
+
   /* ── State-dependent damage (damage_scale) ───────────────────── */
 
   // MIGRATED from the legacy DAMAGE_SCALERS registry (attacks.ts). Behavior is
