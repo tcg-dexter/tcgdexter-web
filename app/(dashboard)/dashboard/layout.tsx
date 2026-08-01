@@ -18,7 +18,7 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text-primary)]">
       <DashboardThemeColor />
-      <header className="border-b border-black/8 dark:border-white/10 bg-white/80 dark:bg-surface-elevated/80 backdrop-blur">
+      <header className="border-b border-black/8 dark:border-white/10 bg-white/80 dark:bg-surface-elevated backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3 py-3 sm:px-6">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <div className="flex items-center gap-2">
