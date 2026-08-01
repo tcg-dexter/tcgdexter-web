@@ -50,7 +50,14 @@ export interface DecisionPolicy {
 /* ─── Heuristic v1 ──────────────────────────────────────────────── */
 
 /** Stop spending deck on draws/searches below this (turn-start draws must
- *  keep flowing — deck-out is a loss). Mirrors the planner's reserve. */
+ *  keep flowing — deck-out is a loss). Mirrors the planner's reserve.
+ *
+ *  TESTED AND REJECTED: raising this to 14 or 20 does not fix deck-out.
+ *  Alakazam holds at 32-37% across all three values. The arithmetic says why —
+ *  once a deck is down to ~13-20 cards by own-turn 9, a 25-turn game decks out
+ *  from the compulsory turn-start draw alone, whatever the reserve is. Game
+ *  LENGTH is the cause, which means prize rate, which means piloting. Do not
+ *  re-tune this constant expecting deck-out to move. */
 const DECK_RESERVE = 8;
 
 /** Pick a beneficial activated ability from the legal set, or null.

@@ -22,6 +22,7 @@ import { metaDeckToList, type MetaDeckEntry } from "@/lib/metaDeckList";
 import { simulateMatchup } from "@/lib/engine/sim/rollout";
 import { PlannerPolicy } from "@/lib/engine/sim/planner";
 import { plannerParamsForSkill } from "@/lib/engine/sim/difficulty";
+import { createBotEvaluator } from "@/lib/ml/botEvaluator";
 import { lookupCard } from "@/lib/engine/catalog";
 import {
   gutDeckList,
@@ -55,6 +56,13 @@ function load(): Entry[] {
   return out.sort((x, y) => y.rep - x.rep);
 }
 
+/** The bot plays with the TRAINED value model when one is available. Both
+ *  harnesses previously constructed PlannerPolicy without an `evaluate`
+ *  option, so every calibration run silently fell back to the planner's
+ *  built-in heuristicEvaluator — i.e. we were measuring the meta with the
+ *  weakest pilot we own while value-gbm-v1 sat unused. */
+const EVALUATOR = createBotEvaluator() ?? undefined;
+
 const params = plannerParamsForSkill(1);
 
 /** Seat-balanced win rate of `list` against `field`. */
@@ -68,8 +76,8 @@ function vsField(list: string, field: Entry[], seed: string): number {
         n: N,
         seed: `${seed}:${f.id}:${flipped}`,
         policies: (gameSeed: number) => ({
-          player: new PlannerPolicy({ params, seed: gameSeed }),
-          opponent: new PlannerPolicy({ params, seed: (gameSeed ^ 0x85ebca6b) >>> 0 }),
+          player: new PlannerPolicy({ params, seed: gameSeed, evaluate: EVALUATOR }),
+          opponent: new PlannerPolicy({ params, seed: (gameSeed ^ 0x85ebca6b) >>> 0, evaluate: EVALUATOR }),
         }),
       });
       wins += flipped ? N - r.wins_a : r.wins_a;

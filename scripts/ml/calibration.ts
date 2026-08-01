@@ -39,6 +39,7 @@ import metaArchetypesRaw from "@/data/meta-archetypes.json";
 import { metaDeckToList, type MetaDeckEntry } from "@/lib/metaDeckList";
 import { simulateMatchup } from "@/lib/engine/sim/rollout";
 import { PlannerPolicy, plannerParamsForSkill, SIM_VERSION } from "@/lib/engine/sim";
+import { createBotEvaluator } from "@/lib/ml/botEvaluator";
 import { deckEffectCoverage } from "@/lib/ml/effectCoverage";
 import { mulberry32 } from "@/lib/engine/sim/rng";
 import { evaluateCalibration } from "@/lib/ml/deckGradeCalibration";
@@ -85,6 +86,13 @@ const RANK_GATE_FRACTION = Number(arg("--rank-fraction") ?? 0.8);
 /** How many real list variants per archetype to average over. 1 reproduces
  *  the old single-canonical-list behaviour. */
 const VARIANTS_PER_DECK = Number(arg("--variants") ?? 3);
+
+/** The bot plays with the TRAINED value model when one is available. Both
+ *  harnesses previously constructed PlannerPolicy without an `evaluate`
+ *  option, so every calibration run silently fell back to the planner's
+ *  built-in heuristicEvaluator — i.e. we were measuring the meta with the
+ *  weakest pilot we own while value-gbm-v1 sat unused. */
+const EVALUATOR = createBotEvaluator() ?? undefined;
 
 /* ─── Inputs ────────────────────────────────────────────────────── */
 
@@ -292,10 +300,11 @@ function runMatrix(decks: Deck[]): {
           ...(POLICY === "planner"
             ? {
                 policies: (gameSeed: number) => ({
-                  player: new PlannerPolicy({ params: plannerParamsForSkill(SKILL), seed: gameSeed }),
+                  player: new PlannerPolicy({ params: plannerParamsForSkill(SKILL), seed: gameSeed, evaluate: EVALUATOR }),
                   opponent: new PlannerPolicy({
                     params: plannerParamsForSkill(SKILL),
                     seed: (gameSeed ^ 0x85ebca6b) >>> 0,
+                    evaluate: EVALUATOR,
                   }),
                 }),
               }
