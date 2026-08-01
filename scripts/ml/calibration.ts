@@ -41,6 +41,7 @@ import { simulateMatchup } from "@/lib/engine/sim/rollout";
 import { PlannerPolicy, plannerParamsForSkill, SIM_VERSION } from "@/lib/engine/sim";
 import { deckEffectCoverage } from "@/lib/ml/effectCoverage";
 import { mulberry32 } from "@/lib/engine/sim/rng";
+import { evaluateCalibration } from "@/lib/ml/deckGradeCalibration";
 
 /* ─── CLI ───────────────────────────────────────────────────────── */
 
@@ -415,6 +416,25 @@ function main(): void {
       `[GATE: <= ${(RMSE_GATE * 100).toFixed(0)}, floor ${(ceiling.rmseFloor * 100).toFixed(2)}]`,
   );
   console.log(`  RMSE, null model:  ${(nullErr * 100).toFixed(2)} points   [predict ${(nullPred * 100).toFixed(1)}% for EVERY deck]`);
+
+  // A raw simulated win rate is a model SCORE, not a prediction — the sim
+  // spans 26%-83% where reality spans 46.6%-58.1%. Fitting a link function is
+  // ordinary practice; fitting it and then scoring the fit is not, and when
+  // the simulator has no signal the fit degenerates to the null model. So
+  // this is LEAVE-ONE-OUT: every deck is predicted by a fit that never saw
+  // it, and the null baseline is held to the same rule.
+  const cal = evaluateCalibration(
+    rows.map((r) => ({ sim: r.sim, real: r.real, label: r.deck.name })),
+  );
+  console.log("\n  === calibrated prediction (leave-one-out) ===");
+  console.log(`  fit:               real = ${cal.fullFit.intercept.toFixed(3)} + ${cal.fullFit.slope.toFixed(3)} x sim`);
+  console.log(`  RMSE out-of-sample ${cal.rmsePoints.toFixed(2)} points   [null, same protocol: ${cal.nullRmsePoints.toFixed(2)}]`);
+  console.log(
+    `  SKILL out-of-sample ${(cal.skill * 100).toFixed(0)}%   ` +
+      (cal.skill > 0
+        ? "(calibrated simulation beats knowing nothing)"
+        : "(no better than knowing nothing)"),
+  );
   console.log(
     `  SKILL vs null:     ${(skill * 100).toFixed(0)}%   ` +
       (skill > 0
