@@ -483,10 +483,22 @@ export function promoteBest(bench: PokemonInPlay[]): number {
   let best = 0;
   let bestScore = -1;
   bench.forEach((mon, i) => {
+    // Score against the bench that would REMAIN after promoting this one.
+    // That matters for copy-an-attack: N's Zoroark's Night Joker is worth
+    // whatever is still BEHIND it, so promoting the donor and promoting the
+    // copier are not interchangeable. Also routes through the declarative
+    // estimate, so an attack printing "" no longer reads as a 0 ceiling.
+    const remaining = bench.filter((_, j) => j !== i);
+    const attacks = (mon.card.catalog?.attacks ?? []).length;
+    let ceiling = 0;
+    for (let ai = 0; ai < attacks; ai++) {
+      ceiling = Math.max(
+        ceiling,
+        estimatedAttackDamage(mon, ai, undefined, "player", { ownBench: remaining }),
+      );
+    }
     const score =
-      mon.attachedEnergy.length * 10000 +
-      attackCeiling(mon) * 10 +
-      (mon.card.catalog?.hp ?? 0) / 100;
+      mon.attachedEnergy.length * 10000 + ceiling * 10 + (mon.card.catalog?.hp ?? 0) / 100;
     if (score > bestScore) {
       bestScore = score;
       best = i;
