@@ -79,6 +79,16 @@ const MIN_GAMES = Number(arg("--min-games") ?? 100);
  *  10 points of the real measurement" is the product-level bar — it is what a
  *  deck grade claims when it says a list wins about X% against the field. */
 const RMSE_GATE = Number(arg("--rmse-gate") ?? 0.10);
+/** Planner lookahead: re-rank the top-K plans by simulating our follow-up
+ *  turn. Defaults OFF in the engine (DEFAULT_DEEPEN_TOP_K = 0) because it did
+ *  not pay with the heuristic evaluator; worth re-testing now the trained
+ *  value model is actually in the loop.
+ *
+ *  TESTED: --deepen 4 gives slope 0.028 / out-of-sample skill -8%, against
+ *  0.036 / -6% with deepening off. No evidence it helps even with the trained
+ *  evaluator, which is consistent with why the engine defaults it to 0. Kept
+ *  as a flag so the re-test is one command, not a code change. */
+const DEEPEN = Number(arg("--deepen") ?? 0);
 /** Secondary gate: rank correlation, as a FRACTION of what the real data can
  *  support. Expressed as a fraction because the absolute number is bounded by
  *  sampling noise in the ground truth, not by the simulator. */
@@ -300,11 +310,12 @@ function runMatrix(decks: Deck[]): {
           ...(POLICY === "planner"
             ? {
                 policies: (gameSeed: number) => ({
-                  player: new PlannerPolicy({ params: plannerParamsForSkill(SKILL), seed: gameSeed, evaluate: EVALUATOR }),
+                  player: new PlannerPolicy({ params: plannerParamsForSkill(SKILL), seed: gameSeed, evaluate: EVALUATOR, deepenTopK: DEEPEN }),
                   opponent: new PlannerPolicy({
                     params: plannerParamsForSkill(SKILL),
                     seed: (gameSeed ^ 0x85ebca6b) >>> 0,
                     evaluate: EVALUATOR,
+                    deepenTopK: DEEPEN,
                   }),
                 }),
               }
