@@ -391,6 +391,19 @@ function main(): void {
     rows.map((r) => ({ wins: r.deck.arch.wins, decided: r.deck.decided })),
   );
 
+  // THE NULL MODEL: predict the field mean for every deck. It knows nothing —
+  // no cards, no rules, no simulation — and it scores RMSE ~3.2 here, because
+  // the real win rates only span 46.6%-58.1%. Any RMSE bar loose enough to be
+  // reachable is therefore ALSO reachable by saying "every deck is average",
+  // and shrinking simulated win rates toward the mean would "pass" while
+  // adding no information at all. This line exists so that can never be
+  // mistaken for progress — including by whoever is tempted next.
+  const nullPred = realArr.reduce((sum, v) => sum + v, 0) / realArr.length;
+  const nullErr = rmse(realArr.map(() => nullPred), realArr);
+  // Fraction of the null model's error the simulator removes. Negative means
+  // the simulation is worse than assuming every deck is average.
+  const skill = 1 - err / nullErr;
+
   console.log("\n  === correlation vs real tournament results ===");
   console.log(
     `  Spearman (rank):   ${rho.toFixed(3)}   [ceiling ${ceiling.attainableSpearman.toFixed(3)}` +
@@ -400,6 +413,13 @@ function main(): void {
   console.log(
     `  RMSE on win%:      ${(err * 100).toFixed(2)} points   ` +
       `[GATE: <= ${(RMSE_GATE * 100).toFixed(0)}, floor ${(ceiling.rmseFloor * 100).toFixed(2)}]`,
+  );
+  console.log(`  RMSE, null model:  ${(nullErr * 100).toFixed(2)} points   [predict ${(nullPred * 100).toFixed(1)}% for EVERY deck]`);
+  console.log(
+    `  SKILL vs null:     ${(skill * 100).toFixed(0)}%   ` +
+      (skill > 0
+        ? "(the simulation carries information)"
+        : "(WORSE than assuming every deck is average)"),
   );
   console.log(`  Sim spread:        ${(Math.min(...simArr) * 100).toFixed(1)}% – ${(Math.max(...simArr) * 100).toFixed(1)}%`);
   console.log(`  Real spread:       ${(Math.min(...realArr) * 100).toFixed(1)}% – ${(Math.max(...realArr) * 100).toFixed(1)}%`);
@@ -429,7 +449,18 @@ function main(): void {
   // never have passed, no matter how good the engine got.
   const rankOk = rho >= RANK_GATE_FRACTION * ceiling.attainableSpearman;
   const errOk = err <= RMSE_GATE;
-  const pass = errOk && rankOk;
+  // Beating the null model is non-negotiable: without it a low RMSE only
+  // means we learned to say "average", which is not a deck grade.
+  const skillOk = skill > 0;
+  const pass = errOk && rankOk && skillOk;
+  if (!skillOk) {
+    console.log(
+      `\n  !! The null model beats the simulator by ${((err - nullErr) * 100).toFixed(1)} points.` +
+        `\n     Do NOT close this gap by shrinking simulated win rates toward the mean —` +
+        `\n     that reproduces the null model exactly. It closes by RANKING decks correctly,` +
+        `\n     i.e. by play quality (Spearman ${rho.toFixed(3)} of ${ceiling.attainableSpearman.toFixed(3)} attainable).`,
+    );
+  }
   console.log(
     `\n  ${pass ? "PASS" : "FAIL"} — RMSE ${(err * 100).toFixed(2)}pts ` +
       `${errOk ? "<=" : ">"} ${(RMSE_GATE * 100).toFixed(0)} (primary), ` +

@@ -38,6 +38,7 @@ import {
   promoteBest,
   wantsDrawRefresh,
   type DecisionPolicy,
+  wantsSearch,
 } from "./policy";
 import { energyProvides, energyUnits, prizeValue } from "./setup";
 import { isSupporter, trainerSpec, type PlayTrainerMove, type TrainerSpec } from "./trainers";
@@ -357,17 +358,19 @@ export class PlannerPolicy implements DecisionPolicy {
         const supporter = legal.find((m) => m.kind === "cycle_supporter");
         if (supporter) return supporter;
       }
-      const searches = legal.filter(
-        (m): m is PlayTrainerMove => specOf(m)?.phase === "search",
-      );
-      if (searches.length > 0) return bestSearchTrainer(view, searches);
-      // Declarative search cards (Team Rocket's Transceiver, …) — info phase.
-      const searchEffects = legal.filter(
-        (m): m is EffectMove =>
-          m.kind === "effect" && effectMovePhase(m.card, m.effectIndex) === "search",
-      );
-      const searchEffect = chooseEffectMove(view, searchEffects);
-      if (searchEffect) return searchEffect;
+      if (wantsSearch(view)) {
+        const searches = legal.filter(
+          (m): m is PlayTrainerMove => specOf(m)?.phase === "search",
+        );
+        if (searches.length > 0) return bestSearchTrainer(view, searches);
+        // Declarative search cards (Team Rocket's Transceiver, …) — info phase.
+        const searchEffects = legal.filter(
+          (m): m is EffectMove =>
+            m.kind === "effect" && effectMovePhase(m.card, m.effectIndex) === "search",
+        );
+        const searchEffect = chooseEffectMove(view, searchEffects);
+        if (searchEffect) return searchEffect;
+      }
       const item = legal.find((m) => m.kind === "cycle_item");
       if (item) return item;
       if (tacticalSupporterInHand === false) {

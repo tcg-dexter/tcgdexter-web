@@ -208,6 +208,28 @@ export function bestSearchTrainer(view: PlayerView, moves: PlayTrainerMove[]): P
   return best;
 }
 
+/** A hand this size is not card-starved, it is ACTION-starved. */
+const HAND_GLUT = 12;
+
+/** Is spending deck on a search worth it right now?
+ *
+ *  Searches were gated on `deckCount > DECK_RESERVE` and nothing else, so both
+ *  policies played every Ultra Ball / Poffin / Secret Box in hand every single
+ *  turn. A search moves cards from deck to hand, and tracing Alakazam showed
+ *  exactly that: deck 43 -> 13 while the hand grew 4.5 -> 20, about seven
+ *  cards a turn. The AI was transferring its deck into its hand and then
+ *  losing to deck-out in 47% of its games while posting 32% against a real
+ *  58.1%.
+ *
+ *  A real player holding 20 cards does not play another ball — they play the
+ *  cards they already have. Deck is the resource that keeps you alive; hand
+ *  is only useful to the extent you can spend it. So searching stops paying
+ *  once the hand is in surplus. */
+export function wantsSearch(view: PlayerView): boolean {
+  if (view.deckCount <= DECK_RESERVE) return false;
+  return view.hand.length < HAND_GLUT;
+}
+
 /** Should the hand be refreshed? SMALL *or* DEAD.
  *
  *  The gate used to be hand size alone (<= 5), which produced the calibration
@@ -223,7 +245,19 @@ export function bestSearchTrainer(view: PlayerView, moves: PlayTrainerMove[]): P
  *  Shared with the planner, which had its own copy of the <= 5 gate. */
 export function wantsDrawRefresh(view: PlayerView): boolean {
   if (view.hand.length <= 5) return true;
-  return !view.hand.some((c) => energyProvides(c) !== null);
+  // "No energy in hand" alone is FAR too eager. A deck running 6 Energy in 60
+  // has an energy-less hand most turns, so this fired nearly every turn and
+  // the AI dug its own deck out: Alakazam decked out in 47% of its games while
+  // posting 32% against a real 58.1%. Deck-out is a loss, and burning deck to
+  // find a card you do not need is how you get there.
+  //
+  // Dig only when energy would actually CHANGE something — i.e. some Pokémon
+  // in play still can't attack. If every attacker is already armed, more
+  // energy is dead weight and the deck is worth more than the cards.
+  if (view.hand.some((c) => energyProvides(c) !== null)) return false;
+  return inPlay(view.board).some(
+    (m) => usableAttacks(m).length < (m.card.catalog?.attacks.length ?? 0),
+  );
 }
 
 /** Which Pokémon to put on the Bench, or null if none is legal.
@@ -319,11 +353,13 @@ export class HeuristicPolicy implements DecisionPolicy {
       if (drawSupporters.length > 0 && wantDraw) return drawSupporters[0];
       const drawEffects = effectMovesOf(legal, "draw");
       if (drawEffects.length > 0 && wantDraw) return chooseEffectMove(view, drawEffects)!;
-      const searches = trainersBySpec((s) => s.phase === "search");
-      if (searches.length > 0) return bestSearchTrainer(view, searches);
-      // Declarative search cards (Team Rocket's Transceiver, …) play here too.
-      const searchEffects = effectMovesOf(legal, "search");
-      if (searchEffects.length > 0) return chooseEffectMove(view, searchEffects)!;
+      if (wantsSearch(view)) {
+        const searches = trainersBySpec((s) => s.phase === "search");
+        if (searches.length > 0) return bestSearchTrainer(view, searches);
+        // Declarative search cards (Team Rocket's Transceiver, …) play here too.
+        const searchEffects = effectMovesOf(legal, "search");
+        if (searchEffects.length > 0) return chooseEffectMove(view, searchEffects)!;
+      }
       const supporter = byKind("cycle_supporter");
       if (supporter.length > 0) return supporter[0];
     }
