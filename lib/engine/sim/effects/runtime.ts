@@ -243,12 +243,18 @@ function payDiscardBoost(
 /** Ceiling on the options ONE target slot may produce. "Up to 3" over a wide
  *  deck is genuinely large, and slots multiply through the cartesian product,
  *  so an uncapped enumeration would blow up legalMoves (and every policy that
- *  scores it). Truncation is deterministic — zone order — so replay is stable. */
-const MAX_SLOT_OPTIONS = 60;
-
-/** Ceiling on the moves ONE effect may enumerate across all its slots. The
- *  per-slot cap alone isn't enough: three slots at 60 each is 216,000. */
-const MAX_EFFECT_MOVES = 200;
+ *  scores it). Truncation is deterministic — zone order — so replay is stable.
+ *
+ *  These were 60/200 while only a handful of cards were declarative. Once the
+ *  field landed (W3) the planner-latency test caught the cost: legalMoves runs
+ *  many times per turn and the planner scores every move, so broad searches
+ *  (Ciphermaniac's unfiltered choose-2, Noctowl's "up to 2 cards") dominated
+ *  the budget — 60 hard-vs-hard games went from ~1.1s to ~16s. Tightened to
+ *  the point where a search still offers a real choice but the AI isn't
+ *  ranking dozens of near-identical fetches. A genuine multi-option chooser
+ *  is W4's job; until then more options buy accuracy the policies can't use. */
+const MAX_SLOT_OPTIONS = 12;
+const MAX_EFFECT_MOVES = 24;
 
 /** Choose `k` items, allowing an item to repeat up to `copies` times.
  *  Multi-pick of the SAME NAME is legal and often correct (Cyrano taking two

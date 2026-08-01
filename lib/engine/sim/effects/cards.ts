@@ -378,6 +378,7 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
   ],
   Alakazam: [
 { card: "Alakazam", ability: "Psychic Draw", trigger: { kind: "on_evolve" }, ops: [{ op: "draw", n: 3 }] },
+    { card: "Alakazam", trigger: { kind: "attack_rider", attackName: "Powerful Hand" }, ops: [{ op: "place_counters", monRef: DEFENDER_REF, n: "own_hand_size" }] },
   ],
   Kadabra: [
 { card: "Kadabra", ability: "Psychic Draw", trigger: { kind: "on_evolve" }, ops: [{ op: "draw", n: 2 }] },

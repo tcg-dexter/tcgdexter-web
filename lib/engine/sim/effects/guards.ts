@@ -48,6 +48,10 @@ export function guardsPass(
         return (side.supporterNamePlayedThisTurn ?? "").includes(g.text);
       case "moved_to_active_this_turn":
         return source != null && source.movedToActiveOnTurn === state.turn.number;
+      case "stadium_in_play":
+        return state.stadium != null;
+      case "own_bench_gte":
+        return side.bench.length >= g.n;
       case "own_has_mon": {
         const pool = [side.active, ...side.bench].filter((m): m is PokemonInPlay => m !== null);
         return pool.some((m) => monMatches(m, g.filter));

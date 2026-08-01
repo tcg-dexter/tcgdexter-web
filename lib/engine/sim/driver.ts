@@ -27,7 +27,7 @@ import { retreatCost } from "./tools";
 import { damageTakenReduction, hasStatus, statusAmount } from "./statuses";
 import { applyTrainer } from "./trainers";
 import { applyEffect } from "./effects/runtime";
-import { attackRiderEffect, effectsFor, onAttachEffect, triggerEffect } from "./effects/cards";
+import { attackRiderEffect, damageScaleEffect, effectsFor, onAttachEffect, triggerEffect } from "./effects/cards";
 import { applyStadium, benchCap, enforceBenchCap } from "./stadiums";
 import { viewFor } from "./view";
 import { shuffle, type Rng } from "./rng";
@@ -331,11 +331,19 @@ export function applyMove(
         attackBaseDamage(state, actor, attacker, move.attackIndex, rng) +
         activeDamageBonus(state, actor, attacker, defender) -
         statusAmount(attacker, "damage_dealt_reduction", state);
-      // No-Weakness / prevent-all are read on the DEFENDER.
-      const afterWr = hasStatus(defender, "no_weakness", state)
+      // Attack-level exemptions ("damage isn't affected by Weakness or
+      // Resistance, or by any effects on your opponent's Active").
+      const ignore = damageScaleEffect(attacker.card.name, attack.name)?.damage?.ignore;
+      const skipWr =
+        ignore?.weakness === true || hasStatus(defender, "no_weakness", state);
+      const afterWr = skipWr
         ? Math.max(0, rawBase)
         : applyWeaknessResistance(Math.max(0, rawBase), attacker, defender);
-      const reduced = Math.max(0, afterWr - damageTakenReduction(defender, attacker, state));
+      // "…or by any effects on your opponent's Active" also bypasses the
+      // defender's damage-reduction statuses.
+      const reduced = ignore?.defenderEffects
+        ? afterWr
+        : Math.max(0, afterWr - damageTakenReduction(defender, attacker, state));
       dealRawDamage(defender, hasStatus(defender, "prevent_all", state) ? 0 : reduced);
 
       // Attack-inflicted conditions on the defending active (Mind Bend,

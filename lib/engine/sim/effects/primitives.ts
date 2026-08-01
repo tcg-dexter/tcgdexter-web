@@ -51,6 +51,7 @@ function spliceById(zone: CardInstance[], id: string): CardInstance | null {
 function resolveQty(q: Quantity, side: PlayerSide, opp?: PlayerSide): number {
   if (q === "own_prizes" || q === "opp_prizes") return side.prizes.length;
   if (q === "opp_bench_count") return opp?.bench.length ?? 0;
+  if (q === "own_hand_size") return side.hand.length;
   return q;
 }
 function mons(ctx: OpContext, ref: string): ResolvedMon[] {
@@ -173,7 +174,7 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
       break;
 
     case "place_counters":
-      for (const { mon } of mons(ctx, op.monRef)) placeCounters(mon, op.n);
+      for (const { mon } of mons(ctx, op.monRef)) placeCounters(mon, resolveQty(op.n, side, opp));
       break;
 
     case "move_counters": {

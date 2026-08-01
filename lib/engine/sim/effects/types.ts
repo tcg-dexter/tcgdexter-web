@@ -123,6 +123,10 @@ export type Guard =
   /** ANY of the acting player's Pokémon in play matches (Glass Trumpet needs
    *  a Tera Pokémon on board). */
   | { cond: "own_has_mon"; filter: MonFilter }
+  /** A Stadium is in play at all (Assault Landing). */
+  | { cond: "stadium_in_play" }
+  /** The acting player has at least `n` Benched Pokémon (V-Force). */
+  | { cond: "own_bench_gte"; n: number }
   /** EVERY one of the acting player's Pokémon in play matches (Ariana draws
    *  more when the whole board is Team Rocket's). */
   | { cond: "all_own_mons_match"; filter: MonFilter }
@@ -171,6 +175,9 @@ export interface DamageFormula {
   count?: DamageCount;
   /** Flat conditional additions (Rising Blade's "+80 if the Active is an ex"). */
   bonuses?: { amount: number; when: Guard }[];
+  /** Damage-calculation exemptions ("this attack's damage isn't affected by
+   *  Weakness or Resistance, or by any effects on your opponent's Active"). */
+  ignore?: { weakness?: boolean; resistance?: boolean; defenderEffects?: boolean };
   /** "You MAY discard X … and this attack does N more for each" (Metallic
    *  Hammer, Bellowing Thunder, Garland Ray, Erasure Ball, Rocket Feathers).
    *  Modeled as always taking the boost when the resource is there — these
@@ -198,7 +205,7 @@ export interface DamageFormula {
 /* ─── Effect primitives ─────────────────────────────────────────── */
 
 /** `n` can be a fixed count or a dynamic quantity read at apply time. */
-export type Quantity = number | "own_prizes" | "opp_prizes" | "opp_bench_count";
+export type Quantity = number | "own_prizes" | "opp_prizes" | "opp_bench_count" | "own_hand_size";
 
 export type EffectOp =
   | { op: "draw"; n: Quantity }
@@ -236,7 +243,7 @@ export type EffectOp =
   // your opponent's Pokémon"). Weakness/Resistance apply only in the Active
   // spot, matching the printed reminder text on these attacks.
   | { op: "damage_mon"; monRef: string; amount: number }
-  | { op: "place_counters"; monRef: string; n: number }
+  | { op: "place_counters"; monRef: string; n: Quantity }
   | { op: "move_counters"; fromRef: string; toRef: string; n: number }
   | { op: "apply_condition"; monRef: string; condition: SpecialCondition }
   | { op: "heal"; monRef: string; n: number | "all" }
