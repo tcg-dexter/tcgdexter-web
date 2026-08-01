@@ -133,6 +133,10 @@ export type Guard =
   | { cond: "own_has_mon"; filter: MonFilter }
   /** A Stadium is in play at all (Assault Landing). */
   | { cond: "stadium_in_play" }
+  /** Both players hold the same number of cards (Adjusted Horn). */
+  | { cond: "hands_equal" }
+  /** The opponent's Active already has damage on it (Huge Bite). */
+  | { cond: "opp_active_damaged" }
   /** The acting player has at least `n` Benched Pokémon (V-Force). */
   | { cond: "own_bench_gte"; n: number }
   /** EVERY one of the acting player's Pokémon in play matches (Ariana draws

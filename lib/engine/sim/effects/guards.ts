@@ -48,6 +48,10 @@ export function guardsPass(
         return (side.supporterNamePlayedThisTurn ?? "").includes(g.text);
       case "moved_to_active_this_turn":
         return source != null && source.movedToActiveOnTurn === state.turn.number;
+      case "hands_equal":
+        return side.hand.length === opp.hand.length;
+      case "opp_active_damaged":
+        return (opp.active?.damage ?? 0) > 0;
       case "stadium_in_play":
         return state.stadium != null;
       case "own_bench_gte":

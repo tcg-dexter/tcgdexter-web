@@ -9,6 +9,113 @@ import { DEFENDER_REF, OWN_ACTIVE_REF, SELF_REF } from "./types";
 import type { CardEffect } from "./types";
 
 export const EFFECT_CARDS: Record<string, CardEffect[]> = {
+  "Cornerstone Mask Ogerpon ex": [
+    { card: "Cornerstone Mask Ogerpon ex", trigger: { kind: "damage_scale", attackName: "Demolish" },
+      damage: { base: 140, ignore: { weakness: true, resistance: true, defenderEffects: true } }, ops: [] },
+  ],
+  "Mega Starmie ex": [
+    { card: "Mega Starmie ex", trigger: { kind: "damage_scale", attackName: "Nebula Beam" },
+      damage: { base: 210, ignore: { weakness: true, resistance: true, defenderEffects: true } }, ops: [] },
+    { card: "Mega Starmie ex", trigger: { kind: "attack_rider", attackName: "Jetting Blow" }, targets: [{ ref: "t", select: "mon", mon: { side: "opponent", zone: "bench" }, chooser: "player" }], ops: [{ op: "damage_mon", monRef: "t", amount: 50 }] },
+  ],
+  Crustle: [
+    { card: "Crustle", trigger: { kind: "damage_scale", attackName: "Superb Scissors" },
+      damage: { base: 120, ignore: { defenderEffects: true } }, ops: [] },
+  ],
+  "Dudunsparce ex": [
+    { card: "Dudunsparce ex", trigger: { kind: "damage_scale", attackName: "Destructive Drill" },
+      damage: { base: 150, ignore: { defenderEffects: true } }, ops: [] },
+    {
+      card: "Dudunsparce ex",
+      trigger: { kind: "damage_scale", attackName: "Tenacious Tail" },
+      damage: {
+        base: 0,
+        per: 60,
+        count: { of: "mons_in_play", side: "opponent", filter: { side: "opponent", zone: "in_play", isEx: true } },
+      },
+      ops: [],
+    },
+  ],
+  "Mega Lopunny ex": [
+    { card: "Mega Lopunny ex", trigger: { kind: "damage_scale", attackName: "Spiky Hopper" },
+      damage: { base: 160, ignore: { defenderEffects: true } }, ops: [] },
+{ card: "Mega Lopunny ex", trigger: { kind: "damage_scale", attackName: "Gale Thrust" },
+    damage: { base: 60, bonuses: [{ amount: 170, when: { cond: "moved_to_active_this_turn" } }] }, ops: [] },
+  ],
+  "N's Zekrom": [
+    { card: "N's Zekrom", trigger: { kind: "damage_scale", attackName: "Shred" },
+      damage: { base: 70, ignore: { defenderEffects: true } }, ops: [] },
+    { card: "N's Zekrom", trigger: { kind: "attack_rider", attackName: "Rampaging Thunder" }, ops: [{ op: "apply_status", monRef: SELF_REF, status: "cannot_attack" }] },
+  ],
+  "Cynthia's Gible": [
+    { card: "Cynthia's Gible", trigger: { kind: "damage_scale", attackName: "Rock Hurl" },
+      damage: { base: 20, ignore: { resistance: true } }, ops: [] },
+  ],
+  "Fan Rotom": [
+    { card: "Fan Rotom", trigger: { kind: "damage_scale", attackName: "Assault Landing" },
+      damage: { base: 0, bonuses: [{ amount: 70, when: { cond: "stadium_in_play" } }] }, ops: [] },
+{ card: "Fan Rotom", ability: "Fan Call", trigger: { kind: "activated" },
+    targets: [{ ref: "p", select: "card", count: 3, upTo: true, card: { zone: "deck", filter: { supertype: "Pokémon", pokemonType: "Colorless", maxHp: 100 } }, chooser: "player" }],
+    ops: [{ op: "search", targetRef: "p", to: "hand" }] },
+  ],
+  Victini: [
+    { card: "Victini", trigger: { kind: "damage_scale", attackName: "V-Force" },
+      damage: { base: 0, bonuses: [{ amount: 120, when: { cond: "own_bench_gte", n: 5 } }] }, ops: [] },
+  ],
+  Solrock: [
+    { card: "Solrock", trigger: { kind: "damage_scale", attackName: "Cosmic Beam" },
+      damage: { base: 0, ignore: { weakness: true, resistance: true },
+        bonuses: [{ amount: 70, when: { cond: "own_has_mon", filter: { side: "own", zone: "bench", nameContains: "Lunatone" } } }] }, ops: [] },
+  ],
+  "Hop's Cramorant": [
+    { card: "Hop's Cramorant", trigger: { kind: "damage_scale", attackName: "Fickle Spitting" },
+      damage: { base: 0, bonuses: [{ amount: 120, when: { cond: "opp_prizes_lte", n: 4 } }] }, ops: [] },
+  ],
+  "Iron Boulder": [
+    { card: "Iron Boulder", trigger: { kind: "damage_scale", attackName: "Adjusted Horn" },
+      damage: { base: 0, bonuses: [{ amount: 170, when: { cond: "hands_equal" } }] }, ops: [] },
+  ],
+  "Mega Mawile ex": [
+    { card: "Mega Mawile ex", trigger: { kind: "damage_scale", attackName: "Huge Bite" },
+      damage: { base: 260, bonuses: [{ amount: -230, when: { cond: "opp_active_damaged" } }] }, ops: [] },
+{ card: "Mega Mawile ex", trigger: { kind: "damage_scale", attackName: "Gobble Down" },
+    damage: { base: 0, per: 80, count: { of: "self_prizes_taken" } }, ops: [] },
+  ],
+  "Archaludon ex": [
+    { card: "Archaludon ex", trigger: { kind: "attack_rider", attackName: "Metal Defender" },
+      ops: [{ op: "apply_status", monRef: SELF_REF, status: "no_weakness" }] },
+{ card: "Archaludon ex", ability: "Assemble Alloy", trigger: { kind: "on_evolve" },
+    targets: [
+      { ref: "e", select: "card", count: 2, upTo: true, card: { zone: "discard", filter: { basicEnergy: true, energyType: "Metal" } }, chooser: "player" },
+      { ref: "m", select: "mon", mon: { side: "own", zone: "in_play", type: "Metal" }, chooser: "player" }],
+    ops: [{ op: "attach_energy", energyRef: "e", monRef: "m", from: "discard" }] },
+  ],
+  "Hop's Phantump": [
+    { card: "Hop's Phantump", trigger: { kind: "attack_rider", attackName: "Splashing Dodge" },
+      ops: [{ op: "coin_flip", heads: [{ op: "apply_status", monRef: SELF_REF, status: "prevent_all" }] }] },
+  ],
+  Petilil: [
+    { card: "Petilil", trigger: { kind: "attack_rider", attackName: "Hide" },
+      ops: [{ op: "coin_flip", heads: [{ op: "apply_status", monRef: SELF_REF, status: "prevent_all" }] }] },
+  ],
+  Duskull: [
+    { card: "Duskull", trigger: { kind: "attack_rider", attackName: "Come and Get You" },
+      targets: [{ ref: "d", select: "card", count: 3, upTo: true, card: { zone: "discard", filter: { nameContains: "Duskull" } }, chooser: "player" }],
+      ops: [{ op: "retrieve", targetRef: "d", to: "bench" }] },
+  ],
+  Elgyem: [
+    { card: "Elgyem", trigger: { kind: "attack_rider", attackName: "Slight Shift" },
+      targets: [{ ref: "f", select: "mon", mon: { side: "opponent", zone: "in_play" }, chooser: "player" },
+                { ref: "t", select: "mon", mon: { side: "opponent", zone: "in_play" }, chooser: "player" }],
+      ops: [{ op: "move_energy", fromRef: "f", toRef: "t", filter: {}, count: 1 }] },
+  ],
+  "Eevee ex": [
+    { card: "Eevee ex", ability: "Rainbow DNA", trigger: { kind: "static" }, ops: [] },
+  ],
+  Kyurem: [
+    { card: "Kyurem", ability: "Plasma Bane", trigger: { kind: "static" }, ops: [] },
+    { card: "Kyurem", trigger: { kind: "attack_rider", attackName: "Trifrost" }, targets: [{ ref: "t", select: "mon", count: 3, upTo: true, mon: { side: "opponent", zone: "in_play" }, chooser: "player" }], ops: [{ op: "discard_energy", monRef: SELF_REF, n: "all" }, { op: "damage_mon", monRef: "t", amount: 110 }] },
+  ],
   Budew: [
     { card: "Budew", trigger: { kind: "attack_rider", attackName: "Itchy Pollen" }, ops: [{ op: "apply_status", monRef: DEFENDER_REF, status: "cannot_retreat" }] },
   ],
@@ -47,9 +154,6 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
   "Greninja ex": [
     { card: "Greninja ex", trigger: { kind: "attack_rider", attackName: "Mirage Barrage" }, targets: [{ ref: "t", select: "mon", count: 2, upTo: true, mon: { side: "opponent", zone: "in_play" }, chooser: "player" }], ops: [{ op: "discard_energy", monRef: SELF_REF, n: 2 }, { op: "damage_mon", monRef: "t", amount: 120 }] },
     { card: "Greninja ex", trigger: { kind: "attack_rider", attackName: "Shinobi Blade" }, targets: [{ ref: "c", upTo: true, select: "card", card: { zone: "deck", filter: {} }, chooser: "player" }], ops: [{ op: "search", targetRef: "c", to: "hand" }] },
-  ],
-  Kyurem: [
-    { card: "Kyurem", trigger: { kind: "attack_rider", attackName: "Trifrost" }, targets: [{ ref: "t", select: "mon", count: 3, upTo: true, mon: { side: "opponent", zone: "in_play" }, chooser: "player" }], ops: [{ op: "discard_energy", monRef: SELF_REF, n: "all" }, { op: "damage_mon", monRef: "t", amount: 110 }] },
   ],
   "Ting-Lu": [
     { card: "Ting-Lu", trigger: { kind: "attack_rider", attackName: "Ground Crasher" }, guards: [{ cond: "stadium_in_play" }], ops: [{ op: "damage_opponent_bench", amount: 30 }, { op: "discard_stadium" }] },
@@ -302,9 +406,6 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
   "Steven's Metang": [
     { card: "Steven's Metang", trigger: { kind: "attack_rider", attackName: "Metal Slash" }, ops: [{ op: "apply_status", monRef: SELF_REF, status: "cannot_attack" }] },
   ],
-  "N's Zekrom": [
-    { card: "N's Zekrom", trigger: { kind: "attack_rider", attackName: "Rampaging Thunder" }, ops: [{ op: "apply_status", monRef: SELF_REF, status: "cannot_attack" }] },
-  ],
   "Koraidon ex": [
     { card: "Koraidon ex", trigger: { kind: "attack_rider", attackName: "Impact Blow" }, ops: [{ op: "apply_status", monRef: SELF_REF, status: "cannot_attack" }] },
     // (second authoring batch)
@@ -387,9 +488,6 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
 { card: "Raging Bolt ex", trigger: { kind: "damage_scale", attackName: "Bellowing Thunder" },
     damage: { base: 0, discardBoost: { from: "own_bench", filter: { basicEnergy: true }, per: 70 } }, ops: [] },
   ],
-  "Mega Starmie ex": [
-    { card: "Mega Starmie ex", trigger: { kind: "attack_rider", attackName: "Jetting Blow" }, targets: [{ ref: "t", select: "mon", mon: { side: "opponent", zone: "bench" }, chooser: "player" }], ops: [{ op: "damage_mon", monRef: "t", amount: 50 }] },
-  ],
   "Marnie's Grimmsnarl ex": [
     { card: "Marnie's Grimmsnarl ex", trigger: { kind: "attack_rider", attackName: "Shadow Bullet" }, targets: [{ ref: "t", select: "mon", mon: { side: "opponent", zone: "bench" }, chooser: "player" }], ops: [{ op: "damage_mon", monRef: "t", amount: 30 }] },
     // (second authoring batch)
@@ -442,13 +540,6 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
   Kadabra: [
 { card: "Kadabra", ability: "Psychic Draw", trigger: { kind: "on_evolve" }, ops: [{ op: "draw", n: 2 }] },
   ],
-  "Archaludon ex": [
-{ card: "Archaludon ex", ability: "Assemble Alloy", trigger: { kind: "on_evolve" },
-    targets: [
-      { ref: "e", select: "card", count: 2, upTo: true, card: { zone: "discard", filter: { basicEnergy: true, energyType: "Metal" } }, chooser: "player" },
-      { ref: "m", select: "mon", mon: { side: "own", zone: "in_play", type: "Metal" }, chooser: "player" }],
-    ops: [{ op: "attach_energy", energyRef: "e", monRef: "m", from: "discard" }] },
-  ],
   "Hop's Dubwool": [
 { card: "Hop's Dubwool", ability: "Defiant Horn", trigger: { kind: "on_evolve" },
     targets: [{ ref: "t", select: "mon", mon: { side: "opponent", zone: "bench" }, chooser: "player" }],
@@ -497,11 +588,6 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
 { card: "Ethan's Quilava", ability: "Bonded by the Journey", trigger: { kind: "activated" },
     targets: [{ ref: "c", select: "card", card: { zone: "deck", filter: { nameContains: "Ethan's Adventure" } }, chooser: "player" }],
     ops: [{ op: "search", targetRef: "c", to: "hand" }] },
-  ],
-  "Fan Rotom": [
-{ card: "Fan Rotom", ability: "Fan Call", trigger: { kind: "activated" },
-    targets: [{ ref: "p", select: "card", count: 3, upTo: true, card: { zone: "deck", filter: { supertype: "Pokémon", pokemonType: "Colorless", maxHp: 100 } }, chooser: "player" }],
-    ops: [{ op: "search", targetRef: "p", to: "hand" }] },
   ],
   "Hydrapple ex": [
 { card: "Hydrapple ex", ability: "Ripening Charge", trigger: { kind: "activated" },
@@ -828,14 +914,6 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
 { card: "Mega Diancie ex", trigger: { kind: "damage_scale", attackName: "Garland Ray" },
     damage: { base: 0, discardBoost: { from: "self", filter: { supertype: "Energy" }, max: 2, per: 120 } }, ops: [] },
   ],
-  "Mega Lopunny ex": [
-{ card: "Mega Lopunny ex", trigger: { kind: "damage_scale", attackName: "Gale Thrust" },
-    damage: { base: 60, bonuses: [{ amount: 170, when: { cond: "moved_to_active_this_turn" } }] }, ops: [] },
-  ],
-  "Mega Mawile ex": [
-{ card: "Mega Mawile ex", trigger: { kind: "damage_scale", attackName: "Gobble Down" },
-    damage: { base: 0, per: 80, count: { of: "self_prizes_taken" } }, ops: [] },
-  ],
   Metagross: [
 { card: "Metagross", trigger: { kind: "damage_scale", attackName: "Metallic Hammer" },
     damage: { base: 150, discardBoost: { from: "self", filter: { supertype: "Energy", energyType: "Metal" }, exactly: 3, per: 0, flat: 150 } }, ops: [] },
@@ -990,18 +1068,6 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
       card: "Lillie's Clefairy ex",
       trigger: { kind: "damage_scale", attackName: "Full Moon Rondo" },
       damage: { base: 20, per: 20, count: { of: "bench_count", side: "both" } },
-      ops: [],
-    },
-  ],
-  "Dudunsparce ex": [
-    {
-      card: "Dudunsparce ex",
-      trigger: { kind: "damage_scale", attackName: "Tenacious Tail" },
-      damage: {
-        base: 0,
-        per: 60,
-        count: { of: "mons_in_play", side: "opponent", filter: { side: "opponent", zone: "in_play", isEx: true } },
-      },
       ops: [],
     },
   ],
