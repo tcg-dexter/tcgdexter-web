@@ -59,3 +59,26 @@ describe("copy-an-attack donor selection", () => {
     expect(bestCopy([null, null])).toBeNull();
   });
 });
+
+describe("copy tempo — drawbacks come with the copied attack", () => {
+  const locked = (name: string, atk: string, dmg: string) =>
+    mon(name, [{ name: atk, damage: dmg, text: "During your next turn, this Pokémon can't use attacks." }]);
+
+  it("prefers a smaller attack once the lockout halves the bigger one below it", () => {
+    // A locked attack costs the copier its next turn, so it is worth about
+    // half its printed damage per turn. 150 locked = 75/turn, which a clean
+    // 90 beats.
+    const big = locked("N's Zekrom", "Rampaging Thunder", "150");
+    const steady = mon("N's Darmanitan", [{ name: "Flamebody Cannon", damage: "90" }]);
+    expect(bestCopy([big, steady])?.donor.card.name).toBe("N's Darmanitan");
+  });
+
+  it("still takes the big locked attack when it wins even at half rate", () => {
+    // The real pairing: Rampaging Thunder's 250 is 125/turn, which still
+    // beats Flamebody Cannon's 90. Halving is a discount, not a veto — this
+    // is the case that made me check the model instead of assuming it.
+    const zekrom = locked("N's Zekrom", "Rampaging Thunder", "250");
+    const steady = mon("N's Darmanitan", [{ name: "Flamebody Cannon", damage: "90" }]);
+    expect(bestCopy([zekrom, steady])?.donor.card.name).toBe("N's Zekrom");
+  });
+});

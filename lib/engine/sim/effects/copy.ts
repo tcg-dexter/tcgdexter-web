@@ -16,6 +16,7 @@
 // only a PlayerView — can call it with the same semantics the apply path uses.
 
 import type { PokemonInPlay } from "../../types";
+import { attackSelfLock } from "../statuses";
 import { monMatches } from "./match";
 import type { MonFilter } from "./types";
 
@@ -24,6 +25,9 @@ export interface CopyCandidate {
   attackIndex: number;
   /** Printed damage, 0 for attacks whose damage lives in their own rider. */
   damage: number;
+  /** Damage per TURN, discounting an attack that locks the copier out next
+   *  turn. This is what candidates are ranked by. */
+  tempo: number;
 }
 
 /** A copied attack that is itself a copy would recurse; the copyDepth guard in
@@ -53,10 +57,17 @@ export function copyCandidates(
     attacks.forEach((attack, attackIndex) => {
       if (isCopyAttack(attack.text)) return;
       const parsed = parseInt(attack.damage, 10);
-      out.push({ donor, attackIndex, damage: Number.isFinite(parsed) ? parsed : 0 });
+      const damage = Number.isFinite(parsed) ? parsed : 0;
+      // Copying an attack brings its DRAWBACK along, so raw damage is the
+      // wrong thing to maximise. N's Zoroark copying Rampaging Thunder hits
+      // for 250 and then cannot attack at all next turn — 125 a turn, with a
+      // 280 HP body standing there defenceless in between. A 90 with no
+      // lockout beats that. Rank by damage per turn.
+      const locked = attackSelfLock(attack.name, attack.text) !== null;
+      out.push({ donor, attackIndex, damage, tempo: locked ? damage / 2 : damage });
     });
   }
-  return out.sort((a, b) => b.damage - a.damage);
+  return out.sort((a, b) => b.tempo - a.tempo || b.damage - a.damage);
 }
 
 /** Highest-damage copy available from `pool`, or null. */

@@ -258,16 +258,53 @@ export function toPokemonInPlay(card: CardInstance, turnNumber: number): Pokemon
 
 /* ─── Initial state ─────────────────────────────────────────────── */
 
-function bestOpeningBasic(hand: CardInstance[]): CardInstance | null {
+/** Best printed damage of any attack on `card`. */
+function printedCeiling(card: CardInstance): number {
+  const attacks = card.catalog?.attacks ?? [];
+  return Math.max(0, ...attacks.map((a) => parseInt(a.damage, 10) || 0));
+}
+
+/** Which Pokémon does the game plan want in the Active spot on turn one?
+ *
+ *  This used to score a Basic by ITS OWN printed damage, which is the same
+ *  blindness that ran through the rest of the engine: it judges the card in
+ *  front of it and ignores what the card BECOMES. N's Zorua's Scratch does
+ *  20, so the AI led with Yveltal (Dark Feather, 110) and never started the
+ *  line — N's Zoroark ex reached the Active spot on own-turn 6.0 and was
+ *  armed on 8.5, in a deck whose entire plan is a Stage 1 attacking by
+ *  turn 2-3.
+ *
+ *  Score a Basic by the best attacker its EVOLUTION LINE can reach using
+ *  cards actually in this deck. A 70 HP Zorua that becomes a 280 HP Zoroark
+ *  ex is a far better lead than a 110-damage Basic that goes nowhere. */
+function bestOpeningBasic(hand: CardInstance[], library: CardInstance[]): CardInstance | null {
   const basics = hand.filter(isBasic);
   if (basics.length === 0) return null;
-  // Highest printed attack damage, then HP — a crude "primary attacker"
-  // read that at least avoids leading with a support Pokémon.
-  const score = (c: CardInstance) => {
-    const attacks = c.catalog?.attacks ?? [];
-    const best = Math.max(0, ...attacks.map((a) => parseInt(a.damage, 10) || 0));
-    return best * 1000 + (c.catalog?.hp ?? 0);
+
+  // Evolution index over everything this deck actually contains.
+  const evolvesFrom = new Map<string, CardInstance[]>();
+  for (const c of library) {
+    const from = c.catalog?.evolves_from;
+    if (!from) continue;
+    const bucket = evolvesFrom.get(from) ?? [];
+    bucket.push(c);
+    evolvesFrom.set(from, bucket);
+  }
+
+  /** Best ceiling reachable from `name`, walking the line. Depth-capped
+   *  because a malformed catalog could otherwise cycle. */
+  const lineCeiling = (card: CardInstance, depth = 0): number => {
+    let best = printedCeiling(card);
+    if (depth >= 3) return best;
+    for (const next of evolvesFrom.get(card.catalog?.name ?? card.name) ?? []) {
+      // An evolution is worth slightly less than a Basic of equal damage: it
+      // costs turns and the right card in hand.
+      best = Math.max(best, lineCeiling(next, depth + 1) * 0.9);
+    }
+    return best;
   };
+
+  const score = (c: CardInstance) => lineCeiling(c) * 1000 + (c.catalog?.hp ?? 0);
   return basics.reduce((a, b) => (score(b) > score(a) ? b : a));
 }
 
@@ -310,7 +347,7 @@ function setupSide(handle: string, deck: SimDeck, rng: Rng): { side: PlayerSide;
   side.prizes = side.deck.splice(0, 6);
 
   // Board: best basic active, remaining basics benched (common line).
-  const active = bestOpeningBasic(side.hand);
+  const active = bestOpeningBasic(side.hand, [...side.hand, ...side.deck, ...side.prizes]);
   if (active) {
     side.hand.splice(side.hand.indexOf(active), 1);
     side.active = toPokemonInPlay(active, 0);

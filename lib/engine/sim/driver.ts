@@ -79,6 +79,8 @@ export interface TurnObservation {
    *  i.e. value the heuristic declined. Empty when the turn ended by attack. */
   declinedAtPass: string[];
   activeName: string | null;
+  /** Names of Pokémon on the bench — diagnostic only. */
+  benchNames: string[];
 }
 
 export interface GameOutcome {
@@ -579,6 +581,7 @@ export function playGame(
         energyInHand: side.hand.filter((c) => energyUnits(c, null).length > 0).length,
         declinedAtPass: declined,
         activeName: side.active?.card.name ?? null,
+        benchNames: side.bench.map((m) => m.card.name),
       });
     }
 

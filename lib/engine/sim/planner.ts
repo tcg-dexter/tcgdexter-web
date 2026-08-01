@@ -40,6 +40,7 @@ import {
   type DecisionPolicy,
   wantsSearch,
   energyAccelMoves,
+  chooseRepositionEffect,
 } from "./policy";
 import { energyProvides, energyUnits, prizeValue } from "./setup";
 import { isSupporter, trainerSpec, type PlayTrainerMove, type TrainerSpec } from "./trainers";
@@ -345,6 +346,8 @@ export class PlannerPolicy implements DecisionPolicy {
     // HeuristicPolicy; see energyAccelMoves for why the old placement (dead
     // last, as a `tactical` effect) meant it essentially never fired.
     if (!sloppy) {
+      const reposition = chooseRepositionEffect(view, legal);
+      if (reposition) return reposition;
       const accel = energyAccelMoves(view, legal);
       if (accel.length > 0) return accel[0];
     }

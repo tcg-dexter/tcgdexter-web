@@ -23,7 +23,7 @@ import { energyProvides } from "./setup";
 import { trainerSpec, type PlayTrainerMove, type TrainerSpec } from "./trainers";
 import { estimatedAttackDamage } from "./attacks";
 import { activatedPhase } from "./abilities";
-import { effectMovePhase, isEnergyAccelEffect } from "./effects/cards";
+import { effectMovePhase, isEnergyAccelEffect, isSelfSwitchEffect } from "./effects/cards";
 import { searchTargetValue } from "./effects/cardValue";
 import type { EffectMove } from "./effects/runtime";
 import type { PlayerView } from "./view";
@@ -273,6 +273,61 @@ export function energyAccelMoves(view: PlayerView, legal: SimMove[]): SimMove[] 
   return out;
 }
 
+/** Damage this Pokémon could deal RIGHT NOW, with the energy already on it. */
+function damageNow(mon: PokemonInPlay, view: PlayerView): number {
+  const board = { ownBench: view.board.bench, oppActive: view.opponent.board.active };
+  let best = 0;
+  for (const { index } of usableAttacks(mon)) {
+    best = Math.max(best, estimatedAttackDamage(mon, index, undefined, "player", board));
+  }
+  return best;
+}
+
+/** Minimum edge, in damage, before it's worth spending a switch effect. */
+const REPOSITION_EDGE = 30;
+
+/** Put a better attacker in the Active spot using a switch EFFECT.
+ *
+ *  Distinct from the "I'm trapped" retreat branch: this is proactive setup.
+ *  An attack-based payoff (Night Joker, and 7 other switch effects across the
+ *  field) needs its Pokémon Active to do anything at all, and the effects that
+ *  put it there classify as `tactical` — dead last, after the attack branch
+ *  has already ended the turn. */
+export function chooseRepositionEffect(view: PlayerView, legal: SimMove[]): SimMove | null {
+  const active = view.board.active;
+  if (!active) return null;
+  const switches = legal.filter(
+    (m): m is EffectMove => m.kind === "effect" && isSelfSwitchEffect(m.card, m.effectIndex),
+  );
+  if (switches.length === 0) return null;
+  const activeDamage = damageNow(active, view);
+  const benchByName = new Map(view.board.bench.map((m) => [m.card.name, m]));
+  let best: SimMove | null = null;
+  let bestGain = 0;
+  for (const m of switches) {
+    for (const pick of m.picks) {
+      for (const name of pick.monNames ?? []) {
+        const mon = benchByName.get(name);
+        if (!mon) continue;
+        // Judge the candidate on what it will do ONCE ARMED, not on what it
+        // can do while sitting on the bench with no energy. Gating on current
+        // damage was circular — energy goes to the attacker we intend to
+        // promote, and we never promote it because it has no energy. The
+        // branch fired once in 158 opportunities.
+        //
+        // The safety condition is the ACTIVE side of the trade: only switch
+        // away from a Pokémon that isn't already doing the job.
+        const gain = attachPriority(mon, view) - Math.max(activeDamage, attachPriority(active, view));
+        if (gain > bestGain) {
+          bestGain = gain;
+          best = m;
+        }
+      }
+    }
+  }
+  return bestGain >= REPOSITION_EDGE ? best : null;
+}
+
 /** A hand this size is not card-starved, it is ACTION-starved. */
 const HAND_GLUT = 12;
 
@@ -408,6 +463,10 @@ export class HeuristicPolicy implements DecisionPolicy {
     // 2e. Use an activated Stadium effect (Artazon: bench a Basic).
     const stadiumEffect = byKind("use_stadium");
     if (stadiumEffect.length > 0) return stadiumEffect[0];
+
+    // 2f-. Reposition into a better attacker (setup, not a last resort).
+    const reposition = chooseRepositionEffect(view, legal);
+    if (reposition) return reposition;
 
     // 2f. Energy ACCELERATION, during development — before the attack branch
     //     ends the turn. See energyAccelMoves for why this placement matters.

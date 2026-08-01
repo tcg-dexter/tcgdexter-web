@@ -1309,6 +1309,18 @@ export function isEnergyAccelEffect(cardName: string, effectIndex: number): bool
   return effect ? effect.ops.some((o) => o.op === "attach_energy") : false;
 }
 
+/** Does this effect SWITCH one of our own Benched Pokémon into the Active
+ *  spot? Repositioning is setup, not a last resort: Night Joker is an ATTACK,
+ *  so N's Zoroark ex has to be Active to do anything, and the deck's enabler
+ *  (Pecharunt ex's Subjugating Chains) is an activated ability whose `switch`
+ *  op classifies as `tactical` — which both policies reached only after the
+ *  attack branch had already ended the turn. Zoroark ex first reached the
+ *  Active spot on own-turn 6.0 in a deck that wants it attacking by turn 2-3. */
+export function isSelfSwitchEffect(cardName: string, effectIndex: number): boolean {
+  const effect = effectsFor(cardName)[effectIndex];
+  return effect ? effect.ops.some((o) => o.op === "switch") : false;
+}
+
 /** The coarse phase of a declarative-effect move, or null for other moves.
  *  The shared seam the AI policies use to handle effect moves generically. */
 export function effectMovePhase(cardName: string, effectIndex: number): "draw" | "search" | "tactical" | null {
