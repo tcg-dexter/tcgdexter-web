@@ -9,38 +9,83 @@ import { DEFENDER_REF, OWN_ACTIVE_REF, SELF_REF } from "./types";
 import type { CardEffect } from "./types";
 
 export const EFFECT_CARDS: Record<string, CardEffect[]> = {
-  /* ── Hook-driven triggers (on_damaged / end_of_turn / checkup) ── */
-
+  Budew: [
+    { card: "Budew", trigger: { kind: "attack_rider", attackName: "Itchy Pollen" }, ops: [{ op: "apply_status", monRef: DEFENDER_REF, status: "cannot_retreat" }] },
+  ],
+  "Team Rocket's Murkrow": [
+    { card: "Team Rocket's Murkrow", trigger: { kind: "attack_rider", attackName: "Torment" }, ops: [{ op: "apply_status", monRef: DEFENDER_REF, status: "cannot_attack" }] },
+    { card: "Team Rocket's Murkrow", trigger: { kind: "attack_rider", attackName: "Deceit" }, targets: [{ ref: "s", upTo: true, select: "card", card: { zone: "deck", filter: { supertype: "Trainer", subtype: "Supporter" } }, chooser: "player" }], ops: [{ op: "search", targetRef: "s", to: "hand" }] },
+  ],
+  "Mega Audino ex": [
+    { card: "Mega Audino ex", trigger: { kind: "attack_rider", attackName: "Kaleidowaltz" }, targets: [{ ref: "e", select: "card", count: 2, upTo: true, card: { zone: "deck", filter: { basicEnergy: true } }, chooser: "player" }, { ref: "m", select: "mon", mon: { side: "own", zone: "in_play" }, chooser: "player" }], ops: [{ op: "attach_energy", energyRef: "e", monRef: "m", from: "deck" }] },
+{ card: "Mega Audino ex", trigger: { kind: "damage_scale", attackName: "Ear Force" },
+    damage: { base: 20, per: 80, count: { of: "energy_on_active", side: "opponent" } }, ops: [] },
+  ],
+  Dedenne: [
+    { card: "Dedenne", trigger: { kind: "attack_rider", attackName: "Tail Generator" }, targets: [{ ref: "e", select: "card", count: 3, upTo: true, card: { zone: "discard", filter: { basicEnergy: true, energyType: "Lightning" } }, chooser: "player" }, { ref: "m", select: "mon", mon: { side: "own", zone: "in_play", type: "Lightning" }, chooser: "player" }], ops: [{ op: "attach_energy", energyRef: "e", monRef: "m", from: "discard" }] },
+  ],
+  Seaking: [
+    { card: "Seaking", trigger: { kind: "attack_rider", attackName: "Hydro Jet" }, targets: [{ ref: "t", select: "mon", mon: { side: "opponent", zone: "in_play" }, chooser: "player" }], ops: [{ op: "damage_mon", monRef: "t", amount: 30 }] },
+  ],
+  Genesect: [
+    { card: "Genesect", trigger: { kind: "attack_rider", attackName: "Bug's Cannon" }, targets: [{ ref: "t", select: "mon", mon: { side: "opponent", zone: "in_play" }, chooser: "player" }], ops: [{ op: "damage_mon", monRef: "t", amount: 20 }] },
+  ],
+  "Arboliva ex": [
+    { card: "Arboliva ex", trigger: { kind: "attack_rider", attackName: "Oil Salvo" }, targets: [{ ref: "t", select: "mon", mon: { side: "opponent", zone: "in_play" }, chooser: "player" }], ops: [{ op: "damage_mon", monRef: "t", amount: 120 }] },
+    { card: "Arboliva ex", trigger: { kind: "attack_rider", attackName: "Aroma Shot" }, ops: [{ op: "clear_conditions", monRef: SELF_REF }] },
+  ],
+  "Wellspring Mask Ogerpon ex": [
+    { card: "Wellspring Mask Ogerpon ex", trigger: { kind: "attack_rider", attackName: "Torrential Pump" }, targets: [{ ref: "t", select: "mon", mon: { side: "opponent", zone: "bench" }, chooser: "player" }], ops: [{ op: "discard_energy", monRef: SELF_REF, n: 3 }, { op: "damage_mon", monRef: "t", amount: 120 }] },
+    { card: "Wellspring Mask Ogerpon ex", trigger: { kind: "attack_rider", attackName: "Sob" }, ops: [{ op: "apply_status", monRef: DEFENDER_REF, status: "cannot_retreat" }] },
+  ],
+  Zeraora: [
+    { card: "Zeraora", trigger: { kind: "attack_rider", attackName: "Thunder Raid" }, targets: [{ ref: "t", select: "mon", mon: { side: "opponent", zone: "bench", isEx: true }, chooser: "player" }], ops: [{ op: "discard_energy", monRef: SELF_REF, n: "all" }, { op: "damage_mon", monRef: "t", amount: 210 }] },
+  ],
+  "Mega Skarmory ex": [
+    { card: "Mega Skarmory ex", trigger: { kind: "attack_rider", attackName: "Sonic Ripper" }, targets: [{ ref: "t", select: "mon", mon: { side: "opponent", zone: "in_play" }, chooser: "player" }], ops: [{ op: "discard_energy", monRef: SELF_REF, n: "all" }, { op: "damage_mon", monRef: "t", amount: 220 }] },
+  ],
+  "Greninja ex": [
+    { card: "Greninja ex", trigger: { kind: "attack_rider", attackName: "Mirage Barrage" }, targets: [{ ref: "t", select: "mon", count: 2, upTo: true, mon: { side: "opponent", zone: "in_play" }, chooser: "player" }], ops: [{ op: "discard_energy", monRef: SELF_REF, n: 2 }, { op: "damage_mon", monRef: "t", amount: 120 }] },
+    { card: "Greninja ex", trigger: { kind: "attack_rider", attackName: "Shinobi Blade" }, targets: [{ ref: "c", upTo: true, select: "card", card: { zone: "deck", filter: {} }, chooser: "player" }], ops: [{ op: "search", targetRef: "c", to: "hand" }] },
+  ],
+  Kyurem: [
+    { card: "Kyurem", trigger: { kind: "attack_rider", attackName: "Trifrost" }, targets: [{ ref: "t", select: "mon", count: 3, upTo: true, mon: { side: "opponent", zone: "in_play" }, chooser: "player" }], ops: [{ op: "discard_energy", monRef: SELF_REF, n: "all" }, { op: "damage_mon", monRef: "t", amount: 110 }] },
+  ],
+  "Ting-Lu": [
+    { card: "Ting-Lu", trigger: { kind: "attack_rider", attackName: "Ground Crasher" }, guards: [{ cond: "stadium_in_play" }], ops: [{ op: "damage_opponent_bench", amount: 30 }, { op: "discard_stadium" }] },
+  ],
+  "Mega Absol ex": [
+    { card: "Mega Absol ex", trigger: { kind: "attack_rider", attackName: "Terminal Period" }, ops: [{ op: "ko_if_counters", monRef: DEFENDER_REF, counters: 6 }] },
+    { card: "Mega Absol ex", trigger: { kind: "attack_rider", attackName: "Claw of Darkness" }, ops: [{ op: "discard_from_hand", who: "opponent", filter: {}, max: 1 }] },
+  ],
+  "Sylveon ex": [
+    { card: "Sylveon ex", trigger: { kind: "attack_rider", attackName: "Angelite" }, targets: [{ ref: "t", select: "mon", count: 2, upTo: true, mon: { side: "opponent", zone: "bench" }, chooser: "player" }], ops: [{ op: "shuffle_mons_to_deck", monRef: "t" }] },
+    { card: "Sylveon ex", trigger: { kind: "attack_rider", attackName: "Magical Charm" }, ops: [{ op: "apply_status", monRef: DEFENDER_REF, status: "damage_dealt_reduction", amount: 100 }] },
+  ],
   "Lucky Helmet": [
     { card: "Lucky Helmet", trigger: { kind: "on_damaged" }, guards: [{ cond: "is_active" }],
       ops: [{ op: "draw", n: 2 }] },
   ],
-
   "Handheld Fan": [
     { card: "Handheld Fan", trigger: { kind: "on_damaged" }, guards: [{ cond: "is_active" }],
       ops: [{ op: "discard_energy", monRef: "attacker", n: 1 }] },
   ],
-
   "Spiky Energy": [
     { card: "Spiky Energy", trigger: { kind: "on_damaged" }, guards: [{ cond: "is_active" }],
       ops: [{ op: "counters_on_attacker", n: 2 }] },
   ],
-
   Powerglass: [
     { card: "Powerglass", trigger: { kind: "end_of_turn" }, guards: [{ cond: "is_active" }],
       targets: [{ ref: "e", upTo: true, select: "card", card: { zone: "discard", filter: { basicEnergy: true } }, chooser: "auto" }],
       ops: [{ op: "attach_energy", energyRef: "e", monRef: SELF_REF, from: "discard" }] },
   ],
-
   "Ignition Energy": [
     { card: "Ignition Energy", trigger: { kind: "end_of_turn" }, ops: [{ op: "discard_self_card" }] },
   ],
-
   Froslass: [
     { card: "Froslass", ability: "Freezing Shroud", trigger: { kind: "checkup" },
       ops: [{ op: "counters_on_all", filter: { side: "own", zone: "in_play" }, n: 1, exceptSelfName: true }] },
   ],
-
   "Nest Ball": [
     {
       card: "Nest Ball",
@@ -283,9 +328,6 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
 { card: "Hop's Trevenant", trigger: { kind: "damage_scale", attackName: "Horrifying Revenge" },
     damage: { base: 30, bonuses: [{ amount: 100, when: { cond: "koed_last_opp_turn" } }] }, ops: [] },
   ],
-  "Wellspring Mask Ogerpon ex": [
-    { card: "Wellspring Mask Ogerpon ex", trigger: { kind: "attack_rider", attackName: "Sob" }, ops: [{ op: "apply_status", monRef: DEFENDER_REF, status: "cannot_retreat" }] },
-  ],
   Yveltal: [
     { card: "Yveltal", trigger: { kind: "attack_rider", attackName: "Clutch" }, ops: [{ op: "apply_status", monRef: DEFENDER_REF, status: "cannot_retreat" }] },
   ],
@@ -294,9 +336,6 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
   ],
   Chikorita: [
     { card: "Chikorita", trigger: { kind: "attack_rider", attackName: "Growl" }, ops: [{ op: "apply_status", monRef: DEFENDER_REF, status: "damage_dealt_reduction", amount: 20 }] },
-  ],
-  "Sylveon ex": [
-    { card: "Sylveon ex", trigger: { kind: "attack_rider", attackName: "Magical Charm" }, ops: [{ op: "apply_status", monRef: DEFENDER_REF, status: "damage_dealt_reduction", amount: 100 }] },
   ],
   "Empoleon ex": [
     { card: "Empoleon ex", trigger: { kind: "attack_rider", attackName: "Iron Feathers" }, ops: [{ op: "apply_status", monRef: SELF_REF, status: "damage_taken_reduction", amount: 60 }] },
@@ -326,9 +365,6 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
   ],
   "Team Rocket's Tarountula": [
     { card: "Team Rocket's Tarountula", trigger: { kind: "attack_rider", attackName: "Take Down" }, ops: [{ op: "damage_self", amount: 10 }] },
-  ],
-  "Arboliva ex": [
-    { card: "Arboliva ex", trigger: { kind: "attack_rider", attackName: "Aroma Shot" }, ops: [{ op: "clear_conditions", monRef: SELF_REF }] },
   ],
   Dipplin: [
     { card: "Dipplin", trigger: { kind: "attack_rider", attackName: "Energy Loop" }, ops: [{ op: "energy_to_hand", monRef: SELF_REF, n: 1 }] },
@@ -372,17 +408,11 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
   Piplup: [
     { card: "Piplup", trigger: { kind: "attack_rider", attackName: "Call for Support" }, targets: [{ ref: "s", upTo: true, select: "card", card: { zone: "deck", filter: { supertype: "Trainer", subtype: "Supporter" } }, chooser: "player" }], ops: [{ op: "search", targetRef: "s", to: "hand" }] },
   ],
-  "Team Rocket's Murkrow": [
-    { card: "Team Rocket's Murkrow", trigger: { kind: "attack_rider", attackName: "Deceit" }, targets: [{ ref: "s", upTo: true, select: "card", card: { zone: "deck", filter: { supertype: "Trainer", subtype: "Supporter" } }, chooser: "player" }], ops: [{ op: "search", targetRef: "s", to: "hand" }] },
-  ],
   Frogadier: [
     { card: "Frogadier", trigger: { kind: "attack_rider", attackName: "Summoning Jutsu" }, targets: [{ ref: "p", select: "card", count: 3, upTo: true, card: { zone: "deck", filter: { supertype: "Pokémon" } }, chooser: "player" }], ops: [{ op: "search", targetRef: "p", to: "hand" }] },
   ],
   Noctowl: [
     { card: "Noctowl", trigger: { kind: "attack_rider", attackName: "Talon Hunt" }, targets: [{ ref: "c", select: "card", count: 2, upTo: true, card: { zone: "deck", filter: {} }, chooser: "player" }], ops: [{ op: "search", targetRef: "c", to: "hand" }] },
-  ],
-  "Greninja ex": [
-    { card: "Greninja ex", trigger: { kind: "attack_rider", attackName: "Shinobi Blade" }, targets: [{ ref: "c", upTo: true, select: "card", card: { zone: "deck", filter: {} }, chooser: "player" }], ops: [{ op: "search", targetRef: "c", to: "hand" }] },
   ],
   Smoochum: [
     { card: "Smoochum", trigger: { kind: "attack_rider", attackName: "Delightful Kiss" }, targets: [{ ref: "e", select: "card", count: 2, upTo: true, card: { zone: "deck", filter: { basicEnergy: true, energyType: "Psychic" } }, chooser: "player" }, { ref: "m", select: "mon", mon: { side: "own", zone: "bench" }, chooser: "player" }], ops: [{ op: "attach_energy", energyRef: "e", monRef: "m", from: "deck" }] },
@@ -401,9 +431,6 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
   ],
   "Team Rocket's Porygon": [
     { card: "Team Rocket's Porygon", trigger: { kind: "attack_rider", attackName: "Hacking" }, ops: [{ op: "discard_hand_cards", n: 1 }, { op: "discard_hand_down_to", who: "opponent", n: 4 }] },
-  ],
-  "Mega Absol ex": [
-    { card: "Mega Absol ex", trigger: { kind: "attack_rider", attackName: "Claw of Darkness" }, ops: [{ op: "discard_from_hand", who: "opponent", filter: {}, max: 1 }] },
   ],
   Hoothoot: [
     { card: "Hoothoot", trigger: { kind: "attack_rider", attackName: "Silent Wing" }, ops: [] },
@@ -797,10 +824,6 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
     damage: { base: 0, per: 20, count: { of: "damage_counters_on", side: "opponent", zone: "active" } }, ops: [] },
     { card: "Glalie", trigger: { kind: "attack_rider", attackName: "Crazy Headbutt" }, ops: [{ op: "discard_energy", monRef: SELF_REF, n: 1 }] },
   ],
-  "Mega Audino ex": [
-{ card: "Mega Audino ex", trigger: { kind: "damage_scale", attackName: "Ear Force" },
-    damage: { base: 20, per: 80, count: { of: "energy_on_active", side: "opponent" } }, ops: [] },
-  ],
   "Mega Diancie ex": [
 { card: "Mega Diancie ex", trigger: { kind: "damage_scale", attackName: "Garland Ray" },
     damage: { base: 0, discardBoost: { from: "self", filter: { supertype: "Energy" }, max: 2, per: 120 } }, ops: [] },
@@ -816,6 +839,7 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
   Metagross: [
 { card: "Metagross", trigger: { kind: "damage_scale", attackName: "Metallic Hammer" },
     damage: { base: 150, discardBoost: { from: "self", filter: { supertype: "Energy", energyType: "Metal" }, exactly: 3, per: 0, flat: 150 } }, ops: [] },
+    { card: "Metagross", trigger: { kind: "attack_rider", attackName: "Bounce Back" }, ops: [{ op: "opponent_switches_active" }] },
   ],
   Okidogi: [
 { card: "Okidogi", trigger: { kind: "damage_scale", attackName: "Settle the Score" },

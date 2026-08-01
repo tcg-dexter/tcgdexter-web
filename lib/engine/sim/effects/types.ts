@@ -291,6 +291,19 @@ export type EffectOp =
   | { op: "counters_on_all"; filter: MonFilter; n: number; exceptSelfName?: boolean }
   /** Discard this card (the Energy/Tool carrying the effect) from its holder. */
   | { op: "discard_self_card" }
+  /** Shuffle resolved Pokémon (and everything attached) into their owner's
+   *  deck (Sylveon ex's Angelite). */
+  | { op: "shuffle_mons_to_deck"; monRef: string }
+  /** Knock the resolved Pokémon out outright when it has exactly `counters`
+   *  damage counters (Mega Absol ex's Terminal Period). */
+  | { op: "ko_if_counters"; monRef: string; counters: number }
+  /** Send the opponent's Active to the Bench; they choose the replacement
+   *  (Metagross's Bounce Back — modeled as the engine's promotion heuristic). */
+  | { op: "opponent_switches_active" }
+  /** Discard the Stadium in play (Ting-Lu's Ground Crasher). */
+  | { op: "discard_stadium" }
+  /** Damage every Pokémon on the opponent's Bench (no W/R). */
+  | { op: "damage_opponent_bench"; amount: number }
   | { op: "discard_from_mon"; monRef: string; category: "tool" | "special_energy" | "energy" }
   /** Look at the top `n` of your own deck, take up to `count` matching cards
    *  to hand, shuffle the rest back (Pokégear 3.0, Bug Catching Set). v1

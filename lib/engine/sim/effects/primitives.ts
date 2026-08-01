@@ -12,6 +12,7 @@ import { applyCondition, clearConditions } from "../conditions";
 import { placeCounters, moveCounters, dealRawDamage } from "../damage";
 import { applyWeaknessResistance } from "../moves";
 import { pickDiscards } from "../trainers";
+import { promoteBest } from "../policy";
 import { cardMatches, monMatches as cardMatchesMon } from "./match";
 import { guardsPass } from "./guards";
 import type { EffectOp, Quantity } from "./types";
@@ -265,6 +266,52 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
       }
       break;
     }
+
+    case "shuffle_mons_to_deck": {
+      for (const { mon, side: monSide } of mons(ctx, op.monRef)) {
+        const ps = state.sides[monSide];
+        const cards_ = [mon.card, ...mon.stack, ...mon.attachedEnergy, ...mon.attachedTools];
+        const i = ps.bench.indexOf(mon);
+        if (i >= 0) ps.bench.splice(i, 1);
+        else if (ps.active === mon) ps.active = null;
+        ps.deck.push(...cards_);
+        if (rng) shuffle(ps.deck, rng);
+      }
+      break;
+    }
+
+    case "ko_if_counters":
+      for (const { mon } of mons(ctx, op.monRef)) {
+        if (Math.floor(mon.damage / 10) === op.counters) {
+          mon.damage = (mon.card.catalog?.hp ?? 120) + 1000;
+        }
+      }
+      break;
+
+    case "opponent_switches_active": {
+      // The opponent picks their new Active; the engine uses its promotion
+      // heuristic as a stand-in (a real choice is a W4 chooser).
+      if (opp.active && opp.bench.length > 0) {
+        const best = promoteBest(opp.bench);
+        const incoming = opp.bench[best];
+        opp.bench[best] = opp.active;
+        clearConditions(opp.active);
+        incoming.movedToActiveOnTurn = state.turn.number;
+        opp.active = incoming;
+      }
+      break;
+    }
+
+    case "discard_stadium":
+      if (state.stadium) {
+        state.sides[state.stadium.owner ?? actor].discard.push(state.stadium.card);
+        state.stadium = null;
+      }
+      break;
+
+    case "damage_opponent_bench":
+      for (const m of opp.bench) dealRawDamage(m, op.amount);
+      break;
 
     case "clear_conditions":
       for (const { mon } of mons(ctx, op.monRef)) clearConditions(mon);
