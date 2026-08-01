@@ -25,6 +25,7 @@ import type { DecisionPolicy } from "./policy";
 import { buildSimInitialState, energyUnits, toPokemonInPlay, type SimDeck } from "./setup";
 import { retreatCost } from "./tools";
 import { damageTakenReduction, hasStatus, statusAmount } from "./statuses";
+import { auraDamageReduction, auraPreventsEffects } from "./auras";
 import { applyTrainer } from "./trainers";
 import { applyEffect } from "./effects/runtime";
 import { attackRiderEffect, damageScaleEffect, effectsFor, onAttachEffect, triggerEffect } from "./effects/cards";
@@ -341,15 +342,21 @@ export function applyMove(
         : applyWeaknessResistance(Math.max(0, rawBase), attacker, defender);
       // "…or by any effects on your opponent's Active" also bypasses the
       // defender's damage-reduction statuses.
-      const reduced = ignore?.defenderEffects
-        ? afterWr
-        : Math.max(0, afterWr - damageTakenReduction(defender, attacker, state));
+      const auraCut = ignore?.defenderEffects ? 0 : auraDamageReduction(defender, attacker, state);
+      const reduced =
+        auraCut === Infinity
+          ? 0 // an aura prevents the damage entirely (Mysterious Rock Inn)
+          : ignore?.defenderEffects
+            ? afterWr
+            : Math.max(0, afterWr - damageTakenReduction(defender, attacker, state) - auraCut);
       dealRawDamage(defender, hasStatus(defender, "prevent_all", state) ? 0 : reduced);
 
       // Attack-inflicted conditions on the defending active (Mind Bend,
       // Bemusing Aroma, Thunder Shock — coin flips resolve via rng).
-      for (const c of attackInflictedConditions(attacker.card.name, attack.name, rng ?? undefined)) {
-        applyCondition(defender, c, state);
+      if (!auraPreventsEffects(defender, state)) {
+        for (const c of attackInflictedConditions(attacker.card.name, attack.name, rng ?? undefined)) {
+          applyCondition(defender, c, state);
+        }
       }
 
       // Placement / self-cost side effects (no Weakness/Resistance on bench).

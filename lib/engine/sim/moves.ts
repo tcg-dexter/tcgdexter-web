@@ -8,6 +8,7 @@ import type { EngineAttack, GameState, PlayerSide, PokemonInPlay } from "../type
 import { energyProvides, energyUnits, isBasic, toPokemonInPlay } from "./setup";
 import { unitPaysType } from "./effects/energy";
 import { hasStatus, statusAmount } from "./statuses";
+import { auraAttackDiscount, auraBlocksAttack, auraWeaknessOverride } from "./auras";
 import { isSupporter, trainerMoves, trainerSpec, type PlayTrainerMove } from "./trainers";
 import { abilityMoves, hasLegacyActivated, type UseAbilityMove } from "./abilities";
 import { cannotAct } from "./conditions";
@@ -102,10 +103,13 @@ export function effectiveCost(
 ): string[] {
   const extra =
     stadiumAttackCostExtra(mon, state) + statusAmount(mon, "attack_cost_extra", state);
+  const attackName = (mon.card.catalog?.attacks ?? []).find((a) => a.cost === cost)?.name ?? "";
   let out = extra > 0 ? [...cost, ...Array(extra).fill("Colorless")] : cost;
   // Tool discounts (Counter Gain, Sparkling Crystal, Hop's Choice Band) strip
   // Colorless first — a typed requirement can't be discounted away.
-  const cut = toolCostReduction(mon, state, hasPrizeLead(mon, state));
+  const cut =
+    toolCostReduction(mon, state, hasPrizeLead(mon, state)) +
+    auraAttackDiscount(mon, attackName, state);
   for (let i = 0; i < cut; i++) {
     const idx = out.lastIndexOf("Colorless");
     if (idx === -1) break;
@@ -129,8 +133,9 @@ export function usableAttacks(
   mon: PokemonInPlay,
   state?: GameState,
 ): { attack: EngineAttack; index: number }[] {
-  // A Pokémon under "can't attack" has no usable attacks at all.
-  if (hasStatus(mon, "cannot_attack", state)) return [];
+  // A Pokémon under "can't attack" — or one whose aura requirement isn't met
+  // (Power Saver) — has no usable attacks at all.
+  if (hasStatus(mon, "cannot_attack", state) || auraBlocksAttack(mon, state)) return [];
   const attacks = mon.card.catalog?.attacks ?? [];
   return attacks
     .map((attack, index) => ({ attack, index }))
@@ -156,13 +161,19 @@ export function applyWeaknessResistance(
   base: number,
   attacker: PokemonInPlay,
   defender: PokemonInPlay,
+  state?: GameState,
 ): number {
   if (base <= 0) return 0;
   let dmg = base;
   const attackerType = attacker.card.catalog?.types[0];
   const defCatalog = defender.card.catalog;
   if (attackerType && defCatalog) {
-    if (defCatalog.weaknesses.some((w) => w.type === attackerType)) dmg *= 2;
+    // An aura may REWRITE the defender's Weakness (Fairy Zone).
+    const forced = auraWeaknessOverride(defender, state);
+    const weak = forced
+      ? forced === attackerType
+      : defCatalog.weaknesses.some((w) => w.type === attackerType);
+    if (weak) dmg *= 2;
     if (defCatalog.resistances.some((r) => r.type === attackerType)) dmg = Math.max(0, dmg - 30);
   }
   return dmg;

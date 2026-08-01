@@ -19,6 +19,7 @@ import { isStadiumModeled } from "./stadiums";
 import { isToolModeled } from "./tools";
 import { TRAINER_EFFECTS } from "./trainers";
 import { attackRiderEffect, effectsFor, hasDeclarativeAbility } from "./effects/cards";
+import { isAuraModeled } from "./auras";
 
 export type EffectSlotKind =
   | "ability"
@@ -63,7 +64,8 @@ export function classifyCardEffects(name: string): EffectSlot[] {
         // mutually exclusive during cutover; either counts as implemented.
         implemented:
           isAbilityModeled(card.name, ability.name) ||
-          hasDeclarativeAbility(card.name, ability.name),
+          hasDeclarativeAbility(card.name, ability.name) ||
+          isAuraModeled(card.name, ability.name),
       });
     }
     for (const attack of card.attacks ?? []) {

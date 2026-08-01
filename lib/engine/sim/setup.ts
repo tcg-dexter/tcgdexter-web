@@ -20,6 +20,7 @@ import { ENGINE_VERSION } from "../types";
 import type { CardInstance, GameState, PlayerSide, PokemonInPlay } from "../types";
 import { shuffle, type Rng } from "./rng";
 import { specialEnergyUnits, type EnergyUnit } from "./effects/energy";
+import { auraEnergyUnits } from "./auras";
 
 /** Bump when sim behavior changes enough to invalidate cached results
  *  (v2: staple trainer effects replaced generic cycling for the registry
@@ -62,7 +63,11 @@ import { specialEnergyUnits, type EnergyUnit } from "./effects/energy";
 // v13: turn-scoped attack statuses (can't attack / can't retreat / damage
 // reduction / cost bumps) plus ~60 more attack riders. Many attacks that were
 // pure damage now leave lasting effects, changing rollouts broadly.
-export const SIM_VERSION = 13;
+// v14: static ability auras (W3). Abilities that change the RULES while in
+// play — damage reduction/prevention, damage boosts, retreat waivers, ability
+// and attack locks, energy provision, Weakness rewrites — are now read at the
+// rule sites instead of sitting inert.
+export const SIM_VERSION = 14;
 
 const MAX_MULLIGANS = 20;
 
@@ -184,7 +189,11 @@ export function energyUnits(
   if (c.catalog?.supertype !== "Energy") return [];
   if (isBasicEnergyCard(c)) {
     const m = c.name.match(ENERGY_TYPE_RE);
-    return [m ? m[1] : "Colorless"];
+    const type = m ? m[1] : "Colorless";
+    // An aura may make each Basic Energy of a type provide more (Meganium's
+    // Wild Growth: Grass provides GG).
+    const boosted = mon ? auraEnergyUnits(type, mon, state ?? undefined) : null;
+    return boosted ? Array(boosted).fill(type) : [type];
   }
   return specialEnergyUnits(c, mon ?? null, state ?? null) ?? ["Colorless"];
 }

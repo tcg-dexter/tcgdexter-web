@@ -13,6 +13,11 @@ import { moveCounters, placeCounters } from "./damage";
 import { energyProvides, isBasicEnergyCard } from "./setup";
 import { isSupporter, pickDiscards } from "./trainers";
 import { stadiumSuppressesAbility } from "./stadiums";
+import { auraBlocksSelfKoAbility } from "./auras";
+
+/** Abilities whose cost is knocking their own Pokémon out — the set Psyduck's
+ *  Damp shuts down. */
+const SELF_KO_ABILITIES = new Set(["Dusknoir::Cursed Blast", "Dusclops::Cursed Blast"]);
 
 export interface UseAbilityMove {
   kind: "use_ability";
@@ -44,6 +49,10 @@ export function abilityAvailable(state: GameState, actor: Actor, mon: PokemonInP
   if (!ability) return null;
   // A Stadium may switch this Pokémon's Abilities off entirely.
   if (stadiumSuppressesAbility(mon, state)) return null;
+  // Psyduck's Damp switches off abilities that KO their own user.
+  if (SELF_KO_ABILITIES.has(`${mon.card.name}::${ability.name}`) && auraBlocksSelfKoAbility(state)) {
+    return null;
+  }
   const key = `${mon.card.name}::${ability.name}`;
   const spec = ACTIVATED[key];
   if (!spec) return null;

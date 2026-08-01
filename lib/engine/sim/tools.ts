@@ -10,6 +10,7 @@ import { isNsPokemon, totalEnergyUnits } from "./setup";
 import { specialEnergyHpBonus } from "./effects/energy";
 import { stadiumDisablesTools, stadiumHpDelta } from "./stadiums";
 import { hasStatus, statusAmount } from "./statuses";
+import { auraWaivesRetreat } from "./auras";
 
 export interface ToolEffect {
   /** Reduces Retreat Cost by this many Colorless (floored at 0). */
@@ -126,7 +127,7 @@ function stadiumWaivesRetreat(mon: PokemonInPlay, state?: GameState): boolean {
 /** Retreat cost in Colorless after tool reductions and passive Stadium
  *  effects (floored at 0). Pass `state` so Stadium waivers apply. */
 export function retreatCost(mon: PokemonInPlay, state?: GameState): number {
-  if (stadiumWaivesRetreat(mon, state)) return 0;
+  if (stadiumWaivesRetreat(mon, state) || auraWaivesRetreat(mon, state)) return 0;
   const base = mon.card.catalog?.retreat_cost ?? 0;
   const reduction = toolEffects(mon, state).reduce((n, e) => n + (e.retreatReduction ?? 0), 0);
   return Math.max(0, base - reduction + statusAmount(mon, "retreat_cost_extra", state));
