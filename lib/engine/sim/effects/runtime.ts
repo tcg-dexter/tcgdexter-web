@@ -14,6 +14,8 @@ import { energyProvides } from "../setup";
 import { applyOps, type OpContext, type ResolvedMon, type ResolvedTargets } from "./primitives";
 import { isSupporter } from "../trainers";
 import { SELF_REF } from "./types";
+export { guardsPass } from "./guards";
+import { guardsPass } from "./guards";
 // Matchers live in match.ts so primitives.ts can share them without a cycle.
 export { cardMatches, monMatches } from "./match";
 import { cardMatches, monMatches } from "./match";
@@ -82,47 +84,6 @@ function candidateMons(state: GameState, actor: Actor, spec: TargetSpec): Resolv
   return pool.filter((m) => monMatches(m, spec.mon!)).map((mon) => ({ mon, side }));
 }
 
-/* ─── Guards ────────────────────────────────────────────────────── */
-
-export function guardsPass(
-  state: GameState,
-  actor: Actor,
-  source: PokemonInPlay | null,
-  guards: Guard[] | undefined,
-): boolean {
-  if (!guards) return true;
-  const side = state.sides[actor];
-  const opp = state.sides[other(actor)];
-  return guards.every((g) => {
-    switch (g.cond) {
-      case "opp_prizes_lte":
-        return opp.prizes.length <= g.n;
-      case "self_prizes_lte":
-        return side.prizes.length <= g.n;
-      case "is_active":
-        return source != null && side.active === source;
-      case "koed_last_opp_turn":
-        return side.koedLastOppTurn === true;
-      case "has_energy_type":
-        return source != null && source.attachedEnergy.some((c) => energyProvides(c) === g.type);
-      case "deck_has":
-        return side.deck.some((c) => cardMatches(c, g.filter));
-      case "discard_has":
-        return side.discard.some((c) => cardMatches(c, g.filter));
-      case "opp_active_is":
-        return opp.active != null && monMatches(opp.active, g.filter);
-      case "self_has_energy":
-        return source != null && source.attachedEnergy.some((c) => cardMatches(c, g.filter));
-      case "self_is":
-        return source != null && monMatches(source, g.filter);
-      case "hand_size_gte":
-        // Checked while the card is still IN hand (enumeration time), so a
-        // "discard N OTHER cards" cost needs N+1.
-        return side.hand.length >= g.n;
-    }
-  });
-}
-
 /* ─── State-dependent damage ────────────────────────────────────── */
 
 const MAX_COIN_FLIPS = 50; // guard against a pathological rng stream
@@ -169,6 +130,44 @@ function evalCount(
       while (heads < MAX_COIN_FLIPS && rng() < 0.5) heads++;
       return heads;
     }
+    case "coin_flips": {
+      if (!rng) return 0;
+      let heads = 0;
+      for (let i = 0; i < count.n; i++) if (rng() < 0.5) heads++;
+      return heads;
+    }
+    case "damage_counters_on": {
+      const s = count.side === "opponent" ? opp : side;
+      const pool =
+        count.zone === "active"
+          ? s.active
+            ? [s.active]
+            : []
+          : count.zone === "bench"
+            ? s.bench
+            : [s.active, ...s.bench].filter((m): m is PokemonInPlay => m !== null);
+      const matched = count.filter ? pool.filter((m) => monMatches(m, count.filter!)) : pool;
+      // Counters, not raw damage: 10 damage = 1 counter.
+      return matched.reduce((n, m) => n + Math.floor(m.damage / 10), 0);
+    }
+    case "energy_attached_all": {
+      const s = count.side === "opponent" ? opp : side;
+      const pool = [s.active, ...s.bench].filter((m): m is PokemonInPlay => m !== null);
+      return pool.reduce(
+        (n, m) =>
+          n +
+          m.attachedEnergy.filter(
+            (c) => !count.energyType || energyProvides(c) === count.energyType,
+          ).length,
+        0,
+      );
+    }
+    case "self_prizes_taken":
+      return state.prizesTaken[actor];
+    case "opp_prizes_taken_last_turn":
+      return opp.prizesTakenLastTurn ?? 0;
+    case "opp_hand_size":
+      return opp.hand.length;
   }
   void source;
   return 0;
@@ -189,7 +188,51 @@ export function evalDamageFormula(
   for (const bonus of formula.bonuses ?? []) {
     if (guardsPass(state, actor, source, [bonus.when])) total += bonus.amount;
   }
+  // Optional discard cost. MUTATES, so real resolution only (rng non-null).
+  if (formula.discardBoost && rng && source) {
+    total += payDiscardBoost(state, actor, source, formula.discardBoost);
+  }
   return Math.max(0, total);
+}
+
+/** Pay a formula's optional discard cost and return the damage it bought.
+ *  Always takes the maximum available — see DamageFormula.discardBoost. */
+function payDiscardBoost(
+  state: GameState,
+  actor: Actor,
+  source: PokemonInPlay,
+  boost: NonNullable<DamageFormula["discardBoost"]>,
+): number {
+  const side = state.sides[actor];
+  const pools: { cards: CardInstance[]; owner: CardInstance[] }[] = [];
+  if (boost.from === "self") {
+    pools.push({ cards: source.attachedEnergy, owner: source.attachedEnergy });
+  } else if (boost.from === "own_bench") {
+    for (const m of side.bench) pools.push({ cards: m.attachedEnergy, owner: m.attachedEnergy });
+  } else {
+    pools.push({ cards: side.hand, owner: side.hand });
+  }
+
+  const cap = boost.exactly ?? boost.max ?? Number.MAX_SAFE_INTEGER;
+  const picked: { zone: CardInstance[]; card: CardInstance }[] = [];
+  for (const pool of pools) {
+    for (const card of [...pool.cards]) {
+      if (picked.length >= cap) break;
+      if (cardMatches(card, boost.filter)) picked.push({ zone: pool.owner, card });
+    }
+  }
+  // "Discard exactly N or nothing" — an all-or-nothing cost.
+  if (boost.exactly != null && picked.length < boost.exactly) return 0;
+
+  for (const { zone, card } of picked) {
+    const i = zone.findIndex((c) => c.id === card.id);
+    if (i < 0) continue;
+    const [paid] = zone.splice(i, 1);
+    if (boost.to === "deck") side.deck.push(paid);
+    else side.discard.push(paid);
+  }
+  if (picked.length === 0) return 0;
+  return picked.length * boost.per + (boost.flat ?? 0);
 }
 
 /* ─── Enumeration ───────────────────────────────────────────────── */

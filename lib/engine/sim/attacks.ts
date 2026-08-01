@@ -57,9 +57,19 @@ export function activeDamageBonus(
   // Attached Tools (Vitality Band, Maximum Belt, Brave Bangle, Hop's Choice
   // Band) — declarative, see tools.ts.
   let bonus = toolDamageBonus(attacker, defender, state);
-  // Black Belt's Training: +40 to the opponent's Active Pokémon ex, the turn
-  // it is played.
-  const defIsEx = defender.card.catalog?.subtypes.includes("ex") ?? false;
+  // Turn-scoped Supporter buffs (Black Belt's Training, Kieran, Premium Power
+  // Pro) — declarative, see the buff_damage_this_turn op.
+  const defSubs = defender.card.catalog?.subtypes ?? [];
+  const defIsEx = defSubs.includes("ex");
+  const defIsExOrV = defIsEx || defSubs.includes("V") || defSubs.includes("VSTAR") || defSubs.includes("VMAX");
+  for (const buff of state.sides[actor].damageBuffs ?? []) {
+    if (buff.turn !== state.turn.number) continue;
+    if (buff.vsTarget === "ex" && !defIsEx) continue;
+    if (buff.vsTarget === "ex_or_v" && !defIsExOrV) continue;
+    if (buff.attackerType && !(attacker.card.catalog?.types.includes(buff.attackerType) ?? false)) continue;
+    bonus += buff.amount;
+  }
+  // Legacy Black Belt's Training flag (trainers.ts still sets it).
   if (state.sides[actor].blackBeltTrainingTurn === state.turn.number && defIsEx) {
     bonus += 40;
   }

@@ -159,6 +159,8 @@ function knockOut(state: GameState, side: PlayerSide, mon: PokemonInPlay, ownerA
   const taken = state.sides[taker].prizes.splice(0, prizeValue(mon.card.name));
   state.sides[taker].hand.push(...taken);
   state.prizesTaken[taker] += taken.length;
+  const takerSide = state.sides[taker];
+  takerSide.prizesTakenThisTurn = (takerSide.prizesTakenThisTurn ?? 0) + taken.length;
 }
 
 /**

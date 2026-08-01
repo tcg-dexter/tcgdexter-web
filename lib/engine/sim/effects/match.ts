@@ -39,6 +39,7 @@ export function cardMatches(c: CardInstance, f: CardFilter): boolean {
     return false;
   }
   if (f.namePrefix && !c.name.startsWith(f.namePrefix)) return false;
+  if (f.nameContains && !c.name.includes(f.nameContains)) return false;
   if (f.maxHp != null && (cat.hp ?? Infinity) > f.maxHp) return false;
   if (f.singlePrize && prizeValue(c.name) !== 1) return false;
   return true;
@@ -52,6 +53,7 @@ export function monMatches(mon: PokemonInPlay, f: MonFilter): boolean {
   const cat = mon.card.catalog;
   if (f.type && !(cat?.types.includes(f.type) ?? false)) return false;
   if (f.namePrefix && !mon.card.name.startsWith(f.namePrefix)) return false;
+  if (f.nameContains && !mon.card.name.includes(f.nameContains)) return false;
   if (f.basic && !(cat?.supertype === "Pokémon" && !cat.evolves_from)) return false;
   if (f.isEx && !(cat?.subtypes.includes("ex") ?? false)) return false;
   if (f.hasTool && mon.attachedTools.length === 0) return false;

@@ -81,6 +81,9 @@ export function beginTurn(
   side.energyAttachedThisTurn = 0;
   side.supporterPlayedThisTurn = false;
   side.supporterNamePlayedThisTurn = undefined;
+  // Roll this side's prize counter: what it took last turn is now history.
+  side.prizesTakenLastTurn = side.prizesTakenThisTurn ?? 0;
+  side.prizesTakenThisTurn = 0;
   // The opponent's comeback window (were THEY KO'd during this turn?) opens
   // fresh now — clear the flag they read at the start of their last turn.
   state.sides[otherActor(actor)].koedLastOppTurn = false;
@@ -104,6 +107,7 @@ export function promote(state: GameState, actor: "player" | "opponent", benchInd
   const idx = Math.min(Math.max(0, benchIndex), side.bench.length - 1);
   const [promoted] = side.bench.splice(idx, 1);
   if (promoted.conditions.length > 0) promoted.conditions = [];
+  promoted.movedToActiveOnTurn = state.turn.number;
   side.active = promoted;
 }
 
@@ -205,6 +209,7 @@ export function applyMove(
       }
       clearConditions(active); // leaving the Active Spot clears conditions
       side.bench[move.benchIndex] = active;
+      promoted.movedToActiveOnTurn = state.turn.number;
       side.active = promoted;
       ctx.retreated = true;
       return done(false);

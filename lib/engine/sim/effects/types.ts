@@ -27,6 +27,7 @@ export interface CardFilter {
   energyType?: string; // ENERGY card providing this type (Darkness, Fire, …)
   pokemonType?: string; // POKÉMON card of this type (Bug Catching Set's Grass)
   namePrefix?: string; // e.g. "N's "
+  nameContains?: string; // e.g. "Team Rocket", "Antique"
   maxHp?: number;
   singlePrize?: boolean; // prizeValue === 1 (no rule box)
 }
@@ -37,6 +38,7 @@ export interface MonFilter {
   zone: "active" | "bench" | "in_play";
   type?: string; // catalog type (Darkness, …)
   namePrefix?: string; // "N's "
+  nameContains?: string;
   basic?: boolean;
   isEx?: boolean; // a Pokémon ex (rule-box; Rising Blade's "+80 vs ex")
   hasTool?: boolean;
@@ -102,6 +104,12 @@ export type Guard =
   /** Enough cards in hand BESIDES the card being played, for a discard cost
    *  ("you can use this only if you discard 3 other cards" — Secret Box). */
   | { cond: "hand_size_gte"; n: number }
+  /** A Supporter whose name contains this was played this turn (Wicked
+   *  Impact, Team Rocket's Factory). */
+  | { cond: "supporter_played_contains"; text: string }
+  /** The source Pokémon moved from the Bench into the Active Spot this turn
+   *  (Gale Thrust). */
+  | { cond: "moved_to_active_this_turn" }
   /** The SOURCE Pokémon itself matches (Telepathic Psychic Energy only
    *  triggers when attached to a Psychic Pokémon). `side`/`zone` on the
    *  filter are ignored — the subject is always the source. */
@@ -124,7 +132,20 @@ export type DamageCount =
   | { of: "cards_in_zone"; zone: "discard" | "hand"; side: "own" | "opponent"; filter: CardFilter }
   /** Heads on "flip a coin until you get tails" (Rapid-Fire Combo). Consumes
    *  the rng — only ever evaluated once, at real damage resolution. */
-  | { of: "coin_flips_until_tails" };
+  | { of: "coin_flips_until_tails" }
+  /** Heads out of a FIXED number of flips (Comet Punch: flip 4). */
+  | { of: "coin_flips"; n: number }
+  /** Damage counters already on a Pokémon (Mad Bite, Damage Beat). */
+  | { of: "damage_counters_on"; side: "own" | "opponent"; zone: "active" | "bench" | "in_play"; filter?: MonFilter }
+  /** Energy attached across every matching Pokémon (Syrup Storm, Verdant
+   *  Storm). `energyType` narrows to one provided type. */
+  | { of: "energy_attached_all"; side: "own" | "opponent"; energyType?: string }
+  /** Prizes THIS player has taken (Gobble Down). */
+  | { of: "self_prizes_taken" }
+  /** Prizes the opponent took during their last turn (Settle the Score). */
+  | { of: "opp_prizes_taken_last_turn" }
+  /** Cards in the opponent's hand (Resentful Refrain). */
+  | { of: "opp_hand_size" };
 
 /** Base damage for an attack whose printed value is state-dependent ("180+",
  *  "60×"): `base + per × count`, plus each bonus whose guard holds. */
@@ -134,6 +155,28 @@ export interface DamageFormula {
   count?: DamageCount;
   /** Flat conditional additions (Rising Blade's "+80 if the Active is an ex"). */
   bonuses?: { amount: number; when: Guard }[];
+  /** "You MAY discard X … and this attack does N more for each" (Metallic
+   *  Hammer, Bellowing Thunder, Garland Ray, Erasure Ball, Rocket Feathers).
+   *  Modeled as always taking the boost when the resource is there — these
+   *  attacks are used at maximum in practice. Unlike the rest of the formula
+   *  this MUTATES (it pays the cost), so it runs only at real resolution
+   *  (rng non-null), never during ghost evaluation. */
+  discardBoost?: {
+    from: "self" | "own_bench" | "hand";
+    filter: CardFilter;
+    /** Cards discarded, at most. Omit for "any amount". */
+    max?: number;
+    /** Extra damage per card discarded. */
+    per: number;
+    /** Flat extra damage added ONCE if the cost was paid at all — for the
+     *  all-or-nothing wording ("discard 3 … and do 150 more"). */
+    flat?: number;
+    /** Discard exactly this many or nothing (Metallic Hammer's 3). */
+    exactly?: number;
+    /** Where the paid cards go. Chrono Burst SHUFFLES them into the deck
+     *  rather than discarding, which matters for later recursion. */
+    to?: "discard" | "deck";
+  };
 }
 
 /* ─── Effect primitives ─────────────────────────────────────────── */
@@ -153,6 +196,24 @@ export type EffectOp =
   // Move resolved energy cards (a card TargetSpec) onto a resolved mon.
   | { op: "attach_energy"; energyRef: string; monRef: string; from: "deck" | "discard" }
   | { op: "shuffle_deck" }
+  /** Shuffle matching cards from the discard back INTO the deck (Energy
+   *  Recycler, Sacred Ash). */
+  | { op: "discard_to_deck"; filter: CardFilter; max: number }
+  /** Move attached Energy between two resolved Pokémon (Energy Switch). */
+  | { op: "move_energy"; fromRef: string; toRef: string; filter: CardFilter; count: number }
+  /** Draw until the hand holds `n` (Iris's Fighting Spirit, Ariana). `bonus`
+   *  raises the target when its guard holds. */
+  | { op: "draw_until"; n: number; bonus?: { n: number; when: Guard } }
+  /** A player discards down to `n` cards in hand (Xerosic, Hand Trimmer). */
+  | { op: "discard_hand_down_to"; who: "own" | "opponent" | "both"; n: number }
+  /** Discard matching cards out of a hand (Eri: up to 2 Items from the
+   *  opponent's). */
+  | { op: "discard_from_hand"; who: "own" | "opponent"; filter: CardFilter; max: number }
+  /** Return a Pokémon and everything attached to its owner's hand (Scoop Up
+   *  Cyclone). */
+  | { op: "bounce_to_hand"; monRef: string }
+  /** Evolve a resolved own Pokémon straight out of the deck (Salvatore). */
+  | { op: "evolve_from_deck"; monRef: string; filter: CardFilter }
   | { op: "gust"; monRef: string } // swap opponent's chosen Bench mon to Active
   | { op: "switch"; monRef: string } // swap own chosen Bench mon to Active
   // Raw damage to the resolved Pokémon ("this attack does N damage to 1 of
@@ -162,7 +223,8 @@ export type EffectOp =
   | { op: "place_counters"; monRef: string; n: number }
   | { op: "move_counters"; fromRef: string; toRef: string; n: number }
   | { op: "apply_condition"; monRef: string; condition: SpecialCondition }
-  | { op: "heal"; monRef: string; n: number }
+  | { op: "heal"; monRef: string; n: number | "all" }
+  | { op: "clear_conditions"; monRef: string }
   | { op: "discard_from_mon"; monRef: string; category: "tool" | "special_energy" | "energy" }
   /** Look at the top `n` of your own deck, take up to `count` matching cards
    *  to hand, shuffle the rest back (Pokégear 3.0, Bug Catching Set). v1
@@ -175,7 +237,10 @@ export type EffectOp =
    *  so a heads branch can use the same picks the parent enumerated
    *  (Crushing Hammer's chosen Pokémon). Consumes the rng. */
   | { op: "coin_flip"; heads: EffectOp[]; tails?: EffectOp[] }
-  | { op: "buff_damage_this_turn"; amount: number; vsTarget?: "ex" }; // Black Belt's Training
+  /** Turn-scoped damage buff to the opponent's ACTIVE, before W/R. Scoped by
+   *  what the DEFENDER is (vsTarget) and/or what the ATTACKER is
+   *  (attackerType) — Black Belt's Training, Kieran, Premium Power Pro. */
+  | { op: "buff_damage_this_turn"; amount: number; vsTarget?: "ex" | "ex_or_v"; attackerType?: string };
 
 /* ─── Card effect ───────────────────────────────────────────────── */
 

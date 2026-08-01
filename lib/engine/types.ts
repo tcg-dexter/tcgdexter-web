@@ -108,6 +108,9 @@ export interface PokemonInPlay {
   enteredPlayOnTurn: number;
   /** True if this stack started its current top form this same turn. */
   evolvedThisTurn: boolean;
+  /** Global turn on which this Pokémon moved from the Bench into the Active
+   *  Spot (retreat, switch, promotion). Gale Thrust keys off it. */
+  movedToActiveOnTurn?: number;
 }
 
 /* ─── Player side ───────────────────────────────────────────────── */
@@ -129,6 +132,20 @@ export interface PlayerSide {
   /** Name of the Supporter played this turn, for effects that key off WHICH
    *  Supporter it was (Team Rocket's Factory). Cleared at turn start. */
   supporterNamePlayedThisTurn?: string;
+  /** Prizes this side took during its PREVIOUS turn (Okidogi's Settle the
+   *  Score reads the opponent's). Rolled over at turn start. */
+  prizesTakenLastTurn?: number;
+  /** Running count for the current turn, rolled into prizesTakenLastTurn. */
+  prizesTakenThisTurn?: number;
+  /** Turn-scoped damage buffs from Supporters (Black Belt's Training, Kieran,
+   *  Premium Power Pro). Read by activeDamageBonus; entries for past turns are
+   *  simply ignored rather than pruned. */
+  damageBuffs?: {
+    turn: number;
+    amount: number;
+    vsTarget?: "ex" | "ex_or_v";
+    attackerType?: string;
+  }[];
   /** True when one of this side's Pokémon was Knocked Out during the
    *  opponent's most recent turn (set in knockOut, cleared at the start of
    *  the opponent's next turn). Read by comeback abilities like

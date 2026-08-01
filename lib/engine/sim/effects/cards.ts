@@ -213,6 +213,93 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
     },
   ],
 
+
+  /* ── W3: state-dependent damage across the field ─────────────── */
+
+  "Bloodmoon Ursaluna": [{ card: "Bloodmoon Ursaluna", trigger: { kind: "damage_scale", attackName: "Mad Bite" },
+    damage: { base: 100, per: 30, count: { of: "damage_counters_on", side: "opponent", zone: "active" } }, ops: [] }],
+
+  Bronzor: [{ card: "Bronzor", trigger: { kind: "damage_scale", attackName: "Mirror Attack" },
+    damage: { base: 10, bonuses: [{ amount: 30, when: { cond: "opp_active_is", filter: { side: "opponent", zone: "active", type: "Metal" } } }] }, ops: [] }],
+
+  "Cynthia's Spiritomb": [{ card: "Cynthia's Spiritomb", trigger: { kind: "damage_scale", attackName: "Raging Curse" },
+    damage: { base: 0, per: 10, count: { of: "damage_counters_on", side: "own", zone: "bench", filter: { side: "own", zone: "bench", namePrefix: "Cynthia's " } } }, ops: [] }],
+
+  Deoxys: [{ card: "Deoxys", trigger: { kind: "damage_scale", attackName: "Psychic" },
+    damage: { base: 80, per: 20, count: { of: "energy_on_active", side: "opponent" } }, ops: [] }],
+
+  Dialga: [{ card: "Dialga", trigger: { kind: "damage_scale", attackName: "Chrono Burst" },
+    damage: { base: 80, discardBoost: { from: "self", filter: { supertype: "Energy" }, per: 0, flat: 80, to: "deck" } }, ops: [] }],
+
+  Eevee: [{ card: "Eevee", trigger: { kind: "damage_scale", attackName: "Quick Attack" },
+    damage: { base: 20, per: 20, count: { of: "coin_flips", n: 1 } }, ops: [] }],
+
+  "Ethan's Typhlosion": [{ card: "Ethan's Typhlosion", trigger: { kind: "damage_scale", attackName: "Buddy Blast" },
+    damage: { base: 40, per: 60, count: { of: "cards_in_zone", zone: "discard", side: "own", filter: { nameContains: "Ethan's Adventure" } } }, ops: [] }],
+
+  Glalie: [{ card: "Glalie", trigger: { kind: "damage_scale", attackName: "Damage Beat" },
+    damage: { base: 0, per: 20, count: { of: "damage_counters_on", side: "opponent", zone: "active" } }, ops: [] }],
+
+  "Hop's Trevenant": [{ card: "Hop's Trevenant", trigger: { kind: "damage_scale", attackName: "Horrifying Revenge" },
+    damage: { base: 30, bonuses: [{ amount: 100, when: { cond: "koed_last_opp_turn" } }] }, ops: [] }],
+
+  "Hydrapple ex": [{ card: "Hydrapple ex", trigger: { kind: "damage_scale", attackName: "Syrup Storm" },
+    damage: { base: 30, per: 30, count: { of: "energy_attached_all", side: "own", energyType: "Grass" } }, ops: [] }],
+
+  "Koraidon ex": [{ card: "Koraidon ex", trigger: { kind: "damage_scale", attackName: "Orichalcum Fang" },
+    damage: { base: 50, bonuses: [{ amount: 120, when: { cond: "koed_last_opp_turn" } }] }, ops: [] }],
+
+  "Leafeon ex": [{ card: "Leafeon ex", trigger: { kind: "damage_scale", attackName: "Verdant Storm" },
+    damage: { base: 0, per: 60, count: { of: "energy_attached_all", side: "opponent" } }, ops: [] }],
+
+  "Mega Audino ex": [{ card: "Mega Audino ex", trigger: { kind: "damage_scale", attackName: "Ear Force" },
+    damage: { base: 20, per: 80, count: { of: "energy_on_active", side: "opponent" } }, ops: [] }],
+
+  "Mega Diancie ex": [{ card: "Mega Diancie ex", trigger: { kind: "damage_scale", attackName: "Garland Ray" },
+    damage: { base: 0, discardBoost: { from: "self", filter: { supertype: "Energy" }, max: 2, per: 120 } }, ops: [] }],
+
+  "Mega Froslass ex": [{ card: "Mega Froslass ex", trigger: { kind: "damage_scale", attackName: "Resentful Refrain" },
+    damage: { base: 0, per: 50, count: { of: "opp_hand_size" } }, ops: [] }],
+
+  "Mega Lopunny ex": [{ card: "Mega Lopunny ex", trigger: { kind: "damage_scale", attackName: "Gale Thrust" },
+    damage: { base: 60, bonuses: [{ amount: 170, when: { cond: "moved_to_active_this_turn" } }] }, ops: [] }],
+
+  "Mega Mawile ex": [{ card: "Mega Mawile ex", trigger: { kind: "damage_scale", attackName: "Gobble Down" },
+    damage: { base: 0, per: 80, count: { of: "self_prizes_taken" } }, ops: [] }],
+
+  Metagross: [{ card: "Metagross", trigger: { kind: "damage_scale", attackName: "Metallic Hammer" },
+    damage: { base: 150, discardBoost: { from: "self", filter: { supertype: "Energy", energyType: "Metal" }, exactly: 3, per: 0, flat: 150 } }, ops: [] }],
+
+  Okidogi: [{ card: "Okidogi", trigger: { kind: "damage_scale", attackName: "Settle the Score" },
+    damage: { base: 80, per: 60, count: { of: "opp_prizes_taken_last_turn" } }, ops: [] }],
+
+  Passimian: [{ card: "Passimian", trigger: { kind: "damage_scale", attackName: "Coordinated Throwing" },
+    damage: { base: 0, per: 20, count: { of: "mons_in_play", side: "own", filter: { side: "own", zone: "in_play", basic: true } } }, ops: [] }],
+
+  "Raging Bolt ex": [{ card: "Raging Bolt ex", trigger: { kind: "damage_scale", attackName: "Bellowing Thunder" },
+    damage: { base: 0, discardBoost: { from: "own_bench", filter: { basicEnergy: true }, per: 70 } }, ops: [] }],
+
+  Relicanth: [{ card: "Relicanth", trigger: { kind: "damage_scale", attackName: "Fossil Beatdown" },
+    damage: { base: 10, per: 30, count: { of: "mons_in_play", side: "own", filter: { side: "own", zone: "bench", nameContains: "Antique" } } }, ops: [] }],
+
+  "Team Rocket's Honchkrow": [{ card: "Team Rocket's Honchkrow", trigger: { kind: "damage_scale", attackName: "Rocket Feathers" },
+    damage: { base: 0, discardBoost: { from: "hand", filter: { supertype: "Trainer", subtype: "Supporter", nameContains: "Team Rocket" }, per: 60 } }, ops: [] }],
+
+  "Team Rocket's Kangaskhan ex": [
+    { card: "Team Rocket's Kangaskhan ex", trigger: { kind: "damage_scale", attackName: "Comet Punch" },
+      damage: { base: 0, per: 30, count: { of: "coin_flips", n: 4 } }, ops: [] },
+    { card: "Team Rocket's Kangaskhan ex", trigger: { kind: "damage_scale", attackName: "Wicked Impact" },
+      damage: { base: 120, bonuses: [{ amount: 100, when: { cond: "supporter_played_contains", text: "Team Rocket" } }] }, ops: [] }],
+
+  "Team Rocket's Mewtwo ex": [{ card: "Team Rocket's Mewtwo ex", trigger: { kind: "damage_scale", attackName: "Erasure Ball" },
+    damage: { base: 160, discardBoost: { from: "own_bench", filter: { supertype: "Energy" }, max: 2, per: 60 } }, ops: [] }],
+
+  "Team Rocket's Porygon2": [{ card: "Team Rocket's Porygon2", trigger: { kind: "damage_scale", attackName: "R Command" },
+    damage: { base: 0, per: 20, count: { of: "cards_in_zone", zone: "discard", side: "own", filter: { supertype: "Trainer", subtype: "Supporter", nameContains: "Team Rocket" } } }, ops: [] }],
+
+  "Team Rocket's Spidops": [{ card: "Team Rocket's Spidops", trigger: { kind: "damage_scale", attackName: "Rocket Rush" },
+    damage: { base: 0, per: 30, count: { of: "mons_in_play", side: "own", filter: { side: "own", zone: "in_play", namePrefix: "Team Rocket's " } } }, ops: [] }],
+
   /* ── On-attach Special Energy (W2-fin.6) ─────────────────────── */
 
   // Jet Energy: when attached from hand to a BENCHED Pokémon, switch it into

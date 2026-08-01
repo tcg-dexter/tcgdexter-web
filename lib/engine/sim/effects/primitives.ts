@@ -13,6 +13,7 @@ import { placeCounters, moveCounters, dealRawDamage } from "../damage";
 import { applyWeaknessResistance } from "../moves";
 import { pickDiscards } from "../trainers";
 import { cardMatches } from "./match";
+import { guardsPass } from "./guards";
 import type { EffectOp, Quantity } from "./types";
 
 type Actor = "player" | "opponent";
@@ -60,11 +61,12 @@ function cards(ctx: OpContext, ref: string): CardInstance[] {
 
 /** Move a Bench Pokémon into the Active Spot, swapping the old Active to the
  *  vacated Bench slot. Leaving the Active Spot clears Special Conditions. */
-function promoteFromBench(side: PlayerSide, benchMon: PokemonInPlay): void {
+function promoteFromBench(side: PlayerSide, benchMon: PokemonInPlay, turn?: number): void {
   const idx = side.bench.indexOf(benchMon);
   if (idx < 0 || !side.active) return;
   clearConditions(side.active);
   side.bench[idx] = side.active;
+  if (turn != null) benchMon.movedToActiveOnTurn = turn;
   side.active = benchMon;
 }
 
@@ -147,12 +149,12 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
 
     case "gust": {
       const picked = mons(ctx, op.monRef)[0];
-      if (picked && picked.side === other(actor)) promoteFromBench(opp, picked.mon);
+      if (picked && picked.side === other(actor)) promoteFromBench(opp, picked.mon, state.turn.number);
       break;
     }
     case "switch": {
       const picked = mons(ctx, op.monRef)[0];
-      if (picked && picked.side === actor) promoteFromBench(side, picked.mon);
+      if (picked && picked.side === actor) promoteFromBench(side, picked.mon, state.turn.number);
       break;
     }
 
@@ -185,8 +187,120 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
       break;
 
     case "heal":
-      for (const { mon } of mons(ctx, op.monRef)) mon.damage = Math.max(0, mon.damage - op.n);
+      for (const { mon } of mons(ctx, op.monRef)) {
+        mon.damage = op.n === "all" ? 0 : Math.max(0, mon.damage - op.n);
+      }
       break;
+
+    case "clear_conditions":
+      for (const { mon } of mons(ctx, op.monRef)) clearConditions(mon);
+      break;
+
+    case "discard_to_deck": {
+      // Shuffle matching cards from the discard back into the deck.
+      let moved = 0;
+      for (const card of [...side.discard]) {
+        if (moved >= op.max) break;
+        if (!cardMatches(card, op.filter)) continue;
+        const pulled = spliceById(side.discard, card.id);
+        if (pulled) {
+          side.deck.push(pulled);
+          moved++;
+        }
+      }
+      if (moved > 0 && rng) shuffle(side.deck, rng);
+      break;
+    }
+
+    case "move_energy": {
+      const from = mons(ctx, op.fromRef)[0];
+      const to = mons(ctx, op.toRef)[0];
+      if (!from || !to || from.mon === to.mon) break;
+      let moved = 0;
+      for (const card of [...from.mon.attachedEnergy]) {
+        if (moved >= op.count) break;
+        if (!cardMatches(card, op.filter)) continue;
+        const i = from.mon.attachedEnergy.findIndex((c) => c.id === card.id);
+        if (i >= 0) {
+          to.mon.attachedEnergy.push(...from.mon.attachedEnergy.splice(i, 1));
+          moved++;
+        }
+      }
+      break;
+    }
+
+    case "draw_until": {
+      let target = op.n;
+      if (op.bonus && guardsPass(state, actor, ctx.source ?? null, [op.bonus.when])) {
+        target = op.bonus.n;
+      }
+      draw(side, Math.max(0, target - side.hand.length));
+      break;
+    }
+
+    case "discard_hand_down_to": {
+      const who: Actor[] =
+        op.who === "both" ? [other(actor), actor] : op.who === "own" ? [actor] : [other(actor)];
+      for (const w of who) {
+        const ps = state.sides[w];
+        while (ps.hand.length > op.n) {
+          const chosen = pickDiscards(ps, 1, "")[0] ?? ps.hand[0];
+          const i = ps.hand.findIndex((c) => c.id === chosen.id);
+          if (i < 0) break;
+          ps.discard.push(...ps.hand.splice(i, 1));
+        }
+      }
+      break;
+    }
+
+    case "discard_from_hand": {
+      const ps = op.who === "own" ? side : opp;
+      let n = 0;
+      for (const card of [...ps.hand]) {
+        if (n >= op.max) break;
+        if (!cardMatches(card, op.filter)) continue;
+        const pulled = spliceById(ps.hand, card.id);
+        if (pulled) {
+          ps.discard.push(pulled);
+          n++;
+        }
+      }
+      break;
+    }
+
+    case "bounce_to_hand": {
+      for (const { mon, side: monSide } of mons(ctx, op.monRef)) {
+        const ps = state.sides[monSide];
+        // Everything attached rides along: the card, its evolution stack,
+        // energy and tools all return to hand.
+        const returned = [mon.card, ...mon.stack, ...mon.attachedEnergy, ...mon.attachedTools];
+        if (ps.active === mon) {
+          ps.active = null;
+        } else {
+          const i = ps.bench.indexOf(mon);
+          if (i >= 0) ps.bench.splice(i, 1);
+        }
+        ps.hand.push(...returned);
+      }
+      break;
+    }
+
+    case "evolve_from_deck": {
+      const target = mons(ctx, op.monRef)[0];
+      if (!target) break;
+      const idx = side.deck.findIndex(
+        (c) => cardMatches(c, op.filter) && c.catalog?.evolves_from === target.mon.card.name,
+      );
+      if (idx >= 0) {
+        const [evo] = side.deck.splice(idx, 1);
+        target.mon.stack.push(target.mon.card);
+        target.mon.card = evo;
+        target.mon.evolvedThisTurn = true;
+        target.mon.conditions = [];
+      }
+      if (rng) shuffle(side.deck, rng);
+      break;
+    }
 
     case "discard_from_mon": {
       for (const { mon, side: monSide } of mons(ctx, op.monRef)) {
@@ -244,7 +358,12 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
     }
 
     case "buff_damage_this_turn":
-      side.blackBeltTrainingTurn = state.turn.number;
+      (side.damageBuffs ??= []).push({
+        turn: state.turn.number,
+        amount: op.amount,
+        vsTarget: op.vsTarget,
+        attackerType: op.attackerType,
+      });
       break;
   }
 }
