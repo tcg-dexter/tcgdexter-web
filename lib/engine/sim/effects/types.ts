@@ -41,6 +41,7 @@ export interface MonFilter {
   nameContains?: string;
   basic?: boolean;
   isEx?: boolean; // a Pokémon ex (rule-box; Rising Blade's "+80 vs ex")
+  subtype?: string; // catalog subtype (Tera, Stage 2, …)
   hasTool?: boolean;
   hasSpecialEnergy?: boolean;
   damaged?: boolean; // damage >= 10
@@ -55,6 +56,11 @@ export interface MonFilter {
  *  Pokémon", "switch this Pokémon"), and binding it avoids enumerating a
  *  one-candidate target slot on every attack. */
 export const SELF_REF = "self";
+
+/** Reserved ref for the ACTING player's own Active Pokémon, bound by the
+ *  runtime. Needed by effects that can rebound onto you (Venture Bomb's
+ *  tails) where there is no `self` source Pokémon. */
+export const OWN_ACTIVE_REF = "own_active";
 
 /** A named target slot the interpreter resolves. `player` choosers enumerate
  *  concrete moves; `auto` collapses to a heuristic pick; `all` hits every
@@ -110,6 +116,12 @@ export type Guard =
   /** The source Pokémon moved from the Bench into the Active Spot this turn
    *  (Gale Thrust). */
   | { cond: "moved_to_active_this_turn" }
+  /** ANY of the acting player's Pokémon in play matches (Glass Trumpet needs
+   *  a Tera Pokémon on board). */
+  | { cond: "own_has_mon"; filter: MonFilter }
+  /** EVERY one of the acting player's Pokémon in play matches (Ariana draws
+   *  more when the whole board is Team Rocket's). */
+  | { cond: "all_own_mons_match"; filter: MonFilter }
   /** The SOURCE Pokémon itself matches (Telepathic Psychic Energy only
    *  triggers when attached to a Psychic Pokémon). `side`/`zone` on the
    *  filter are ignored — the subject is always the source. */
@@ -182,7 +194,7 @@ export interface DamageFormula {
 /* ─── Effect primitives ─────────────────────────────────────────── */
 
 /** `n` can be a fixed count or a dynamic quantity read at apply time. */
-export type Quantity = number | "own_prizes" | "opp_prizes";
+export type Quantity = number | "own_prizes" | "opp_prizes" | "opp_bench_count";
 
 export type EffectOp =
   | { op: "draw"; n: Quantity }
@@ -194,7 +206,7 @@ export type EffectOp =
   | { op: "search"; targetRef: string; to: "hand" | "bench" | "deck_top" }
   | { op: "retrieve"; targetRef: string; to: "hand" | "bench" }
   // Move resolved energy cards (a card TargetSpec) onto a resolved mon.
-  | { op: "attach_energy"; energyRef: string; monRef: string; from: "deck" | "discard" }
+  | { op: "attach_energy"; energyRef: string; monRef: string; from: "deck" | "discard" | "hand" }
   | { op: "shuffle_deck" }
   /** Shuffle matching cards from the discard back INTO the deck (Energy
    *  Recycler, Sacred Ash). */
@@ -225,11 +237,14 @@ export type EffectOp =
   | { op: "apply_condition"; monRef: string; condition: SpecialCondition }
   | { op: "heal"; monRef: string; n: number | "all" }
   | { op: "clear_conditions"; monRef: string }
+  /** The source Pokémon knocks ITSELF out (Cursed Blast). Marked lethally so
+   *  the driver's resolveKnockouts handles prizes and promotion normally. */
+  | { op: "ko_self" }
   | { op: "discard_from_mon"; monRef: string; category: "tool" | "special_energy" | "energy" }
   /** Look at the top `n` of your own deck, take up to `count` matching cards
    *  to hand, shuffle the rest back (Pokégear 3.0, Bug Catching Set). v1
    *  auto-picks the first matches — a real reveal choice is a W4 chooser. */
-  | { op: "reveal_top"; n: number; count: number; filter: CardFilter; to: "hand" }
+  | { op: "reveal_top"; n: number; count: number; filter: CardFilter; to: "hand"; from?: "top" | "bottom" }
   /** Discard `n` cards from your own hand as a COST (Secret Box). Auto-picks
    *  the least useful cards via the shared pickDiscards heuristic. */
   | { op: "discard_hand_cards"; n: number }

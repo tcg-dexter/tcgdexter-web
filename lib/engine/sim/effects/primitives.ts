@@ -48,8 +48,9 @@ function spliceById(zone: CardInstance[], id: string): CardInstance | null {
   const i = zone.findIndex((c) => c.id === id);
   return i >= 0 ? zone.splice(i, 1)[0] : null;
 }
-function resolveQty(q: Quantity, side: PlayerSide): number {
+function resolveQty(q: Quantity, side: PlayerSide, opp?: PlayerSide): number {
   if (q === "own_prizes" || q === "opp_prizes") return side.prizes.length;
+  if (q === "opp_bench_count") return opp?.bench.length ?? 0;
   return q;
 }
 function mons(ctx: OpContext, ref: string): ResolvedMon[] {
@@ -79,7 +80,7 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
 
   switch (op.op) {
     case "draw":
-      draw(side, resolveQty(op.n, side));
+      draw(side, resolveQty(op.n, side, opp));
       break;
 
     case "shuffle_hand_draw": {
@@ -134,7 +135,7 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
 
     case "attach_energy": {
       const target = mons(ctx, op.monRef)[0];
-      const zone = op.from === "deck" ? side.deck : side.discard;
+      const zone = op.from === "deck" ? side.deck : op.from === "hand" ? side.hand : side.discard;
       for (const energy of cards(ctx, op.energyRef)) {
         const pulled = spliceById(zone, energy.id);
         if (pulled && target) target.mon.attachedEnergy.push(pulled);
@@ -190,6 +191,12 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
       for (const { mon } of mons(ctx, op.monRef)) {
         mon.damage = op.n === "all" ? 0 : Math.max(0, mon.damage - op.n);
       }
+      break;
+
+    case "ko_self":
+      // Lethal marking rather than direct removal, so prizes/promotion run
+      // through the normal knockout path (mirrors legacy Cursed Blast).
+      if (ctx.source) ctx.source.damage = (ctx.source.card.catalog?.hp ?? 120) + 1000;
       break;
 
     case "clear_conditions":
@@ -323,7 +330,11 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
     case "reveal_top": {
       // Look at the top n, take up to `count` matches, rest back to the deck
       // (then shuffled, matching "shuffle the other cards back into your deck").
-      const top = side.deck.splice(0, Math.max(0, op.n));
+      // Dusk Ball looks at the BOTTOM instead of the top.
+      const fromBottom = op.from === "bottom";
+      const top = fromBottom
+        ? side.deck.splice(Math.max(0, side.deck.length - op.n), op.n)
+        : side.deck.splice(0, Math.max(0, op.n));
       let taken = 0;
       const rest: CardInstance[] = [];
       for (const c of top) {

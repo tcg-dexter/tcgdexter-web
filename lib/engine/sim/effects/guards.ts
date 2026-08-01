@@ -48,6 +48,14 @@ export function guardsPass(
         return (side.supporterNamePlayedThisTurn ?? "").includes(g.text);
       case "moved_to_active_this_turn":
         return source != null && source.movedToActiveOnTurn === state.turn.number;
+      case "own_has_mon": {
+        const pool = [side.active, ...side.bench].filter((m): m is PokemonInPlay => m !== null);
+        return pool.some((m) => monMatches(m, g.filter));
+      }
+      case "all_own_mons_match": {
+        const pool = [side.active, ...side.bench].filter((m): m is PokemonInPlay => m !== null);
+        return pool.length > 0 && pool.every((m) => monMatches(m, g.filter));
+      }
       case "hand_size_gte":
         // Checked while the card is still IN hand (enumeration time), so a
         // "discard N OTHER cards" cost needs N+1.

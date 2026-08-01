@@ -26,7 +26,7 @@ import { buildSimInitialState, energyUnits, toPokemonInPlay, type SimDeck } from
 import { retreatCost } from "./tools";
 import { applyTrainer } from "./trainers";
 import { applyEffect } from "./effects/runtime";
-import { attackRiderEffect, effectsFor, onAttachEffect } from "./effects/cards";
+import { attackRiderEffect, effectsFor, onAttachEffect, triggerEffect } from "./effects/cards";
 import { applyStadium, benchCap, enforceBenchCap } from "./stadiums";
 import { viewFor } from "./view";
 import { shuffle, type Rng } from "./rng";
@@ -164,7 +164,15 @@ export function applyMove(
     case "bench": {
       const card = takeFromHand(move.cardId);
       if (card && side.bench.length < benchCap(state, actor)) {
-        side.bench.push(toPokemonInPlay(card, state.turn.number));
+        const placed = toPokemonInPlay(card, state.turn.number);
+        side.bench.push(placed);
+        // On-play abilities (Meowth ex's Last-Ditch Catch) fire as it lands.
+        const onPlay = triggerEffect(card.name, "on_play");
+        if (onPlay) {
+          applyEffect(state, actor, onPlay.effect,
+            { kind: "effect", sourceId: placed.id, card: card.name, effectIndex: onPlay.index, picks: move.triggerPicks ?? [] },
+            rng, placed);
+        }
       }
       return done(false);
     }
@@ -176,9 +184,16 @@ export function applyMove(
         target.card = card;
         target.evolvedThisTurn = true;
         target.conditions = [];
-        // On-evolve abilities (Charizard ex's Infernal Reign) fire now.
+        // On-evolve abilities fire now — the legacy hand-written trigger
+        // (Charizard ex) and the declarative ones (Alakazam, Punk Up).
         if (hasOnEvolveTrigger(card)) {
           onEvolve(state, actor, target, rng ? () => shuffle(side.deck, rng) : null);
+        }
+        const onEvo = triggerEffect(card.name, "on_evolve");
+        if (onEvo) {
+          applyEffect(state, actor, onEvo.effect,
+            { kind: "effect", sourceId: target.id, card: card.name, effectIndex: onEvo.index, picks: move.triggerPicks ?? [] },
+            rng, target);
         }
       }
       return done(false);

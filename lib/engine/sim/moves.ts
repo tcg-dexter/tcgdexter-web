@@ -5,7 +5,7 @@
 // (see setup.ts header).
 
 import type { EngineAttack, GameState, PlayerSide, PokemonInPlay } from "../types";
-import { energyProvides, energyUnits, isBasic } from "./setup";
+import { energyProvides, energyUnits, isBasic, toPokemonInPlay } from "./setup";
 import { unitPaysType } from "./effects/energy";
 import { isSupporter, trainerMoves, trainerSpec, type PlayTrainerMove } from "./trainers";
 import { abilityMoves, hasLegacyActivated, type UseAbilityMove } from "./abilities";
@@ -13,7 +13,7 @@ import { cannotAct } from "./conditions";
 import { canRetreat, effectiveMaxHp, isTool, toolCostReduction } from "./tools";
 import { benchCap, stadiumAttackCostExtra, stadiumMoves, type UseStadiumMove } from "./stadiums";
 import { enumerateEffect, type EffectMove, type EffectPick } from "./effects/runtime";
-import { abilityEffects, attackRiderEffect, effectsFor, onAttachEffect } from "./effects/cards";
+import { abilityEffects, attackRiderEffect, effectsFor, onAttachEffect, triggerEffect } from "./effects/cards";
 
 export type SimMove =
   | {
@@ -24,8 +24,8 @@ export type SimMove =
        *  2 Basics). Like riderPicks, it resolves inside the attach move. */
       attachPicks?: EffectPick[];
     }
-  | { kind: "bench"; cardId: string }
-  | { kind: "evolve"; cardId: string; targetId: string }
+  | { kind: "bench"; cardId: string; triggerPicks?: EffectPick[] }
+  | { kind: "evolve"; cardId: string; targetId: string; triggerPicks?: EffectPick[] }
   | { kind: "retreat"; benchIndex: number }
   | { kind: "cycle_supporter"; cardId: string }
   | { kind: "cycle_item"; cardId: string }
@@ -240,13 +240,52 @@ export function legalMoves(
   for (const card of side.hand) {
     // Bench a basic.
     if (isBasic(card) && side.bench.length < cap) {
-      moves.push({ kind: "bench", cardId: card.id });
+      // An ON-PLAY ability (Meowth ex, Bloodmoon Ursaluna) resolves as this
+      // Pokémon hits the Bench, so its picks ride on the bench move. The
+      // Pokémon isn't in play yet, so enumerate against a provisional instance.
+      const onPlay = triggerEffect(card.name, "on_play");
+      const combos = onPlay
+        ? enumerateEffect(
+            state,
+            actor,
+            { id: card.id, name: card.name },
+            onPlay.effect,
+            onPlay.index,
+            toPokemonInPlay(card, state.turn.number),
+          )
+        : [];
+      if (onPlay && combos.length > 0 && (onPlay.effect.targets?.length ?? 0) > 0) {
+        for (const combo of combos) {
+          moves.push({ kind: "bench", cardId: card.id, triggerPicks: combo.picks });
+        }
+      } else {
+        moves.push({ kind: "bench", cardId: card.id });
+      }
     }
     // Evolve.
     const from = card.catalog?.evolves_from;
     if (from && canEvolve) {
       for (const target of evolutionTargets(side, from, state.turn.number)) {
-        moves.push({ kind: "evolve", cardId: card.id, targetId: target.id });
+        // ON-EVOLVE abilities (Alakazam's Psychic Draw, Marnie's Grimmsnarl's
+        // Punk Up) fire as the evolution lands; picks ride on the evolve move.
+        const onEvo = triggerEffect(card.name, "on_evolve");
+        const combos = onEvo
+          ? enumerateEffect(
+              state,
+              actor,
+              { id: card.id, name: card.name },
+              onEvo.effect,
+              onEvo.index,
+              target,
+            )
+          : [];
+        if (onEvo && combos.length > 0 && (onEvo.effect.targets?.length ?? 0) > 0) {
+          for (const combo of combos) {
+            moves.push({ kind: "evolve", cardId: card.id, targetId: target.id, triggerPicks: combo.picks });
+          }
+        } else {
+          moves.push({ kind: "evolve", cardId: card.id, targetId: target.id });
+        }
       }
     }
     // Attach energy (one per turn).

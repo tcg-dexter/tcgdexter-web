@@ -5,7 +5,7 @@
 // the legacy TRAINER_EFFECTS/ACTIVATED registries — the two are mutually
 // exclusive during cutover so nothing double-lists.
 
-import { SELF_REF } from "./types";
+import { OWN_ACTIVE_REF, SELF_REF } from "./types";
 import type { CardEffect } from "./types";
 
 export const EFFECT_CARDS: Record<string, CardEffect[]> = {
@@ -214,10 +214,316 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
   ],
 
 
-  /* ── W3: state-dependent damage across the field ─────────────── */
 
-  "Bloodmoon Ursaluna": [{ card: "Bloodmoon Ursaluna", trigger: { kind: "damage_scale", attackName: "Mad Bite" },
-    damage: { base: 100, per: 30, count: { of: "damage_counters_on", side: "opponent", zone: "active" } }, ops: [] }],
+
+  /* ── W3: abilities (activated / on-play / on-evolve) ─────────── */
+
+  Alakazam: [{ card: "Alakazam", ability: "Psychic Draw", trigger: { kind: "on_evolve" }, ops: [{ op: "draw", n: 3 }] }],
+  Kadabra: [{ card: "Kadabra", ability: "Psychic Draw", trigger: { kind: "on_evolve" }, ops: [{ op: "draw", n: 2 }] }],
+
+  "Archaludon ex": [{ card: "Archaludon ex", ability: "Assemble Alloy", trigger: { kind: "on_evolve" },
+    targets: [
+      { ref: "e", select: "card", count: 2, upTo: true, card: { zone: "discard", filter: { basicEnergy: true, energyType: "Metal" } }, chooser: "player" },
+      { ref: "m", select: "mon", mon: { side: "own", zone: "in_play", type: "Metal" }, chooser: "player" }],
+    ops: [{ op: "attach_energy", energyRef: "e", monRef: "m", from: "discard" }] }],
+
+  "Hop's Dubwool": [{ card: "Hop's Dubwool", ability: "Defiant Horn", trigger: { kind: "on_evolve" },
+    targets: [{ ref: "t", select: "mon", mon: { side: "opponent", zone: "bench" }, chooser: "player" }],
+    ops: [{ op: "gust", monRef: "t" }] }],
+
+  "Marnie's Grimmsnarl ex": [{ card: "Marnie's Grimmsnarl ex", ability: "Punk Up", trigger: { kind: "on_evolve" },
+    targets: [
+      { ref: "e", select: "card", count: 5, upTo: true, card: { zone: "deck", filter: { basicEnergy: true, energyType: "Darkness" } }, chooser: "player" },
+      { ref: "m", select: "mon", mon: { side: "own", zone: "in_play", namePrefix: "Marnie's " }, chooser: "player" }],
+    ops: [{ op: "attach_energy", energyRef: "e", monRef: "m", from: "deck" }] }],
+
+  "Meowth ex": [{ card: "Meowth ex", ability: "Last-Ditch Catch", trigger: { kind: "on_play" },
+    targets: [{ ref: "s", upTo: true, select: "card", card: { zone: "deck", filter: { supertype: "Trainer", subtype: "Supporter" } }, chooser: "player" }],
+    ops: [{ op: "search", targetRef: "s", to: "hand" }] },
+    { card: "Meowth ex", trigger: { kind: "attack_rider", attackName: "Tuck Tail" },
+      ops: [{ op: "bounce_to_hand", monRef: SELF_REF }] }],
+
+  "Bloodmoon Ursaluna": [{ card: "Bloodmoon Ursaluna", ability: "Battle-Hardened", trigger: { kind: "on_play" },
+    targets: [{ ref: "e", select: "card", count: 2, upTo: true, card: { zone: "hand", filter: { basicEnergy: true, energyType: "Fighting" } }, chooser: "player" }],
+    ops: [{ op: "attach_energy", energyRef: "e", monRef: SELF_REF, from: "hand" }] },
+    { card: "Bloodmoon Ursaluna", trigger: { kind: "damage_scale", attackName: "Mad Bite" },
+      damage: { base: 100, per: 30, count: { of: "damage_counters_on", side: "opponent", zone: "active" } }, ops: [] }],
+
+  "Iron Leaves ex": [{ card: "Iron Leaves ex", ability: "Rapid Vernier", trigger: { kind: "on_play" },
+    ops: [{ op: "switch", monRef: SELF_REF }] }],
+
+  Barbaracle: [{ card: "Barbaracle", ability: "Stone Arms", trigger: { kind: "activated" },
+    targets: [
+      { ref: "e", select: "card", card: { zone: "hand", filter: { basicEnergy: true, energyType: "Fighting" } }, chooser: "player" },
+      { ref: "m", select: "mon", mon: { side: "own", zone: "in_play", type: "Fighting" }, chooser: "player" }],
+    ops: [{ op: "attach_energy", energyRef: "e", monRef: "m", from: "hand" }] }],
+
+  "Cynthia's Gabite": [{ card: "Cynthia's Gabite", ability: "Champion's Call", trigger: { kind: "activated" },
+    targets: [{ ref: "p", select: "card", card: { zone: "deck", filter: { supertype: "Pokémon", namePrefix: "Cynthia's " } }, chooser: "player" }],
+    ops: [{ op: "search", targetRef: "p", to: "hand" }] }],
+
+  Drakloak: [{ card: "Drakloak", ability: "Recon Directive", trigger: { kind: "activated" },
+    ops: [{ op: "reveal_top", n: 2, count: 1, filter: {}, to: "hand" }] }],
+
+  Dudunsparce: [{ card: "Dudunsparce", ability: "Run Away Draw", trigger: { kind: "activated" },
+    ops: [{ op: "draw", n: 3 }, { op: "bounce_to_hand", monRef: SELF_REF }] }],
+
+  Dusclops: [{ card: "Dusclops", ability: "Cursed Blast", trigger: { kind: "activated" },
+    targets: [{ ref: "t", select: "mon", mon: { side: "opponent", zone: "in_play" }, chooser: "player" }],
+    ops: [{ op: "place_counters", monRef: "t", n: 5 }, { op: "ko_self" }] }],
+
+  "Ethan's Quilava": [{ card: "Ethan's Quilava", ability: "Bonded by the Journey", trigger: { kind: "activated" },
+    targets: [{ ref: "c", select: "card", card: { zone: "deck", filter: { nameContains: "Ethan's Adventure" } }, chooser: "player" }],
+    ops: [{ op: "search", targetRef: "c", to: "hand" }] }],
+
+  "Fan Rotom": [{ card: "Fan Rotom", ability: "Fan Call", trigger: { kind: "activated" },
+    targets: [{ ref: "p", select: "card", count: 3, upTo: true, card: { zone: "deck", filter: { supertype: "Pokémon", pokemonType: "Colorless", maxHp: 100 } }, chooser: "player" }],
+    ops: [{ op: "search", targetRef: "p", to: "hand" }] }],
+
+  "Genesect ex": [{ card: "Genesect ex", ability: "Metallic Signal", trigger: { kind: "activated" },
+    targets: [{ ref: "p", select: "card", count: 2, upTo: true, card: { zone: "deck", filter: { supertype: "Pokémon", pokemonType: "Metal" } }, chooser: "player" }],
+    ops: [{ op: "search", targetRef: "p", to: "hand" }] }],
+
+  "Hydrapple ex": [{ card: "Hydrapple ex", ability: "Ripening Charge", trigger: { kind: "activated" },
+    targets: [
+      { ref: "e", select: "card", card: { zone: "hand", filter: { basicEnergy: true, energyType: "Grass" } }, chooser: "player" },
+      { ref: "m", select: "mon", mon: { side: "own", zone: "in_play" }, chooser: "player" }],
+    ops: [{ op: "attach_energy", energyRef: "e", monRef: "m", from: "hand" }, { op: "heal", monRef: "m", n: 30 }] },
+    { card: "Hydrapple ex", trigger: { kind: "damage_scale", attackName: "Syrup Storm" },
+      damage: { base: 30, per: 30, count: { of: "energy_attached_all", side: "own", energyType: "Grass" } }, ops: [] }],
+
+  Lunatone: [{ card: "Lunatone", ability: "Lunar Cycle", trigger: { kind: "activated" },
+    guards: [{ cond: "own_has_mon", filter: { side: "own", zone: "in_play", nameContains: "Solrock" } }, { cond: "hand_size_gte", n: 1 }],
+    ops: [{ op: "discard_hand_cards", n: 1 }, { op: "draw", n: 3 }] }],
+
+  "Pecharunt ex": [{ card: "Pecharunt ex", ability: "Subjugating Chains", trigger: { kind: "activated" },
+    targets: [{ ref: "m", select: "mon", mon: { side: "own", zone: "bench", type: "Darkness", excludeName: "Pecharunt ex" }, chooser: "player" }],
+    ops: [{ op: "switch", monRef: "m" }, { op: "apply_condition", monRef: "m", condition: "Poisoned" }] },
+    { card: "Pecharunt ex", trigger: { kind: "damage_scale", attackName: "Irritated Outburst" },
+      damage: { base: 0, per: 60, count: { of: "opp_prizes_taken" } }, ops: [] }],
+
+  "Steven's Metagross ex": [{ card: "Steven's Metagross ex", ability: "X-Boot", trigger: { kind: "activated" },
+    targets: [
+      { ref: "e", select: "card", count: 2, upTo: true, card: { zone: "deck", filter: { anyOf: [{ basicEnergy: true, energyType: "Psychic" }, { basicEnergy: true, energyType: "Metal" }] } }, chooser: "player" },
+      { ref: "m", select: "mon", mon: { side: "own", zone: "in_play" }, chooser: "player" }],
+    ops: [{ op: "attach_energy", energyRef: "e", monRef: "m", from: "deck" }] }],
+
+  "Teal Mask Ogerpon ex": [{ card: "Teal Mask Ogerpon ex", ability: "Teal Dance", trigger: { kind: "activated" },
+    targets: [{ ref: "e", select: "card", card: { zone: "hand", filter: { basicEnergy: true, energyType: "Grass" } }, chooser: "player" }],
+    ops: [{ op: "attach_energy", energyRef: "e", monRef: SELF_REF, from: "hand" }, { op: "draw", n: 1 }] },
+    { card: "Teal Mask Ogerpon ex", trigger: { kind: "damage_scale", attackName: "Myriad Leaf Shower" },
+      damage: { base: 30, per: 30, count: { of: "energy_on_active", side: "both" } }, ops: [] }],
+
+  "Team Rocket's Spidops": [{ card: "Team Rocket's Spidops", ability: "Charging Up", trigger: { kind: "activated" },
+    targets: [{ ref: "e", select: "card", card: { zone: "discard", filter: { basicEnergy: true } }, chooser: "player" }],
+    ops: [{ op: "attach_energy", energyRef: "e", monRef: SELF_REF, from: "discard" }] },
+    { card: "Team Rocket's Spidops", trigger: { kind: "damage_scale", attackName: "Rocket Rush" },
+      damage: { base: 0, per: 30, count: { of: "mons_in_play", side: "own", filter: { side: "own", zone: "in_play", namePrefix: "Team Rocket's " } } }, ops: [] }],
+
+  Thwackey: [{ card: "Thwackey", ability: "Boom Boom Groove", trigger: { kind: "activated" },
+    targets: [{ ref: "c", select: "card", card: { zone: "deck", filter: {} }, chooser: "player" }],
+    ops: [{ op: "search", targetRef: "c", to: "hand" }] }],
+
+  /* ── W3: trainers ────────────────────────────────────────────── */
+
+  "Bianca's Devotion": [{ card: "Bianca's Devotion", trigger: { kind: "trainer", subtype: "Supporter" },
+    targets: [{ ref: "m", select: "mon", mon: { side: "own", zone: "in_play", damaged: true }, chooser: "player" }],
+    ops: [{ op: "heal", monRef: "m", n: "all" }] }],
+
+  "Brock's Scouting": [{ card: "Brock's Scouting", trigger: { kind: "trainer", subtype: "Supporter" },
+    targets: [{ ref: "p", select: "card", count: 2, upTo: true, card: { zone: "deck", filter: { basicPokemon: true } }, chooser: "player" }],
+    ops: [{ op: "search", targetRef: "p", to: "hand" }] }],
+
+  "Colress's Tenacity": [{ card: "Colress's Tenacity", trigger: { kind: "trainer", subtype: "Supporter" },
+    targets: [
+      { ref: "st", upTo: true, select: "card", card: { zone: "deck", filter: { supertype: "Trainer", subtype: "Stadium" } }, chooser: "auto" },
+      { ref: "e", upTo: true, select: "card", card: { zone: "deck", filter: { supertype: "Energy" } }, chooser: "auto" }],
+    ops: [{ op: "search", targetRef: "st", to: "hand" }, { op: "search", targetRef: "e", to: "hand" }] }],
+
+  Drayton: [{ card: "Drayton", trigger: { kind: "trainer", subtype: "Supporter" },
+    ops: [{ op: "reveal_top", n: 7, count: 1, filter: { supertype: "Pokémon" }, to: "hand" },
+          { op: "reveal_top", n: 7, count: 1, filter: { supertype: "Trainer" }, to: "hand" }] }],
+
+  "Dusk Ball": [{ card: "Dusk Ball", trigger: { kind: "trainer", subtype: "Item" },
+    ops: [{ op: "reveal_top", n: 7, count: 1, filter: { supertype: "Pokémon" }, to: "hand", from: "bottom" }] }],
+
+  "Energy Recycler": [{ card: "Energy Recycler", trigger: { kind: "trainer", subtype: "Item" },
+    ops: [{ op: "discard_to_deck", filter: { basicEnergy: true }, max: 5 }] }],
+
+  "Energy Retrieval": [{ card: "Energy Retrieval", trigger: { kind: "trainer", subtype: "Item" },
+    targets: [{ ref: "e", select: "card", count: 2, upTo: true, card: { zone: "discard", filter: { basicEnergy: true } }, chooser: "player" }],
+    ops: [{ op: "retrieve", targetRef: "e", to: "hand" }] }],
+
+  "Energy Search": [{ card: "Energy Search", trigger: { kind: "trainer", subtype: "Item" },
+    targets: [{ ref: "e", upTo: true, select: "card", card: { zone: "deck", filter: { basicEnergy: true } }, chooser: "player" }],
+    ops: [{ op: "search", targetRef: "e", to: "hand" }] }],
+
+  "Energy Switch": [{ card: "Energy Switch", trigger: { kind: "trainer", subtype: "Item" },
+    targets: [
+      { ref: "from", select: "mon", mon: { side: "own", zone: "in_play" }, chooser: "player" },
+      { ref: "to", select: "mon", mon: { side: "own", zone: "in_play" }, chooser: "player" }],
+    ops: [{ op: "move_energy", fromRef: "from", toRef: "to", filter: { basicEnergy: true }, count: 1 }] }],
+
+  "Enhanced Hammer": [{ card: "Enhanced Hammer", trigger: { kind: "trainer", subtype: "Item" },
+    targets: [{ ref: "t", select: "mon", mon: { side: "opponent", zone: "in_play", hasSpecialEnergy: true }, chooser: "player" }],
+    ops: [{ op: "discard_from_mon", monRef: "t", category: "special_energy" }] }],
+
+  Eri: [{ card: "Eri", trigger: { kind: "trainer", subtype: "Supporter" },
+    ops: [{ op: "discard_from_hand", who: "opponent", filter: { supertype: "Trainer", subtype: "Item" }, max: 2 }] }],
+
+  "Ethan's Adventure": [{ card: "Ethan's Adventure", trigger: { kind: "trainer", subtype: "Item" },
+    targets: [{ ref: "c", select: "card", count: 3, upTo: true,
+      card: { zone: "deck", filter: { anyOf: [{ supertype: "Pokémon", namePrefix: "Ethan's " }, { basicEnergy: true, energyType: "Fire" }] } }, chooser: "player" }],
+    ops: [{ op: "search", targetRef: "c", to: "hand" }] }],
+
+  "Fighting Gong": [{ card: "Fighting Gong", trigger: { kind: "trainer", subtype: "Item" },
+    targets: [{ ref: "c", upTo: true, select: "card",
+      card: { zone: "deck", filter: { anyOf: [{ basicEnergy: true, energyType: "Fighting" }, { basicPokemon: true, pokemonType: "Fighting" }] } }, chooser: "player" }],
+    ops: [{ op: "search", targetRef: "c", to: "hand" }] }],
+
+  "Hand Trimmer": [{ card: "Hand Trimmer", trigger: { kind: "trainer", subtype: "Item" },
+    ops: [{ op: "discard_hand_down_to", who: "both", n: 5 }] }],
+
+  Hassel: [{ card: "Hassel", trigger: { kind: "trainer", subtype: "Supporter" },
+    guards: [{ cond: "koed_last_opp_turn" }],
+    ops: [{ op: "reveal_top", n: 8, count: 3, filter: {}, to: "hand" }] }],
+
+  "Hop's Bag": [{ card: "Hop's Bag", trigger: { kind: "trainer", subtype: "Item" },
+    targets: [{ ref: "p", select: "card", count: 2, upTo: true, card: { zone: "deck", filter: { basicPokemon: true, namePrefix: "Hop's " } }, chooser: "player" }],
+    ops: [{ op: "search", targetRef: "p", to: "bench" }] }],
+
+  "Iris's Fighting Spirit": [{ card: "Iris's Fighting Spirit", trigger: { kind: "trainer", subtype: "Supporter" },
+    guards: [{ cond: "hand_size_gte", n: 2 }],
+    ops: [{ op: "discard_hand_cards", n: 1 }, { op: "draw_until", n: 6 }] }],
+
+  "Jumbo Ice Cream": [{ card: "Jumbo Ice Cream", trigger: { kind: "trainer", subtype: "Item" },
+    targets: [{ ref: "m", select: "mon", mon: { side: "own", zone: "active", damaged: true }, chooser: "player" }],
+    ops: [{ op: "heal", monRef: "m", n: 80 }] }],
+
+  Kieran: [{ card: "Kieran", trigger: { kind: "trainer", subtype: "Supporter" },
+    ops: [{ op: "buff_damage_this_turn", amount: 30, vsTarget: "ex_or_v" }] }],
+
+  "Lana's Aid": [{ card: "Lana's Aid", trigger: { kind: "trainer", subtype: "Supporter" },
+    targets: [{ ref: "c", select: "card", count: 3, upTo: true,
+      card: { zone: "discard", filter: { anyOf: [{ supertype: "Pokémon", singlePrize: true }, { basicEnergy: true }] } }, chooser: "player" }],
+    ops: [{ op: "retrieve", targetRef: "c", to: "hand" }] }],
+
+  "Larry's Skill": [{ card: "Larry's Skill", trigger: { kind: "trainer", subtype: "Supporter" },
+    targets: [
+      { ref: "p", upTo: true, select: "card", card: { zone: "deck", filter: { supertype: "Pokémon" } }, chooser: "auto" },
+      { ref: "s", upTo: true, select: "card", card: { zone: "deck", filter: { supertype: "Trainer", subtype: "Supporter" } }, chooser: "auto" },
+      { ref: "e", upTo: true, select: "card", card: { zone: "deck", filter: { basicEnergy: true } }, chooser: "auto" }],
+    ops: [{ op: "discard_hand_cards", n: 99 }, { op: "search", targetRef: "p", to: "hand" },
+          { op: "search", targetRef: "s", to: "hand" }, { op: "search", targetRef: "e", to: "hand" }] }],
+
+  "Lisia's Appeal": [{ card: "Lisia's Appeal", trigger: { kind: "trainer", subtype: "Supporter" },
+    targets: [{ ref: "t", select: "mon", mon: { side: "opponent", zone: "bench", basic: true }, chooser: "player" }],
+    ops: [{ op: "gust", monRef: "t" }, { op: "apply_condition", monRef: "t", condition: "Confused" }] }],
+
+  "Miracle Headset": [{ card: "Miracle Headset", trigger: { kind: "trainer", subtype: "Item" },
+    targets: [{ ref: "s", select: "card", count: 2, upTo: true, card: { zone: "discard", filter: { supertype: "Trainer", subtype: "Supporter" } }, chooser: "player" }],
+    ops: [{ op: "retrieve", targetRef: "s", to: "hand" }] }],
+
+  "Morty's Conviction": [{ card: "Morty's Conviction", trigger: { kind: "trainer", subtype: "Supporter" },
+    guards: [{ cond: "hand_size_gte", n: 2 }],
+    ops: [{ op: "discard_hand_cards", n: 1 }, { op: "draw", n: "opp_bench_count" }] }],
+
+  Philippe: [{ card: "Philippe", trigger: { kind: "trainer", subtype: "Supporter" },
+    targets: [
+      { ref: "e", select: "card", count: 2, upTo: true, card: { zone: "discard", filter: { basicEnergy: true, energyType: "Metal" } }, chooser: "player" },
+      { ref: "m", select: "mon", mon: { side: "own", zone: "in_play", type: "Metal" }, chooser: "player" }],
+    ops: [{ op: "attach_energy", energyRef: "e", monRef: "m", from: "discard" }] }],
+
+  "Pokémon Catcher": [{ card: "Pokémon Catcher", trigger: { kind: "trainer", subtype: "Item" },
+    targets: [{ ref: "t", select: "mon", mon: { side: "opponent", zone: "bench" }, chooser: "player" }],
+    ops: [{ op: "coin_flip", heads: [{ op: "gust", monRef: "t" }] }] }],
+
+  "Pokémon Center Lady": [{ card: "Pokémon Center Lady", trigger: { kind: "trainer", subtype: "Supporter" },
+    targets: [{ ref: "m", select: "mon", mon: { side: "own", zone: "in_play" }, chooser: "player" }],
+    ops: [{ op: "heal", monRef: "m", n: 60 }, { op: "clear_conditions", monRef: "m" }] }],
+
+  "Precious Trolley": [{ card: "Precious Trolley", trigger: { kind: "trainer", subtype: "Supporter" },
+    targets: [{ ref: "p", select: "card", count: 5, upTo: true, card: { zone: "deck", filter: { basicPokemon: true } }, chooser: "player" }],
+    ops: [{ op: "search", targetRef: "p", to: "bench" }] }],
+
+  "Premium Power Pro": [{ card: "Premium Power Pro", trigger: { kind: "trainer", subtype: "Supporter" },
+    ops: [{ op: "buff_damage_this_turn", amount: 30, attackerType: "Fighting" }] }],
+
+  "Prime Catcher": [{ card: "Prime Catcher", trigger: { kind: "trainer", subtype: "Item" },
+    targets: [
+      { ref: "t", select: "mon", mon: { side: "opponent", zone: "bench" }, chooser: "player" },
+      { ref: "s", upTo: true, select: "mon", mon: { side: "own", zone: "bench" }, chooser: "player" }],
+    ops: [{ op: "gust", monRef: "t" }, { op: "switch", monRef: "s" }] }],
+
+  "Roto-Stick": [{ card: "Roto-Stick", trigger: { kind: "trainer", subtype: "Item" },
+    ops: [{ op: "reveal_top", n: 4, count: 4, filter: { supertype: "Trainer", subtype: "Supporter" }, to: "hand" }] }],
+
+  "Sacred Ash": [{ card: "Sacred Ash", trigger: { kind: "trainer", subtype: "Item" },
+    ops: [{ op: "discard_to_deck", filter: { supertype: "Pokémon" }, max: 5 }] }],
+
+  Salvatore: [{ card: "Salvatore", trigger: { kind: "trainer", subtype: "Supporter" },
+    targets: [{ ref: "m", select: "mon", mon: { side: "own", zone: "in_play" }, chooser: "player" }],
+    ops: [{ op: "evolve_from_deck", monRef: "m", filter: { supertype: "Pokémon" } }] }],
+
+  "Scoop Up Cyclone": [{ card: "Scoop Up Cyclone", trigger: { kind: "trainer", subtype: "Item" },
+    targets: [{ ref: "m", select: "mon", mon: { side: "own", zone: "bench" }, chooser: "player" }],
+    ops: [{ op: "bounce_to_hand", monRef: "m" }] }],
+
+  Tarragon: [{ card: "Tarragon", trigger: { kind: "trainer", subtype: "Supporter" },
+    targets: [{ ref: "c", select: "card", count: 4, upTo: true,
+      card: { zone: "discard", filter: { anyOf: [{ supertype: "Pokémon", pokemonType: "Fighting" }, { basicEnergy: true, energyType: "Fighting" }] } }, chooser: "player" }],
+    ops: [{ op: "retrieve", targetRef: "c", to: "hand" }] }],
+
+  "Team Rocket's Archer": [{ card: "Team Rocket's Archer", trigger: { kind: "trainer", subtype: "Supporter" },
+    guards: [{ cond: "koed_last_opp_turn" }],
+    ops: [{ op: "shuffle_hand_draw", n: 5 }, { op: "hand_to_bottom_draw", n: 3, who: "opponent" }] }],
+
+  "Team Rocket's Ariana": [{ card: "Team Rocket's Ariana", trigger: { kind: "trainer", subtype: "Supporter" },
+    ops: [{ op: "draw_until", n: 5, bonus: { n: 8, when: { cond: "all_own_mons_match", filter: { side: "own", zone: "in_play", namePrefix: "Team Rocket's " } } } }] }],
+
+  "Team Rocket's Giovanni": [{ card: "Team Rocket's Giovanni", trigger: { kind: "trainer", subtype: "Supporter" },
+    targets: [
+      { ref: "s", select: "mon", mon: { side: "own", zone: "bench", namePrefix: "Team Rocket's " }, chooser: "player" },
+      { ref: "t", select: "mon", mon: { side: "opponent", zone: "bench" }, chooser: "player" }],
+    ops: [{ op: "switch", monRef: "s" }, { op: "gust", monRef: "t" }] }],
+
+  "Team Rocket's Proton": [{ card: "Team Rocket's Proton", trigger: { kind: "trainer", subtype: "Supporter" },
+    targets: [{ ref: "p", select: "card", count: 3, upTo: true, card: { zone: "deck", filter: { basicPokemon: true, namePrefix: "Team Rocket's " } }, chooser: "player" }],
+    ops: [{ op: "search", targetRef: "p", to: "hand" }] }],
+
+  "Team Rocket's Venture Bomb": [{ card: "Team Rocket's Venture Bomb", trigger: { kind: "trainer", subtype: "Item" },
+    targets: [{ ref: "t", select: "mon", mon: { side: "opponent", zone: "in_play" }, chooser: "player" }],
+    ops: [{ op: "coin_flip", heads: [{ op: "place_counters", monRef: "t", n: 2 }], tails: [{ op: "place_counters", monRef: OWN_ACTIVE_REF, n: 2 }] }] }],
+
+  "Tool Scrapper": [{ card: "Tool Scrapper", trigger: { kind: "trainer", subtype: "Item" },
+    targets: [{ ref: "t", select: "mon", count: 2, upTo: true, mon: { side: "opponent", zone: "in_play", hasTool: true }, chooser: "player" }],
+    ops: [{ op: "discard_from_mon", monRef: "t", category: "tool" }] }],
+
+  "Unfair Stamp": [{ card: "Unfair Stamp", trigger: { kind: "trainer", subtype: "Item" },
+    guards: [{ cond: "koed_last_opp_turn" }],
+    ops: [{ op: "shuffle_hand_draw", n: 5 }, { op: "hand_to_bottom_draw", n: 2, who: "opponent" }] }],
+
+  "Wally's Compassion": [{ card: "Wally's Compassion", trigger: { kind: "trainer", subtype: "Supporter" },
+    targets: [{ ref: "m", select: "mon", mon: { side: "own", zone: "in_play", isEx: true, damaged: true }, chooser: "player" }],
+    ops: [{ op: "heal", monRef: "m", n: "all" }] }],
+
+  "Wondrous Patch": [{ card: "Wondrous Patch", trigger: { kind: "trainer", subtype: "Item" },
+    targets: [
+      { ref: "e", select: "card", card: { zone: "discard", filter: { basicEnergy: true, energyType: "Psychic" } }, chooser: "player" },
+      { ref: "m", select: "mon", mon: { side: "own", zone: "bench", type: "Psychic" }, chooser: "player" }],
+    ops: [{ op: "attach_energy", energyRef: "e", monRef: "m", from: "discard" }] }],
+
+  "Xerosic's Machinations": [{ card: "Xerosic's Machinations", trigger: { kind: "trainer", subtype: "Supporter" },
+    ops: [{ op: "discard_hand_down_to", who: "opponent", n: 3 }] }],
+
+  "Glass Trumpet": [{ card: "Glass Trumpet", trigger: { kind: "trainer", subtype: "Item" },
+    guards: [{ cond: "own_has_mon", filter: { side: "own", zone: "in_play", subtype: "Tera" } }],
+    targets: [
+      { ref: "e", select: "card", count: 2, upTo: true, card: { zone: "discard", filter: { basicEnergy: true } }, chooser: "player" },
+      { ref: "m", select: "mon", mon: { side: "own", zone: "bench", type: "Colorless" }, chooser: "player" }],
+    ops: [{ op: "attach_energy", energyRef: "e", monRef: "m", from: "discard" }] }],
+
+  /* ── W3: state-dependent damage across the field ─────────────── */
 
   Bronzor: [{ card: "Bronzor", trigger: { kind: "damage_scale", attackName: "Mirror Attack" },
     damage: { base: 10, bonuses: [{ amount: 30, when: { cond: "opp_active_is", filter: { side: "opponent", zone: "active", type: "Metal" } } }] }, ops: [] }],
@@ -242,9 +548,6 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
 
   "Hop's Trevenant": [{ card: "Hop's Trevenant", trigger: { kind: "damage_scale", attackName: "Horrifying Revenge" },
     damage: { base: 30, bonuses: [{ amount: 100, when: { cond: "koed_last_opp_turn" } }] }, ops: [] }],
-
-  "Hydrapple ex": [{ card: "Hydrapple ex", trigger: { kind: "damage_scale", attackName: "Syrup Storm" },
-    damage: { base: 30, per: 30, count: { of: "energy_attached_all", side: "own", energyType: "Grass" } }, ops: [] }],
 
   "Koraidon ex": [{ card: "Koraidon ex", trigger: { kind: "damage_scale", attackName: "Orichalcum Fang" },
     damage: { base: 50, bonuses: [{ amount: 120, when: { cond: "koed_last_opp_turn" } }] }, ops: [] }],
@@ -297,8 +600,6 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
   "Team Rocket's Porygon2": [{ card: "Team Rocket's Porygon2", trigger: { kind: "damage_scale", attackName: "R Command" },
     damage: { base: 0, per: 20, count: { of: "cards_in_zone", zone: "discard", side: "own", filter: { supertype: "Trainer", subtype: "Supporter", nameContains: "Team Rocket" } } }, ops: [] }],
 
-  "Team Rocket's Spidops": [{ card: "Team Rocket's Spidops", trigger: { kind: "damage_scale", attackName: "Rocket Rush" },
-    damage: { base: 0, per: 30, count: { of: "mons_in_play", side: "own", filter: { side: "own", zone: "in_play", namePrefix: "Team Rocket's " } } }, ops: [] }],
 
   /* ── On-attach Special Energy (W2-fin.6) ─────────────────────── */
 
@@ -453,26 +754,6 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
     },
   ],
 
-  // Myriad Leaf Shower: 30+, 30 more for each Energy attached to BOTH Actives.
-  "Teal Mask Ogerpon ex": [
-    {
-      card: "Teal Mask Ogerpon ex",
-      trigger: { kind: "damage_scale", attackName: "Myriad Leaf Shower" },
-      damage: { base: 30, per: 30, count: { of: "energy_on_active", side: "both" } },
-      ops: [],
-    },
-  ],
-
-  // Irritated Outburst: 60× — 60 for each Prize the opponent has taken.
-  "Pecharunt ex": [
-    {
-      card: "Pecharunt ex",
-      trigger: { kind: "damage_scale", attackName: "Irritated Outburst" },
-      damage: { base: 0, per: 60, count: { of: "opp_prizes_taken" } },
-      ops: [],
-    },
-  ],
-
   // Tenacious Tail: 60× — 60 for each of your opponent's Pokémon ex in play.
   "Dudunsparce ex": [
     {
@@ -560,6 +841,20 @@ export function abilityEffects(
     if (effect.trigger.kind === trigger && effect.ability) out.push({ effect, index });
   });
   return out;
+}
+
+/** The first effect on `cardName` with the given trigger kind, plus its
+ *  ORIGINAL index. Shared by the on-play / on-evolve / on-attach paths, which
+ *  all resolve INSIDE another move rather than as moves of their own. */
+export function triggerEffect(
+  cardName: string,
+  kind: "on_play" | "on_evolve" | "on_attach",
+): { effect: CardEffect; index: number } | null {
+  const effects = effectsFor(cardName);
+  for (let index = 0; index < effects.length; index++) {
+    if (effects[index].trigger.kind === kind) return { effect: effects[index], index };
+  }
+  return null;
 }
 
 /** The on-attach effect for an Energy card (Jet, Enriching, Telepathic), with

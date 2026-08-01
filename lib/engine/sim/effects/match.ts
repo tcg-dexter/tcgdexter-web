@@ -56,6 +56,7 @@ export function monMatches(mon: PokemonInPlay, f: MonFilter): boolean {
   if (f.nameContains && !mon.card.name.includes(f.nameContains)) return false;
   if (f.basic && !(cat?.supertype === "Pokémon" && !cat.evolves_from)) return false;
   if (f.isEx && !(cat?.subtypes.includes("ex") ?? false)) return false;
+  if (f.subtype && !(cat?.subtypes.includes(f.subtype) ?? false)) return false;
   if (f.hasTool && mon.attachedTools.length === 0) return false;
   if (f.hasSpecialEnergy && !hasSpecialEnergy(mon)) return false;
   if (f.damaged && mon.damage < 10) return false;

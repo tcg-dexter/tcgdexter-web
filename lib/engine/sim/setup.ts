@@ -56,7 +56,10 @@ import { specialEnergyUnits, type EnergyUnit } from "./effects/energy";
 // declarative and CONDITIONAL on its holder (Ignition/Prism/Neo Upper/Reversal),
 // restricted wildcards pay typed costs, Stadium passives are read at six rule
 // sites, Tools gain damage/cost modifiers, and Energy has an on-attach trigger.
-export const SIM_VERSION = 11;
+// v12: W3 bulk authoring — on_play / on_evolve triggers routed, and ~120 more
+// field effects (all damage scalers, 49 trainers, 30 abilities) are really
+// played instead of degrading. Rollouts change for nearly every meta deck.
+export const SIM_VERSION = 12;
 
 const MAX_MULLIGANS = 20;
 
