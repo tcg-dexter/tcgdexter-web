@@ -7,7 +7,7 @@
 import type { EngineAttack, GameState, PlayerSide, PokemonInPlay } from "../types";
 import { energyProvides, energyUnits, isBasic, toPokemonInPlay } from "./setup";
 import { unitPaysType } from "./effects/energy";
-import { hasStatus, statusAmount } from "./statuses";
+import { hasStatus, statusAmount, attackLocked } from "./statuses";
 import { auraAttackDiscount, auraBlocksAttack, auraWeaknessOverride } from "./auras";
 import { isSupporter, trainerMoves, trainerSpec, type PlayTrainerMove } from "./trainers";
 import { abilityMoves, hasLegacyActivated, type UseAbilityMove } from "./abilities";
@@ -139,6 +139,7 @@ export function usableAttacks(
   const attacks = mon.card.catalog?.attacks ?? [];
   return attacks
     .map((attack, index) => ({ attack, index }))
+    .filter(({ attack }) => !attackLocked(mon, attack.name, state))
     .filter(({ attack }) => canPayCost(mon, effectiveCost(mon, attack.cost, state)));
 }
 

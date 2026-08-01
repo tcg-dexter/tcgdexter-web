@@ -16,6 +16,7 @@ import { promoteBest } from "../policy";
 import { cardMatches, monMatches as cardMatchesMon } from "./match";
 import { guardsPass } from "./guards";
 import { bestCopy } from "./copy";
+import { applyAttackSelfLock } from "../statuses";
 import type { EffectOp, Quantity } from "./types";
 
 type Actor = "player" | "opponent";
@@ -357,6 +358,11 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
       if (Number.isFinite(dmg) && dmg > 0) {
         dealRawDamage(defender, applyWeaknessResistance(dmg, ctx.source, defender, state));
       }
+      // Using an attack "as this attack" means its drawbacks come along too:
+      // copying N's Zekrom's Rampaging Thunder locks the COPIER down next
+      // turn, exactly as using it directly would. Without this the copy is
+      // strictly better than the original.
+      applyAttackSelfLock(ctx.source, attack.name, attack.text, state.turn.number);
       break;
     }
 

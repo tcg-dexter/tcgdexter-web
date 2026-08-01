@@ -24,7 +24,7 @@ import { dealRawDamage, placeAttackCounters, placeBenchDamage, resolveKnockouts 
 import type { DecisionPolicy } from "./policy";
 import { buildSimInitialState, energyUnits, toPokemonInPlay, type SimDeck } from "./setup";
 import { retreatCost } from "./tools";
-import { damageTakenReduction, hasStatus, statusAmount } from "./statuses";
+import { applyAttackSelfLock, damageTakenReduction, hasStatus, statusAmount } from "./statuses";
 import { auraDamageReduction, auraPreventsEffects } from "./auras";
 import { fireCheckup, fireEndOfTurn, fireOnDamaged } from "./hooks";
 import { specialEnergyPreventsEffects } from "./effects/energy";
@@ -441,6 +441,11 @@ export function applyMove(
           attacker,
         );
       }
+
+      // "During your next turn, this Pokémon can't use <this attack>" — the
+      // cost the game charges for enormous cheap attacks. Applied AFTER the
+      // attack resolves so it never blocks the attack that imposes it.
+      applyAttackSelfLock(attacker, attack.name, attack.text, state.turn.number);
 
       const ko = resolveKnockouts(state);
       if (ko.winner) {

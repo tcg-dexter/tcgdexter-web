@@ -118,6 +118,9 @@ export interface PokemonInPlay {
   statuses?: {
     kind:
       | "cannot_attack"
+      /** "During your next turn, this Pokémon can't use <attackName>."
+       *  Scoped to ONE attack, so the Pokémon may still use its others. */
+      | "cannot_use_attack"
       | "cannot_retreat"
       | "damage_taken_reduction"
       | "damage_dealt_reduction"
@@ -129,6 +132,8 @@ export interface PokemonInPlay {
     amount?: number;
     /** Restricts a reduction to attacks from Evolution Pokémon (Metal Block). */
     fromEvolutionOnly?: boolean;
+    /** Which attack a `cannot_use_attack` lock applies to. */
+    attackName?: string;
   }[];
 }
 
