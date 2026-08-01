@@ -304,7 +304,7 @@ export default function CrmContactsClient({
       </div>
 
       {selected.size > 0 ? (
-        <div className="sticky top-2 z-10 flex flex-wrap items-center gap-2 rounded-xl border border-black/10 dark:border-white/15 bg-white/95 dark:bg-surface-elevated/95 p-2.5 shadow-[0_2px_8px_-2px_rgba(15,15,15,0.18)] backdrop-blur-sm">
+        <div className="sticky top-2 z-10 flex flex-wrap items-center gap-2 rounded-xl border border-black/10 dark:border-white/15 bg-white/95 dark:bg-surface-elevated p-2.5 shadow-[0_2px_8px_-2px_rgba(15,15,15,0.18)] backdrop-blur-sm">
           <span className="text-xs font-semibold">{selected.size} selected</span>
           <span className="text-[11px] text-[var(--text-muted)]">Add to campaign:</span>
           {campaignTargets.length === 0 ? (
