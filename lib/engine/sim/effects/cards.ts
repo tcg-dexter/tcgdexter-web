@@ -1293,6 +1293,22 @@ export function effectPhase(effect: CardEffect): "draw" | "search" | "tactical" 
   return "tactical";
 }
 
+/** Does this effect ATTACH ENERGY — i.e. is it acceleration?
+ *
+ *  Acceleration is not a nicety, it is how half the format gets to attack at
+ *  all. Manual attachment is once per turn, so a deck whose attacker costs
+ *  three is two turns behind unless it accelerates. But an effect that only
+ *  attaches energy classifies as `tactical`, which both policies played DEAD
+ *  LAST — after the attack branch had already ended the turn. So the AI
+ *  essentially never accelerated, and the decks that depend on it had a legal
+ *  attack on only ~25% of their turns versus ~65% for the aggro decks that
+ *  need no help. That is the whole shape of the calibration residual: every
+ *  engine archetype under-rated, every simple aggro one over-rated. */
+export function isEnergyAccelEffect(cardName: string, effectIndex: number): boolean {
+  const effect = effectsFor(cardName)[effectIndex];
+  return effect ? effect.ops.some((o) => o.op === "attach_energy") : false;
+}
+
 /** The coarse phase of a declarative-effect move, or null for other moves.
  *  The shared seam the AI policies use to handle effect moves generically. */
 export function effectMovePhase(cardName: string, effectIndex: number): "draw" | "search" | "tactical" | null {

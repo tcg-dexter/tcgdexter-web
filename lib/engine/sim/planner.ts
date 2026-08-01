@@ -39,6 +39,7 @@ import {
   wantsDrawRefresh,
   type DecisionPolicy,
   wantsSearch,
+  energyAccelMoves,
 } from "./policy";
 import { energyProvides, energyUnits, prizeValue } from "./setup";
 import { isSupporter, trainerSpec, type PlayTrainerMove, type TrainerSpec } from "./trainers";
@@ -298,7 +299,10 @@ export class PlannerPolicy implements DecisionPolicy {
     // is a strictly-better evolve, so it rides along here (active first).
     // Shared with HeuristicPolicy so bench selection can't drift between the
     // two pilots — this was `legal.find(...)`, i.e. hand order.
-    const bench = chooseBenchMove(view, legal);
+    const sloppy = this.sloppyDevelopment(view);
+    const bench = sloppy
+      ? legal.find((m) => m.kind === "bench")
+      : chooseBenchMove(view, legal);
     if (bench) return bench;
     const candies = legal.filter(
       (m): m is PlayTrainerMove =>
@@ -336,6 +340,15 @@ export class PlannerPolicy implements DecisionPolicy {
     const stadiumEffect = legal.find((m) => m.kind === "use_stadium");
     if (stadiumEffect) return stadiumEffect;
 
+    // Energy ACCELERATION is free development too — and it must happen before
+    // the plan search, which ends the turn on an attack. Shared with
+    // HeuristicPolicy; see energyAccelMoves for why the old placement (dead
+    // last, as a `tactical` effect) meant it essentially never fired.
+    if (!sloppy) {
+      const accel = energyAccelMoves(view, legal);
+      if (accel.length > 0) return accel[0];
+    }
+
     // Phase 2 — reveal information before deciding (each play reveals
     // cards; the consequential plan is recomputed on the post-draw hand).
     // Draw supporters go first (a refreshed hand feeds the searches), and
@@ -358,11 +371,13 @@ export class PlannerPolicy implements DecisionPolicy {
         const supporter = legal.find((m) => m.kind === "cycle_supporter");
         if (supporter) return supporter;
       }
-      if (wantsSearch(view)) {
+      if (wantsSearch(view) || sloppy) {
         const searches = legal.filter(
           (m): m is PlayTrainerMove => specOf(m)?.phase === "search",
         );
-        if (searches.length > 0) return bestSearchTrainer(view, searches);
+        if (searches.length > 0) {
+          return sloppy ? searches[0] : bestSearchTrainer(view, searches);
+        }
         // Declarative search cards (Team Rocket's Transceiver, …) — info phase.
         const searchEffects = legal.filter(
           (m): m is EffectMove =>
@@ -391,6 +406,29 @@ export class PlannerPolicy implements DecisionPolicy {
 
   choosePromotion(view: PlayerView): number {
     return promoteBest(view.board.bench);
+  }
+
+  /** Does this pilot play the FREE-DEVELOPMENT phase sloppily this turn?
+   *
+   *  Development (bench choice, energy acceleration, which card a search
+   *  fetches) happens outside the plan search, so it used to be played
+   *  perfectly at every difficulty. That was tolerable while those branches
+   *  were naive; once they got good, the easy bot got good with them and the
+   *  difficulty ladder compressed — `medium beats easy` fell to exactly 60%
+   *  and the strength-ladder test caught it.
+   *
+   *  The difficulty model is "one engine, strength = how faithfully it picks
+   *  the best-scored play", so development must be on the same dial. Reuses
+   *  the existing epsilon rather than inventing a second knob, and is seeded
+   *  per turn so replays stay deterministic. */
+  private sloppyDevelopment(view: PlayerView): boolean {
+    if (this.params.epsilon <= 0) return false;
+    const rng = mulberry32((this.seed ^ Math.imul(view.turn.number + 1, 0x27d4eb2f)) >>> 0);
+    // sqrt spreads the LOW end: a weak pilot misplays development far more
+    // often than it outright blunders a whole turn, and development errors
+    // (benching the wrong basic, never accelerating) are precisely what
+    // distinguishes a beginner. Concave, so `hard` stays at ~0.
+    return rng() < Math.sqrt(this.params.epsilon);
   }
 
   /* ── Plan search ─────────────────────────────────────────────── */

@@ -23,7 +23,7 @@ import { energyProvides } from "./setup";
 import { trainerSpec, type PlayTrainerMove, type TrainerSpec } from "./trainers";
 import { estimatedAttackDamage } from "./attacks";
 import { activatedPhase } from "./abilities";
-import { effectMovePhase } from "./effects/cards";
+import { effectMovePhase, isEnergyAccelEffect } from "./effects/cards";
 import { searchTargetValue } from "./effects/cardValue";
 import type { EffectMove } from "./effects/runtime";
 import type { PlayerView } from "./view";
@@ -124,6 +124,42 @@ function attackCeiling(mon: PokemonInPlay, view?: PlayerView): number {
   return best;
 }
 
+/** How much MORE energy this Pokémon needs before it can use `attack`. */
+function energyShortfall(mon: PokemonInPlay, cost: string[]): number {
+  return Math.max(0, cost.length - mon.attachedEnergy.length);
+}
+
+/** Who deserves the turn's one energy attachment.
+ *
+ *  Ranking by raw attack ceiling — which is what this did — quietly assumes
+ *  energy is free. It is not: attachment is once per turn, and the engine
+ *  decks run 6-8 Energy in 60 where the aggro decks run 13. Alakazam's
+ *  Powerful Hand costs ONE Psychic for ~100 damage, but the same deck holds
+ *  Genesect (110 for three) and Dudunsparce (90 for three), which score a
+ *  higher ceiling. So the AI fed the three-cost attackers that never came
+ *  online and left the one-cost payoff attacker empty — a legal attack on
+ *  ~25% of its turns, against ~65% for the decks that need no help.
+ *
+ *  Score damage per turn of investment instead: a big attack two attachments
+ *  away is worth less right now than a slightly smaller one that fires this
+ *  turn. That is tempo, and it is what the calibration residual has been
+ *  measuring all along. */
+function attachPriority(mon: PokemonInPlay, view?: PlayerView): number {
+  const attacks = mon.card.catalog?.attacks ?? [];
+  const board = view
+    ? { ownBench: view.board.bench, oppActive: view.opponent.board.active }
+    : undefined;
+  let best = 0;
+  attacks.forEach((attack, i) => {
+    const dmg = estimatedAttackDamage(mon, i, undefined, "player", board);
+    if (dmg <= 0) return;
+    // +1 so an already-affordable attack isn't divided by zero, and so the
+    // gap between "ready now" and "one away" is the largest single step.
+    best = Math.max(best, dmg / (1 + energyShortfall(mon, attack.cost)));
+  });
+  return best;
+}
+
 function inPlay(board: PlayerView["board"]): PokemonInPlay[] {
   return [board.active, ...board.bench].filter((m): m is PokemonInPlay => m !== null);
 }
@@ -206,6 +242,35 @@ export function bestSearchTrainer(view: PlayerView, moves: PlayTrainerMove[]): P
     }
   }
   return best;
+}
+
+/** Legacy trainers whose whole point is putting extra Energy into play. */
+const ACCEL_TRAINER_KINDS = new Set(["ns_pp_up", "crispin", "janine"]);
+
+/** Would extra energy actually change anything? Only if something in play
+ *  still can't use all of its attacks. Accelerating onto a fully-armed board
+ *  spends cards for nothing. */
+export function needsEnergy(view: PlayerView): boolean {
+  return inPlay(view.board).some(
+    (m) => usableAttacks(m).length < (m.card.catalog?.attacks.length ?? 0),
+  );
+}
+
+/** Energy-acceleration moves — legacy and declarative — or an empty list.
+ *  Played during DEVELOPMENT, before the attack branch ends the turn. */
+export function energyAccelMoves(view: PlayerView, legal: SimMove[]): SimMove[] {
+  if (!needsEnergy(view)) return [];
+  const out: SimMove[] = [];
+  for (const m of legal) {
+    if (m.kind === "play_trainer") {
+      const card = view.hand.find((c) => c.id === m.cardId);
+      const spec = card ? trainerSpec(card) : null;
+      if (spec && ACCEL_TRAINER_KINDS.has(spec.effect.kind)) out.push(m);
+    } else if (m.kind === "effect" && isEnergyAccelEffect(m.card, m.effectIndex)) {
+      out.push(m);
+    }
+  }
+  return out;
 }
 
 /** A hand this size is not card-starved, it is ACTION-starved. */
@@ -344,6 +409,11 @@ export class HeuristicPolicy implements DecisionPolicy {
     const stadiumEffect = byKind("use_stadium");
     if (stadiumEffect.length > 0) return stadiumEffect[0];
 
+    // 2f. Energy ACCELERATION, during development — before the attack branch
+    //     ends the turn. See energyAccelMoves for why this placement matters.
+    const accel = energyAccelMoves(view, legal);
+    if (accel.length > 0) return accel[0];
+
     // 3. Draw fuel + searches: real draw supporters and deck searches
     //    before generic cycling — all deck-reserve guarded so we never
     //    draw ourselves out while ahead.
@@ -397,7 +467,7 @@ export class HeuristicPolicy implements DecisionPolicy {
         // re-try it without a matchup-level reason.
         .sort(
           (a, b) =>
-            attackCeiling(b, view) - attackCeiling(a, view) ||
+            attachPriority(b, view) - attachPriority(a, view) ||
             (b.id === active?.id ? 1 : 0) - (a.id === active?.id ? 1 : 0),
         );
       const target = needy[0] ?? active ?? mons[0];
