@@ -15,6 +15,7 @@ import { pickDiscards } from "../trainers";
 import { promoteBest } from "../policy";
 import { cardMatches, monMatches as cardMatchesMon } from "./match";
 import { guardsPass } from "./guards";
+import { bestCopy } from "./copy";
 import type { EffectOp, Quantity } from "./types";
 
 type Actor = "player" | "opponent";
@@ -326,10 +327,17 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
       const defender = opp.active;
       if (!defender || !ctx.source) break;
       let donor: PokemonInPlay | null = null;
-      if (op.from === "own_bench") {
-        donor = side.bench.find((m) => !op.filter || cardMatchesMon(m, op.filter)) ?? null;
-      } else if (op.from === "opponent_active") {
-        donor = opp.active && (!op.filter || cardMatchesMon(opp.active, op.filter)) ? opp.active : null;
+      let donorAttackIndex = 0;
+      if (op.from === "own_bench" || op.from === "opponent_active") {
+        // The card lets the player choose the Pokémon AND the attack, so take
+        // the hardest-hitting pair — the copier pays the cost, not the donor,
+        // which is the entire point of the mechanic.
+        const pool = op.from === "own_bench" ? side.bench : [opp.active];
+        const best = bestCopy(pool, op.filter);
+        if (best) {
+          donor = best.donor;
+          donorAttackIndex = best.attackIndex;
+        }
       } else {
         // Seek Inspiration: discard the top card; copy it only if it's a
         // Pokemon with no rule box.
@@ -343,7 +351,7 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
           }
         }
       }
-      const attack = donor?.card.catalog?.attacks?.[0];
+      const attack = donor?.card.catalog?.attacks?.[donorAttackIndex];
       if (!attack) break;
       const dmg = parseInt(attack.damage, 10);
       if (Number.isFinite(dmg) && dmg > 0) {

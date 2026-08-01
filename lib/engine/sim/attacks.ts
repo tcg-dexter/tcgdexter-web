@@ -60,13 +60,25 @@ export function estimatedAttackDamage(
   attackIndex: number,
   state?: GameState,
   actor: "player" | "opponent" = "player",
+  /** Board context for riders whose damage depends on it — currently the
+   *  copy-an-attack family, which needs the donor pool. Supplied by callers
+   *  that only hold a PlayerView (the policies) as well as by state callers. */
+  board?: { ownBench?: readonly (PokemonInPlay | null)[]; oppActive?: PokemonInPlay | null },
 ): number {
   const attack = attacker.card.catalog?.attacks[attackIndex];
   if (!attack) return 0;
   const base = state
     ? attackBaseDamage(state, actor, attacker, attackIndex, null)
     : (damageScaleEffect(attacker.card.name, attack.name)?.damage?.base ?? baseDamage(attack));
-  return base + riderDamageEstimate(attacker.card.name, attack.name);
+  const ctx =
+    board ??
+    (state
+      ? {
+          ownBench: state.sides[actor].bench,
+          oppActive: state.sides[actor === "player" ? "opponent" : "player"].active,
+        }
+      : undefined);
+  return base + riderDamageEstimate(attacker.card.name, attack.name, ctx);
 }
 
 /* ─── Flat damage bonuses to the Active (before Weakness/Resistance) ─ */

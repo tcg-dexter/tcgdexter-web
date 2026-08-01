@@ -109,10 +109,17 @@ export function chooseAbilityMove(view: PlayerView, legal: SimMove[]): SimMove |
  *  declarative formulas and riders — not just the printed number. Attacks
  *  whose damage lives in a rider print as "" and would rank 0 here, so the
  *  attach heuristic below would never arm them. */
-function attackCeiling(mon: PokemonInPlay): number {
+function attackCeiling(mon: PokemonInPlay, view?: PlayerView): number {
   const n = (mon.card.catalog?.attacks ?? []).length;
+  // Copy-an-attack (Night Joker) has no printed damage of its own — its
+  // ceiling is whatever sits on the bench, so pass the board when we have it.
+  const board = view
+    ? { ownBench: view.board.bench, oppActive: view.opponent.board.active }
+    : undefined;
   let best = 0;
-  for (let i = 0; i < n; i++) best = Math.max(best, estimatedAttackDamage(mon, i));
+  for (let i = 0; i < n; i++) {
+    best = Math.max(best, estimatedAttackDamage(mon, i, undefined, "player", board));
+  }
   return best;
 }
 
@@ -227,7 +234,7 @@ export class HeuristicPolicy implements DecisionPolicy {
         .filter((m) => usableAttacks(m).length < (m.card.catalog?.attacks.length ?? 0))
         .sort(
           (a, b) =>
-            attackCeiling(b) - attackCeiling(a) ||
+            attackCeiling(b, view) - attackCeiling(a, view) ||
             (b.id === active?.id ? 1 : 0) - (a.id === active?.id ? 1 : 0),
         );
       const target = needy[0] ?? active ?? mons[0];
@@ -276,7 +283,10 @@ export class HeuristicPolicy implements DecisionPolicy {
         const attack = active.card.catalog!.attacks[m.attackIndex];
         // Estimate through the declarative path so formula/rider damage counts
         // — computeDamage alone reads the printed number and scores these 0.
-        const raw = estimatedAttackDamage(active, m.attackIndex);
+        const raw = estimatedAttackDamage(active, m.attackIndex, undefined, "player", {
+          ownBench: view.board.bench,
+          oppActive: defender,
+        });
         const dmg = Math.max(computeDamage(active, attack, defender), raw);
         return { move: m, dmg, lethal: dmg >= remainingHp(defender), cost: attack.cost.length };
       });

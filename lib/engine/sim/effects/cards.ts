@@ -5,6 +5,8 @@
 // the legacy TRAINER_EFFECTS/ACTIVATED registries — the two are mutually
 // exclusive during cutover so nothing double-lists.
 
+import type { PokemonInPlay } from "../../types";
+import { bestCopy, DECK_TOP_NOMINAL } from "./copy";
 import { DEFENDER_REF, OWN_ACTIVE_REF, SELF_REF } from "./types";
 import type { CardEffect } from "./types";
 
@@ -1225,7 +1227,15 @@ export function attackRiderEffect(
  *  Rider damage never shows in the printed number, so without this the
  *  policies score Cruel Arrow (100 to any Pokémon) and Powerful Hand as 0 and
  *  refuse to arm or use those attackers at all. */
-export function riderDamageEstimate(cardName: string, attackName: string): number {
+export function riderDamageEstimate(
+  cardName: string,
+  attackName: string,
+  /** Board context for ops whose damage depends on it. Copy-an-attack needs
+   *  the donor pool: without it Night Joker / Gemstone Mimicry / Seek
+   *  Inspiration estimate 0 and the AI never arms the attack that IS the
+   *  deck. Callers with no board pass nothing and get the conservative read. */
+  ctx?: { ownBench?: readonly (PokemonInPlay | null)[]; oppActive?: PokemonInPlay | null },
+): number {
   const hit = attackRiderEffect(cardName, attackName);
   if (!hit) return 0;
   let dmg = 0;
@@ -1240,6 +1250,13 @@ export function riderDamageEstimate(cardName: string, attackName: string): numbe
       dmg += n * (op.per ?? 1) * 10;
     }
     else if (op.op === "damage_opponent_bench") dmg += op.amount;
+    else if (op.op === "use_copied_attack") {
+      if (op.from === "deck_top") dmg += DECK_TOP_NOMINAL;
+      else if (ctx) {
+        const pool = op.from === "own_bench" ? ctx.ownBench ?? [] : [ctx.oppActive ?? null];
+        dmg += bestCopy(pool, op.filter)?.damage ?? 0;
+      }
+    }
   }
   return dmg;
 }
