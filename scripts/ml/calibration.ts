@@ -39,7 +39,7 @@ import metaArchetypesRaw from "@/data/meta-archetypes.json";
 import { metaDeckToList, type MetaDeckEntry } from "@/lib/metaDeckList";
 import { simulateMatchup } from "@/lib/engine/sim/rollout";
 import { PlannerPolicy, plannerParamsForSkill, SIM_VERSION } from "@/lib/engine/sim";
-import { createBotEvaluator } from "@/lib/ml/botEvaluator";
+import { createBotEvaluator, createBoardEvaluator } from "@/lib/ml/botEvaluator";
 import { deckEffectCoverage } from "@/lib/ml/effectCoverage";
 import { mulberry32 } from "@/lib/engine/sim/rng";
 import { evaluateCalibration } from "@/lib/ml/deckGradeCalibration";
@@ -89,6 +89,9 @@ const RMSE_GATE = Number(arg("--rmse-gate") ?? 0.10);
  *  evaluator, which is consistent with why the engine defaults it to 0. Kept
  *  as a flag so the re-test is one command, not a code change. */
 const DEEPEN = Number(arg("--deepen") ?? 0);
+/** Path to a value-model artifact to pilot with, overriding the promoted one.
+ *  Lets a freshly-trained model be A/B'd end to end before promotion. */
+const VALUE_ARTIFACT = arg("--value-artifact");
 /** Secondary gate: rank correlation, as a FRACTION of what the real data can
  *  support. Expressed as a fraction because the absolute number is bounded by
  *  sampling noise in the ground truth, not by the simulator. */
@@ -102,7 +105,8 @@ const VARIANTS_PER_DECK = Number(arg("--variants") ?? 3);
  *  option, so every calibration run silently fell back to the planner's
  *  built-in heuristicEvaluator — i.e. we were measuring the meta with the
  *  weakest pilot we own while value-gbm-v1 sat unused. */
-const EVALUATOR = createBotEvaluator() ?? undefined;
+const EVALUATOR =
+  (VALUE_ARTIFACT ? createBoardEvaluator(VALUE_ARTIFACT) : createBotEvaluator()) ?? undefined;
 
 /* ─── Inputs ────────────────────────────────────────────────────── */
 
