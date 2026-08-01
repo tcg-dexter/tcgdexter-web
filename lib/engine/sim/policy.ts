@@ -353,6 +353,12 @@ export class HeuristicPolicy implements DecisionPolicy {
       const mons = inPlay(view.board);
       const needy = mons
         .filter((m) => usableAttacks(m).length < (m.card.catalog?.attacks.length ?? 0))
+        // Ceiling first, active only as the tie-break. Prioritising the
+        // ACTIVE instead was tested and is WORSE: it lifts attack frequency
+        // 32.3% -> 35.8% but drops prize wins 67.1% -> 65.8% and pushes
+        // deck-out 17.1% -> 18.8%. Attacking more often with a small attacker
+        // spends the energy that should have built the real threat. Don't
+        // re-try it without a matchup-level reason.
         .sort(
           (a, b) =>
             attackCeiling(b, view) - attackCeiling(a, view) ||

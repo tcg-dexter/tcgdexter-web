@@ -104,6 +104,10 @@ function main(): void {
     console.log(`  ${r.padEnd(10)} ${((c / games) * 100).toFixed(1)}%  (${c})`);
   }
 
+  // How CLOSE were deck-out games to finishing on prizes? A deck-out at 5
+  // prizes is a real (if rare) Pokemon ending; one at 1-2 prizes means the AI
+  // spun its wheels for 25 turns and never threatened.
+  const lastByGame = new Map<number, TurnObservation>();
   console.log("\n=== TURN SHAPE ===");
   console.log(`turns observed        ${total}`);
   console.log(`had a legal attack    ${((hadAttack / total) * 100).toFixed(1)}%`);
