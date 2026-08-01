@@ -40,6 +40,7 @@ import {
 import { energyProvides, energyUnits, prizeValue } from "./setup";
 import { isSupporter, trainerSpec, type PlayTrainerMove, type TrainerSpec } from "./trainers";
 import { effectMovePhase } from "./effects/cards";
+import { estimatedAttackDamage } from "./attacks";
 import { canRetreat } from "./tools";
 import { lookupCard } from "../catalog";
 import { makeUnrevealed } from "../initial";
@@ -599,10 +600,22 @@ export class PlannerPolicy implements DecisionPolicy {
       score += this.tactical.damageProgress * Math.min(1, theirActive.damage / theirHp);
 
       // Threat: our active could take the KO next turn as the board stands.
+      // Estimate THROUGH the declarative path: attacks whose damage lives in
+      // a formula or rider print as "" and score 0 on computeDamage alone.
+      // v18 fixed exactly this in HeuristicPolicy and the planner never got
+      // it — so the pilot the calibration gate uses could not see the damage
+      // of any card W3 made real. N's Zoroark's Night Joker is the extreme
+      // case: it prints nothing and IS the deck.
       const ourBest = Math.max(
         0,
-        ...usableAttacks(ourActive).map(({ attack }) =>
-          computeDamage(ourActive, attack, theirActive),
+        ...usableAttacks(ourActive).map(({ attack, index }) =>
+          Math.max(
+            computeDamage(ourActive, attack, theirActive),
+            estimatedAttackDamage(ourActive, index, undefined, "player", {
+              ownBench: self.bench,
+              oppActive: theirActive,
+            }),
+          ),
         ),
       );
       if (ourBest >= remainingHp(theirActive)) score += this.tactical.koThreat;
@@ -616,8 +629,18 @@ export class PlannerPolicy implements DecisionPolicy {
     for (const mon of [self.active, ...self.bench]) {
       if (!mon) continue;
       let best = 0;
-      for (const attack of mon.card.catalog?.attacks ?? []) {
-        const dmg = baseDamage(attack);
+      const monAttacks = mon.card.catalog?.attacks ?? [];
+      for (let ai = 0; ai < monAttacks.length; ai++) {
+        const attack = monAttacks[ai];
+        // Same blindness as above: an attack that prints "" is not worthless,
+        // so energy invested toward it is not wasted investment.
+        const dmg = Math.max(
+          baseDamage(attack),
+          estimatedAttackDamage(mon, ai, undefined, "player", {
+            ownBench: self.bench,
+            oppActive: opp.active,
+          }),
+        );
         if (dmg <= 0 || attack.cost.length === 0) continue;
         const progress = costProgress(mon, attack.cost);
         // Convex in progress: the marginal energy is worth more the closer
@@ -859,7 +882,13 @@ function simulateOpponentReply(end: GameState, chooser: ReplyChooser | null = nu
     usableAttacks(mon).map(({ attack, index }) => ({
       benchIndex,
       attackIndex: index,
-      damage: computeDamage(mon, attack, defender),
+      damage: Math.max(
+        computeDamage(mon, attack, defender),
+        estimatedAttackDamage(mon, index, undefined, "opponent", {
+          ownBench: oppSide.bench,
+          oppActive: defender,
+        }),
+      ),
     }));
 
   const lines = linesFrom(oppSide.active, null);

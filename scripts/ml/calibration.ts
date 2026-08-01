@@ -25,6 +25,12 @@
  * combines its wins as A in (i,j) with its wins as B in (j,i).
  *
  *   npx tsx scripts/ml/calibration.ts [--n 60] [--seed cal-1] [--json out.json]
+ *
+ * ON READING THE OUTPUT: this harness is NOISY at small --n. Two runs of the
+ * identical build at --n 8 differed by 0.085 Spearman and 1.0 RMSE point
+ * (seeds cal-p / cal-q). Do not attribute a change of that size to whatever
+ * you just edited — A/B a change at --n 40+, or across several seeds, or you
+ * will chase noise. Measured, after doing exactly that.
  */
 
 import { writeFileSync } from "node:fs";
