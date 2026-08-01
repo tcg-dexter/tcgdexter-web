@@ -24,6 +24,7 @@ import { dealRawDamage, placeAttackCounters, placeBenchDamage, resolveKnockouts 
 import type { DecisionPolicy } from "./policy";
 import { buildSimInitialState, energyUnits, toPokemonInPlay, type SimDeck } from "./setup";
 import { retreatCost } from "./tools";
+import { damageTakenReduction, hasStatus, statusAmount } from "./statuses";
 import { applyTrainer } from "./trainers";
 import { applyEffect } from "./effects/runtime";
 import { attackRiderEffect, effectsFor, onAttachEffect, triggerEffect } from "./effects/cards";
@@ -322,10 +323,20 @@ export function applyMove(
 
       // Damage to the active: state-scaled base (attacks.ts) + flat bonuses
       // (Black Belt's Training, Binding Mochi), then W/R.
-      const base =
+      // "During your next turn, this Pokémon can't attack" — the attack fizzles
+      // but the turn still ends.
+      if (hasStatus(attacker, "cannot_attack", state)) return done(true);
+
+      const rawBase =
         attackBaseDamage(state, actor, attacker, move.attackIndex, rng) +
-        activeDamageBonus(state, actor, attacker, defender);
-      dealRawDamage(defender, applyWeaknessResistance(base, attacker, defender));
+        activeDamageBonus(state, actor, attacker, defender) -
+        statusAmount(attacker, "damage_dealt_reduction", state);
+      // No-Weakness / prevent-all are read on the DEFENDER.
+      const afterWr = hasStatus(defender, "no_weakness", state)
+        ? Math.max(0, rawBase)
+        : applyWeaknessResistance(Math.max(0, rawBase), attacker, defender);
+      const reduced = Math.max(0, afterWr - damageTakenReduction(defender, attacker, state));
+      dealRawDamage(defender, hasStatus(defender, "prevent_all", state) ? 0 : reduced);
 
       // Attack-inflicted conditions on the defending active (Mind Bend,
       // Bemusing Aroma, Thunder Shock — coin flips resolve via rng).

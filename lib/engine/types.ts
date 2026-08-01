@@ -111,6 +111,25 @@ export interface PokemonInPlay {
   /** Global turn on which this Pokémon moved from the Bench into the Active
    *  Spot (retreat, switch, promotion). Gale Thrust keys off it. */
   movedToActiveOnTurn?: number;
+  /** Turn-scoped effects from attacks ("during your opponent's next turn,
+   *  this Pokémon takes 60 less damage"). `untilTurn` is the last global turn
+   *  on which the entry still applies; expired entries are ignored, not
+   *  pruned, so nothing has to sweep them. */
+  statuses?: {
+    kind:
+      | "cannot_attack"
+      | "cannot_retreat"
+      | "damage_taken_reduction"
+      | "damage_dealt_reduction"
+      | "attack_cost_extra"
+      | "retreat_cost_extra"
+      | "no_weakness"
+      | "prevent_all";
+    untilTurn: number;
+    amount?: number;
+    /** Restricts a reduction to attacks from Evolution Pokémon (Metal Block). */
+    fromEvolutionOnly?: boolean;
+  }[];
 }
 
 /* ─── Player side ───────────────────────────────────────────────── */

@@ -59,7 +59,10 @@ import { specialEnergyUnits, type EnergyUnit } from "./effects/energy";
 // v12: W3 bulk authoring — on_play / on_evolve triggers routed, and ~120 more
 // field effects (all damage scalers, 49 trainers, 30 abilities) are really
 // played instead of degrading. Rollouts change for nearly every meta deck.
-export const SIM_VERSION = 12;
+// v13: turn-scoped attack statuses (can't attack / can't retreat / damage
+// reduction / cost bumps) plus ~60 more attack riders. Many attacks that were
+// pure damage now leave lasting effects, changing rollouts broadly.
+export const SIM_VERSION = 13;
 
 const MAX_MULLIGANS = 20;
 

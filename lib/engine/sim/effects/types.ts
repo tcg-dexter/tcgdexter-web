@@ -62,6 +62,10 @@ export const SELF_REF = "self";
  *  tails) where there is no `self` source Pokémon. */
 export const OWN_ACTIVE_REF = "own_active";
 
+/** Reserved ref for the OPPONENT's Active — the Defending Pokémon. Bound by
+ *  the runtime so riders can debuff it without declaring a target slot. */
+export const DEFENDER_REF = "defender";
+
 /** A named target slot the interpreter resolves. `player` choosers enumerate
  *  concrete moves; `auto` collapses to a heuristic pick; `all` hits every
  *  match with no choice. */
@@ -240,6 +244,30 @@ export type EffectOp =
   /** The source Pokémon knocks ITSELF out (Cursed Blast). Marked lethally so
    *  the driver's resolveKnockouts handles prizes and promotion normally. */
   | { op: "ko_self" }
+  /** Apply a turn-scoped status. `turns: 1` means "during the next turn".
+   *  monRef may be a target ref, SELF_REF, or DEFENDER_REF. */
+  | {
+      op: "apply_status";
+      monRef: string;
+      status:
+        | "cannot_attack"
+        | "cannot_retreat"
+        | "damage_taken_reduction"
+        | "damage_dealt_reduction"
+        | "attack_cost_extra"
+        | "retreat_cost_extra"
+        | "no_weakness"
+        | "prevent_all";
+      amount?: number;
+      turns?: number;
+      fromEvolutionOnly?: boolean;
+    }
+  /** Discard attached Energy from a resolved Pokémon ("all" for every card). */
+  | { op: "discard_energy"; monRef: string; n: number | "all" }
+  /** Return attached Energy from a resolved Pokémon to its owner's hand. */
+  | { op: "energy_to_hand"; monRef: string; n: number }
+  /** Self-inflicted recoil (Wood Hammer). */
+  | { op: "damage_self"; amount: number }
   | { op: "discard_from_mon"; monRef: string; category: "tool" | "special_energy" | "energy" }
   /** Look at the top `n` of your own deck, take up to `count` matching cards
    *  to hand, shuffle the rest back (Pokégear 3.0, Bug Catching Set). v1

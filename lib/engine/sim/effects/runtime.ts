@@ -13,7 +13,7 @@ import type { Rng } from "../rng";
 import { energyProvides } from "../setup";
 import { applyOps, type OpContext, type ResolvedMon, type ResolvedTargets } from "./primitives";
 import { isSupporter } from "../trainers";
-import { OWN_ACTIVE_REF, SELF_REF } from "./types";
+import { DEFENDER_REF, OWN_ACTIVE_REF, SELF_REF } from "./types";
 export { guardsPass } from "./guards";
 import { guardsPass } from "./guards";
 // Matchers live in match.ts so primitives.ts can share them without a cycle.
@@ -411,6 +411,8 @@ function resolveTargets(
   if (source) resolved[SELF_REF] = { mons: [{ mon: source, side: actor }], cards: [] };
   const ownActive = state.sides[actor].active;
   if (ownActive) resolved[OWN_ACTIVE_REF] = { mons: [{ mon: ownActive, side: actor }], cards: [] };
+  const defender = state.sides[other(actor)].active;
+  if (defender) resolved[DEFENDER_REF] = { mons: [{ mon: defender, side: other(actor) }], cards: [] };
   for (const pick of move.picks) {
     const spec = specByRef.get(pick.ref);
     if (!spec) continue;

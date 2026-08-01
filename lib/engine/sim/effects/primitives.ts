@@ -199,6 +199,35 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
       if (ctx.source) ctx.source.damage = (ctx.source.card.catalog?.hp ?? 120) + 1000;
       break;
 
+    case "apply_status":
+      for (const { mon } of mons(ctx, op.monRef)) {
+        (mon.statuses ??= []).push({
+          kind: op.status,
+          untilTurn: state.turn.number + (op.turns ?? 1),
+          amount: op.amount,
+          fromEvolutionOnly: op.fromEvolutionOnly,
+        });
+      }
+      break;
+
+    case "discard_energy":
+      for (const { mon, side: monSide } of mons(ctx, op.monRef)) {
+        const owner = state.sides[monSide];
+        const n = op.n === "all" ? mon.attachedEnergy.length : op.n;
+        owner.discard.push(...mon.attachedEnergy.splice(0, Math.max(0, n)));
+      }
+      break;
+
+    case "energy_to_hand":
+      for (const { mon, side: monSide } of mons(ctx, op.monRef)) {
+        state.sides[monSide].hand.push(...mon.attachedEnergy.splice(0, Math.max(0, op.n)));
+      }
+      break;
+
+    case "damage_self":
+      if (ctx.source) dealRawDamage(ctx.source, op.amount);
+      break;
+
     case "clear_conditions":
       for (const { mon } of mons(ctx, op.monRef)) clearConditions(mon);
       break;

@@ -7,6 +7,7 @@
 import type { EngineAttack, GameState, PlayerSide, PokemonInPlay } from "../types";
 import { energyProvides, energyUnits, isBasic, toPokemonInPlay } from "./setup";
 import { unitPaysType } from "./effects/energy";
+import { hasStatus, statusAmount } from "./statuses";
 import { isSupporter, trainerMoves, trainerSpec, type PlayTrainerMove } from "./trainers";
 import { abilityMoves, hasLegacyActivated, type UseAbilityMove } from "./abilities";
 import { cannotAct } from "./conditions";
@@ -99,7 +100,8 @@ export function effectiveCost(
   cost: string[],
   state?: GameState,
 ): string[] {
-  const extra = stadiumAttackCostExtra(mon, state);
+  const extra =
+    stadiumAttackCostExtra(mon, state) + statusAmount(mon, "attack_cost_extra", state);
   let out = extra > 0 ? [...cost, ...Array(extra).fill("Colorless")] : cost;
   // Tool discounts (Counter Gain, Sparkling Crystal, Hop's Choice Band) strip
   // Colorless first — a typed requirement can't be discounted away.
@@ -127,6 +129,8 @@ export function usableAttacks(
   mon: PokemonInPlay,
   state?: GameState,
 ): { attack: EngineAttack; index: number }[] {
+  // A Pokémon under "can't attack" has no usable attacks at all.
+  if (hasStatus(mon, "cannot_attack", state)) return [];
   const attacks = mon.card.catalog?.attacks ?? [];
   return attacks
     .map((attack, index) => ({ attack, index }))

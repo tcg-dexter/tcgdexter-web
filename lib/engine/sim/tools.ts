@@ -9,6 +9,7 @@ import type { CardInstance, GameState, PokemonInPlay } from "../types";
 import { isNsPokemon, totalEnergyUnits } from "./setup";
 import { specialEnergyHpBonus } from "./effects/energy";
 import { stadiumDisablesTools, stadiumHpDelta } from "./stadiums";
+import { hasStatus, statusAmount } from "./statuses";
 
 export interface ToolEffect {
   /** Reduces Retreat Cost by this many Colorless (floored at 0). */
@@ -128,11 +129,13 @@ export function retreatCost(mon: PokemonInPlay, state?: GameState): number {
   if (stadiumWaivesRetreat(mon, state)) return 0;
   const base = mon.card.catalog?.retreat_cost ?? 0;
   const reduction = toolEffects(mon, state).reduce((n, e) => n + (e.retreatReduction ?? 0), 0);
-  return Math.max(0, base - reduction);
+  return Math.max(0, base - reduction + statusAmount(mon, "retreat_cost_extra", state));
 }
 
 /** Whether the Pokémon has enough attached Energy units to retreat. */
 export function canRetreat(mon: PokemonInPlay, state?: GameState): boolean {
+  // "During your opponent's next turn, the Defending Pokémon can't retreat."
+  if (hasStatus(mon, "cannot_retreat", state)) return false;
   return totalEnergyUnits(mon) >= retreatCost(mon, state);
 }
 
