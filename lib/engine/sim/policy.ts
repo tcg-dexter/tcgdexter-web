@@ -127,6 +127,57 @@ function inPlay(board: PlayerView["board"]): PokemonInPlay[] {
   return [board.active, ...board.bench].filter((m): m is PokemonInPlay => m !== null);
 }
 
+/** Should the hand be refreshed? SMALL *or* DEAD.
+ *
+ *  The gate used to be hand size alone (<= 5), which produced the calibration
+ *  death spiral: a hand grows to ~8 unplayable cards, the size gate closes,
+ *  the AI never digs again, so it never draws energy. Energy-in-hand fell to
+ *  0.1 by turn 6 and stayed there — no energy, no attacks, no prizes, and the
+ *  game grinds out at one card per turn until someone decks out.
+ *
+ *  "No energy in hand" is the honest dead-hand signal: the draw branches are
+ *  only reached once evolve/bench/ability/stadium/tool have all declined, so
+ *  energy is the main thing left worth holding on to.
+ *
+ *  Shared with the planner, which had its own copy of the <= 5 gate. */
+export function wantsDrawRefresh(view: PlayerView): boolean {
+  if (view.hand.length <= 5) return true;
+  return !view.hand.some((c) => energyProvides(c) !== null);
+}
+
+/** Which Pokémon to put on the Bench, or null if none is legal.
+ *
+ *  Both policies used to take the first legal bench move — whatever happened
+ *  to sit first in hand — and the Bench fills to its cap of 5 by about turn 4.
+ *  So the one Pokémon a deck actually needs back there often never fit: N's
+ *  Zoroark's Night Joker copies a BENCHED N's Pokémon's attack, and benching
+ *  Budew instead of N's Zekrom is the difference between copying 250 and
+ *  copying 20.
+ *
+ *  Two things earn a slot: a Pokémon we can evolve (the line has to start
+ *  somewhere, and it is dead weight until it does) and a Pokémon worth
+ *  copying, promoting, or attacking with. */
+export function chooseBenchMove(view: PlayerView, legal: SimMove[]): SimMove | null {
+  const bench = legal.filter(
+    (m): m is Extract<SimMove, { kind: "bench" }> => m.kind === "bench",
+  );
+  if (bench.length === 0) return null;
+  const evolvableFromHand = new Set(
+    view.hand.map((c) => c.catalog?.evolves_from).filter((n): n is string => Boolean(n)),
+  );
+  const score = (m: (typeof bench)[number]): number => {
+    const cat = view.hand.find((c) => c.id === m.cardId)?.catalog;
+    if (!cat) return 0;
+    const printed = (cat.attacks ?? []).map((a) => {
+      const n = parseInt(a.damage, 10);
+      return Number.isFinite(n) ? n : 0;
+    });
+    const ceiling = printed.length > 0 ? Math.max(...printed) : 0;
+    return (evolvableFromHand.has(cat.name) ? 1000 : 0) + ceiling + (cat.hp ?? 0) / 100;
+  };
+  return bench.slice().sort((a, b) => score(b) - score(a))[0];
+}
+
 export class HeuristicPolicy implements DecisionPolicy {
   chooseMove(view: PlayerView, legal: SimMove[], _ctx: TurnContext): SimMove {
     const active = view.board.active;
@@ -156,9 +207,9 @@ export class HeuristicPolicy implements DecisionPolicy {
       return activeEvolve ?? evolves[0];
     }
 
-    // 2. Develop the bench.
-    const bench = byKind("bench");
-    if (bench.length > 0) return bench[0];
+    // 2. Develop the bench, with purpose (shared with the planner).
+    const benchMove = chooseBenchMove(view, legal);
+    if (benchMove) return benchMove;
 
     // 2b. Activated abilities (don't end the turn). Play the beneficial ones.
     const ability = chooseAbilityMove(view, legal);
@@ -182,18 +233,7 @@ export class HeuristicPolicy implements DecisionPolicy {
     //    before generic cycling — all deck-reserve guarded so we never
     //    draw ourselves out while ahead.
     if (view.deckCount > DECK_RESERVE) {
-      // Refresh the hand when it's SMALL *or* DEAD. The old gate was hand
-      // size alone (<= 5), which produced the calibration death spiral: a
-      // hand grows to ~8 unplayable cards, the size gate closes, the AI
-      // never digs again, so it never draws energy — energy-in-hand fell to
-      // 0.1 by turn 6 and stayed there. No energy ⇒ no attacks ⇒ no prizes
-      // ⇒ the game grinds out at one card per turn and decks out.
-      //
-      // "No energy in hand" is the honest dead-hand signal here: this branch
-      // is only reached once evolve/bench/ability/stadium/tool have all
-      // declined, so energy is the main thing left worth holding.
-      const handIsDead = !view.hand.some((c) => energyProvides(c) !== null);
-      const wantDraw = view.hand.length <= 5 || handIsDead;
+      const wantDraw = wantsDrawRefresh(view);
       const drawSupporters = trainersBySpec((s) => s.phase === "draw");
       if (drawSupporters.length > 0 && wantDraw) return drawSupporters[0];
       const drawEffects = effectMovesOf(legal, "draw");

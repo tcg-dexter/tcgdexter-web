@@ -29,7 +29,14 @@ import {
   type SimMove,
   type TurnContext,
 } from "./moves";
-import { HeuristicPolicy, chooseAbilityMove, promoteBest, type DecisionPolicy } from "./policy";
+import {
+  HeuristicPolicy,
+  chooseAbilityMove,
+  chooseBenchMove,
+  promoteBest,
+  wantsDrawRefresh,
+  type DecisionPolicy,
+} from "./policy";
 import { energyProvides, energyUnits, prizeValue } from "./setup";
 import { isSupporter, trainerSpec, type PlayTrainerMove, type TrainerSpec } from "./trainers";
 import { effectMovePhase } from "./effects/cards";
@@ -284,7 +291,9 @@ export class PlannerPolicy implements DecisionPolicy {
 
     // Phase 1 — free development (never part of the search). Rare Candy
     // is a strictly-better evolve, so it rides along here (active first).
-    const bench = legal.find((m) => m.kind === "bench");
+    // Shared with HeuristicPolicy so bench selection can't drift between the
+    // two pilots — this was `legal.find(...)`, i.e. hand order.
+    const bench = chooseBenchMove(view, legal);
     if (bench) return bench;
     const candies = legal.filter(
       (m): m is PlayTrainerMove =>
@@ -332,7 +341,7 @@ export class PlannerPolicy implements DecisionPolicy {
       return spec?.phase === "tactical" && isSupporter(c);
     });
     if (view.deckCount > CYCLE_DECK_RESERVE) {
-      if (!tacticalSupporterInHand && view.hand.length <= 5) {
+      if (!tacticalSupporterInHand && wantsDrawRefresh(view)) {
         const drawMove = legal.find((m) => specOf(m)?.phase === "draw");
         if (drawMove) return drawMove;
         const drawEffect = legal.find(

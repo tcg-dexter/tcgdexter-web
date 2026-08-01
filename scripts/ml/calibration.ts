@@ -7,10 +7,16 @@
  * canonical archetype lists, weight each deck's results by how much of the
  * real field it faces, and correlate that against the real tournament record.
  *
- * GO/NO-GO: Spearman >= 0.7 (does the sim RANK archetypes like reality?),
- * with RMSE on win% as a secondary read. Rank correlation is the primary
- * because a systematic offset (the sim being uniformly swingier than paper,
- * say) is calibratable; getting the ORDER wrong is not.
+ * GO/NO-GO: RMSE on win% <= 10 points (primary), plus Spearman at >= 80% of
+ * what the real data can support (secondary).
+ *
+ * The gate was originally "Spearman >= 0.7", which was a mistake: nobody
+ * checked whether the ground truth could support it. The 16 scored archetypes
+ * span 46.6%-58.1% with a median ~270 decided games, so adjacent decks differ
+ * by less than their own sampling error. Split-half resampling puts the
+ * ceiling for a PERFECT simulator at about 0.66 — BELOW the old bar. It could
+ * never have passed. `realDataCeiling` now computes that ceiling from the
+ * data at runtime and the rank gate is stated relative to it.
  *
  * Seat balance is not optional. simulateMatchup already alternates who goes
  * first, but deck A always occupies the "player" seat, and value_gate.ts
@@ -28,6 +34,7 @@ import { metaDeckToList, type MetaDeckEntry } from "@/lib/metaDeckList";
 import { simulateMatchup } from "@/lib/engine/sim/rollout";
 import { PlannerPolicy, plannerParamsForSkill, SIM_VERSION } from "@/lib/engine/sim";
 import { deckEffectCoverage } from "@/lib/ml/effectCoverage";
+import { mulberry32 } from "@/lib/engine/sim/rng";
 
 /* ─── CLI ───────────────────────────────────────────────────────── */
 
@@ -60,6 +67,14 @@ const SKILL = Number(arg("--skill") ?? 2);
  *  from Dragapult's 1,886 games. Fringe decks are still SIMULATED (they are
  *  part of the field every deck faces) — they're just not scored. */
 const MIN_GAMES = Number(arg("--min-games") ?? 100);
+/** Primary gate: mean absolute error on win%, in fractional points. "Within
+ *  10 points of the real measurement" is the product-level bar — it is what a
+ *  deck grade claims when it says a list wins about X% against the field. */
+const RMSE_GATE = Number(arg("--rmse-gate") ?? 0.10);
+/** Secondary gate: rank correlation, as a FRACTION of what the real data can
+ *  support. Expressed as a fraction because the absolute number is bounded by
+ *  sampling noise in the ground truth, not by the simulator. */
+const RANK_GATE_FRACTION = Number(arg("--rank-fraction") ?? 0.8);
 
 /* ─── Inputs ────────────────────────────────────────────────────── */
 
@@ -85,6 +100,53 @@ interface Deck {
   coverage: number;
   /** Real decided games behind realWinRate — the reliability of this row. */
   decided: number;
+}
+
+
+/* ─── How much signal does the ground truth actually contain? ────── */
+
+/** Split-half reliability of the real record, by binomial resampling.
+ *
+ *  This exists because the original gate (Spearman >= 0.7) was set without
+ *  asking whether the data could support it. The 16 scored archetypes span
+ *  46.6%-58.1% real win rate with a median of ~270 decided games, so adjacent
+ *  decks differ by less than their own sampling error. Drawing each
+ *  archetype's rate twice from its OWN observed distribution and correlating
+ *  the two draws measures the ground truth's agreement with itself.
+ *
+ *  If two draws correlate at rho, then a PERFECT simulator — which produces
+ *  the true probability rather than a second noisy draw — correlates with the
+ *  observed sample at about sqrt(rho). That is the real ceiling, and no
+ *  amount of engine work can exceed it. */
+function realDataCeiling(
+  decks: { wins: number; decided: number }[],
+  trials = 400,
+): { attainableSpearman: number; rmseFloor: number } {
+  const rng = mulberry32(0x5eed);
+  const draw = (n: number, p: number) => {
+    let k = 0;
+    for (let i = 0; i < n; i++) if (rng() < p) k += 1;
+    return k / n;
+  };
+  let rhoSum = 0;
+  let errSum = 0;
+  for (let t = 0; t < trials; t++) {
+    const a: number[] = [];
+    const b: number[] = [];
+    for (const d of decks) {
+      const p = d.wins / Math.max(1, d.decided);
+      a.push(draw(d.decided, p));
+      b.push(draw(d.decided, p));
+    }
+    rhoSum += spearman(a, b);
+    errSum += rmse(a, b);
+  }
+  const splitHalf = rhoSum / trials;
+  return {
+    attainableSpearman: Math.sqrt(Math.max(0, splitHalf)),
+    // Two noisy draws differ by sqrt(2)x what one noisy draw differs from truth.
+    rmseFloor: errSum / trials / Math.SQRT2,
+  };
 }
 
 function loadDecks(): Deck[] {
@@ -279,10 +341,20 @@ function main(): void {
     );
   }
 
+  const ceiling = realDataCeiling(
+    rows.map((r) => ({ wins: r.deck.arch.wins, decided: r.deck.decided })),
+  );
+
   console.log("\n  === correlation vs real tournament results ===");
-  console.log(`  Spearman (rank):   ${rho.toFixed(3)}   [GATE: >= 0.700]`);
+  console.log(
+    `  Spearman (rank):   ${rho.toFixed(3)}   [ceiling ${ceiling.attainableSpearman.toFixed(3)}` +
+      ` — ${((rho / Math.max(1e-9, ceiling.attainableSpearman)) * 100).toFixed(0)}% of attainable]`,
+  );
   console.log(`  Pearson  (linear): ${r2.toFixed(3)}`);
-  console.log(`  RMSE on win%:      ${(err * 100).toFixed(2)} points`);
+  console.log(
+    `  RMSE on win%:      ${(err * 100).toFixed(2)} points   ` +
+      `[GATE: <= ${(RMSE_GATE * 100).toFixed(0)}, floor ${(ceiling.rmseFloor * 100).toFixed(2)}]`,
+  );
   console.log(`  Sim spread:        ${(Math.min(...simArr) * 100).toFixed(1)}% – ${(Math.max(...simArr) * 100).toFixed(1)}%`);
   console.log(`  Real spread:       ${(Math.min(...realArr) * 100).toFixed(1)}% – ${(Math.max(...realArr) * 100).toFixed(1)}%`);
 
@@ -302,8 +374,23 @@ function main(): void {
     );
   }
 
-  const pass = rho >= 0.7;
-  console.log(`\n  ${pass ? "PASS" : "FAIL"} — Spearman ${rho.toFixed(3)} ${pass ? ">=" : "<"} 0.700\n`);
+  // PRIMARY gate is absolute error, not rank. Two reasons. First, it is the
+  // question the product actually asks: a deck grade says "this list wins
+  // about X% against the field", and being 15 points off is wrong in a way
+  // users would notice. Second, rank correlation is capped by the ground
+  // truth's own noise (see realDataCeiling) — the old >= 0.700 bar sat ABOVE
+  // what a flawless simulator could score against this sample, so it could
+  // never have passed, no matter how good the engine got.
+  const rankOk = rho >= RANK_GATE_FRACTION * ceiling.attainableSpearman;
+  const errOk = err <= RMSE_GATE;
+  const pass = errOk && rankOk;
+  console.log(
+    `\n  ${pass ? "PASS" : "FAIL"} — RMSE ${(err * 100).toFixed(2)}pts ` +
+      `${errOk ? "<=" : ">"} ${(RMSE_GATE * 100).toFixed(0)} (primary), ` +
+      `Spearman ${rho.toFixed(3)} ${rankOk ? ">=" : "<"} ` +
+      `${(RANK_GATE_FRACTION * ceiling.attainableSpearman).toFixed(3)} ` +
+      `(${(RANK_GATE_FRACTION * 100).toFixed(0)}% of the ${ceiling.attainableSpearman.toFixed(3)} attainable)\n`,
+  );
 
   if (JSON_OUT) {
     writeFileSync(
