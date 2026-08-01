@@ -81,6 +81,9 @@ const RMSE_GATE = Number(arg("--rmse-gate") ?? 0.10);
  *  support. Expressed as a fraction because the absolute number is bounded by
  *  sampling noise in the ground truth, not by the simulator. */
 const RANK_GATE_FRACTION = Number(arg("--rank-fraction") ?? 0.8);
+/** How many real list variants per archetype to average over. 1 reproduces
+ *  the old single-canonical-list behaviour. */
+const VARIANTS_PER_DECK = Number(arg("--variants") ?? 3);
 
 /* ─── Inputs ────────────────────────────────────────────────────── */
 
@@ -97,7 +100,10 @@ interface Archetype {
 interface Deck {
   id: string;
   name: string;
+  /** Canonical list — used for coverage and as the single-variant fallback. */
   list: string;
+  /** Real variants of this archetype, sampled per rollout. */
+  lists: string[];
   arch: Archetype;
   /** Real win rate, ties excluded (the standard convention). */
   realWinRate: number;
@@ -163,9 +169,24 @@ function loadDecks(): Deck[] {
   for (const raw of metaDecksRaw as (MetaDeckEntry & { id: string; name: string; variants?: { cards: unknown[] }[] })[]) {
     const arch = archetypes.get(raw.id);
     if (!arch) continue;
-    const cards = raw.cards?.length ? raw.cards : (raw.variants?.[0]?.cards as MetaDeckEntry["cards"]) ?? [];
-    const list = metaDeckToList({ ...raw, cards } as MetaDeckEntry);
-    if (!list) continue;
+    // Every archetype ships MULTIPLE real variants (up to 12) and we used
+    // only variants[0]. The tournament record being correlated against is the
+    // aggregate of all of them, so simulating one canonical list measures a
+    // different population than the ground truth does. Sample up to
+    // VARIANTS_PER_DECK of them and average.
+    const variantCards: MetaDeckEntry["cards"][] = [];
+    if (raw.cards?.length) variantCards.push(raw.cards);
+    for (const v of raw.variants ?? []) {
+      if (Array.isArray(v?.cards) && v.cards.length) {
+        variantCards.push(v.cards as MetaDeckEntry["cards"]);
+      }
+    }
+    const lists = variantCards
+      .slice(0, VARIANTS_PER_DECK)
+      .map((cards) => metaDeckToList({ ...raw, cards } as MetaDeckEntry))
+      .filter((l): l is string => Boolean(l));
+    if (lists.length === 0) continue;
+    const list = lists[0];
     const decided = arch.wins + arch.losses;
     if (decided === 0) continue; // no real record at all
     out.push({
@@ -173,6 +194,7 @@ function loadDecks(): Deck[] {
       id: raw.id,
       name: raw.name,
       list,
+      lists,
       arch,
       realWinRate: arch.wins / decided,
       weight: arch.representation_pct,
@@ -251,26 +273,44 @@ function runMatrix(decks: Deck[]): {
         winsAsA[i][j] = N / 2;
         continue;
       }
-      const r = simulateMatchup(decks[i].list, decks[j].list, {
-        n: N,
-        seed: `${SEED}:${decks[i].id}:${decks[j].id}`,
-        ...(POLICY === "planner"
-          ? {
-              policies: (gameSeed: number) => ({
-                player: new PlannerPolicy({ params: plannerParamsForSkill(SKILL), seed: gameSeed }),
-                opponent: new PlannerPolicy({
-                  params: plannerParamsForSkill(SKILL),
-                  seed: (gameSeed ^ 0x85ebca6b) >>> 0,
+      // Pair the variants off (variant v of A vs variant v of B) rather than
+      // crossing them: crossing is quadratic in variants for no extra signal,
+      // since what we want is the AVERAGE over real lists, not every pairing.
+      const pairs = Math.max(decks[i].lists.length, decks[j].lists.length);
+      const perPair = Math.max(1, Math.round(N / pairs));
+      let wins = 0;
+      let played = 0;
+      let turnsAcc = 0;
+      let turnsN = 0;
+      for (let v = 0; v < pairs; v++) {
+        const listA = decks[i].lists[v % decks[i].lists.length];
+        const listB = decks[j].lists[v % decks[j].lists.length];
+        const r = simulateMatchup(listA, listB, {
+          n: perPair,
+          seed: `${SEED}:${decks[i].id}:${decks[j].id}:${v}`,
+          ...(POLICY === "planner"
+            ? {
+                policies: (gameSeed: number) => ({
+                  player: new PlannerPolicy({ params: plannerParamsForSkill(SKILL), seed: gameSeed }),
+                  opponent: new PlannerPolicy({
+                    params: plannerParamsForSkill(SKILL),
+                    seed: (gameSeed ^ 0x85ebca6b) >>> 0,
+                  }),
                 }),
-              }),
-            }
-          : {}),
-      });
-      winsAsA[i][j] = r.wins_a;
-      for (const [k, v] of Object.entries(r.end_reasons)) {
-        endReasons[k] = (endReasons[k] ?? 0) + v;
+              }
+            : {}),
+        });
+        wins += r.wins_a;
+        played += perPair;
+        turnsAcc += r.avg_turns;
+        turnsN += 1;
+        for (const [k, val] of Object.entries(r.end_reasons)) {
+          endReasons[k] = (endReasons[k] ?? 0) + val;
+        }
       }
-      turnSum += r.avg_turns;
+      // Normalise back onto the N-game scale the matrix below assumes.
+      winsAsA[i][j] = (wins / Math.max(1, played)) * N;
+      turnSum += turnsAcc / Math.max(1, turnsN);
       matchups++;
     }
     const pct = (((i + 1) / size) * 100).toFixed(0);
