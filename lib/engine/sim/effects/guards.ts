@@ -48,6 +48,9 @@ export function guardsPass(
         return (side.supporterNamePlayedThisTurn ?? "").includes(g.text);
       case "moved_to_active_this_turn":
         return source != null && source.movedToActiveOnTurn === state.turn.number;
+      case "hand_has":
+        // The card being played is still in hand, so require n + 1 matches.
+        return side.hand.filter((c) => cardMatches(c, g.filter)).length >= g.n + 1;
       case "hands_equal":
         return side.hand.length === opp.hand.length;
       case "opp_active_damaged":

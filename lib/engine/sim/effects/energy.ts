@@ -115,10 +115,9 @@ export const SPECIAL_ENERGY: Record<string, SpecialEnergySpec> = {
     units: ["Grass"],
     hpBonus: { amount: 20, when: { on: "pokemon_type", type: "Grass" } },
   },
-  "Boomerang Energy": {
-    units: ["Colorless"],
-    unmodeledRider: "re-attaches itself after being discarded by its own attack",
-  },
+  // The re-attach is an `end_of_turn` trigger (effects/cards.ts) — it returns
+  // itself from the discard to its former holder after the attack.
+  "Boomerang Energy": { units: ["Colorless"] },
   // The counter-punch is an `on_damaged` trigger (effects/cards.ts).
   "Spiky Energy": { units: ["Colorless"] },
   "Gift Energy": {

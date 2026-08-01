@@ -74,7 +74,11 @@ import { auraEnergyUnits } from "./auras";
 // v16: remaining stadium passives/activated effects and Special Energy effect
 // prevention (Mist, Rocky Fighting). Postwick boosts, Forest of Vitality
 // waives the evolve lock, Risky Ruins taxes Bench entry.
-export const SIM_VERSION = 16;
+// v17: field-weighted effect coverage reaches 100%. Copy-an-attack (bounded
+// so a copied attack cannot copy again), prize bonuses/reset, multi-card play
+// and Boomerang Energy's self-return close the last gaps. Every effect in the
+// 30-archetype meta is now modeled, so rollouts change for every deck.
+export const SIM_VERSION = 17;
 
 const MAX_MULLIGANS = 20;
 

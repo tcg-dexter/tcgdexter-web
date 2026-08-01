@@ -9,6 +9,59 @@ import { DEFENDER_REF, OWN_ACTIVE_REF, SELF_REF } from "./types";
 import type { CardEffect } from "./types";
 
 export const EFFECT_CARDS: Record<string, CardEffect[]> = {
+  /* ── W3 final: copy-attack, prize effects, multi-card play ──── */
+
+  // Night Joker / Gemstone Mimicry / Seek Inspiration all "use another
+  // Pokémon's attack as this attack". Bounded by the copyDepth guard in
+  // primitives: a copied attack cannot itself copy.
+  "N's Zoroark ex": [
+    { card: "N's Zoroark ex", trigger: { kind: "attack_rider", attackName: "Night Joker" },
+      ops: [{ op: "use_copied_attack", from: "own_bench", filter: { side: "own", zone: "bench", namePrefix: "N's " } }] },
+  ],
+  "Team Rocket's Mimikyu": [
+    { card: "Team Rocket's Mimikyu", trigger: { kind: "attack_rider", attackName: "Gemstone Mimicry" },
+      ops: [{ op: "use_copied_attack", from: "opponent_active", filter: { side: "opponent", zone: "active", subtype: "Tera" } }] },
+  ],
+  Slowking: [
+    { card: "Slowking", trigger: { kind: "attack_rider", attackName: "Seek Inspiration" },
+      ops: [{ op: "use_copied_attack", from: "deck_top" }] },
+  ],
+
+  // Briar: only when the opponent is at exactly 2 Prizes; the extra Prize is
+  // claimed at the knockout site and only for a Tera attacker.
+  Briar: [
+    { card: "Briar", trigger: { kind: "trainer", subtype: "Supporter" },
+      guards: [{ cond: "opp_prizes_lte", n: 2 }],
+      ops: [{ op: "prize_bonus_this_turn", amount: 1, requiresAttackerSubtype: "Tera" }] },
+  ],
+
+  "Redeemable Ticket": [
+    { card: "Redeemable Ticket", trigger: { kind: "trainer", subtype: "Item" },
+      ops: [{ op: "reset_prizes" }] },
+  ],
+
+  // Transformation Tome must be played TWO at a time, so the guard demands a
+  // second copy in hand and the effect discards it as a cost.
+  "Transformation Tome": [
+    { card: "Transformation Tome", trigger: { kind: "trainer", subtype: "Item" },
+      guards: [{ cond: "hand_has", filter: { nameContains: "Transformation Tome" }, n: 1 }],
+      targets: [
+        { ref: "d", select: "card", card: { zone: "discard", filter: { basicPokemon: true } }, chooser: "player" },
+        { ref: "m", select: "mon", mon: { side: "own", zone: "in_play", basic: true }, chooser: "player" },
+      ],
+      ops: [
+        { op: "discard_from_hand", who: "own", filter: { nameContains: "Transformation Tome" }, max: 1 },
+        { op: "swap_with_discard", cardRef: "d", monRef: "m" },
+      ] },
+  ],
+
+  // Boomerang Energy re-attaches itself after an attack discarded it.
+  "Boomerang Energy": [
+    { card: "Boomerang Energy", trigger: { kind: "end_of_turn" },
+      targets: [{ ref: "e", upTo: true, select: "card", card: { zone: "discard", filter: { nameContains: "Boomerang Energy" } }, chooser: "auto" }],
+      ops: [{ op: "attach_energy", energyRef: "e", monRef: SELF_REF, from: "discard" }] },
+  ],
+
   "Cornerstone Mask Ogerpon ex": [
     { card: "Cornerstone Mask Ogerpon ex", trigger: { kind: "damage_scale", attackName: "Demolish" },
       damage: { base: 140, ignore: { weakness: true, resistance: true, defenderEffects: true } }, ops: [] },

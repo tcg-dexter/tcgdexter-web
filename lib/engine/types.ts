@@ -163,6 +163,8 @@ export interface PlayerSide {
    *  (Lillie's Pearl, Legacy Energy: the attacker takes 1 fewer). Consumed
    *  at knockout time. */
   prizeShieldOnce?: number;
+  /** Extra Prizes this side takes on a knockout THIS turn (Briar). */
+  prizeBonus?: { turn: number; amount: number; attackerSubtype?: string };
   damageBuffs?: {
     turn: number;
     amount: number;

@@ -41,6 +41,9 @@ export interface OpContext {
   /** Name of the CARD carrying the effect (an attached Energy/Tool), for ops
    *  that remove it from its holder. */
   selfCardName?: string;
+  /** How many copy-an-attack layers deep we are. A copied attack may not copy
+   *  again, which is what bounds the recursion. */
+  copyDepth?: number;
 }
 
 /* ─── Zone helpers (mirror trainers.ts semantics) ───────────────── */
@@ -312,6 +315,71 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
     case "damage_opponent_bench":
       for (const m of opp.bench) dealRawDamage(m, op.amount);
       break;
+
+    case "use_copied_attack": {
+      // Bounded copy: pick a source attack, deal its printed damage to the
+      // Defending Pokemon, then resolve that attack's own rider. A copied
+      // attack may not copy again (copyDepth guard), so this can't recurse.
+      if ((ctx.copyDepth ?? 0) > 0) break;
+      const defender = opp.active;
+      if (!defender || !ctx.source) break;
+      let donor: PokemonInPlay | null = null;
+      if (op.from === "own_bench") {
+        donor = side.bench.find((m) => !op.filter || cardMatchesMon(m, op.filter)) ?? null;
+      } else if (op.from === "opponent_active") {
+        donor = opp.active && (!op.filter || cardMatchesMon(opp.active, op.filter)) ? opp.active : null;
+      } else {
+        // Seek Inspiration: discard the top card; copy it only if it's a
+        // Pokemon with no rule box.
+        const [top] = side.deck.splice(0, 1);
+        if (top) {
+          side.discard.push(top);
+          const cat = top.catalog;
+          const ruleBox = /\b(ex|EX|V|VMAX|VSTAR)\b/.test(top.name);
+          if (cat?.supertype === "Pokémon" && !ruleBox && (cat.attacks ?? []).length > 0) {
+            donor = { ...ctx.source, card: top };
+          }
+        }
+      }
+      const attack = donor?.card.catalog?.attacks?.[0];
+      if (!attack) break;
+      const dmg = parseInt(attack.damage, 10);
+      if (Number.isFinite(dmg) && dmg > 0) {
+        dealRawDamage(defender, applyWeaknessResistance(dmg, ctx.source, defender, state));
+      }
+      break;
+    }
+
+    case "prize_bonus_this_turn":
+      side.prizeBonus = {
+        turn: state.turn.number,
+        amount: op.amount,
+        attackerSubtype: op.requiresAttackerSubtype,
+      };
+      break;
+
+    case "reset_prizes": {
+      // Prizes to the bottom of the deck, then draw the same number back.
+      const n = side.prizes.length;
+      side.deck.push(...side.prizes.splice(0, n));
+      if (rng) shuffle(side.deck, rng);
+      side.prizes = side.deck.splice(0, n);
+      break;
+    }
+
+    case "swap_with_discard": {
+      const target = mons(ctx, op.monRef)[0];
+      const replacement = cards(ctx, op.cardRef)[0];
+      if (!target || !replacement) break;
+      const i = side.discard.findIndex((c) => c.id === replacement.id);
+      if (i < 0) break;
+      const [pulled] = side.discard.splice(i, 1);
+      // Everything attached STAYS on the new Pokémon: damage, energy, tools,
+      // conditions and turns in play all carry over.
+      side.discard.push(target.mon.card);
+      target.mon.card = pulled;
+      break;
+    }
 
     case "clear_conditions":
       for (const { mon } of mons(ctx, op.monRef)) clearConditions(mon);

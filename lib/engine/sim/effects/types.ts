@@ -135,6 +135,9 @@ export type Guard =
   | { cond: "stadium_in_play" }
   /** Both players hold the same number of cards (Adjusted Horn). */
   | { cond: "hands_equal" }
+  /** At least `n` OTHER matching cards in hand besides the one being played
+   *  (Transformation Tome's second copy). */
+  | { cond: "hand_has"; filter: CardFilter; n: number }
   /** The opponent's Active already has damage on it (Huge Bite). */
   | { cond: "opp_active_damaged" }
   /** The acting player has at least `n` Benched Pokémon (V-Force). */
@@ -308,6 +311,19 @@ export type EffectOp =
   | { op: "discard_stadium" }
   /** Damage every Pokémon on the opponent's Bench (no W/R). */
   | { op: "damage_opponent_bench"; amount: number }
+  /** Use another Pokémon's attack as this attack (Night Joker, Gemstone
+   *  Mimicry, Seek Inspiration). `from` picks whose attack is copied. The
+   *  copy resolves damage + its own rider, but a copied attack may NOT copy
+   *  again — that recursion guard is what keeps this bounded. */
+  | { op: "use_copied_attack"; from: "own_bench" | "opponent_active" | "deck_top" ; filter?: MonFilter }
+  /** Extra Prize taken when this attack knocks the Active out (Briar). */
+  | { op: "prize_bonus_this_turn"; amount: number; requiresAttackerSubtype?: string }
+  /** Shuffle your Prize cards into the deck and draw fresh ones (Redeemable
+   *  Ticket). */
+  | { op: "reset_prizes" }
+  /** Swap a Basic in the discard with one in play, carrying over everything
+   *  attached (Transformation Tome). */
+  | { op: "swap_with_discard"; cardRef: string; monRef: string }
   | { op: "discard_from_mon"; monRef: string; category: "tool" | "special_energy" | "energy" }
   /** Look at the top `n` of your own deck, take up to `count` matching cards
    *  to hand, shuffle the rest back (Pokégear 3.0, Bug Catching Set). v1

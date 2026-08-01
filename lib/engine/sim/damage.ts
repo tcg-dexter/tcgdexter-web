@@ -176,6 +176,15 @@ function knockOut(state: GameState, side: PlayerSide, mon: PokemonInPlay, ownerA
     count = Math.max(0, count - shield);
     side.prizeShieldOnce = (side.prizeShieldOnce ?? 0) + shield; // consumed
   }
+  // Briar and friends: an extra Prize when the attack meets its condition.
+  const bonus = state.sides[taker].prizeBonus;
+  if (bonus && bonus.turn === state.turn.number) {
+    const attacker = state.sides[taker].active;
+    const ok =
+      !bonus.attackerSubtype ||
+      (attacker?.card.catalog?.subtypes.includes(bonus.attackerSubtype) ?? false);
+    if (ok) count += bonus.amount;
+  }
   const taken = state.sides[taker].prizes.splice(0, count);
   state.sides[taker].hand.push(...taken);
   state.prizesTaken[taker] += taken.length;
