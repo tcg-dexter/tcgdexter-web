@@ -83,7 +83,7 @@ describe("Dusknoir — Cursed Blast", () => {
     expect(target.damage).toBe(130); // 13 counters
     // Dusknoir self-KO'd: gone from play, opponent took a prize for it.
     expect(s.prizesTaken.opponent).toBe(oppPrizesBefore + 1);
-    expect(result.pendingPromotion).toBe("player");
+    expect(result.pendingPromotions).toContain("player");
   });
 });
 

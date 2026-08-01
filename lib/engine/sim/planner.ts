@@ -770,8 +770,7 @@ function simulateOpponentReply(end: GameState, chooser: ReplyChooser | null = nu
   const ctx: TurnContext = { retreated: false };
   const finish = (attackIndex: number): void => {
     const result = applyMove(end, "opponent", { kind: "attack", attackIndex }, ctx);
-    if (result.pendingPromotion && end.winner === null) {
-      const side = result.pendingPromotion;
+    for (const side of end.winner === null ? result.pendingPromotions : []) {
       promote(end, side, promoteBest(end.sides[side].bench));
     }
   };
@@ -953,8 +952,10 @@ function heuristicShadowPlan(ghost: GameState): SimMove[] {
     if (!isStillLegal(move, legal)) break;
     moves.push(move);
     const result = applyMove(state, "player", move, ctx);
-    if (result.pendingPromotion && state.winner === null) {
-      promote(state, result.pendingPromotion, promoteBest(state.sides[result.pendingPromotion].bench));
+    if (state.winner === null) {
+      for (const side of result.pendingPromotions) {
+        promote(state, side, promoteBest(state.sides[side].bench));
+      }
     }
     if (result.turnEnded || state.winner !== null) break;
   }
@@ -970,8 +971,10 @@ function applyPlanToGhost(ghost: GameState, moves: SimMove[]): GameState | null 
     const legal = legalMoves(state, "player", ctx);
     if (!isStillLegal(move, legal)) return null;
     const result = applyMove(state, "player", move, ctx);
-    if (result.pendingPromotion && state.winner === null) {
-      promote(state, result.pendingPromotion, promoteBest(state.sides[result.pendingPromotion].bench));
+    if (state.winner === null) {
+      for (const side of result.pendingPromotions) {
+        promote(state, side, promoteBest(state.sides[side].bench));
+      }
     }
   }
   return state;

@@ -360,16 +360,17 @@ function runAiTurnBody(session: GameSession, record: boolean): void {
       finish(session, state.winner);
       return;
     }
-    if (result.pendingPromotion === "player") {
+    // Auto-promote the AI's own side FIRST (a recoil/self-KO can fall in the
+    // same move that KO'd the human's active), then hand the choice over.
+    if (result.pendingPromotions.includes("opponent")) {
+      promote(state, "opponent", session.aiPolicy.choosePromotion(viewFor(state, "opponent")));
+    }
+    if (result.pendingPromotions.includes("player")) {
       // The AI's attack KO'd the human active; they choose the replacement,
       // then the Checkup runs and their turn begins (resume: attack_ko).
       session.status = "human_promotion";
       session.promotionResume = "attack_ko";
       return;
-    }
-    if (result.pendingPromotion === "opponent") {
-      // Defensive — cannot happen during the AI's own turn.
-      promote(state, "opponent", session.aiPolicy.choosePromotion(viewFor(state, "opponent")));
     }
     if (result.turnEnded) break;
   }
@@ -525,7 +526,7 @@ export function applyHumanMove(session: GameSession, move: InteractiveMove, reco
     finish(session, state.winner);
     return;
   }
-  if (result.pendingPromotion === "opponent") {
+  if (result.pendingPromotions.includes("opponent")) {
     const idx = session.aiPolicy.choosePromotion(viewFor(state, "opponent"));
     promote(state, "opponent", idx);
     const promoted = state.sides.opponent.active;
@@ -535,7 +536,7 @@ export function applyHumanMove(session: GameSession, move: InteractiveMove, reco
     });
     if (record) session.transcript.moves.push({ actor: "ai", move: { kind: "promote", benchIndex: idx } });
   }
-  if (result.pendingPromotion === "player") {
+  if (result.pendingPromotions.includes("player")) {
     // The human's OWN effect KO'd their active (Dusknoir's Cursed Blast, a
     // Confusion self-hit). They choose the replacement; if the move ended
     // the turn, the AI plays next, otherwise the human keeps going.

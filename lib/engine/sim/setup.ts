@@ -82,7 +82,19 @@ import { auraEnergyUnits } from "./auras";
 // attack branch now estimate through formulas and riders instead of the
 // printed number, so attacks that print "" (Powerful Hand, Cruel Arrow) are
 // armed and used. Also fixes Powerful Hand's missing x2 counter multiplier.
-export const SIM_VERSION = 18;
+// v19: RULE FIX — "a player must always have an Active Pokémon" was being
+// violated. ApplyOutcome carried ONE pending promotion where a move can
+// produce two, so the effect/ability sites (which kept only the actor's)
+// dropped the OPPONENT's promotion whenever a declarative effect knocked out
+// their Active. Nothing retried it, so that side sat with an empty Active
+// spot — unable to attack or retreat — for the remainder of the game: 12.6%
+// of all turns. pendingPromotions is now a list and the driver enforces the
+// invariant after every move. Also: the AI now uses card-flow abilities
+// (Trade, Flip the Script, Attract Customers) instead of a two-name
+// allowlist that discarded them, plays otherwise-unhandled legacy trainers
+// rather than passing, refreshes a dead hand, and takes 0-damage utility
+// attacks. Deck-out 30.8% -> 16.7%, prize wins 48.3% -> 63.3%.
+export const SIM_VERSION = 19;
 
 const MAX_MULLIGANS = 20;
 

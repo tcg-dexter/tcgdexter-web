@@ -3,7 +3,7 @@
 // the log), this enforces outcomes itself — damage math, KOs, prizes,
 // promotion, deck-out, and the turn cap.
 //
-// Promotion after a KO is a CALLER decision (returned as pendingPromotion,
+// Promotion after a KO is a CALLER decision (returned as pendingPromotions,
 // resolved via promote()): playGame answers it with the defender's policy
 // immediately; the interactive runner pauses and asks the human.
 
@@ -40,6 +40,45 @@ export interface GameOptions {
   maxTurns?: number;
   /** Safety valve on policy loops within a single turn. */
   maxMovesPerTurn?: number;
+  /** Diagnostic observer, called once per completed turn with the live
+   *  state. Read-only by contract — calibration probes use it to see WHY a
+   *  game stalls without forking the turn loop (a forked loop drifts from
+   *  the real one and then measures the wrong thing). Never set in
+   *  production paths, so it cannot affect the rng stream or determinism. */
+  observer?: (ev: TurnObservation) => void;
+}
+
+/** One turn's worth of diagnostic telemetry. */
+export interface TurnObservation {
+  turn: number;
+  actor: "player" | "opponent";
+  /** Move kinds the policy chose this turn, in order. */
+  moves: string[];
+  /** Times the "must have an Active" backstop had to step in — should be 0
+   *  once every KO site hands its promotions back. */
+  invariantFixes: number;
+  deckCount: number;
+  handCount: number;
+  benchCount: number;
+  prizesTaken: { player: number; opponent: number };
+  /** Did this side attack this turn? */
+  attacked: boolean;
+  /** Attack moves that were LEGAL on the final decision of the turn. */
+  attacksAvailable: number;
+  /** Energy in play on this side (active + bench). */
+  energyInPlay: number;
+  /** Was an attach move legal at any decision point this turn? */
+  attachAvailable: boolean;
+  /** Energy on the single best-loaded Pokémon — spread vs concentration. */
+  maxEnergyOnOneMon: number;
+  /** Distinct Pokémon carrying at least one energy. */
+  monsWithEnergy: number;
+  /** Energy cards sitting in hand at end of turn. */
+  energyInHand: number;
+  /** Move kinds that were still LEGAL at the moment the policy passed —
+   *  i.e. value the heuristic declined. Empty when the turn ended by attack. */
+  declinedAtPass: string[];
+  activeName: string | null;
 }
 
 export interface GameOutcome {
@@ -60,8 +99,13 @@ export function otherActor(actor: "player" | "opponent"): "player" | "opponent" 
 
 export interface ApplyOutcome {
   turnEnded: boolean;
-  /** Side whose active was knocked out and must promote from its bench. */
-  pendingPromotion: "player" | "opponent" | null;
+  /** Sides whose active was knocked out and must promote from their bench.
+   *  A LIST, not one side: a single move can knock out both actives (an
+   *  attack with recoil, an effect that damages across the board), and one
+   *  slot silently dropped the other. Because nothing ever retries a dropped
+   *  promotion, that side sat with no Active — unable to attack or retreat —
+   *  for the rest of the game. The probe caught it on 17% of turns. */
+  pendingPromotions: ("player" | "opponent")[];
   /** Global turn number of a KO this move caused, else null. */
   koTurn: number | null;
 }
@@ -115,7 +159,7 @@ export function promote(state: GameState, actor: "player" | "opponent", benchInd
   side.active = promoted;
 }
 
-/** Applies one move. Never promotes — see ApplyOutcome.pendingPromotion.
+/** Applies one move. Never promotes — see ApplyOutcome.pendingPromotions.
  *  `rng` drives post-search/hand-shuffle effects; callers that replay a
  *  fixed stream (game loop, sessions) must always pass the same instance
  *  so transcripts stay deterministic. Ghost evaluations pass null. */
@@ -127,8 +171,8 @@ export function applyMove(
   rng: Rng | null = null,
 ): ApplyOutcome {
   const side = sideOf(state, actor);
-  const done = (turnEnded: boolean, pendingPromotion: ApplyOutcome["pendingPromotion"] = null, koTurn: number | null = null): ApplyOutcome =>
-    ({ turnEnded, pendingPromotion, koTurn });
+  const done = (turnEnded: boolean, pendingPromotions: ApplyOutcome["pendingPromotions"] = [], koTurn: number | null = null): ApplyOutcome =>
+    ({ turnEnded, pendingPromotions, koTurn });
   const takeFromHand = (cardId: string) => {
     const idx = side.hand.findIndex((c) => c.id === cardId);
     return idx >= 0 ? side.hand.splice(idx, 1)[0] : null;
@@ -211,11 +255,11 @@ export function applyMove(
       if (ko.winner) {
         state.winner = ko.winner;
         state.endReason = ko.endReason;
-        return done(false, null, ko.koTurn);
+        return done(false, [], ko.koTurn);
       }
-      // Cursed Blast self-KOs the user; if it was our active, we promote.
-      const pending = ko.pendingPromotions.includes(actor) ? actor : null;
-      return done(false, pending, ko.koTurn);
+      // Cursed Blast self-KOs the user, and its 13 counters can knock out the
+      // OPPONENT's active at the same time — both sides promote.
+      return done(false, ko.pendingPromotions, ko.koTurn);
     }
     case "retreat": {
       const active = side.active;
@@ -278,10 +322,9 @@ export function applyMove(
       if (ko.winner) {
         state.winner = ko.winner;
         state.endReason = ko.endReason;
-        return done(false, null, ko.koTurn);
+        return done(false, [], ko.koTurn);
       }
-      const pending = ko.pendingPromotions.includes(actor) ? actor : null;
-      return done(false, pending, ko.koTurn);
+      return done(false, ko.pendingPromotions, ko.koTurn);
     }
     case "play_stadium": {
       const card = takeFromHand(move.cardId);
@@ -319,9 +362,9 @@ export function applyMove(
         if (ko.winner) {
           state.winner = ko.winner;
           state.endReason = ko.endReason;
-          return done(true, null, ko.koTurn);
+          return done(true, [], ko.koTurn);
         }
-        return done(true, ko.pendingPromotions.includes(actor) ? actor : null, ko.koTurn);
+        return done(true, ko.pendingPromotions, ko.koTurn);
       }
 
       // Miracle Force and the like: the attacker clears its own conditions.
@@ -403,17 +446,37 @@ export function applyMove(
       if (ko.winner) {
         state.winner = ko.winner;
         state.endReason = ko.endReason;
-        return done(true, null, ko.koTurn);
+        return done(true, [], ko.koTurn);
       }
-      // The defender promotes if its active fell. (A self-damaging rider could
-      // in principle leave the ATTACKER promotion-pending too, but `done` can
-      // only carry one — no such rider is modeled yet; revisit when one lands.)
-      const pending = ko.pendingPromotions.includes(defActor) ? defActor : null;
-      return done(true, pending, ko.koTurn);
+      // Both sides promote: the defender whose active fell, and the attacker
+      // if a self-damaging rider or recoil knocked its own active out too.
+      return done(true, ko.pendingPromotions, ko.koTurn);
     }
     case "pass":
       return done(true);
   }
+}
+
+/** "A player must always have an Active Pokémon" is a rule, not a bookkeeping
+ *  detail — a side stuck with an empty Active spot cannot attack or retreat
+ *  and simply loses in slow motion. Rather than rely on every KO site
+ *  remembering to hand back a promotion, enforce the invariant in one place
+ *  after every move. Returns the sides it had to fix, so a probe can tell
+ *  whether a path is still dropping promotions. */
+function enforceActiveInvariant(
+  state: GameState,
+  policies: { player: DecisionPolicy; opponent: DecisionPolicy },
+): ("player" | "opponent")[] {
+  const fixed: ("player" | "opponent")[] = [];
+  if (state.winner !== null) return fixed;
+  for (const actor of ["player", "opponent"] as const) {
+    const side = sideOf(state, actor);
+    if (side.active === null && side.bench.length > 0) {
+      promote(state, actor, policies[actor].choosePromotion(viewFor(state, actor)));
+      fixed.push(actor);
+    }
+  }
+  return fixed;
 }
 
 export function playGame(
@@ -437,14 +500,34 @@ export function playGame(
     if (!beginTurn(state, actor, playerTurnCounts[actor])) break;
 
     const ctx: TurnContext = { retreated: false };
+    const observed: string[] = [];
+    let invariantFixes = 0;
+    let lastAttacksAvailable = 0;
+    let attachSeen = false;
+    let declined: string[] = [];
     for (let i = 0; i < maxMoves; i++) {
       const legal = legalMoves(state, actor, ctx);
+      if (options.observer) {
+        lastAttacksAvailable = legal.filter((m) => m.kind === "attack").length;
+        if (legal.some((m) => m.kind === "attach")) attachSeen = true;
+      }
       const move = policies[actor].chooseMove(viewFor(state, actor, ctx), legal, ctx);
+      if (options.observer) {
+        observed.push(move.kind);
+        declined = move.kind === "pass" ? legal.map((m) => m.kind) : [];
+      }
       const result = applyMove(state, actor, move, ctx, rng);
       if (result.koTurn !== null && firstKoTurn === null) firstKoTurn = result.koTurn;
-      if (result.pendingPromotion && state.winner === null) {
-        const pending = result.pendingPromotion;
-        promote(state, pending, policies[pending].choosePromotion(viewFor(state, pending)));
+      if (state.winner === null) {
+        for (const pending of result.pendingPromotions) {
+          promote(state, pending, policies[pending].choosePromotion(viewFor(state, pending)));
+        }
+      }
+      // Backstop: whatever the move did, nobody may be left without an Active.
+      if (options.observer && enforceActiveInvariant(state, policies).length > 0) {
+        invariantFixes += 1;
+      } else if (!options.observer) {
+        enforceActiveInvariant(state, policies);
       }
       if (result.turnEnded || state.winner !== null) break;
     }
@@ -467,7 +550,33 @@ export function playGame(
           promote(state, side, policies[side].choosePromotion(viewFor(state, side)));
         }
       }
+      enforceActiveInvariant(state, policies);
     }
+
+    if (options.observer) {
+      const side = sideOf(state, actor);
+      const mons = [side.active, ...side.bench].filter((m): m is PokemonInPlay => m !== null);
+      options.observer({
+        turn: state.turn.number,
+        actor,
+        moves: observed,
+        invariantFixes,
+        deckCount: side.deck.length,
+        handCount: side.hand.length,
+        benchCount: side.bench.length,
+        prizesTaken: { ...state.prizesTaken },
+        attacked: observed.includes("attack"),
+        attacksAvailable: lastAttacksAvailable,
+        energyInPlay: mons.reduce((s, m) => s + m.attachedEnergy.length, 0),
+        attachAvailable: attachSeen,
+        maxEnergyOnOneMon: mons.reduce((s, m) => Math.max(s, m.attachedEnergy.length), 0),
+        monsWithEnergy: mons.filter((m) => m.attachedEnergy.length > 0).length,
+        energyInHand: side.hand.filter((c) => energyUnits(c, null).length > 0).length,
+        declinedAtPass: declined,
+        activeName: side.active?.card.name ?? null,
+      });
+    }
+
 
     actor = otherActor(actor);
   }

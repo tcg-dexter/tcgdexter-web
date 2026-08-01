@@ -22,6 +22,7 @@ import {
 import { energyProvides } from "./setup";
 import { trainerSpec, type PlayTrainerMove, type TrainerSpec } from "./trainers";
 import { estimatedAttackDamage } from "./attacks";
+import { activatedPhase } from "./abilities";
 import { effectMovePhase } from "./effects/cards";
 import type { EffectMove } from "./effects/runtime";
 import type { PlayerView } from "./view";
@@ -52,13 +53,34 @@ export interface DecisionPolicy {
 const DECK_RESERVE = 8;
 
 /** Pick a beneficial activated ability from the legal set, or null.
- *  Munkidori (move counters toward a KO) is almost always good; Dusknoir's
- *  self-KO Cursed Blast only when its 13 counters (130) actually KO. */
+ *
+ *  Card-flow abilities (Trade, Flip the Script, Attract Customers) come FIRST
+ *  and are classified by `activatedPhase`, not by name. They are the draw
+ *  engines of modern Pokémon — a real N's Zoroark player uses Trade every
+ *  single turn — and while this function was a two-name allowlist they were
+ *  enumerated as legal moves and then silently discarded, which is why those
+ *  decks never drew energy, never attacked, and decked out.
+ *
+ *  Then the tactical ones: Munkidori (move counters toward a KO) is almost
+ *  always good; Dusknoir's self-KO Cursed Blast only when its 13 counters
+ *  (130) actually KO. */
 export function chooseAbilityMove(view: PlayerView, legal: SimMove[]): SimMove | null {
   const abilities = legal.filter(
     (m): m is Extract<SimMove, { kind: "use_ability" }> => m.kind === "use_ability",
   );
   if (abilities.length === 0) return null;
+
+  // Card flow, deck-reserve guarded like every other draw branch.
+  if (view.deckCount > DECK_RESERVE) {
+    const monName = (id: string) =>
+      inPlay(view.board).find((m) => m.id === id)?.card.name ?? "";
+    const flow = abilities.filter((m) => {
+      const phase = activatedPhase(monName(m.monId), m.abilityName);
+      return phase === "draw" || phase === "search";
+    });
+    if (flow.length > 0) return flow[0];
+  }
+
   const oppMons = [view.opponent.board.active, ...view.opponent.board.bench].filter(
     (m): m is PokemonInPlay => m !== null,
   );
@@ -153,10 +175,22 @@ export class HeuristicPolicy implements DecisionPolicy {
     //    before generic cycling — all deck-reserve guarded so we never
     //    draw ourselves out while ahead.
     if (view.deckCount > DECK_RESERVE) {
+      // Refresh the hand when it's SMALL *or* DEAD. The old gate was hand
+      // size alone (<= 5), which produced the calibration death spiral: a
+      // hand grows to ~8 unplayable cards, the size gate closes, the AI
+      // never digs again, so it never draws energy — energy-in-hand fell to
+      // 0.1 by turn 6 and stayed there. No energy ⇒ no attacks ⇒ no prizes
+      // ⇒ the game grinds out at one card per turn and decks out.
+      //
+      // "No energy in hand" is the honest dead-hand signal here: this branch
+      // is only reached once evolve/bench/ability/stadium/tool have all
+      // declined, so energy is the main thing left worth holding.
+      const handIsDead = !view.hand.some((c) => energyProvides(c) !== null);
+      const wantDraw = view.hand.length <= 5 || handIsDead;
       const drawSupporters = trainersBySpec((s) => s.phase === "draw");
-      if (drawSupporters.length > 0 && view.hand.length <= 5) return drawSupporters[0];
+      if (drawSupporters.length > 0 && wantDraw) return drawSupporters[0];
       const drawEffects = effectMovesOf(legal, "draw");
-      if (drawEffects.length > 0 && view.hand.length <= 5) return drawEffects[0];
+      if (drawEffects.length > 0 && wantDraw) return drawEffects[0];
       const searches = trainersBySpec((s) => s.phase === "search");
       if (searches.length > 0) return searches[0];
       // Declarative search cards (Team Rocket's Transceiver, …) play here too.
@@ -249,7 +283,11 @@ export class HeuristicPolicy implements DecisionPolicy {
       const lethals = scored.filter((s) => s.lethal).sort((a, b) => a.cost - b.cost || b.dmg - a.dmg);
       if (lethals.length > 0) return lethals[0].move;
       const best = scored.sort((a, b) => b.dmg - a.dmg)[0];
-      if (best.dmg > 0) return best.move;
+      // Attack even at zero estimated damage. The turn is ending either way,
+      // and a 0-damage attack is a utility attack — status, energy accel,
+      // disruption. The probe found the AI declining a legal attack on 12%
+      // of the turns it passed on, which is strictly worse than taking it.
+      if (best) return best.move;
     }
 
     // Stranding guard: a declarative-effect move (e.g. a tactical one) that
@@ -268,6 +306,20 @@ export class HeuristicPolicy implements DecisionPolicy {
       return !consumesDeck || view.deckCount > DECK_RESERVE;
     });
     if (anyEffect) return anyEffect;
+
+    // The same guard for LEGACY trainers, which had none. The branches above
+    // recognise draw/search/gust/switch/rare_candy and nothing else, so every
+    // other tactical trainer was enumerated and then dropped on the floor —
+    // including N's PP Up, which is energy ACCELERATION, in an AI that the
+    // probe showed was permanently one energy short of attacking. Gust and
+    // switch are excluded: branches 3b and 5 declined those on purpose.
+    const anyTrainer = trainersBySpec(
+      (s) =>
+        s.effect.kind !== "gust" &&
+        s.effect.kind !== "switch_active" &&
+        (s.phase !== "draw" && s.phase !== "search" ? true : view.deckCount > DECK_RESERVE),
+    );
+    if (anyTrainer.length > 0) return anyTrainer[0];
 
     return { kind: "pass" };
   }

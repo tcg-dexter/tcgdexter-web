@@ -62,7 +62,18 @@ export function abilityAvailable(state: GameState, actor: Actor, mon: PokemonInP
 
 /* ─── Activated ability registry ────────────────────────────────── */
 
+/** What an activated ability DOES, in the same vocabulary `TrainerSpec.phase`
+ *  uses. The policies need this: without it they can only recognise abilities
+ *  by name, and an allowlist silently drops every ability nobody remembered to
+ *  add. That is exactly what happened — Trade, Flip the Script and Attract
+ *  Customers (the card-flow engines of three archetypes) were enumerated as
+ *  legal moves and then never chosen, so those decks never drew and never
+ *  attacked. Classify here, next to the effect, not in the policy. */
+export type AbilityPhase = "draw" | "search" | "tactical";
+
 interface ActivatedSpec {
+  /** Coarse class the policies dispatch on. */
+  phase: AbilityPhase;
   available: (state: GameState, actor: Actor, mon: PokemonInPlay) => boolean;
   /** All concrete plays (target combinations) for the UI/AI. */
   moves: (state: GameState, actor: Actor, mon: PokemonInPlay) => UseAbilityMove[];
@@ -75,6 +86,7 @@ const ACTIVATED: Record<string, ActivatedSpec> = {
   // Once per turn. v1 auto-discards the least useful card (a human discard
   // choice is a future refinement; the reserved move.cardId can carry it).
   "N's Zoroark ex::Trade": {
+    phase: "draw",
     available: (state, actor) => {
       const side = state.sides[actor];
       return side.deck.length > 0 && side.hand.length > 0;
@@ -104,6 +116,7 @@ const ACTIVATED: Record<string, ActivatedSpec> = {
   // (v1 gates once-per-Pokémon; the "1 per turn across copies" cap is a
   // future refinement — decks run a single copy.)
   "Fezandipiti ex::Flip the Script": {
+    phase: "draw",
     available: (state, actor) => {
       const side = state.sides[actor];
       return side.koedLastOppTurn === true && side.deck.length > 0;
@@ -123,6 +136,7 @@ const ACTIVATED: Record<string, ActivatedSpec> = {
   // hand, then put the rest on the bottom of your deck. v1 auto-picks the
   // first Supporter and returns the rest in order (deterministic for replay).
   "Tatsugiri::Attract Customers": {
+    phase: "search",
     available: (state, actor, mon) => {
       const side = state.sides[actor];
       if (side.active !== mon || side.deck.length === 0) return false;
@@ -144,6 +158,7 @@ const ACTIVATED: Record<string, ActivatedSpec> = {
   // Munkidori — Adrena-Brain: if it has Darkness Energy, move up to 3 damage
   // counters from 1 of your Pokémon to 1 of your opponent's Pokémon.
   "Munkidori::Adrena-Brain": {
+    phase: "tactical",
     available: (state, actor, mon) => {
       if (!hasEnergyType(mon, "Darkness")) return false;
       const own = allInPlay(state.sides[actor]).some((m) => m.damage >= 10);
@@ -184,6 +199,7 @@ const ACTIVATED: Record<string, ActivatedSpec> = {
   // Dusknoir — Cursed Blast: put 13 damage counters on 1 of your opponent's
   // Pokémon; then this Pokémon is Knocked Out.
   "Dusknoir::Cursed Blast": {
+    phase: "tactical",
     available: (state, actor) =>
       allInPlay(state.sides[actor === "player" ? "opponent" : "player"]).length > 0,
     moves: (state, actor, mon) =>
@@ -211,6 +227,13 @@ const ACTIVATED: Record<string, ActivatedSpec> = {
  *  check the declarative path uses (moves.ts): legacy specs keep their tuned
  *  handling and the policies' `use_ability` branches; declarative records only
  *  cover abilities the legacy registry does NOT. */
+/** Coarse class of a legacy activated ability, for policy dispatch. Null when
+ *  the ability isn't in this registry (the declarative path classifies its own
+ *  via `effectMovePhase`). */
+export function activatedPhase(cardName: string, abilityName: string): AbilityPhase | null {
+  return ACTIVATED[`${cardName}::${abilityName}`]?.phase ?? null;
+}
+
 export function hasLegacyActivated(cardName: string, abilityName: string): boolean {
   return `${cardName}::${abilityName}` in ACTIVATED;
 }
