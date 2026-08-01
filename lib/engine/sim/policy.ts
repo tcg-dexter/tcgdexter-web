@@ -380,20 +380,37 @@ export class HeuristicPolicy implements DecisionPolicy {
     const items = byKind("cycle_item");
     if (items.length > 0 && view.deckCount > DECK_RESERVE) return items[0];
 
-    // 5. Reposition when trapped: active can't attack, a bench mon can.
-    //    Switch (free) beats paying a retreat cost.
-    const activeAttacks = active ? usableAttacks(active) : [];
-    if (active && activeAttacks.length === 0) {
+    // 5. Reposition when the active can't do anything USEFUL — not merely
+    //    when it has no legal attack at all.
+    //
+    //    The old test was `usableAttacks(active).length === 0`, which misses
+    //    the case that matters most: an active holding a legal attack that
+    //    would deal ZERO. N's Zoroark with no N's Pokémon left on the bench
+    //    has Night Joker available and it does literally nothing — before
+    //    this, the AI stood there and spent the turn on it. Real players
+    //    retreat to something that can actually hit.
+    const bestDamageOf = (mon: PokemonInPlay | null): number => {
+      if (!mon) return 0;
+      const board = { ownBench: view.board.bench, oppActive: defender };
+      return Math.max(
+        0,
+        ...usableAttacks(mon).map(({ attack, index }) =>
+          Math.max(
+            defender ? computeDamage(mon, attack, defender) : 0,
+            estimatedAttackDamage(mon, index, undefined, "player", board),
+          ),
+        ),
+      );
+    };
+    const activeDamage = bestDamageOf(active);
+    if (active && activeDamage <= 0) {
+      const betterOnBench = (mon: PokemonInPlay | null) =>
+        mon != null && bestDamageOf(mon) > activeDamage;
       const switches = trainersBySpec((s) => s.effect.kind === "switch_active");
-      const freeSwitch = switches.find((m) => {
-        const target = view.board.bench[m.benchIndex ?? -1];
-        return target != null && usableAttacks(target).length > 0;
-      });
+      const freeSwitch = switches.find((m) => betterOnBench(view.board.bench[m.benchIndex ?? -1]));
       if (freeSwitch) return freeSwitch;
       const retreats = byKind("retreat");
-      const ready = retreats.find(
-        (m) => usableAttacks(view.board.bench[m.benchIndex]).length > 0,
-      );
+      const ready = retreats.find((m) => betterOnBench(view.board.bench[m.benchIndex]));
       if (ready) return ready;
     }
 
