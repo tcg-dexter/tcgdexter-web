@@ -473,9 +473,19 @@ describe("W2-fin — new primitive ops", () => {
     const played = playTrainer(s, "Dawn");
     expect(played, "Dawn produced no legal move").not.toBeNull();
     const hand = s.sides.player.hand;
-    expect(hand.some((c) => c.id === basic.id)).toBe(true);
+    // Assert the SHAPE (one card of each stage), not the specific seeded ids.
+    // The `auto` chooser now ranks candidates instead of taking the first in
+    // zone order, so the Basic slot picks the best Basic in the deck — which
+    // is one of the base deck's Snorlax/Pikachu, not the Dratini seeded here.
+    // That is the intended behaviour; pinning ids was pinning the old
+    // arbitrary pick. Stage 1 and Stage 2 are unique in this deck, so those
+    // still identify exactly.
+    const isStage = (c: (typeof hand)[number], stage: string) =>
+      c.catalog?.supertype === "Pokémon" && (c.catalog.subtypes ?? []).includes(stage);
+    expect(hand.some((c) => isStage(c, "Basic"))).toBe(true);
     expect(hand.some((c) => c.id === stage1.id)).toBe(true);
     expect(hand.some((c) => c.id === stage2.id)).toBe(true);
+    void basic;
   });
 
   it("discard_hand_cards: Secret Box needs 3 other cards and pays them", () => {

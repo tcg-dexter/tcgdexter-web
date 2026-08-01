@@ -31,8 +31,10 @@ import {
 } from "./moves";
 import {
   HeuristicPolicy,
+  bestSearchTrainer,
   chooseAbilityMove,
   chooseBenchMove,
+  chooseEffectMove,
   promoteBest,
   wantsDrawRefresh,
   type DecisionPolicy,
@@ -41,6 +43,7 @@ import { energyProvides, energyUnits, prizeValue } from "./setup";
 import { isSupporter, trainerSpec, type PlayTrainerMove, type TrainerSpec } from "./trainers";
 import { effectMovePhase } from "./effects/cards";
 import { estimatedAttackDamage } from "./attacks";
+import type { EffectMove } from "./effects/runtime";
 import { canRetreat } from "./tools";
 import { lookupCard } from "../catalog";
 import { makeUnrevealed } from "../initial";
@@ -345,9 +348,11 @@ export class PlannerPolicy implements DecisionPolicy {
       if (!tacticalSupporterInHand && wantsDrawRefresh(view)) {
         const drawMove = legal.find((m) => specOf(m)?.phase === "draw");
         if (drawMove) return drawMove;
-        const drawEffect = legal.find(
-          (m) => m.kind === "effect" && effectMovePhase(m.card, m.effectIndex) === "draw",
+        const drawEffects = legal.filter(
+          (m): m is EffectMove =>
+            m.kind === "effect" && effectMovePhase(m.card, m.effectIndex) === "draw",
         );
+        const drawEffect = chooseEffectMove(view, drawEffects);
         if (drawEffect) return drawEffect;
         const supporter = legal.find((m) => m.kind === "cycle_supporter");
         if (supporter) return supporter;
@@ -355,11 +360,13 @@ export class PlannerPolicy implements DecisionPolicy {
       const searches = legal.filter(
         (m): m is PlayTrainerMove => specOf(m)?.phase === "search",
       );
-      if (searches.length > 0) return bestSearchMove(view, searches);
+      if (searches.length > 0) return bestSearchTrainer(view, searches);
       // Declarative search cards (Team Rocket's Transceiver, …) — info phase.
-      const searchEffect = legal.find(
-        (m) => m.kind === "effect" && effectMovePhase(m.card, m.effectIndex) === "search",
+      const searchEffects = legal.filter(
+        (m): m is EffectMove =>
+          m.kind === "effect" && effectMovePhase(m.card, m.effectIndex) === "search",
       );
+      const searchEffect = chooseEffectMove(view, searchEffects);
       if (searchEffect) return searchEffect;
       const item = legal.find((m) => m.kind === "cycle_item");
       if (item) return item;
@@ -747,31 +754,6 @@ function isStillLegal(move: SimMove, legal: SimMove[]): boolean {
 /** Heuristic pick among deck/discard search plays: fetch the card with the
  *  best attack ceiling, with a big bonus for evolutions of Pokémon already
  *  in play (they convert to board power immediately). Deterministic. */
-function bestSearchMove(view: PlayerView, moves: PlayTrainerMove[]): PlayTrainerMove {
-  const inPlayNames = new Set(
-    [view.board.active, ...view.board.bench].filter(Boolean).map((m) => m!.card.name),
-  );
-  const scoreName = (name: string): number => {
-    const card = lookupCard(name);
-    if (!card) return 0;
-    if (card.supertype === "Energy") return 25;
-    if (card.supertype === "Trainer") return 20;
-    const ceiling = Math.max(0, ...card.attacks.map((a) => parseInt(a.damage, 10) || 0));
-    const evolvesInPlay = card.evolves_from && inPlayNames.has(card.evolves_from) ? 200 : 0;
-    return ceiling + evolvesInPlay;
-  };
-  let best = moves[0];
-  let bestScore = -1;
-  for (const move of moves) {
-    const names = move.deckCardNames ?? (move.discardPickName ? [move.discardPickName] : []);
-    const score = names.reduce((s, n) => s + scoreName(n), names.length === 0 ? 10 : 0);
-    if (score > bestScore) {
-      bestScore = score;
-      best = move;
-    }
-  }
-  return best;
-}
 
 /** Mutate a ghost end-state with the opponent's best reply, using PUBLIC
  *  information only (their hand is unrevealed placeholders in the ghost, so

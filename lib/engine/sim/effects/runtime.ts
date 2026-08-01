@@ -19,6 +19,7 @@ import { guardsPass } from "./guards";
 // Matchers live in match.ts so primitives.ts can share them without a cycle.
 export { cardMatches, monMatches } from "./match";
 import { cardMatches, monMatches } from "./match";
+import { searchTargetValue } from "./cardValue";
 import type {
   CardEffect,
   CardFilter,
@@ -337,7 +338,22 @@ function specOptions(state: GameState, actor: Actor, spec: TargetSpec): EffectPi
   if (matching.length === 0) return spec.upTo ? [pick([])] : [];
   if (spec.chooser === "all") return [pick(matching)];
   const wanted = Math.max(1, spec.count ?? 1);
-  if (spec.chooser === "auto") return [pick(dedupeByName(matching).slice(0, wanted))];
+  if (spec.chooser === "auto") {
+    // `auto` used to take the first matches in ZONE order. For a deck search
+    // that is the first match in a shuffled deck — i.e. a random card, from a
+    // zone the player can actually read. Rank them instead, so the multi-slot
+    // searches that use `auto` because their full cross-product is hundreds
+    // of moves (Dawn, Secret Box) still fetch something sensible.
+    const inPlayNames = new Set(
+      [state.sides[actor].active, ...state.sides[actor].bench]
+        .filter((m): m is PokemonInPlay => m !== null)
+        .map((m) => m.card.name),
+    );
+    const ranked = dedupeByName(matching)
+      .slice()
+      .sort((a, b) => searchTargetValue(b.name, inPlayNames) - searchTargetValue(a.name, inPlayNames));
+    return [pick(ranked.slice(0, wanted))];
+  }
 
   // Group the physical cards by name: the CHOICE is which names to take and
   // how many of each; which specific copy is irrelevant and would only

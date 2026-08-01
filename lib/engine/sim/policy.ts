@@ -24,6 +24,7 @@ import { trainerSpec, type PlayTrainerMove, type TrainerSpec } from "./trainers"
 import { estimatedAttackDamage } from "./attacks";
 import { activatedPhase } from "./abilities";
 import { effectMovePhase } from "./effects/cards";
+import { searchTargetValue } from "./effects/cardValue";
 import type { EffectMove } from "./effects/runtime";
 import type { PlayerView } from "./view";
 
@@ -125,6 +126,86 @@ function attackCeiling(mon: PokemonInPlay, view?: PlayerView): number {
 
 function inPlay(board: PlayerView["board"]): PokemonInPlay[] {
   return [board.active, ...board.bench].filter((m): m is PokemonInPlay => m !== null);
+}
+
+/* ─── W4: what a search actually FETCHES ────────────────────────── */
+
+/** Value of pulling `name` out of the deck, given what is already in play.
+ *
+ *  Shared by every search path. Both policies used to take the FIRST
+ *  enumerated option — `searches[0]` / `legal.find(...)` — so Ultra Ball,
+ *  Nest Ball, Buddy-Buddy Poffin, Cyrano, Arven and the rest fetched whatever
+ *  the enumerator happened to list first. For an aggro deck that barely
+ *  matters; for an engine deck, searching up the right piece IS the deck,
+ *  which is exactly the shape of the calibration residual (the sim
+ *  under-rates the most-played, most engine-heavy archetypes).
+ *
+ *  Ranking rationale: completing an evolution line already on the board beats
+ *  everything (that card is dead in the deck and live in hand), then real
+ *  attackers by how hard they hit, then Energy, then generic Trainers. */
+
+export { searchTargetValue };
+
+/** Names a declarative effect move would pull out of hidden zones. */
+function effectPickNames(m: EffectMove): string[] {
+  const out: string[] = [];
+  for (const p of m.picks) {
+    if (p.cardNames) out.push(...p.cardNames);
+    if (p.monNames) out.push(...p.monNames);
+  }
+  return out;
+}
+
+/** Best of several enumerations of the SAME search card — i.e. which cards to
+ *  fetch. Falls back to the first move when nothing scores. */
+export function bestEffectPick(view: PlayerView, moves: EffectMove[]): EffectMove {
+  const inPlayNames = new Set(inPlay(view.board).map((m) => m.card.name));
+  let best = moves[0];
+  let bestScore = -Infinity;
+  for (const m of moves) {
+    const names = effectPickNames(m);
+    // An empty pick set means "found nothing" — legal (searches may fail) but
+    // strictly worse than any real hit, so it must not win by default.
+    const score =
+      names.length === 0
+        ? 0
+        : names.reduce((sum, n) => sum + searchTargetValue(n, inPlayNames), 0);
+    if (score > bestScore) {
+      bestScore = score;
+      best = m;
+    }
+  }
+  return best;
+}
+
+/** Group effect moves by the card+effect they come from, so we only compare
+ *  alternative PICKS of one card rather than ranking different cards by the
+ *  size of their haul (which would always prefer the greediest search). */
+export function chooseEffectMove(view: PlayerView, moves: EffectMove[]): EffectMove | null {
+  if (moves.length === 0) return null;
+  const firstKey = `${moves[0].card}::${moves[0].effectIndex}`;
+  const sameCard = moves.filter((m) => `${m.card}::${m.effectIndex}` === firstKey);
+  return bestEffectPick(view, sameCard);
+}
+
+/** Which LEGACY search trainer to play, and what it fetches. Lived in the
+ *  planner; the heuristic had no chooser at all and played `searches[0]`. */
+export function bestSearchTrainer(view: PlayerView, moves: PlayTrainerMove[]): PlayTrainerMove {
+  const inPlayNames = new Set(inPlay(view.board).map((m) => m.card.name));
+  let best = moves[0];
+  let bestScore = -1;
+  for (const move of moves) {
+    const names = move.deckCardNames ?? (move.discardPickName ? [move.discardPickName] : []);
+    const score = names.reduce(
+      (s, n) => s + searchTargetValue(n, inPlayNames),
+      names.length === 0 ? 10 : 0,
+    );
+    if (score > bestScore) {
+      bestScore = score;
+      best = move;
+    }
+  }
+  return best;
 }
 
 /** Should the hand be refreshed? SMALL *or* DEAD.
@@ -237,12 +318,12 @@ export class HeuristicPolicy implements DecisionPolicy {
       const drawSupporters = trainersBySpec((s) => s.phase === "draw");
       if (drawSupporters.length > 0 && wantDraw) return drawSupporters[0];
       const drawEffects = effectMovesOf(legal, "draw");
-      if (drawEffects.length > 0 && wantDraw) return drawEffects[0];
+      if (drawEffects.length > 0 && wantDraw) return chooseEffectMove(view, drawEffects)!;
       const searches = trainersBySpec((s) => s.phase === "search");
-      if (searches.length > 0) return searches[0];
+      if (searches.length > 0) return bestSearchTrainer(view, searches);
       // Declarative search cards (Team Rocket's Transceiver, …) play here too.
       const searchEffects = effectMovesOf(legal, "search");
-      if (searchEffects.length > 0) return searchEffects[0];
+      if (searchEffects.length > 0) return chooseEffectMove(view, searchEffects)!;
       const supporter = byKind("cycle_supporter");
       if (supporter.length > 0) return supporter[0];
     }
