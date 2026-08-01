@@ -40,9 +40,20 @@ const SEED = arg("--seed") ?? "calibration-v1";
 const JSON_OUT = arg("--json");
 /** Which AI pilots both decks. Real results come from expert humans, so a
  *  weak pilot is itself a calibration error: decks that need setup (Stage-2
- *  lines, combo) are under-rated purely because the AI can't assemble them. */
-const POLICY = (arg("--policy") ?? "heuristic") as "heuristic" | "planner";
-const SKILL = Number(arg("--skill") ?? 1);
+ *  lines, combo) are under-rated purely because the AI can't assemble them.
+ *
+ *  Defaults to the PLANNER, and that default is a measured decision, not a
+ *  preference. Piloted by the heuristic the field correlates at Spearman
+ *  0.094; by the planner, 0.303. Grading a deck against a pilot that cannot
+ *  play it is measuring the pilot, so the gate uses the strongest one we
+ *  have. (`--policy heuristic` still runs the cheap version for quick loops.)
+ *
+ *  Worth recording: the planner scored WORSE than the heuristic (-0.157) when
+ *  this was first measured. What changed in between was the engine — a rules
+ *  violation was leaving a side with no Active Pokémon on 12.6% of turns, and
+ *  lookahead cannot help when the rules underneath it are wrong. */
+const POLICY = (arg("--policy") ?? "planner") as "heuristic" | "planner";
+const SKILL = Number(arg("--skill") ?? 2);
 /** Minimum DECIDED real games for an archetype to be scored. Half the field
  *  has <100: Mega Diancie's "25% win rate" is 1 win in 4 games. Correlating
  *  against that treats coin-flip noise as ground truth and swamps the signal
