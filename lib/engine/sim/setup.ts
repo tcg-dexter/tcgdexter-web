@@ -78,7 +78,11 @@ import { auraEnergyUnits } from "./auras";
 // so a copied attack cannot copy again), prize bonuses/reset, multi-card play
 // and Boomerang Energy's self-return close the last gaps. Every effect in the
 // 30-archetype meta is now modeled, so rollouts change for every deck.
-export const SIM_VERSION = 17;
+// v18: the policies can finally SEE declarative damage. attackCeiling and the
+// attack branch now estimate through formulas and riders instead of the
+// printed number, so attacks that print "" (Powerful Hand, Cruel Arrow) are
+// armed and used. Also fixes Powerful Hand's missing x2 counter multiplier.
+export const SIM_VERSION = 18;
 
 const MAX_MULLIGANS = 20;
 

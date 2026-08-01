@@ -258,7 +258,9 @@ export type EffectOp =
   // your opponent's Pokémon"). Weakness/Resistance apply only in the Active
   // spot, matching the printed reminder text on these attacks.
   | { op: "damage_mon"; monRef: string; amount: number }
-  | { op: "place_counters"; monRef: string; n: Quantity }
+  /** `n` counters, multiplied by `per` — "2 damage counters FOR EACH card in
+   *  your hand" is n:"own_hand_size", per:2. */
+  | { op: "place_counters"; monRef: string; n: Quantity; per?: number }
   | { op: "move_counters"; fromRef: string; toRef: string; n: number }
   | { op: "apply_condition"; monRef: string; condition: SpecialCondition }
   | { op: "heal"; monRef: string; n: number | "all" }

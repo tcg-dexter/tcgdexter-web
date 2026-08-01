@@ -16,7 +16,7 @@ import type { Rng } from "./rng";
 import { toolDamageBonus } from "./tools";
 import { auraDamageBonus } from "./auras";
 import { stadiumDamageBonus } from "./stadiums";
-import { damageScaleEffect } from "./effects/cards";
+import { damageScaleEffect, riderDamageEstimate } from "./effects/cards";
 import { evalDamageFormula } from "./effects/runtime";
 
 /* ─── Damage scaling ────────────────────────────────────────────── */
@@ -43,6 +43,30 @@ export function attackBaseDamage(
   return scaled?.damage
     ? evalDamageFormula(state, actor, attacker, scaled.damage, rng)
     : baseDamage(attack);
+}
+
+/** Damage an attack is EXPECTED to do, for AI evaluation. Unlike the printed
+ *  number this understands declarative formulas and riders, which is what the
+ *  policies need now that W3 made those real: an attack whose damage lives in
+ *  a formula or a rider prints as "" and would otherwise score 0, so the AI
+ *  would neither arm nor use it (this is exactly what buried Alakazam's
+ *  Powerful Hand and Fezandipiti's Cruel Arrow in calibration).
+ *
+ *  `state` is optional: without it the formula falls back to its base, which
+ *  is the right conservative read for a deck-level ceiling. rng is always
+ *  null here — estimation must never consume the game's random stream. */
+export function estimatedAttackDamage(
+  attacker: PokemonInPlay,
+  attackIndex: number,
+  state?: GameState,
+  actor: "player" | "opponent" = "player",
+): number {
+  const attack = attacker.card.catalog?.attacks[attackIndex];
+  if (!attack) return 0;
+  const base = state
+    ? attackBaseDamage(state, actor, attacker, attackIndex, null)
+    : (damageScaleEffect(attacker.card.name, attack.name)?.damage?.base ?? baseDamage(attack));
+  return base + riderDamageEstimate(attacker.card.name, attack.name);
 }
 
 /* ─── Flat damage bonuses to the Active (before Weakness/Resistance) ─ */

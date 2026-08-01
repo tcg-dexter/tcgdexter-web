@@ -181,7 +181,9 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
       break;
 
     case "place_counters":
-      for (const { mon } of mons(ctx, op.monRef)) placeCounters(mon, resolveQty(op.n, side, opp));
+      for (const { mon } of mons(ctx, op.monRef)) {
+        placeCounters(mon, resolveQty(op.n, side, opp) * (op.per ?? 1));
+      }
       break;
 
     case "move_counters": {

@@ -588,7 +588,7 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
   ],
   Alakazam: [
 { card: "Alakazam", ability: "Psychic Draw", trigger: { kind: "on_evolve" }, ops: [{ op: "draw", n: 3 }] },
-    { card: "Alakazam", trigger: { kind: "attack_rider", attackName: "Powerful Hand" }, ops: [{ op: "place_counters", monRef: DEFENDER_REF, n: "own_hand_size" }] },
+    { card: "Alakazam", trigger: { kind: "attack_rider", attackName: "Powerful Hand" }, ops: [{ op: "place_counters", monRef: DEFENDER_REF, n: "own_hand_size", per: 2 }] },
   ],
   Kadabra: [
 { card: "Kadabra", ability: "Psychic Draw", trigger: { kind: "on_evolve" }, ops: [{ op: "draw", n: 2 }] },
@@ -1218,6 +1218,30 @@ export function attackRiderEffect(
     }
   }
   return null;
+}
+
+/** Damage an attack's RIDER contributes, for AI evaluation only. Sums the
+ *  damage_mon / place_counters ops it would apply to an opponent's Pokémon.
+ *  Rider damage never shows in the printed number, so without this the
+ *  policies score Cruel Arrow (100 to any Pokémon) and Powerful Hand as 0 and
+ *  refuse to arm or use those attackers at all. */
+export function riderDamageEstimate(cardName: string, attackName: string): number {
+  const hit = attackRiderEffect(cardName, attackName);
+  if (!hit) return 0;
+  let dmg = 0;
+  for (const op of hit.effect.ops) {
+    if (op.op === "damage_mon") dmg += op.amount;
+    else if (op.op === "place_counters") {
+      // A dynamic count (hand size, bench count) can't be resolved without the
+      // board, so assume a typical mid-game value. Without SOME estimate these
+      // attacks score 0 and the AI never arms them at all.
+      const NOMINAL_DYNAMIC = 5;
+      const n = typeof op.n === "number" ? op.n : NOMINAL_DYNAMIC;
+      dmg += n * (op.per ?? 1) * 10;
+    }
+    else if (op.op === "damage_opponent_bench") dmg += op.amount;
+  }
+  return dmg;
 }
 
 /** The declarative damage-scaling record for an attack, or null. Read by

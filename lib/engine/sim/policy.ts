@@ -21,6 +21,7 @@ import {
 } from "./moves";
 import { energyProvides } from "./setup";
 import { trainerSpec, type PlayTrainerMove, type TrainerSpec } from "./trainers";
+import { estimatedAttackDamage } from "./attacks";
 import { effectMovePhase } from "./effects/cards";
 import type { EffectMove } from "./effects/runtime";
 import type { PlayerView } from "./view";
@@ -82,9 +83,15 @@ export function chooseAbilityMove(view: PlayerView, legal: SimMove[]): SimMove |
   return null;
 }
 
-/** Best printed damage this Pokémon could ever do (its attack ceiling). */
+/** Best damage this Pokémon could ever do (its attack ceiling), counting
+ *  declarative formulas and riders — not just the printed number. Attacks
+ *  whose damage lives in a rider print as "" and would rank 0 here, so the
+ *  attach heuristic below would never arm them. */
 function attackCeiling(mon: PokemonInPlay): number {
-  return Math.max(0, ...(mon.card.catalog?.attacks ?? []).map(baseDamage));
+  const n = (mon.card.catalog?.attacks ?? []).length;
+  let best = 0;
+  for (let i = 0; i < n; i++) best = Math.max(best, estimatedAttackDamage(mon, i));
+  return best;
 }
 
 function inPlay(board: PlayerView["board"]): PokemonInPlay[] {
@@ -233,7 +240,10 @@ export class HeuristicPolicy implements DecisionPolicy {
     if (attacks.length > 0 && active && defender) {
       const scored = attacks.map((m) => {
         const attack = active.card.catalog!.attacks[m.attackIndex];
-        const dmg = computeDamage(active, attack, defender);
+        // Estimate through the declarative path so formula/rider damage counts
+        // — computeDamage alone reads the printed number and scores these 0.
+        const raw = estimatedAttackDamage(active, m.attackIndex);
+        const dmg = Math.max(computeDamage(active, attack, defender), raw);
         return { move: m, dmg, lethal: dmg >= remainingHp(defender), cost: attack.cost.length };
       });
       const lethals = scored.filter((s) => s.lethal).sort((a, b) => a.cost - b.cost || b.dmg - a.dmg);
@@ -245,7 +255,18 @@ export class HeuristicPolicy implements DecisionPolicy {
     // Stranding guard: a declarative-effect move (e.g. a tactical one) that
     // no earlier branch consumed still beats passing — effect moves don't end
     // the turn, so the policy keeps playing the turn out next call.
-    const anyEffect = legal.find((m): m is EffectMove => m.kind === "effect");
+    //
+    // It MUST respect the deck reserve. Without this the guard replayed every
+    // draw/search effect at any deck size, and once the field became fully
+    // declarative that alone decked the AI out in ~23% of calibration games.
+    // Tactical effects (gusts, damage, status) don't consume deck and are
+    // always safe; draw/search are gated like every other draw branch.
+    const anyEffect = legal.find((m): m is EffectMove => {
+      if (m.kind !== "effect") return false;
+      const phase = effectMovePhase(m.card, m.effectIndex);
+      const consumesDeck = phase === "draw" || phase === "search";
+      return !consumesDeck || view.deckCount > DECK_RESERVE;
+    });
     if (anyEffect) return anyEffect;
 
     return { kind: "pass" };
