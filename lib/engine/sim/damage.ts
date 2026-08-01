@@ -140,6 +140,17 @@ export interface KnockoutResult {
   koTurn: number | null;
 }
 
+/** Prize reduction granted by cards attached to a fallen Pokémon. Lillie's
+ *  Pearl needs a Lillie's Pokémon; Legacy Energy applies once per game. */
+function prizeShieldFor(mon: PokemonInPlay, side: PlayerSide): number {
+  let n = 0;
+  const hasPearl = mon.attachedTools.some((t) => t.name === "Lillie's Pearl");
+  if (hasPearl && mon.card.name.startsWith("Lillie's ")) n += 1;
+  const hasLegacy = mon.attachedEnergy.some((c) => c.name === "Legacy Energy");
+  if (hasLegacy && (side.prizeShieldOnce ?? 0) === 0) n += 1;
+  return n;
+}
+
 function knockOut(state: GameState, side: PlayerSide, mon: PokemonInPlay, ownerActor: "player" | "opponent"): void {
   side.discard.push(mon.card, ...mon.stack, ...mon.attachedEnergy, ...mon.attachedTools);
   if (side.active === mon) {
@@ -154,9 +165,18 @@ function knockOut(state: GameState, side: PlayerSide, mon: PokemonInPlay, ownerA
   if (state.turn.actor === opposite(ownerActor)) {
     side.koedLastOppTurn = true;
   }
-  // The player facing this side takes the Prize cards.
+  // The player facing this side takes the Prize cards — unless a prize
+  // shield attached to the fallen Pokémon reduces the count (Lillie's Pearl,
+  // Legacy Energy). Shields are consumed, matching "can't be applied more
+  // than once per game".
   const taker = opposite(ownerActor);
-  const taken = state.sides[taker].prizes.splice(0, prizeValue(mon.card.name));
+  let count = prizeValue(mon.card.name);
+  const shield = prizeShieldFor(mon, side);
+  if (shield > 0) {
+    count = Math.max(0, count - shield);
+    side.prizeShieldOnce = (side.prizeShieldOnce ?? 0) + shield; // consumed
+  }
+  const taken = state.sides[taker].prizes.splice(0, count);
   state.sides[taker].hand.push(...taken);
   state.prizesTaken[taker] += taken.length;
   const takerSide = state.sides[taker];

@@ -159,6 +159,10 @@ export interface PlayerSide {
   /** Turn-scoped damage buffs from Supporters (Black Belt's Training, Kieran,
    *  Premium Power Pro). Read by activeDamageBonus; entries for past turns are
    *  simply ignored rather than pruned. */
+  /** Prize-count modifiers when one of THIS side's Pokémon is knocked out
+   *  (Lillie's Pearl, Legacy Energy: the attacker takes 1 fewer). Consumed
+   *  at knockout time. */
+  prizeShieldOnce?: number;
   damageBuffs?: {
     turn: number;
     amount: number;

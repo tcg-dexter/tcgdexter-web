@@ -67,7 +67,11 @@ import { auraEnergyUnits } from "./auras";
 // play — damage reduction/prevention, damage boosts, retreat waivers, ability
 // and attack locks, energy provision, Weakness rewrites — are now read at the
 // rule sites instead of sitting inert.
-export const SIM_VERSION = 14;
+// v15: hook-driven triggers (on_damaged / end_of_turn / checkup) and KO prize
+// shields. Lucky Helmet draws, Spiky Energy punishes attackers, Powerglass
+// re-arms, Ignition self-discards, and Lillie's Pearl / Legacy Energy really
+// cost the attacker a prize.
+export const SIM_VERSION = 15;
 
 const MAX_MULLIGANS = 20;
 

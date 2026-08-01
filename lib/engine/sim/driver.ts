@@ -26,6 +26,7 @@ import { buildSimInitialState, energyUnits, toPokemonInPlay, type SimDeck } from
 import { retreatCost } from "./tools";
 import { damageTakenReduction, hasStatus, statusAmount } from "./statuses";
 import { auraDamageReduction, auraPreventsEffects } from "./auras";
+import { fireCheckup, fireEndOfTurn, fireOnDamaged } from "./hooks";
 import { applyTrainer } from "./trainers";
 import { applyEffect } from "./effects/runtime";
 import { attackRiderEffect, damageScaleEffect, effectsFor, onAttachEffect, triggerEffect } from "./effects/cards";
@@ -349,7 +350,8 @@ export function applyMove(
           : ignore?.defenderEffects
             ? afterWr
             : Math.max(0, afterWr - damageTakenReduction(defender, attacker, state) - auraCut);
-      dealRawDamage(defender, hasStatus(defender, "prevent_all", state) ? 0 : reduced);
+      const dealt = hasStatus(defender, "prevent_all", state) ? 0 : reduced;
+      dealRawDamage(defender, dealt);
 
       // Attack-inflicted conditions on the defending active (Mind Bend,
       // Bemusing Aroma, Thunder Shock — coin flips resolve via rng).
@@ -367,6 +369,11 @@ export function applyMove(
         if (effect.discardSelfEnergy) discardAllEnergy(attacker, side.discard);
         placeBenchDamage(defSide, effect.amount, effect.targets, move.benchDamageTargets);
       }
+
+      // On-damaged hooks fire for the DEFENDER's side (Lucky Helmet's draw,
+      // Spiky Energy's counters) — before knockouts, per "even if this Pokémon
+      // is Knocked Out".
+      if (dealt > 0) fireOnDamaged(state, defActor, defender, attacker, rng);
 
       // Declarative attack rider (W2-fin): resolves AFTER damage and placement,
       // BEFORE knockouts — so rider damage can contribute to a KO this turn.
@@ -441,7 +448,11 @@ export function playGame(
     // Pokémon Checkup between turns: poison/burn/sleep/paralysis on both
     // actives, then resolve any KOs (auto-promote via each side's policy).
     if (state.winner === null) {
+      // End-of-turn hooks (Powerglass's attach, Ignition Energy's self-discard)
+      // fire for the player whose turn just ended, before the Checkup.
+      fireEndOfTurn(state, actor, rng);
       runCheckup(state, actor, rng);
+      fireCheckup(state, rng); // Freezing Shroud and friends
       const ko = resolveKnockouts(state);
       if (ko.koTurn !== null && firstKoTurn === null) firstKoTurn = ko.koTurn;
       if (ko.winner) {

@@ -458,6 +458,8 @@ export function applyEffect(
   /** The source Pokémon for non-trainer triggers. Defaults to a lookup by
    *  `move.sourceId`; pass explicitly for `attack_rider` (the attacker). */
   sourceMon: PokemonInPlay | null = null,
+  /** Extra bound refs for hook-driven triggers (on_damaged binds "attacker"). */
+  extraRefs: ResolvedTargets = {},
 ): void {
   const side = state.sides[actor];
 
@@ -478,8 +480,8 @@ export function applyEffect(
       ? null
       : (sourceMon ?? [side.active, ...side.bench].find((m) => m?.id === move.sourceId) ?? null);
 
-  const targets = resolveTargets(state, actor, effect, move, source);
-  const ctx: OpContext = { state, actor, targets, rng, source };
+  const targets = { ...resolveTargets(state, actor, effect, move, source), ...extraRefs };
+  const ctx: OpContext = { state, actor, targets, rng, source, selfCardName: move.card };
   applyOps(effect.ops, ctx);
 
   if (effect.trigger.kind === "activated" || effect.trigger.kind === "on_play") {

@@ -60,10 +60,9 @@ export const SPECIAL_ENERGY: Record<string, SpecialEnergySpec> = {
     // "If the Pokémon has any OTHER Special Energy attached, provides Colorless."
     overrides: [{ when: { on: "other_special_attached" }, units: ["Colorless"] }],
   },
-  "Legacy Energy": {
-    units: ["Any"],
-    unmodeledRider: "opponent takes 1 fewer Prize on KO (once per game)",
-  },
+  // The once-per-game prize reduction is applied at the knockout site
+  // (damage.ts prizeShieldFor), so there is no unmodeled rider left.
+  "Legacy Energy": { units: ["Any"] },
   "Prism Energy": {
     units: ["Colorless"],
     overrides: [{ when: { on: "stage", stage: "Basic" }, units: ["Any"] }],
@@ -95,7 +94,6 @@ export const SPECIAL_ENERGY: Record<string, SpecialEnergySpec> = {
   "Ignition Energy": {
     units: ["Colorless"],
     overrides: [{ when: { on: "evolution" }, units: ["Colorless", "Colorless", "Colorless"] }],
-    unmodeledRider: "discard at end of turn",
   },
 
   /* ── Typed ─────────────────────────────────────────────────── */
@@ -116,10 +114,8 @@ export const SPECIAL_ENERGY: Record<string, SpecialEnergySpec> = {
     units: ["Colorless"],
     unmodeledRider: "re-attaches itself after being discarded by its own attack",
   },
-  "Spiky Energy": {
-    units: ["Colorless"],
-    unmodeledRider: "2 damage counters on the attacker when the holder is damaged",
-  },
+  // The counter-punch is an `on_damaged` trigger (effects/cards.ts).
+  "Spiky Energy": { units: ["Colorless"] },
   "Gift Energy": {
     units: ["Colorless"],
     unmodeledRider: "draw up to 7 when the holder is KO'd",

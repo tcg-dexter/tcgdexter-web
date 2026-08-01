@@ -89,6 +89,14 @@ export type Trigger =
   // switch, Enriching Energy's draw). Not a move of its own — it resolves
   // inside the `attach` move, like an attack rider inside its attack.
   | { kind: "on_attach" }
+  /** The holder was damaged by an opponent's attack (Lucky Helmet, Handheld
+   *  Fan, Spiky Energy). Fires even if the holder is knocked out. */
+  | { kind: "on_damaged" }
+  /** End of the holder's controller's turn, after the attack (Powerglass,
+   *  Ignition Energy's self-discard). */
+  | { kind: "end_of_turn" }
+  /** Pokémon Checkup between turns (Froslass's Freezing Shroud). */
+  | { kind: "checkup" }
   | { kind: "on_evolve" }
   | { kind: "attack_rider"; attackName: string } // resolves after the attack's damage
   // Computes the attack's BASE damage when the printed value is state-dependent
@@ -275,6 +283,14 @@ export type EffectOp =
   | { op: "energy_to_hand"; monRef: string; n: number }
   /** Self-inflicted recoil (Wood Hammer). */
   | { op: "damage_self"; amount: number }
+  /** Counters onto the Pokémon that just attacked this one (Spiky Energy).
+   *  Only meaningful inside an `on_damaged` trigger. */
+  | { op: "counters_on_attacker"; n: number }
+  /** Place counters on every matching Pokémon across both boards (Freezing
+   *  Shroud). */
+  | { op: "counters_on_all"; filter: MonFilter; n: number; exceptSelfName?: boolean }
+  /** Discard this card (the Energy/Tool carrying the effect) from its holder. */
+  | { op: "discard_self_card" }
   | { op: "discard_from_mon"; monRef: string; category: "tool" | "special_energy" | "energy" }
   /** Look at the top `n` of your own deck, take up to `count` matching cards
    *  to hand, shuffle the rest back (Pokégear 3.0, Bug Catching Set). v1

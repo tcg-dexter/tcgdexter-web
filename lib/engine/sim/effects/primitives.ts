@@ -12,7 +12,7 @@ import { applyCondition, clearConditions } from "../conditions";
 import { placeCounters, moveCounters, dealRawDamage } from "../damage";
 import { applyWeaknessResistance } from "../moves";
 import { pickDiscards } from "../trainers";
-import { cardMatches } from "./match";
+import { cardMatches, monMatches as cardMatchesMon } from "./match";
 import { guardsPass } from "./guards";
 import type { EffectOp, Quantity } from "./types";
 
@@ -37,6 +37,9 @@ export interface OpContext {
   /** The effect's source Pokémon (ability owner / attacker), when there is
    *  one. Also bound as the reserved `self` target ref. */
   source?: PokemonInPlay | null;
+  /** Name of the CARD carrying the effect (an attached Energy/Tool), for ops
+   *  that remove it from its holder. */
+  selfCardName?: string;
 }
 
 /* ─── Zone helpers (mirror trainers.ts semantics) ───────────────── */
@@ -228,6 +231,40 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
     case "damage_self":
       if (ctx.source) dealRawDamage(ctx.source, op.amount);
       break;
+
+    case "counters_on_attacker": {
+      // Bound by the on_damaged hook as the DEFENDER_REF's counterpart.
+      const atk = ctx.targets["attacker"]?.mons[0];
+      if (atk) placeCounters(atk.mon, op.n);
+      break;
+    }
+
+    case "counters_on_all": {
+      for (const a of ["player", "opponent"] as Actor[]) {
+        const ps = state.sides[a];
+        for (const m of [ps.active, ...ps.bench]) {
+          if (!m) continue;
+          if (op.exceptSelfName && ctx.source && m.card.name === ctx.source.card.name) continue;
+          if (!cardMatchesMon(m, op.filter)) continue;
+          placeCounters(m, op.n);
+        }
+      }
+      break;
+    }
+
+    case "discard_self_card": {
+      // The card carrying this effect leaves its holder.
+      const holder = ctx.source;
+      const name = ctx.selfCardName;
+      if (holder && name) {
+        const ownerSide = [state.sides.player, state.sides.opponent].find((ps) =>
+          [ps.active, ...ps.bench].some((m) => m?.id === holder.id),
+        );
+        const i = holder.attachedEnergy.findIndex((c) => c.name === name);
+        if (i >= 0 && ownerSide) ownerSide.discard.push(...holder.attachedEnergy.splice(i, 1));
+      }
+      break;
+    }
 
     case "clear_conditions":
       for (const { mon } of mons(ctx, op.monRef)) clearConditions(mon);

@@ -57,6 +57,13 @@ const TOOL_EFFECTS: Record<string, ToolEffect> = {
   },
   "Counter Gain": { costReduction: { amount: 1, whenPrizeLead: true } },
   "Sparkling Crystal": { costReduction: { amount: 1, holderSubtype: "Tera" } },
+  // Prize reduction is applied at the knockout site (damage.ts); the empty
+  // effect here records that the card IS modeled.
+  "Lillie's Pearl": {},
+  // Effects live in effects/cards.ts as on_damaged / end_of_turn triggers.
+  "Lucky Helmet": {},
+  "Handheld Fan": {},
+  Powerglass: {},
 };
 
 const RULE_BOX = /\b(ex|EX|V|VMAX|VSTAR)\b/;
