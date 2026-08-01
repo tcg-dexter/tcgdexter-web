@@ -26,7 +26,7 @@ import { buildSimInitialState, energyUnits, toPokemonInPlay, type SimDeck } from
 import { retreatCost } from "./tools";
 import { applyTrainer } from "./trainers";
 import { applyEffect } from "./effects/runtime";
-import { attackRiderEffect, effectsFor } from "./effects/cards";
+import { attackRiderEffect, effectsFor, onAttachEffect } from "./effects/cards";
 import { applyStadium, benchCap, enforceBenchCap } from "./stadiums";
 import { viewFor } from "./view";
 import { shuffle, type Rng } from "./rng";
@@ -80,6 +80,7 @@ export function beginTurn(
   const side = sideOf(state, actor);
   side.energyAttachedThisTurn = 0;
   side.supporterPlayedThisTurn = false;
+  side.supporterNamePlayedThisTurn = undefined;
   // The opponent's comeback window (were THEY KO'd during this turn?) opens
   // fresh now — clear the flag they read at the start of their last turn.
   state.sides[otherActor(actor)].koedLastOppTurn = false;
@@ -134,6 +135,25 @@ export function applyMove(
       if (card && target) {
         target.attachedEnergy.push(card);
         side.energyAttachedThisTurn += 1;
+        // On-attach Energy effects (Jet's switch, Enriching's draw, Telepathic's
+        // search) resolve AFTER the card is attached, so `self` sees it.
+        const onAttach = onAttachEffect(card.name);
+        if (onAttach) {
+          applyEffect(
+            state,
+            actor,
+            onAttach.effect,
+            {
+              kind: "effect",
+              sourceId: target.id,
+              card: card.name,
+              effectIndex: onAttach.index,
+              picks: move.attachPicks ?? [],
+            },
+            rng,
+            target,
+          );
+        }
       }
       return done(false);
     }
@@ -205,6 +225,7 @@ export function applyMove(
         side.discard.push(card);
         side.hand.push(...side.deck.splice(0, 2));
         side.supporterPlayedThisTurn = true;
+        side.supporterNamePlayedThisTurn = card.name;
       }
       return done(false);
     }
@@ -289,13 +310,13 @@ export function applyMove(
       // Attack-inflicted conditions on the defending active (Mind Bend,
       // Bemusing Aroma, Thunder Shock — coin flips resolve via rng).
       for (const c of attackInflictedConditions(attacker.card.name, attack.name, rng ?? undefined)) {
-        applyCondition(defender, c);
+        applyCondition(defender, c, state);
       }
 
       // Placement / self-cost side effects (no Weakness/Resistance on bench).
       const effect = attackEffect(attacker, move.attackIndex);
       if (effect?.kind === "bench_counters") {
-        placeAttackCounters(defSide, effect.counters, move.benchCounters);
+        placeAttackCounters(defSide, effect.counters, move.benchCounters, state);
       } else if (effect?.kind === "bench_damage") {
         if (effect.discardSelfEnergy) discardAllEnergy(attacker, side.discard);
         placeBenchDamage(defSide, effect.amount, effect.targets, move.benchDamageTargets);

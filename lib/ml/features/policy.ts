@@ -137,7 +137,7 @@ function pushMon(v: Vec, prefix: string, mon: PokemonInPlay | null): void {
   v.push(`${prefix}_max_hp`, mon ? effectiveMaxHp(mon) : 0);
   v.push(`${prefix}_hp_remaining`, mon ? remainingHp(mon) : 0);
   v.push(`${prefix}_damage`, mon?.damage ?? 0);
-  v.push(`${prefix}_energy_units`, mon ? mon.attachedEnergy.flatMap(energyUnits).length : 0);
+  v.push(`${prefix}_energy_units`, mon ? mon.attachedEnergy.flatMap((c) => energyUnits(c, mon)).length : 0);
   v.push(`${prefix}_tools`, mon?.attachedTools.length ?? 0);
   v.push(`${prefix}_prize_value`, mon ? prizeValue(mon.card.name) : 0);
   v.push(`${prefix}_can_attack`, mon ? usableAttacks(mon).length > 0 : false);
@@ -151,7 +151,7 @@ function pushBench(v: Vec, prefix: string, bench: PokemonInPlay[]): void {
   v.push(`${prefix}_count`, bench.length);
   v.push(`${prefix}_hp_remaining`, bench.reduce((s, m) => s + remainingHp(m), 0));
   v.push(`${prefix}_damage`, bench.reduce((s, m) => s + m.damage, 0));
-  v.push(`${prefix}_energy_units`, bench.reduce((s, m) => s + m.attachedEnergy.flatMap(energyUnits).length, 0));
+  v.push(`${prefix}_energy_units`, bench.reduce((s, m) => s + m.attachedEnergy.flatMap((c) => energyUnits(c, m)).length, 0));
   v.push(`${prefix}_attackers_ready`, bench.filter((m) => usableAttacks(m).length > 0).length);
   v.push(`${prefix}_max_prize_value`, bench.reduce((s, m) => Math.max(s, prizeValue(m.card.name)), 0));
 }
@@ -422,7 +422,7 @@ function encodeAction(view: PlayerView, move: SimMove): Vec {
   v.push("target_max_hp", target ? effectiveMaxHp(target) : 0);
   v.push("target_hp_remaining", target ? remainingHp(target) : 0);
   v.push("target_damage", target?.damage ?? 0);
-  v.push("target_energy_units", target ? target.attachedEnergy.flatMap(energyUnits).length : 0);
+  v.push("target_energy_units", target ? target.attachedEnergy.flatMap((c) => energyUnits(c, target)).length : 0);
   v.push("target_prize_value", target ? prizeValue(target.card.name) : 0);
   v.push("target_can_attack", target ? usableAttacks(target).length > 0 : false);
 
@@ -472,7 +472,7 @@ function encodeAction(view: PlayerView, move: SimMove): Vec {
   v.push("reposition_incoming_best_damage", incomingBest);
   v.push(
     "reposition_incoming_energy_units",
-    incoming ? incoming.attachedEnergy.flatMap(energyUnits).length : 0,
+    incoming ? incoming.attachedEnergy.flatMap((c) => energyUnits(c, incoming)).length : 0,
   );
   v.push("reposition_clears_status", outgoing ? outgoing.conditions.length > 0 : false);
   v.push("reposition_dodges_ko", outgoing !== null && threat > 0 && threat >= remainingHp(outgoing));

@@ -23,6 +23,18 @@ const SAMPLE_TRAINERS = [
   "Cook",
 ];
 
+/** Special Energy to draw an unmodeled example from — same moving-target
+ *  reasoning as SAMPLE_TRAINERS. */
+const SAMPLE_SPECIAL_ENERGY = [
+  "Neo Upper Energy",
+  "Mist Energy",
+  "Spiky Energy",
+  "Gift Energy",
+  "Boomerang Energy",
+  "Legacy Energy",
+  "Double Turbo Energy",
+];
+
 describe("deckEffectCoverage", () => {
   it("is fully covered for an all-basic-energy list (no effect slots)", () => {
     const cov = deckEffectCoverage(["Energy: 4", "4 Basic Darkness Energy"].join("\n"));
@@ -62,10 +74,19 @@ describe("deckEffectCoverage", () => {
   });
 
   it("distinguishes a modeled Special Energy from an unmodeled one", () => {
-    const cov = deckEffectCoverage(
-      ["Energy: 2", "1 Luminous Energy", "1 Neo Upper Energy"].join("\n"),
+    // Derived for the same reason as the trainer case above — "Neo Upper
+    // Energy" held this slot until W2-fin.6 modeled it. A Special Energy is a
+    // gap when its OUTPUT is undeclared or it has an unimplemented rider.
+    const unmodeled = SAMPLE_SPECIAL_ENERGY.find(
+      (n) => classifyCardEffects(n).some((s) => !s.implemented && s.kind === "special_energy"),
     );
-    expect(cov.gaps.some((g) => g.key === "Neo Upper Energy" && g.kind === "special_energy")).toBe(true);
+    if (!unmodeled) {
+      const cov = deckEffectCoverage(["Energy: 1", "1 Luminous Energy"].join("\n"));
+      expect(cov.gaps).toEqual([]);
+      return;
+    }
+    const cov = deckEffectCoverage(["Energy: 2", "1 Luminous Energy", `1 ${unmodeled}`].join("\n"));
+    expect(cov.gaps.some((g) => g.key === unmodeled && g.kind === "special_energy")).toBe(true);
     expect(cov.gaps.some((g) => g.key === "Luminous Energy")).toBe(false);
   });
 

@@ -73,6 +73,10 @@ export type Trigger =
   | { kind: "trainer"; subtype: "Supporter" | "Item" | "Stadium" | "Tool" }
   | { kind: "activated" } // once/turn/Pokémon ability
   | { kind: "on_play" } // played from hand onto the Bench (Meowth ex)
+  // Fires when this card is attached from hand to a Pokémon (Jet Energy's
+  // switch, Enriching Energy's draw). Not a move of its own — it resolves
+  // inside the `attach` move, like an attack rider inside its attack.
+  | { kind: "on_attach" }
   | { kind: "on_evolve" }
   | { kind: "attack_rider"; attackName: string } // resolves after the attack's damage
   // Computes the attack's BASE damage when the printed value is state-dependent
@@ -97,7 +101,11 @@ export type Guard =
   | { cond: "self_has_energy"; filter: CardFilter }
   /** Enough cards in hand BESIDES the card being played, for a discard cost
    *  ("you can use this only if you discard 3 other cards" — Secret Box). */
-  | { cond: "hand_size_gte"; n: number };
+  | { cond: "hand_size_gte"; n: number }
+  /** The SOURCE Pokémon itself matches (Telepathic Psychic Energy only
+   *  triggers when attached to a Psychic Pokémon). `side`/`zone` on the
+   *  filter are ignored — the subject is always the source. */
+  | { cond: "self_is"; filter: MonFilter };
 
 /* ─── State-dependent damage ────────────────────────────────────── */
 

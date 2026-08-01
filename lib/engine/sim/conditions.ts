@@ -16,6 +16,7 @@
 // and let application replace the mutually-exclusive group.
 
 import type { GameState, PokemonInPlay } from "../types";
+import { stadiumBlocksConditions } from "./stadiums";
 import type { SpecialCondition } from "@/lib/battle-log/types";
 import type { Rng } from "./rng";
 
@@ -27,7 +28,17 @@ export function hasCondition(mon: PokemonInPlay, c: SpecialCondition): boolean {
 
 /** Apply a condition to a Pokémon. Asleep/Paralyzed/Confused replace one
  *  another; Poisoned/Burned are added if not present. */
-export function applyCondition(mon: PokemonInPlay, condition: SpecialCondition): void {
+export function applyCondition(
+  mon: PokemonInPlay,
+  condition: SpecialCondition,
+  state?: GameState,
+): void {
+  // Festival Grounds: a Pokémon with any Energy can't be affected by Special
+  // Conditions at all (and existing ones are cleared).
+  if (stadiumBlocksConditions(mon, state)) {
+    mon.conditions = [];
+    return;
+  }
   if (SLEEP_PAR_CONFUSE.includes(condition)) {
     mon.conditions = mon.conditions.filter((c) => !SLEEP_PAR_CONFUSE.includes(c));
   }

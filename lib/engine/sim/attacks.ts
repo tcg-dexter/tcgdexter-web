@@ -13,6 +13,7 @@
 import type { CardInstance, GameState, PokemonInPlay } from "../types";
 import { baseDamage } from "./moves";
 import type { Rng } from "./rng";
+import { toolDamageBonus } from "./tools";
 import { damageScaleEffect } from "./effects/cards";
 import { evalDamageFormula } from "./effects/runtime";
 
@@ -53,7 +54,9 @@ export function activeDamageBonus(
   attacker: PokemonInPlay,
   defender: PokemonInPlay,
 ): number {
-  let bonus = 0;
+  // Attached Tools (Vitality Band, Maximum Belt, Brave Bangle, Hop's Choice
+  // Band) — declarative, see tools.ts.
+  let bonus = toolDamageBonus(attacker, defender, state);
   // Black Belt's Training: +40 to the opponent's Active Pokémon ex, the turn
   // it is played.
   const defIsEx = defender.card.catalog?.subtypes.includes("ex") ?? false;

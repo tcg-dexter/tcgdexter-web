@@ -10,7 +10,7 @@ import { legalMoves, type SimMove, type TurnContext } from "./moves";
 import { attackBenchCounterCount, attackBenchDamageTargets } from "./attacks";
 import { isSupporter, trainerDiscardCost } from "./trainers";
 import { enumerateEffect, type EffectMove } from "./effects/runtime";
-import { attackRiderEffect, effectsFor } from "./effects/cards";
+import { attackRiderEffect, effectsFor, onAttachEffect } from "./effects/cards";
 
 /** Order-insensitive fingerprint of an effect move's picks, so a human
  *  selection matches an enumerated move regardless of id/slot ordering. */
@@ -82,6 +82,36 @@ export function isLegalHumanMove(
       return false;
     }
     return true;
+  }
+
+  // Attach with an ON-ATTACH effect: the picks choose real cards out of a
+  // hidden zone (Telepathic's 2 Basics), so they need the same exact-match
+  // treatment as rider picks — the generic legalMoves comparison below would
+  // not catch a forged pick.
+  if (move.kind === "attach" && move.attachPicks != null && move.attachPicks.length > 0) {
+    const side = state.sides[actor];
+    const card = side.hand.find((c) => c.id === move.cardId);
+    const target = [side.active, ...side.bench].find((m) => m?.id === move.targetId) ?? null;
+    if (!card || !target) return false;
+    if (side.energyAttachedThisTurn !== 0) return false;
+    const onAttach = onAttachEffect(card.name);
+    if (!onAttach) return false;
+    const enumerated = enumerateEffect(
+      state,
+      actor,
+      { id: card.id, name: card.name },
+      onAttach.effect,
+      onAttach.index,
+      target,
+    );
+    const supplied = effectPicks({
+      kind: "effect",
+      sourceId: target.id,
+      card: card.name,
+      effectIndex: onAttach.index,
+      picks: move.attachPicks,
+    });
+    return enumerated.some((m) => effectPicks(m) === supplied);
   }
 
   if (move.kind === "attack") {

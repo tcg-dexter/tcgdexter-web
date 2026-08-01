@@ -6,16 +6,24 @@
 
 import type { EngineAttack, GameState, PlayerSide, PokemonInPlay } from "../types";
 import { energyProvides, energyUnits, isBasic } from "./setup";
+import { unitPaysType } from "./effects/energy";
 import { isSupporter, trainerMoves, trainerSpec, type PlayTrainerMove } from "./trainers";
 import { abilityMoves, hasLegacyActivated, type UseAbilityMove } from "./abilities";
 import { cannotAct } from "./conditions";
-import { canRetreat, effectiveMaxHp, isTool } from "./tools";
-import { benchCap, stadiumMoves, type UseStadiumMove } from "./stadiums";
+import { canRetreat, effectiveMaxHp, isTool, toolCostReduction } from "./tools";
+import { benchCap, stadiumAttackCostExtra, stadiumMoves, type UseStadiumMove } from "./stadiums";
 import { enumerateEffect, type EffectMove, type EffectPick } from "./effects/runtime";
-import { abilityEffects, attackRiderEffect, effectsFor } from "./effects/cards";
+import { abilityEffects, attackRiderEffect, effectsFor, onAttachEffect } from "./effects/cards";
 
 export type SimMove =
-  | { kind: "attach"; cardId: string; targetId: string }
+  | {
+      kind: "attach";
+      cardId: string;
+      targetId: string;
+      /** Picks for this Energy's ON-ATTACH effect (Telepathic Psychic Energy's
+       *  2 Basics). Like riderPicks, it resolves inside the attach move. */
+      attachPicks?: EffectPick[];
+    }
   | { kind: "bench"; cardId: string }
   | { kind: "evolve"; cardId: string; targetId: string }
   | { kind: "retreat"; benchIndex: number }
@@ -67,14 +75,16 @@ export function canPayCost(mon: PokemonInPlay, cost: string[]): boolean {
   if (cost.length === 0) return true;
   // One card can provide several units (Double Turbo = 2) and a unit can be
   // a wildcard "Any" (Luminous) that pays any typed requirement.
-  const pool = mon.attachedEnergy.flatMap(energyUnits);
+  const pool = mon.attachedEnergy.flatMap((c) => energyUnits(c, mon));
   if (pool.length < cost.length) return false;
 
-  // Typed requirements first: prefer an exact-type unit, fall back to "Any".
+  // Typed requirements first: spend an exact-type unit before any wildcard, so
+  // a restricted wildcard (Team Rocket's "Psychic or Darkness") isn't wasted on
+  // a cost a plain unit could have paid.
   for (const req of cost) {
     if (req === "Colorless") continue;
     let idx = pool.indexOf(req);
-    if (idx === -1) idx = pool.indexOf("Any");
+    if (idx === -1) idx = pool.findIndex((u) => unitPaysType(u, req));
     if (idx === -1) return false;
     pool.splice(idx, 1);
   }
@@ -82,11 +92,45 @@ export function canPayCost(mon: PokemonInPlay, cost: string[]): boolean {
   return pool.length >= colorless; // Colorless pays from anything left
 }
 
-export function usableAttacks(mon: PokemonInPlay): { attack: EngineAttack; index: number }[] {
+/** Attack cost after passive Stadium modifiers (Nighttime Mine taxes Tera
+ *  Pokémon a Colorless). Pass `state` so those apply. */
+export function effectiveCost(
+  mon: PokemonInPlay,
+  cost: string[],
+  state?: GameState,
+): string[] {
+  const extra = stadiumAttackCostExtra(mon, state);
+  let out = extra > 0 ? [...cost, ...Array(extra).fill("Colorless")] : cost;
+  // Tool discounts (Counter Gain, Sparkling Crystal, Hop's Choice Band) strip
+  // Colorless first — a typed requirement can't be discounted away.
+  const cut = toolCostReduction(mon, state, hasPrizeLead(mon, state));
+  for (let i = 0; i < cut; i++) {
+    const idx = out.lastIndexOf("Colorless");
+    if (idx === -1) break;
+    out = [...out.slice(0, idx), ...out.slice(idx + 1)];
+  }
+  return out;
+}
+
+/** Does the side owning `mon` have MORE prizes left than its opponent? */
+function hasPrizeLead(mon: PokemonInPlay, state?: GameState): boolean {
+  if (!state) return false;
+  const mine = [state.sides.player, state.sides.opponent].find((s) =>
+    [s.active, ...s.bench].some((m) => m?.id === mon.id),
+  );
+  if (!mine) return false;
+  const theirs = mine === state.sides.player ? state.sides.opponent : state.sides.player;
+  return mine.prizes.length > theirs.prizes.length;
+}
+
+export function usableAttacks(
+  mon: PokemonInPlay,
+  state?: GameState,
+): { attack: EngineAttack; index: number }[] {
   const attacks = mon.card.catalog?.attacks ?? [];
   return attacks
     .map((attack, index) => ({ attack, index }))
-    .filter(({ attack }) => canPayCost(mon, attack.cost));
+    .filter(({ attack }) => canPayCost(mon, effectiveCost(mon, attack.cost, state)));
 }
 
 /* ─── Damage math ───────────────────────────────────────────────── */
@@ -127,12 +171,12 @@ export function applyWeaknessResistance(
  *  investment term and the ML state encoder (schema v3). */
 export function costProgress(mon: PokemonInPlay, cost: string[]): number {
   if (cost.length === 0) return 0;
-  const pool = mon.attachedEnergy.flatMap(energyUnits);
+  const pool = mon.attachedEnergy.flatMap((c) => energyUnits(c, mon));
   let paid = 0;
   for (const req of cost) {
     if (req === "Colorless") continue;
     let idx = pool.indexOf(req);
-    if (idx === -1) idx = pool.indexOf("Any");
+    if (idx === -1) idx = pool.findIndex((u) => unitPaysType(u, req));
     if (idx === -1) continue;
     pool.splice(idx, 1);
     paid += 1;
@@ -207,8 +251,39 @@ export function legalMoves(
     }
     // Attach energy (one per turn).
     if (side.energyAttachedThisTurn === 0 && energyProvides(card) !== null) {
+      // An Energy with an ON-ATTACH effect (Telepathic, Jet, Enriching) may
+      // need picks; those are enumerated per candidate target, since the
+      // effect's guards read the Pokémon it lands on.
+      const onAttach = onAttachEffect(card.name);
       for (const target of inPlay) {
-        moves.push({ kind: "attach", cardId: card.id, targetId: target.id });
+        if (!onAttach) {
+          moves.push({ kind: "attach", cardId: card.id, targetId: target.id });
+          continue;
+        }
+        const combos = enumerateEffect(
+          state,
+          actor,
+          { id: card.id, name: card.name },
+          onAttach.effect,
+          onAttach.index,
+          target,
+        );
+        if (combos.length === 0) {
+          // Guards fail on this target (Telepathic on a non-Psychic) — the
+          // attach itself is still perfectly legal, just without the bonus.
+          moves.push({ kind: "attach", cardId: card.id, targetId: target.id });
+        } else if ((onAttach.effect.targets?.length ?? 0) === 0) {
+          moves.push({ kind: "attach", cardId: card.id, targetId: target.id });
+        } else {
+          for (const combo of combos) {
+            moves.push({
+              kind: "attach",
+              cardId: card.id,
+              targetId: target.id,
+              attachPicks: combo.picks,
+            });
+          }
+        }
       }
     }
     // Stadium: one per turn, into play, unless one of the same name already
@@ -305,7 +380,7 @@ export function legalMoves(
 
   // Attack (ends the turn). Nobody attacks on the game's very first turn.
   if (activeCanAct && side.active && state.turn.number > 1) {
-    for (const { index, attack } of usableAttacks(side.active)) {
+    for (const { index, attack } of usableAttacks(side.active, state)) {
       // A declarative rider with target slots multiplies the attack into one
       // move per pick combination; riderPicks rides on the attack move so the
       // whole attack (damage + rider) stays a single atomic decision.

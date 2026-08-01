@@ -12,6 +12,7 @@ import type { CardInstance, GameState, PlayerSide, PokemonInPlay } from "../type
 import { moveCounters, placeCounters } from "./damage";
 import { energyProvides, isBasicEnergyCard } from "./setup";
 import { isSupporter, pickDiscards } from "./trainers";
+import { stadiumSuppressesAbility } from "./stadiums";
 
 export interface UseAbilityMove {
   kind: "use_ability";
@@ -41,6 +42,8 @@ function hasEnergyType(mon: PokemonInPlay, type: string): boolean {
 export function abilityAvailable(state: GameState, actor: Actor, mon: PokemonInPlay): { name: string } | null {
   const ability = mon.card.catalog?.abilities?.[0];
   if (!ability) return null;
+  // A Stadium may switch this Pokémon's Abilities off entirely.
+  if (stadiumSuppressesAbility(mon, state)) return null;
   const key = `${mon.card.name}::${ability.name}`;
   const spec = ACTIVATED[key];
   if (!spec) return null;

@@ -392,7 +392,10 @@ export function applyTrainer(
     side.discard.push(card);
     return;
   }
-  if (isSupporter(card)) side.supporterPlayedThisTurn = true;
+  if (isSupporter(card)) {
+    side.supporterPlayedThisTurn = true;
+    side.supporterNamePlayedThisTurn = card.name;
+  }
   // Played card leaves the hand BEFORE hand-wide effects resolve.
   side.discard.push(card);
 

@@ -15,6 +15,7 @@
 // the OPPOSING side takes its Prize cards.
 
 import type { GameState, PlayerSide, PokemonInPlay } from "../types";
+import { stadiumPreventsBenchCounters } from "./stadiums";
 import { prizeValue } from "./setup";
 import { effectiveMaxHp } from "./tools";
 
@@ -66,11 +67,17 @@ const HP_TO_KO = (mon: PokemonInPlay) => maxHp(mon) - mon.damage;
  *  chosen allocation (`chosenIds`, one entry per counter) when it's a valid
  *  bench selection; otherwise auto-allocates to maximize knockouts — fill
  *  the closest-to-KO Pokémon first, then spread. */
+/** Battle Cage: counters can't be PLACED on the Bench by attack/ability
+ *  effects. Raw bench DAMAGE (placeBenchDamage) is unaffected. */
 export function placeAttackCounters(
   side: PlayerSide,
   counters: number,
   chosenIds?: string[],
+  state?: GameState,
 ): void {
+  // Battle Cage: counters can't be PLACED on the Bench by attack/ability
+  // effects at all. (Raw bench DAMAGE — placeBenchDamage — still applies.)
+  if (stadiumPreventsBenchCounters(state)) return;
   if (side.bench.length === 0) return; // no legal target — counters fizzle
   if (chosenIds && chosenIds.length === counters) {
     const valid = chosenIds.every((id) => side.bench.some((m) => m.id === id));

@@ -213,6 +213,48 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
     },
   ],
 
+  /* ── On-attach Special Energy (W2-fin.6) ─────────────────────── */
+
+  // Jet Energy: when attached from hand to a BENCHED Pokémon, switch it into
+  // the Active Spot. The `self` ref is the mon it was just attached to.
+  "Jet Energy": [
+    {
+      card: "Jet Energy",
+      trigger: { kind: "on_attach" },
+      ops: [{ op: "switch", monRef: SELF_REF }],
+    },
+  ],
+
+  // Enriching Energy (ACE SPEC): when attached from hand, draw 4.
+  "Enriching Energy": [
+    {
+      card: "Enriching Energy",
+      trigger: { kind: "on_attach" },
+      ops: [{ op: "draw", n: 4 }],
+    },
+  ],
+
+  // Telepathic Psychic Energy: when attached from hand to a PSYCHIC Pokémon,
+  // search the deck for up to 2 Basic Psychic Pokémon and bench them.
+  "Telepathic Psychic Energy": [
+    {
+      card: "Telepathic Psychic Energy",
+      trigger: { kind: "on_attach" },
+      guards: [{ cond: "self_is", filter: { side: "own", zone: "in_play", type: "Psychic" } }],
+      targets: [
+        {
+          ref: "p",
+          select: "card",
+          count: 2,
+          upTo: true,
+          card: { zone: "deck", filter: { basicPokemon: true, pokemonType: "Psychic" } },
+          chooser: "player",
+        },
+      ],
+      ops: [{ op: "search", targetRef: "p", to: "bench" }],
+    },
+  ],
+
   /* ── Multi-pick searches (W2-fin.5) ──────────────────────────── */
 
   // Cyrano: search your deck for up to 3 Pokémon ex. The first true multi-pick
@@ -431,6 +473,16 @@ export function abilityEffects(
     if (effect.trigger.kind === trigger && effect.ability) out.push({ effect, index });
   });
   return out;
+}
+
+/** The on-attach effect for an Energy card (Jet, Enriching, Telepathic), with
+ *  its ORIGINAL index. Resolves inside the `attach` move, not as its own. */
+export function onAttachEffect(cardName: string): { effect: CardEffect; index: number } | null {
+  const effects = effectsFor(cardName);
+  for (let index = 0; index < effects.length; index++) {
+    if (effects[index].trigger.kind === "on_attach") return { effect: effects[index], index };
+  }
+  return null;
 }
 
 /** The declarative rider for an attack, with its ORIGINAL index in

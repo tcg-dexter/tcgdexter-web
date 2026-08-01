@@ -8,6 +8,7 @@
 
 import type { CardInstance, GameState, PlayerSide, PokemonInPlay } from "../types";
 import { isBasic, prizeValue, toPokemonInPlay } from "./setup";
+import { pickDiscards } from "./trainers";
 import type { Rng } from "./rng";
 import { shuffle } from "./rng";
 
@@ -55,6 +56,89 @@ export function enforceBenchCap(state: GameState): void {
   }
 }
 
+/* ─── Static stadium passives (W2-fin.6) ────────────────────────── */
+
+/** A Stadium's passive rule, read at the site where the rule applies rather
+ *  than enumerated as a move. Each field maps to exactly one call site, which
+ *  is what keeps these honest: a passive with no site is not "implemented". */
+interface StadiumPassive {
+  /** Flat max-HP delta for matching Pokémon (Gravity Mountain: Stage 2 −30). */
+  hpDelta?: { amount: number; stage?: "Basic" | "Stage 1" | "Stage 2" };
+  /** Attacks cost this many extra Colorless (Nighttime Mine: Tera +1). */
+  attackCostExtra?: { amount: number; subtype?: string };
+  /** Pokémon matching this have no Abilities (Team Rocket's Watchtower). */
+  abilitiesOffFor?: { type?: string };
+  /** All attached Pokémon Tools do nothing (Jamming Tower). */
+  toolsDisabled?: boolean;
+  /** Pokémon with any Energy can't be affected by Special Conditions
+   *  (Festival Grounds). */
+  conditionImmuneWithEnergy?: boolean;
+  /** Damage counters can't be PLACED on Benched Pokémon by attack/ability
+   *  effects — attack damage still applies (Battle Cage). */
+  preventBenchCounters?: boolean;
+}
+
+const STADIUM_PASSIVES: Record<string, StadiumPassive> = {
+  "Gravity Mountain": { hpDelta: { amount: -30, stage: "Stage 2" } },
+  "Nighttime Mine": { attackCostExtra: { amount: 1, subtype: "Tera" } },
+  "Team Rocket's Watchtower": { abilitiesOffFor: { type: "Colorless" } },
+  "Jamming Tower": { toolsDisabled: true },
+  "Festival Grounds": { conditionImmuneWithEnergy: true },
+  "Battle Cage": { preventBenchCounters: true },
+};
+
+function passive(state: GameState | undefined): StadiumPassive | null {
+  const name = state?.stadium?.card.name;
+  return name ? (STADIUM_PASSIVES[name] ?? null) : null;
+}
+
+function stageOf(mon: PokemonInPlay): string | null {
+  const cat = mon.card.catalog;
+  if (cat?.supertype !== "Pokémon") return null;
+  if (cat.subtypes.includes("Stage 2")) return "Stage 2";
+  if (cat.subtypes.includes("Stage 1")) return "Stage 1";
+  return cat.evolves_from ? null : "Basic";
+}
+
+/** Max-HP delta the current Stadium imposes on this Pokémon. */
+export function stadiumHpDelta(mon: PokemonInPlay, state?: GameState): number {
+  const p = passive(state)?.hpDelta;
+  if (!p) return 0;
+  return !p.stage || stageOf(mon) === p.stage ? p.amount : 0;
+}
+
+/** Extra Colorless the current Stadium adds to this Pokémon's attack costs. */
+export function stadiumAttackCostExtra(mon: PokemonInPlay, state?: GameState): number {
+  const p = passive(state)?.attackCostExtra;
+  if (!p) return 0;
+  const subs = mon.card.catalog?.subtypes ?? [];
+  return !p.subtype || subs.includes(p.subtype) ? p.amount : 0;
+}
+
+/** True when the current Stadium switches this Pokémon's Abilities off. */
+export function stadiumSuppressesAbility(mon: PokemonInPlay, state?: GameState): boolean {
+  const p = passive(state)?.abilitiesOffFor;
+  if (!p) return false;
+  return !p.type || (mon.card.catalog?.types.includes(p.type) ?? false);
+}
+
+/** True when the current Stadium nullifies attached Pokémon Tools. */
+export function stadiumDisablesTools(state?: GameState): boolean {
+  return passive(state)?.toolsDisabled === true;
+}
+
+/** True when the current Stadium makes this Pokémon immune to Special
+ *  Conditions (Festival Grounds — any Energy attached). */
+export function stadiumBlocksConditions(mon: PokemonInPlay, state?: GameState): boolean {
+  return passive(state)?.conditionImmuneWithEnergy === true && mon.attachedEnergy.length > 0;
+}
+
+/** True when the current Stadium prevents counters being PLACED on the Bench
+ *  (Battle Cage). Attack damage to the Bench is unaffected. */
+export function stadiumPreventsBenchCounters(state?: GameState): boolean {
+  return passive(state)?.preventBenchCounters === true;
+}
+
 /** Effect-coverage predicate (W1): stadiums with a modeled passive or
  *  activated effect (others sit inertly). */
 const MODELED_STADIUMS = new Set([
@@ -64,7 +148,7 @@ const MODELED_STADIUMS = new Set([
   "N's Castle",
 ]);
 export function isStadiumModeled(name: string): boolean {
-  return MODELED_STADIUMS.has(name);
+  return MODELED_STADIUMS.has(name) || name in STADIUM_PASSIVES || name in STADIUM_ACTIVATED;
 }
 
 /* ─── Activated stadium effects ─────────────────────────────────── */
@@ -84,22 +168,76 @@ function dedupeByName(cards: CardInstance[]): CardInstance[] {
   return cards.filter((c) => (seen.has(c.name) ? false : (seen.add(c.name), true)));
 }
 
+/** Activated Stadium effects, once during EACH player's turn. Artazon keeps
+ *  its hand-written search (it picks a card, so it needs the pickers); the
+ *  rest are simple enough to declare as data. */
+interface StadiumActivated {
+  /** Search own deck for a card matching this name prefix -> hand. */
+  searchNamePrefix?: string;
+  /** Put a card from hand on top of the deck (Academy at Night). */
+  handToDeckTop?: boolean;
+  /** Discard N from hand, then draw M (Prism Tower). */
+  discardThenDraw?: { discard: number; draw: number };
+  /** Draw N if a Supporter whose name contains this was played this turn
+   *  (Team Rocket's Factory). */
+  drawIfSupporterPlayed?: { contains: string; draw: number };
+}
+
+export const STADIUM_ACTIVATED: Record<string, StadiumActivated> = {
+  "Spikemuth Gym": { searchNamePrefix: "Marnie's " },
+  "Academy at Night": { handToDeckTop: true },
+  "Prism Tower": { discardThenDraw: { discard: 2, draw: 1 } },
+  "Team Rocket's Factory": { drawIfSupporterPlayed: { contains: "Team Rocket", draw: 2 } },
+};
+
 /** Once-per-turn activated Stadium moves for `actor` (empty if none). */
 export function stadiumMoves(
   state: GameState,
   actor: "player" | "opponent",
   alreadyUsed: boolean,
 ): UseStadiumMove[] {
-  if (alreadyUsed || state.stadium?.card.name !== "Artazon") return [];
+  if (alreadyUsed) return [];
+  const name = state.stadium?.card.name;
+  if (!name) return [];
   const side = state.sides[actor];
-  if (side.bench.length >= benchCap(state, actor)) return [];
-  const eligible = side.deck.filter((c) => isBasic(c) && prizeValue(c.name) === 1);
-  return dedupeByName(eligible).map((c) => ({
-    kind: "use_stadium",
-    stadiumName: "Artazon",
-    deckCardId: c.id,
-    deckCardName: c.name,
-  }));
+
+  if (name === "Artazon") {
+    if (side.bench.length >= benchCap(state, actor)) return [];
+    const eligible = side.deck.filter((c) => isBasic(c) && prizeValue(c.name) === 1);
+    return dedupeByName(eligible).map((c) => ({
+      kind: "use_stadium",
+      stadiumName: "Artazon",
+      deckCardId: c.id,
+      deckCardName: c.name,
+    }));
+  }
+
+  const spec = STADIUM_ACTIVATED[name];
+  if (!spec) return [];
+  const one = (extra: Partial<UseStadiumMove> = {}): UseStadiumMove[] => [
+    { kind: "use_stadium", stadiumName: name, ...extra },
+  ];
+
+  if (spec.searchNamePrefix) {
+    const eligible = side.deck.filter((c) => c.name.startsWith(spec.searchNamePrefix!));
+    return dedupeByName(eligible).map((c) => ({
+      kind: "use_stadium",
+      stadiumName: name,
+      deckCardId: c.id,
+      deckCardName: c.name,
+    }));
+  }
+  if (spec.handToDeckTop) return side.hand.length > 0 ? one() : [];
+  if (spec.discardThenDraw) {
+    return side.hand.length >= spec.discardThenDraw.discard && side.deck.length > 0 ? one() : [];
+  }
+  if (spec.drawIfSupporterPlayed) {
+    // Gated on the supporter actually played this turn, tracked on the side.
+    const played = side.supporterNamePlayedThisTurn ?? "";
+    const ok = played.includes(spec.drawIfSupporterPlayed.contains) && side.deck.length > 0;
+    return ok ? one() : [];
+  }
+  return [];
 }
 
 /** Apply a validated use_stadium move (Artazon: bench the chosen Basic). */
@@ -109,12 +247,50 @@ export function applyStadium(
   move: UseStadiumMove,
   rng: Rng | null,
 ): void {
-  if (state.stadium?.card.name !== "Artazon" || move.stadiumName !== "Artazon") return;
+  const name = state.stadium?.card.name;
+  if (!name || move.stadiumName !== name) return;
   const side = state.sides[actor];
-  if (side.bench.length >= benchCap(state, actor)) return;
-  const idx = move.deckCardId ? side.deck.findIndex((c) => c.id === move.deckCardId) : -1;
-  if (idx < 0) return;
-  const [pulled] = side.deck.splice(idx, 1);
-  side.bench.push(toPokemonInPlay(pulled, state.turn.number));
-  if (rng) shuffle(side.deck, rng);
+
+  if (name === "Artazon") {
+    if (side.bench.length >= benchCap(state, actor)) return;
+    const idx = move.deckCardId ? side.deck.findIndex((c) => c.id === move.deckCardId) : -1;
+    if (idx < 0) return;
+    const [pulled] = side.deck.splice(idx, 1);
+    side.bench.push(toPokemonInPlay(pulled, state.turn.number));
+    if (rng) shuffle(side.deck, rng);
+    return;
+  }
+
+  const spec = STADIUM_ACTIVATED[name];
+  if (!spec) return;
+
+  if (spec.searchNamePrefix) {
+    const idx = move.deckCardId ? side.deck.findIndex((c) => c.id === move.deckCardId) : -1;
+    if (idx < 0) return;
+    side.hand.push(...side.deck.splice(idx, 1));
+    if (rng) shuffle(side.deck, rng);
+    return;
+  }
+  if (spec.handToDeckTop) {
+    // Auto-pick the least useful card (a real choice is a W4 chooser).
+    const chosen = pickDiscards(side, 1, "")[0];
+    const i = chosen ? side.hand.findIndex((c) => c.id === chosen.id) : -1;
+    if (i >= 0) side.deck.unshift(...side.hand.splice(i, 1));
+    return;
+  }
+  if (spec.discardThenDraw) {
+    const { discard, draw } = spec.discardThenDraw;
+    if (side.hand.length < discard) return;
+    for (const c of pickDiscards(side, discard, "")) {
+      const i = side.hand.findIndex((h) => h.id === c.id);
+      if (i >= 0) side.discard.push(...side.hand.splice(i, 1));
+    }
+    side.hand.push(...side.deck.splice(0, draw));
+    return;
+  }
+  if (spec.drawIfSupporterPlayed) {
+    const played = side.supporterNamePlayedThisTurn ?? "";
+    if (!played.includes(spec.drawIfSupporterPlayed.contains)) return;
+    side.hand.push(...side.deck.splice(0, spec.drawIfSupporterPlayed.draw));
+  }
 }

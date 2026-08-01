@@ -19,6 +19,7 @@ import { mintInstanceId } from "../initial";
 import { ENGINE_VERSION } from "../types";
 import type { CardInstance, GameState, PlayerSide, PokemonInPlay } from "../types";
 import { shuffle, type Rng } from "./rng";
+import { specialEnergyUnits, type EnergyUnit } from "./effects/energy";
 
 /** Bump when sim behavior changes enough to invalidate cached results
  *  (v2: staple trainer effects replaced generic cycling for the registry
@@ -51,7 +52,11 @@ import { shuffle, type Rng } from "./rng";
 // v10: multi-pick within a single target slot (W2-fin.5) — Cyrano, Arven and
 // Ciphermaniac's Codebreaking are really played, and a pick may take several
 // copies of the same card. Enumeration is capped per slot and per effect.
-export const SIM_VERSION = 10;
+// v11: the `static` rule-site layer lands (W2-fin.6). Special Energy output is
+// declarative and CONDITIONAL on its holder (Ignition/Prism/Neo Upper/Reversal),
+// restricted wildcards pay typed costs, Stadium passives are read at six rule
+// sites, Tools gain damage/cost modifiers, and Energy has an on-attach trigger.
+export const SIM_VERSION = 11;
 
 const MAX_MULLIGANS = 20;
 
@@ -142,46 +147,45 @@ const ENERGY_TYPE_RE =
 export function energyProvides(c: CardInstance): string | null {
   if (c.catalog?.supertype !== "Energy") return null;
   const units = energyUnits(c);
-  const first = units[0];
+  // Restricted wildcards ("Any(Psychic|Darkness)") display as their first
+  // concrete type — a UI label, never used for cost logic (see unitPaysType).
+  const raw = units[0];
+  const first = raw?.startsWith("Any(") ? raw.slice(4, -1).split("|")[0] : raw;
   return first === "Any" ? "Colorless" : first ?? "Colorless";
 }
 
-/** A single energy provided by an attached card: a concrete type, or "Any"
- *  (a wildcard that satisfies any typed cost). */
-export type EnergyUnit = string;
-
-/** Special energy that provides a wildcard "every type" unit. */
-const ANY_TYPE_SPECIAL = new Set(["Luminous Energy", "Legacy Energy", "Rainbow Energy", "V Guard Energy"]);
-/** Special energy providing 2+ Colorless from one card. */
-const MULTI_COLORLESS_SPECIAL: Record<string, number> = { "Double Turbo Energy": 2 };
-
-/** Effect-coverage predicate (W1): is this Special Energy's output modeled?
- *  Unmodeled special energy degrades to a single Colorless. */
-export function isSpecialEnergyModeled(name: string): boolean {
-  return ANY_TYPE_SPECIAL.has(name) || name in MULTI_COLORLESS_SPECIAL;
-}
+// Special Energy is now DECLARATIVE (effects/energy.ts) — output, conditional
+// overrides and coverage all live in that table rather than in ad-hoc sets here.
+export type { EnergyUnit } from "./effects/energy";
+export { isSpecialEnergyModeled } from "./effects/energy";
 
 /**
- * Energy units an attached card provides toward attack/retreat costs. One
- * card can provide multiple units (Double Turbo = 2 Colorless) and can be a
- * wildcard (Luminous = 1 Any). Basic energy provides one unit of its type.
- * Unknown special energy provides a single Colorless (conservative default).
+ * Energy units an attached card provides toward attack/retreat costs. One card
+ * can provide several units (Double Turbo = 2) and a unit can be a wildcard
+ * ("Any") or a RESTRICTED wildcard ("Any(Psychic|Darkness)").
+ *
+ * `mon`/`state` are optional context: several Special Energies provide
+ * DIFFERENT units depending on their holder (Ignition gives 3 on an Evolution,
+ * Prism a wildcard on a Basic). Without context the base output is used, which
+ * is what display and deck-level callers want. Unknown special energy provides
+ * a single Colorless (conservative default).
  */
-export function energyUnits(c: CardInstance): EnergyUnit[] {
+export function energyUnits(
+  c: CardInstance,
+  mon?: PokemonInPlay | null,
+  state?: GameState | null,
+): EnergyUnit[] {
   if (c.catalog?.supertype !== "Energy") return [];
   if (isBasicEnergyCard(c)) {
     const m = c.name.match(ENERGY_TYPE_RE);
     return [m ? m[1] : "Colorless"];
   }
-  if (ANY_TYPE_SPECIAL.has(c.name)) return ["Any"];
-  const multi = MULTI_COLORLESS_SPECIAL[c.name];
-  if (multi) return Array(multi).fill("Colorless");
-  return ["Colorless"];
+  return specialEnergyUnits(c, mon ?? null, state ?? null) ?? ["Colorless"];
 }
 
 /** Total energy units attached to a Pokémon (Double Turbo counts as 2). */
-export function totalEnergyUnits(mon: PokemonInPlay): number {
-  return mon.attachedEnergy.reduce((n, c) => n + energyUnits(c).length, 0);
+export function totalEnergyUnits(mon: PokemonInPlay, state?: GameState | null): number {
+  return mon.attachedEnergy.reduce((n, c) => n + energyUnits(c, mon, state).length, 0);
 }
 
 /** Prize cards taken for knocking this Pokémon out. */

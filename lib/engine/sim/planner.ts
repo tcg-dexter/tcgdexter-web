@@ -649,6 +649,7 @@ export class PlannerPolicy implements DecisionPolicy {
     const self = state.sides.player;
     self.energyAttachedThisTurn = 0;
     self.supporterPlayedThisTurn = false;
+    self.supporterNamePlayedThisTurn = undefined;
     for (const mon of [self.active, ...self.bench]) if (mon) mon.evolvedThisTurn = false;
 
     // Doing nothing next turn is always available, and is the floor. Clone

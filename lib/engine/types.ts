@@ -126,6 +126,9 @@ export interface PlayerSide {
   energyAttachedThisTurn: number;
   /** Supporter played this turn (1/turn rule). Reset at turn end. */
   supporterPlayedThisTurn: boolean;
+  /** Name of the Supporter played this turn, for effects that key off WHICH
+   *  Supporter it was (Team Rocket's Factory). Cleared at turn start. */
+  supporterNamePlayedThisTurn?: string;
   /** True when one of this side's Pokémon was Knocked Out during the
    *  opponent's most recent turn (set in knockOut, cleared at the start of
    *  the opponent's next turn). Read by comeback abilities like

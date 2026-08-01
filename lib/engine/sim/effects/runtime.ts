@@ -113,6 +113,8 @@ export function guardsPass(
         return opp.active != null && monMatches(opp.active, g.filter);
       case "self_has_energy":
         return source != null && source.attachedEnergy.some((c) => cardMatches(c, g.filter));
+      case "self_is":
+        return source != null && monMatches(source, g.filter);
       case "hand_size_gte":
         // Checked while the card is still IN hand (enumeration time), so a
         // "discard N OTHER cards" cost needs N+1.
@@ -411,7 +413,10 @@ export function applyEffect(
     if (idx < 0) return;
     const cardInstance = side.hand[idx];
     side.hand.splice(idx, 1);
-    if (isSupporter(cardInstance)) side.supporterPlayedThisTurn = true;
+    if (isSupporter(cardInstance)) {
+      side.supporterPlayedThisTurn = true;
+      side.supporterNamePlayedThisTurn = cardInstance.name;
+    }
     side.discard.push(cardInstance); // the trainer itself
   }
 
