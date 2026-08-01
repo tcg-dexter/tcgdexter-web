@@ -27,10 +27,11 @@ import { retreatCost } from "./tools";
 import { damageTakenReduction, hasStatus, statusAmount } from "./statuses";
 import { auraDamageReduction, auraPreventsEffects } from "./auras";
 import { fireCheckup, fireEndOfTurn, fireOnDamaged } from "./hooks";
+import { specialEnergyPreventsEffects } from "./effects/energy";
 import { applyTrainer } from "./trainers";
 import { applyEffect } from "./effects/runtime";
 import { attackRiderEffect, damageScaleEffect, effectsFor, onAttachEffect, triggerEffect } from "./effects/cards";
-import { applyStadium, benchCap, enforceBenchCap } from "./stadiums";
+import { applyStadium, benchCap, enforceBenchCap, stadiumBenchEntryCounters } from "./stadiums";
 import { viewFor } from "./view";
 import { shuffle, type Rng } from "./rng";
 
@@ -169,6 +170,9 @@ export function applyMove(
       if (card && side.bench.length < benchCap(state, actor)) {
         const placed = toPokemonInPlay(card, state.turn.number);
         side.bench.push(placed);
+        // Risky Ruins punishes Basics entering the Bench.
+        const entry = stadiumBenchEntryCounters(placed, state);
+        if (entry > 0) placed.damage += entry * 10;
         // On-play abilities (Meowth ex's Last-Ditch Catch) fire as it lands.
         const onPlay = triggerEffect(card.name, "on_play");
         if (onPlay) {
@@ -355,7 +359,7 @@ export function applyMove(
 
       // Attack-inflicted conditions on the defending active (Mind Bend,
       // Bemusing Aroma, Thunder Shock — coin flips resolve via rng).
-      if (!auraPreventsEffects(defender, state)) {
+      if (!auraPreventsEffects(defender, state) && !specialEnergyPreventsEffects(defender)) {
         for (const c of attackInflictedConditions(attacker.card.name, attack.name, rng ?? undefined)) {
           applyCondition(defender, c, state);
         }

@@ -76,6 +76,12 @@ interface StadiumPassive {
   /** Damage counters can't be PLACED on Benched Pokémon by attack/ability
    *  effects — attack damage still applies (Battle Cage). */
   preventBenchCounters?: boolean;
+  /** Attacks by matching Pokémon (BOTH sides) hit the Active harder. */
+  damageBonus?: { amount: number; attacker: { namePrefix?: string } };
+  /** Matching Pokémon may evolve the turn they are played. */
+  evolveSameTurn?: { type: string };
+  /** Counters placed on a Basic as it hits the Bench (Risky Ruins). */
+  benchEntryCounters?: { n: number; exceptType?: string };
 }
 
 const STADIUM_PASSIVES: Record<string, StadiumPassive> = {
@@ -85,6 +91,9 @@ const STADIUM_PASSIVES: Record<string, StadiumPassive> = {
   "Jamming Tower": { toolsDisabled: true },
   "Festival Grounds": { conditionImmuneWithEnergy: true },
   "Battle Cage": { preventBenchCounters: true },
+  Postwick: { damageBonus: { amount: 30, attacker: { namePrefix: "Hop's " } } },
+  "Forest of Vitality": { evolveSameTurn: { type: "Grass" } },
+  "Risky Ruins": { benchEntryCounters: { n: 2, exceptType: "Darkness" } },
 };
 
 function passive(state: GameState | undefined): StadiumPassive | null {
@@ -181,10 +190,25 @@ interface StadiumActivated {
   /** Draw N if a Supporter whose name contains this was played this turn
    *  (Team Rocket's Factory). */
   drawIfSupporterPlayed?: { contains: string; draw: number };
+  /** Heal N from every one of your Pokémon, gated on having played a
+   *  Supporter this turn (Community Center). */
+  healAllIfSupporterPlayed?: number;
+  /** Discard an Energy from hand, then draw up to your Psychic-Pokémon count
+   *  (Mystery Garden). */
+  discardEnergyDrawToPsychicCount?: boolean;
+  /** Evolve a Basic from the deck, then that Stage 1 into its Stage 2
+   *  (Grand Tree). */
+  evolveChainFromDeck?: boolean;
 }
 
 export const STADIUM_ACTIVATED: Record<string, StadiumActivated> = {
   "Spikemuth Gym": { searchNamePrefix: "Marnie's " },
+  // Heal 10 from each of your Pokémon, if you played a Supporter this turn.
+  "Community Center": { healAllIfSupporterPlayed: 10 },
+  // Discard an Energy from hand, then draw up to your Psychic count.
+  "Mystery Garden": { discardEnergyDrawToPsychicCount: true },
+  // Evolve a Basic straight out of the deck, then its Stage 2.
+  "Grand Tree": { evolveChainFromDeck: true },
   "Academy at Night": { handToDeckTop: true },
   "Prism Tower": { discardThenDraw: { discard: 2, draw: 1 } },
   "Team Rocket's Factory": { drawIfSupporterPlayed: { contains: "Team Rocket", draw: 2 } },
@@ -236,6 +260,18 @@ export function stadiumMoves(
     const played = side.supporterNamePlayedThisTurn ?? "";
     const ok = played.includes(spec.drawIfSupporterPlayed.contains) && side.deck.length > 0;
     return ok ? one() : [];
+  }
+  if (spec.healAllIfSupporterPlayed != null) {
+    return side.supporterPlayedThisTurn ? one() : [];
+  }
+  if (spec.discardEnergyDrawToPsychicCount) {
+    return side.hand.some((c) => c.catalog?.supertype === "Energy") ? one() : [];
+  }
+  if (spec.evolveChainFromDeck) {
+    const basics = [side.active, ...side.bench].filter(
+      (m): m is PokemonInPlay => m !== null && !m.card.catalog?.evolves_from,
+    );
+    return basics.length > 0 && side.deck.length > 0 ? one() : [];
   }
   return [];
 }
@@ -292,5 +328,62 @@ export function applyStadium(
     const played = side.supporterNamePlayedThisTurn ?? "";
     if (!played.includes(spec.drawIfSupporterPlayed.contains)) return;
     side.hand.push(...side.deck.splice(0, spec.drawIfSupporterPlayed.draw));
+    return;
   }
+  if (spec.healAllIfSupporterPlayed != null) {
+    if (!side.supporterPlayedThisTurn) return;
+    for (const m of [side.active, ...side.bench]) {
+      if (m) m.damage = Math.max(0, m.damage - spec.healAllIfSupporterPlayed);
+    }
+    return;
+  }
+  if (spec.discardEnergyDrawToPsychicCount) {
+    const i = side.hand.findIndex((c) => c.catalog?.supertype === "Energy");
+    if (i < 0) return;
+    side.discard.push(...side.hand.splice(i, 1));
+    const psychic = [side.active, ...side.bench].filter(
+      (m) => m?.card.catalog?.types.includes("Psychic"),
+    ).length;
+    side.hand.push(...side.deck.splice(0, Math.max(0, psychic - side.hand.length)));
+    return;
+  }
+  if (spec.evolveChainFromDeck) {
+    // Basic -> Stage 1 -> Stage 2, each pulled from the deck.
+    const target = [side.active, ...side.bench].find(
+      (m): m is PokemonInPlay => m !== null && !m.card.catalog?.evolves_from,
+    );
+    if (!target) return;
+    for (let step = 0; step < 2; step++) {
+      const idx = side.deck.findIndex((c) => c.catalog?.evolves_from === target.card.name);
+      if (idx < 0) break;
+      const [evo] = side.deck.splice(idx, 1);
+      target.stack.push(target.card);
+      target.card = evo;
+      target.evolvedThisTurn = true;
+    }
+    if (rng) shuffle(side.deck, rng);
+  }
+}
+
+/** Extra Active-spot damage from the current Stadium (Postwick). */
+export function stadiumDamageBonus(attacker: PokemonInPlay, state?: GameState): number {
+  const b = passive(state)?.damageBonus;
+  if (!b) return 0;
+  const pre = b.attacker.namePrefix;
+  return !pre || attacker.card.name.startsWith(pre) ? b.amount : 0;
+}
+
+/** True when the Stadium lets this Pokémon evolve the turn it was played. */
+export function stadiumAllowsSameTurnEvolve(mon: PokemonInPlay, state?: GameState): boolean {
+  const e = passive(state)?.evolveSameTurn;
+  return Boolean(e && (mon.card.catalog?.types.includes(e.type) ?? false));
+}
+
+/** Counters placed on a Basic as it enters the Bench (Risky Ruins). */
+export function stadiumBenchEntryCounters(mon: PokemonInPlay, state?: GameState): number {
+  const b = passive(state)?.benchEntryCounters;
+  if (!b) return 0;
+  if (mon.card.catalog?.evolves_from) return 0; // Basics only
+  if (b.exceptType && (mon.card.catalog?.types.includes(b.exceptType) ?? false)) return 0;
+  return b.n;
 }

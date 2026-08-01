@@ -9,6 +9,38 @@ import { DEFENDER_REF, OWN_ACTIVE_REF, SELF_REF } from "./types";
 import type { CardEffect } from "./types";
 
 export const EFFECT_CARDS: Record<string, CardEffect[]> = {
+  /* ── Hook-driven triggers (on_damaged / end_of_turn / checkup) ── */
+
+  "Lucky Helmet": [
+    { card: "Lucky Helmet", trigger: { kind: "on_damaged" }, guards: [{ cond: "is_active" }],
+      ops: [{ op: "draw", n: 2 }] },
+  ],
+
+  "Handheld Fan": [
+    { card: "Handheld Fan", trigger: { kind: "on_damaged" }, guards: [{ cond: "is_active" }],
+      ops: [{ op: "discard_energy", monRef: "attacker", n: 1 }] },
+  ],
+
+  "Spiky Energy": [
+    { card: "Spiky Energy", trigger: { kind: "on_damaged" }, guards: [{ cond: "is_active" }],
+      ops: [{ op: "counters_on_attacker", n: 2 }] },
+  ],
+
+  Powerglass: [
+    { card: "Powerglass", trigger: { kind: "end_of_turn" }, guards: [{ cond: "is_active" }],
+      targets: [{ ref: "e", upTo: true, select: "card", card: { zone: "discard", filter: { basicEnergy: true } }, chooser: "auto" }],
+      ops: [{ op: "attach_energy", energyRef: "e", monRef: SELF_REF, from: "discard" }] },
+  ],
+
+  "Ignition Energy": [
+    { card: "Ignition Energy", trigger: { kind: "end_of_turn" }, ops: [{ op: "discard_self_card" }] },
+  ],
+
+  Froslass: [
+    { card: "Froslass", ability: "Freezing Shroud", trigger: { kind: "checkup" },
+      ops: [{ op: "counters_on_all", filter: { side: "own", zone: "in_play" }, n: 1, exceptSelfName: true }] },
+  ],
+
   "Nest Ball": [
     {
       card: "Nest Ball",

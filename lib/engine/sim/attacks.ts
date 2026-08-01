@@ -15,6 +15,7 @@ import { baseDamage } from "./moves";
 import type { Rng } from "./rng";
 import { toolDamageBonus } from "./tools";
 import { auraDamageBonus } from "./auras";
+import { stadiumDamageBonus } from "./stadiums";
 import { damageScaleEffect } from "./effects/cards";
 import { evalDamageFormula } from "./effects/runtime";
 
@@ -57,7 +58,7 @@ export function activeDamageBonus(
 ): number {
   // Attached Tools (Vitality Band, Maximum Belt, Brave Bangle, Hop's Choice
   // Band) — declarative, see tools.ts.
-  let bonus = toolDamageBonus(attacker, defender, state) + auraDamageBonus(attacker, state);
+  let bonus = toolDamageBonus(attacker, defender, state) + auraDamageBonus(attacker, state) + stadiumDamageBonus(attacker, state);
   // Turn-scoped Supporter buffs (Black Belt's Training, Kieran, Premium Power
   // Pro) — declarative, see the buff_damage_this_turn op.
   const defSubs = defender.card.catalog?.subtypes ?? [];

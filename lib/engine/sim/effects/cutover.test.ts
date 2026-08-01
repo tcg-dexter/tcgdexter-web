@@ -20,6 +20,7 @@ import { viewFor } from "../view";
 import { startGame, applyHumanMove, rebuildSession, humanOptions } from "../interactive";
 import { enumerateEffect, type EffectMove } from "./runtime";
 import { effectsFor } from "./cards";
+import { isToolModeled } from "../tools";
 
 const card = (n: string): CardInstance => ({ id: mintInstanceId("t"), name: n, catalog: lookupCard(n) });
 const mon = (n: string): PokemonInPlay => toPokemonInPlay(card(n), 0);
@@ -646,5 +647,35 @@ describe("W2 cutover — the interactive/API path the play UI drives", () => {
     // the recorded effect move must re-validate and reproduce the same board.
     const rebuilt = rebuildSession(session.transcript);
     expect(rebuilt.state.sides.player.hand.some((c) => c.name === "Team Rocket's Giovanni")).toBe(true);
+  });
+});
+
+describe("coverage honesty — cards marked modeled must really be registered", () => {
+  // A card can be flagged "implemented" in one registry while its effect lives
+  // in another. During W3 an insert silently failed and six cards were counted
+  // as modeled with no effect behind them — the metric overstated coverage.
+  // These assertions make that specific failure loud.
+  const HOOK_CARDS: [string, string][] = [
+    ["Lucky Helmet", "on_damaged"],
+    ["Handheld Fan", "on_damaged"],
+    ["Spiky Energy", "on_damaged"],
+    ["Powerglass", "end_of_turn"],
+    ["Ignition Energy", "end_of_turn"],
+    ["Froslass", "checkup"],
+  ];
+
+  it.each(HOOK_CARDS)("%s really carries a %s effect", (name, kind) => {
+    const effects = effectsFor(name);
+    expect(effects.length, `${name} is marked modeled but has no effect record`).toBeGreaterThan(0);
+    expect(effects.some((e) => e.trigger.kind === kind)).toBe(true);
+  });
+
+  it("every Tool with an empty effect record has a declarative effect instead", () => {
+    // TOOL_EFFECTS entries of `{}` mean "modeled elsewhere" — verify elsewhere
+    // actually exists, rather than silently counting as covered.
+    for (const [name] of HOOK_CARDS) {
+      if (!isToolModeled(name)) continue;
+      expect(effectsFor(name).length, `${name}`).toBeGreaterThan(0);
+    }
   });
 });

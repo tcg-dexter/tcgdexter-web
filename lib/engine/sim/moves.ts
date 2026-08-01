@@ -13,7 +13,7 @@ import { isSupporter, trainerMoves, trainerSpec, type PlayTrainerMove } from "./
 import { abilityMoves, hasLegacyActivated, type UseAbilityMove } from "./abilities";
 import { cannotAct } from "./conditions";
 import { canRetreat, effectiveMaxHp, isTool, toolCostReduction } from "./tools";
-import { benchCap, stadiumAttackCostExtra, stadiumMoves, type UseStadiumMove } from "./stadiums";
+import { benchCap, stadiumAllowsSameTurnEvolve, stadiumAttackCostExtra, stadiumMoves, type UseStadiumMove } from "./stadiums";
 import { enumerateEffect, type EffectMove, type EffectPick } from "./effects/runtime";
 import { abilityEffects, attackRiderEffect, effectsFor, onAttachEffect, triggerEffect } from "./effects/cards";
 
@@ -219,6 +219,7 @@ export function evolutionTargets(
   side: PlayerSide,
   evolvesFrom: string,
   turnNumber: number,
+  state?: GameState,
 ): PokemonInPlay[] {
   const inPlay = [side.active, ...side.bench].filter(
     (m): m is PokemonInPlay => m !== null,
@@ -226,7 +227,9 @@ export function evolutionTargets(
   return inPlay.filter(
     (mon) =>
       mon.card.name === evolvesFrom &&
-      mon.enteredPlayOnTurn < turnNumber &&
+      // Forest of Vitality waives the "in play since last turn" rule for its
+      // matching Pokémon.
+      (mon.enteredPlayOnTurn < turnNumber || stadiumAllowsSameTurnEvolve(mon, state)) &&
       !mon.evolvedThisTurn,
   );
 }
@@ -280,7 +283,7 @@ export function legalMoves(
     // Evolve.
     const from = card.catalog?.evolves_from;
     if (from && canEvolve) {
-      for (const target of evolutionTargets(side, from, state.turn.number)) {
+      for (const target of evolutionTargets(side, from, state.turn.number, state)) {
         // ON-EVOLVE abilities (Alakazam's Psychic Draw, Marnie's Grimmsnarl's
         // Punk Up) fire as the evolution lands; picks ride on the evolve move.
         const onEvo = triggerEffect(card.name, "on_evolve");

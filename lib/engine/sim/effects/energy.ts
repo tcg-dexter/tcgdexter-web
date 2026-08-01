@@ -45,6 +45,12 @@ export interface SpecialEnergySpec {
   overrides?: { when: EnergyCondition; units: EnergyUnit[] }[];
   /** Extra max HP granted to the holder (Growing Grass Energy). */
   hpBonus?: { amount: number; when?: EnergyCondition };
+  /** Prevents all EFFECTS of the opponent's attacks on the holder (damage is
+   *  not an effect). Read at the driver's condition/rider site. */
+  preventsEffects?: boolean;
+  /** Narrows preventsEffects to holders matching this (Rocky Fighting Energy
+   *  only shields Fighting Pokémon). */
+  preventsEffectsWhen?: EnergyCondition;
   /** Set when a NON-output rider (on-KO, damage prevention, re-attach) is not
    *  modeled. Such a card is deliberately reported as a coverage GAP even
    *  though its energy output is correct — see isSpecialEnergyModeled. */
@@ -100,12 +106,11 @@ export const SPECIAL_ENERGY: Record<string, SpecialEnergySpec> = {
   "Telepathic Psychic Energy": { units: ["Psychic"] },
   "Rocky Fighting Energy": {
     units: ["Fighting"],
-    unmodeledRider: "prevents attack effects on the holder",
+    preventsEffects: true,
+    preventsEffectsWhen: { on: "pokemon_type", type: "Fighting" },
   },
-  "Mist Energy": {
-    units: ["Colorless"],
-    unmodeledRider: "prevents attack effects on the holder",
-  },
+  // Effect prevention is read at the driver's condition site (preventsEffects).
+  "Mist Energy": { units: ["Colorless"], preventsEffects: true },
   "Growing Grass Energy": {
     units: ["Grass"],
     hpBonus: { amount: 20, when: { on: "pokemon_type", type: "Grass" } },
@@ -184,6 +189,16 @@ export function specialEnergyUnits(
     }
   }
   return [...spec.units];
+}
+
+/** True when an attached Special Energy shields its holder from attack
+ *  EFFECTS (Mist Energy, Rocky Fighting Energy). */
+export function specialEnergyPreventsEffects(mon: PokemonInPlay): boolean {
+  return mon.attachedEnergy.some((card) => {
+    const spec = SPECIAL_ENERGY[card.name];
+    if (!spec?.preventsEffects) return false;
+    return !spec.preventsEffectsWhen || condHolds(spec.preventsEffectsWhen, card, mon, null);
+  });
 }
 
 /** Extra max HP the attached Special Energy grants its holder. */

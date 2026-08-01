@@ -71,7 +71,10 @@ import { auraEnergyUnits } from "./auras";
 // shields. Lucky Helmet draws, Spiky Energy punishes attackers, Powerglass
 // re-arms, Ignition self-discards, and Lillie's Pearl / Legacy Energy really
 // cost the attacker a prize.
-export const SIM_VERSION = 15;
+// v16: remaining stadium passives/activated effects and Special Energy effect
+// prevention (Mist, Rocky Fighting). Postwick boosts, Forest of Vitality
+// waives the evolve lock, Risky Ruins taxes Bench entry.
+export const SIM_VERSION = 16;
 
 const MAX_MULLIGANS = 20;
 
