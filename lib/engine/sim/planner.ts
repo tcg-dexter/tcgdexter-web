@@ -167,13 +167,36 @@ const PRIZE_CONVERSION_BONUS = 0.15;
 // line exists all candidates pay it equally and the ordering is untouched,
 // so it only ever tips choices toward attacking.
 //   A/B-swept (see git history): the value trades off two things — a bigger
-// penalty shifts more decisions toward attacking, but too large a value
-// compresses the skill ladder (easy/medium/hard differ only in exploration
-// noise over the same greedy scores, so over-shaping the greedy policy
-// erodes their separation and breaks the difficulty-ladder tests). 0.04 is
-// the largest value that keeps the ladder intact with margin (medium beats
-// easy ~0.65) while cutting self-play deck-out ~46.7% → ~41.7% and raising
-// the attack share; ≥0.08 breaks the ladder for no extra deck-out gain.
+// penalty shifts more decisions toward attacking, but too large a value used
+// to compress the skill ladder (easy/medium/hard differed only in exploration
+// noise over the same greedy scores, so over-shaping the greedy policy eroded
+// their separation). That capped it at 0.04: "≥0.08 breaks the ladder".
+//
+//   RE-SWEPT 2026-08-02. The LADDER cap no longer binds — `sloppyDevelopment`
+// gives the difficulty dial a separation source independent of the greedy
+// scores, and the ladder tests pass at 0.18 with margin. But raising it is
+// still wrong, for a different reason, so the value stays at 0.04.
+//
+// Game SHAPE improves monotonically with a bigger penalty (5 decks, 120
+// games each):
+//
+//     penalty   prizes-win   deck-out   attacked-when-able
+//       0.04       40.8%      32.5%          73.2%
+//       0.10       44.2%      28.3%          79.3%
+//       0.18       49.2%      25.0%          85.6%
+//
+// STRENGTH does not. Paired against HeuristicPolicy on the frozen benchmark,
+// three seeds x 240 true-mirror games each:
+//
+//     penalty   seed a   seed b   seed c    mean
+//       0.04     51.5%    49.6%    49.8%   50.3%   <- kept
+//       0.10     46.3%    47.8%    50.0%   48.0%
+//       0.18     47.1%    48.5%    47.3%   47.6%
+//
+// Worse on every seed, consistently, so it is a real ~2.5-point cost rather
+// than noise. More attacking makes the games LOOK healthier while making the
+// bot play slightly worse — shape is a proxy, strength is the thing. Kept at
+// 0.04; the deck-out rate needs a fix that isn't this knob.
 const NO_ATTACK_TEMPO_PENALTY = 0.04;
 // An energy that advances no attack scores identically to not attaching
 // (the investment term sees no progress), and the softmax splits exact

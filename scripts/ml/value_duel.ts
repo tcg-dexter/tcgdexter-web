@@ -93,12 +93,20 @@ function main(): void {
   let bWins = 0;
   let draws = 0;
   for (let g = 0; g < GAMES; g++) {
-    const d = instantiateDeck(decks[g % decks.length].list);
+    // Deck advances every 4 games and the (seat, initiative) combination
+    // cycles WITHIN each deck, so every deck is played in all four
+    // combinations. The obvious `deck = g % decks.length` with a mod-4 seat
+    // cycle is broken whenever 4 divides the deck count — with 12 benchmark
+    // decks each deck was locked to ONE combination for the whole run, so a
+    // deck's first-player advantage never cancelled and the result swung with
+    // which decks happened to land on which seat. That is exactly the
+    // seat/initiative confound value_gate.ts documents, and it showed up as
+    // the same configuration scoring 39.1% and 56.1% on different seeds.
+    const combo = g % 4;
+    const d = instantiateDeck(decks[Math.floor(g / 4) % decks.length].list);
     const gameSeed = hashSeed(`${SEED}:${g}`);
-    // Alternate BOTH which seat A occupies and who moves first, so neither
-    // the seat nor the initiative advantage can accumulate on one side.
-    const aIsPlayer = g % 2 === 0;
-    const firstActor = g % 4 < 2 ? ("player" as const) : ("opponent" as const);
+    const aIsPlayer = combo % 2 === 0;
+    const firstActor = combo < 2 ? ("player" as const) : ("opponent" as const);
     const pa = a.make(gameSeed);
     const pb = b.make((gameSeed ^ 0x85ebca6b) >>> 0);
     const out = playGame(

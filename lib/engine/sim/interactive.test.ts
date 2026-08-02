@@ -150,7 +150,7 @@ describe("declarative abilities are playable by a human", () => {
     let found = false;
     // Several seeds: the ability needs its Pokémon benched, which is a draw.
     for (let seed = 0; seed < 40 && !found; seed++) {
-      const session = startGame({ deckHuman: ABILITY_DECK, deckAi: ABILITY_DECK, seed });
+      const session = startGame({ deckHuman: ABILITY_DECK, deckAi: ABILITY_DECK, seed, skill: 1 });
       for (let step = 0; step < 30 && session.status === "human_turn"; step++) {
         const options = humanOptions(session);
         const inPlay = new Set(

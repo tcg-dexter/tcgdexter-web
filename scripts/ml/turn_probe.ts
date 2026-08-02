@@ -19,6 +19,9 @@ import { metaDeckToList, type MetaDeckEntry } from "@/lib/metaDeckList";
 import { instantiateDeck } from "@/lib/engine/sim/setup";
 import { playGame, type TurnObservation } from "@/lib/engine/sim/driver";
 import { HeuristicPolicy } from "@/lib/engine/sim/policy";
+import { PlannerPolicy } from "@/lib/engine/sim/planner";
+import { plannerParamsForSkill } from "@/lib/engine/sim/difficulty";
+import { createBotEvaluator } from "@/lib/ml/botEvaluator";
 import { hashSeed, mulberry32 } from "@/lib/engine/sim/rng";
 
 function arg(flag: string): string | null {
@@ -28,6 +31,15 @@ function arg(flag: string): string | null {
 const N = Number(arg("--n") ?? 40);
 const DECKS = Number(arg("--decks") ?? 6);
 const SEED = arg("--seed") ?? "probe-1";
+/** Which pilot to profile. The planner is what the gameplay UI actually uses,
+ *  so its turn shape is the one that matters for "does the AI play well". */
+const POLICY = arg("--policy") ?? "heuristic";
+const EVALUATOR = createBotEvaluator() ?? undefined;
+const PARAMS = plannerParamsForSkill(1);
+const makePolicy = (seed: number) =>
+  POLICY === "planner"
+    ? new PlannerPolicy({ params: PARAMS, seed, evaluate: EVALUATOR })
+    : new HeuristicPolicy();
 
 interface Arch { id: string; name: string; representation_pct: number }
 
@@ -70,7 +82,7 @@ function main(): void {
         const out = playGame(
           deckA,
           deckB,
-          { player: new HeuristicPolicy(), opponent: new HeuristicPolicy() },
+          { player: makePolicy(g + 1), opponent: makePolicy(g + 9001) },
           rng,
           g % 2 === 0 ? "player" : "opponent",
           { observer: (ev) => { local.push(ev); } },
