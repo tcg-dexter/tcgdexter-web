@@ -1321,6 +1321,13 @@ export function isSelfSwitchEffect(cardName: string, effectIndex: number): boole
   return effect ? effect.ops.some((o) => o.op === "switch") : false;
 }
 
+/** The ABILITY name a declarative effect represents, if it is one. The play
+ *  UI labels its buttons with this — "Subjugating Chains" reads as an
+ *  ability, "Pecharunt ex" reads as a card you are about to play. */
+export function effectAbilityName(cardName: string, effectIndex: number): string | null {
+  return effectsFor(cardName)[effectIndex]?.ability ?? null;
+}
+
 /** The coarse phase of a declarative-effect move, or null for other moves.
  *  The shared seam the AI policies use to handle effect moves generically. */
 export function effectMovePhase(cardName: string, effectIndex: number): "draw" | "search" | "tactical" | null {

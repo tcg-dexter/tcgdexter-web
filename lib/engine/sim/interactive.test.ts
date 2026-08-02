@@ -124,3 +124,58 @@ describe("interactive session", () => {
     expect(raw).not.toContain("(unrevealed)");
   });
 });
+
+/* ─── Human reachability of the W3 move shapes ──────────────────── */
+
+// W3 gave the engine 100% effect coverage, but the play UI only ever looked
+// for effect moves whose `sourceId` was a HAND card. Declarative activated
+// abilities carry `sourceId` = a Pokémon in play, so every one of them was
+// enumerated for the AI and unreachable for the human. These pin the SESSION
+// side of that: the moves are offered, and the validator accepts them.
+describe("declarative abilities are playable by a human", () => {
+  /** A deck whose engine is a declarative activated ability. */
+  const ABILITY_DECK = [
+    "Pokémon: 12",
+    "4 Lunatone MEE 74",
+    "4 Solrock MEE 73",
+    "4 Snorlax SVI 143",
+    "Trainer: 24",
+    "12 Ultra Ball SVI 196",
+    "12 Nest Ball SVI 181",
+    "Energy: 24",
+    "24 Basic Fighting Energy SVE 6",
+  ].join("\n");
+
+  it("offers ability moves sourced from a Pokémon in play, and accepts them", () => {
+    let found = false;
+    // Several seeds: the ability needs its Pokémon benched, which is a draw.
+    for (let seed = 0; seed < 40 && !found; seed++) {
+      const session = startGame({ deckHuman: ABILITY_DECK, deckAi: ABILITY_DECK, seed });
+      for (let step = 0; step < 30 && session.status === "human_turn"; step++) {
+        const options = humanOptions(session);
+        const inPlay = new Set(
+          [session.state.sides.player.active, ...session.state.sides.player.bench]
+            .filter((m) => m !== null)
+            .map((m) => m!.id),
+        );
+        const abilityMove = options.find(
+          (m) => m.kind === "effect" && inPlay.has((m as { sourceId: string }).sourceId),
+        );
+        if (abilityMove) {
+          // The whole point: this must NOT throw. If validate rejected moves
+          // it had itself enumerated, the human path would be broken.
+          expect(() => applyHumanMove(session, abilityMove)).not.toThrow();
+          found = true;
+          break;
+        }
+        const next = scriptedHumanMove(session);
+        try {
+          applyHumanMove(session, next);
+        } catch {
+          break;
+        }
+      }
+    }
+    expect(found).toBe(true);
+  });
+});

@@ -14,6 +14,8 @@ import type { ClientMon, ClientView, InteractiveMove } from "@/lib/engine/sim";
 /** A universal declarative-effect move (W2). Carries `sourceId` (the hand card)
  *  and `picks` with display names, so the UI can label choices generically. */
 type EffectMove = Extract<InteractiveMove, { kind: "effect" }>;
+/** The display-name half of an EffectPick — all this UI needs from a pick. */
+type EffectPickLike = { cardNames?: string[]; monNames?: string[] };
 // Import the value directly from its leaf module rather than the
 // "@/lib/engine/sim" barrel — the barrel also re-exports interactive.ts
 // and planner.ts, which transitively pull in lib/ml/botEvaluator.ts
@@ -22,6 +24,7 @@ type EffectMove = Extract<InteractiveMove, { kind: "effect" }>;
 // module graph into this client bundle and webpack can't handle the
 // node: scheme in the browser build.
 import { trainerDiscardCostByName } from "@/lib/engine/sim/trainers";
+import { effectAbilityName } from "@/lib/engine/sim/effects/cards";
 import type { GameReview } from "@/lib/ml/gameReview";
 import {
   InspectContext,
@@ -117,7 +120,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
    *  the moves' pick display names. */
   const [effectChooser, setEffectChooser] = useState<{
     label: string;
-    moves: EffectMove[];
+    moves: InteractiveMove[];
   } | null>(null);
   /** Discard-cost stage (Ultra Ball): the chosen fetch move + running picks. */
   const [discardStage, setDiscardStage] = useState<{
@@ -142,7 +145,9 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
    *  Candy) — an explicit list so targeting never depends on board taps. */
   const [ownTargetChooser, setOwnTargetChooser] = useState<{
     label: string;
-    choices: { move: InteractiveMove; monId: string }[];
+    /** `moves` holds every move for that target — normally one, but more when
+     *  an on-attach trigger adds `attachPicks`, which is then a second choice. */
+    choices: { move: InteractiveMove; monId: string; moves?: InteractiveMove[] }[];
   } | null>(null);
   const [review, setReview] = useState<GameReview | null>(null);
   const [loading, setLoading] = useState(false);
@@ -289,15 +294,63 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     alwaysAsk = false,
   ) {
     if (choices.length === 0) return;
-    if (choices.length === 1 && !alwaysAsk) return void sendMove(choices[0].move);
-    setOwnTargetChooser({ label, choices });
+    // Several moves may share a target and differ only in `attachPicks` (an
+    // on-attach trigger). Collapse to one entry per target so the target
+    // picker isn't showing the same Pokémon twice, then resolve the pick.
+    const byMon = new Map<string, InteractiveMove[]>();
+    for (const c of choices) {
+      const list = byMon.get(c.monId) ?? [];
+      list.push(c.move);
+      byMon.set(c.monId, list);
+    }
+    const unique = Array.from(byMon, ([monId, moves]) => ({ monId, moves }));
+    if (unique.length === 1 && !alwaysAsk) {
+      return void sendOrChoose(label, unique[0].moves);
+    }
+    setOwnTargetChooser({
+      label,
+      choices: unique.map(({ monId, moves }) => ({ monId, move: moves[0], moves })),
+    });
+  }
+
+  /** Display names carried by ANY pick-bearing move.
+   *
+   *  W2 gave declarative trainers `picks`; W3 then added the same shape to
+   *  four more places — `triggerPicks` (on-play / on-evolve), `attachPicks`
+   *  (on-attach) and `riderPicks` (attack riders). The UI only ever read
+   *  `picks`, so those choices were enumerated by the engine, offered to the
+   *  AI, and silently dropped for the human. One accessor for all of them. */
+  function pickNamesOf(m: InteractiveMove): string[] {
+    const groups = [
+      (m as { picks?: EffectPickLike[] }).picks,
+      (m as { triggerPicks?: EffectPickLike[] }).triggerPicks,
+      (m as { attachPicks?: EffectPickLike[] }).attachPicks,
+      (m as { riderPicks?: EffectPickLike[] }).riderPicks,
+    ];
+    const out: string[] = [];
+    for (const g of groups) {
+      for (const p of g ?? []) out.push(...(p.cardNames ?? []), ...(p.monNames ?? []));
+    }
+    return out;
+  }
+
+  /** Send when there's nothing to decide, otherwise let the human choose. */
+  function sendOrChoose(label: string, moves: InteractiveMove[]) {
+    if (moves.length === 0) return;
+    if (moves.length === 1) return void sendMove(moves[0]);
+    setEffectChooser({ label, moves });
   }
 
   function handleHandClick(cardId: string) {
     if (!game || game.status !== "human_turn") return;
     const card = view.hand.find((c) => c.id === cardId);
-    const bench = byKind("bench").find((m) => m.cardId === cardId);
-    if (bench) return void sendMove(bench);
+    // Bench. Several bench moves for one card differ only in `triggerPicks`
+    // (Meowth ex's Last-Ditch Catch and friends) — that is the human's choice
+    // to make, and taking `.find()` threw it away.
+    const benchMoves = byKind("bench").filter((m) => m.cardId === cardId);
+    if (benchMoves.length > 0) {
+      return void sendOrChoose(card?.name ?? "Bench", benchMoves);
+    }
     const stadium = byKind("play_stadium").find((m) => m.cardId === cardId);
     if (stadium) return void sendMove(stadium);
     const supporter = byKind("cycle_supporter").find((m) => m.cardId === cardId);
@@ -536,6 +589,18 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
   const view: ClientView = game.view;
   const images = game.images;
   const attacks = byKind("attack");
+  /** Attacks grouped by index. `legalMoves` emits one move per rider-pick
+   *  combination, so a rider attack appears several times; the UI keyed its
+   *  buttons on `attackIndex` and therefore rendered duplicate keys and threw
+   *  every pick but one away. */
+  const attackGroups = Array.from(
+    attacks.reduce((map, m) => {
+      const list = map.get(m.attackIndex) ?? [];
+      list.push(m);
+      map.set(m.attackIndex, list);
+      return map;
+    }, new Map<number, typeof attacks>()),
+  ).map(([attackIndex, moves]) => ({ attackIndex, moves }));
   const canRetreat = byKind("retreat").length > 0;
   const promoting = game.status === "human_promotion";
   const humanActive = view.board.active ? toFrame(view.board.active, images) : null;
@@ -598,6 +663,31 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
       return map;
     }, new Map<string, { abilityName: string; monId: string; moves: typeof abilityOptions }>())
     .values(),
+  );
+
+  /** DECLARATIVE activated abilities (W3). These arrive as `effect` moves
+   *  whose `sourceId` is a Pokémon in play rather than a hand card — and the
+   *  only place this UI looked for effect moves was `sourceId === <hand card>`,
+   *  so none of them were reachable. Every ability W3 authored was usable by
+   *  the AI and invisible to the human: Pecharunt ex's Subjugating Chains,
+   *  Mega Kangaskhan ex's Run Errand, Lunatone's Lunar Cycle, Fan Rotom,
+   *  Teal Mask Ogerpon ex, ~30 in all.
+   *
+   *  The legacy `use_ability` registry keeps its own tuned buttons above; this
+   *  covers everything the declarative path added. */
+  const inPlayIds = new Set(
+    [view.board.active, ...view.board.bench].filter(Boolean).map((m) => m!.id),
+  );
+  const declarativeAbilityGroups = Array.from(
+    options
+      .filter((m): m is EffectMove => m.kind === "effect" && inPlayIds.has(m.sourceId))
+      .reduce((map, m) => {
+        const key = `${m.sourceId}:${m.card}`;
+        if (!map.has(key)) map.set(key, { monId: m.sourceId, card: m.card, moves: [] as EffectMove[] });
+        map.get(key)!.moves.push(m);
+        return map;
+      }, new Map<string, { monId: string; card: string; moves: EffectMove[] }>())
+      .values(),
   );
 
   // The AI mat is the target surface for Boss (bench), ability targeting
@@ -813,6 +903,17 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
               })}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-black/8 pt-2">
+              {/* Declarative abilities (W3) — sourced from a Pokémon in play. */}
+              {declarativeAbilityGroups.map((g) => (
+                <button
+                  key={`decl:${g.monId}:${g.card}`}
+                  onClick={() => sendOrChoose(g.card, g.moves)}
+                  disabled={loading}
+                  className="rounded-lg border border-accent px-3 py-1.5 text-xs font-semibold text-accent disabled:opacity-50"
+                >
+                  {effectAbilityName(g.card, g.moves[0].effectIndex) ?? g.card}
+                </button>
+              ))}
               {/* Ability buttons (Munkidori, Dusknoir, …). */}
               {abilityGroups.map((g) => (
                 <button
@@ -876,19 +977,26 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                   </button>
                 </>
               ) : (
-                attacks.map((m) => {
-                  const attack = view.board.active?.attacks[m.attackIndex];
+                attackGroups.map(({ attackIndex, moves }) => {
+                  const m = moves[0];
+                  const attack = view.board.active?.attacks[attackIndex];
                   const counters = attack?.benchCounters ?? 0;
                   const hasBench = view.opponent.board.bench.length > 0;
                   return (
                     <button
-                      key={m.attackIndex}
+                      key={attackIndex}
                       onClick={() => {
                         // Attacks that place counters on a non-empty bench
                         // enter tap-to-place mode; everything else fires now.
                         if (counters > 0 && hasBench) {
-                          setCounterPlace({ attackIndex: m.attackIndex, total: counters, placed: [] });
+                          setCounterPlace({ attackIndex, total: counters, placed: [] });
                           setAbilityTargeting(null);
+                        } else if (moves.length > 1) {
+                          // Same attack, different `riderPicks` (Cruel Arrow's
+                          // target, Night Joker's donor). One button, then the
+                          // choice — rendering one button per pick meant
+                          // duplicate React keys and an arbitrary target.
+                          setEffectChooser({ label: attack?.name ?? "Attack", moves });
                         } else {
                           void sendMove(m);
                         }
@@ -1106,7 +1214,13 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                 return (
                   <button
                     key={`${choice.monId}-${i}`}
-                    onClick={() => sendMove(choice.move)}
+                    onClick={() => {
+                      // Target chosen. If that target's move carries an
+                      // on-attach trigger with alternatives, ask for those too.
+                      const label = ownTargetChooser.label;
+                      setOwnTargetChooser(null);
+                      sendOrChoose(label, choice.moves ?? [choice.move]);
+                    }}
                     disabled={loading}
                     className="flex flex-col items-center gap-1 rounded-lg border border-black/8 p-1.5 hover:border-accent disabled:opacity-50"
                   >
@@ -1160,7 +1274,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
             </div>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {effectChooser.moves.map((m, i) => {
-                const names = m.picks.flatMap((p) => [...(p.cardNames ?? []), ...(p.monNames ?? [])]);
+                const names = pickNamesOf(m);
                 return (
                   <button
                     key={i}
