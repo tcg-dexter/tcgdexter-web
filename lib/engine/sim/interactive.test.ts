@@ -179,3 +179,71 @@ describe("declarative abilities are playable by a human", () => {
     expect(found).toBe(true);
   });
 });
+
+/* ─── A full game on a real meta deck, through the human path ────── */
+
+// Closes the long-standing "end-to-end: a full engine deck plays correctly"
+// gap. The scripted-game test above uses a deliberately simple deck (Miraidon
+// / Pikachu / Snorlax); this one plays a real 60-card meta list whose engine
+// is declarative — activated abilities, on-play triggers, attack riders — and
+// requires the game to actually FINISH. If any W3 move shape were malformed,
+// the validator would reject it here and the game would stall.
+describe("a full game with a real meta deck", () => {
+  const META = [
+    "Pokémon: 13",
+    "3 N's Zorua JTG 96",
+    "3 N's Zoroark ex JTG 98",
+    "1 N's Zekrom JTG 45",
+    "2 Pecharunt ex SFA 39",
+    "1 Fezandipiti ex SFA 38",
+    "1 Munkidori TWM 95",
+    "1 Budew PRE 4",
+    "1 Meowth ex MEE 96",
+    "Trainer: 34",
+    "4 Buddy-Buddy Poffin TEF 144",
+    "4 Ultra Ball SVI 196",
+    "4 Nest Ball SVI 181",
+    "3 Boss's Orders PAL 172",
+    "4 Professor's Research SVI 189",
+    "4 Iono PAL 185",
+    "4 Night Stretcher SFA 61",
+    "3 Switch SVI 194",
+    "4 Rare Candy SVI 191",
+    "Energy: 13",
+    "13 Basic Darkness Energy SVE 15",
+  ].join("\n");
+
+  it("plays to a finish, with the human using declarative moves", () => {
+    const session = startGame({ deckHuman: META, deckAi: META, seed: 7, skill: 1 });
+    let usedPickMove = false;
+    // Generous cap: a real game is ~25-35 turns of several moves each.
+    for (let step = 0; step < 4000; step++) {
+      if (session.status === "over") break;
+      if (session.status !== "human_turn" && session.status !== "human_promotion") break;
+      const move = scriptedHumanMove(session);
+      const picky = move as { picks?: unknown[]; triggerPicks?: unknown[] };
+      if ((picky.picks?.length ?? 0) > 0 || (picky.triggerPicks?.length ?? 0) > 0) {
+        usedPickMove = true;
+      }
+      try {
+        applyHumanMove(session, move);
+      } catch (e) {
+        // A rejected move that legalMoves itself offered is the failure this
+        // test exists to catch — surface it rather than swallowing it.
+        throw new Error(`validator rejected an enumerated move: ${(e as Error).message}`);
+      }
+    }
+    // The game REACHES an ending — no stall, and no move the validator
+    // refuses after legalMoves offered it.
+    expect(session.status).toBe("over");
+    // And it was actually contested: prizes were taken. A turn-cap ending
+    // with a winner of null is legitimate (our games run long — see the
+    // deck-out work in the plan file), so asserting a decisive winner would
+    // be asserting something this engine does not currently guarantee.
+    const taken = session.state.prizesTaken.player + session.state.prizesTaken.opponent;
+    expect(taken).toBeGreaterThan(0);
+    // The deck's whole engine is pick-bearing, so a game that never used one
+    // would mean those shapes stopped being enumerated.
+    expect(usedPickMove).toBe(true);
+  });
+});
