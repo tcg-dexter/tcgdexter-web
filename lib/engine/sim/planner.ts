@@ -202,6 +202,11 @@ const NO_ATTACK_TEMPO_PENALTY = 0.04;
 // (the investment term sees no progress), and the softmax splits exact
 // ties — so ~half of those turns silently wasted the attachment. Banked
 // energy is retreat fuel at worst; a hair of value breaks the tie.
+//   TESTED 2026-08-02 at 0.05: strength is flat (50.1% vs 50.3% against
+// HeuristicPolicy, 3 seeds x 240, mixed by seed) and game shape gets WORSE —
+// the bot attaches more (72.1% -> 75.2% of turns where it could) but attacks
+// less (73.2% -> 68.5%) and decks out more (32.5% -> 35.0%). Spending the
+// turn banking energy instead of using it. Kept at 0.01.
 const ATTACH_TIEBREAK_BONUS = 0.01;
 
 // Selective deepening budget (see deepen()). Re-scoring every candidate at
