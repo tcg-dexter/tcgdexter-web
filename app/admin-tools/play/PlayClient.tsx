@@ -25,6 +25,7 @@ type EffectPickLike = { cardNames?: string[]; monNames?: string[] };
 // node: scheme in the browser build.
 import { trainerDiscardCostByName } from "@/lib/engine/sim/trainers";
 import { effectAbilityName, effectDiscardCost } from "@/lib/engine/sim/effects/cards";
+import { activatedHandDiscard } from "@/lib/engine/sim/abilities";
 import type { GameReview } from "@/lib/ml/gameReview";
 import {
   InspectContext,
@@ -128,7 +129,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
    *  `trainerDiscardCostByName`, which only reads the legacy registry, so no
    *  prompt appeared and the op silently auto-picked the player's cards. */
   const [discardStage, setDiscardStage] = useState<{
-    move: Extract<InteractiveMove, { kind: "play_trainer" | "effect" }>;
+    move: Extract<InteractiveMove, { kind: "play_trainer" | "effect" | "use_ability" }>;
     need: number;
     picked: string[];
   } | null>(null);
@@ -349,6 +350,22 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     if (moves.length === 0) return;
     if (moves.length === 1) return void sendMove(moves[0]);
     setEffectChooser({ label, moves });
+  }
+
+  /** One of your own Pokémon by id, Active or Benched. */
+  function inPlayById(id: string): ClientMon | undefined {
+    return view.board.active?.id === id
+      ? view.board.active
+      : view.board.bench.find((m) => m.id === id);
+  }
+
+  /** The card PAYING a discard cost, which must not be discardable itself.
+   *  A trainer pays with `cardId`, a declarative effect with `sourceId`, and
+   *  an ability with neither — it is a Pokémon in play, not a hand card. */
+  function discardCostSourceId(m: InteractiveMove): string | null {
+    if (m.kind === "effect") return m.sourceId;
+    if (m.kind === "play_trainer") return m.cardId;
+    return null;
   }
 
   function handleHandClick(cardId: string) {
@@ -968,9 +985,14 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                 <button
                   key={`${g.monId}:${g.abilityName}`}
                   onClick={() => {
-                    // Single-target-free abilities send immediately; the rest
-                    // enter opponent-target selection.
-                    if (g.moves.length === 1 && g.moves[0].targetMonId == null) {
+                    // A hand-discard cost is asked FIRST (Trade). Otherwise
+                    // single-target-free abilities send immediately and the
+                    // rest enter opponent-target selection.
+                    const owner = inPlayById(g.monId);
+                    const cost = owner ? activatedHandDiscard(owner.name, g.abilityName) : 0;
+                    if (cost > 0) {
+                      setDiscardStage({ move: g.moves[0], need: cost, picked: [] });
+                    } else if (g.moves.length === 1 && g.moves[0].targetMonId == null) {
                       void sendMove(g.moves[0]);
                     } else {
                       setAbilityTargeting({ label: g.abilityName, moves: g.moves });
@@ -1201,13 +1223,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
             </div>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {view.hand
-                .filter(
-                  (c) =>
-                    c.id !==
-                    (discardStage.move.kind === "effect"
-                      ? discardStage.move.sourceId
-                      : discardStage.move.cardId),
-                )
+                .filter((c) => c.id !== discardCostSourceId(discardStage.move))
                 .map((card) => {
                   const chosen = discardStage.picked.includes(card.id);
                   const image = images[card.name];
@@ -1238,7 +1254,15 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                 })}
             </div>
             <button
-              onClick={() => sendMove({ ...discardStage.move, discardCardIds: discardStage.picked })}
+              onClick={() =>
+                sendMove(
+                  discardStage.move.kind === "use_ability"
+                    ? // Trade takes ONE card on `cardId` — the field its apply
+                      // has always read and nothing ever supplied.
+                      { ...discardStage.move, cardId: discardStage.picked[0] }
+                    : { ...discardStage.move, discardCardIds: discardStage.picked },
+                )
+              }
               disabled={discardStage.picked.length !== discardStage.need || loading}
               className="mt-3 w-full rounded-lg border border-transparent bg-accent px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"
             >
@@ -1407,7 +1431,12 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                         key={`p-leg:${g.abilityName}`}
                         onClick={() => {
                           setMonPanel(null);
-                          if (g.moves.length === 1 && g.moves[0].targetMonId == null) {
+                          const cost = activatedHandDiscard(mon.name, g.abilityName);
+                          if (cost > 0) {
+                            // Trade: "discard a card from your hand, then draw
+                            // 2". Which card is the player's decision.
+                            setDiscardStage({ move: g.moves[0], need: cost, picked: [] });
+                          } else if (g.moves.length === 1 && g.moves[0].targetMonId == null) {
                             void sendMove(g.moves[0]);
                           } else {
                             setAbilityTargeting({ label: g.abilityName, moves: g.moves });

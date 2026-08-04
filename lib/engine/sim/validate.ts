@@ -11,6 +11,7 @@ import { attackBenchCounterCount, attackBenchDamageTargets } from "./attacks";
 import { isSupporter, trainerDiscardCost } from "./trainers";
 import { enumerateEffect, type EffectMove } from "./effects/runtime";
 import { attackRiderEffect, effectDiscardCost, effectsFor, onAttachEffect } from "./effects/cards";
+import { activatedHandDiscard } from "./abilities";
 
 /** Order-insensitive fingerprint of an effect move's picks, so a human
  *  selection matches an enumerated move regardless of id/slot ordering. */
@@ -80,6 +81,18 @@ export function isLegalHumanMove(
     if (!match) return false;
     if (move.counters != null && (move.counters < 1 || move.counters > (match.counters ?? move.counters))) {
       return false;
+    }
+    // The player's chosen discard (Trade). Enumeration does not include it —
+    // the AI auto-picks — so this comparison deliberately ignores `cardId`,
+    // which means it must be checked HERE or a forged move could discard a
+    // card the player doesn't hold, or attach a discard to an ability that
+    // has no such cost.
+    if (move.cardId !== undefined) {
+      const side = state.sides[actor];
+      const mon = [side.active, ...side.bench].find((m) => m?.id === move.monId);
+      if (!mon) return false;
+      if (activatedHandDiscard(mon.card.name, move.abilityName) === 0) return false;
+      if (!side.hand.some((c) => c.id === move.cardId)) return false;
     }
     return true;
   }

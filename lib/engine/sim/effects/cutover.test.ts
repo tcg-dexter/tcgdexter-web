@@ -11,6 +11,7 @@ import { mintInstanceId } from "../../initial";
 import { mulberry32 } from "../rng";
 import type { CardInstance, GameState, PokemonInPlay } from "../../types";
 import { applyMove, beginTurn } from "../driver";
+import { activatedHandDiscard, applyAbility } from "../abilities";
 import { attackBaseDamage } from "../attacks";
 import { isLegalHumanMove } from "../validate";
 import { describeMove } from "../serialize";
@@ -791,5 +792,66 @@ describe("activated abilities reset every turn", () => {
     bench[0].abilitiesUsedThisTurn.push("Bench Ability");
     beginTurn(state, "player", 2);
     expect(bench[0].abilitiesUsedThisTurn).toEqual([]);
+  });
+});
+
+/* ─── Trade discards the card the PLAYER chose ──────────────────── */
+
+describe("N's Zoroark's Trade honours a chosen discard", () => {
+  const ZDECK = [
+    "Pokémon: 8",
+    "4 N's Zorua JTG 96",
+    "4 N's Zoroark ex JTG 98",
+    "Trainer: 28",
+    "28 Nest Ball SVI 181",
+    "Energy: 24",
+    "24 Basic Darkness Energy SVE 15",
+  ].join("\n");
+
+  it("declares its hand-discard cost so the UI can prompt", () => {
+    // Without this the UI cannot know Trade owes the player a choice, and
+    // `apply`'s auto-picker silently decides which card leaves your hand.
+    expect(activatedHandDiscard("N's Zoroark ex", "Trade")).toBe(1);
+    expect(activatedHandDiscard("Munkidori", "Adrena-Brain")).toBe(0);
+  });
+
+  it("discards exactly the chosen card, not the auto-pick", () => {
+    const deck = instantiateDeck(ZDECK);
+    const state = buildSimInitialState(deck, deck, mulberry32(9), "player");
+    const side = state.sides.player;
+    const zoro = toPokemonInPlay(card("N's Zoroark ex"), 0);
+    side.bench.push(zoro);
+    // Choose the LAST card in hand; the auto-picker prefers the least useful
+    // one, so if the choice were ignored a different card would go.
+    const chosen = side.hand[side.hand.length - 1];
+    const before = side.hand.length;
+
+    applyAbility(state, "player", {
+      kind: "use_ability",
+      monId: zoro.id,
+      abilityName: "Trade",
+      cardId: chosen.id,
+    });
+
+    expect(side.discard.some((c) => c.id === chosen.id)).toBe(true);
+    expect(side.hand.some((c) => c.id === chosen.id)).toBe(false);
+    // -1 discarded, +2 drawn.
+    expect(side.hand.length).toBe(before - 1 + 2);
+  });
+
+  it("rejects a discard the player does not hold", () => {
+    const deck = instantiateDeck(ZDECK);
+    const state = buildSimInitialState(deck, deck, mulberry32(9), "player");
+    const zoro = toPokemonInPlay(card("N's Zoroark ex"), 0);
+    state.sides.player.bench.push(zoro);
+    const ctx: TurnContext = { retreated: false };
+    expect(
+      isLegalHumanMove(state, "player", ctx, {
+        kind: "use_ability",
+        monId: zoro.id,
+        abilityName: "Trade",
+        cardId: "not-a-real-card-id",
+      }),
+    ).toBe(false);
   });
 });

@@ -74,6 +74,14 @@ export type AbilityPhase = "draw" | "search" | "tactical";
 interface ActivatedSpec {
   /** Coarse class the policies dispatch on. */
   phase: AbilityPhase;
+  /** Hand cards this ability makes you DISCARD as a cost, if any.
+   *
+   *  Declared here for the same reason `phase` is: the UI cannot otherwise
+   *  know that Trade ("discard a card from your hand, then draw 2") owes the
+   *  player a choice. `apply` has always honoured a supplied `move.cardId`
+   *  and fallen back to auto-picking — but nothing ever supplied one, so the
+   *  auto-picker silently chose which card left your hand. */
+  handDiscard?: number;
   available: (state: GameState, actor: Actor, mon: PokemonInPlay) => boolean;
   /** All concrete plays (target combinations) for the UI/AI. */
   moves: (state: GameState, actor: Actor, mon: PokemonInPlay) => UseAbilityMove[];
@@ -87,6 +95,7 @@ const ACTIVATED: Record<string, ActivatedSpec> = {
   // choice is a future refinement; the reserved move.cardId can carry it).
   "N's Zoroark ex::Trade": {
     phase: "draw",
+    handDiscard: 1,
     available: (state, actor) => {
       const side = state.sides[actor];
       return side.deck.length > 0 && side.hand.length > 0;
@@ -227,6 +236,11 @@ const ACTIVATED: Record<string, ActivatedSpec> = {
  *  check the declarative path uses (moves.ts): legacy specs keep their tuned
  *  handling and the policies' `use_ability` branches; declarative records only
  *  cover abilities the legacy registry does NOT. */
+/** How many hand cards this legacy ability discards as a cost (0 if none). */
+export function activatedHandDiscard(cardName: string, abilityName: string): number {
+  return ACTIVATED[`${cardName}::${abilityName}`]?.handDiscard ?? 0;
+}
+
 /** Coarse class of a legacy activated ability, for policy dispatch. Null when
  *  the ability isn't in this registry (the declarative path classifies its own
  *  via `effectMovePhase`). */
