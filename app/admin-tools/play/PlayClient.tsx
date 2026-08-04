@@ -24,7 +24,10 @@ type EffectPickLike = { cardNames?: string[]; monNames?: string[] };
 // module graph into this client bundle and webpack can't handle the
 // node: scheme in the browser build.
 import { trainerDiscardCostByName } from "@/lib/engine/sim/trainers";
-import { effectAbilityName, effectDiscardCost } from "@/lib/engine/sim/effects/cards";
+import { effectAbilityName, effectDiscardCost, effectDiscardFilter } from "@/lib/engine/sim/effects/cards";
+import { cardMatches } from "@/lib/engine/sim/effects/match";
+import { lookupCard } from "@/lib/engine/catalog";
+import type { CardFilter } from "@/lib/engine/sim/effects/types";
 import { activatedHandDiscard } from "@/lib/engine/sim/abilities";
 import type { GameReview } from "@/lib/ml/gameReview";
 import {
@@ -132,6 +135,8 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     move: Extract<InteractiveMove, { kind: "play_trainer" | "effect" | "use_ability" }>;
     need: number;
     picked: string[];
+    /** Restricts which hand cards may pay (Lunatone's Fighting Energy). */
+    filter?: CardFilter | null;
   } | null>(null);
   /** Ability targeting: chosen ability's legal moves, awaiting an opponent
    *  target tap (Munkidori, Dusknoir). */
@@ -352,6 +357,16 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     setEffectChooser({ label, moves });
   }
 
+  /** Does a card NAME satisfy a CardFilter? The client view carries no
+   *  catalog (it is the redacted information set), so hydrate from the shared
+   *  card catalog to run the same matcher the engine uses — otherwise the UI
+   *  would offer cards the validator then rejects. */
+  function matchesFilter(name: string, filter: CardFilter): boolean {
+    const catalog = lookupCard(name);
+    if (!catalog) return false;
+    return cardMatches({ id: name, name, catalog }, filter);
+  }
+
   /** One of your own Pokémon by id, Active or Benched. */
   function inPlayById(id: string): ClientMon | undefined {
     return view.board.active?.id === id
@@ -434,7 +449,12 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
         // Pay the cost first, exactly like Ultra Ball. The op auto-picks when
         // no explicit choice is supplied, which is right for the AI and wrong
         // for a human — "discard 3 cards" is the player's decision.
-        return void setDiscardStage({ move: effectMoves[0], need: cost, picked: [] });
+        return void setDiscardStage({
+          move: effectMoves[0],
+          need: cost,
+          picked: [],
+          filter: effectDiscardFilter(effectMoves[0].card, effectMoves[0].effectIndex),
+        });
       }
       if (effectMoves.length === 1) return void sendMove(effectMoves[0]);
       return void setEffectChooser({ label: card?.name ?? "Play", moves: effectMoves });
@@ -1224,6 +1244,10 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {view.hand
                 .filter((c) => c.id !== discardCostSourceId(discardStage.move))
+                // Only cards that may actually PAY are offered — a restricted
+                // cost (Lunatone's Basic Fighting Energy) would otherwise let
+                // the player pick a card the validator then rejects.
+                .filter((c) => !discardStage.filter || matchesFilter(c.name, discardStage.filter))
                 .map((card) => {
                   const chosen = discardStage.picked.includes(card.id);
                   const image = images[card.name];

@@ -10,7 +10,8 @@ import { legalMoves, type SimMove, type TurnContext } from "./moves";
 import { attackBenchCounterCount, attackBenchDamageTargets } from "./attacks";
 import { isSupporter, trainerDiscardCost } from "./trainers";
 import { enumerateEffect, type EffectMove } from "./effects/runtime";
-import { attackRiderEffect, effectDiscardCost, effectsFor, onAttachEffect } from "./effects/cards";
+import { attackRiderEffect, effectDiscardCost, effectDiscardFilter, effectsFor, onAttachEffect } from "./effects/cards";
+import { cardMatches } from "./effects/match";
 import { activatedHandDiscard } from "./abilities";
 
 /** Order-insensitive fingerprint of an effect move's picks, so a human
@@ -216,6 +217,9 @@ export function isLegalHumanMove(
         if (sourceMon.abilitiesUsedThisTurn.includes(effect.ability)) return false;
       }
     }
+    // expandAuto — this is the HUMAN's move being checked, and humanOptions
+    // offered the expanded set. Re-enumerating without it would reject every
+    // choice the player was just given.
     const enumerated = enumerateEffect(
       state,
       actor,
@@ -223,6 +227,7 @@ export function isLegalHumanMove(
       effect,
       move.effectIndex,
       sourceMon,
+      true,
     );
     // Player-chosen discard COST (Secret Box). Enumeration auto-picks these,
     // so they are not part of the pick fingerprint — they are validated on
@@ -237,8 +242,15 @@ export function isLegalHumanMove(
       if (move.discardCardIds.length !== need) return false;
       // The played card is still in hand at validation time (applyMove removes
       // it), so paying with the card itself must not be allowed.
+      // Restricted costs (Lunatone: "a Basic Fighting Energy card") must be
+      // paid with a MATCHING card — otherwise the player pays with a spare
+      // Trainer and the ability is effectively free.
+      const filter = effectDiscardFilter(move.card, move.effectIndex);
       const payable = new Set(
-        side.hand.filter((c) => c.id !== move.sourceId).map((c) => c.id),
+        side.hand
+          .filter((c) => c.id !== move.sourceId)
+          .filter((c) => !filter || cardMatches(c, filter))
+          .map((c) => c.id),
       );
       if (!move.discardCardIds.every((id) => payable.has(id))) return false;
     }

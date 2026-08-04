@@ -555,10 +555,24 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
       // every remaining card is fair game. A human's explicit choice wins
       // over the auto-picker — validate.ts has already checked the ids are
       // in hand and that there are enough of them.
+      const eligible = op.filter
+        ? side.hand.filter((c) => cardMatches(c, op.filter!))
+        : side.hand;
+      if (op.n === "all") {
+        // "Discard your hand" — no choice to make.
+        side.discard.push(...eligible);
+        side.hand = side.hand.filter((c) => !eligible.includes(c));
+        break;
+      }
       const chosen = (ctx.discardCardIds ?? [])
-        .map((id) => side.hand.find((c) => c.id === id))
+        .map((id) => eligible.find((c) => c.id === id))
         .filter((c): c is CardInstance => c !== undefined);
-      const toDiscard = chosen.length >= op.n ? chosen.slice(0, op.n) : pickDiscards(side, op.n, "");
+      const toDiscard =
+        chosen.length >= op.n
+          ? chosen.slice(0, op.n)
+          : op.filter
+            ? eligible.slice(0, op.n)
+            : pickDiscards(side, op.n, "");
       for (const c of toDiscard) {
         const pulled = spliceById(side.hand, c.id);
         if (pulled) side.discard.push(pulled);

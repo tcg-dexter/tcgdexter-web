@@ -316,7 +316,25 @@ function slotSizes(spec: TargetSpec, available: number): number[] {
   return sizes;
 }
 
-function specOptions(state: GameState, actor: Actor, spec: TargetSpec): EffectPick[] {
+/** `expandAuto` turns `chooser: "auto"` slots into real choice sets.
+ *
+ *  Auto exists because enumerating every combination explodes the move count
+ *  and the AI gains nothing from it — Secret Box alone has four slots. But the
+ *  CARD says the player chooses which cards come out of their deck, and the
+ *  human path silently took the first match. So the AI still enumerates one
+ *  move (unchanged strength, unchanged planner latency) while the human path
+ *  passes this flag and gets the full set.
+ *
+ *  Measured: flipping the DATA to `chooser: "player"` cost the bot ~1.4 points
+ *  against HeuristicPolicy across three seeds, because six of the twelve
+ *  benchmark decks carry these cards. This flag keeps the choice and the
+ *  strength. */
+function specOptions(
+  state: GameState,
+  actor: Actor,
+  spec: TargetSpec,
+  expandAuto = false,
+): EffectPick[] {
   if (spec.select === "mon") {
     const cands = candidateMons(state, actor, spec);
     const pick = (ms: ResolvedMon[]): EffectPick => ({
@@ -327,7 +345,7 @@ function specOptions(state: GameState, actor: Actor, spec: TargetSpec): EffectPi
     if (cands.length === 0) return spec.upTo ? [pick([])] : [];
     if (spec.chooser === "all") return [pick(cands)];
     const wanted = Math.max(1, spec.count ?? 1);
-    if (spec.chooser === "auto") return [pick(cands.slice(0, wanted))];
+    if (spec.chooser === "auto" && !expandAuto) return [pick(cands.slice(0, wanted))];
     // Each Pokémon in play is a distinct entity — no copies to collapse.
     const groups = cands.map((m) => ({ item: m, copies: 1 }));
     const out: EffectPick[] = [];
@@ -350,7 +368,7 @@ function specOptions(state: GameState, actor: Actor, spec: TargetSpec): EffectPi
   if (matching.length === 0) return spec.upTo ? [pick([])] : [];
   if (spec.chooser === "all") return [pick(matching)];
   const wanted = Math.max(1, spec.count ?? 1);
-  if (spec.chooser === "auto") {
+  if (spec.chooser === "auto" && !expandAuto) {
     // `auto` used to take the first matches in ZONE order. For a deck search
     // that is the first match in a shuffled deck — i.e. a random card, from a
     // zone the player can actually read. Rank them instead, so the multi-slot
@@ -409,13 +427,18 @@ export function enumerateEffect(
   effect: CardEffect,
   effectIndex: number,
   sourceMon: PokemonInPlay | null = null,
+  /** Expand `chooser: "auto"` slots into real choices. The HUMAN path sets
+   *  this (a person choosing which card leaves their deck is the whole point
+   *  of the card); the AI leaves it off so its move count and planner latency
+   *  are untouched. */
+  expandAuto = false,
 ): EffectMove[] {
   if (!guardsPass(state, actor, sourceMon, effect.guards)) return [];
   const base: EffectMove = { kind: "effect", sourceId: source.id, card: source.name, effectIndex, picks: [] };
   const specs = effect.targets ?? [];
   let combos: EffectPick[][] = [[]];
   for (const spec of specs) {
-    const opts = specOptions(state, actor, spec);
+    const opts = specOptions(state, actor, spec, expandAuto);
     if (opts.length === 0) return []; // a required slot with no candidate
     const next: EffectPick[][] = [];
     for (const combo of combos) {

@@ -333,7 +333,16 @@ export type EffectOp =
   | { op: "reveal_top"; n: number; count: number; filter: CardFilter; to: "hand"; from?: "top" | "bottom" }
   /** Discard `n` cards from your own hand as a COST (Secret Box). Auto-picks
    *  the least useful cards via the shared pickDiscards heuristic. */
-  | { op: "discard_hand_cards"; n: number }
+  /** Discard hand cards as a COST.
+   *
+   *  `n: "all"` is "discard your hand" (Larry's Skill) — there is nothing to
+   *  choose, so no prompt. It used to be encoded as the magic number 99,
+   *  which read as a real count and made the UI demand 99 picks.
+   *
+   *  `filter` restricts WHICH cards may pay. Lunatone's Lunar Cycle wants "a
+   *  Basic Fighting Energy card"; without the filter any card paid, and the
+   *  guard only asked for a non-empty hand — so it drew 3 for free. */
+  | { op: "discard_hand_cards"; n: number | "all"; filter?: CardFilter }
   /** Flip a coin and branch. The nested ops run in the same target context,
    *  so a heads branch can use the same picks the parent enumerated
    *  (Crushing Hammer's chosen Pokémon). Consumes the rng. */

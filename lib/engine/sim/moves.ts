@@ -241,6 +241,11 @@ export function legalMoves(
   state: GameState,
   actor: "player" | "opponent",
   ctx: TurnContext,
+  /** Expand `chooser: "auto"` slots into real choices. Set on the HUMAN path
+   *  only (see humanOptions): the card says the player picks which cards leave
+   *  their deck, but enumerating every combination for the AI explodes the
+   *  move count for no gain — and measurably costs it ~1.4 points. */
+  expandAuto = false,
 ): SimMove[] {
   const side = sideOf(state, actor);
   const moves: SimMove[] = [];
@@ -381,7 +386,7 @@ export function legalMoves(
         if (supporterOk) {
           effects.forEach((effect, i) => {
             if (effect.trigger.kind !== "trainer") return;
-            moves.push(...enumerateEffect(state, actor, { id: card.id, name: card.name }, effect, i));
+            moves.push(...enumerateEffect(state, actor, { id: card.id, name: card.name }, effect, i, null, expandAuto));
           });
         }
       } else if (side.deck.length > 0) {
@@ -411,7 +416,7 @@ export function legalMoves(
         if (effect.ability !== ability.name) continue;
         if (mon.abilitiesUsedThisTurn.includes(ability.name)) continue; // once per turn
         moves.push(
-          ...enumerateEffect(state, actor, { id: mon.id, name: mon.card.name }, effect, index, mon),
+          ...enumerateEffect(state, actor, { id: mon.id, name: mon.card.name }, effect, index, mon, expandAuto),
         );
       }
     }

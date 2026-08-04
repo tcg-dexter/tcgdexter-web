@@ -8,7 +8,7 @@
 import type { PokemonInPlay } from "../../types";
 import { bestCopy, DECK_TOP_NOMINAL } from "./copy";
 import { DEFENDER_REF, OWN_ACTIVE_REF, SELF_REF } from "./types";
-import type { CardEffect } from "./types";
+import type { CardEffect, CardFilter } from "./types";
 
 export const EFFECT_CARDS: Record<string, CardEffect[]> = {
   /* ── W3 final: copy-attack, prize effects, multi-card play ──── */
@@ -655,8 +655,17 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
   ],
   Lunatone: [
 { card: "Lunatone", ability: "Lunar Cycle", trigger: { kind: "activated" },
-    guards: [{ cond: "own_has_mon", filter: { side: "own", zone: "in_play", nameContains: "Solrock" } }, { cond: "hand_size_gte", n: 1 }],
-    ops: [{ op: "discard_hand_cards", n: 1 }, { op: "draw", n: 3 }] },
+    // "discard a Basic Fighting Energy card from your hand in order to use
+    // this Ability" — the cost is RESTRICTED. Without the filter any card
+    // paid, and `hand_size_gte 1` let it draw 3 for free with no Energy at all.
+    guards: [
+      { cond: "own_has_mon", filter: { side: "own", zone: "in_play", nameContains: "Solrock" } },
+      { cond: "hand_has", filter: { basicEnergy: true, energyType: "Fighting" }, n: 1 },
+    ],
+    ops: [
+      { op: "discard_hand_cards", n: 1, filter: { basicEnergy: true, energyType: "Fighting" } },
+      { op: "draw", n: 3 },
+    ] },
   ],
   "Pecharunt ex": [
 { card: "Pecharunt ex", ability: "Subjugating Chains", trigger: { kind: "activated" },
@@ -799,7 +808,7 @@ export const EFFECT_CARDS: Record<string, CardEffect[]> = {
       { ref: "p", upTo: true, select: "card", card: { zone: "deck", filter: { supertype: "Pokémon" } }, chooser: "auto" },
       { ref: "s", upTo: true, select: "card", card: { zone: "deck", filter: { supertype: "Trainer", subtype: "Supporter" } }, chooser: "auto" },
       { ref: "e", upTo: true, select: "card", card: { zone: "deck", filter: { basicEnergy: true } }, chooser: "auto" }],
-    ops: [{ op: "discard_hand_cards", n: 99 }, { op: "search", targetRef: "p", to: "hand" },
+    ops: [{ op: "discard_hand_cards", n: "all" }, { op: "search", targetRef: "p", to: "hand" },
           { op: "search", targetRef: "s", to: "hand" }, { op: "search", targetRef: "e", to: "hand" }] },
   ],
   "Lisia's Appeal": [
@@ -1332,9 +1341,24 @@ export function effectDiscardCost(cardName: string, effectIndex: number): number
   const effect = effectsFor(cardName)[effectIndex];
   if (!effect) return 0;
   for (const op of effect.ops) {
-    if (op.op === "discard_hand_cards") return op.n;
+    // "all" (Larry's Skill: "discard your hand") is NOT a prompt — there is
+    // nothing to choose. Report 0 so the UI plays it straight through.
+    if (op.op === "discard_hand_cards") return op.n === "all" ? 0 : op.n;
   }
   return 0;
+}
+
+/** Which hand cards may PAY a discard cost, if the card restricts them.
+ *  Lunatone's Lunar Cycle wants "a Basic Fighting Energy card" — offering the
+ *  whole hand would let the player pay with the wrong card, and accepting it
+ *  would make the ability free. */
+export function effectDiscardFilter(cardName: string, effectIndex: number): CardFilter | null {
+  const effect = effectsFor(cardName)[effectIndex];
+  if (!effect) return null;
+  for (const op of effect.ops) {
+    if (op.op === "discard_hand_cards" && op.n !== "all") return op.filter ?? null;
+  }
+  return null;
 }
 
 /** The ABILITY name a declarative effect represents, if it is one. The play

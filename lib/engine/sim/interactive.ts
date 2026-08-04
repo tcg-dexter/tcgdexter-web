@@ -574,7 +574,10 @@ export function rebuildSession(transcript: GameTranscript): GameSession {
 /** Human's currently legal decisions, for the client UI. */
 export function humanOptions(session: GameSession): InteractiveMove[] {
   if (session.status === "human_turn") {
-    return legalMoves(session.state, "player", session.ctx);
+    // expandAuto: a person choosing which cards come out of their own deck is
+    // the whole point of a search card. The AI keeps the single auto-picked
+    // move (see legalMoves) so its strength and latency are unchanged.
+    return legalMoves(session.state, "player", session.ctx, true);
   }
   if (session.status === "human_promotion") {
     return session.state.sides.player.bench.map((_, i) => ({

@@ -20,7 +20,7 @@ import { HeuristicPolicy } from "../policy";
 import { viewFor } from "../view";
 import { startGame, applyHumanMove, rebuildSession, humanOptions } from "../interactive";
 import { applyEffect, enumerateEffect, type EffectMove } from "./runtime";
-import { effectsFor, effectDiscardCost } from "./cards";
+import { effectsFor, effectDiscardCost, effectDiscardFilter } from "./cards";
 import { isToolModeled } from "../tools";
 
 const card = (n: string): CardInstance => ({ id: mintInstanceId("t"), name: n, catalog: lookupCard(n) });
@@ -853,5 +853,107 @@ describe("N's Zoroark's Trade honours a chosen discard", () => {
         cardId: "not-a-real-card-id",
       }),
     ).toBe(false);
+  });
+});
+
+/* ─── Audit follow-ups: "all" costs and restricted costs ────────── */
+
+describe("discard costs found by the choice audit", () => {
+  it("Larry's Skill discards the WHOLE hand and prompts for nothing", () => {
+    // Encoded as the magic number 99, which read as a real count — the
+    // discard prompt would have demanded 99 picks and never enabled Confirm,
+    // making the card unplayable in the UI.
+    const idx = effectsFor("Larry's Skill").findIndex((e) =>
+      e.ops.some((o) => o.op === "discard_hand_cards"),
+    );
+    expect(effectDiscardCost("Larry's Skill", idx)).toBe(0);
+
+    const deck = instantiateDeck(
+      ["Pokémon: 4", "4 Snorlax SVI 143", "Trainer: 32", "32 Nest Ball SVI 181",
+       "Energy: 24", "24 Basic Fighting Energy SVE 6"].join("\n"),
+    );
+    const state = buildSimInitialState(deck, deck, mulberry32(3), "player");
+    const side = state.sides.player;
+    // The trainer branch removes the played card FROM HAND by id, so the
+    // source must really be there.
+    const larry = card("Larry's Skill");
+    side.hand.push(larry);
+    const otherCards = side.hand.length - 1;
+    expect(otherCards).toBeGreaterThan(0);
+    applyEffect(
+      state, "player", effectsFor("Larry's Skill")[idx],
+      { kind: "effect", sourceId: larry.id, card: "Larry's Skill", effectIndex: idx, picks: [] },
+      mulberry32(2),
+    );
+    // Every card that was in hand is now in the discard — the card itself
+    // plus the whole hand it discarded.
+    expect(side.discard.length).toBeGreaterThanOrEqual(otherCards + 1);
+  });
+
+  it("Lunatone's Lunar Cycle costs a Basic FIGHTING Energy specifically", () => {
+    // The filter did not exist: any card paid, and the guard only asked for a
+    // non-empty hand — so Lunar Cycle drew 3 for free.
+    const idx = effectsFor("Lunatone").findIndex((e) =>
+      e.ops.some((o) => o.op === "discard_hand_cards"),
+    );
+    const filter = effectDiscardFilter("Lunatone", idx);
+    expect(filter).not.toBeNull();
+    expect(filter?.basicEnergy).toBe(true);
+    expect(filter?.energyType).toBe("Fighting");
+  });
+
+  it("an unrestricted cost still reports no filter", () => {
+    const idx = effectsFor("Iris's Fighting Spirit").findIndex((e) =>
+      e.ops.some((o) => o.op === "discard_hand_cards"),
+    );
+    expect(effectDiscardCost("Iris's Fighting Spirit", idx)).toBe(1);
+    expect(effectDiscardFilter("Iris's Fighting Spirit", idx)).toBeNull();
+  });
+});
+
+/* ─── The human chooses; the AI still auto-picks ────────────────── */
+
+describe("expandAuto gives the human real search choices", () => {
+  const DECK = [
+    "Pokémon: 12", "4 Miraidon ex SVI 81", "4 Pikachu SVI 62", "4 Snorlax SVI 143",
+    "Trainer: 24", "8 Ultra Ball SVI 196", "8 Nest Ball SVI 181", "8 Switch SVI 194",
+    "Energy: 24", "24 Basic Lightning Energy SVE 4",
+  ].join("\n");
+
+  it("enumerates ONE move for the AI and several for the human", () => {
+    // The card says the player chooses which cards leave their deck. The AI
+    // must NOT get the expanded set: flipping the DATA to chooser:"player"
+    // cost ~1.4 points against HeuristicPolicy over three seeds, because half
+    // the benchmark decks carry these cards.
+    const deck = instantiateDeck(DECK);
+    const state = buildSimInitialState(deck, deck, mulberry32(2), "player");
+    const dawn = card("Dawn");
+    state.sides.player.hand.push(dawn);
+    const effect = effectsFor("Dawn")[0];
+    const src = { id: dawn.id, name: "Dawn" };
+
+    const forAi = enumerateEffect(state, "player", src, effect, 0, null, false);
+    const forHuman = enumerateEffect(state, "player", src, effect, 0, null, true);
+    expect(forAi).toHaveLength(1);
+    expect(forHuman.length).toBeGreaterThan(1);
+  });
+
+  it("accepts a human pick the AI enumeration would never produce", () => {
+    const deck = instantiateDeck(DECK);
+    const state = buildSimInitialState(deck, deck, mulberry32(2), "player");
+    const dawn = card("Dawn");
+    state.sides.player.hand.push(dawn);
+    const effect = effectsFor("Dawn")[0];
+    const src = { id: dawn.id, name: "Dawn" };
+    const forAi = enumerateEffect(state, "player", src, effect, 0, null, false);
+    const forHuman = enumerateEffect(state, "player", src, effect, 0, null, true);
+
+    const different = forHuman.find(
+      (m) => JSON.stringify(m.picks) !== JSON.stringify(forAi[0].picks),
+    );
+    expect(different).toBeDefined();
+    const ctx: TurnContext = { retreated: false };
+    // validate re-enumerates WITH expandAuto, so the human's choice is legal.
+    expect(isLegalHumanMove(state, "player", ctx, different!)).toBe(true);
   });
 });
