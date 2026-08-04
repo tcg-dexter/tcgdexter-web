@@ -138,7 +138,16 @@ export function beginTurn(
   // fresh now — clear the flag they read at the start of their last turn.
   state.sides[otherActor(actor)].koedLastOppTurn = false;
   for (const mon of [side.active, ...side.bench]) {
-    if (mon) mon.evolvedThisTurn = false;
+    if (!mon) continue;
+    mon.evolvedThisTurn = false;
+    // "Once during your turn" — per TURN, not per game. This was never
+    // cleared in the simulator (the replay reducer always did), so every
+    // activated ability fired exactly ONCE PER GAME: N's Zoroark's Trade,
+    // which is that deck's whole draw engine, Pecharunt ex's Subjugating
+    // Chains, Flip the Script, Attract Customers, Adrena-Brain, and all ~30
+    // declarative abilities W3 authored. Reported from real play as "used
+    // Subjugating Chains one turn, never offered again".
+    if (mon.abilitiesUsedThisTurn.length > 0) mon.abilitiesUsedThisTurn = [];
   }
   if (side.deck.length === 0) {
     state.winner = otherActor(actor);

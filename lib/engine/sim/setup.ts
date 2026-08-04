@@ -94,7 +94,13 @@ import { auraEnergyUnits } from "./auras";
 // allowlist that discarded them, plays otherwise-unhandled legacy trainers
 // rather than passing, refreshes a dead hand, and takes 0-damage utility
 // attacks. Deck-out 30.8% -> 16.7%, prize wins 48.3% -> 63.3%.
-export const SIM_VERSION = 19;
+// v20: RULE FIX — "once during your turn" was once per GAME. The simulator
+// never cleared `abilitiesUsedThisTurn` at turn start (the replay reducer
+// always did), so every activated ability fired exactly once per game: N's
+// Zoroark's Trade (that deck's entire draw engine), Pecharunt ex's
+// Subjugating Chains, Flip the Script, Attract Customers, Adrena-Brain, and
+// all ~30 declarative abilities W3 authored. Found from real play.
+export const SIM_VERSION = 20;
 
 const MAX_MULLIGANS = 20;
 

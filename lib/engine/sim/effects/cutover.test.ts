@@ -10,7 +10,7 @@ import { lookupCard } from "../../catalog";
 import { mintInstanceId } from "../../initial";
 import { mulberry32 } from "../rng";
 import type { CardInstance, GameState, PokemonInPlay } from "../../types";
-import { applyMove } from "../driver";
+import { applyMove, beginTurn } from "../driver";
 import { attackBaseDamage } from "../attacks";
 import { isLegalHumanMove } from "../validate";
 import { describeMove } from "../serialize";
@@ -750,5 +750,46 @@ describe("declarative discard costs are the PLAYER's choice", () => {
     const discardIds = new Set(side.discard.map((c) => c.id));
     for (const id of chosen) expect(discardIds.has(id)).toBe(true);
     for (const id of chosen) expect(side.hand.some((c) => c.id === id)).toBe(false);
+  });
+});
+
+/* ─── "Once during your turn" means per TURN ────────────────────── */
+
+describe("activated abilities reset every turn", () => {
+  it("clears abilitiesUsedThisTurn at the start of each turn", () => {
+    // The simulator never cleared this (the replay reducer always did), so
+    // every activated ability fired exactly ONCE PER GAME. N's Zoroark's
+    // Trade is that deck's entire draw engine; Pecharunt ex's Subjugating
+    // Chains was reported from real play as "used it once, never offered
+    // again". Guard the reset itself, since the symptom is many turns away
+    // from the cause.
+    const deck = instantiateDeck(
+      ["Pokémon: 4", "4 Snorlax SVI 143", "Trainer: 32", "32 Nest Ball SVI 181",
+       "Energy: 24", "24 Basic Lightning Energy SVE 4"].join("\n"),
+    );
+    const state = buildSimInitialState(deck, deck, mulberry32(4), "player");
+    const active = state.sides.player.active;
+    expect(active).not.toBeNull();
+
+    active!.abilitiesUsedThisTurn.push("Some Ability");
+    // The opponent's turn must NOT clear our flag...
+    beginTurn(state, "opponent", 1);
+    expect(active!.abilitiesUsedThisTurn).toContain("Some Ability");
+    // ...but the start of OUR next turn must.
+    beginTurn(state, "player", 2);
+    expect(active!.abilitiesUsedThisTurn).toEqual([]);
+  });
+
+  it("resets benched Pokémon too, not just the Active", () => {
+    const deck = instantiateDeck(
+      ["Pokémon: 8", "4 Snorlax SVI 143", "4 Pikachu SVI 62", "Trainer: 28",
+       "28 Nest Ball SVI 181", "Energy: 24", "24 Basic Lightning Energy SVE 4"].join("\n"),
+    );
+    const state = buildSimInitialState(deck, deck, mulberry32(6), "player");
+    const bench = state.sides.player.bench;
+    if (bench.length === 0) return;
+    bench[0].abilitiesUsedThisTurn.push("Bench Ability");
+    beginTurn(state, "player", 2);
+    expect(bench[0].abilitiesUsedThisTurn).toEqual([]);
   });
 });

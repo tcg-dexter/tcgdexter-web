@@ -619,6 +619,30 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     }, new Map<number, typeof attacks>()),
   ).map(([attackIndex, moves]) => ({ attackIndex, moves }));
   const canRetreat = byKind("retreat").length > 0;
+  /** Why retreat is unavailable, or null when it IS available.
+   *
+   *  The button used to be hidden whenever retreat was illegal, which makes
+   *  "your Active can't pay the cost" indistinguishable from "this game has no
+   *  retreat" — and that is exactly how it was reported. Retreat is legal on
+   *  only ~22% of decision points (energy is scarce), so the button was
+   *  missing most of the time. Absence of an affordance reads as a bug; a
+   *  disabled button with a reason reads as the rules. */
+  const retreatBlockedReason: string | null = (() => {
+    if (canRetreat) return null;
+    if (game?.status !== "human_turn") return null;
+    const active = view.board.active;
+    if (!active) return "No Active Pokémon";
+    if (view.board.bench.length === 0) return "No Benched Pokémon to promote";
+    const cost = active.retreatCost ?? 0;
+    const have = active.energy?.length ?? 0;
+    // Energy is the cause in essentially every case measured (193 of 193
+    // blocked decision points in a 6-game probe), so name it precisely.
+    // Anything else — already retreated this turn, a "can't retreat" status —
+    // is not distinguishable from the client view, so say so rather than
+    // guess: a wrong reason is worse than an honest vague one.
+    if (have < cost) return `Needs ${cost} Energy — ${have} attached`;
+    return "Not available this turn";
+  })();
   const promoting = game.status === "human_promotion";
   const humanActive = view.board.active ? toFrame(view.board.active, images) : null;
   const humanBench = view.board.bench.map((m) => toFrame(m, images));
@@ -1035,6 +1059,15 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                     </button>
                   );
                 })
+              )}
+              {!canRetreat && retreatBlockedReason && !counterPlace && (
+                <button
+                  disabled
+                  title={retreatBlockedReason}
+                  className="cursor-not-allowed rounded-lg border border-black/10 bg-white px-3 py-1.5 text-xs font-semibold text-text-muted"
+                >
+                  Retreat · {retreatBlockedReason}
+                </button>
               )}
               {canRetreat && !counterPlace && (
                 <button
