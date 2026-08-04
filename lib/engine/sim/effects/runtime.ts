@@ -52,6 +52,18 @@ export interface EffectMove {
   card: string;
   effectIndex: number;
   picks: EffectPick[];
+  /** Hand cards the player chose to pay a `discard_hand_cards` COST with.
+   *
+   *  Not part of `picks`, and deliberately not enumerated: choosing 3 of a
+   *  7-card hand is 35 combinations multiplied through every search slot,
+   *  which MAX_EFFECT_MOVES would truncate and the AI would not benefit
+   *  from. So enumeration keeps auto-picking (the AI is unaffected) while a
+   *  human supplies real choices here — Secret Box asks you to discard 3
+   *  cards, and picking them for you is not the same card.
+   *
+   *  Validated in validate.ts: every id must be in hand and the count must
+   *  match what the op demands. */
+  discardCardIds?: string[];
 }
 
 /* ─── Candidate resolution ──────────────────────────────────────── */
@@ -497,7 +509,15 @@ export function applyEffect(
       : (sourceMon ?? [side.active, ...side.bench].find((m) => m?.id === move.sourceId) ?? null);
 
   const targets = { ...resolveTargets(state, actor, effect, move, source), ...extraRefs };
-  const ctx: OpContext = { state, actor, targets, rng, source, selfCardName: move.card };
+  const ctx: OpContext = {
+    state,
+    actor,
+    targets,
+    rng,
+    source,
+    selfCardName: move.card,
+    discardCardIds: move.discardCardIds,
+  };
   applyOps(effect.ops, ctx);
 
   if (effect.trigger.kind === "activated" || effect.trigger.kind === "on_play") {

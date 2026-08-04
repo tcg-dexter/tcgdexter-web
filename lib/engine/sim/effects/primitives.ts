@@ -46,6 +46,8 @@ export interface OpContext {
   /** How many copy-an-attack layers deep we are. A copied attack may not copy
    *  again, which is what bounds the recursion. */
   copyDepth?: number;
+  /** Player-chosen hand cards paying a `discard_hand_cards` cost. */
+  discardCardIds?: string[];
 }
 
 /* ─── Zone helpers (mirror trainers.ts semantics) ───────────────── */
@@ -550,8 +552,14 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
 
     case "discard_hand_cards": {
       // A cost: the played card has already left the hand by this point, so
-      // every remaining card is fair game.
-      for (const c of pickDiscards(side, op.n, "")) {
+      // every remaining card is fair game. A human's explicit choice wins
+      // over the auto-picker — validate.ts has already checked the ids are
+      // in hand and that there are enough of them.
+      const chosen = (ctx.discardCardIds ?? [])
+        .map((id) => side.hand.find((c) => c.id === id))
+        .filter((c): c is CardInstance => c !== undefined);
+      const toDiscard = chosen.length >= op.n ? chosen.slice(0, op.n) : pickDiscards(side, op.n, "");
+      for (const c of toDiscard) {
         const pulled = spliceById(side.hand, c.id);
         if (pulled) side.discard.push(pulled);
       }

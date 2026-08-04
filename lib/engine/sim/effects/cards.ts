@@ -1321,6 +1321,22 @@ export function isSelfSwitchEffect(cardName: string, effectIndex: number): boole
   return effect ? effect.ops.some((o) => o.op === "switch") : false;
 }
 
+/** How many hand cards this effect DISCARDS AS A COST, or 0.
+ *
+ *  The UI needs this to ask the player which cards to pay with. It could not
+ *  before: `trainerDiscardCostByName` only reads the LEGACY registry, so a
+ *  declarative card like Secret Box ("discard 3 cards, then search") reported
+ *  a cost of 0, no discard prompt appeared, and the op silently auto-picked
+ *  three cards out of the player's hand. */
+export function effectDiscardCost(cardName: string, effectIndex: number): number {
+  const effect = effectsFor(cardName)[effectIndex];
+  if (!effect) return 0;
+  for (const op of effect.ops) {
+    if (op.op === "discard_hand_cards") return op.n;
+  }
+  return 0;
+}
+
 /** The ABILITY name a declarative effect represents, if it is one. The play
  *  UI labels its buttons with this — "Subjugating Chains" reads as an
  *  ability, "Pecharunt ex" reads as a card you are about to play. */

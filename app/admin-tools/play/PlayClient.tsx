@@ -24,7 +24,7 @@ type EffectPickLike = { cardNames?: string[]; monNames?: string[] };
 // module graph into this client bundle and webpack can't handle the
 // node: scheme in the browser build.
 import { trainerDiscardCostByName } from "@/lib/engine/sim/trainers";
-import { effectAbilityName } from "@/lib/engine/sim/effects/cards";
+import { effectAbilityName, effectDiscardCost } from "@/lib/engine/sim/effects/cards";
 import type { GameReview } from "@/lib/ml/gameReview";
 import {
   InspectContext,
@@ -123,8 +123,12 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     moves: InteractiveMove[];
   } | null>(null);
   /** Discard-cost stage (Ultra Ball): the chosen fetch move + running picks. */
+  /** Discard-cost stage. Accepts BOTH a legacy trainer (Ultra Ball) and a
+   *  declarative effect (Secret Box) — the latter reported a cost of 0 via
+   *  `trainerDiscardCostByName`, which only reads the legacy registry, so no
+   *  prompt appeared and the op silently auto-picked the player's cards. */
   const [discardStage, setDiscardStage] = useState<{
-    move: Extract<InteractiveMove, { kind: "play_trainer" }>;
+    move: Extract<InteractiveMove, { kind: "play_trainer" | "effect" }>;
     need: number;
     picked: string[];
   } | null>(null);
@@ -149,6 +153,12 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
      *  an on-attach trigger adds `attachPicks`, which is then a second choice. */
     choices: { move: InteractiveMove; monId: string; moves?: InteractiveMove[] }[];
   } | null>(null);
+  /** Tapping one of YOUR OWN Pokémon opens its attacks + abilities. The
+   *  action bar has always carried these, but nothing happened when you
+   *  tapped the Pokémon itself — it fell through to the card inspector — so
+   *  they read as missing, and a benched Pokémon's ability in a shared bar
+   *  gives no clue which Pokémon it belongs to. */
+  const [monPanel, setMonPanel] = useState<string | null>(null);
   const [review, setReview] = useState<GameReview | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -402,6 +412,13 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     // option ⇒ play it; several ⇒ a generic chooser over the picks.
     const effectMoves = effectMovesFor(cardId);
     if (effectMoves.length > 0) {
+      const cost = effectDiscardCost(effectMoves[0].card, effectMoves[0].effectIndex);
+      if (cost > 0) {
+        // Pay the cost first, exactly like Ultra Ball. The op auto-picks when
+        // no explicit choice is supplied, which is right for the AI and wrong
+        // for a human — "discard 3 cards" is the player's decision.
+        return void setDiscardStage({ move: effectMoves[0], need: cost, picked: [] });
+      }
       if (effectMoves.length === 1) return void sendMove(effectMoves[0]);
       return void setEffectChooser({ label: card?.name ?? "Play", moves: effectMoves });
     }
@@ -623,7 +640,9 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     onActiveClick:
       pendingCardId && view.board.active && pendingTargets.has(view.board.active.id)
         ? () => sendTargeted(view.board.active!.id)
-        : undefined,
+        : view.board.active
+          ? () => setMonPanel(view.board.active!.id)
+          : undefined,
     highlightActive:
       pendingCardId != null && view.board.active != null && pendingTargets.has(view.board.active.id),
     onBenchClick: benchActs
@@ -640,9 +659,15 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
             return;
           }
           const mon = view.board.bench[i];
-          if (mon && pendingTargets.has(mon.id)) sendTargeted(mon.id);
+          if (mon && pendingTargets.has(mon.id)) return void sendTargeted(mon.id);
+          if (mon) setMonPanel(mon.id);
         }
-      : undefined,
+      : (i: number) => {
+          // Even with no pending action, a benched Pokémon must open its own
+          // abilities — that is where a human looks for them.
+          const mon = view.board.bench[i];
+          if (mon) setMonPanel(mon.id);
+        },
     highlightBench: view.board.bench.map((mon, i) =>
       promoting ||
       benchPickIndex(i) != null ||
@@ -1143,7 +1168,13 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
             </div>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {view.hand
-                .filter((c) => c.id !== discardStage.move.cardId)
+                .filter(
+                  (c) =>
+                    c.id !==
+                    (discardStage.move.kind === "effect"
+                      ? discardStage.move.sourceId
+                      : discardStage.move.cardId),
+                )
                 .map((card) => {
                   const chosen = discardStage.picked.includes(card.id);
                   const image = images[card.name];
@@ -1253,6 +1284,134 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
       )}
       {/* Generic declarative-effect chooser — one option per enumerated move,
           labelled by the picks' display names (fetched card / targeted mon). */}
+      {monPanel && (() => {
+        const mon =
+          view.board.active?.id === monPanel
+            ? view.board.active
+            : view.board.bench.find((m) => m.id === monPanel);
+        if (!mon) return null;
+        const isActive = view.board.active?.id === mon.id;
+        const myAttacks = isActive ? attackGroups : [];
+        const myDecl = declarativeAbilityGroups.filter((g) => g.monId === mon.id);
+        const myLegacy = abilityGroups.filter((g) => g.monId === mon.id);
+        const nothing = myAttacks.length === 0 && myDecl.length === 0 && myLegacy.length === 0;
+        return (
+          <div
+            className="fixed inset-0 z-40 flex items-center justify-center p-4"
+            style={{ background: "rgba(242,242,242,0.92)" }}
+            role="dialog"
+            aria-modal="true"
+            aria-label={mon.name}
+            onClick={() => setMonPanel(null)}
+          >
+            <div
+              className="max-h-[80vh] w-full max-w-sm overflow-y-auto rounded-2xl border border-black/8 bg-white p-4 shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-xs font-semibold text-text-primary">
+                  {mon.name}
+                  {!isActive && <span className="ml-1 font-normal text-text-muted">(Benched)</span>}
+                </span>
+                <button onClick={() => setMonPanel(null)} className="text-[10px] font-semibold text-accent">
+                  close
+                </button>
+              </div>
+
+              {myAttacks.length > 0 && (
+                <div className="mb-3">
+                  <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-muted">Attacks</div>
+                  <div className="flex flex-col gap-1.5">
+                    {myAttacks.map(({ attackIndex, moves }) => {
+                      const atk = mon.attacks?.[attackIndex];
+                      const counters = atk?.benchCounters ?? 0;
+                      const hasBench = view.opponent.board.bench.length > 0;
+                      return (
+                        <button
+                          key={attackIndex}
+                          onClick={() => {
+                            setMonPanel(null);
+                            if (counters > 0 && hasBench) {
+                              setCounterPlace({ attackIndex, total: counters, placed: [] });
+                              setAbilityTargeting(null);
+                            } else if (moves.length > 1) {
+                              setEffectChooser({ label: atk?.name ?? "Attack", moves });
+                            } else {
+                              void sendMove(moves[0]);
+                            }
+                          }}
+                          disabled={loading}
+                          className="flex items-center justify-between rounded-lg border border-transparent bg-black px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                        >
+                          <span>{atk?.name ?? "Attack"}</span>
+                          <span className="tabular-nums">{atk?.damage || ""}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {(myDecl.length > 0 || myLegacy.length > 0) && (
+                <div>
+                  <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-muted">Abilities</div>
+                  <div className="flex flex-col gap-1.5">
+                    {myDecl.map((g) => (
+                      <button
+                        key={`p-decl:${g.card}`}
+                        onClick={() => {
+                          setMonPanel(null);
+                          sendOrChoose(g.card, g.moves);
+                        }}
+                        disabled={loading}
+                        className="rounded-lg border border-purple-300 bg-purple-50 px-3 py-2 text-left text-xs font-semibold text-purple-800 disabled:opacity-50"
+                      >
+                        ⚡ {effectAbilityName(g.card, g.moves[0].effectIndex) ?? g.card}
+                      </button>
+                    ))}
+                    {myLegacy.map((g) => (
+                      <button
+                        key={`p-leg:${g.abilityName}`}
+                        onClick={() => {
+                          setMonPanel(null);
+                          if (g.moves.length === 1 && g.moves[0].targetMonId == null) {
+                            void sendMove(g.moves[0]);
+                          } else {
+                            setAbilityTargeting({ label: g.abilityName, moves: g.moves });
+                            setCounterPlace(null);
+                          }
+                        }}
+                        disabled={loading}
+                        className="rounded-lg border border-purple-300 bg-purple-50 px-3 py-2 text-left text-xs font-semibold text-purple-800 disabled:opacity-50"
+                      >
+                        ⚡ {g.abilityName}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {nothing && (
+                <p className="text-xs text-text-secondary">
+                  Nothing to use right now.
+                  {!isActive && " Attacks are only available from the Active Spot."}
+                </p>
+              )}
+
+              <button
+                onClick={() => {
+                  setMonPanel(null);
+                  setInspect({ kind: "card", name: mon.name, imageUrl: images[mon.name] ?? null });
+                }}
+                className="mt-3 w-full rounded-lg border border-black/15 bg-white px-3 py-1.5 text-[11px] font-semibold text-text-secondary"
+              >
+                View card
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
       {effectChooser && (
         <div
           className="fixed inset-0 z-40 flex items-center justify-center p-4"

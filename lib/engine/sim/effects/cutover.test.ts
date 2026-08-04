@@ -18,8 +18,8 @@ import { legalMoves, type SimMove, type TurnContext } from "../moves";
 import { HeuristicPolicy } from "../policy";
 import { viewFor } from "../view";
 import { startGame, applyHumanMove, rebuildSession, humanOptions } from "../interactive";
-import { enumerateEffect, type EffectMove } from "./runtime";
-import { effectsFor } from "./cards";
+import { applyEffect, enumerateEffect, type EffectMove } from "./runtime";
+import { effectsFor, effectDiscardCost } from "./cards";
 import { isToolModeled } from "../tools";
 
 const card = (n: string): CardInstance => ({ id: mintInstanceId("t"), name: n, catalog: lookupCard(n) });
@@ -687,5 +687,68 @@ describe("coverage honesty — cards marked modeled must really be registered", 
       if (!isToolModeled(name)) continue;
       expect(effectsFor(name).length, `${name}`).toBeGreaterThan(0);
     }
+  });
+});
+
+/* ─── Player-chosen discard costs (Secret Box) ──────────────────── */
+
+describe("declarative discard costs are the PLAYER's choice", () => {
+  it("reports the cost so the UI can prompt for it", () => {
+    // trainerDiscardCostByName only reads the LEGACY registry, so Secret Box
+    // reported 0, no prompt appeared, and the op auto-picked three cards out
+    // of the player's hand. This is the lookup that fixes that.
+    const idx = effectsFor("Secret Box").findIndex((e) =>
+      e.ops.some((o) => o.op === "discard_hand_cards"),
+    );
+    expect(idx).toBeGreaterThanOrEqual(0);
+    expect(effectDiscardCost("Secret Box", idx)).toBe(3);
+  });
+
+  it("reports 0 for a card with no discard cost", () => {
+    expect(effectDiscardCost("Nest Ball", 0)).toBe(0);
+  });
+
+  it("discards exactly the cards the player chose", () => {
+    const deck = instantiateDeck(
+      [
+        "Pokémon: 4",
+        "4 Snorlax SVI 143",
+        "Trainer: 32",
+        "4 Secret Box TWM 163",
+        "28 Nest Ball SVI 181",
+        "Energy: 24",
+        "24 Basic Lightning Energy SVE 4",
+      ].join("\n"),
+    );
+    const state = buildSimInitialState(deck, deck, mulberry32(5), "player");
+    const side = state.sides.player;
+    const box = side.hand.find((c) => c.name === "Secret Box");
+    if (!box) return; // opening hand didn't contain one; the other cases cover the lookup
+    const idx = effectsFor("Secret Box").findIndex((e) =>
+      e.ops.some((o) => o.op === "discard_hand_cards"),
+    );
+    const payable = side.hand.filter((c) => c.id !== box.id).slice(0, 3);
+    const chosen = payable.map((c) => c.id);
+    expect(chosen).toHaveLength(3);
+
+    applyEffect(
+      state,
+      "player",
+      effectsFor("Secret Box")[idx],
+      {
+        kind: "effect",
+        sourceId: box.id,
+        card: "Secret Box",
+        effectIndex: idx,
+        picks: [],
+        discardCardIds: chosen,
+      },
+      mulberry32(11),
+    );
+
+    // Precisely the chosen cards left the hand for the discard pile.
+    const discardIds = new Set(side.discard.map((c) => c.id));
+    for (const id of chosen) expect(discardIds.has(id)).toBe(true);
+    for (const id of chosen) expect(side.hand.some((c) => c.id === id)).toBe(false);
   });
 });

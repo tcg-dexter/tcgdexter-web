@@ -10,7 +10,7 @@ import { legalMoves, type SimMove, type TurnContext } from "./moves";
 import { attackBenchCounterCount, attackBenchDamageTargets } from "./attacks";
 import { isSupporter, trainerDiscardCost } from "./trainers";
 import { enumerateEffect, type EffectMove } from "./effects/runtime";
-import { attackRiderEffect, effectsFor, onAttachEffect } from "./effects/cards";
+import { attackRiderEffect, effectDiscardCost, effectsFor, onAttachEffect } from "./effects/cards";
 
 /** Order-insensitive fingerprint of an effect move's picks, so a human
  *  selection matches an enumerated move regardless of id/slot ordering. */
@@ -211,6 +211,25 @@ export function isLegalHumanMove(
       move.effectIndex,
       sourceMon,
     );
+    // Player-chosen discard COST (Secret Box). Enumeration auto-picks these,
+    // so they are not part of the pick fingerprint — they are validated on
+    // their own terms: each id must be a DISTINCT card actually in hand, and
+    // there must be exactly as many as the op demands. Without this check a
+    // forged move could "discard" cards it doesn't hold, or discard none.
+    if (move.discardCardIds !== undefined) {
+      const need = effectDiscardCost(move.card, move.effectIndex);
+      if (need === 0) return false;
+      const ids = new Set(move.discardCardIds);
+      if (ids.size !== move.discardCardIds.length) return false;
+      if (move.discardCardIds.length !== need) return false;
+      // The played card is still in hand at validation time (applyMove removes
+      // it), so paying with the card itself must not be allowed.
+      const payable = new Set(
+        side.hand.filter((c) => c.id !== move.sourceId).map((c) => c.id),
+      );
+      if (!move.discardCardIds.every((id) => payable.has(id))) return false;
+    }
+
     const want = effectPicks(move);
     return enumerated.some((m) => effectPicks(m) === want);
   }
