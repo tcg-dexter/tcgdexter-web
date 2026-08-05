@@ -5,7 +5,9 @@
 //
 //   decks.jsonl    — one row per saved_deck
 //   matches.jsonl  — one row per match (log-derived features when a battle
-//                    log exists, stored-column fallback otherwise) + labels
+//                    log exists, stored-column fallback otherwise) + labels.
+//                    Includes AI Player games from ai_battles, tagged
+//                    source='ai_player' — same format, same code path.
 //   turns.jsonl    — one row per playable turn with quality flags
 //   manifest.json  — schema/parser/engine versions, store data hash, counts
 //
@@ -122,6 +124,75 @@ function storedColumnFeatures(m: Row): MatchLogFeatures {
   };
 }
 
+/** AI Player games, shaped like a `matches` row.
+ *
+ *  The mapping is small because the formats already agree: the emitter
+ *  (lib/engine/sim/battleLog.ts) writes the same vocabulary the parser
+ *  reads, enforced by battleLog.test.ts. What differs is naming
+ *  (battle_log vs battle_log_raw, winner vs result) and the fact that the
+ *  player's handle lives inside the transcript rather than in a column.
+ *
+ *  Ids are namespaced `ai:<uuid>` so a battle can never be mistaken for a
+ *  match downstream — they are distinct universes of row, and a collision
+ *  would silently merge them. */
+function loadAiBattles(
+  db: InstanceType<typeof DatabaseSync>,
+  errors: { kind: string; id: string; error: string }[],
+): Row[] {
+  let rows: Row[];
+  try {
+    rows = db.prepare("SELECT * FROM ai_battles ORDER BY id").all();
+  } catch {
+    // A store exported before dexter-ml schema v3 has no such table. Not an
+    // error: older stores are still perfectly extractable.
+    return [];
+  }
+  const out: Row[] = [];
+  for (const b of rows) {
+    const id = String(b.id);
+    let playerHandle: string | null = null;
+    try {
+      const t = JSON.parse(String(b.transcript ?? "{}")) as {
+        handles?: { player?: string };
+      };
+      playerHandle = t.handles?.player ?? null;
+    } catch (e) {
+      errors.push({
+        kind: "ai_battle_transcript",
+        id: `ai:${id}`,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+    const winner = str(b.winner);
+    out.push({
+      id: `ai:${id}`,
+      user_id: b.user_id,
+      saved_deck_id: b.saved_deck_id,
+      source: "ai_player",
+      // The log names both players; normalizePerspective needs to know which
+      // side is "the player". Without the handle the row still counts, but
+      // it cannot be replayed — which is why a bad transcript is recorded
+      // as an error above rather than silently skipped.
+      player_handle: playerHandle,
+      battle_log_raw: b.battle_log,
+      // The AI's deck IS the opponent archetype for these games.
+      opponent_archetype: b.ai_deck_name,
+      result: winner === "user" ? "win" : winner === "ai" ? "loss" : null,
+      played_at: b.played_at,
+      created_at: b.created_at,
+      // Stored-column fallback, for when the replay path can't run.
+      went_first: b.user_went_first,
+      total_turns: b.turns,
+      prizes_taken_player: b.prizes_user,
+      prizes_taken_opponent: b.prizes_ai,
+      end_reason: b.end_reason,
+      player_mulligans: null,
+      opponent_mulligans: null,
+    });
+  }
+  return out;
+}
+
 /* ─── Main ──────────────────────────────────────────────────────── */
 
 function main(): void {
@@ -158,13 +229,24 @@ function main(): void {
     }
   }
 
-  /* Matches + turns. */
+  /* Matches + turns.
+   *
+   * Two sources, ONE code path. AI Player games (ai_battles) carry a log in
+   * the same TCG Live format as an imported match, so they are shaped into
+   * the same row and fed through the identical parse → replay → feature
+   * pipeline below. Extracting them separately would let the two drift into
+   * incomparable feature sets, which is the failure this avoids; the only
+   * difference that survives is `source`, so a trainer can include or
+   * exclude them deliberately. */
   let matchQuery = "SELECT * FROM matches ORDER BY id";
   if (onlyMatchId) matchQuery = "SELECT * FROM matches WHERE id = ? ORDER BY id";
-  const allMatches = onlyMatchId
+  const realMatches = onlyMatchId
     ? db.prepare(matchQuery).all(onlyMatchId)
     : db.prepare(matchQuery).all();
+  const aiMatches = onlyMatchId ? [] : loadAiBattles(db, errors);
+  const allMatches = [...realMatches, ...aiMatches];
   const matches = limit !== null ? allMatches.slice(0, limit) : allMatches;
+  const aiBattleCount = aiMatches.length;
 
   const matchRows: Row[] = [];
   const turnRows: Row[] = [];
@@ -254,6 +336,10 @@ function main(): void {
     counts: {
       decks: deckRows.length,
       matches: matchRows.length,
+      // Split out, because "matches: 300" means something very different
+      // when 250 of them are self-play against our own bot.
+      matches_real: matchRows.length - aiBattleCount,
+      matches_ai_player: aiBattleCount,
       matches_with_log: matchesWithLog,
       matches_replayed: matchesReplayed,
       turns: turnRows.length,
