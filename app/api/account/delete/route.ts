@@ -68,6 +68,11 @@ export async function POST(req: Request) {
   // let the user retry.
   const steps: Array<{ label: string; run: () => PromiseLike<{ error: unknown }> }> = [
     {
+      // AI Player games: deck lists and battle logs are user content.
+      label: "ai_battles",
+      run: () => admin.from("ai_battles").delete().eq("user_id", userId),
+    },
+    {
       label: "match_actions",
       run: () => admin.from("match_actions").delete().eq("user_id", userId),
     },

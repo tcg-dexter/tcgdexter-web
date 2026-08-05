@@ -46,6 +46,17 @@ import { describeMove, describePromotion } from "./serialize";
 import { isSupporter, trainerSpec } from "./trainers";
 import { hashSeed, mulberry32, type Rng } from "./rng";
 import { viewFor } from "./view";
+import {
+  BattleLogWriter,
+  logGameEnd,
+  logMove,
+  logPromotion,
+  logSetup,
+  logTurnStart,
+  sanitizeHandle,
+  snapshotMove,
+  type LogHandles,
+} from "./battleLog";
 
 /* ─── Transcript ────────────────────────────────────────────────── */
 
@@ -77,6 +88,18 @@ export interface GameTranscript {
   skill: number;
   human_first: boolean;
   moves: TranscriptMove[];
+  /** Display names in the emitted battle log. Recorded so a rebuilt
+   *  session renders byte-identical text — the log is a stored artifact,
+   *  and it must not change because a profile was renamed later. */
+  handles?: LogHandles;
+  /** Labels for the persisted row. Display-only, and carried here because
+   *  the server is stateless: the transcript is the only thing that
+   *  survives from the game's start to the move that ends it. */
+  meta?: {
+    user_deck_name?: string | null;
+    ai_deck_name?: string | null;
+    saved_deck_id?: string | null;
+  };
 }
 
 /* ─── Session ───────────────────────────────────────────────────── */
@@ -132,6 +155,10 @@ export interface GameSession {
    *  promotes. Re-derived deterministically during transcript replay
    *  (set at the pause point, which regenerates identically). */
   promotionResume: PromotionResume;
+  /** TCG Live-format log of the game so far, written as it is played.
+   *  Rebuilt from scratch on every replay, so it never needs storing in
+   *  the transcript — the transcript already determines it. */
+  log: BattleLogWriter;
 }
 
 /** Where to resume after a human promotion choice:
@@ -258,7 +285,10 @@ function applyTracked(
     }
   }
   const prizesBefore = state.prizesTaken[actor];
+  // Card names and targets have to be read BEFORE the move mutates them.
+  const logSnap = snapshotMove(session.log, state, actor, move);
   const result = applyMove(state, actor, move, ctx, session.rng);
+  logMove(session.log, state, actor, logSnap);
   if (s) {
     const delta = state.prizesTaken[actor] - prizesBefore;
     s.prizesTaken += delta;
@@ -276,6 +306,7 @@ function finish(session: GameSession, winner: "player" | "opponent" | null): voi
     else if (state.prizesTaken.opponent > state.prizesTaken.player) finalWinner = "opponent";
   }
   session.status = "over";
+  logGameEnd(session.log, finalWinner, state.endReason);
   session.outcome = {
     winner: finalWinner,
     endReason: (state.endReason as GameOutcome["endReason"]) ?? "turn_cap",
@@ -294,10 +325,19 @@ function advanceTurn(session: GameSession, actor: "player" | "opponent"): boolea
     return false;
   }
   session.turnCounts[actor] += 1;
+  const handBefore = new Set(session.state.sides[actor].hand.map((c) => c.id));
   if (!beginTurn(session.state, actor, session.turnCounts[actor])) {
+    // Deck-out: the turn header still belongs in the log, then the result.
+    logTurnStart(session.log, actor, null, "player");
     finish(session, session.state.winner);
     return false;
   }
+  logTurnStart(
+    session.log,
+    actor,
+    session.state.sides[actor].hand.find((c) => !handBefore.has(c.id)) ?? null,
+    "player",
+  );
   session.turnStats = {
     actor,
     turnNumber: session.state.turn.number,
@@ -327,6 +367,7 @@ function advanceTurn(session: GameSession, actor: "player" | "opponent"): boolea
 function autoPromoteAi(session: GameSession): void {
   const state = session.state;
   promote(state, "opponent", session.aiPolicy.choosePromotion(viewFor(state, "opponent")));
+  logPromotion(session.log, state, "opponent");
   session.aiActions.push({
     turn: state.turn.number,
     description: describePromotion(state.sides.opponent.active?.card.name ?? "a Pokémon"),
@@ -340,8 +381,29 @@ function autoPromoteAi(session: GameSession): void {
 function betweenTurns(session: GameSession, justActed: "player" | "opponent"): boolean {
   const state = session.state;
   if (state.turn.number === 0) return true; // no Checkup before the game's first turn
+  // Only open a Checkup section when something is actually there to resolve;
+  // TCG Live omits the header on an empty Checkup and an empty section would
+  // be noise in every single turn.
+  const conditioned = [state.sides.player.active, state.sides.opponent.active].some(
+    (m) => m != null && m.conditions.length > 0,
+  );
+  const koBefore = new Set(
+    (["player", "opponent"] as const).flatMap((a) =>
+      [state.sides[a].active].filter((m) => m != null).map((m) => `${a}:${m!.id}:${m!.card.name}`),
+    ),
+  );
+  if (conditioned) session.log.checkup();
   runCheckup(state, justActed, session.rng);
   const ko = resolveKnockouts(state);
+  if (conditioned) {
+    for (const key of Array.from(koBefore)) {
+      const [a, id, name] = key.split(":");
+      const actor = a as "player" | "opponent";
+      const side = state.sides[actor];
+      const alive = [side.active, ...side.bench].some((m) => m?.id === id);
+      if (!alive) session.log.line(`${session.log.handle(actor)}'s ${name} was Knocked Out!`);
+    }
+  }
   if (ko.winner) {
     finish(session, ko.winner);
     return false;
@@ -410,6 +472,12 @@ export interface StartOptions {
   /** Difficulty dial 0..1. */
   skill: number;
   seed?: number | string;
+  /** Display names for the emitted battle log. Set HERE rather than on the
+   *  session afterwards: the writer is built at boot, so a late assignment
+   *  produces a log the rebuilt session does not reproduce. */
+  handles?: LogHandles;
+  /** Labels recorded alongside the persisted game. Display-only. */
+  meta?: GameTranscript["meta"];
 }
 
 export function startGame(options: StartOptions): GameSession {
@@ -427,6 +495,13 @@ export function startGame(options: StartOptions): GameSession {
     skill: options.skill,
     human_first: mulberry32(seed)() < 0.5,
     moves: [],
+    handles: {
+      // "Player" rather than "You": the log grammar is third-person
+      // ("<handle>'s Turn", "<handle> wins."), and "You wins." reads as a bug.
+      player: sanitizeHandle(options.handles?.player ?? "", "Player"),
+      opponent: sanitizeHandle(options.handles?.opponent ?? "", "Dexter"),
+    },
+    ...(options.meta ? { meta: options.meta } : {}),
   };
   return bootSession(transcript);
 }
@@ -474,6 +549,10 @@ function bootSession(transcript: GameTranscript): GameSession {
     turnStats: null,
     rng,
     promotionResume: null,
+    log: new BattleLogWriter({
+      player: sanitizeHandle(transcript.handles?.player ?? "", "You"),
+      opponent: sanitizeHandle(transcript.handles?.opponent ?? "", "Dexter"),
+    }),
     aiPolicy: new PlannerPolicy({
       params: plannerParamsForSkill(transcript.skill),
       seed: (transcript.seed ^ 0x5eed) >>> 0,
@@ -495,6 +574,14 @@ function startPlay(session: GameSession): void {
   // would have shown the human the AI's whole board first. Placement consumes
   // no rng, so the seeded stream (and replay) is unaffected.
   autoPlaceBoard(session.state.sides.opponent);
+  // Both boards exist now, so the Setup section can be written in one go —
+  // which is also the order TCG Live writes it.
+  logSetup(
+    session.log,
+    session.state,
+    session.transcript.human_first ? "player" : "opponent",
+    "player", // the human owns this log; a real log reveals only its owner's hand
+  );
   session.status = "human_turn";
   if (session.transcript.human_first) {
     advanceTurn(session, "player");
@@ -599,6 +686,7 @@ export function applyHumanMove(session: GameSession, move: InteractiveMove, reco
       throw new IllegalMoveError("Invalid bench index");
     }
     promote(state, "player", move.benchIndex);
+    logPromotion(session.log, state, "player");
     if (record) session.transcript.moves.push({ actor: "human", move });
     const resume = session.promotionResume;
     session.promotionResume = null;
@@ -687,6 +775,13 @@ export function rebuildSession(transcript: GameTranscript): GameSession {
     applyHumanMove(session, entry.move, true);
   }
   return session;
+}
+
+/** The game so far as a TCG Live-format battle log. Rebuilt from the
+ *  transcript on every replay, so it is always consistent with the moves —
+ *  there is no second source of truth to drift. */
+export function battleLogText(session: GameSession): string {
+  return session.log.render();
 }
 
 /** Human's currently legal decisions, for the client UI. */

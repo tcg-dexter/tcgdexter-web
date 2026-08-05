@@ -86,37 +86,62 @@ export function parseDeckListCards(raw: string): Card[] {
     // boundary (whitespace + qty + whitespace + non-digit) or end-of-buffer,
     // so we don't accidentally fold a downstream card's qty into the
     // previous card's number.
-    const setCodeRe = /(\d+)\s+(.+?)\s+([A-Z][A-Z0-9-]+)\s+(\d+)(?=\s+\d+\s+\S|\s*$)/g;
+    // The name must not span a card boundary. Without that guard, a
+    // set-code-less card sitting immediately before a set-coded one was
+    // absorbed into the latter's NAME and vanished: "4 Rare Candy 3 Nest
+    // Ball SVI 181" parsed as ONE card called "Rare Candy 3 Nest Ball".
+    // Lists mixing the two forms are normal (people hand-edit exports), and
+    // the deck simply came out short with no error anywhere.
+    const setCodeRe =
+      /(\d+)\s+((?:(?!\s+\d+\s+\D).)+?)\s+([A-Z][A-Z0-9-]+)\s+(\d+)(?=\s+\d+\s+\S|\s*$)/g;
+    // Source order is preserved by recording each card with the offset it
+    // was found at and sorting once at the end — the two passes otherwise
+    // interleave arbitrarily.
+    const found: { at: number; card: Card }[] = [];
+    const matched: [number, number][] = [];
     let m: RegExpExecArray | null;
-    let lastEnd = 0;
     while ((m = setCodeRe.exec(text)) !== null) {
-      cards.push({
-        qty: parseInt(m[1], 10),
-        name: m[2].trim(),
-        number: m[4],
-        setCode: m[3],
-        section: currentSection,
+      found.push({
+        at: m.index,
+        card: {
+          qty: parseInt(m[1], 10),
+          name: m[2].trim(),
+          number: m[4],
+          setCode: m[3],
+          section: currentSection,
+        },
       });
-      lastEnd = m.index + m[0].length;
+      matched.push([m.index, m.index + m[0].length]);
     }
-    // Pass 2: any tail the set-code regex didn't consume (or the whole
-    // buffer if pass 1 found nothing) gets re-scanned for set-code-less
-    // <qty> <name> tokens — same boundary lookahead so multiple name-only
-    // cards on the same line still split correctly.
-    const leftover = text.slice(lastEnd).trim();
-    if (leftover) {
+    // Pass 2: every GAP pass 1 left — not just the tail. A set-code-less
+    // card can sit before, between, or after set-coded ones.
+    const gaps: { at: number; text: string }[] = [];
+    let cursor = 0;
+    for (const [start, end] of matched) {
+      if (start > cursor) gaps.push({ at: cursor, text: text.slice(cursor, start) });
+      cursor = end;
+    }
+    if (cursor < text.length) gaps.push({ at: cursor, text: text.slice(cursor) });
+
+    for (const gap of gaps) {
+      if (!gap.text.trim()) continue;
       const nameOnlyRe = /(\d+)\s+(.+?)(?=\s+\d+\s+\S|\s*$)/g;
       let n: RegExpExecArray | null;
-      while ((n = nameOnlyRe.exec(leftover)) !== null) {
-        cards.push({
-          qty: parseInt(n[1], 10),
-          name: n[2].trim(),
-          number: "",
-          setCode: "",
-          section: currentSection,
+      while ((n = nameOnlyRe.exec(gap.text)) !== null) {
+        found.push({
+          at: gap.at + n.index,
+          card: {
+            qty: parseInt(n[1], 10),
+            name: n[2].trim(),
+            number: "",
+            setCode: "",
+            section: currentSection,
+          },
         });
       }
     }
+    found.sort((a, b) => a.at - b.at);
+    for (const f of found) cards.push(f.card);
     buffer = "";
   };
 

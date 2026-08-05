@@ -23,6 +23,7 @@ export {
   applyHumanMove,
   rebuildSession,
   humanOptions,
+  battleLogText,
   setupOptions,
   autoSetup,
   isSetupMove,

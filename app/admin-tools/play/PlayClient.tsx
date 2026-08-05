@@ -235,7 +235,18 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     setReview(null);
     setLog([]);
     try {
-      absorb(await post({ action: "start", deck_human: human.deckList, deck_ai: ai.deckList, skill: difficulty }));
+      absorb(
+      await post({
+        action: "start",
+        deck_human: human.deckList,
+        deck_ai: ai.deckList,
+        skill: difficulty,
+        // Labels for the recorded game — which decks this was, in words.
+        user_deck_name: human.name,
+        ai_deck_name: ai.name,
+        saved_deck_id: human.id,
+      }),
+    );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {

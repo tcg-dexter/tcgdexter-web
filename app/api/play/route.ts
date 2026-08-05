@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { recordAiBattle } from "@/lib/ai-battles/record";
 import { cardImageUrlForAnyName } from "@/lib/primaryCardImage";
 import {
   applyHumanMove,
@@ -31,8 +33,13 @@ import type {
  * redacted view + the human's next legal options.
  *
  * Body:
- *   { action: "start", deck_human, deck_ai, skill?, seed? }
+ *   { action: "start", deck_human, deck_ai, skill?, seed?,
+ *     user_deck_name?, ai_deck_name?, saved_deck_id? }
  *   { action: "move", transcript, move }
+ *
+ * A finished game is recorded to `ai_battles` server-side (see
+ * lib/ai-battles/record.ts) rather than by a client call, so closing the
+ * tab on the winning move still leaves the log behind.
  */
 
 const DECK_TEXT_MAX = 8000;
@@ -84,6 +91,19 @@ function collectImages(
     images[name] = cardImageUrlForAnyName(name);
   });
   return images;
+}
+
+/** Record a finished game, once it is finished. Awaited so a serverless
+ *  invocation isn't torn down mid-write, but never allowed to fail the
+ *  response — see recordAiBattle. */
+async function recordIfOver(session: GameSession, userId: string): Promise<void> {
+  if (session.status !== "over") return;
+  const meta = session.transcript.meta ?? {};
+  await recordAiBattle(createAdminClient(), session, userId, {
+    userDeckName: meta.user_deck_name,
+    aiDeckName: meta.ai_deck_name,
+    savedDeckId: meta.saved_deck_id,
+  });
 }
 
 function respond(session: GameSession): NextResponse {
@@ -140,12 +160,29 @@ export async function POST(req: Request) {
       if (deckHuman.length > DECK_TEXT_MAX || deckAi.length > DECK_TEXT_MAX) {
         return NextResponse.json({ error: "Deck list too large" }, { status: 400 });
       }
+      // The log's handles: the player's display name, falling back to a
+      // neutral one. Read from the profile rather than the request so a log
+      // cannot be attributed to a name its author didn't have.
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("id", user.id)
+        .maybeSingle<{ display_name: string | null }>();
       const session = startGame({
         deckHuman,
         deckAi,
         skill: clampSkill(body.skill),
         seed: typeof body.seed === "number" || typeof body.seed === "string" ? body.seed : undefined,
+        handles: { player: profile?.display_name ?? "Player", opponent: "Dexter" },
+        meta: {
+          user_deck_name: typeof body.user_deck_name === "string" ? body.user_deck_name : null,
+          ai_deck_name: typeof body.ai_deck_name === "string" ? body.ai_deck_name : null,
+          saved_deck_id: typeof body.saved_deck_id === "string" ? body.saved_deck_id : null,
+        },
       });
+      // A game can be over on the opening turn (an immediate deck-out on a
+      // pathological list), so even the start path has to record.
+      await recordIfOver(session, user.id);
       return respond(session);
     }
 
@@ -163,6 +200,7 @@ export async function POST(req: Request) {
       }
       const session = rebuildSession(transcript);
       applyHumanMove(session, move);
+      await recordIfOver(session, user.id);
       return respond(session);
     }
 
