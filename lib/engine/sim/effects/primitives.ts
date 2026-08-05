@@ -15,7 +15,7 @@ import { pickDiscards } from "../trainers";
 import { promoteBest } from "../policy";
 import { cardMatches, monMatches as cardMatchesMon } from "./match";
 import { guardsPass } from "./guards";
-import { bestCopy } from "./copy";
+import { copyCandidates, copyPool } from "./copy";
 import { applyAttackSelfLock } from "../statuses";
 import type { EffectOp, Quantity } from "./types";
 
@@ -46,6 +46,9 @@ export interface OpContext {
   /** How many copy-an-attack layers deep we are. A copied attack may not copy
    *  again, which is what bounds the recursion. */
   copyDepth?: number;
+  /** The player's chosen (Pokémon, attack) for a copy op. Absent on the AI
+   *  path, which falls back to bestCopy. */
+  copyPick?: { monId: string; attackIndex: number };
   /** Player-chosen hand cards paying a `discard_hand_cards` cost. */
   discardCardIds?: string[];
 }
@@ -331,15 +334,25 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
       if (!defender || !ctx.source) break;
       let donor: PokemonInPlay | null = null;
       let donorAttackIndex = 0;
-      if (op.from === "own_bench" || op.from === "opponent_active") {
-        // The card lets the player choose the Pokémon AND the attack, so take
-        // the hardest-hitting pair — the copier pays the cost, not the donor,
-        // which is the entire point of the mechanic.
-        const pool = op.from === "own_bench" ? side.bench : [opp.active];
-        const best = bestCopy(pool, op.filter);
-        if (best) {
-          donor = best.donor;
-          donorAttackIndex = best.attackIndex;
+      const pool = copyPool(op.from, side.bench, opp.active);
+      if (pool) {
+        // The card lets the player choose the Pokémon AND the attack. When
+        // they did, honour it — matched against the same candidate list the
+        // enumerator offered, so a forged pick can't copy an attack that was
+        // never on the table. Otherwise (the AI) take the best tempo pair;
+        // the copier pays the cost, not the donor, which is the whole point.
+        const candidates = copyCandidates(pool, op.filter);
+        const chosen = ctx.copyPick
+          ? candidates.find(
+              (c) =>
+                c.donor.id === ctx.copyPick!.monId &&
+                c.attackIndex === ctx.copyPick!.attackIndex,
+            )
+          : undefined;
+        const pick = chosen ?? (ctx.copyPick ? undefined : candidates[0]);
+        if (pick) {
+          donor = pick.donor;
+          donorAttackIndex = pick.attackIndex;
         }
       } else {
         // Seek Inspiration: discard the top card; copy it only if it's a

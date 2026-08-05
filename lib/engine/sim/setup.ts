@@ -117,7 +117,17 @@ import { auraEnergyUnits } from "./auras";
 // (Team Rocket's Porygon), and "discard down to N" for OUR half of a
 // symmetric trim. Headless play is bit-identical — every fallback is the old
 // heuristic — but the move SHAPES changed, so v21 transcripts do not replay.
-export const SIM_VERSION = 22;
+// v23: RULE FIX — attacks that cost no Energy could not be used. The card
+// data spells a free cost two ways (an empty array, and the token "Free"),
+// and the cost solver read every token as a typed Energy requirement, so
+// "Free" asked for a type nothing provides. Budew's Itchy Pollen (the Item
+// lock) and Tyrogue's Pow-Pow Punching were therefore unplayable — both
+// cards exist to attack for nothing on turn one. Normalized at the catalog
+// boundary, so this changes headless play for any deck carrying them.
+// Also: which attack a copy-attack borrows (Night Joker) is now the human's
+// choice rather than the engine's best-tempo pick; the AI's enumeration is
+// unchanged (expandAuto).
+export const SIM_VERSION = 23;
 
 const MAX_MULLIGANS = 20;
 

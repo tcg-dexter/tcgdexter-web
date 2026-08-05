@@ -158,6 +158,16 @@ function attachPriority(mon: PokemonInPlay, view?: PlayerView): number {
     : undefined;
   let best = 0;
   attacks.forEach((attack, i) => {
+    // An attack that costs NO Energy can never be improved by attaching
+    // more, so it must not make its Pokémon a better place to put Energy.
+    // Budew's Itchy Pollen is free and deals 10; ranked here it scored a
+    // full 10 (nothing to be short of) and beat a 250-damage attacker that
+    // was one Energy away, which scored 250/(1+1)... except an attacker
+    // whose damage estimate is 0 scores nothing at all. The deck's real
+    // threat was never armed and the game stalled to the turn cap with no
+    // prizes taken. Free attacks are a REASON TO ATTACK, never a reason to
+    // attach.
+    if ((attack.cost?.length ?? 0) === 0) return;
     const dmg = estimatedAttackDamage(mon, i, undefined, "player", board);
     if (dmg <= 0) return;
     // +1 so an already-affordable attack isn't divided by zero, and so the

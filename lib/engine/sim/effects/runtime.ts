@@ -64,6 +64,10 @@ export interface EffectMove {
    *  Validated in validate.ts: every id must be in hand and the count must
    *  match what the op demands. */
   discardCardIds?: string[];
+  /** The player's chosen donor + attack for a copy op (Night Joker). Rides
+   *  on the ATTACK move, not here, so this is only ever set by the driver
+   *  forwarding it into the rider's effect. */
+  copyPick?: { monId: string; attackIndex: number };
 }
 
 /* ─── Candidate resolution ──────────────────────────────────────── */
@@ -540,6 +544,7 @@ export function applyEffect(
     source,
     selfCardName: move.card,
     discardCardIds: move.discardCardIds,
+    copyPick: move.copyPick,
   };
   applyOps(effect.ops, ctx);
 

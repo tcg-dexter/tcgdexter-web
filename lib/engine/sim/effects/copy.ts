@@ -70,6 +70,20 @@ export function copyCandidates(
   return out.sort((a, b) => b.tempo - a.tempo || b.damage - a.damage);
 }
 
+/** The pool a copy op draws from, given the acting side's board. Shared so
+ *  enumeration, application and validation cannot disagree about what was
+ *  on offer — a mismatch there would let a human copy an attack the engine
+ *  never enumerated. */
+export function copyPool(
+  from: "own_bench" | "opponent_active" | string,
+  ownBench: readonly PokemonInPlay[],
+  opponentActive: PokemonInPlay | null,
+): readonly (PokemonInPlay | null)[] | null {
+  if (from === "own_bench") return ownBench;
+  if (from === "opponent_active") return [opponentActive];
+  return null; // deck-top copies are revealed on resolution, not chosen
+}
+
 /** Highest-damage copy available from `pool`, or null. */
 export function bestCopy(
   pool: readonly (PokemonInPlay | null)[],

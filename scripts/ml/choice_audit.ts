@@ -134,6 +134,7 @@ function main(): void {
   console.log("  stadiums.ts   Academy at Night top-deck       — PROMPTED (handCardIds)");
   console.log("  stadiums.ts   Prism Tower discard 2           — PROMPTED (handCardIds)");
   console.log("  driver.ts     attack rider hand cost          — PROMPTED (riderDiscardCardIds)");
+  console.log("  primitives.ts copy-an-attack donor + attack   — ENUMERATED (copyPick, expandAuto)");
 
   const legacyAbilities = ["N's Zoroark ex::Trade"];
   console.log("\n  legacy abilities declaring a hand cost:");

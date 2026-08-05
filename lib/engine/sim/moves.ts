@@ -16,6 +16,7 @@ import { canRetreat, effectiveMaxHp, isTool, toolCostReduction } from "./tools";
 import { benchCap, stadiumAllowsSameTurnEvolve, stadiumAttackCostExtra, stadiumMoves, type UseStadiumMove } from "./stadiums";
 import { enumerateEffect, type EffectMove, type EffectPick } from "./effects/runtime";
 import { abilityEffects, attackRiderEffect, effectsFor, onAttachEffect, triggerEffect } from "./effects/cards";
+import { copyCandidates, copyPool } from "./effects/copy";
 
 export type SimMove =
   | {
@@ -52,6 +53,17 @@ export type SimMove =
        *  "1 of your opponent's Pokémon"). Enumerated alongside the attack —
        *  a rider is never a move of its own; it resolves after damage. */
       riderPicks?: EffectPick[];
+      /** Which Pokémon's attack this attack COPIES (Night Joker, Gemstone
+       *  Mimicry). The card says "choose 1 of your Benched Pokémon and use
+       *  one of its attacks" — two choices the engine used to make itself,
+       *  taking the highest damage-per-turn pair. Names ride along so the
+       *  move is self-describing for the picker. */
+      copyPick?: {
+        monId: string;
+        attackIndex: number;
+        monName?: string;
+        attackName?: string;
+      };
       /** Cards the player chose from their own hand to pay a rider's cost
        *  (Team Rocket's Porygon's Hacking discards 1). A selection, not an
        *  enumerated variant — validated on its own terms, like a trainer's
@@ -146,6 +158,37 @@ export function usableAttacks(
     .map((attack, index) => ({ attack, index }))
     .filter(({ attack }) => !attackLocked(mon, attack.name, state))
     .filter(({ attack }) => canPayCost(mon, effectiveCost(mon, attack.cost, state)));
+}
+
+/** Every (Pokémon, attack) pair `attackName`'s copy rider could take, as
+ *  self-describing picks. Empty when the attack copies nothing, or copies
+ *  from a hidden zone (Seek Inspiration reveals the deck's top card, so
+ *  there is nothing to choose beforehand). */
+export function copyChoices(
+  state: GameState,
+  actor: "player" | "opponent",
+  attacker: PokemonInPlay,
+  attackName: string,
+): NonNullable<Extract<SimMove, { kind: "attack" }>["copyPick"]>[] {
+  const rider = attackRiderEffect(attacker.card.name, attackName);
+  if (!rider) return [];
+  const side = state.sides[actor];
+  const opp = state.sides[actor === "player" ? "opponent" : "player"];
+  const out: NonNullable<Extract<SimMove, { kind: "attack" }>["copyPick"]>[] = [];
+  for (const op of rider.effect.ops) {
+    if (op.op !== "use_copied_attack") continue;
+    const pool = copyPool(op.from, side.bench, opp.active);
+    if (!pool) continue;
+    for (const c of copyCandidates(pool, op.filter)) {
+      out.push({
+        monId: c.donor.id,
+        attackIndex: c.attackIndex,
+        monName: c.donor.card.name,
+        attackName: c.donor.card.catalog?.attacks?.[c.attackIndex]?.name,
+      });
+    }
+  }
+  return out;
 }
 
 /* ─── Damage math ───────────────────────────────────────────────── */
@@ -463,7 +506,16 @@ export function legalMoves(
             side.active,
           )
         : [];
-      if (rider && combos.length > 0 && (rider.effect.targets?.length ?? 0) > 0) {
+      // An attack that COPIES another (Night Joker) asks for a second kind
+      // of choice the target slots can't express: which Pokémon, and which
+      // of ITS attacks. Enumerated only for a human — the AI keeps the
+      // single bestCopy pick, whose tempo ranking (halving damage for an
+      // attack that locks the copier out next turn) is tuned and measured.
+      const copies = expandAuto ? copyChoices(state, actor, side.active, attack.name) : [];
+
+      if (copies.length > 0) {
+        for (const c of copies) moves.push({ kind: "attack", attackIndex: index, copyPick: c });
+      } else if (rider && combos.length > 0 && (rider.effect.targets?.length ?? 0) > 0) {
         for (const combo of combos) {
           moves.push({ kind: "attack", attackIndex: index, riderPicks: combo.picks });
         }

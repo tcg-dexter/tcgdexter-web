@@ -247,6 +247,9 @@ export function snapshotMove(
       const attacker = side.active;
       const attack = attacker?.card.catalog?.attacks[move.attackIndex];
       if (!attacker || !attack) break;
+      // A copied attack is logged as the attack it borrowed, which is what a
+      // reader needs to follow the turn — "used Night Joker" says nothing.
+      const copied = move.copyPick?.attackName;
       if (foe.active) {
         const dmg = computeDamage(attacker, attack, foe.active);
         // TCG Live writes the damage-dealing form only when damage lands;
@@ -259,6 +262,12 @@ export function snapshotMove(
         );
       } else {
         lines.push(`${me}'s ${attacker.card.name} used ${attack.name}.`);
+      }
+      if (copied) {
+        // A "- " child of the attack line. Pushed into `lines` rather than
+        // written via w.child(): snapshotMove COLLECTS and logMove writes,
+        // so writing here would emit it before its own parent.
+        lines.push(`- ${attacker.card.name} copied ${move.copyPick!.monName}'s ${copied}.`);
       }
       break;
     }

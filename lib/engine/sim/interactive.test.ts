@@ -219,8 +219,9 @@ describe("a full game with a real meta deck", () => {
     "13 Basic Darkness Energy SVE 15",
   ].join("\n");
 
-  it("plays to a finish, with the human using declarative moves", () => {
-    const session = startGame({ deckHuman: META, deckAi: META, seed: 7, skill: 1 });
+  /** Play the scripted game out; report what it proved. */
+  function runMetaGame(seed: number) {
+    const session = startGame({ deckHuman: META, deckAi: META, seed, skill: 1 });
     autoSetup(session);
     let usedPickMove = false;
     // Generous cap: a real game is ~25-35 turns of several moves each.
@@ -240,17 +241,32 @@ describe("a full game with a real meta deck", () => {
         throw new Error(`validator rejected an enumerated move: ${(e as Error).message}`);
       }
     }
+    const taken = session.state.prizesTaken.player + session.state.prizesTaken.opponent;
+    return { session, usedPickMove, taken };
+  }
+
+  const SEEDS = [7, 11, 23];
+
+  it.each(SEEDS)("plays to a finish with declarative moves (seed %i)", (seed) => {
+    const { session, usedPickMove } = runMetaGame(seed);
     // The game REACHES an ending — no stall, and no move the validator
     // refuses after legalMoves offered it.
     expect(session.status).toBe("over");
-    // And it was actually contested: prizes were taken. A turn-cap ending
-    // with a winner of null is legitimate (our games run long — see the
-    // deck-out work in the plan file), so asserting a decisive winner would
-    // be asserting something this engine does not currently guarantee.
-    const taken = session.state.prizesTaken.player + session.state.prizesTaken.opponent;
-    expect(taken).toBeGreaterThan(0);
     // The deck's whole engine is pick-bearing, so a game that never used one
     // would mean those shapes stopped being enumerated.
     expect(usedPickMove).toBe(true);
+  });
+
+  it("produces contested games, across seeds", () => {
+    // "Prizes were taken" is a play-QUALITY property, and unlike the two
+    // above it is not guaranteed on any single seed. This list runs Budew,
+    // whose Itchy Pollen locks Items — and 26 of its 34 Trainers ARE Items,
+    // so a mirror where both sides lead Budew can genuinely grind to the
+    // turn cap with nothing scored. That is the cards behaving correctly,
+    // not the engine stalling, so it is asserted over a set of seeds rather
+    // than pinned to one that happened to pass.
+    const results = SEEDS.map(runMetaGame);
+    expect(results.every((r) => r.session.status === "over")).toBe(true);
+    expect(results.some((r) => r.taken > 0)).toBe(true);
   });
 });

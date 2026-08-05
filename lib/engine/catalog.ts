@@ -66,6 +66,22 @@ function pickPrinting(prints: PrintingRaw[]): PrintingRaw {
   return best;
 }
 
+/** Two spellings of "this attack costs no Energy" exist in the card data:
+ *  an empty cost array, and the single token "Free". The engine's cost
+ *  solver reads every token as a typed Energy requirement, so "Free" asked
+ *  for an Energy type nothing provides and the attack could NEVER be used.
+ *
+ *  It affects two standard-legal cards — Budew's Itchy Pollen (the Item
+ *  lock) and Tyrogue's Pow-Pow Punching — both of which exist precisely to
+ *  attack for nothing on turn one. Normalizing here rather than in the cost
+ *  solver fixes it once for every consumer: legality, the planner's damage
+ *  estimates, retreat math and the UI's cost pips all read this shape. */
+function normalizeAttackCost(attack: EngineAttack): EngineAttack {
+  const cost = attack.cost ?? [];
+  if (!cost.some((c) => c === "Free")) return attack;
+  return { ...attack, cost: cost.filter((c) => c !== "Free") };
+}
+
 function normalize(printing: PrintingRaw): EngineCard {
   const hpNum =
     typeof printing.hp === "number"
@@ -85,7 +101,7 @@ function normalize(printing: PrintingRaw): EngineCard {
     evolves_from: printing.evolves_from ?? null,
     weaknesses: printing.weaknesses ?? [],
     resistances: printing.resistances ?? [],
-    attacks: printing.attacks ?? [],
+    attacks: (printing.attacks ?? []).map(normalizeAttackCost),
     abilities: printing.abilities ?? [],
     rules: printing.rules ?? [],
     hasStandardVariant: Boolean(printing.hasStandardVariant),

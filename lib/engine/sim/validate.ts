@@ -6,7 +6,7 @@
 // (which replays untrusted transcripts) has a single trust boundary.
 
 import type { GameState, PokemonInPlay } from "../types";
-import { legalMoves, type SimMove, type TurnContext } from "./moves";
+import { copyChoices, legalMoves, type SimMove, type TurnContext } from "./moves";
 import { attackBenchCounterCount, attackBenchDamageTargets } from "./attacks";
 import { isSupporter, trainerDiscardCost } from "./trainers";
 import { enumerateEffect, type EffectMove } from "./effects/runtime";
@@ -201,6 +201,18 @@ export function isLegalHumanMove(
       if (ids.length !== need) return false;
       if (new Set(ids).size !== ids.length) return false;
       if (!ids.every((id) => side.hand.some((c) => c.id === id))) return false;
+    }
+
+    // A copied attack (Night Joker). The pick is not part of the picks
+    // fingerprint, so without this a forged move could copy ANY attack in
+    // the game — including one on a Pokémon that isn't even on our bench.
+    if (move.copyPick != null) {
+      const attackName = attacker.card.catalog?.attacks[move.attackIndex]?.name ?? "";
+      const offered = copyChoices(state, actor, attacker, attackName);
+      const ok = offered.some(
+        (c) => c.monId === move.copyPick!.monId && c.attackIndex === move.copyPick!.attackIndex,
+      );
+      if (!ok) return false;
     }
 
     // Declarative rider picks (Cruel Arrow's target). The rider resolves inside

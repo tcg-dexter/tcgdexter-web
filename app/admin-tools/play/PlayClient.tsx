@@ -374,7 +374,20 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
       const mon = inPlayById(id);
       if (mon) out.push(mon.name);
     }
+    // A copied attack names the Pokémon it borrows from — the card art the
+    // chooser shows is that donor's.
+    const copy = (m as { copyPick?: { monName?: string } }).copyPick;
+    if (copy?.monName) out.push(copy.monName);
     return out;
+  }
+
+  /** Label for one option in the attack chooser. Card art alone can't tell
+   *  "N's Zekrom — Shred" from "N's Zekrom — Rampaging Thunder", and those
+   *  are 70 damage vs 250 with a lockout. */
+  function attackOptionLabel(m: InteractiveMove): string | null {
+    const copy = (m as { copyPick?: { monName?: string; attackName?: string } }).copyPick;
+    if (!copy) return null;
+    return `${copy.monName ?? "Pokémon"} — ${copy.attackName ?? "attack"}`;
   }
 
   /** Send when there's nothing to decide, otherwise let the human choose. */
@@ -1696,7 +1709,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                       )}
                     </div>
                     <span className="line-clamp-2 text-center text-[9px] font-semibold leading-tight text-text-secondary">
-                      {names.join(" + ") || "Play"}
+                      {attackOptionLabel(m) ?? (names.join(" + ") || "Play")}
                     </span>
                   </button>
                 );

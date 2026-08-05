@@ -448,6 +448,7 @@ export function applyMove(
             effectIndex: rider.index,
             picks: move.riderPicks ?? [],
             discardCardIds: move.riderDiscardCardIds,
+            copyPick: move.copyPick,
           },
           rng,
           attacker,
