@@ -100,7 +100,15 @@ import { auraEnergyUnits } from "./auras";
 // Zoroark's Trade (that deck's entire draw engine), Pecharunt ex's
 // Subjugating Chains, Flip the Script, Attract Customers, Adrena-Brain, and
 // all ~30 declarative abilities W3 authored. Found from real play.
-export const SIM_VERSION = 20;
+// v21: two decisions the engine was making FOR the player. Janine's Secret
+// Art auto-picked the Active first, so it always Poisoned our own Active and
+// the Bench-only line was unreachable; it now enumerates every subset of up
+// to 2 Darkness Pokémon. And the interactive session pauses at "human_setup"
+// so a person places their own opening board instead of inheriting the
+// headless auto-placement. The headless sim still auto-places, so self-play,
+// rollouts and calibration are unchanged — but old transcripts are not
+// replayable, hence the bump.
+export const SIM_VERSION = 21;
 
 const MAX_MULLIGANS = 20;
 
@@ -283,9 +291,12 @@ function printedCeiling(card: CardInstance): number {
  *  Score a Basic by the best attacker its EVOLUTION LINE can reach using
  *  cards actually in this deck. A 70 HP Zorua that becomes a 280 HP Zoroark
  *  ex is a far better lead than a 110-damage Basic that goes nowhere. */
-function bestOpeningBasic(hand: CardInstance[], library: CardInstance[]): CardInstance | null {
+export function rankOpeningBasics(
+  hand: CardInstance[],
+  library: CardInstance[],
+): CardInstance[] {
   const basics = hand.filter(isBasic);
-  if (basics.length === 0) return null;
+  if (basics.length === 0) return [];
 
   // Evolution index over everything this deck actually contains.
   const evolvesFrom = new Map<string, CardInstance[]>();
@@ -311,7 +322,14 @@ function bestOpeningBasic(hand: CardInstance[], library: CardInstance[]): CardIn
   };
 
   const score = (c: CardInstance) => lineCeiling(c) * 1000 + (c.catalog?.hp ?? 0);
-  return basics.reduce((a, b) => (score(b) > score(a) ? b : a));
+  // Stable sort: equal-scoring Basics keep hand order, so the ranking is
+  // deterministic and a caller taking [0] gets exactly bestOpeningBasic.
+  return [...basics].sort((a, b) => score(b) - score(a));
+}
+
+/** The single Basic the game plan wants Active on turn one. */
+function bestOpeningBasic(hand: CardInstance[], library: CardInstance[]): CardInstance | null {
+  return rankOpeningBasics(hand, library)[0] ?? null;
 }
 
 function drawOpeningHand(side: PlayerSide, rng: Rng): number {
@@ -334,7 +352,12 @@ function drawOpeningHand(side: PlayerSide, rng: Rng): number {
   }
 }
 
-function setupSide(handle: string, deck: SimDeck, rng: Rng): { side: PlayerSide; mulligans: number } {
+function setupSide(
+  handle: string,
+  deck: SimDeck,
+  rng: Rng,
+  autoPlace = true,
+): { side: PlayerSide; mulligans: number } {
   const side: PlayerSide = {
     handle,
     deck: shuffle([...deck.cards], rng),
@@ -352,7 +375,20 @@ function setupSide(handle: string, deck: SimDeck, rng: Rng): { side: PlayerSide;
   side.mulligans = mulligans;
   side.prizes = side.deck.splice(0, 6);
 
-  // Board: best basic active, remaining basics benched (common line).
+  // A human places their own board (interactive.ts pauses at "human_setup"
+  // and applies their choices); the headless sim always auto-places, so
+  // self-play, rollouts and calibration are untouched by that seam.
+  if (autoPlace) autoPlaceBoard(side);
+  return { side, mulligans };
+}
+
+/** Best Basic Active, every remaining Basic Benched (the common line).
+ *
+ *  Consumes no rng, so the interactive session can defer the AI's placement
+ *  until the human has committed to their own board without shifting the
+ *  seeded stream — see interactive.ts startPlay. */
+export function autoPlaceBoard(side: PlayerSide): void {
+  if (side.active) return;
   const active = bestOpeningBasic(side.hand, [...side.hand, ...side.deck, ...side.prizes]);
   if (active) {
     side.hand.splice(side.hand.indexOf(active), 1);
@@ -365,7 +401,6 @@ function setupSide(handle: string, deck: SimDeck, rng: Rng): { side: PlayerSide;
       side.bench.push(toPokemonInPlay(c, 0));
     }
   }
-  return { side, mulligans };
 }
 
 /** Build a ready-to-play state. sides.player = deck A, sides.opponent =
@@ -375,9 +410,14 @@ export function buildSimInitialState(
   deckB: SimDeck,
   rng: Rng,
   firstActor: "player" | "opponent",
+  /** Leave BOTH boards empty: sides.player for a human to place, and
+   *  sides.opponent so the human doesn't get to see the AI's board while
+   *  choosing their own. The caller places the AI side (autoPlaceBoard)
+   *  once setup is committed. */
+  manualPlayerSetup = false,
 ): GameState {
-  const a = setupSide("sim-a", deckA, rng);
-  const b = setupSide("sim-b", deckB, rng);
+  const a = setupSide("sim-a", deckA, rng, !manualPlayerSetup);
+  const b = setupSide("sim-b", deckB, rng, !manualPlayerSetup);
 
   // Mulligan compensation: 1 bonus draw per opposing mulligan.
   for (let i = 0; i < a.mulligans; i++) b.side.hand.push(...b.side.deck.splice(0, 1));

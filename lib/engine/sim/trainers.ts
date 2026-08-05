@@ -109,6 +109,9 @@ export interface PlayTrainerMove {
   discardPickName?: string;
   /** Own in-play target (Crispin attach, Rare Candy basic). */
   monId?: string;
+  /** Several own in-play targets, chosen together (Janine's Secret Art).
+   *  Order is the enumerator's, so validate's structural compare is exact. */
+  monIds?: string[];
   /** Rare Candy's Stage 2 from hand. */
   handCardId?: string;
   /** Own bench target (Switch). */
@@ -266,13 +269,38 @@ export function trainerMoves(
       // Usable only while the opponent has 3 or fewer Prizes remaining.
       return other.prizes.length <= 3 ? [base] : [];
     case "janine": {
-      const hasDarkEnergy = side.deck.some(
+      // "Choose up to 2 of your Darkness Pokémon" — one Energy each. Attaching
+      // to the ACTIVE poisons it, so which Pokémon get the Energy is a real
+      // decision, not a formality: two Benched targets take 2 Energy with no
+      // drawback, while any subset containing the Active trades a Poison for
+      // arming the attacker now. Every non-empty subset up to size 2 is
+      // enumerated so both halves of that trade are reachable.
+      const energyAvailable = side.deck.filter(
         (c) => isBasicEnergy(c) && energyProvides(c) === "Darkness",
+      ).length;
+      if (energyAvailable === 0) return [];
+      const targets = [side.active, ...side.bench].filter(
+        (m): m is NonNullable<typeof m> => !!m?.card.catalog?.types.includes("Darkness"),
       );
-      const hasDarkMon = [side.active, ...side.bench].some(
-        (m) => m?.card.catalog?.types.includes("Darkness"),
-      );
-      return hasDarkEnergy && hasDarkMon ? [base] : [];
+      if (targets.length === 0) return [];
+      const pairs: PlayTrainerMove[] = [];
+      const singles: PlayTrainerMove[] = [];
+      for (let i = 0; i < targets.length; i++) {
+        singles.push({ ...base, monIds: [targets[i].id] });
+        if (energyAvailable < 2) continue;
+        for (let j = i + 1; j < targets.length; j++) {
+          pairs.push({ ...base, monIds: [targets[i].id, targets[j].id] });
+        }
+      }
+      // Best-guess first: HeuristicPolicy takes the head of the accel list
+      // (the planner scores them all). More Energy beats less, and within
+      // each size the Bench-only options come first because they don't
+      // Poison our own Active.
+      const activeId = side.active?.id;
+      const poisonsSelf = (m: PlayTrainerMove) =>
+        activeId != null && m.monIds!.includes(activeId) ? 1 : 0;
+      const rank = (list: PlayTrainerMove[]) => list.sort((a, b) => poisonsSelf(a) - poisonsSelf(b));
+      return [...rank(pairs), ...rank(singles)];
     }
     case "gust":
       return other.active
@@ -537,12 +565,13 @@ export function applyTrainer(
       break;
     }
     case "janine": {
-      // Attach up to 2 Basic Darkness Energy from the deck to up to 2 of your
-      // Darkness Pokémon (v1 auto-picks: Active first, then the Bench). If an
-      // Energy lands on the Active, it becomes Poisoned.
-      const darkTargets = [side.active, ...side.bench].filter(
-        (m): m is NonNullable<typeof m> => !!m?.card.catalog?.types.includes("Darkness"),
-      );
+      // One Basic Darkness Energy from the deck onto each CHOSEN Darkness
+      // Pokémon (the enumerator offers every subset up to 2). If an Energy
+      // lands on our own Active, it becomes Poisoned.
+      const inPlay = [side.active, ...side.bench];
+      const darkTargets = (move.monIds ?? [])
+        .map((id) => inPlay.find((m) => m?.id === id))
+        .filter((m): m is NonNullable<typeof m> => !!m);
       let attachedToActive = false;
       for (const target of darkTargets.slice(0, 2)) {
         const idx = side.deck.findIndex(

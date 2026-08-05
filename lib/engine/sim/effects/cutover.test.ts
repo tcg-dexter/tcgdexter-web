@@ -18,7 +18,7 @@ import { describeMove } from "../serialize";
 import { legalMoves, type SimMove, type TurnContext } from "../moves";
 import { HeuristicPolicy } from "../policy";
 import { viewFor } from "../view";
-import { startGame, applyHumanMove, rebuildSession, humanOptions } from "../interactive";
+import { startGame, applyHumanMove, rebuildSession, humanOptions, autoSetup } from "../interactive";
 import { applyEffect, enumerateEffect, type EffectMove } from "./runtime";
 import { effectsFor, effectDiscardCost, effectDiscardFilter } from "./cards";
 import { isToolModeled } from "../tools";
@@ -625,9 +625,11 @@ describe("W2 cutover — the interactive/API path the play UI drives", () => {
     // Find a seed where the human is dealt Transceiver on their first decision
     // (opening hand of 7 from 60, with 4 copies — a low seed always hits).
     let session = startGame({ deckHuman: DECK, deckAi: DECK, skill: 0.5, seed: 0 });
+    autoSetup(session);
     let move: EffectMove | undefined;
     for (let seed = 0; seed < 400; seed++) {
       const s = startGame({ deckHuman: DECK, deckAi: DECK, skill: 0.5, seed });
+      autoSetup(s);
       if (s.status !== "human_turn") continue;
       const opt = humanOptions(s).find(
         (m): m is EffectMove => m.kind === "effect" && m.card === "Team Rocket's Transceiver",

@@ -5,7 +5,9 @@
 // exact game; the API layer replays it on every request instead of
 // holding sessions. Human = sides.player, AI = sides.opponent.
 //
-// Status machine: "human_turn" (awaiting a SimMove) → applying it may KO
+// Status machine: "human_setup" (the human places their opening board;
+// the AI's is placed only once they commit, so neither sees the other's) →
+// "human_turn" (awaiting a SimMove) → applying it may KO
 // the AI's active (AI promotes instantly via its policy) or end the turn
 // (the AI's whole reply turn runs, possibly leaving "human_promotion"
 // when its attack KO'd the human's active) → back to "human_turn", until
@@ -31,7 +33,15 @@ import { PlannerPolicy, type StateEvaluator } from "./planner";
 import { createBotEvaluator } from "@/lib/ml/botEvaluator";
 import { plannerParamsForSkill } from "./difficulty";
 import { promoteBest, type DecisionPolicy } from "./policy";
-import { buildSimInitialState, instantiateDeck, SIM_VERSION } from "./setup";
+import {
+  autoPlaceBoard,
+  buildSimInitialState,
+  instantiateDeck,
+  isBasic,
+  rankOpeningBasics,
+  toPokemonInPlay,
+  SIM_VERSION,
+} from "./setup";
 import { describeMove, describePromotion } from "./serialize";
 import { isSupporter, trainerSpec } from "./trainers";
 import { hashSeed, mulberry32, type Rng } from "./rng";
@@ -39,7 +49,19 @@ import { viewFor } from "./view";
 
 /* ─── Transcript ────────────────────────────────────────────────── */
 
-export type InteractiveMove = SimMove | { kind: "promote"; benchIndex: number };
+/** Opening-board placement, before turn 1. Not `SimMove`s: they never appear
+ *  in `legalMoves` and the headless sim auto-places, so they live here with
+ *  `promote` as decisions the SESSION owns rather than the rules engine. */
+export type SetupMove =
+  | { kind: "setup_active"; cardId: string }
+  | { kind: "setup_bench"; cardId: string }
+  | { kind: "setup_reset" }
+  | { kind: "setup_done" };
+
+export type InteractiveMove =
+  | SimMove
+  | { kind: "promote"; benchIndex: number }
+  | SetupMove;
 
 export interface TranscriptMove {
   actor: "human" | "ai";
@@ -59,7 +81,7 @@ export interface GameTranscript {
 
 /* ─── Session ───────────────────────────────────────────────────── */
 
-export type SessionStatus = "human_turn" | "human_promotion" | "over";
+export type SessionStatus = "human_setup" | "human_turn" | "human_promotion" | "over";
 
 export interface AiAction {
   turn: number;
@@ -438,11 +460,12 @@ function bootSession(transcript: GameTranscript): GameSession {
     deckAi,
     rng,
     transcript.human_first ? "player" : "opponent",
+    true, // the human places their own opening board
   );
   const session: GameSession = {
     state,
     transcript,
-    status: "human_turn",
+    status: "human_setup",
     ctx: { retreated: false },
     outcome: null,
     aiActions: [],
@@ -460,12 +483,99 @@ function bootSession(transcript: GameTranscript): GameSession {
       })(),
     }),
   };
-  if (transcript.human_first) {
+  return session;
+}
+
+/* ─── Opening setup ─────────────────────────────────────────────── */
+
+/** Board placement is over; hand off to whoever goes first. */
+function startPlay(session: GameSession): void {
+  // The AI places only NOW. Both players choose their opening board without
+  // seeing the other's, as in the real game — placing it at buildSimInitialState
+  // would have shown the human the AI's whole board first. Placement consumes
+  // no rng, so the seeded stream (and replay) is unaffected.
+  autoPlaceBoard(session.state.sides.opponent);
+  session.status = "human_turn";
+  if (session.transcript.human_first) {
     advanceTurn(session, "player");
   } else {
+    // The AI must not take its first turn against an empty board, which is
+    // why bootSession pauses BEFORE this rather than after buildSimInitialState.
     runAiTurn(session, true);
   }
-  return session;
+}
+
+/** The human's opening-board choices: their Active, then any Basics they
+ *  want Benched. Every Basic in hand is offered — the ranking only decides
+ *  the ORDER, so a caller taking the first option reproduces the headless
+ *  auto-placement exactly (see rankOpeningBasics). */
+export function setupOptions(session: GameSession): SetupMove[] {
+  const side = session.state.sides.player;
+  const library = [...side.hand, ...side.deck, ...side.prizes];
+  const basics = rankOpeningBasics(side.hand, library);
+  if (!side.active) {
+    return basics.map((c) => ({ kind: "setup_active" as const, cardId: c.id }));
+  }
+  const out: SetupMove[] = [];
+  if (side.bench.length < 5) {
+    out.push(...basics.map((c) => ({ kind: "setup_bench" as const, cardId: c.id })));
+  }
+  // `setup_done` sits after the Bench options and before `setup_reset` so a
+  // naive agent that always takes options[0] benches everything and then
+  // finishes, rather than looping on reset forever.
+  out.push({ kind: "setup_done" }, { kind: "setup_reset" });
+  return out;
+}
+
+/** Take the top-ranked choice at every step — the same board the headless
+ *  sim would have built. Used by tests and by the UI's auto-place button. */
+export function autoSetup(session: GameSession): void {
+  while (session.status === "human_setup") {
+    const options = setupOptions(session);
+    if (options.length === 0) throw new IllegalMoveError("No legal opening board");
+    applyHumanMove(session, options[0]);
+  }
+}
+
+export function isSetupMove(move: InteractiveMove): move is SetupMove {
+  return move.kind.startsWith("setup_");
+}
+
+function applySetupMove(session: GameSession, move: SetupMove): void {
+  const side = session.state.sides.player;
+  const takeBasic = (cardId: string) => {
+    const idx = side.hand.findIndex((c) => c.id === cardId);
+    if (idx < 0) throw new IllegalMoveError("That card is not in your hand");
+    const card = side.hand[idx];
+    if (!isBasic(card)) throw new IllegalMoveError("Only Basic Pokémon can be placed");
+    side.hand.splice(idx, 1);
+    return card;
+  };
+
+  switch (move.kind) {
+    case "setup_active":
+      if (side.active) throw new IllegalMoveError("Active Pokémon already chosen");
+      side.active = toPokemonInPlay(takeBasic(move.cardId), 0);
+      return;
+    case "setup_bench":
+      if (!side.active) throw new IllegalMoveError("Choose your Active Pokémon first");
+      if (side.bench.length >= 5) throw new IllegalMoveError("Bench is full");
+      side.bench.push(toPokemonInPlay(takeBasic(move.cardId), 0));
+      return;
+    case "setup_reset":
+      // Everything goes back to hand in placement order. Replay applies the
+      // same recorded moves, so the resulting hand order is deterministic.
+      for (const mon of [side.active, ...side.bench]) {
+        if (mon) side.hand.push(mon.card);
+      }
+      side.active = null;
+      side.bench = [];
+      return;
+    case "setup_done":
+      if (!side.active) throw new IllegalMoveError("You must choose an Active Pokémon");
+      startPlay(session);
+      return;
+  }
 }
 
 /** Apply one human decision (a turn move or a promotion). Advances the
@@ -474,6 +584,14 @@ function bootSession(transcript: GameTranscript): GameSession {
 export function applyHumanMove(session: GameSession, move: InteractiveMove, record = true): void {
   if (session.status === "over") throw new IllegalMoveError("Game is over");
   const state = session.state;
+
+  if (session.status === "human_setup") {
+    if (!isSetupMove(move)) throw new IllegalMoveError("Place your opening board first");
+    applySetupMove(session, move);
+    if (record) session.transcript.moves.push({ actor: "human", move });
+    return;
+  }
+  if (isSetupMove(move)) throw new IllegalMoveError("Your board is already set up");
 
   if (session.status === "human_promotion") {
     if (move.kind !== "promote") throw new IllegalMoveError("A promotion choice is required");
@@ -573,6 +691,7 @@ export function rebuildSession(transcript: GameTranscript): GameSession {
 
 /** Human's currently legal decisions, for the client UI. */
 export function humanOptions(session: GameSession): InteractiveMove[] {
+  if (session.status === "human_setup") return setupOptions(session);
   if (session.status === "human_turn") {
     // expandAuto: a person choosing which cards come out of their own deck is
     // the whole point of a search card. The AI keeps the single auto-picked

@@ -260,23 +260,60 @@ describe("Special Red Card", () => {
 });
 
 describe("Janine's Secret Art", () => {
-  it("attaches Basic Darkness from deck to Darkness Pokémon; poisons the Active if targeted", () => {
+  /** Board: Darkness Active + two Darkness Benched, 2 Basic Darkness in deck. */
+  function janineState() {
     const state = freshState();
     const me = state.sides.player;
     me.active = mon("N's Zorua"); // Darkness
-    me.bench = [mon("N's Zoroark ex")]; // Darkness
-    // Make sure Basic Darkness Energy is available in the deck.
+    me.bench = [mon("N's Zoroark ex"), mon("N's Zorua")]; // Darkness
     me.deck.unshift(card("Basic Darkness Energy"), card("Basic Darkness Energy"));
     const src = card("Janine's Secret Art");
     me.hand = [src];
+    return { state, me, src };
+  }
 
-    expect(trainerOptions(state, src.id).length).toBe(1);
-    apply(state, trainerOptions(state, src.id)[0]);
-    const attachedActive = me.active!.attachedEnergy.length;
-    const attachedBench = me.bench[0].attachedEnergy.length;
-    expect(attachedActive + attachedBench).toBe(2); // up to 2 attached
-    // Active received energy ⇒ Poisoned.
-    if (attachedActive > 0) expect(me.active!.conditions).toContain("Poisoned");
+  it("offers every subset of up to 2 Darkness Pokémon", () => {
+    const { state, me, src } = janineState();
+    const options = trainerOptions(state, src.id);
+    const sets = options.map((m) => m.monIds!.join("+"));
+    // 3 pairs + 3 singles, each target set exactly once.
+    expect(new Set(sets).size).toBe(6);
+    expect(sets.filter((s) => s.includes("+")).length).toBe(3);
+    // Bench-only options rank ahead of any that Poison our own Active, so
+    // HeuristicPolicy's accel[0] takes the drawback-free line.
+    expect(options[0].monIds).not.toContain(me.active!.id);
+  });
+
+  it("attaches one Energy per chosen Pokémon and Poisons our Active only if targeted", () => {
+    const { state, me, src } = janineState();
+    const benchOnly = trainerOptions(state, src.id).find(
+      (m) => m.monIds!.length === 2 && !m.monIds!.includes(me.active!.id),
+    )!;
+    apply(state, benchOnly);
+    expect(me.bench[0].attachedEnergy.length).toBe(1);
+    expect(me.bench[1].attachedEnergy.length).toBe(1);
+    expect(me.active!.attachedEnergy.length).toBe(0);
+    expect(me.active!.conditions).not.toContain("Poisoned"); // the whole point
+  });
+
+  it("Poisons our Active when the Active is one of the chosen", () => {
+    const { state, me, src } = janineState();
+    const withActive = trainerOptions(state, src.id).find((m) =>
+      m.monIds!.includes(me.active!.id),
+    )!;
+    apply(state, withActive);
+    expect(me.active!.attachedEnergy.length).toBe(1);
+    expect(me.active!.conditions).toContain("Poisoned");
+  });
+
+  it("offers only singles when one Basic Darkness Energy is left", () => {
+    const { state, me, src } = janineState();
+    // Strip the deck to exactly one Basic Darkness Energy.
+    me.deck = me.deck.filter((c) => c.name !== "Basic Darkness Energy");
+    me.deck.unshift(card("Basic Darkness Energy"));
+    const options = trainerOptions(state, src.id);
+    expect(options.length).toBeGreaterThan(0);
+    expect(options.every((m) => m.monIds!.length === 1)).toBe(true);
   });
 });
 

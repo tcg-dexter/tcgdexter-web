@@ -3,7 +3,7 @@
 // Poison/Burn KO at the Pokémon Checkup.
 
 import { describe, it, expect } from "vitest";
-import { startGame, applyHumanMove, humanOptions } from "./index";
+import { startGame, applyHumanMove, humanOptions, autoSetup } from "./index";
 import { applyCondition } from "./conditions";
 import type { GameSession } from "./interactive";
 
@@ -23,6 +23,7 @@ const DECK = [
 function humanTurnGame(seed: number): GameSession {
   for (let s = seed; s < seed + 50; s++) {
     const g = startGame({ deckHuman: DECK, deckAi: DECK, skill: 0.5, seed: s });
+    autoSetup(g); // opening board: the same one the headless sim builds
     if (g.status === "human_turn" && g.state.sides.player.active && g.state.sides.player.bench.length > 0) {
       return g;
     }

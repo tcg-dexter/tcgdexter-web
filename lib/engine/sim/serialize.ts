@@ -82,6 +82,10 @@ export function describeMove(
       if (move.monId != null) {
         return `Played ${name} on ${monName(state, actor, move.monId)}`;
       }
+      if (move.monIds?.length) {
+        const names = move.monIds.map((id) => monName(state, actor, id)).join(" and ");
+        return `Played ${name} on ${names}`;
+      }
       return `Played ${name}`;
     }
     case "attack": {

@@ -8,6 +8,7 @@ import {
   humanOptions,
   rebuildSession,
   startGame,
+  autoSetup,
   IllegalMoveError,
   HeuristicPolicy,
   serializeView,
@@ -43,6 +44,7 @@ function scriptedHumanMove(session: GameSession): InteractiveMove {
 
 function playFullGame(seed: number): GameSession {
   const session = startGame({ deckHuman: DECK, deckAi: DECK, skill: 0.95, seed });
+  autoSetup(session); // opening board: the same one the headless sim builds
   for (let i = 0; i < 500 && session.status !== "over"; i++) {
     applyHumanMove(session, scriptedHumanMove(session));
   }
@@ -60,6 +62,7 @@ describe("interactive session", () => {
 
   it("rejects illegal moves and bad promotions", () => {
     const session = startGame({ deckHuman: DECK, deckAi: DECK, skill: 0.5, seed: 3 });
+    autoSetup(session);
     expect(session.status).toBe("human_turn");
     // Attacking with a fabricated index / promoting with none pending.
     expect(() => applyHumanMove(session, { kind: "attack", attackIndex: 9 })).toThrow(IllegalMoveError);
@@ -80,6 +83,7 @@ describe("interactive session", () => {
 
   it("mid-game replay lands on the same decision point", () => {
     const session = startGame({ deckHuman: DECK, deckAi: DECK, skill: 0.95, seed: 33 });
+    autoSetup(session);
     for (let i = 0; i < 12 && session.status !== "over"; i++) {
       applyHumanMove(session, scriptedHumanMove(session));
     }
@@ -114,6 +118,7 @@ describe("interactive session", () => {
 
   it("serialized client view redacts all hidden zones", () => {
     const session = startGame({ deckHuman: DECK, deckAi: DECK, skill: 0.5, seed: 7 });
+    autoSetup(session);
     const view = serializeView(viewFor(session.state, "player"));
     const opponent = view.opponent as unknown as Record<string, unknown>;
     expect(opponent.hand).toBeUndefined();
@@ -151,6 +156,7 @@ describe("declarative abilities are playable by a human", () => {
     // Several seeds: the ability needs its Pokémon benched, which is a draw.
     for (let seed = 0; seed < 40 && !found; seed++) {
       const session = startGame({ deckHuman: ABILITY_DECK, deckAi: ABILITY_DECK, seed, skill: 1 });
+      autoSetup(session);
       for (let step = 0; step < 30 && session.status === "human_turn"; step++) {
         const options = humanOptions(session);
         const inPlay = new Set(
@@ -215,6 +221,7 @@ describe("a full game with a real meta deck", () => {
 
   it("plays to a finish, with the human using declarative moves", () => {
     const session = startGame({ deckHuman: META, deckAi: META, seed: 7, skill: 1 });
+    autoSetup(session);
     let usedPickMove = false;
     // Generous cap: a real game is ~25-35 turns of several moves each.
     for (let step = 0; step < 4000; step++) {

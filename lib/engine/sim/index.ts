@@ -23,6 +23,9 @@ export {
   applyHumanMove,
   rebuildSession,
   humanOptions,
+  setupOptions,
+  autoSetup,
+  isSetupMove,
   IllegalMoveError,
 } from "./interactive";
 export type {
@@ -30,6 +33,7 @@ export type {
   GameTranscript,
   TranscriptMove,
   InteractiveMove,
+  SetupMove,
   SessionStatus,
   AiAction,
   StartOptions,

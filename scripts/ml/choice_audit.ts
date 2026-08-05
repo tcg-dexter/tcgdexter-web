@@ -31,6 +31,7 @@ import { metaDeckToList, type MetaDeckEntry } from "@/lib/metaDeckList";
 import { effectsFor, effectDiscardCost } from "@/lib/engine/sim/effects/cards";
 import { EFFECT_CARDS } from "@/lib/engine/sim/effects/cards";
 import { activatedHandDiscard } from "@/lib/engine/sim/abilities";
+import { TRAINER_EFFECTS } from "@/lib/engine/sim/trainers";
 import { lookupCard } from "@/lib/engine/catalog";
 
 const SHOW_ALL = process.argv.includes("--all");
@@ -101,10 +102,31 @@ function main(): void {
     }
   }
 
+  // The legacy TRAINER_EFFECTS registry is hand-written switch arms, not
+  // data, so nothing above can see it. Janine's Secret Art hid there: its
+  // text says "Choose up to 2 of your Darkness Pokémon" and the enumerator
+  // returned a single move that always picked the Active first. Flag every
+  // legacy trainer whose printed text contains a choice verb, so the next
+  // one is a line in this report rather than a bug report.
+  console.log("\n\nLEGACY TRAINER REGISTRY — printed text implies a choice\n");
+  const CHOICE_VERB = /\b(choose|up to|search your deck|discard \d|in any way)/i;
+  const legacy: { card: string; weight: number; text: string }[] = [];
+  for (const name of Object.keys(TRAINER_EFFECTS)) {
+    const text = (lookupCard(name)?.rules ?? []).join(" ");
+    if (!CHOICE_VERB.test(text)) continue;
+    legacy.push({ card: name, weight: weights.get(name) ?? 0, text });
+  }
+  legacy.sort((a, b) => b.weight - a.weight);
+  console.log("  Verify each ENUMERATES the choice rather than picking for the player.\n");
+  for (const l of legacy) {
+    console.log(`${l.weight.toFixed(1).padStart(6)}   ${l.card.slice(0, 30).padEnd(32)}${l.text.slice(0, 60)}`);
+  }
+
   console.log("\n\nHAND-WRITTEN AUTO-PICKS (not data — review by hand)\n");
   console.log("  trainers.ts:413    legacy deck_search discardCost — PROMPTED (Ultra Ball)");
   console.log("  abilities.ts:113   Trade's discard          — PROMPTED (handDiscard)");
   console.log("  primitives.ts:561  discard_hand_cards       — PROMPTED (discardCardIds)");
+  console.log("  trainers.ts:268   Janine target subsets      — ENUMERATED (monIds)");
   console.log("  primitives.ts:454  hand_to_bottom_draw pick — auto");
   console.log("  stadiums.ts:312    stadium discard          — auto");
   console.log("  stadiums.ts:320    stadium discard (n)      — auto");

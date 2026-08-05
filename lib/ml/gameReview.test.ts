@@ -6,6 +6,7 @@ import {
   applyHumanMove,
   humanOptions,
   startGame,
+  autoSetup,
   viewFor,
   HeuristicPolicy,
   IllegalMoveError,
@@ -28,6 +29,7 @@ const DECK = [
 
 function playFullGame(seed: number): GameSession {
   const session = startGame({ deckHuman: DECK, deckAi: DECK, skill: 0.95, seed });
+  autoSetup(session); // opening board: the same one the headless sim builds
   const policy = new HeuristicPolicy();
   for (let i = 0; i < 500 && session.status !== "over"; i++) {
     const options = humanOptions(session);
@@ -76,6 +78,7 @@ describe("reviewFromTranscript", () => {
 
   it("refuses unfinished games", () => {
     const open = startGame({ deckHuman: DECK, deckAi: DECK, skill: 0.5, seed: 5 });
+    autoSetup(open);
     expect(() => reviewFromTranscript(open.transcript)).toThrow(IllegalMoveError);
   });
 });

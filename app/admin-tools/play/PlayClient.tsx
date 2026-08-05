@@ -347,6 +347,13 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     for (const g of groups) {
       for (const p of g ?? []) out.push(...(p.cardNames ?? []), ...(p.monNames ?? []));
     }
+    // Legacy trainers that target SEVERAL of our own Pokémon at once
+    // (Janine's Secret Art) carry board ids rather than picks; resolve them
+    // to names so the same chooser can render them.
+    for (const id of (m as { monIds?: string[] }).monIds ?? []) {
+      const mon = inPlayById(id);
+      if (mon) out.push(mon.name);
+    }
     return out;
   }
 
@@ -384,7 +391,16 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
   }
 
   function handleHandClick(cardId: string) {
-    if (!game || game.status !== "human_turn") return;
+    if (!game) return;
+    // Opening board: tapping a Basic places it, Active first then the Bench.
+    if (game.status === "human_setup") {
+      const place = options.find(
+        (m) => (m.kind === "setup_active" || m.kind === "setup_bench") && m.cardId === cardId,
+      );
+      if (place) void sendMove(place);
+      return;
+    }
+    if (game.status !== "human_turn") return;
     const card = view.hand.find((c) => c.id === cardId);
     // Bench. Several bench moves for one card differ only in `triggerPicks`
     // (Meowth ex's Last-Ditch Catch and friends) — that is the human's choice
@@ -428,6 +444,12 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
         return void setBossMoves(trainers); // pick an opponent Pokémon
       }
       if (first.benchIndex != null) return void setBenchPickMoves(trainers);
+      if (first.monIds != null) {
+        // Janine's Secret Art: which one or two of our Darkness Pokémon.
+        // Each option names its whole target set, because "both, and Poison
+        // my own Active" is a different decision from "just the Benched one".
+        return void sendOrChoose(card?.name ?? "Play", trainers);
+      }
       if (first.monId != null) {
         // Crispin / Rare Candy: pick which own Pokémon.
         return void chooseOwnTarget(
@@ -838,7 +860,12 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
         }
       : undefined;
 
-  const statusLine = promoting
+  const settingUp = game.status === "human_setup";
+  const statusLine = settingUp
+    ? !view.board.active
+      ? "Choose your Active Pokémon"
+      : `Bench up to 5 Basics (${view.board.bench.length}/5), then Start`
+    : promoting
     ? "Choose your new Active Pokémon"
     : game.status === "human_turn"
       ? counterPlace
@@ -949,7 +976,8 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
             </div>
             <div className="flex gap-1.5 overflow-x-auto pb-1">
               {view.hand.map((card) => {
-                const playable = game.status === "human_turn" && cardIsPlayable(card.id);
+                const playable =
+                  (game.status === "human_turn" || settingUp) && cardIsPlayable(card.id);
                 const image = images[card.name];
                 return (
                   <button
@@ -1126,6 +1154,24 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                 >
                   Retreat
                 </button>
+              )}
+              {settingUp && (
+                <>
+                  <button
+                    onClick={() => sendMove({ kind: "setup_reset" })}
+                    disabled={loading || !view.board.active}
+                    className="rounded-lg border border-black/15 bg-white px-3 py-1.5 text-xs font-semibold text-text-secondary disabled:opacity-50"
+                  >
+                    Clear Board
+                  </button>
+                  <button
+                    onClick={() => sendMove({ kind: "setup_done" })}
+                    disabled={loading || !view.board.active}
+                    className="ml-auto rounded-lg border border-transparent bg-accent px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                  >
+                    Start Game
+                  </button>
+                </>
               )}
               {game.status === "human_turn" && (
                 <button
