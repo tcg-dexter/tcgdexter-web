@@ -79,6 +79,10 @@ export function describeMove(
         const target = [side.active, ...side.bench].find((m) => m?.id === move.monId);
         return `Played ${name} — evolved ${target?.card.name ?? "a Pokémon"} into ${cardName(state, actor, move.handCardId)}`;
       }
+      if (move.attachCardName != null && move.monId != null) {
+        const toHand = move.toHandCardName ? `, ${move.toHandCardName} to hand` : "";
+        return `Played ${name} — ${move.attachCardName} onto ${monName(state, actor, move.monId)}${toHand}`;
+      }
       if (move.monId != null) {
         return `Played ${name} on ${monName(state, actor, move.monId)}`;
       }

@@ -114,6 +114,13 @@ export interface PlayTrainerMove {
   monIds?: string[];
   /** Rare Candy's Stage 2 from hand. */
   handCardId?: string;
+  /** Crispin: the searched Energy that gets ATTACHED (to `monId`), and the
+   *  one that goes to hand instead. Absent on the AI's narrow enumeration,
+   *  which lets applyTrainer pick the split. */
+  attachCardId?: string;
+  attachCardName?: string;
+  toHandCardId?: string;
+  toHandCardName?: string;
   /** Own bench target (Switch). */
   benchIndex?: number;
   /** Opponent bench target (Boss's Orders). */
@@ -179,12 +186,28 @@ function dedupeByName(cards: CardInstance[]): CardInstance[] {
 }
 
 /** All concrete plays of a registered trainer. The supporter-per-turn gate
- *  is the caller's job (legalMoves); this enumerates effect targets. */
+ *  is the caller's job (legalMoves); this enumerates effect targets.
+ *
+ *  `expandAuto` is the same path-level flag the declarative runtime uses: a
+ *  HUMAN gets every combination a card's text lets them choose, while the AI
+ *  keeps the single auto-picked move. Widening enumeration for both was
+ *  measured on the declarative side and LOST (48.9% vs a 50.3% baseline,
+ *  worse on 2 of 3 seeds) — a bigger branching factor costs the planner more
+ *  than the extra options gain it. `validate` re-enumerates WITH the flag,
+ *  or it would reject the very choices the player was just offered.
+ *
+ *  Not every choice is gated on it. The measured loss was for picks out of a
+ *  HIDDEN zone (which cards come out of the deck), where the combinations
+ *  multiply and the AI cannot read the zone anyway. A choice among Pokémon
+ *  already on the BOARD is small and fully visible, so Janine's Secret Art
+ *  enumerates for both — the AI should see that attaching to its own Active
+ *  costs it a Poison. */
 export function trainerMoves(
   state: GameState,
   actor: "player" | "opponent",
   card: CardInstance,
   spec: TrainerSpec,
+  expandAuto = false,
 ): PlayTrainerMove[] {
   const side = state.sides[actor];
   const other = state.sides[actor === "player" ? "opponent" : "player"];
@@ -236,9 +259,30 @@ export function trainerMoves(
       return moves;
     }
     case "hilda": {
-      const hasEvo = side.deck.some((c) => c.catalog?.supertype === "Pokémon" && c.catalog.evolves_from);
-      const hasEnergy = side.deck.some((c) => c.catalog?.supertype === "Energy");
-      return hasEvo || hasEnergy ? [base] : [];
+      // "Search your deck for an Evolution Pokémon and an Energy card,
+      // reveal them, and put them into your hand." BOTH are the player's
+      // pick; the enumerator offered a single move and applyTrainer chose
+      // an evolution matching something in play, plus the first Energy.
+      const evolutions = dedupeByName(
+        side.deck.filter((c) => c.catalog?.supertype === "Pokémon" && c.catalog.evolves_from),
+      );
+      const energies = dedupeByName(side.deck.filter((c) => c.catalog?.supertype === "Energy"));
+      if (evolutions.length === 0 && energies.length === 0) return [];
+      if (!expandAuto) return [base]; // AI: split resolved at apply time
+      const moves: PlayTrainerMove[] = [];
+      // A search may legally fail to find either half, so the absent side
+      // contributes a single "nothing" slot rather than killing the play.
+      for (const evo of evolutions.length > 0 ? evolutions : [null]) {
+        for (const energy of energies.length > 0 ? energies : [null]) {
+          const picked = [evo, energy].filter((c): c is CardInstance => c !== null);
+          moves.push({
+            ...base,
+            deckCardIds: picked.map((c) => c.id),
+            deckCardNames: picked.map((c) => c.name),
+          });
+        }
+      }
+      return moves;
     }
     case "night_stretcher": {
       const eligible = side.discard.filter(
@@ -251,12 +295,51 @@ export function trainerMoves(
       }));
     }
     case "crispin": {
-      const energyNames = new Set(
-        side.deck.filter(isBasicEnergy).map((c) => c.name),
-      );
-      if (energyNames.size === 0) return [];
+      // "Search your deck for up to 2 Basic Energy cards of DIFFERENT types,
+      // ... put 1 of them into your hand. Attach the other to 1 of your
+      // Pokémon." Three choices: which two types, which of them attaches,
+      // and to whom. Only the target was ever enumerated — the two Energy
+      // were taken in deck order and the attach/hand split decided by a
+      // heuristic over the target's attack costs.
+      const byName = new Map<string, CardInstance>();
+      for (const c of side.deck) {
+        if (isBasicEnergy(c) && !byName.has(c.name)) byName.set(c.name, c);
+      }
+      const distinct = Array.from(byName.values());
+      if (distinct.length === 0) return [];
       const targets = [side.active, ...side.bench].filter((m) => m !== null);
-      return targets.map((m) => ({ ...base, monId: m!.id }));
+      if (targets.length === 0) return [];
+      if (!expandAuto) {
+        // AI: one move per target, split resolved at apply time (unchanged).
+        return targets.map((m) => ({ ...base, monId: m!.id }));
+      }
+      const moves: PlayTrainerMove[] = [];
+      for (const target of targets) {
+        for (const attach of distinct) {
+          // Ordered: swapping which one attaches is a different play.
+          for (const toHand of distinct) {
+            if (toHand === attach) continue;
+            moves.push({
+              ...base,
+              monId: target!.id,
+              attachCardId: attach.id,
+              attachCardName: attach.name,
+              toHandCardId: toHand.id,
+              toHandCardName: toHand.name,
+            });
+          }
+          // Only one Energy type left in the deck: attach it, nothing to hand.
+          if (distinct.length === 1) {
+            moves.push({
+              ...base,
+              monId: target!.id,
+              attachCardId: attach.id,
+              attachCardName: attach.name,
+            });
+          }
+        }
+      }
+      return moves;
     }
     case "shuffle_hand_draw":
     case "discard_hand_draw":
@@ -457,8 +540,17 @@ export function applyTrainer(
       break;
     }
     case "hilda": {
-      // Auto-picks: an evolution matching something in play (else the
-      // deck's first evolution), plus the deck's most common energy.
+      // The player's explicit picks, when they made them.
+      if (move.deckCardIds?.length) {
+        for (const id of move.deckCardIds) {
+          const pulled = takeFromDeckById(side, id);
+          if (pulled) side.hand.push(pulled);
+        }
+        maybeShuffleDeck(side, rng);
+        break;
+      }
+      // AI path: an evolution matching something in play (else the deck's
+      // first evolution), plus the deck's first energy.
       const inPlayNames = new Set(
         [side.active, ...side.bench].filter(Boolean).map((m) => m!.card.name),
       );
@@ -481,22 +573,36 @@ export function applyTrainer(
       break;
     }
     case "crispin": {
-      const basics = side.deck.filter(isBasicEnergy);
       const byName = new Map<string, CardInstance>();
-      for (const c of basics) if (!byName.has(c.name)) byName.set(c.name, c);
-      const distinct = Array.from(byName.values()).slice(0, 2);
-      if (distinct.length === 0) break;
+      for (const c of side.deck) {
+        if (isBasicEnergy(c) && !byName.has(c.name)) byName.set(c.name, c);
+      }
       const target = [side.active, ...side.bench].find((m) => m?.id === move.monId) ?? side.active;
-      // Attach the one the target's attacks want; the other goes to hand.
-      const wanted = new Set(
-        (target?.card.catalog?.attacks ?? []).flatMap((a) => a.cost),
-      );
-      const attachCard =
-        distinct.find((c) => {
-          const t = energyProvides(c);
-          return t !== null && wanted.has(t);
-        }) ?? distinct[0];
-      const handCard = distinct.find((c) => c !== attachCard);
+
+      // The human's explicit split, when they made one.
+      let attachCard = move.attachCardId
+        ? side.deck.find((c) => c.id === move.attachCardId) ?? null
+        : null;
+      let handCard = move.toHandCardId
+        ? side.deck.find((c) => c.id === move.toHandCardId) ?? null
+        : null;
+
+      if (!attachCard) {
+        // AI path: take the first two distinct types in deck order and attach
+        // whichever one the target's attacks actually want.
+        const distinct = Array.from(byName.values()).slice(0, 2);
+        if (distinct.length === 0) break;
+        const wanted = new Set(
+          (target?.card.catalog?.attacks ?? []).flatMap((a) => a.cost),
+        );
+        attachCard =
+          distinct.find((c) => {
+            const t = energyProvides(c);
+            return t !== null && wanted.has(t);
+          }) ?? distinct[0];
+        handCard = distinct.find((c) => c !== attachCard) ?? null;
+      }
+      if (!attachCard) break;
       const pulled = takeFromDeckById(side, attachCard.id);
       if (pulled && target) target.attachedEnergy.push(pulled);
       else if (pulled) side.hand.push(pulled);

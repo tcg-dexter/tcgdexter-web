@@ -42,6 +42,7 @@ export type {
 export { serializeView, describeMove, describePromotion } from "./serialize";
 export type { ClientView, ClientCard, ClientMon, ClientBoard } from "./serialize";
 export { trainerDiscardCost, trainerDiscardCostByName, TRAINER_EFFECTS } from "./trainers";
+export { stadiumHandCost, stadiumTopDecks } from "./stadiums";
 export type { PlayTrainerMove } from "./trainers";
 export { isLegalHumanMove } from "./validate";
 export {

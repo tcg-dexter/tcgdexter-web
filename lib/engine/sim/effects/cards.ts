@@ -1217,6 +1217,15 @@ export function onAttachEffect(cardName: string): { effect: CardEffect; index: n
 /** The declarative rider for an attack, with its ORIGINAL index in
  *  effectsFor(card) so validate/driver resolve the same record. Riders are not
  *  moves of their own — they resolve inside the attack that names them. */
+/** How many cards from hand an attack's RIDER costs (Team Rocket's Porygon's
+ *  Hacking discards 1). The client prompts for exactly this many, inside the
+ *  attack flow — the rider is not a move of its own, so there is nowhere else
+ *  to ask. 0 = the attack takes no hand cost. */
+export function attackRiderDiscardCost(cardName: string, attackName: string): number {
+  const rider = attackRiderEffect(cardName, attackName);
+  return rider ? effectDiscardCost(cardName, rider.index) : 0;
+}
+
 export function attackRiderEffect(
   cardName: string,
   attackName: string,
@@ -1346,6 +1355,22 @@ export function effectDiscardCost(cardName: string, effectIndex: number): number
     if (op.op === "discard_hand_cards") return op.n === "all" ? 0 : op.n;
   }
   return 0;
+}
+
+/** Hand size this effect trims OUR OWN hand down to, or null when it does
+ *  not (Hand Trimmer trims both hands to 5). Unlike a fixed discard cost the
+ *  count depends on the current hand, so the caller computes it — but WHICH
+ *  cards go is still the player's choice, and the op honours the same
+ *  `discardCardIds` channel a discard cost uses. */
+export function effectOwnHandTrimTo(cardName: string, effectIndex: number): number | null {
+  const effect = effectsFor(cardName)[effectIndex];
+  if (!effect) return null;
+  for (const op of effect.ops) {
+    if (op.op === "discard_hand_down_to" && (op.who === "own" || op.who === "both")) {
+      return op.n;
+    }
+  }
+  return null;
 }
 
 /** Which hand cards may PAY a discard cost, if the card restricts them.

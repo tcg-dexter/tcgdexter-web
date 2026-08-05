@@ -170,6 +170,28 @@ export interface UseStadiumMove {
   stadiumName: string;
   deckCardId?: string;
   deckCardName?: string;
+  /** Cards the PLAYER chose out of their own hand — Academy at Night's
+   *  top-deck, Prism Tower's two discards. Absent means the AI/auto path
+   *  picks (pickDiscards). Like a trainer's discard cost this is a selection
+   *  rather than an enumerated variant, so validate checks it separately
+   *  (see stadiumHandCost). */
+  handCardIds?: string[];
+}
+
+/** True when the Stadium's hand pick goes on TOP OF THE DECK rather than to
+ *  the discard pile — the client must not label it "discard". */
+export function stadiumTopDecks(name: string): boolean {
+  return STADIUM_ACTIVATED[name]?.handToDeckTop === true;
+}
+
+/** How many cards from hand a Stadium's activated effect makes the player
+ *  choose (0 = none). The client asks for exactly this many. */
+export function stadiumHandCost(name: string, handSize: number): number {
+  const spec = STADIUM_ACTIVATED[name];
+  if (!spec) return 0;
+  if (spec.handToDeckTop) return Math.min(1, handSize);
+  if (spec.discardThenDraw) return Math.min(spec.discardThenDraw.discard, handSize);
+  return 0;
 }
 
 function dedupeByName(cards: CardInstance[]): CardInstance[] {
@@ -307,9 +329,16 @@ export function applyStadium(
     if (rng) shuffle(side.deck, rng);
     return;
   }
+  // The player's own hand picks when they made them, else the heuristic.
+  const fromHand = (n: number): CardInstance[] => {
+    const chosen = (move.handCardIds ?? [])
+      .map((id) => side.hand.find((c) => c.id === id))
+      .filter((c): c is CardInstance => c !== undefined);
+    return chosen.length >= n ? chosen.slice(0, n) : pickDiscards(side, n, "");
+  };
+
   if (spec.handToDeckTop) {
-    // Auto-pick the least useful card (a real choice is a W4 chooser).
-    const chosen = pickDiscards(side, 1, "")[0];
+    const [chosen] = fromHand(1);
     const i = chosen ? side.hand.findIndex((c) => c.id === chosen.id) : -1;
     if (i >= 0) side.deck.unshift(...side.hand.splice(i, 1));
     return;
@@ -317,7 +346,7 @@ export function applyStadium(
   if (spec.discardThenDraw) {
     const { discard, draw } = spec.discardThenDraw;
     if (side.hand.length < discard) return;
-    for (const c of pickDiscards(side, discard, "")) {
+    for (const c of fromHand(discard)) {
       const i = side.hand.findIndex((h) => h.id === c.id);
       if (i >= 0) side.discard.push(...side.hand.splice(i, 1));
     }

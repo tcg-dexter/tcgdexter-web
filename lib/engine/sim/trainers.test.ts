@@ -56,9 +56,13 @@ function grab(side: PlayerSide, name: string): CardInstance {
   return card;
 }
 
-function trainerOptions(state: GameState, cardId: string): PlayTrainerMove[] {
+function trainerOptions(
+  state: GameState,
+  cardId: string,
+  expandAuto = false,
+): PlayTrainerMove[] {
   const ctx: TurnContext = { retreated: false };
-  return legalMoves(state, "player", ctx).filter(
+  return legalMoves(state, "player", ctx, expandAuto).filter(
     (m): m is PlayTrainerMove => m.kind === "play_trainer" && m.cardId === cardId,
   );
 }
@@ -386,5 +390,99 @@ describe("N's PP Up", () => {
     // Energy present but still no benched N's Pokémon.
     side.discard = [card("Basic Darkness Energy")];
     expect(trainerOptions(state, ppup.id).length).toBe(0);
+  });
+});
+
+// ─── Player choices that used to be made by the engine ─────────────
+//
+// Each of these cards names a decision in its printed text that the
+// enumerator resolved on the player's behalf. They share a shape: the AI's
+// narrow enumeration is unchanged (expandAuto = false), and the human's
+// expanded one carries the choice.
+
+describe("Crispin", () => {
+  function crispinState() {
+    const state = freshState();
+    const me = state.sides.player;
+    // Two Basic Energy TYPES in deck (the card needs different types).
+    me.deck.unshift(card("Basic Fire Energy"), card("Basic Lightning Energy"));
+    const src = card("Crispin");
+    me.hand = [src];
+    return { state, me, src };
+  }
+
+  it("keeps ONE move per target for the AI", () => {
+    const { state, me, src } = crispinState();
+    const options = trainerOptions(state, src.id);
+    const targets = [me.active, ...me.bench].filter(Boolean).length;
+    expect(options.length).toBe(targets);
+    expect(options.every((m) => m.attachCardId === undefined)).toBe(true);
+  });
+
+  it("offers the human which Energy attaches and which goes to hand", () => {
+    const { state, src } = crispinState();
+    const options = trainerOptions(state, src.id, true);
+    const splits = new Set(options.map((m) => `${m.attachCardName}->${m.toHandCardName}`));
+    // Both orderings of the two types are offered: which one attaches is a
+    // real decision, not a formality.
+    expect(splits.has("Basic Fire Energy->Basic Lightning Energy")).toBe(true);
+    expect(splits.has("Basic Lightning Energy->Basic Fire Energy")).toBe(true);
+  });
+
+  it("attaches the Energy the player chose, and hands over the other", () => {
+    const { state, me, src } = crispinState();
+    const chosen = trainerOptions(state, src.id, true).find(
+      (m) => m.attachCardName === "Basic Lightning Energy" && m.monId === me.active!.id,
+    )!;
+    apply(state, chosen);
+    expect(me.active!.attachedEnergy.map((c) => c.name)).toEqual(["Basic Lightning Energy"]);
+    expect(me.hand.some((c) => c.name === "Basic Fire Energy")).toBe(true);
+  });
+
+  it("falls back to the heuristic split when the move carries no choice", () => {
+    const { state, me, src } = crispinState();
+    apply(state, trainerOptions(state, src.id)[0]);
+    // Exactly one Energy attached and one in hand, whichever the AI chose.
+    const attached = [me.active, ...me.bench].filter(Boolean).reduce(
+      (n, m) => n + m!.attachedEnergy.length,
+      0,
+    );
+    expect(attached).toBe(1);
+  });
+});
+
+describe("Hilda", () => {
+  function hildaState() {
+    const state = freshState();
+    const me = state.sides.player;
+    const src = card("Hilda");
+    me.hand = [src];
+    return { state, me, src };
+  }
+
+  it("keeps a single move for the AI but offers real pairs to the human", () => {
+    const { state, src } = hildaState();
+    expect(trainerOptions(state, src.id).length).toBe(1);
+    const expanded = trainerOptions(state, src.id, true);
+    expect(expanded.length).toBeGreaterThan(1);
+    // Every option names both halves the card fetches.
+    expect(expanded.every((m) => (m.deckCardNames?.length ?? 0) === 2)).toBe(true);
+    // Both an Evolution and an Energy are represented across the options.
+    const names = new Set(expanded.flatMap((m) => m.deckCardNames ?? []));
+    expect(names.has("Charmeleon") || names.has("Charizard ex")).toBe(true);
+    expect(Array.from(names).some((n) => n.startsWith("Basic "))).toBe(true);
+  });
+
+  it("puts exactly the player's two picks into hand", () => {
+    const { state, me, src } = hildaState();
+    const chosen = trainerOptions(state, src.id, true).find((m) =>
+      m.deckCardNames?.includes("Charizard ex"),
+    )!;
+    const before = me.hand.length;
+    apply(state, chosen);
+    expect(me.hand.length).toBe(before - 1 + 2); // -Hilda, +2 fetched
+    for (const n of chosen.deckCardNames!) {
+      expect(me.hand.some((c) => c.name === n)).toBe(true);
+    }
   });
 });

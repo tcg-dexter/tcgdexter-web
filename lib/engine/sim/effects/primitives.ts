@@ -450,6 +450,21 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
         op.who === "both" ? [other(actor), actor] : op.who === "own" ? [actor] : [other(actor)];
       for (const w of who) {
         const ps = state.sides[w];
+        // OUR side's discard is our choice (Hand Trimmer trims both hands,
+        // and the half that is ours was being auto-picked). The OPPONENT's
+        // half is theirs, so it keeps the engine's heuristic — we do not get
+        // to choose which cards they throw away.
+        const picked =
+          w === actor
+            ? (ctx.discardCardIds ?? [])
+                .map((id) => ps.hand.find((c) => c.id === id))
+                .filter((c): c is CardInstance => c !== undefined)
+            : [];
+        for (const c of picked) {
+          if (ps.hand.length <= op.n) break;
+          const pulled = spliceById(ps.hand, c.id);
+          if (pulled) ps.discard.push(pulled);
+        }
         while (ps.hand.length > op.n) {
           const chosen = pickDiscards(ps, 1, "")[0] ?? ps.hand[0];
           const i = ps.hand.findIndex((c) => c.id === chosen.id);

@@ -10,9 +10,17 @@ import { legalMoves, type SimMove, type TurnContext } from "./moves";
 import { attackBenchCounterCount, attackBenchDamageTargets } from "./attacks";
 import { isSupporter, trainerDiscardCost } from "./trainers";
 import { enumerateEffect, type EffectMove } from "./effects/runtime";
-import { attackRiderEffect, effectDiscardCost, effectDiscardFilter, effectsFor, onAttachEffect } from "./effects/cards";
+import {
+  attackRiderEffect,
+  effectDiscardCost,
+  effectDiscardFilter,
+  effectOwnHandTrimTo,
+  effectsFor,
+  onAttachEffect,
+} from "./effects/cards";
 import { cardMatches } from "./effects/match";
 import { activatedHandDiscard } from "./abilities";
+import { stadiumHandCost } from "./stadiums";
 
 /** Order-insensitive fingerprint of an effect move's picks, so a human
  *  selection matches an enumerated move regardless of id/slot ordering. */
@@ -36,6 +44,13 @@ function trainerCore(m: Extract<SimMove, { kind: "play_trainer" }>): string {
   return JSON.stringify(core);
 }
 
+/** Same idea for a Stadium: `handCardIds` is a selection, not an enumerated
+ *  variant, so it must be stripped before the structural compare. */
+function stadiumCore(m: Extract<SimMove, { kind: "use_stadium" }>): string {
+  const { handCardIds: _h, ...core } = m;
+  return JSON.stringify(core);
+}
+
 /** True when `move` is a legal human decision in the current state. */
 export function isLegalHumanMove(
   state: GameState,
@@ -43,7 +58,25 @@ export function isLegalHumanMove(
   ctx: TurnContext,
   move: SimMove,
 ): boolean {
-  const legal = legalMoves(state, actor, ctx);
+  // expandAuto: this is the HUMAN's move, and humanOptions offered them the
+  // expanded set (every Energy split Crispin allows, every Janine target
+  // subset). Re-enumerating narrow would reject the choice they were given.
+  const legal = legalMoves(state, actor, ctx, true);
+
+  // A Stadium's activated effect may make the player choose out of their own
+  // hand (Academy at Night's top-deck, Prism Tower's two discards). Like a
+  // trainer's discard cost these are a SELECTION, not an enumerated variant,
+  // so the generic comparison below cannot see them: without this check a
+  // forged move could top-deck or discard a card the player doesn't hold.
+  if (move.kind === "use_stadium" && move.handCardIds != null) {
+    const side = state.sides[actor];
+    const need = stadiumHandCost(move.stadiumName, side.hand.length);
+    const ids = move.handCardIds;
+    if (ids.length !== need) return false;
+    if (new Set(ids).size !== ids.length) return false;
+    if (!ids.every((id) => side.hand.some((c) => c.id === id))) return false;
+    // Fall through to the structural check on the rest of the move.
+  }
 
   if (move.kind === "play_trainer") {
     const core = trainerCore(move);
@@ -153,6 +186,23 @@ export function isLegalHumanMove(
       if (new Set(move.benchDamageTargets).size !== move.benchDamageTargets.length) return false;
       if (!move.benchDamageTargets.every(onBench)) return false;
     }
+    // A rider that costs cards from hand (Team Rocket's Porygon's Hacking
+    // discards 1). Enumeration auto-picks these, so they are not part of the
+    // pick fingerprint and must be checked here: distinct cards, actually in
+    // hand, exactly as many as the rider demands.
+    if (move.riderDiscardCardIds != null) {
+      const side = state.sides[actor];
+      const attackName = attacker.card.catalog?.attacks[move.attackIndex]?.name;
+      const r = attackName ? attackRiderEffect(attacker.card.name, attackName) : null;
+      if (!r) return false;
+      const need = effectDiscardCost(attacker.card.name, r.index);
+      const ids = move.riderDiscardCardIds;
+      if (need === 0) return false;
+      if (ids.length !== need) return false;
+      if (new Set(ids).size !== ids.length) return false;
+      if (!ids.every((id) => side.hand.some((c) => c.id === id))) return false;
+    }
+
     // Declarative rider picks (Cruel Arrow's target). The rider resolves inside
     // this attack, so a forged pick here would hit an arbitrary Pokémon —
     // re-enumerate and require an exact match, same as a standalone effect move.
@@ -235,7 +285,14 @@ export function isLegalHumanMove(
     // there must be exactly as many as the op demands. Without this check a
     // forged move could "discard" cards it doesn't hold, or discard none.
     if (move.discardCardIds !== undefined) {
-      const need = effectDiscardCost(move.card, move.effectIndex);
+      // Two shapes pay out of hand: a fixed COST (Secret Box discards 3) and
+      // a TRIM to a hand size (Hand Trimmer trims to 5), whose count depends
+      // on the current hand rather than the card.
+      const trimTo = effectOwnHandTrimTo(move.card, move.effectIndex);
+      const need =
+        trimTo != null
+          ? Math.max(0, side.hand.length - 1 - trimTo) // the played card leaves first
+          : effectDiscardCost(move.card, move.effectIndex);
       if (need === 0) return false;
       const ids = new Set(move.discardCardIds);
       if (ids.size !== move.discardCardIds.length) return false;
@@ -257,6 +314,13 @@ export function isLegalHumanMove(
 
     const want = effectPicks(move);
     return enumerated.some((m) => effectPicks(m) === want);
+  }
+
+  // A Stadium's hand selection was checked above on its own terms; strip it
+  // before the structural compare, or it would never match an enumerated move.
+  if (move.kind === "use_stadium") {
+    const core = stadiumCore(move);
+    return legal.some((m) => m.kind === "use_stadium" && stadiumCore(m) === core);
   }
 
   const encoded = JSON.stringify(move);

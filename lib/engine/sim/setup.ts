@@ -108,7 +108,16 @@ import { auraEnergyUnits } from "./auras";
 // headless auto-placement. The headless sim still auto-places, so self-play,
 // rollouts and calibration are unchanged — but old transcripts are not
 // replayable, hence the bump.
-export const SIM_VERSION = 21;
+// v22: the rest of that sweep. Crispin's Energy split and Hilda's two fetches
+// are enumerated for the human (via the same `expandAuto` path flag the
+// declarative runtime uses, so the AI's enumeration and strength are
+// unchanged), and three places that spent cards out of hand with the engine's
+// "least useful card" heuristic now carry the player's pick: a Stadium's
+// activated effect (Academy at Night, Prism Tower), an attack RIDER's cost
+// (Team Rocket's Porygon), and "discard down to N" for OUR half of a
+// symmetric trim. Headless play is bit-identical — every fallback is the old
+// heuristic — but the move SHAPES changed, so v21 transcripts do not replay.
+export const SIM_VERSION = 22;
 
 const MAX_MULLIGANS = 20;
 

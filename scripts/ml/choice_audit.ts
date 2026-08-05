@@ -123,13 +123,17 @@ function main(): void {
   }
 
   console.log("\n\nHAND-WRITTEN AUTO-PICKS (not data — review by hand)\n");
-  console.log("  trainers.ts:413    legacy deck_search discardCost — PROMPTED (Ultra Ball)");
-  console.log("  abilities.ts:113   Trade's discard          — PROMPTED (handDiscard)");
-  console.log("  primitives.ts:561  discard_hand_cards       — PROMPTED (discardCardIds)");
-  console.log("  trainers.ts:268   Janine target subsets      — ENUMERATED (monIds)");
-  console.log("  primitives.ts:454  hand_to_bottom_draw pick — auto");
-  console.log("  stadiums.ts:312    stadium discard          — auto");
-  console.log("  stadiums.ts:320    stadium discard (n)      — auto");
+  console.log("  trainers.ts   legacy deck_search discardCost  — PROMPTED (discardCardIds)");
+  console.log("  abilities.ts  Trade's discard                 — PROMPTED (handDiscard)");
+  console.log("  primitives.ts discard_hand_cards              — PROMPTED (discardCardIds)");
+  console.log("  primitives.ts discard_hand_down_to, OUR half  — PROMPTED (discardCardIds)");
+  console.log("  primitives.ts discard_hand_down_to, THEIR half— auto BY DESIGN (their choice)");
+  console.log("  trainers.ts   Janine target subsets           — ENUMERATED (monIds)");
+  console.log("  trainers.ts   Crispin Energy split            — ENUMERATED (expandAuto)");
+  console.log("  trainers.ts   Hilda's two fetches             — ENUMERATED (expandAuto)");
+  console.log("  stadiums.ts   Academy at Night top-deck       — PROMPTED (handCardIds)");
+  console.log("  stadiums.ts   Prism Tower discard 2           — PROMPTED (handCardIds)");
+  console.log("  driver.ts     attack rider hand cost          — PROMPTED (riderDiscardCardIds)");
 
   const legacyAbilities = ["N's Zoroark ex::Trade"];
   console.log("\n  legacy abilities declaring a hand cost:");

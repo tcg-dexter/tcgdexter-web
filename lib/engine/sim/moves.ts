@@ -52,6 +52,11 @@ export type SimMove =
        *  "1 of your opponent's Pokémon"). Enumerated alongside the attack —
        *  a rider is never a move of its own; it resolves after damage. */
       riderPicks?: EffectPick[];
+      /** Cards the player chose from their own hand to pay a rider's cost
+       *  (Team Rocket's Porygon's Hacking discards 1). A selection, not an
+       *  enumerated variant — validated on its own terms, like a trainer's
+       *  discard cost. */
+      riderDiscardCardIds?: string[];
     }
   | { kind: "pass" };
 
@@ -378,7 +383,7 @@ export function legalMoves(
         // policies already understand); declarative records are consulted
         // only for cards the legacy registry doesn't cover.
         if (supporterOk) {
-          moves.push(...trainerMoves(state, actor, card, spec));
+          moves.push(...trainerMoves(state, actor, card, spec, expandAuto));
         }
       } else if (effects.length > 0) {
         // Declarative-effect trainer (W2). Enumerate concrete moves with the

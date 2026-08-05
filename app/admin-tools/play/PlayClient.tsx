@@ -24,6 +24,8 @@ type EffectPickLike = { cardNames?: string[]; monNames?: string[] };
 // module graph into this client bundle and webpack can't handle the
 // node: scheme in the browser build.
 import { trainerDiscardCostByName } from "@/lib/engine/sim/trainers";
+import { stadiumHandCost, stadiumTopDecks } from "@/lib/engine/sim/stadiums";
+import { attackRiderDiscardCost, effectOwnHandTrimTo } from "@/lib/engine/sim/effects/cards";
 import { effectAbilityName, effectDiscardCost, effectDiscardFilter } from "@/lib/engine/sim/effects/cards";
 import { cardMatches } from "@/lib/engine/sim/effects/match";
 import { lookupCard } from "@/lib/engine/catalog";
@@ -132,11 +134,18 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
    *  `trainerDiscardCostByName`, which only reads the legacy registry, so no
    *  prompt appeared and the op silently auto-picked the player's cards. */
   const [discardStage, setDiscardStage] = useState<{
-    move: Extract<InteractiveMove, { kind: "play_trainer" | "effect" | "use_ability" }>;
+    move: Extract<
+      InteractiveMove,
+      { kind: "play_trainer" | "effect" | "use_ability" | "use_stadium" | "attack" }
+    >;
     need: number;
     picked: string[];
     /** Restricts which hand cards may pay (Lunatone's Fighting Energy). */
     filter?: CardFilter | null;
+    /** What happens to the chosen cards. Not every hand choice is a discard —
+     *  Academy at Night puts one on TOP OF YOUR DECK, and calling that
+     *  "discard" would be a lie the player acts on. */
+    verb?: string;
   } | null>(null);
   /** Ability targeting: chosen ability's legal moves, awaiting an opponent
    *  target tap (Munkidori, Dusknoir). */
@@ -437,6 +446,23 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
         );
         return void setPickerMoves(reps); // stage 1: pick which Energy
       }
+      // Crispin: stage 1 picks the Energy split (which type attaches, which
+      // goes to hand), stage 2 picks who it attaches to. Same two-stage shape
+      // as N's PP Up, keyed on distinct fields so routing stays unambiguous.
+      if (first.attachCardId != null && first.monId != null) {
+        const splits = new Map<string, typeof trainers>();
+        for (const m of trainers) {
+          const key = `${m.attachCardName}->${m.toHandCardName ?? ""}`;
+          splits.set(key, [...(splits.get(key) ?? []), m]);
+        }
+        if (splits.size <= 1) {
+          return void chooseOwnTarget(
+            card?.name ?? "Attach",
+            trainers.map((m) => ({ move: m as InteractiveMove, monId: m.monId! })),
+          );
+        }
+        return void setPickerMoves(Array.from(splits.values(), (ms) => ms[0]));
+      }
       if (first.deckCardIds || first.discardPickId) {
         return void setPickerMoves(trainers); // search picker modal
       }
@@ -466,6 +492,17 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     // option ⇒ play it; several ⇒ a generic chooser over the picks.
     const effectMoves = effectMovesFor(cardId);
     if (effectMoves.length > 0) {
+      // "Discard down to N" (Hand Trimmer). The count depends on the hand
+      // rather than the card, so it is computed here — but which cards go is
+      // still the player's, and the op reads the same discardCardIds channel.
+      const trimTo = effectOwnHandTrimTo(effectMoves[0].card, effectMoves[0].effectIndex);
+      if (trimTo != null) {
+        // The card being played leaves the hand first, so it is not counted.
+        const need = Math.max(0, view.hand.length - 1 - trimTo);
+        if (need > 0) {
+          return void setDiscardStage({ move: effectMoves[0], need, picked: [] });
+        }
+      }
       const cost = effectDiscardCost(effectMoves[0].card, effectMoves[0].effectIndex);
       if (cost > 0) {
         // Pay the cost first, exactly like Ultra Ball. The op auto-picks when
@@ -517,6 +554,19 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
       if (need > 0) {
         setPickerMoves(null);
         setDiscardStage({ move: m, need, picked: [] });
+        return;
+      }
+      // Crispin stage 2: the chosen Energy split still needs a target.
+      if (m.attachCardId != null && m.monId != null) {
+        const targets = trainerMovesFor(m.cardId).filter(
+          (x) => x.attachCardId === m.attachCardId && x.toHandCardId === m.toHandCardId,
+        );
+        setPickerMoves(null);
+        chooseOwnTarget(
+          `Attach ${m.attachCardName ?? "Energy"}`,
+          targets.map((x) => ({ move: x as InteractiveMove, monId: x.monId! })),
+          true,
+        );
         return;
       }
       // N's PP Up stage 2: the chosen Energy still needs a Benched target.
@@ -1063,9 +1113,32 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                   (m): m is Extract<InteractiveMove, { kind: "use_stadium" }> => m.kind === "use_stadium",
                 );
                 if (stadiumMoves.length === 0) return null;
+                const handNeed = stadiumHandCost(
+                  stadiumMoves[0].stadiumName,
+                  view.hand.length,
+                );
                 return (
                   <button
-                    onClick={() => setPickerMoves(stadiumMoves)}
+                    onClick={() => {
+                      // Academy at Night / Prism Tower spend cards from hand.
+                      // They also carry no `deckCardName`, so the search
+                      // picker rendered an EMPTY modal — the button did
+                      // nothing at all before this.
+                      if (handNeed > 0) {
+                        return void setDiscardStage({
+                          move: stadiumMoves[0],
+                          need: handNeed,
+                          picked: [],
+                          verb: stadiumTopDecks(stadiumMoves[0].stadiumName)
+                            ? "Put on top of your deck"
+                            : "Discard",
+                        });
+                      }
+                      if (stadiumMoves.some((m) => m.deckCardName)) {
+                        return void setPickerMoves(stadiumMoves);
+                      }
+                      void sendMove(stadiumMoves[0]);
+                    }}
                     disabled={loading}
                     className="rounded-lg border border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-800"
                   >
@@ -1101,13 +1174,24 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                   const attack = view.board.active?.attacks[attackIndex];
                   const counters = attack?.benchCounters ?? 0;
                   const hasBench = view.opponent.board.bench.length > 0;
+                  const attacker = view.board.active;
+                  const riderCost =
+                    attacker && attack
+                      ? attackRiderDiscardCost(attacker.name, attack.name)
+                      : 0;
                   return (
                     <button
                       key={attackIndex}
                       onClick={() => {
                         // Attacks that place counters on a non-empty bench
                         // enter tap-to-place mode; everything else fires now.
-                        if (counters > 0 && hasBench) {
+                        if (riderCost > 0) {
+                          // The attack's rider spends cards from hand (Team
+                          // Rocket's Porygon's Hacking). Ask before firing —
+                          // a rider resolves inside the attack, so this is
+                          // the only point at which the player can choose.
+                          setDiscardStage({ move: m, need: riderCost, picked: [] });
+                        } else if (counters > 0 && hasBench) {
                           setCounterPlace({ attackIndex, total: counters, placed: [] });
                           setAbilityTargeting(null);
                         } else if (moves.length > 1) {
@@ -1230,7 +1314,10 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
               {pickerMoves.map((m, i) => {
                 const names =
                   m.kind === "play_trainer"
-                    ? m.deckCardNames ?? (m.discardPickName ? [m.discardPickName] : [])
+                    ? m.attachCardName
+                      // Crispin: attached first, then the one going to hand.
+                      ? [m.attachCardName, ...(m.toHandCardName ? [m.toHandCardName] : [])]
+                      : m.deckCardNames ?? (m.discardPickName ? [m.discardPickName] : [])
                     : m.kind === "use_stadium" && m.deckCardName
                       ? [m.deckCardName]
                       : [];
@@ -1272,7 +1359,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
           style={{ background: "rgba(242,242,242,0.92)" }}
           role="dialog"
           aria-modal="true"
-          aria-label="Choose cards to discard"
+          aria-label="Choose cards from your hand"
           onClick={() => setDiscardStage(null)}
         >
           <div
@@ -1281,7 +1368,8 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
           >
             <div className="mb-3 flex items-center justify-between">
               <span className="text-xs font-semibold text-text-primary">
-                Discard {discardStage.need} — chosen {discardStage.picked.length}/{discardStage.need}
+                {discardStage.verb ?? "Discard"} {discardStage.need} — chosen{" "}
+                {discardStage.picked.length}/{discardStage.need}
               </span>
               <button onClick={() => setDiscardStage(null)} className="text-[10px] font-semibold text-accent">
                 cancel
@@ -1330,13 +1418,17 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                     ? // Trade takes ONE card on `cardId` — the field its apply
                       // has always read and nothing ever supplied.
                       { ...discardStage.move, cardId: discardStage.picked[0] }
-                    : { ...discardStage.move, discardCardIds: discardStage.picked },
+                    : discardStage.move.kind === "use_stadium"
+                      ? { ...discardStage.move, handCardIds: discardStage.picked }
+                      : discardStage.move.kind === "attack"
+                        ? { ...discardStage.move, riderDiscardCardIds: discardStage.picked }
+                        : { ...discardStage.move, discardCardIds: discardStage.picked },
                 )
               }
               disabled={discardStage.picked.length !== discardStage.need || loading}
               className="mt-3 w-full rounded-lg border border-transparent bg-accent px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"
             >
-              Confirm discard &amp; play
+              Confirm &amp; play
             </button>
           </div>
         </div>

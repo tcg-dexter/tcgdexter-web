@@ -73,6 +73,8 @@ function collectImages(
     if (m.kind === "play_trainer") {
       for (const n of m.deckCardNames ?? []) names.add(n);
       if (m.discardPickName) names.add(m.discardPickName);
+      if (m.attachCardName) names.add(m.attachCardName);
+      if (m.toHandCardName) names.add(m.toHandCardName);
     } else if (m.kind === "use_stadium" && m.deckCardName) {
       names.add(m.deckCardName);
     }
