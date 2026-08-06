@@ -8,8 +8,8 @@
 // immediately; the interactive runner pauses and asks the human.
 
 import type { GameState, PokemonInPlay } from "../types";
-import { applyWeaknessResistance, legalMoves, sideOf, type SimMove, type TurnContext } from "./moves";
-import { activeDamageBonus, attackBaseDamage, attackEffect, discardAllEnergy } from "./attacks";
+import { legalMoves, sideOf, type SimMove, type TurnContext } from "./moves";
+import { attackEffect, discardAllEnergy, projectedAttackDamage } from "./attacks";
 import { applyAbility, hasOnEvolveTrigger, onEvolve } from "./abilities";
 import {
   applyCondition,
@@ -24,13 +24,13 @@ import { dealRawDamage, placeAttackCounters, placeBenchDamage, resolveKnockouts 
 import type { DecisionPolicy } from "./policy";
 import { buildSimInitialState, energyUnits, toPokemonInPlay, type SimDeck } from "./setup";
 import { retreatCost } from "./tools";
-import { applyAttackSelfLock, damageTakenReduction, hasStatus, statusAmount } from "./statuses";
-import { auraDamageReduction, auraPreventsEffects } from "./auras";
+import { applyAttackSelfLock, hasStatus } from "./statuses";
+import { auraPreventsEffects } from "./auras";
 import { fireCheckup, fireEndOfTurn, fireOnDamaged } from "./hooks";
 import { specialEnergyPreventsEffects } from "./effects/energy";
 import { applyTrainer } from "./trainers";
 import { applyEffect } from "./effects/runtime";
-import { attackRiderEffect, damageScaleEffect, effectsFor, onAttachEffect, triggerEffect } from "./effects/cards";
+import { attackRiderEffect, effectsFor, onAttachEffect, triggerEffect } from "./effects/cards";
 import { applyStadium, benchCap, enforceBenchCap, stadiumBenchEntryCounters } from "./stadiums";
 import { viewFor } from "./view";
 import { shuffle, type Rng } from "./rng";
@@ -387,28 +387,10 @@ export function applyMove(
       // but the turn still ends.
       if (hasStatus(attacker, "cannot_attack", state)) return done(true);
 
-      const rawBase =
-        attackBaseDamage(state, actor, attacker, move.attackIndex, rng) +
-        activeDamageBonus(state, actor, attacker, defender) -
-        statusAmount(attacker, "damage_dealt_reduction", state);
-      // Attack-level exemptions ("damage isn't affected by Weakness or
-      // Resistance, or by any effects on your opponent's Active").
-      const ignore = damageScaleEffect(attacker.card.name, attack.name)?.damage?.ignore;
-      const skipWr =
-        ignore?.weakness === true || hasStatus(defender, "no_weakness", state);
-      const afterWr = skipWr
-        ? Math.max(0, rawBase)
-        : applyWeaknessResistance(Math.max(0, rawBase), attacker, defender);
-      // "…or by any effects on your opponent's Active" also bypasses the
-      // defender's damage-reduction statuses.
-      const auraCut = ignore?.defenderEffects ? 0 : auraDamageReduction(defender, attacker, state);
-      const reduced =
-        auraCut === Infinity
-          ? 0 // an aura prevents the damage entirely (Mysterious Rock Inn)
-          : ignore?.defenderEffects
-            ? afterWr
-            : Math.max(0, afterWr - damageTakenReduction(defender, attacker, state) - auraCut);
-      const dealt = hasStatus(defender, "prevent_all", state) ? 0 : reduced;
+      // The whole Active-damage pipeline — scaled base, flat bonuses,
+      // Weakness/Resistance, defender reductions — lives in attacks.ts so the
+      // UI can label an attack with the number this will actually deal.
+      const dealt = projectedAttackDamage(state, actor, attacker, defender, move.attackIndex, rng);
       dealRawDamage(defender, dealt);
 
       // Attack-inflicted conditions on the defending active (Mind Bend,

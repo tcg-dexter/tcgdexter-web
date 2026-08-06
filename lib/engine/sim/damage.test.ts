@@ -8,7 +8,7 @@ import { buildSimInitialState, instantiateDeck, toPokemonInPlay } from "./setup"
 import { applyMove } from "./driver";
 import { placeCounters, moveCounters, isKnockedOut, resolveKnockouts, maxHp } from "./damage";
 import { applyWeaknessResistance } from "./moves";
-import { activeDamageBonus } from "./attacks";
+import { activeDamageBonus, projectedAttackDamage } from "./attacks";
 import { lookupCard } from "../catalog";
 import { mintInstanceId } from "../initial";
 import { mulberry32 } from "./rng";
@@ -179,5 +179,51 @@ describe("named attack effects", () => {
     const target = state.sides.opponent.active!;
     applyMove(state, "player", { kind: "attack", attackIndex: idx }, { retreated: false }, mulberry32(4));
     expect(target.damage).toBe(90); // 30 × 3 basic energy
+  });
+});
+
+// The number the UI puts on an attack row is the number the driver deals —
+// because they are the same function. Before the extraction the driver had
+// the pipeline inline and any label would have been a second implementation
+// of scaling + Weakness + tools + reduction auras, free to drift.
+describe("projected damage is what actually lands", () => {
+  function attackSetup(attacker: string, defenderActive: string, attackName: string) {
+    const state = blankState();
+    const atk = mon(attacker);
+    for (let i = 0; i < 4; i++) atk.attachedEnergy.push(card("Basic Fire Energy"));
+    state.sides.player.active = atk;
+    state.sides.opponent.active = mon(defenderActive);
+    const idx = atk.card.catalog!.attacks.findIndex((a) => a.name === attackName);
+    return { state, idx };
+  }
+
+  it.each([
+    ["Snorlax", "Collapse", "Pikachu"],
+    ["N's Darmanitan", "Flamebody Cannon", "N's Zoroark ex"],
+  ])("%s's %s", (attacker, attackName, defenderName) => {
+    const { state, idx } = attackSetup(attacker, defenderName, attackName);
+    const projected = projectedAttackDamage(
+      state,
+      "player",
+      state.sides.player.active!,
+      state.sides.opponent.active!,
+      idx,
+    );
+    expect(projected).toBeGreaterThan(0); // else the comparison is vacuous
+    const defender = state.sides.opponent.active!;
+    applyMove(state, "player", { kind: "attack", attackIndex: idx }, { retreated: false }, mulberry32(5));
+    expect(defender.damage).toBe(projected);
+  });
+
+  it("reflects a damage bonus the printed number knows nothing about", () => {
+    const { state, idx } = attackSetup("Snorlax", "N's Zoroark ex", "Collapse");
+    const before = projectedAttackDamage(
+      state, "player", state.sides.player.active!, state.sides.opponent.active!, idx,
+    );
+    state.sides.player.blackBeltTrainingTurn = state.turn.number; // +40 vs ex
+    const after = projectedAttackDamage(
+      state, "player", state.sides.player.active!, state.sides.opponent.active!, idx,
+    );
+    expect(after).toBeGreaterThan(before);
   });
 });

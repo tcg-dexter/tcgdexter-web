@@ -11,10 +11,11 @@
 // (benchCounters / benchDamageTargets); the AI allocates heuristically.
 
 import type { CardInstance, GameState, PokemonInPlay } from "../types";
-import { baseDamage } from "./moves";
+import { applyWeaknessResistance, baseDamage } from "./moves";
 import type { Rng } from "./rng";
 import { toolDamageBonus } from "./tools";
-import { auraDamageBonus } from "./auras";
+import { auraDamageBonus, auraDamageReduction } from "./auras";
+import { damageTakenReduction, hasStatus, statusAmount } from "./statuses";
 import { stadiumDamageBonus } from "./stadiums";
 import { damageScaleEffect, riderDamageEstimate } from "./effects/cards";
 import { attackPlacement } from "./effects/placement";
@@ -80,6 +81,52 @@ export function estimatedAttackDamage(
         }
       : undefined);
   return base + riderDamageEstimate(attacker.card.name, attack.name, ctx);
+}
+
+/** Damage this attack would actually deal to the defending Active, right now:
+ *  the state-scaled base, flat bonuses, Weakness/Resistance, and every
+ *  reduction on the defender — the whole pipeline, in one place.
+ *
+ *  The driver calls this at resolution and the UI calls it to LABEL the
+ *  attack, so the number the player reads is the number they get. Written
+ *  as an extraction from the driver rather than a second implementation
+ *  precisely because a second one would drift.
+ *
+ *  `rng` is consumed only by flip-until-tails formulas: the driver passes the
+ *  game's stream, and every read-only caller passes null (a projection must
+ *  never advance it). */
+export function projectedAttackDamage(
+  state: GameState,
+  actor: "player" | "opponent",
+  attacker: PokemonInPlay,
+  defender: PokemonInPlay,
+  attackIndex: number,
+  rng: Rng | null = null,
+): number {
+  const attack = attacker.card.catalog?.attacks[attackIndex];
+  if (!attack) return 0;
+  if (hasStatus(attacker, "cannot_attack", state)) return 0;
+  const rawBase =
+    attackBaseDamage(state, actor, attacker, attackIndex, rng) +
+    activeDamageBonus(state, actor, attacker, defender) -
+    statusAmount(attacker, "damage_dealt_reduction", state);
+  // Attack-level exemptions ("damage isn't affected by Weakness or
+  // Resistance, or by any effects on your opponent's Active").
+  const ignore = damageScaleEffect(attacker.card.name, attack.name)?.damage?.ignore;
+  const skipWr = ignore?.weakness === true || hasStatus(defender, "no_weakness", state);
+  const afterWr = skipWr
+    ? Math.max(0, rawBase)
+    : applyWeaknessResistance(Math.max(0, rawBase), attacker, defender);
+  // "…or by any effects on your opponent's Active" also bypasses the
+  // defender's damage-reduction statuses.
+  const auraCut = ignore?.defenderEffects ? 0 : auraDamageReduction(defender, attacker, state);
+  const reduced =
+    auraCut === Infinity
+      ? 0 // an aura prevents the damage entirely (Mysterious Rock Inn)
+      : ignore?.defenderEffects
+        ? afterWr
+        : Math.max(0, afterWr - damageTakenReduction(defender, attacker, state) - auraCut);
+  return hasStatus(defender, "prevent_all", state) ? 0 : reduced;
 }
 
 /* ─── Flat damage bonuses to the Active (before Weakness/Resistance) ─ */

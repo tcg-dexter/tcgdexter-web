@@ -40,6 +40,7 @@ import {
   PlayerMat,
   ReplayCardInspector,
   computeReplayCardWidth,
+  holderFontSize,
   CARD_BACK_URL,
   type InspectTarget,
   type PokemonFrame,
@@ -416,6 +417,38 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
       return;
     }
     void sendMove(m);
+  }
+
+  /** Everything that has to happen between "the player picked this attack"
+   *  and the move going out: a rider's hand cost, a copy/target choice, then
+   *  bench placement. Shared by the action bar, the Active's attack list and
+   *  the benched-Pokémon panel so the three cannot diverge. */
+  function chooseAttack(
+    attackIndex: number,
+    moves: Extract<InteractiveMove, { kind: "attack" }>[],
+    attackName?: string,
+  ) {
+    const m = moves[0];
+    if (!m) return;
+    const attacker = view.board.active;
+    const riderCost =
+      attacker && attackName ? attackRiderDiscardCost(attacker.name, attackName) : 0;
+    if (riderCost > 0) {
+      // The attack's rider spends cards from hand (Team Rocket's Porygon's
+      // Hacking). Ask before firing — a rider resolves inside the attack, so
+      // this is the only point at which the player can choose.
+      setDiscardStage({ move: m, need: riderCost, picked: [] });
+    } else if (moves.length > 1) {
+      // Same attack, different `riderPicks` (Cruel Arrow's target, Night
+      // Joker's donor). One entry point, then the choice — one button per
+      // pick meant duplicate React keys and an arbitrary target. WHICH attack
+      // is copied must be settled before any bench placement, since the copy
+      // is what decides whether there is one.
+      setEffectChooser({ label: attackName ?? "Attack", moves });
+    } else {
+      startAttack(m);
+    }
+    void attackIndex;
   }
 
   /** Send when there's nothing to decide, otherwise let the human choose. */
@@ -911,7 +944,47 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
   /** A selection is in progress somewhere, so anything not part of it
    *  recedes — on both mats and in hand. */
   const selecting = ownTargetIds.size > 0 || oppTargetIds.size > 0;
+
+  /** Tapping the Active opens its attacks inside its own black holder, below
+   *  the HP bar, rather than in a modal over the board — the attacks belong
+   *  to that card, so they read better attached to it.
+   *
+   *  Every printed attack is listed, not only the legal ones: "Blade of
+   *  Judgment needs one more Energy" is information, and a list that silently
+   *  omits it looks like the card is missing an attack. Unavailable rows
+   *  recede to 50%, the same language targeting uses. */
+  const activeAttackList =
+    view.board.active != null && monPanel === view.board.active.id ? (
+      <div className="flex flex-col gap-[1px]">
+        {(view.board.active.attacks ?? []).map((atk, i) => {
+          const group = attackGroups.find((g) => g.attackIndex === i);
+          const usable = group != null && !loading;
+          // The projected number accounts for the board — scaling formulas,
+          // Weakness, tools, damage-reduction auras — and comes from the same
+          // function the driver deals damage with. Attacks whose damage lives
+          // in a rider (Night Joker) project 0, so they show their printed
+          // text instead of a confident, wrong zero.
+          const dmg = atk.projected != null && atk.projected > 0 ? String(atk.projected) : atk.damage;
+          return (
+            <button
+              key={i}
+              disabled={!usable}
+              onClick={() => chooseAttack(i, group!.moves, atk.name)}
+              className={`flex w-full items-center justify-between gap-2 rounded px-1 py-[3px] text-left text-white transition-opacity ${
+                usable ? "hover:bg-white/15" : "cursor-default opacity-50"
+              }`}
+              style={{ fontSize: holderFontSize(cardWidth) }}
+            >
+              <span className="min-w-0 truncate font-semibold">{atk.name}</span>
+              <span className="shrink-0 font-bold tabular-nums">{dmg}</span>
+            </button>
+          );
+        })}
+      </div>
+    ) : undefined;
+
   const humanInteract = {
+    activeFooter: activeAttackList,
     onActiveClick:
       pendingCardId && view.board.active && pendingTargets.has(view.board.active.id)
         ? () => sendTargeted(view.board.active!.id)
@@ -922,7 +995,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
             // card they were placing.
             () => {}
           : view.board.active
-            ? () => setMonPanel(view.board.active!.id)
+            ? () => setMonPanel((cur) => (cur === view.board.active!.id ? null : view.board.active!.id))
             : undefined,
     dimActive:
       selecting && (view.board.active == null || !ownTargetIds.has(view.board.active.id)),
@@ -1318,39 +1391,12 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                 </>
               ) : (
                 attackGroups.map(({ attackIndex, moves }) => {
-                  const m = moves[0];
                   const attack = view.board.active?.attacks[attackIndex];
                   const counters = attack?.benchCounters ?? 0;
-                  const attacker = view.board.active;
-                  const riderCost =
-                    attacker && attack
-                      ? attackRiderDiscardCost(attacker.name, attack.name)
-                      : 0;
                   return (
                     <button
                       key={attackIndex}
-                      onClick={() => {
-                        if (riderCost > 0) {
-                          // The attack's rider spends cards from hand (Team
-                          // Rocket's Porygon's Hacking). Ask before firing —
-                          // a rider resolves inside the attack, so this is
-                          // the only point at which the player can choose.
-                          setDiscardStage({ move: m, need: riderCost, picked: [] });
-                        } else if (moves.length > 1) {
-                          // Same attack, different `riderPicks` (Cruel Arrow's
-                          // target, Night Joker's donor). One button, then the
-                          // choice — rendering one button per pick meant
-                          // duplicate React keys and an arbitrary target.
-                          // WHICH attack is copied has to be settled before
-                          // any bench placement, since the copy is what
-                          // decides whether there is one.
-                          setEffectChooser({ label: attack?.name ?? "Attack", moves });
-                        } else {
-                          // Attacks that place damage on a non-empty bench
-                          // enter tap-to-place mode; everything else fires now.
-                          startAttack(m);
-                        }
-                      }}
+                      onClick={() => chooseAttack(attackIndex, moves, attack?.name)}
                       disabled={loading}
                       className="rounded-lg border border-transparent bg-black px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                     >
@@ -1589,6 +1635,9 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
             : view.board.bench.find((m) => m.id === monPanel);
         if (!mon) return null;
         const isActive = view.board.active?.id === mon.id;
+        // The Active's attacks render inside its own holder on the board; the
+        // modal would be a second, contradictory home for the same list.
+        if (isActive) return null;
         const myAttacks = isActive ? attackGroups : [];
         const myDecl = declarativeAbilityGroups.filter((g) => g.monId === mon.id);
         const myLegacy = abilityGroups.filter((g) => g.monId === mon.id);
@@ -1627,11 +1676,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                           key={attackIndex}
                           onClick={() => {
                             setMonPanel(null);
-                            if (moves.length > 1) {
-                              setEffectChooser({ label: atk?.name ?? "Attack", moves });
-                            } else {
-                              startAttack(moves[0]);
-                            }
+                            chooseAttack(attackIndex, moves, atk?.name);
                           }}
                           disabled={loading}
                           className="flex items-center justify-between rounded-lg border border-transparent bg-black px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"

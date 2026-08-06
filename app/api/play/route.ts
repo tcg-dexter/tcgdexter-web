@@ -107,7 +107,7 @@ async function recordIfOver(session: GameSession, userId: string): Promise<void>
 }
 
 function respond(session: GameSession): NextResponse {
-  const view = serializeView(viewFor(session.state, "player"));
+  const view = serializeView(viewFor(session.state, "player"), session.state);
   const options = humanOptions(session);
   const payload: PlayResponse = {
     status: session.status,

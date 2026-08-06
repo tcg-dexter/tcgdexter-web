@@ -9,7 +9,7 @@
 // threads an `interact` bundle down to its cards. With none of those set,
 // behavior is exactly the replay board's (tap → card inspector).
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import {
@@ -86,6 +86,13 @@ export const TRAY_TOTAL_RATIO =
 // with them, but the footer/label text is pinned to its pre-bump pixel size
 // (see the `/ CARD_IMAGE_BUMP` in the font-size computations).
 const CARD_IMAGE_BUMP = 1.1;
+
+/** Text size for anything living inside a black card holder (the HP row, the
+ *  pile labels, the Active's attack rows). Exported so callers rendering into
+ *  a holder match it instead of guessing a px value that drifts on resize. */
+export function holderFontSize(cardWidth: number): number {
+  return Math.max(6, Math.round((replayTrayMetrics(cardWidth).strip * 0.34) / CARD_IMAGE_BUMP));
+}
 // Shared gap (px) between adjacent cards on the board: bench-to-bench and the
 // float gap between the active and its stadium / played-trainer neighbours.
 const BOARD_CARD_GAP = 4;
@@ -344,6 +351,7 @@ export function PokemonCardImage({
   inspectable = true,
   energyIconSize,
   onClick,
+  footer,
   dimmed,
 }: {
   mon: PokemonFrame;
@@ -356,6 +364,11 @@ export function PokemonCardImage({
   energyIconSize?: number;
   /** Play mode: overrides the inspector tap with a game action. */
   onClick?: () => void;
+  /** Play mode: content rendered INSIDE the black holder, below the HP bar,
+   *  growing the holder downward (the Active's attack list). Kept as a slot
+   *  rather than baked in so BoardKit stays presentational — it knows nothing
+   *  about attacks, legality or damage. */
+  footer?: ReactNode;
   /** Play mode: this card is NOT a legal target for the selection in
    *  progress, so it recedes.
    *
@@ -372,7 +385,7 @@ export function PokemonCardImage({
   const hadFallback = !mon.imageUrl;
   const m = replayTrayMetrics(width);
   const barH = Math.max(3, Math.round(m.strip * 0.22));
-  const hpFontSize = Math.max(6, Math.round((m.strip * 0.34) / CARD_IMAGE_BUMP));
+  const hpFontSize = holderFontSize(width);
   // A tool sits behind the Pokémon card, shifted up so its title peeks
   // above (a stack read). The peek height reserves space at the top of the
   // black holder so it stays contained.
@@ -515,6 +528,13 @@ export function PokemonCardImage({
           </div>
         </div>
       )}
+      {footer != null && (
+        // Stop the tap here: the holder's own onClick toggles this panel, so
+        // letting a row bubble up would close it on the way to acting.
+        <div style={{ marginTop: m.gap }} onClick={(e) => e.stopPropagation()}>
+          {footer}
+        </div>
+      )}
     </div>
   );
 }
@@ -595,6 +615,8 @@ export function StackedPrizePile({
 export interface MatInteraction {
   onActiveClick?: () => void;
   onBenchClick?: (benchIndex: number) => void;
+  /** Rendered inside the Active's black holder, below the HP bar. */
+  activeFooter?: ReactNode;
   dimActive?: boolean;
   /** Bench indexes to ring as legal targets. */
   dimBench?: boolean[];
@@ -707,6 +729,12 @@ export function PlayerMat({
           <motion.div
             key={active.id ?? active.name}
             layoutId={`${side}-${active.id ?? active.name}`}
+            // The expanded holder grows down into the bench overlay's band,
+            // and that overlay is positioned (z-0) while this column is not —
+            // so without an explicit layer the bench would paint over the
+            // attack list. Only raised when there IS a footer, to leave the
+            // promotion animation's stacking exactly as it was.
+            className={interact?.activeFooter ? "relative z-20" : undefined}
             style={{ width: activeTray.containerW }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -717,6 +745,7 @@ export function PlayerMat({
               mon={active}
               width={cardWidth}
               onClick={interact?.onActiveClick}
+              footer={interact?.activeFooter}
               dimmed={interact?.dimActive}
             />
           </motion.div>
@@ -776,7 +805,11 @@ export function PlayerMat({
         {/* ── Bench overlay (z-0, behind stadium/trainer, full mat width) ── */}
         {bench.length > 0 && (
           <div
-            className="absolute z-0 flex justify-center overflow-hidden"
+            // items-end: holders differ in height (a Tool peeks above the
+            // card, a Pokémon with no printed HP has no bar), and hanging them
+            // from a shared TOP left their card art at different heights. The
+            // bottom edge is the one the eye reads as the row.
+            className="absolute z-0 flex items-end justify-center overflow-hidden"
             style={{ top: benchTop, left: MAT_PADDING, width: innerW, gap: BOARD_CARD_GAP }}
           >
             {bench.map((mon, i) => (

@@ -6,7 +6,11 @@
 import type { PokemonInPlay } from "../types";
 import type { GameState } from "../types";
 import { computeDamage, remainingHp, sideOf, type SimMove } from "./moves";
-import { attackBenchCounterCount, attackBenchDamageTargets } from "./attacks";
+import {
+  attackBenchCounterCount,
+  attackBenchDamageTargets,
+  projectedAttackDamage,
+} from "./attacks";
 import { retreatCost } from "./tools";
 import { energyProvides } from "./setup";
 import { effectsFor } from "./effects/cards";
@@ -170,6 +174,12 @@ export interface ClientMon {
     benchCounters?: number;
     /** Benched Pokémon this attack deals raw damage to (Flamebody Cannon). */
     benchDamageTargets?: number;
+    /** What this attack would deal to the CURRENT defending Active — the
+     *  printed number is often not it (scaling formulas, Weakness, tools,
+     *  damage-reduction auras). Computed by the same function the driver
+     *  resolves damage with, so the label cannot lie. Absent when there is
+     *  no defender to project against. */
+    projected?: number;
   }[];
   /** Special conditions on this Pokémon (Poisoned, Asleep, …). */
   conditions: string[];
@@ -202,7 +212,15 @@ export interface ClientView {
   };
 }
 
-function clientMon(mon: PokemonInPlay): ClientMon {
+/** What a projection needs: the live state, whose side this Pokémon is on,
+ *  and who it would be attacking. Absent for callers that hold only a view. */
+interface ProjectCtx {
+  state: GameState;
+  actor: "player" | "opponent";
+  defender: PokemonInPlay | null;
+}
+
+function clientMon(mon: PokemonInPlay, project?: ProjectCtx): ClientMon {
   return {
     id: mon.id,
     name: mon.card.name,
@@ -218,26 +236,43 @@ function clientMon(mon: PokemonInPlay): ClientMon {
     attacks: (mon.card.catalog?.attacks ?? []).map((a, i) => {
       const counters = attackBenchCounterCount(mon, i);
       const benchDmg = attackBenchDamageTargets(mon, i);
+      const projected =
+        project && project.defender
+          ? projectedAttackDamage(project.state, project.actor, mon, project.defender, i, null)
+          : null;
       return {
         name: a.name,
         cost: a.cost,
         damage: a.damage,
         ...(counters > 0 ? { benchCounters: counters } : {}),
         ...(benchDmg > 0 ? { benchDamageTargets: benchDmg } : {}),
+        ...(projected != null ? { projected } : {}),
       };
     }),
     conditions: [...mon.conditions],
   };
 }
 
-function clientBoard(board: { active: PokemonInPlay | null; bench: PokemonInPlay[] }): ClientBoard {
+function clientBoard(
+  board: { active: PokemonInPlay | null; bench: PokemonInPlay[] },
+  project?: ProjectCtx,
+): ClientBoard {
   return {
-    active: board.active ? clientMon(board.active) : null,
-    bench: board.bench.map(clientMon),
+    active: board.active ? clientMon(board.active, project) : null,
+    bench: board.bench.map((m) => clientMon(m, project)),
   };
 }
 
-export function serializeView(view: PlayerView): ClientView {
+/** `state` is optional and read-only: with it, each attack carries what it
+ *  would ACTUALLY deal right now. Callers that only hold a view (tests,
+ *  replay) get the printed number and nothing else changes. */
+export function serializeView(view: PlayerView, state?: GameState): ClientView {
+  const other: "player" | "opponent" = view.actor === "player" ? "opponent" : "player";
+  // Each side's attacks are projected against the Pokémon they would hit.
+  const mine = state
+    ? { state, actor: view.actor, defender: view.opponent.board.active }
+    : undefined;
+  const theirs = state ? { state, actor: other, defender: view.board.active } : undefined;
   return {
     turn: {
       number: view.turn.number,
@@ -246,7 +281,7 @@ export function serializeView(view: PlayerView): ClientView {
     },
     wentFirst: view.wentFirst,
     hand: view.hand.map((c) => ({ id: c.id, name: c.name })),
-    board: clientBoard(view.board),
+    board: clientBoard(view.board, mine),
     discard: view.discard.map((c) => ({ id: c.id, name: c.name })),
     deckCount: view.deckCount,
     prizeCount: view.prizeCount,
@@ -255,7 +290,7 @@ export function serializeView(view: PlayerView): ClientView {
     supporterPlayedThisTurn: view.supporterPlayedThisTurn,
     stadium: view.stadium,
     opponent: {
-      board: clientBoard(view.opponent.board),
+      board: clientBoard(view.opponent.board, theirs),
       discard: view.opponent.discard.map((c) => ({ id: c.id, name: c.name })),
       handCount: view.opponent.handCount,
       deckCount: view.opponent.deckCount,
