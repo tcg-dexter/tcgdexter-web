@@ -74,7 +74,11 @@ function main(): void {
       for (const t of effect.targets ?? []) {
         if (t.chooser === "auto") {
           const zone = t.card?.zone ?? t.mon?.zone ?? "board";
-          kinds.push(`auto-pick from ${zone} (slot "${t.ref}")`);
+          // Card slots are no longer auto for a human: the picker offers the
+          // whole eligible pool from effectCardSlots and validate checks the
+          // choice slot-wise. `auto` now means "the AI's single pick".
+          const who = t.select === "card" ? "AI-only auto-pick" : "auto-pick";
+          kinds.push(`${who} from ${zone} (slot "${t.ref}")`);
         }
       }
       if (effectDiscardCost(cardName, i) > 0) {
@@ -136,6 +140,7 @@ function main(): void {
   console.log("  driver.ts     attack rider hand cost          — PROMPTED (riderDiscardCardIds)");
   console.log("  primitives.ts copy-an-attack donor + attack   — ENUMERATED (copyPick, expandAuto)");
   console.log("  placement.ts  bench targets, direct AND copied— PROMPTED (benchDamageTargets/benchCounters)");
+  console.log("  runtime.ts    deck-search card slots          — PROMPTED (effectCardSlots manifest)");
 
   const legacyAbilities = ["N's Zoroark ex::Trade"];
   console.log("\n  legacy abilities declaring a hand cost:");

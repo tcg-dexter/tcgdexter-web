@@ -44,6 +44,10 @@ import {
 } from "./setup";
 import { describeMove, describePromotion } from "./serialize";
 import { isSupporter, trainerSpec } from "./trainers";
+import { effectCardSlots, type EffectSlot } from "./effects/runtime";
+import { effectSlotKey } from "./effects/types";
+export { effectSlotKey };
+import { effectsFor } from "./effects/cards";
 import { hashSeed, mulberry32, type Rng } from "./rng";
 import { viewFor } from "./view";
 import {
@@ -785,6 +789,35 @@ export function battleLogText(session: GameSession): string {
 }
 
 /** Human's currently legal decisions, for the client UI. */
+/** Every card-choosing slot the human could be asked to fill right now,
+ *  keyed by effect.
+ *
+ *  Sent alongside the options because a card picker should ask the card's
+ *  QUESTION ("an Item, a Tool, a Supporter and a Stadium") against the full
+ *  pool of eligible cards, rather than offering a list of pre-combined
+ *  outcomes. Secret Box's four slots produce hundreds of combinations, and
+ *  enumeration caps out long before it can show them all. */
+export function humanCardSlots(session: GameSession): Record<string, EffectSlot[]> {
+  if (session.status !== "human_turn") return {};
+  const state = session.state;
+  const side = state.sides.player;
+  const out: Record<string, EffectSlot[]> = {};
+  for (const move of legalMoves(state, "player", session.ctx, true)) {
+    if (move.kind !== "effect") continue;
+    const key = effectSlotKey(move.sourceId, move.card, move.effectIndex);
+    if (key in out) continue;
+    const effect = effectsFor(move.card)[move.effectIndex];
+    if (!effect) continue;
+    const sourceMon =
+      effect.trigger.kind === "trainer"
+        ? null
+        : ([side.active, ...side.bench].find((m) => m?.id === move.sourceId) ?? null);
+    const slots = effectCardSlots(state, "player", effect, sourceMon);
+    if (slots.length > 0) out[key] = slots;
+  }
+  return out;
+}
+
 export function humanOptions(session: GameSession): InteractiveMove[] {
   if (session.status === "human_setup") return setupOptions(session);
   if (session.status === "human_turn") {

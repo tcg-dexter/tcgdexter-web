@@ -423,6 +423,137 @@ function specOptions(
   return out;
 }
 
+/* ─── Card-slot manifest (the human picker) ─────────────────────── */
+
+/** One eligible card, with every physical copy of that name. Grouped by name
+ *  because which COPY you take is meaningless — the choice is which card and
+ *  how many. */
+export interface EffectSlotOption {
+  name: string;
+  /** Ids of every copy in the zone; length is how many times it's takeable. */
+  ids: string[];
+}
+
+/** One "choose a card" slot of an effect, with its rule and its full
+ *  candidate list. */
+export interface EffectSlot {
+  ref: string;
+  /** Most cards this slot may take. */
+  count: number;
+  /** True when fewer (including none) is legal — "up to N". */
+  upTo: boolean;
+  /** The rule in words: "an Item", "a Basic Darkness Energy". */
+  label: string;
+  options: EffectSlotOption[];
+}
+
+/** The rule a card slot enforces, in words — for a picker that shows what it
+ *  is asking for rather than a list of pre-baked combinations. */
+export function describeCardFilter(filter: CardFilter): string {
+  if (filter.anyOf?.length) return filter.anyOf.map(describeCardFilter).join(" or ");
+  const bits: string[] = [];
+  if (filter.namePrefix) bits.push(filter.namePrefix.trim());
+  if (filter.nameContains) bits.push(filter.nameContains);
+  if (filter.basicEnergy) bits.push("Basic");
+  if (filter.energyType) bits.push(filter.energyType);
+  if (filter.pokemonType) bits.push(filter.pokemonType);
+  if (filter.stage) bits.push(filter.stage);
+  else if (filter.basicPokemon) bits.push("Basic");
+  if (filter.subtype) bits.push(filter.subtype);
+  if (filter.supertype && filter.supertype !== "Trainer") bits.push(filter.supertype);
+  else if (filter.supertype === "Trainer" && !filter.subtype) bits.push("Trainer");
+  if (filter.singlePrize) bits.push("(single Prize)");
+  if (filter.maxHp) bits.push(`(HP ${filter.maxHp} or less)`);
+  const text = bits.join(" ").trim() || "card";
+  return /^[AEIOU]/.test(text) ? `an ${text}` : `a ${text}`;
+}
+
+/** Card slots the PLAYER fills. `chooser: "all"` takes the whole pool and
+ *  asks nothing, so it is not a picker slot — it stays enumerated, and both
+ *  the manifest and its validation skip it. Stated as a predicate so the two
+ *  cannot disagree about which slots the player owns. */
+export function isPickerSlot(spec: TargetSpec): boolean {
+  return spec.select === "card" && spec.chooser !== "all";
+}
+
+/** Every card slot of an effect with ALL its eligible cards.
+ *
+ *  This is the picker's data source, and it exists because enumeration is the
+ *  wrong shape for a person. Enumeration produces one move per COMBINATION,
+ *  so Secret Box's four slots multiply into hundreds — truncated to
+ *  MAX_EFFECT_MOVES, which means the choice a player wanted was frequently
+ *  not on the menu at all. A manifest asks the question the card asks: here
+ *  is everything eligible, take what the rule allows.
+ *
+ *  Card slots only. Pokémon slots stay enumerated: the board already IS their
+ *  picker, and tapping a Pokémon is a better interface than a list. */
+export function effectCardSlots(
+  state: GameState,
+  actor: Actor,
+  effect: CardEffect,
+  sourceMon: PokemonInPlay | null = null,
+): EffectSlot[] {
+  if (!guardsPass(state, actor, sourceMon, effect.guards)) return [];
+  const out: EffectSlot[] = [];
+  for (const spec of effect.targets ?? []) {
+    if (!isPickerSlot(spec)) continue;
+    const matching = zoneOf(state, actor, spec).filter((c) => cardMatches(c, spec.card!.filter));
+    if (matching.length === 0) continue;
+    const byName = new Map<string, string[]>();
+    for (const c of matching) {
+      const bucket = byName.get(c.name);
+      if (bucket) bucket.push(c.id);
+      else byName.set(c.name, [c.id]);
+    }
+    const options = Array.from(byName, ([name, ids]) => ({ name, ids }));
+    out.push({
+      ref: spec.ref,
+      count: Math.min(matching.length, Math.max(1, spec.count ?? 1)),
+      upTo: spec.upTo === true,
+      label: describeCardFilter(spec.card!.filter),
+      options,
+    });
+  }
+  return out;
+}
+
+/** Is `picks` a legal filling of this effect's CARD slots? The trust boundary
+ *  for the picker: enumeration can no longer be the reference (it truncates),
+ *  so each slot is checked against its own rule — every id eligible for THAT
+ *  slot, no id used twice across slots, and the count within what the slot
+ *  allows. Stricter than the old fingerprint match, and it accepts every
+ *  legal choice rather than the two dozen that survived truncation. */
+export function cardPicksLegal(
+  state: GameState,
+  actor: Actor,
+  effect: CardEffect,
+  picks: EffectPick[],
+  sourceMon: PokemonInPlay | null = null,
+): boolean {
+  const slots = effectCardSlots(state, actor, effect, sourceMon);
+  const used = new Set<string>();
+  for (const spec of effect.targets ?? []) {
+    if (!isPickerSlot(spec)) continue;
+    const ids = picks.find((p) => p.ref === spec.ref)?.cardIds ?? [];
+    const slot = slots.find((s) => s.ref === spec.ref);
+    if (!slot) {
+      // No candidate exists: the slot must be empty. (A required slot with no
+      // candidate makes the whole effect illegal, which legalMoves decides.)
+      if (ids.length > 0) return false;
+      continue;
+    }
+    if (ids.length > slot.count) return false;
+    if (!slot.upTo && ids.length !== slot.count) return false;
+    const eligible = new Set(slot.options.flatMap((o) => o.ids));
+    for (const id of ids) {
+      if (!eligible.has(id)) return false;
+      if (used.has(id)) return false; // one physical card cannot fill two slots
+      used.add(id);
+    }
+  }
+  return true;
+}
+
 /** All concrete moves for a card's effect (empty if guards fail or a required
  *  target has no candidate). Each slot enumerates its own combinations
  *  (including multi-pick and same-name repeats); the cartesian product then

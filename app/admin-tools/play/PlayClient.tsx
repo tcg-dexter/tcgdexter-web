@@ -30,6 +30,8 @@ import { stadiumHandCost, stadiumTopDecks } from "@/lib/engine/sim/stadiums";
 import { attackRiderDiscardCost, effectOwnHandTrimTo } from "@/lib/engine/sim/effects/cards";
 import { effectAbilityName, effectDiscardCost, effectDiscardFilter } from "@/lib/engine/sim/effects/cards";
 import { cardMatches } from "@/lib/engine/sim/effects/match";
+import { effectSlotKey } from "@/lib/engine/sim/effects/types";
+import type { EffectSlot } from "@/lib/engine/sim/effects/runtime";
 import { attackPlacement } from "@/lib/engine/sim/effects/placement";
 import { lookupCard } from "@/lib/engine/catalog";
 import type { CardFilter } from "@/lib/engine/sim/effects/types";
@@ -119,8 +121,19 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
   const [log, setLog] = useState<string[]>([]);
   const [pendingCardId, setPendingCardId] = useState<string | null>(null);
   const [retreatMode, setRetreatMode] = useState(false);
-  /** Search-picker modal (deck/discard fetch choices for one trainer). */
+  /** Search-picker modal (deck/discard fetch choices for one LEGACY trainer). */
   const [pickerMoves, setPickerMoves] = useState<InteractiveMove[] | null>(null);
+  /** Card picker for a declarative effect: every eligible card in one list,
+   *  with the card's own rules deciding what may be selected together. */
+  const [cardPicker, setCardPicker] = useState<{
+    label: string;
+    move: EffectMove;
+    slots: EffectSlot[];
+    /** Chosen card ids, in tap order. Slot assignment is DERIVED from these
+     *  (see assignPicks) rather than stored, so no tap can strand a later one
+     *  in the wrong slot. */
+    picked: string[];
+  } | null>(null);
   /** Boss's Orders: pick the AI's benched Pokémon to drag active. */
   const [bossMoves, setBossMoves] = useState<InteractiveMove[] | null>(null);
   /** Switch etc.: pick one of our benched Pokémon. */
@@ -226,6 +239,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     setPendingNarrow(null);
     setRetreatMode(false);
     setPickerMoves(null);
+    setCardPicker(null);
     setBossMoves(null);
     setBenchPickMoves(null);
     setDiscardStage(null);
@@ -451,10 +465,63 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     void attackIndex;
   }
 
+  /* ── Declarative card picker ──────────────────────────────────────
+   *
+   *  A card that searches asks a RULE ("an Item, a Pokémon Tool, a Supporter
+   *  and a Stadium"), and the honest interface is the whole eligible pool
+   *  with the rule enforced as you tap — not a menu of pre-combined outcomes.
+   *  Secret Box's four slots multiply into hundreds of combinations, which
+   *  enumeration truncates, so most legal choices were never even offered.
+   */
+
+  /** The card slots an effect move must fill, from the server manifest. */
+  function slotsFor(move: EffectMove): EffectSlot[] {
+    return game?.card_slots?.[effectSlotKey(move.sourceId, move.card, move.effectIndex)] ?? [];
+  }
+
+  /** Assign picked cards to slots, or null when no complete assignment
+   *  exists.
+   *
+   *  Needed because slots OVERLAP — a Pokémon Tool is also an Item, so a
+   *  greedy left-to-right assignment can put your only Tool in the Item slot
+   *  and then declare the Tool slot unfillable. This searches instead: it is
+   *  a tiny bipartite matching (at most a handful of cards and four slots),
+   *  and it is what makes "tap any eligible card, in any order" safe. */
+  function assignPicks(picked: string[], slots: EffectSlot[]): Record<string, string[]> | null {
+    const capacity = slots.map((s) => s.count);
+    const out: Record<string, string[]> = Object.fromEntries(slots.map((s) => [s.ref, []]));
+    const fits = (id: string, slot: EffectSlot) => slot.options.some((o) => o.ids.includes(id));
+    const place = (i: number): boolean => {
+      if (i >= picked.length) return true;
+      for (let s = 0; s < slots.length; s++) {
+        if (out[slots[s].ref].length >= capacity[s]) continue;
+        if (!fits(picked[i], slots[s])) continue;
+        out[slots[s].ref].push(picked[i]);
+        if (place(i + 1)) return true;
+        out[slots[s].ref].pop();
+      }
+      return false;
+    };
+    return place(0) ? out : null;
+  }
+
+  /** Play an effect move, pausing on its card picker when it has one. */
+  function playEffectMove(move: EffectMove, label: string) {
+    const slots = slotsFor(move);
+    if (slots.length === 0) return void sendMove(move);
+    setCardPicker({ label, move, slots, picked: [] });
+    setPickerMoves(null);
+    setEffectChooser(null);
+    setDiscardStage(null);
+  }
+
   /** Send when there's nothing to decide, otherwise let the human choose. */
   function sendOrChoose(label: string, moves: InteractiveMove[]) {
     if (moves.length === 0) return;
-    if (moves.length === 1) return void sendMove(moves[0]);
+    if (moves.length === 1) {
+      const m = moves[0];
+      return void (m.kind === "effect" ? playEffectMove(m, label) : sendMove(m));
+    }
     setEffectChooser({ label, moves });
   }
 
@@ -617,7 +684,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
           filter: effectDiscardFilter(effectMoves[0].card, effectMoves[0].effectIndex),
         });
       }
-      if (effectMoves.length === 1) return void sendMove(effectMoves[0]);
+      if (effectMoves.length === 1) return void playEffectMove(effectMoves[0], card?.name ?? "Play");
       return void setEffectChooser({ label: card?.name ?? "Play", moves: effectMoves });
     }
 
@@ -1605,8 +1672,17 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                 })}
             </div>
             <button
-              onClick={() =>
-                sendMove(
+              onClick={() => {
+                // Secret Box pays its cost and THEN searches: the picker is
+                // the second half of the same decision, so the discard stage
+                // hands the move on rather than sending it.
+                if (discardStage.move.kind === "effect" && slotsFor(discardStage.move).length > 0) {
+                  return playEffectMove(
+                    { ...discardStage.move, discardCardIds: discardStage.picked },
+                    discardStage.move.card,
+                  );
+                }
+                void sendMove(
                   discardStage.move.kind === "use_ability"
                     ? // Trade takes ONE card on `cardId` — the field its apply
                       // has always read and nothing ever supplied.
@@ -1616,8 +1692,8 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                       : discardStage.move.kind === "attack"
                         ? { ...discardStage.move, riderDiscardCardIds: discardStage.picked }
                         : { ...discardStage.move, discardCardIds: discardStage.picked },
-                )
-              }
+                );
+              }}
               disabled={discardStage.picked.length !== discardStage.need || loading}
               className="mt-3 w-full rounded-lg border border-transparent bg-accent px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"
             >
@@ -1755,6 +1831,170 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
         );
       })()}
 
+      {cardPicker && (() => {
+        // One flat list of every eligible card — no groupings, no pre-baked
+        // combinations. What may be taken TOGETHER is decided by the card's
+        // slots, re-derived on every tap.
+        const { slots, picked } = cardPicker;
+        const assigned = assignPicks(picked, slots);
+        // Distinct cards across all slots, deduped: a Tool that satisfies
+        // both the Item and the Tool slot is ONE card in this list.
+        const pool = new Map<string, { name: string; ids: string[] }>();
+        for (const slot of slots) {
+          for (const o of slot.options) {
+            const cur = pool.get(o.name);
+            if (cur) for (const id of o.ids) { if (!cur.ids.includes(id)) cur.ids.push(id); }
+            else pool.set(o.name, { name: o.name, ids: [...o.ids] });
+          }
+        }
+        const entries = Array.from(pool.values()).sort((a, b) => a.name.localeCompare(b.name));
+        /** Taken copies of this name. */
+        const takenOf = (ids: string[]) => picked.filter((id) => ids.includes(id)).length;
+        /** The next untaken copy, or null when every copy is already picked. */
+        const nextId = (ids: string[]) => ids.find((id) => !picked.includes(id)) ?? null;
+        /** Could this card be added and still leave a complete assignment? */
+        const canAdd = (ids: string[]) => {
+          const id = nextId(ids);
+          return id != null && assignPicks([...picked, id], slots) != null;
+        };
+        // Every slot of a multi-slot search is `upTo` — "search your deck
+        // for..." may legally fail to find, and a deck may simply hold no
+        // Stadium. So the gate is "is this assignment valid", not "is it
+        // full", and the button says plainly when you are taking nothing.
+        const required = slots.reduce((n, sl) => n + (sl.upTo ? 0 : sl.count), 0);
+        const filled = assigned
+          ? slots.every((sl) => sl.upTo || (assigned[sl.ref]?.length ?? 0) === sl.count)
+          : false;
+        const toggle = (ids: string[]) => {
+          setCardPicker((cp) => {
+            if (!cp) return cp;
+            const mine = ids.filter((id) => cp.picked.includes(id));
+            // Tapping a card you already took gives the copy back.
+            if (mine.length > 0 && !canAdd(ids)) {
+              const drop = mine[mine.length - 1];
+              return { ...cp, picked: cp.picked.filter((id) => id !== drop) };
+            }
+            const id = nextId(ids);
+            if (id == null || assignPicks([...cp.picked, id], cp.slots) == null) {
+              // Full on every copy: a tap takes one back instead.
+              if (mine.length > 0) {
+                const drop = mine[mine.length - 1];
+                return { ...cp, picked: cp.picked.filter((x) => x !== drop) };
+              }
+              return cp;
+            }
+            return { ...cp, picked: [...cp.picked, id] };
+          });
+        };
+        const confirm = () => {
+          if (!assigned) return;
+          const base = cardPicker.move;
+          const cardRefs = new Set(slots.map((sl) => sl.ref));
+          const picks = [
+            // Pokémon picks the board already settled stay exactly as they are.
+            ...base.picks.filter((p) => !cardRefs.has(p.ref)),
+            ...slots.map((sl) => ({
+              ref: sl.ref,
+              cardIds: assigned[sl.ref] ?? [],
+              cardNames: (assigned[sl.ref] ?? []).map(
+                (id) => entries.find((e) => e.ids.includes(id))?.name ?? "",
+              ),
+            })),
+          ];
+          void sendMove({ ...base, picks });
+        };
+        return (
+          <div
+            className="fixed inset-0 z-40 flex items-center justify-center p-4"
+            style={{ background: "rgba(242,242,242,0.92)" }}
+            role="dialog"
+            aria-modal="true"
+            aria-label={cardPicker.label}
+            onClick={() => setCardPicker(null)}
+          >
+            <div
+              className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-black/8 bg-white p-4 shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-xs font-semibold text-text-primary">{cardPicker.label}</span>
+                <button onClick={() => setCardPicker(null)} className="text-[10px] font-semibold text-accent">
+                  cancel
+                </button>
+              </div>
+              {/* The rule, and how much of it is satisfied — this is what the
+                  card actually asks for, rather than a list of outcomes. */}
+              <div className="mb-3 flex flex-wrap gap-1.5">
+                {slots.map((sl) => {
+                  const got = assigned?.[sl.ref]?.length ?? 0;
+                  const done = sl.upTo || got === sl.count;
+                  return (
+                    <span
+                      key={sl.ref}
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                        done ? "bg-black text-white" : "bg-surface text-text-secondary"
+                      }`}
+                    >
+                      {sl.count > 1 ? `${got}/${sl.count} ` : ""}
+                      {sl.label}
+                      {sl.upTo ? " (optional)" : ""}
+                    </span>
+                  );
+                })}
+              </div>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                {entries.map((e) => {
+                  const taken = takenOf(e.ids);
+                  const selectable = taken > 0 || canAdd(e.ids);
+                  const img = images[e.name];
+                  return (
+                    <button
+                      key={e.name}
+                      onClick={() => toggle(e.ids)}
+                      disabled={loading || !selectable}
+                      title={e.name}
+                      className={`relative flex flex-col items-center gap-1 rounded-lg border p-1 transition-opacity ${
+                        taken > 0 ? "border-accent" : "border-black/8"
+                      } ${selectable ? "" : "opacity-50"}`}
+                    >
+                      {img ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={img} alt={e.name} className="w-full rounded-md shadow-sm" />
+                      ) : (
+                        <div className="flex aspect-[5/7] w-full items-center justify-center rounded-md border border-black/15 bg-surface p-1 text-center text-[8px] font-semibold text-text-secondary">
+                          {e.name}
+                        </div>
+                      )}
+                      {taken > 0 && (
+                        <span className="absolute right-1 top-1 rounded-full bg-accent px-1.5 text-[9px] font-bold text-white">
+                          {taken > 1 ? taken : "\u2713"}
+                        </span>
+                      )}
+                      {e.ids.length > 1 && (
+                        <span className="absolute left-1 top-1 rounded-full bg-black/60 px-1.5 text-[9px] font-bold text-white">
+                          {e.ids.length}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={confirm}
+                disabled={loading || !filled}
+                className="mt-3 w-full rounded-lg border border-transparent bg-accent px-3 py-2 text-xs font-semibold text-white disabled:opacity-40"
+              >
+                {!filled
+                  ? `Choose ${required} card${required === 1 ? "" : "s"}`
+                  : picked.length === 0
+                    ? "Take nothing"
+                    : `Take ${picked.length} card${picked.length === 1 ? "" : "s"}`}
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
       {effectChooser && (
         <div
           className="fixed inset-0 z-40 flex items-center justify-center p-4"
@@ -1784,7 +2024,11 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                       // An attack chosen here may still ask for bench targets
                       // — a copied Flamebody Cannon does — so it goes through
                       // the same gate the action bar uses.
-                      m.kind === "attack" ? startAttack(m) : void sendMove(m)
+                      m.kind === "attack"
+                        ? startAttack(m)
+                        : m.kind === "effect"
+                          ? playEffectMove(m, effectChooser.label)
+                          : void sendMove(m)
                     }
                     disabled={loading}
                     className="flex flex-col items-center gap-1 rounded-lg border border-black/8 p-1.5 hover:border-accent disabled:opacity-50"

@@ -23,6 +23,8 @@ export {
   applyHumanMove,
   rebuildSession,
   humanOptions,
+  humanCardSlots,
+  effectSlotKey,
   battleLogText,
   setupOptions,
   autoSetup,

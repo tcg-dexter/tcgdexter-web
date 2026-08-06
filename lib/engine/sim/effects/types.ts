@@ -366,3 +366,12 @@ export interface CardEffect {
   /** Required by (and only meaningful for) the `damage_scale` trigger. */
   damage?: DamageFormula;
 }
+
+/** Key an effect's card-slot manifest by the move it belongs to. Lives here,
+ *  in the leaf, because BOTH the server (which builds the manifest) and the
+ *  play client (which reads it) need it — and the client cannot import
+ *  interactive.ts without dragging the trained-model loader, and node:fs,
+ *  into the browser bundle. */
+export function effectSlotKey(sourceId: string, card: string, effectIndex: number): string {
+  return `${sourceId}::${card}::${effectIndex}`;
+}

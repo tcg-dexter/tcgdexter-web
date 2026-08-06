@@ -9,7 +9,7 @@ import type { GameState, PokemonInPlay } from "../types";
 import { copyChoices, legalMoves, type SimMove, type TurnContext } from "./moves";
 import { attackEffect, attackPlacement } from "./attacks";
 import { isSupporter, trainerDiscardCost } from "./trainers";
-import { enumerateEffect, type EffectMove } from "./effects/runtime";
+import { cardPicksLegal, enumerateEffect, isPickerSlot, type EffectMove } from "./effects/runtime";
 import {
   attackRiderEffect,
   effectDiscardCost,
@@ -23,10 +23,16 @@ import { activatedHandDiscard } from "./abilities";
 import { stadiumHandCost } from "./stadiums";
 
 /** Order-insensitive fingerprint of an effect move's picks, so a human
- *  selection matches an enumerated move regardless of id/slot ordering. */
-function effectPicks(m: EffectMove): string {
+ *  selection matches an enumerated move regardless of id/slot ordering.
+ *
+ *  `skipRefs` drops slots that are validated on their own terms instead —
+ *  the CARD slots, which come from a manifest rather than the enumeration
+ *  (see cardPicksLegal). Fingerprinting those against a TRUNCATED cartesian
+ *  product is what made most legal Secret Box choices unofferable. */
+function effectPicks(m: EffectMove, skipRefs?: Set<string>): string {
   return JSON.stringify(
     m.picks
+      .filter((p) => !skipRefs?.has(p.ref))
       .map((p) => ({
         ref: p.ref,
         mon: [...(p.monIds ?? [])].sort(),
@@ -338,8 +344,18 @@ export function isLegalHumanMove(
       if (!move.discardCardIds.every((id) => payable.has(id))) return false;
     }
 
-    const want = effectPicks(move);
-    return enumerated.some((m) => effectPicks(m) === want);
+    // Card slots are the player's own selection from a manifest of every
+    // eligible card, so they are checked against the slot RULES and excluded
+    // from the structural compare below. Pokémon slots stay enumerated (the
+    // board is their picker) and keep the exact-match treatment.
+    const cardRefs = new Set(
+      (effect.targets ?? []).filter(isPickerSlot).map((t) => t.ref),
+    );
+    if (cardRefs.size > 0 && !cardPicksLegal(state, actor, effect, move.picks, sourceMon)) {
+      return false;
+    }
+    const want = effectPicks(move, cardRefs);
+    return enumerated.some((m) => effectPicks(m, cardRefs) === want);
   }
 
   // A Stadium's hand selection was checked above on its own terms; strip it

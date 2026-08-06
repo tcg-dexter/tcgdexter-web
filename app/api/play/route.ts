@@ -6,6 +6,7 @@ import { cardImageUrlForAnyName } from "@/lib/primaryCardImage";
 import {
   applyHumanMove,
   humanOptions,
+  humanCardSlots,
   rebuildSession,
   serializeView,
   startGame,
@@ -23,6 +24,7 @@ import type {
   InteractiveMove,
   SessionStatus,
 } from "@/lib/engine/sim";
+import type { EffectSlot } from "@/lib/engine/sim/effects/runtime";
 
 /**
  * POST /api/play — the AI player (admin-gated practice mode).
@@ -55,11 +57,16 @@ export interface PlayResponse {
   /** Card name → image URL for everything visible in the view, so the
    *  client renders art without shipping the card catalog. */
   images: Record<string, string | null>;
+  /** Card-choosing slots per effect (Secret Box's four searches), keyed by
+   *  `sourceId::card::effectIndex`. The picker is built from these rather
+   *  than from enumerated combinations. */
+  card_slots: Record<string, EffectSlot[]>;
 }
 
 function collectImages(
   view: ClientView,
   options: InteractiveMove[],
+  cardSlots: Record<string, EffectSlot[]> = {},
 ): Record<string, string | null> {
   const names = new Set<string>();
   for (const c of view.hand) names.add(c.name);
@@ -86,6 +93,10 @@ function collectImages(
       names.add(m.deckCardName);
     }
   }
+  // Every card the picker can offer needs art too.
+  for (const slots of Object.values(cardSlots)) {
+    for (const slot of slots) for (const o of slot.options) names.add(o.name);
+  }
   const images: Record<string, string | null> = {};
   names.forEach((name) => {
     images[name] = cardImageUrlForAnyName(name);
@@ -109,6 +120,7 @@ async function recordIfOver(session: GameSession, userId: string): Promise<void>
 function respond(session: GameSession): NextResponse {
   const view = serializeView(viewFor(session.state, "player"), session.state);
   const options = humanOptions(session);
+  const cardSlots = humanCardSlots(session);
   const payload: PlayResponse = {
     status: session.status,
     transcript: session.transcript,
@@ -116,7 +128,8 @@ function respond(session: GameSession): NextResponse {
     options,
     ai_actions: session.aiActions,
     outcome: session.outcome,
-    images: collectImages(view, options),
+    images: collectImages(view, options, cardSlots),
+    card_slots: cardSlots,
   };
   return NextResponse.json(payload);
 }
