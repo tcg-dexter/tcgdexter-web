@@ -3,9 +3,11 @@
 // AI-player practice mode, rendered on the shared replay BoardKit — the
 // same mats, card holders, piles, prize stacks and card inspector as the
 // Replay viewer, with an interaction layer on top: tap a hand card to play
-// it, tap a highlighted Pokémon to target it, attack/retreat/end-turn from
-// the action bar. When no game action is pending, taps fall through to the
-// card inspector exactly like replay.
+// it, then tap a Pokémon to target it — while a selection is in progress
+// everything that ISN'T choosable dims, so the remaining full-strength
+// cards are the answer. Attack/retreat/end-turn from the action bar. When
+// no game action is pending, taps fall through to the card inspector
+// exactly like replay.
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { PlayResponse } from "@/app/api/play/route";
@@ -810,6 +812,62 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
   const benchActs = promoting || retreatMode || pendingCardId != null || benchPickMoves != null;
   const benchPickIndex = (i: number) =>
     benchPickMoves?.find((m) => m.kind === "play_trainer" && m.benchIndex === i);
+
+  const bossIndex = (i: number) =>
+    bossMoves?.find((m) => m.kind === "play_trainer" && m.oppBenchIndex === i);
+  // Ruffian targets any opponent Pokémon (Active or Bench) by id.
+  const bossMoveForMon = (id: string) =>
+    bossMoves?.find((m) => m.kind === "play_trainer" && m.oppMonId === id);
+  const abilityTargetIds = new Set(
+    abilityTargeting?.moves.map((m) => m.targetMonId).filter((id): id is string => id != null) ?? [],
+  );
+
+  /* ── What the board is offering right now ──────────────────────
+   *
+   * Every selection mode reduces to the same question: which Pokémon can
+   * be chosen? Answering it ONCE, as two id sets, is what lets the taps
+   * and the dimming agree — computing them separately is how a card ends
+   * up looking choosable and doing nothing when tapped.
+   *
+   * Both mats participate. Aiming Boss's Orders at the opponent dims our
+   * own board too: nothing over there is choosable, so nothing over there
+   * should look it. */
+  const ownTargetIds = new Set<string>(
+    promoting
+      ? view.board.bench.map((m) => m.id)
+      : retreatMode
+        ? view.board.bench
+            .filter((_, i) => byKind("retreat").some((m) => m.benchIndex === i))
+            .map((m) => m.id)
+        : benchPickMoves
+          ? view.board.bench.filter((_, i) => benchPickIndex(i) != null).map((m) => m.id)
+          : pendingCardId != null
+            ? Array.from(pendingTargets)
+            : [],
+  );
+  const oppTargetIds = new Set<string>(
+    bossMoves
+      ? [
+          // Active and Bench are kept apart on purpose: Boss's Orders
+          // addresses the Bench BY INDEX, so collapsing them into one list
+          // and filtering out a null Active would shift every index by one
+          // and light up the wrong Pokémon.
+          ...(view.opponent.board.active && bossMoveForMon(view.opponent.board.active.id)
+            ? [view.opponent.board.active.id]
+            : []),
+          ...view.opponent.board.bench
+            .filter((m, i) => bossIndex(i) != null || bossMoveForMon(m.id) != null)
+            .map((m) => m.id),
+        ]
+      : abilityTargeting
+        ? Array.from(abilityTargetIds)
+        : counterPlace
+          ? view.opponent.board.bench.map((m) => m.id)
+          : [],
+  );
+  /** A selection is in progress somewhere, so anything not part of it
+   *  recedes — on both mats and in hand. */
+  const selecting = ownTargetIds.size > 0 || oppTargetIds.size > 0;
   const humanInteract = {
     onActiveClick:
       pendingCardId && view.board.active && pendingTargets.has(view.board.active.id)
@@ -823,8 +881,8 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
           : view.board.active
             ? () => setMonPanel(view.board.active!.id)
             : undefined,
-    highlightActive:
-      pendingCardId != null && view.board.active != null && pendingTargets.has(view.board.active.id),
+    dimActive:
+      selecting && (view.board.active == null || !ownTargetIds.has(view.board.active.id)),
     onBenchClick: benchActs
       ? (i: number) => {
           if (promoting) return void sendMove({ kind: "promote", benchIndex: i });
@@ -849,12 +907,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
           const mon = view.board.bench[i];
           if (mon) setMonPanel(mon.id);
         },
-    highlightBench: view.board.bench.map((mon, i) =>
-      promoting ||
-      benchPickIndex(i) != null ||
-      (retreatMode && byKind("retreat").some((m) => m.benchIndex === i)) ||
-      (pendingCardId != null && pendingTargets.has(mon.id)),
-    ),
+    dimBench: view.board.bench.map((mon) => selecting && !ownTargetIds.has(mon.id)),
   };
 
   // Distinct usable abilities (from the legal set), grouped for buttons.
@@ -899,14 +952,6 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
   // The AI mat is the target surface for Boss (bench), ability targeting
   // (active + bench), and counter placement (bench). Highlight + tap route
   // by whichever mode is live.
-  const bossIndex = (i: number) =>
-    bossMoves?.find((m) => m.kind === "play_trainer" && m.oppBenchIndex === i);
-  // Ruffian targets any opponent Pokémon (Active or Bench) by id.
-  const bossMoveForMon = (id: string) =>
-    bossMoves?.find((m) => m.kind === "play_trainer" && m.oppMonId === id);
-  const abilityTargetIds = new Set(
-    abilityTargeting?.moves.map((m) => m.targetMonId).filter((id): id is string => id != null) ?? [],
-  );
   function sendAbilityAt(targetId: string) {
     if (!abilityTargeting) return;
     // Prefer the move whose source carries the most damage (Munkidori);
@@ -930,7 +975,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                 if (oppActive) sendAbilityAt(oppActive.id);
               }
             : undefined,
-          highlightActive: aiActiveTargetable,
+          dimActive: selecting && !aiActiveTargetable,
           onBenchClick: (i: number) => {
             const mon = view.opponent.board.bench[i];
             if (bossMoves) {
@@ -948,15 +993,14 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
               );
             }
           },
-          highlightBench: view.opponent.board.bench.map((mon, i) =>
-            bossMoves != null
-              ? bossIndex(i) != null || (mon != null && bossMoveForMon(mon.id) != null)
-              : abilityTargeting != null
-                ? abilityTargetIds.has(mon.id)
-                : counterPlace != null,
-          ),
+          dimBench: view.opponent.board.bench.map((mon) => selecting && !oppTargetIds.has(mon.id)),
         }
-      : undefined;
+      : // No targeting mode on the AI mat, but a selection may be live on
+        // OURS — in which case nothing over here is choosable and the whole
+        // mat recedes.
+        selecting
+        ? { dimActive: true, dimBench: view.opponent.board.bench.map(() => true) }
+        : undefined;
 
   const settingUp = game.status === "human_setup";
   const statusLine = settingUp
@@ -1080,6 +1124,11 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
               {view.hand.map((card) => {
                 const playable =
                   (game.status === "human_turn" || settingUp) && cardIsPlayable(card.id);
+                // Mid-selection the hand follows the board's rule: the card
+                // being placed is the only one that can act, so every other
+                // card recedes. That is also what marks it as selected —
+                // no ring needed.
+                const receded = pendingCardId != null ? pendingCardId !== card.id : !playable;
                 const image = images[card.name];
                 return (
                   <button
@@ -1090,8 +1139,8 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                         : setInspect({ kind: "card", name: card.name, imageUrl: image ?? null })
                     }
                     disabled={loading}
-                    className={`w-16 shrink-0 sm:w-20 ${playable ? "" : "opacity-45"} ${
-                      pendingCardId === card.id ? "rounded-md ring-2 ring-accent" : ""
+                    className={`w-16 shrink-0 transition-opacity duration-200 sm:w-20 ${
+                      receded ? "opacity-50" : ""
                     }`}
                     title={card.name}
                   >

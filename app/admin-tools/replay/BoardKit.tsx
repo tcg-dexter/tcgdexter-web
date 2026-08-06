@@ -5,7 +5,7 @@
 // render the same mats, card holders, piles, prize stacks and inspector.
 //
 // Interactivity is additive and optional: PokemonCardImage accepts
-// onClick/highlight overrides (play mode's target picking), and PlayerMat
+// onClick/dimmed overrides (play mode's target picking), and PlayerMat
 // threads an `interact` bundle down to its cards. With none of those set,
 // behavior is exactly the replay board's (tap → card inspector).
 
@@ -344,7 +344,7 @@ export function PokemonCardImage({
   inspectable = true,
   energyIconSize,
   onClick,
-  highlight,
+  dimmed,
 }: {
   mon: PokemonFrame;
   width: number;
@@ -356,17 +356,15 @@ export function PokemonCardImage({
   energyIconSize?: number;
   /** Play mode: overrides the inspector tap with a game action. */
   onClick?: () => void;
-  /** Play mode: accent glow marking a legal target.
+  /** Play mode: this card is NOT a legal target for the selection in
+   *  progress, so it recedes.
    *
-   *  This is the whole targeting affordance now — picking a target is done
-   *  by tapping the board, not by an overlay list — so it has to read as
-   *  "tap me" at a glance rather than as a subtle border.
-   *
-   *  Styled entirely by `.play-target-glow` (globals.css) rather than
-   *  Tailwind's `ring-*`: the ring utilities ARE box-shadows, so the glow
-   *  animation would have overridden them and left a ring class that
-   *  silently did nothing. */
-  highlight?: boolean;
+   *  Targeting marks the negative rather than the positive — dimming what
+   *  cannot be chosen instead of outlining what can. Outlining every legal
+   *  target draws a lot of chrome on a board that is mostly legal targets;
+   *  dimming leaves the eligible cards looking exactly like themselves and
+   *  simply pushes the rest back. */
+  dimmed?: boolean;
 }) {
   const inspect = useContext(InspectContext);
   const clickable = onClick != null || (inspectable && inspect != null);
@@ -398,9 +396,9 @@ export function PokemonCardImage({
 
   return (
     <div
-      className={`relative bg-black shadow-sm transition-[box-shadow,transform] duration-150 ${
+      className={`relative bg-black shadow-sm transition-opacity duration-200 ${
         clickable ? "cursor-pointer" : ""
-      } ${highlight ? "play-target-glow" : ""}`}
+      } ${dimmed ? "opacity-50" : ""}`}
       style={{ width: m.containerW, borderRadius: m.radius, padding: m.pad }}
       title={mon.name}
       role={clickable ? "button" : undefined}
@@ -597,9 +595,9 @@ export function StackedPrizePile({
 export interface MatInteraction {
   onActiveClick?: () => void;
   onBenchClick?: (benchIndex: number) => void;
-  highlightActive?: boolean;
+  dimActive?: boolean;
   /** Bench indexes to ring as legal targets. */
-  highlightBench?: boolean[];
+  dimBench?: boolean[];
 }
 
 // P1 mat: bench at top, active at bottom — actives face each other across the
@@ -719,7 +717,7 @@ export function PlayerMat({
               mon={active}
               width={cardWidth}
               onClick={interact?.onActiveClick}
-              highlight={interact?.highlightActive}
+              dimmed={interact?.dimActive}
             />
           </motion.div>
         )}
@@ -795,7 +793,7 @@ export function PlayerMat({
                   onClick={
                     interact?.onBenchClick ? () => interact.onBenchClick!(i) : undefined
                   }
-                  highlight={interact?.highlightBench?.[i]}
+                  dimmed={interact?.dimBench?.[i]}
                 />
               </motion.div>
             ))}

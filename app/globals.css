@@ -184,38 +184,3 @@ body.card-viewer-open [data-back-button] {
   0%   { opacity: 0; transform: translateY(4px); }
   100% { opacity: 1; transform: translateY(0); }
 }
-
-/* AI-player board targeting.
-   Choosing a target is a board tap — pick up an Energy, Tool or Evolution
-   and the Pokémon that can legally receive it glow. A static ring reads as
-   decoration, so this breathes: the pulse is what says "these are waiting
-   for you". Kept slow and low-contrast enough not to be a distraction while
-   the rest of the turn is played. */
-@keyframes playTargetPulse {
-  0%,
-  100% {
-    box-shadow:
-      0 0 0 2px rgba(217, 85, 85, 0.35),
-      0 0 12px 2px rgba(217, 85, 85, 0.45);
-  }
-  50% {
-    box-shadow:
-      0 0 0 4px rgba(217, 85, 85, 0.5),
-      0 0 22px 6px rgba(217, 85, 85, 0.7);
-  }
-}
-
-.play-target-glow {
-  animation: playTargetPulse 1.6s ease-in-out infinite;
-}
-
-/* Respect a reduced-motion preference: keep the glow, drop the animation.
-   The affordance is the point; the movement is the flourish. */
-@media (prefers-reduced-motion: reduce) {
-  .play-target-glow {
-    animation: none;
-    box-shadow:
-      0 0 0 3px rgba(217, 85, 85, 0.45),
-      0 0 18px 4px rgba(217, 85, 85, 0.6);
-  }
-}
