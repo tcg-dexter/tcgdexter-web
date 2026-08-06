@@ -356,7 +356,16 @@ export function PokemonCardImage({
   energyIconSize?: number;
   /** Play mode: overrides the inspector tap with a game action. */
   onClick?: () => void;
-  /** Play mode: accent ring marking a legal target. */
+  /** Play mode: accent glow marking a legal target.
+   *
+   *  This is the whole targeting affordance now — picking a target is done
+   *  by tapping the board, not by an overlay list — so it has to read as
+   *  "tap me" at a glance rather than as a subtle border.
+   *
+   *  Styled entirely by `.play-target-glow` (globals.css) rather than
+   *  Tailwind's `ring-*`: the ring utilities ARE box-shadows, so the glow
+   *  animation would have overridden them and left a ring class that
+   *  silently did nothing. */
   highlight?: boolean;
 }) {
   const inspect = useContext(InspectContext);
@@ -389,9 +398,9 @@ export function PokemonCardImage({
 
   return (
     <div
-      className={`relative bg-black shadow-sm ${clickable ? "cursor-pointer" : ""} ${
-        highlight ? "ring-2 ring-accent" : ""
-      }`}
+      className={`relative bg-black shadow-sm transition-[box-shadow,transform] duration-150 ${
+        clickable ? "cursor-pointer" : ""
+      } ${highlight ? "play-target-glow" : ""}`}
       style={{ width: m.containerW, borderRadius: m.radius, padding: m.pad }}
       title={mon.name}
       role={clickable ? "button" : undefined}

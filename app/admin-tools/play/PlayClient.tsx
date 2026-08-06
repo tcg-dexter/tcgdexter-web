@@ -162,11 +162,13 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
   } | null>(null);
   /** Own-Pokémon target chooser (attach energy, evolve, Crispin, Rare
    *  Candy) — an explicit list so targeting never depends on board taps. */
-  const [ownTargetChooser, setOwnTargetChooser] = useState<{
-    label: string;
-    /** `moves` holds every move for that target — normally one, but more when
-     *  an on-attach trigger adds `attachPicks`, which is then a second choice. */
-    choices: { move: InteractiveMove; monId: string; moves?: InteractiveMove[] }[];
+  /** A stage-1 choice (which Energy, which split) that must narrow the
+   *  moves board-targeting will consider. Stored as the discriminating
+   *  fields rather than a predicate so it stays plain serializable state. */
+  const [pendingNarrow, setPendingNarrow] = useState<{
+    discardPickId?: string;
+    attachCardId?: string;
+    toHandCardId?: string;
   } | null>(null);
   /** Tapping one of YOUR OWN Pokémon opens its attacks + abilities. The
    *  action bar has always carried these, but nothing happened when you
@@ -212,6 +214,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
   function absorb(next: PlayResponse) {
     setGame(next);
     setPendingCardId(null);
+    setPendingNarrow(null);
     setRetreatMode(false);
     setPickerMoves(null);
     setBossMoves(null);
@@ -219,7 +222,6 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     setDiscardStage(null);
     setAbilityTargeting(null);
     setCounterPlace(null);
-    setOwnTargetChooser(null);
     setEffectChooser(null);
     if (next.ai_actions.length > 0) {
       setLog((old) => [...old.slice(-30), ...next.ai_actions.map((a) => `T${a.turn} · ${a.description}`)]);
@@ -295,6 +297,8 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     byKind("attach").filter((m) => m.cardId === cardId).map((m) => m.targetId);
   const evolveTargets = (cardId: string) =>
     byKind("evolve").filter((m) => m.cardId === cardId).map((m) => m.targetId);
+  const toolTargets = (cardId: string) =>
+    byKind("attach_tool").filter((m) => m.cardId === cardId).map((m) => m.targetId);
   const cardIsPlayable = (cardId: string) =>
     options.some(
       (m) =>
@@ -304,6 +308,16 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
   /** Declarative-effect moves sourced from a given hand card. */
   const effectMovesFor = (cardId: string) =>
     options.filter((m): m is EffectMove => m.kind === "effect" && m.sourceId === cardId);
+  /** Trainer moves the pending card can still make, after any stage-1
+   *  choice. Shared by the glow and by the commit so they cannot disagree
+   *  about which Pokémon are legal. */
+  const pendingTrainerMoves = (cardId: string) =>
+    trainerMovesFor(cardId).filter(
+      (m) =>
+        (pendingNarrow?.discardPickId == null || m.discardPickId === pendingNarrow.discardPickId) &&
+        (pendingNarrow?.attachCardId == null || m.attachCardId === pendingNarrow.attachCardId) &&
+        (pendingNarrow?.toHandCardId == null || m.toHandCardId === pendingNarrow.toHandCardId),
+    );
   const trainerMovesFor = (cardId: string) =>
     options.filter(
       (m): m is Extract<InteractiveMove, { kind: "play_trainer" }> =>
@@ -315,39 +329,12 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     ? new Set([
         ...attachTargets(pendingCardId),
         ...evolveTargets(pendingCardId),
-        ...trainerMovesFor(pendingCardId)
+        ...toolTargets(pendingCardId),
+        ...pendingTrainerMoves(pendingCardId)
           .map((m) => m.monId)
           .filter((id): id is string => id != null),
       ])
     : new Set<string>();
-
-  /** Open the own-Pokémon target chooser. `alwaysAsk` forces the picker
-   *  even for a single candidate (energy attach, so the target is always an
-   *  explicit choice). */
-  function chooseOwnTarget(
-    label: string,
-    choices: { move: InteractiveMove; monId: string }[],
-    alwaysAsk = false,
-  ) {
-    if (choices.length === 0) return;
-    // Several moves may share a target and differ only in `attachPicks` (an
-    // on-attach trigger). Collapse to one entry per target so the target
-    // picker isn't showing the same Pokémon twice, then resolve the pick.
-    const byMon = new Map<string, InteractiveMove[]>();
-    for (const c of choices) {
-      const list = byMon.get(c.monId) ?? [];
-      list.push(c.move);
-      byMon.set(c.monId, list);
-    }
-    const unique = Array.from(byMon, ([monId, moves]) => ({ monId, moves }));
-    if (unique.length === 1 && !alwaysAsk) {
-      return void sendOrChoose(label, unique[0].moves);
-    }
-    setOwnTargetChooser({
-      label,
-      choices: unique.map(({ monId, moves }) => ({ monId, move: moves[0], moves })),
-    });
-  }
 
   /** Display names carried by ANY pick-bearing move.
    *
@@ -423,8 +410,30 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     return null;
   }
 
+  /** Enter board-targeting for a hand card: it stays selected, every legal
+   *  recipient glows, and a tap on one commits. The rule the player learns
+   *  is "if the only decision left is WHICH of my Pokémon, tap the board",
+   *  so every such path enters through here and clears the same competing
+   *  modes rather than leaving two selections live at once. */
+  function beginBoardTarget(cardId: string, narrow: typeof pendingNarrow = null) {
+    setPendingCardId(cardId);
+    setPendingNarrow(narrow);
+    setRetreatMode(false);
+    setBossMoves(null);
+    setBenchPickMoves(null);
+    setAbilityTargeting(null);
+    setPickerMoves(null);
+    setMonPanel(null);
+  }
+
   function handleHandClick(cardId: string) {
     if (!game) return;
+    // Tapping the already-selected card puts it back down. Targeting is a
+    // mode, and a mode needs an obvious way out from where you entered it.
+    if (pendingCardId === cardId) {
+      setPendingNarrow(null);
+      return void setPendingCardId(null);
+    }
     // Opening board: tapping a Basic places it, Active first then the Bench.
     if (game.status === "human_setup") {
       const place = options.find(
@@ -459,11 +468,9 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
           new Set(trainers.map((m) => m.discardPickName ?? m.discardPickId!)),
         );
         if (energyKeys.length <= 1) {
-          // Single Energy type ⇒ skip straight to the target chooser.
-          return void chooseOwnTarget(
-            card?.name ?? "Attach",
-            trainers.map((m) => ({ move: m as InteractiveMove, monId: m.monId! })),
-          );
+          // Only one Energy to choose from, so the sole remaining decision
+          // is WHICH of our Pokémon — which is a board tap.
+          return void beginBoardTarget(cardId);
         }
         const reps = energyKeys.map(
           (k) => trainers.find((m) => (m.discardPickName ?? m.discardPickId) === k)!,
@@ -480,10 +487,8 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
           splits.set(key, [...(splits.get(key) ?? []), m]);
         }
         if (splits.size <= 1) {
-          return void chooseOwnTarget(
-            card?.name ?? "Attach",
-            trainers.map((m) => ({ move: m as InteractiveMove, monId: m.monId! })),
-          );
+          // Only one split available ⇒ target on the board, as above.
+          return void beginBoardTarget(cardId);
         }
         return void setPickerMoves(Array.from(splits.values(), (ms) => ms[0]));
       }
@@ -501,13 +506,12 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
         return void sendOrChoose(card?.name ?? "Play", trainers);
       }
       if (first.monId != null) {
-        // Crispin / Rare Candy: pick which own Pokémon.
-        return void chooseOwnTarget(
-          card?.name ?? "Play",
-          trainers
-            .filter((m) => m.monId != null)
-            .map((m) => ({ move: m as InteractiveMove, monId: m.monId! })),
-        );
+        // Rare Candy: a pure "which of my Pokémon" pick, so it targets on
+        // the board like an attach or an evolution. (Crispin and N's PP Up
+        // do NOT come through here — their first stage is chosen in a list
+        // and pendingCardId cannot carry that choice forward.)
+        beginBoardTarget(cardId);
+        return;
       }
       return void sendMove(first); // no choices (Iono, Research, …)
     }
@@ -551,19 +555,14 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
         m.cardId === cardId,
     );
     if (targeted.length > 0) {
-      const isAttach = targeted[0].kind === "attach";
-      const verb = isAttach
-        ? `Attach ${card?.name ?? "Energy"}`
-        : targeted[0].kind === "attach_tool"
-          ? `Attach ${card?.name ?? "Tool"}`
-          : `Evolve into ${card?.name ?? ""}`;
-      // Energy attach always asks (target is an explicit choice, even with
-      // a single Pokémon in play).
-      return void chooseOwnTarget(
-        verb,
-        targeted.map((m) => ({ move: m, monId: m.targetId })),
-        isAttach,
-      );
+      // Attach Energy, attach a Tool, evolve: the target is picked ON THE
+      // BOARD. The card stays selected in hand and every Pokémon that can
+      // legally receive it glows; tapping one commits. An overlay list of
+      // the same Pokémon that are already on screen is a second, redundant
+      // representation of the board — and it hides the board you are
+      // choosing from.
+      beginBoardTarget(cardId);
+      return;
     }
   }
 
@@ -580,29 +579,22 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
         setDiscardStage({ move: m, need, picked: [] });
         return;
       }
-      // Crispin stage 2: the chosen Energy split still needs a target.
+      // Stage 2 for both two-stage trainers (Crispin's Energy split, N's PP
+      // Up's discard-pile Energy): the only decision left is WHICH of our
+      // Pokémon, so it targets on the board like everything else. The
+      // stage-1 choice rides along as the narrowing, so only the Pokémon
+      // that can receive THAT Energy glow.
       if (m.attachCardId != null && m.monId != null) {
-        const targets = trainerMovesFor(m.cardId).filter(
-          (x) => x.attachCardId === m.attachCardId && x.toHandCardId === m.toHandCardId,
-        );
         setPickerMoves(null);
-        chooseOwnTarget(
-          `Attach ${m.attachCardName ?? "Energy"}`,
-          targets.map((x) => ({ move: x as InteractiveMove, monId: x.monId! })),
-          true,
-        );
+        beginBoardTarget(m.cardId, {
+          attachCardId: m.attachCardId,
+          toHandCardId: m.toHandCardId,
+        });
         return;
       }
-      // N's PP Up stage 2: the chosen Energy still needs a Benched target.
       if (m.monId != null && m.discardPickId != null) {
-        const targets = trainerMovesFor(m.cardId).filter(
-          (x) => x.discardPickId === m.discardPickId,
-        );
         setPickerMoves(null);
-        chooseOwnTarget(
-          game.view.hand.find((c) => c.id === m.cardId)?.name ?? "Attach",
-          targets.map((x) => ({ move: x as InteractiveMove, monId: x.monId! })),
-        );
+        beginBoardTarget(m.cardId, { discardPickId: m.discardPickId });
         return;
       }
     }
@@ -620,14 +612,29 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     });
   }
 
+  /** Commit the pending hand card onto the tapped Pokémon.
+   *
+   *  Several moves can share one (card, target) pair and differ only in a
+   *  further pick — an Energy with an on-attach trigger, an evolution with
+   *  an on-evolve trigger. Taking `.find()` would silently choose for the
+   *  player, the exact bug class the choice audit exists to catch, so the
+   *  remainder goes to the chooser. */
   function sendTargeted(monId: string) {
     if (!pendingCardId) return;
-    const move =
-      options.find(
-        (m) => "cardId" in m && m.cardId === pendingCardId && "targetId" in m && m.targetId === monId,
-      ) ?? trainerMovesFor(pendingCardId).find((m) => m.monId === monId);
-    if (move) void sendMove(move);
+    const onTarget = options.filter(
+      (m) => "cardId" in m && m.cardId === pendingCardId && "targetId" in m && m.targetId === monId,
+    );
+    const moves =
+      onTarget.length > 0
+        ? onTarget
+        : pendingTrainerMoves(pendingCardId).filter((m) => m.monId === monId);
+    if (moves.length === 0) return;
+    const name = view.hand.find((c) => c.id === pendingCardId)?.name;
+    setPendingCardId(null);
+    setPendingNarrow(null);
+    sendOrChoose(name ?? "Play", moves);
   }
+
 
   /* ── Screens ── */
 
@@ -737,6 +744,16 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
   }
 
   const view: ClientView = game.view;
+
+  /** What the pending hand card is about to do, for the status line. */
+  const pendingVerb: string | null = (() => {
+    if (!pendingCardId) return null;
+    const name = view.hand.find((c) => c.id === pendingCardId)?.name ?? "this card";
+    if (byKind("evolve").some((m) => m.cardId === pendingCardId)) return `Evolve into ${name}`;
+    if (byKind("attach_tool").some((m) => m.cardId === pendingCardId)) return `Attach ${name}`;
+    if (byKind("attach").some((m) => m.cardId === pendingCardId)) return `Attach ${name}`;
+    return `Play ${name}`;
+  })();
   const images = game.images;
   const attacks = byKind("attack");
   /** Attacks grouped by index. `legalMoves` emits one move per rider-pick
@@ -797,9 +814,15 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     onActiveClick:
       pendingCardId && view.board.active && pendingTargets.has(view.board.active.id)
         ? () => sendTargeted(view.board.active!.id)
-        : view.board.active
-          ? () => setMonPanel(view.board.active!.id)
-          : undefined,
+        : pendingCardId
+          ? // Targeting is live and this Pokémon can't take the card: ignore
+            // the tap rather than opening its attack panel, which would drop
+            // the player into an unrelated screen and quietly abandon the
+            // card they were placing.
+            () => {}
+          : view.board.active
+            ? () => setMonPanel(view.board.active!.id)
+            : undefined,
     highlightActive:
       pendingCardId != null && view.board.active != null && pendingTargets.has(view.board.active.id),
     onBenchClick: benchActs
@@ -817,6 +840,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
           }
           const mon = view.board.bench[i];
           if (mon && pendingTargets.has(mon.id)) return void sendTargeted(mon.id);
+          if (pendingCardId) return; // not a legal target — see onActiveClick
           if (mon) setMonPanel(mon.id);
         }
       : (i: number) => {
@@ -953,7 +977,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
             : benchPickMoves
               ? "Pick a benched Pokémon"
               : pendingCardId
-                ? "Pick a target Pokémon"
+                ? `${pendingVerb ?? "Play"} — tap a glowing Pokémon`
                 : retreatMode
                   ? "Pick a benched Pokémon to retreat into"
                   : "Your move"
@@ -1037,6 +1061,10 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                 <button
                   onClick={() => {
                     setPendingCardId(null);
+                    // …and the stage-1 choice it was carrying, or the next
+                    // target pick stays narrowed by a decision the player
+                    // just backed out of.
+                    setPendingNarrow(null);
                     setRetreatMode(false);
                     setBossMoves(null);
                     setBenchPickMoves(null);
@@ -1454,74 +1482,6 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
             >
               Confirm &amp; play
             </button>
-          </div>
-        </div>
-      )}
-      {/* Own-Pokémon target chooser (attach energy, evolve, Crispin, Rare
-          Candy) — explicit list so targeting never relies on a board tap. */}
-      {ownTargetChooser && (
-        <div
-          className="fixed inset-0 z-40 flex items-center justify-center p-4"
-          style={{ background: "rgba(242,242,242,0.92)" }}
-          role="dialog"
-          aria-modal="true"
-          aria-label={ownTargetChooser.label}
-          onClick={() => setOwnTargetChooser(null)}
-        >
-          <div
-            className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-2xl border border-black/8 bg-white p-4 shadow-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-xs font-semibold text-text-primary">
-                {ownTargetChooser.label} — choose a Pokémon
-              </span>
-              <button onClick={() => setOwnTargetChooser(null)} className="text-[10px] font-semibold text-accent">
-                cancel
-              </button>
-            </div>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {ownTargetChooser.choices.map((choice, i) => {
-                const mon = [view.board.active, ...view.board.bench].find((m) => m?.id === choice.monId);
-                const img = mon ? images[mon.name] : null;
-                const isActive = view.board.active?.id === choice.monId;
-                return (
-                  <button
-                    key={`${choice.monId}-${i}`}
-                    onClick={() => {
-                      // Target chosen. If that target's move carries an
-                      // on-attach trigger with alternatives, ask for those too.
-                      const label = ownTargetChooser.label;
-                      setOwnTargetChooser(null);
-                      sendOrChoose(label, choice.moves ?? [choice.move]);
-                    }}
-                    disabled={loading}
-                    className="flex flex-col items-center gap-1 rounded-lg border border-black/8 p-1.5 hover:border-accent disabled:opacity-50"
-                  >
-                    {img ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={img}
-                        alt={mon?.name ?? ""}
-                        className="w-full rounded-md shadow-sm"
-                        onError={(e) => {
-                          if (e.currentTarget.src !== CARD_BACK_URL) e.currentTarget.src = CARD_BACK_URL;
-                        }}
-                      />
-                    ) : (
-                      <div className="flex aspect-[5/7] w-full items-center justify-center rounded-md border border-black/15 bg-surface p-1 text-center text-[8px] font-semibold text-text-secondary">
-                        {mon?.name ?? "?"}
-                      </div>
-                    )}
-                    <span className="text-center text-[9px] font-semibold leading-tight text-text-secondary">
-                      {mon?.name ?? "?"}
-                      {isActive ? " (Active)" : ""}
-                      {mon && mon.energy.length > 0 ? ` · ${mon.energy.length}⚡` : ""}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
           </div>
         </div>
       )}
