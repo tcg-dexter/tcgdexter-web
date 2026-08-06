@@ -449,6 +449,10 @@ export function applyMove(
             picks: move.riderPicks ?? [],
             discardCardIds: move.riderDiscardCardIds,
             copyPick: move.copyPick,
+            // A copied attack can carry its own bench placement (Flamebody
+            // Cannon), so the player's targets have to reach the copy op.
+            benchDamageTargets: move.benchDamageTargets,
+            benchCounters: move.benchCounters,
           },
           rng,
           attacker,

@@ -68,6 +68,10 @@ export interface EffectMove {
    *  on the ATTACK move, not here, so this is only ever set by the driver
    *  forwarding it into the rider's effect. */
   copyPick?: { monId: string; attackIndex: number };
+  /** Bench targets for a copied attack's placement effect. Same provenance as
+   *  copyPick: set only by the driver forwarding the attack move's fields. */
+  benchDamageTargets?: string[];
+  benchCounters?: string[];
 }
 
 /* ─── Candidate resolution ──────────────────────────────────────── */
@@ -545,6 +549,8 @@ export function applyEffect(
     selfCardName: move.card,
     discardCardIds: move.discardCardIds,
     copyPick: move.copyPick,
+    benchDamageTargets: move.benchDamageTargets,
+    benchCounters: move.benchCounters,
   };
   applyOps(effect.ops, ctx);
 

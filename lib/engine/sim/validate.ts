@@ -7,7 +7,7 @@
 
 import type { GameState, PokemonInPlay } from "../types";
 import { copyChoices, legalMoves, type SimMove, type TurnContext } from "./moves";
-import { attackBenchCounterCount, attackBenchDamageTargets } from "./attacks";
+import { attackEffect, attackPlacement } from "./attacks";
 import { isSupporter, trainerDiscardCost } from "./trainers";
 import { enumerateEffect, type EffectMove } from "./effects/runtime";
 import {
@@ -171,17 +171,43 @@ export function isLegalHumanMove(
     if (!attacker) return false;
     const oppBench = state.sides[actor === "player" ? "opponent" : "player"].bench;
     const onBench = (id: string) => oppBench.some((m) => m.id === id);
+    // A copied attack (Night Joker). The pick is not part of the picks
+    // fingerprint, so without this a forged move could copy ANY attack in
+    // the game — including one on a Pokémon that isn't even on our bench.
+    // Checked FIRST because the copied attack sets the placement budget below.
+    let copied: { name: string; card: string } | null = null;
+    if (move.copyPick != null) {
+      const attackName = attacker.card.catalog?.attacks[move.attackIndex]?.name ?? "";
+      const offered = copyChoices(state, actor, attacker, attackName);
+      const pick = offered.find(
+        (c) => c.monId === move.copyPick!.monId && c.attackIndex === move.copyPick!.attackIndex,
+      );
+      if (!pick) return false;
+      const donor = [state.sides[actor].active, ...state.sides[actor].bench].find(
+        (m) => m?.id === move.copyPick!.monId,
+      );
+      const donorAttack = donor?.card.catalog?.attacks[move.copyPick.attackIndex];
+      if (donorAttack) copied = { name: donorAttack.name, card: donor!.card.name };
+    }
+
+    // Bench placement budgets. A COPIED attack brings its own placement along
+    // (Night Joker copying Flamebody Cannon), so the budget is the copied
+    // attack's, not Night Joker's own — otherwise the player's chosen Bench
+    // target would be rejected as a forgery.
+    const placement = copied
+      ? attackPlacement(copied.card, copied.name)
+      : attackEffect(attacker, move.attackIndex);
     // Bench-counter allocation: one entry per counter (repeats allowed),
     // every target on the opponent's bench. Full count required when the
     // bench is non-empty; empty when there's no bench (the counters fizzle).
     if (move.benchCounters != null) {
-      const need = attackBenchCounterCount(attacker, move.attackIndex);
+      const need = placement?.kind === "bench_counters" ? placement.counters : 0;
       const expected = oppBench.length > 0 ? need : 0;
       if (move.benchCounters.length !== expected) return false;
       if (!move.benchCounters.every(onBench)) return false;
     }
     if (move.benchDamageTargets != null) {
-      const targets = attackBenchDamageTargets(attacker, move.attackIndex);
+      const targets = placement?.kind === "bench_damage" ? placement.targets : 0;
       if (move.benchDamageTargets.length > targets) return false;
       if (new Set(move.benchDamageTargets).size !== move.benchDamageTargets.length) return false;
       if (!move.benchDamageTargets.every(onBench)) return false;
@@ -201,18 +227,6 @@ export function isLegalHumanMove(
       if (ids.length !== need) return false;
       if (new Set(ids).size !== ids.length) return false;
       if (!ids.every((id) => side.hand.some((c) => c.id === id))) return false;
-    }
-
-    // A copied attack (Night Joker). The pick is not part of the picks
-    // fingerprint, so without this a forged move could copy ANY attack in
-    // the game — including one on a Pokémon that isn't even on our bench.
-    if (move.copyPick != null) {
-      const attackName = attacker.card.catalog?.attacks[move.attackIndex]?.name ?? "";
-      const offered = copyChoices(state, actor, attacker, attackName);
-      const ok = offered.some(
-        (c) => c.monId === move.copyPick!.monId && c.attackIndex === move.copyPick!.attackIndex,
-      );
-      if (!ok) return false;
     }
 
     // Declarative rider picks (Cruel Arrow's target). The rider resolves inside

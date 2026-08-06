@@ -17,6 +17,7 @@ import { toolDamageBonus } from "./tools";
 import { auraDamageBonus } from "./auras";
 import { stadiumDamageBonus } from "./stadiums";
 import { damageScaleEffect, riderDamageEstimate } from "./effects/cards";
+import { attackPlacement } from "./effects/placement";
 import { evalDamageFormula } from "./effects/runtime";
 
 /* ─── Damage scaling ────────────────────────────────────────────── */
@@ -124,55 +125,24 @@ export function activeDamageBonus(
 
 /* ─── Placement / side effects ──────────────────────────────────── */
 
-export type AttackEffect =
-  /** Put N damage counters on the opponent's Benched Pokémon, any way. */
-  | { kind: "bench_counters"; counters: number }
-  /** Deal `amount` raw damage to 1 Benched Pokémon; optionally discard all
-   *  Energy from the attacker first. */
-  | { kind: "bench_damage"; amount: number; targets: number; discardSelfEnergy?: boolean };
-
-const ATTACK_EFFECTS: Record<string, AttackEffect> = {
-  // Phantom Dive: put 6 damage counters on the opponent's Bench, any way.
-  "Dragapult ex::Phantom Dive": { kind: "bench_counters", counters: 6 },
-  // Flamebody Cannon: discard all Energy from this Pokémon; 90 to 1 Bench.
-  "N's Darmanitan::Flamebody Cannon": {
-    kind: "bench_damage",
-    amount: 90,
-    targets: 1,
-    discardSelfEnergy: true,
-  },
-};
+// The table itself moved to effects/placement.ts so the COPY path can read it
+// too (primitives.ts cannot import this module without a cycle). Re-exported
+// here because this is where the rest of the engine already looks for it.
+export {
+  attackPlacement,
+  attackEffect,
+  attackBenchCounterCount,
+  attackBenchDamageTargets,
+  discardAllEnergy,
+  type AttackEffect,
+} from "./effects/placement";
 
 /** Effect-coverage predicate (W1): does this attack have a modeled damage
  *  scaler or placement/side effect? (Attack-inflicted conditions and
  *  self-clear are checked separately in conditions.ts.) */
 export function isAttackModeled(cardName: string, attackName: string): boolean {
   return (
-    `${cardName}::${attackName}` in ATTACK_EFFECTS ||
+    attackPlacement(cardName, attackName) !== null ||
     damageScaleEffect(cardName, attackName) !== null
   );
-}
-
-export function attackEffect(attacker: PokemonInPlay, attackIndex: number): AttackEffect | null {
-  const attack = attacker.card.catalog?.attacks[attackIndex];
-  if (!attack) return null;
-  return ATTACK_EFFECTS[`${attacker.card.name}::${attack.name}`] ?? null;
-}
-
-/** How many bench damage counters this attack asks the player to place
- *  (0 when it has no placement effect). Drives the UI/validation. */
-export function attackBenchCounterCount(attacker: PokemonInPlay, attackIndex: number): number {
-  const eff = attackEffect(attacker, attackIndex);
-  return eff?.kind === "bench_counters" ? eff.counters : 0;
-}
-
-export function attackBenchDamageTargets(attacker: PokemonInPlay, attackIndex: number): number {
-  const eff = attackEffect(attacker, attackIndex);
-  return eff?.kind === "bench_damage" ? eff.targets : 0;
-}
-
-/** Discard all Energy from a Pokémon (Flamebody Cannon cost). */
-export function discardAllEnergy(mon: PokemonInPlay, discard: CardInstance[]): void {
-  discard.push(...mon.attachedEnergy);
-  mon.attachedEnergy = [];
 }

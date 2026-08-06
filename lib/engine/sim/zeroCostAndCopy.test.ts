@@ -157,3 +157,140 @@ describe("Night Joker — which attack to copy is the player's", () => {
     expect(legal({ monId: real.monId, attackIndex: 99 })).toBe(false);
   });
 });
+
+// A copied attack brings its WHOLE text along, not just its printed number.
+// N's Zoroark ex copying N's Darmanitan's Flamebody Cannon has to discard N's
+// Zoroark's own Energy ("this Pokémon" is the copier) and hit the opponent's
+// Bench for 90 — and the Bench target is the player's to choose, on both the
+// direct and the copied path.
+describe("Flamebody Cannon — the Bench hit and the Energy cost", () => {
+  /** Darmanitan Active (or benched, for the copy) with two Pokémon to aim at:
+   *  a fat one the auto-picker prefers, and a small one it wouldn't touch. */
+  function cannonState(copier: boolean): GameState {
+    const deck = instantiateDeck(
+      [
+        "Pokémon: 12",
+        "4 N's Darumaka",
+        "4 N's Darmanitan",
+        "4 N's Zoroark ex",
+        "Trainer: 8",
+        "8 Nest Ball SVI 181",
+        "Energy: 40",
+        "40 Basic Fire Energy",
+      ].join("\n"),
+      "f",
+    );
+    const state = buildSimInitialState(deck, deck, mulberry32(7), "player");
+    beginTurn(state, "player", 1);
+    beginTurn(state, "opponent", 1);
+    beginTurn(state, "player", 2);
+    const me = state.sides.player;
+    me.active = mon(copier ? "N's Zoroark ex" : "N's Darmanitan");
+    // Whatever the attacker's own attack costs — Night Joker is Darkness,
+    // Flamebody Cannon is Fire — has to be payable, or there is no legal
+    // attack for the validator to compare against.
+    const fuel = copier ? "Basic Darkness Energy" : "Basic Fire Energy";
+    for (let i = 0; i < 3; i++) me.active.attachedEnergy.push(card(fuel));
+    if (copier) me.bench = [mon("N's Darmanitan")];
+    state.sides.opponent.active = mon("N's Zoroark ex"); // 280 HP, survives
+    // Snorlax (90 HP) is what the auto-picker takes: 90 damage KOs it.
+    state.sides.opponent.bench = [mon("Snorlax"), mon("N's Zoroark ex")];
+    return state;
+  }
+
+  const cannonIndex = () =>
+    lookupCard("N's Darmanitan")!.attacks.findIndex((a) => a.name === "Flamebody Cannon");
+
+  it("aims at the Pokémon the player chose, not the one the AI would take", () => {
+    const state = cannonState(false);
+    const attackIndex = cannonIndex();
+    const [snorlax, zoroark] = state.sides.opponent.bench;
+    // The auto-picker prefers Snorlax (90 damage KOs it), so choosing the
+    // Zoroark is a result the fallback could not have produced.
+    applyMove(
+      state,
+      "player",
+      { kind: "attack", attackIndex, benchDamageTargets: [zoroark.id] },
+      { retreated: false },
+      mulberry32(1),
+    );
+    expect(zoroark.damage).toBe(90);
+    expect(snorlax.damage).toBe(0);
+    expect(state.sides.player.active!.attachedEnergy).toHaveLength(0);
+  });
+
+  it("still auto-aims when nobody chose (the AI path is unchanged)", () => {
+    const state = cannonState(false);
+    applyMove(
+      state,
+      "player",
+      { kind: "attack", attackIndex: cannonIndex() },
+      { retreated: false },
+      mulberry32(1),
+    );
+    const hit = state.sides.opponent.bench.filter((m) => m.damage > 0);
+    expect(hit).toHaveLength(1);
+  });
+
+  it("copying it discards the COPIER's Energy and hits the Bench", () => {
+    const state = cannonState(true);
+    const attacker = state.sides.player.active!;
+    const attackIndex = attacker.card.catalog!.attacks.findIndex((a) => a.name === "Night Joker");
+    const pick = copyChoices(state, "player", attacker, "Night Joker").find(
+      (c) => c.attackName === "Flamebody Cannon",
+    )!;
+    expect(pick).toBeTruthy();
+    const [, zoroark] = state.sides.opponent.bench;
+    applyMove(
+      state,
+      "player",
+      { kind: "attack", attackIndex, copyPick: pick, benchDamageTargets: [zoroark.id] },
+      { retreated: false },
+      mulberry32(1),
+    );
+    // Printed 90 to the Active, 90 to the chosen Bench Pokémon.
+    expect(state.sides.opponent.active!.damage).toBe(90);
+    expect(zoroark.damage).toBe(90);
+    // "This Pokémon" is N's Zoroark, the copier — not the donor Darmanitan.
+    expect(attacker.attachedEnergy).toHaveLength(0);
+    expect(state.sides.player.bench[0].attachedEnergy).toHaveLength(0);
+    expect(state.sides.player.discard.filter((c) => c.name.includes("Energy"))).toHaveLength(3);
+  });
+
+  it("validates the Bench target against the COPIED attack's budget", () => {
+    const state = cannonState(true);
+    const attacker = state.sides.player.active!;
+    const attackIndex = attacker.card.catalog!.attacks.findIndex((a) => a.name === "Night Joker");
+    const copyPick = copyChoices(state, "player", attacker, "Night Joker").find(
+      (c) => c.attackName === "Flamebody Cannon",
+    )!;
+    const ctx = { retreated: false };
+    const bench = state.sides.opponent.bench;
+    // Night Joker itself places nothing; the budget comes from the copy.
+    expect(
+      isLegalHumanMove(state, "player", ctx, {
+        kind: "attack",
+        attackIndex,
+        copyPick,
+        benchDamageTargets: [bench[0].id],
+      }),
+    ).toBe(true);
+    // One target is all the copied attack allows, and it must be on the bench.
+    expect(
+      isLegalHumanMove(state, "player", ctx, {
+        kind: "attack",
+        attackIndex,
+        copyPick,
+        benchDamageTargets: [bench[0].id, bench[1].id],
+      }),
+    ).toBe(false);
+    expect(
+      isLegalHumanMove(state, "player", ctx, {
+        kind: "attack",
+        attackIndex,
+        copyPick,
+        benchDamageTargets: [state.sides.opponent.active!.id],
+      }),
+    ).toBe(false);
+  });
+});

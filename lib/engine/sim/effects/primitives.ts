@@ -9,7 +9,14 @@ import { shuffle, type Rng } from "../rng";
 import { benchCap } from "../stadiums";
 import { toPokemonInPlay } from "../setup";
 import { applyCondition, clearConditions } from "../conditions";
-import { placeCounters, moveCounters, dealRawDamage } from "../damage";
+import {
+  placeCounters,
+  moveCounters,
+  dealRawDamage,
+  placeBenchDamage,
+  placeAttackCounters,
+} from "../damage";
+import { attackPlacement, discardAllEnergy } from "./placement";
 import { applyWeaknessResistance } from "../moves";
 import { pickDiscards } from "../trainers";
 import { promoteBest } from "../policy";
@@ -49,6 +56,12 @@ export interface OpContext {
   /** The player's chosen (Pokémon, attack) for a copy op. Absent on the AI
    *  path, which falls back to bestCopy. */
   copyPick?: { monId: string; attackIndex: number };
+  /** Player-chosen bench targets for a COPIED attack's placement effect —
+   *  the same fields the attack move carries for the direct path, forwarded
+   *  so a copied Flamebody Cannon lets the player choose its Bench target
+   *  just as the original does. Absent on the AI path (damage.ts allocates). */
+  benchDamageTargets?: string[];
+  benchCounters?: string[];
   /** Player-chosen hand cards paying a `discard_hand_cards` cost. */
   discardCardIds?: string[];
 }
@@ -372,6 +385,17 @@ export function applyOp(op: EffectOp, ctx: OpContext): void {
       const dmg = parseInt(attack.damage, 10);
       if (Number.isFinite(dmg) && dmg > 0) {
         dealRawDamage(defender, applyWeaknessResistance(dmg, ctx.source, defender, state));
+      }
+      // The copied attack's PLACEMENT text comes along as well. N's Zoroark ex
+      // copying Flamebody Cannon discards N's Zoroark's own Energy ("this
+      // Pokémon" is the copier) and hits the opponent's Bench for 90; before
+      // this, copying stripped the drawback and kept the damage.
+      const placement = attackPlacement(donor!.card.name, attack.name);
+      if (placement?.kind === "bench_damage") {
+        if (placement.discardSelfEnergy) discardAllEnergy(ctx.source, side.discard);
+        placeBenchDamage(opp, placement.amount, placement.targets, ctx.benchDamageTargets);
+      } else if (placement?.kind === "bench_counters") {
+        placeAttackCounters(opp, placement.counters, ctx.benchCounters, state);
       }
       // Using an attack "as this attack" means its drawbacks come along too:
       // copying N's Zekrom's Rampaging Thunder locks the COPIER down next

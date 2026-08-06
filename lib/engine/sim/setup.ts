@@ -127,7 +127,13 @@ import { auraEnergyUnits } from "./auras";
 // Also: which attack a copy-attack borrows (Night Joker) is now the human's
 // choice rather than the engine's best-tempo pick; the AI's enumeration is
 // unchanged (expandAuto).
-export const SIM_VERSION = 23;
+// v24: RULE FIX — a COPIED attack now carries its placement text, not just
+// its printed number. Night Joker copying N's Darmanitan's Flamebody Cannon
+// discards the COPIER's Energy ("this Pokémon") and hits the opponent's Bench
+// for 90; before this, copying kept the damage and shed the drawback, which
+// made the copy strictly better than the original. Changes headless play for
+// any deck that copies a placement attack.
+export const SIM_VERSION = 24;
 
 const MAX_MULLIGANS = 20;
 

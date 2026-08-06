@@ -30,6 +30,7 @@ import { stadiumHandCost, stadiumTopDecks } from "@/lib/engine/sim/stadiums";
 import { attackRiderDiscardCost, effectOwnHandTrimTo } from "@/lib/engine/sim/effects/cards";
 import { effectAbilityName, effectDiscardCost, effectDiscardFilter } from "@/lib/engine/sim/effects/cards";
 import { cardMatches } from "@/lib/engine/sim/effects/match";
+import { attackPlacement } from "@/lib/engine/sim/effects/placement";
 import { lookupCard } from "@/lib/engine/catalog";
 import type { CardFilter } from "@/lib/engine/sim/effects/types";
 import { activatedHandDiscard } from "@/lib/engine/sim/abilities";
@@ -155,10 +156,15 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     label: string;
     moves: Extract<InteractiveMove, { kind: "use_ability" }>[];
   } | null>(null);
-  /** Counter-placement mode: an attack that drops N counters on the AI's
-   *  bench, placed one tap at a time. */
-  const [counterPlace, setCounterPlace] = useState<{
-    attackIndex: number;
+  /** Bench-placement mode: an attack that puts damage counters (Phantom Dive)
+   *  or raw damage (Flamebody Cannon) on the AI's bench, chosen one tap at a
+   *  time. The whole MOVE is held, not just its index, because the attack may
+   *  carry a copy pick — a copied Flamebody Cannon asks for its Bench target
+   *  exactly as the original does. */
+  const [benchPlace, setBenchPlace] = useState<{
+    move: Extract<InteractiveMove, { kind: "attack" }>;
+    mode: "counters" | "damage";
+    label: string;
     total: number;
     placed: string[];
   } | null>(null);
@@ -223,7 +229,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     setBenchPickMoves(null);
     setDiscardStage(null);
     setAbilityTargeting(null);
-    setCounterPlace(null);
+    setBenchPlace(null);
     setEffectChooser(null);
     if (next.ai_actions.length > 0) {
       setLog((old) => [...old.slice(-30), ...next.ai_actions.map((a) => `T${a.turn} · ${a.description}`)]);
@@ -377,6 +383,39 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     const copy = (m as { copyPick?: { monName?: string; attackName?: string } }).copyPick;
     if (!copy) return null;
     return `${copy.monName ?? "Pokémon"} — ${copy.attackName ?? "attack"}`;
+  }
+
+  /** The bench placement an attack move asks the player for. Resolved from the
+   *  attack's NAME rather than the serialized view, because a COPIED attack
+   *  (Night Joker naming Flamebody Cannon) carries the placement of the card
+   *  it borrowed, which the copier's own printed attacks know nothing about. */
+  function benchPlacementFor(m: Extract<InteractiveMove, { kind: "attack" }>): {
+    mode: "counters" | "damage";
+    label: string;
+    total: number;
+  } | null {
+    const copy = (m as { copyPick?: { monName?: string; attackName?: string } }).copyPick;
+    const card = copy?.monName ?? view.board.active?.name;
+    const attackName = copy?.attackName ?? view.board.active?.attacks[m.attackIndex]?.name;
+    if (!card || !attackName) return null;
+    const p = attackPlacement(card, attackName);
+    if (p?.kind === "bench_counters") return { mode: "counters", label: attackName, total: p.counters };
+    if (p?.kind === "bench_damage") return { mode: "damage", label: attackName, total: p.targets };
+    return null;
+  }
+
+  /** Fire an attack, pausing first if it asks the player to place damage on
+   *  the opponent's Bench. With an empty bench there is nothing to place and
+   *  the placement fizzles, so the attack goes straight out. */
+  function startAttack(m: Extract<InteractiveMove, { kind: "attack" }>) {
+    const place = benchPlacementFor(m);
+    if (place && place.total > 0 && view.opponent.board.bench.length > 0) {
+      setBenchPlace({ move: m, ...place, placed: [] });
+      setAbilityTargeting(null);
+      setEffectChooser(null);
+      return;
+    }
+    void sendMove(m);
   }
 
   /** Send when there's nothing to decide, otherwise let the human choose. */
@@ -861,8 +900,12 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
         ]
       : abilityTargeting
         ? Array.from(abilityTargetIds)
-        : counterPlace
-          ? view.opponent.board.bench.map((m) => m.id)
+        : benchPlace
+          ? view.opponent.board.bench
+              // Counters may stack on one Pokémon; raw damage names distinct
+              // targets, so a chosen one is no longer choosable.
+              .filter((m) => benchPlace.mode === "counters" || !benchPlace.placed.includes(m.id))
+              .map((m) => m.id)
           : [],
   );
   /** A selection is in progress somewhere, so anything not part of it
@@ -967,7 +1010,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     bossActiveMove != null;
 
   const aiInteract =
-    bossMoves || abilityTargeting || counterPlace
+    bossMoves || abilityTargeting || benchPlace
       ? {
           onActiveClick: aiActiveTargetable
             ? () => {
@@ -987,9 +1030,11 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
               sendAbilityAt(mon.id);
               return;
             }
-            if (counterPlace && mon) {
-              setCounterPlace((cp) =>
-                cp && cp.placed.length < cp.total ? { ...cp, placed: [...cp.placed, mon.id] } : cp,
+            if (benchPlace && mon) {
+              setBenchPlace((bp) =>
+                bp && bp.placed.length < bp.total && (bp.mode === "counters" || !bp.placed.includes(mon.id))
+                  ? { ...bp, placed: [...bp.placed, mon.id] }
+                  : bp,
               );
             }
           },
@@ -1010,8 +1055,10 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
     : promoting
     ? "Choose your new Active Pokémon"
     : game.status === "human_turn"
-      ? counterPlace
-        ? `Place damage counters — ${counterPlace.placed.length}/${counterPlace.total} on the opponent's Bench`
+      ? benchPlace
+        ? benchPlace.mode === "counters"
+          ? `Place damage counters — ${benchPlace.placed.length}/${benchPlace.total} on the opponent's Bench`
+          : `${benchPlace.label}: choose ${benchPlace.total} of the opponent's Benched Pokémon (${benchPlace.placed.length}/${benchPlace.total})`
         : abilityTargeting
           ? `${abilityTargeting.label}: pick a target`
           : bossMoves
@@ -1195,7 +1242,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                       void sendMove(g.moves[0]);
                     } else {
                       setAbilityTargeting({ label: g.abilityName, moves: g.moves });
-                      setCounterPlace(null);
+                      setBenchPlace(null);
                     }
                   }}
                   disabled={loading}
@@ -1247,23 +1294,23 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                   </button>
                 );
               })()}
-              {counterPlace ? (
+              {benchPlace ? (
                 <>
                   <button
                     onClick={() =>
-                      sendMove({
-                        kind: "attack",
-                        attackIndex: counterPlace.attackIndex,
-                        benchCounters: counterPlace.placed,
-                      })
+                      sendMove(
+                        benchPlace.mode === "counters"
+                          ? { ...benchPlace.move, benchCounters: benchPlace.placed }
+                          : { ...benchPlace.move, benchDamageTargets: benchPlace.placed },
+                      )
                     }
-                    disabled={loading || counterPlace.placed.length !== counterPlace.total}
+                    disabled={loading || benchPlace.placed.length !== benchPlace.total}
                     className="rounded-lg border border-transparent bg-accent px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
                   >
-                    Confirm attack ({counterPlace.placed.length}/{counterPlace.total})
+                    Confirm attack ({benchPlace.placed.length}/{benchPlace.total})
                   </button>
                   <button
-                    onClick={() => setCounterPlace(null)}
+                    onClick={() => setBenchPlace(null)}
                     className="rounded-lg border border-black/15 bg-white px-3 py-1.5 text-xs font-semibold text-text-secondary"
                   >
                     Cancel
@@ -1274,7 +1321,6 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                   const m = moves[0];
                   const attack = view.board.active?.attacks[attackIndex];
                   const counters = attack?.benchCounters ?? 0;
-                  const hasBench = view.opponent.board.bench.length > 0;
                   const attacker = view.board.active;
                   const riderCost =
                     attacker && attack
@@ -1284,25 +1330,25 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                     <button
                       key={attackIndex}
                       onClick={() => {
-                        // Attacks that place counters on a non-empty bench
-                        // enter tap-to-place mode; everything else fires now.
                         if (riderCost > 0) {
                           // The attack's rider spends cards from hand (Team
                           // Rocket's Porygon's Hacking). Ask before firing —
                           // a rider resolves inside the attack, so this is
                           // the only point at which the player can choose.
                           setDiscardStage({ move: m, need: riderCost, picked: [] });
-                        } else if (counters > 0 && hasBench) {
-                          setCounterPlace({ attackIndex, total: counters, placed: [] });
-                          setAbilityTargeting(null);
                         } else if (moves.length > 1) {
                           // Same attack, different `riderPicks` (Cruel Arrow's
                           // target, Night Joker's donor). One button, then the
                           // choice — rendering one button per pick meant
                           // duplicate React keys and an arbitrary target.
+                          // WHICH attack is copied has to be settled before
+                          // any bench placement, since the copy is what
+                          // decides whether there is one.
                           setEffectChooser({ label: attack?.name ?? "Attack", moves });
                         } else {
-                          void sendMove(m);
+                          // Attacks that place damage on a non-empty bench
+                          // enter tap-to-place mode; everything else fires now.
+                          startAttack(m);
                         }
                       }}
                       disabled={loading}
@@ -1315,7 +1361,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                   );
                 })
               )}
-              {!canRetreat && retreatBlockedReason && !counterPlace && (
+              {!canRetreat && retreatBlockedReason && !benchPlace && (
                 <button
                   disabled
                   title={retreatBlockedReason}
@@ -1324,7 +1370,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                   Retreat · {retreatBlockedReason}
                 </button>
               )}
-              {canRetreat && !counterPlace && (
+              {canRetreat && !benchPlace && (
                 <button
                   onClick={() => {
                     setRetreatMode(!retreatMode);
@@ -1576,20 +1622,15 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                   <div className="flex flex-col gap-1.5">
                     {myAttacks.map(({ attackIndex, moves }) => {
                       const atk = mon.attacks?.[attackIndex];
-                      const counters = atk?.benchCounters ?? 0;
-                      const hasBench = view.opponent.board.bench.length > 0;
                       return (
                         <button
                           key={attackIndex}
                           onClick={() => {
                             setMonPanel(null);
-                            if (counters > 0 && hasBench) {
-                              setCounterPlace({ attackIndex, total: counters, placed: [] });
-                              setAbilityTargeting(null);
-                            } else if (moves.length > 1) {
+                            if (moves.length > 1) {
                               setEffectChooser({ label: atk?.name ?? "Attack", moves });
                             } else {
-                              void sendMove(moves[0]);
+                              startAttack(moves[0]);
                             }
                           }}
                           disabled={loading}
@@ -1635,7 +1676,7 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                             void sendMove(g.moves[0]);
                           } else {
                             setAbilityTargeting({ label: g.abilityName, moves: g.moves });
-                            setCounterPlace(null);
+                            setBenchPlace(null);
                           }
                         }}
                         disabled={loading}
@@ -1694,7 +1735,12 @@ export default function PlayClient({ decks }: { decks: DeckOption[] }) {
                 return (
                   <button
                     key={i}
-                    onClick={() => sendMove(m)}
+                    onClick={() =>
+                      // An attack chosen here may still ask for bench targets
+                      // — a copied Flamebody Cannon does — so it goes through
+                      // the same gate the action bar uses.
+                      m.kind === "attack" ? startAttack(m) : void sendMove(m)
+                    }
                     disabled={loading}
                     className="flex flex-col items-center gap-1 rounded-lg border border-black/8 p-1.5 hover:border-accent disabled:opacity-50"
                   >
