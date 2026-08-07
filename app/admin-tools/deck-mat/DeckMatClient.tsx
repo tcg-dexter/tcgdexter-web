@@ -413,7 +413,7 @@ async function rasterizeMat({
   matImage: MatImage | null;
   deckName: string;
   matWidth: number;
-}): Promise<string> {
+}): Promise<Blob | null> {
   // ── 1. Pre-fetch all images as data URLs ──────────────────────────────────
   const uniqueCardUrls = Array.from(
     new Set(rows.flat().map((t) => t.smallImageUrl).filter(Boolean)),
@@ -639,16 +639,27 @@ async function rasterizeMat({
     }
   }
 
-  return canvas.toDataURL("image/png");
+  // toBlob, not toDataURL: mobile Safari's <a download> silently no-ops on
+  // large data: URIs (a full-mat PNG at PR=3 easily runs several MB as
+  // base64) — the click does nothing and no file is ever written. A blob:
+  // URL doesn't carry the payload through the URL itself, so it downloads
+  // reliably across iOS Safari and Chrome/Firefox on Android alike.
+  return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
 }
 
-function downloadDataUrl(dataUrl: string, filename: string) {
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = dataUrl;
+  a.href = url;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+  // Deferred, not immediate: revoking synchronously can race the browser's
+  // read of the blob on some mobile builds. A short delay is the standard
+  // safe pattern (matches e.g. FileSaver.js) and costs nothing once the
+  // download has actually started.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -722,8 +733,9 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
       const deckName = decks.find((d) => d.id === selectedDeckId)?.name ?? "";
       const fileName = `${deckName.replace(/[^a-z0-9]/gi, "-").toLowerCase() || "deck-mat"}.png`;
       const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
-      const dataUrl = await rasterizeMat({ rows, cardWidth, activeGradient, textureKey, matImage, deckName, matWidth });
-      downloadDataUrl(dataUrl, fileName);
+      const blob = await rasterizeMat({ rows, cardWidth, activeGradient, textureKey, matImage, deckName, matWidth });
+      if (!blob) throw new Error("Couldn't generate the image.");
+      downloadBlob(blob, fileName);
       trackClient("playmat.exported", {
         style: matStyle,
         texture: textureKey ?? null,
