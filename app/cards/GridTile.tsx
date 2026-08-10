@@ -66,32 +66,32 @@ export default function GridTile({ card: c, index }: { card: CardIndexEntry; ind
             index={index}
             className="w-full h-full object-contain transition-transform group-hover:scale-[1.02]"
           />
-          <button
-            type="button"
-            onClick={handleFooterClick}
-            aria-label="Add to list"
-            className="absolute inset-x-0 bottom-0 h-[15%] min-h-[36px] flex items-end justify-between gap-2 px-2 pb-2 bg-gradient-to-b from-transparent to-neutral-800 to-80% text-white text-[12.5px] font-semibold leading-none tabular-nums overflow-hidden text-left hover:to-neutral-700 transition-colors"
-          >
-            <span className="flex items-center gap-1 min-w-0">
-              <span className="truncate rounded-md border border-white/70 bg-black px-0.5 py-0.5">
-                {(c.ptcgoCode || c.setId).toUpperCase()}
-              </span>
+          <div className="absolute inset-x-0 bottom-0 h-[15%] min-h-[36px] flex items-center gap-2 px-2 pb-2 bg-gradient-to-b from-transparent to-neutral-800 to-80% text-white text-[12.5px] font-semibold leading-none tabular-nums overflow-hidden pointer-events-none relative">
+            <span className="min-w-0 truncate rounded-md border border-white/70 bg-black px-0.5 py-0.5">
+              {(c.ptcgoCode || c.setId).toUpperCase()}
+            </span>
+            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 truncate">
+              {numberLabel}
+            </span>
+            <button
+              type="button"
+              onClick={handleFooterClick}
+              aria-label="Add to list"
+              className="pointer-events-auto ml-auto shrink-0 aspect-square rounded-full border border-white/70 bg-black px-0.5 py-0.5 flex items-center justify-center hover:bg-neutral-800 transition-colors"
+            >
               <svg
                 aria-hidden="true"
                 viewBox="0 0 20 20"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="1.6"
+                strokeWidth="2.5"
                 strokeLinecap="round"
-                strokeLinejoin="round"
-                className="shrink-0 w-3.5 h-3.5"
+                className="w-3 h-3"
               >
-                <path d="M5 3.5h10a.5.5 0 01.5.5v12.5l-5.5-3-5.5 3V4a.5.5 0 01.5-.5z" />
-                <path d="M7.25 8h5.5M10 5.25v5.5" />
+                <path d="M10 4v12M4 10h12" />
               </svg>
-            </span>
-            <span className="truncate mb-[3px]">{numberLabel}</span>
-          </button>
+            </button>
+          </div>
         </Link>
         {mode && (
           <InventoryOverlay
