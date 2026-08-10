@@ -66,7 +66,7 @@ export default function GridTile({ card: c, index }: { card: CardIndexEntry; ind
             index={index}
             className="w-full h-full object-contain transition-transform group-hover:scale-[1.02]"
           />
-          <div className="absolute inset-x-0 bottom-0 h-[15%] min-h-[36px] flex items-center gap-2 px-2 pb-2 bg-gradient-to-b from-transparent to-neutral-800 to-80% text-white text-[12.5px] font-semibold leading-none tabular-nums overflow-hidden pointer-events-none relative">
+          <div className="absolute inset-x-0 bottom-0 h-[15%] min-h-[36px] flex items-center gap-2 px-2 pb-2 bg-gradient-to-b from-transparent to-neutral-800 to-80% text-white text-[12.5px] font-semibold leading-none tabular-nums overflow-hidden pointer-events-none">
             <span className="min-w-0 truncate rounded-md border border-white/70 bg-black px-0.5 py-0.5">
               {(c.ptcgoCode || c.setId).toUpperCase()}
             </span>
