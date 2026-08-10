@@ -11,6 +11,16 @@ interface Props {
   setId: string;
   number: string;
   isAuthenticated: boolean;
+  /**
+   * "icon" (default) — the circular trigger on the card detail page's
+   * title row. "footer" — the full-width strip layered over a catalog
+   * grid tile's image, replacing CardFooterOverlay: the whole strip is
+   * the tap target, with the set-code badge, this trigger's icon, and
+   * the card number all rendered inside it. Requires setCode/setSize.
+   */
+  variant?: "icon" | "footer";
+  setCode?: string | null;
+  setSize?: number;
 }
 
 interface PickerState {
@@ -19,15 +29,27 @@ interface PickerState {
   hasUsername: boolean;
 }
 
+function padNumber(n: string): string {
+  const m = n.match(/^(\d+)(.*)$/);
+  if (!m) return n;
+  return m[1].padStart(3, "0") + m[2];
+}
+
 /**
- * Circular "add to list" trigger for the card detail page's title row.
- * Signed-out clicks redirect to sign-in (mirrors FollowButton). Signed-in
- * opens a portalled checkbox picker over the caller's lists — same
- * positioning convention as DeckCardMenu's dropdown — with optimistic
- * toggles against POST/DELETE /api/lists/[id]/items, plus a trailing
- * "+ New list" row.
+ * "Add to list" trigger. Signed-out clicks redirect to sign-in (mirrors
+ * FollowButton). Signed-in opens a portalled checkbox picker over the
+ * caller's lists — same positioning convention as DeckCardMenu's dropdown —
+ * with optimistic toggles against POST/DELETE /api/lists/[id]/items, plus
+ * a trailing "+ New list" row.
  */
-export default function AddToListButton({ setId, number, isAuthenticated }: Props) {
+export default function AddToListButton({
+  setId,
+  number,
+  isAuthenticated,
+  variant = "icon",
+  setCode = null,
+  setSize = 0,
+}: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<PickerState>({ loading: false, lists: [], hasUsername: true });
@@ -95,7 +117,13 @@ export default function AddToListButton({ setId, number, isAuthenticated }: Prop
     };
   }, [open, setId, number]);
 
-  function handleTrigger() {
+  // preventDefault/stopPropagation so this works nested inside a card
+  // Link (the footer variant sits inside the catalog grid tile's Link to
+  // the card detail page) without also triggering navigation — same
+  // convention InventoryCapsule uses nested inside ListRow's Link.
+  function handleTrigger(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
     if (!isAuthenticated) {
       router.push(`/sign-in?next=${encodeURIComponent(window.location.pathname)}`);
       return;
@@ -131,31 +159,57 @@ export default function AddToListButton({ setId, number, isAuthenticated }: Prop
     }
   }
 
+  const icon = (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="w-4 h-4"
+    >
+      <path d="M5 3.5h10a.5.5 0 01.5.5v12.5l-5.5-3-5.5 3V4a.5.5 0 01.5-.5z" />
+      <path d="M7.25 8h5.5M10 5.25v5.5" />
+    </svg>
+  );
+
   return (
     <>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={handleTrigger}
-        aria-label="Add to list"
-        aria-haspopup={isAuthenticated ? "menu" : undefined}
-        aria-expanded={isAuthenticated ? open : undefined}
-        className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full border border-black/10 bg-white dark:bg-surface-2 text-text-primary hover:bg-surface transition-colors"
-      >
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 20 20"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="w-4 h-4"
+      {variant === "footer" ? (
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={handleTrigger}
+          aria-label="Add to list"
+          aria-haspopup={isAuthenticated ? "menu" : undefined}
+          aria-expanded={isAuthenticated ? open : undefined}
+          className="absolute inset-x-0 bottom-0 h-[15%] min-h-[36px] flex items-end justify-between gap-2 px-2 pb-2 bg-gradient-to-b from-transparent to-neutral-800 to-80% text-white text-[12.5px] font-semibold leading-none tabular-nums overflow-hidden text-left hover:to-neutral-700 transition-colors"
         >
-          <path d="M5 3.5h10a.5.5 0 01.5.5v12.5l-5.5-3-5.5 3V4a.5.5 0 01.5-.5z" />
-          <path d="M7.25 8h5.5M10 5.25v5.5" />
-        </svg>
-      </button>
+          <span className="flex items-center gap-1 min-w-0">
+            <span className="truncate rounded-md border border-white/70 bg-black px-0.5 py-0.5">
+              {(setCode || setId).toUpperCase()}
+            </span>
+            <span className="shrink-0 w-3.5 h-3.5">{icon}</span>
+          </span>
+          <span className="truncate mb-[3px]">
+            {setSize > 0 ? `${padNumber(number)}/${setSize}` : padNumber(number)}
+          </span>
+        </button>
+      ) : (
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={handleTrigger}
+          aria-label="Add to list"
+          aria-haspopup={isAuthenticated ? "menu" : undefined}
+          aria-expanded={isAuthenticated ? open : undefined}
+          className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full border border-black/10 bg-white dark:bg-surface-2 text-text-primary hover:bg-surface transition-colors"
+        >
+          {icon}
+        </button>
+      )}
 
       {open &&
         menuPos !== null &&
