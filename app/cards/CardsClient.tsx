@@ -1,23 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { cardImageSmall } from "@/lib/cardImages";
 import type { CardIndexEntry, SetStats } from "@/lib/cardsIndex";
 import type { SortKey, SortDir, OwnershipFilter } from "@/lib/cardSearch";
 import { COLLECTION_VARIANTS } from "@/lib/inventory";
 import { normalizeForSearch } from "@/lib/searchNormalize";
-import CardImage from "./CardImage";
-import CardFooterOverlay from "./CardFooterOverlay";
 import DataView from "./DataView";
+import ListsView from "./ListsView";
 import InventoryProvider, { useInventory } from "./InventoryContext";
-import {
-  InventoryCapsule,
-  InventoryOverlay,
-  type InventoryMenuMode,
-} from "./InventoryCapsule";
-import GridTile, { formatGridPrice } from "./GridTile";
+import { GridView, ListView } from "./CardCollectionView";
 import PillSelect from "@/app/components/ui/PillSelect";
 import GridListToggle from "@/app/components/ui/GridListToggle";
 
@@ -92,7 +84,7 @@ export default function CardsClient({ initialResult, facets, setStats, initialPa
   const [params, setParams] = useState<Params>(initialParams);
   const [searchInput, setSearchInput] = useState(initialParams.q);
   const [showFilters, setShowFilters] = useState(false);
-  const [mode, setMode] = useState<"catalog" | "data">("catalog");
+  const [mode, setMode] = useState<"catalog" | "data" | "lists">("catalog");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstSync = useRef(true);
 
@@ -167,34 +159,66 @@ export default function CardsClient({ initialResult, facets, setStats, initialPa
         <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-text-primary">
           Card Catalog
         </h2>
-        <button
-          type="button"
-          onClick={() => setMode((m) => (m === "catalog" ? "data" : "catalog"))}
-          aria-pressed={mode === "data"}
-          aria-label={mode === "data" ? "Switch to catalog view" : "Switch to data view"}
-          title={mode === "data" ? "Switch to catalog view" : "Switch to data view"}
-          className={`inline-flex items-center justify-center h-[38px] w-[38px] rounded-full border transition-colors shrink-0 ${
-            mode === "data"
-              ? "border-transparent bg-black dark:bg-white text-white dark:text-black"
-              : "border-black/10 bg-white dark:bg-surface-2 text-text-primary hover:bg-surface"
-          }`}
-        >
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.75"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-4 h-4"
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setMode((m) => (m === "data" ? "catalog" : "data"))}
+            aria-pressed={mode === "data"}
+            aria-label={mode === "data" ? "Switch to catalog view" : "Switch to set progress view"}
+            title={mode === "data" ? "Switch to catalog view" : "Switch to set progress view"}
+            className={`inline-flex items-center justify-center h-[38px] w-[38px] rounded-full border transition-colors ${
+              mode === "data"
+                ? "border-transparent bg-black dark:bg-white text-white dark:text-black"
+                : "border-black/10 bg-white dark:bg-surface-2 text-text-primary hover:bg-surface"
+            }`}
           >
-            <path d="M3 16.5h14" />
-            <path d="M6 16.5V11" />
-            <path d="M10 16.5V6" />
-            <path d="M14 16.5v-7.5" />
-          </svg>
-        </button>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-4 h-4"
+            >
+              <path d="M3 16.5h14" />
+              <path d="M6 16.5V11" />
+              <path d="M10 16.5V6" />
+              <path d="M14 16.5v-7.5" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode((m) => (m === "lists" ? "catalog" : "lists"))}
+            aria-pressed={mode === "lists"}
+            aria-label={mode === "lists" ? "Switch to catalog view" : "Switch to your lists"}
+            title={mode === "lists" ? "Switch to catalog view" : "Switch to your lists"}
+            className={`inline-flex items-center justify-center h-[38px] w-[38px] rounded-full border transition-colors ${
+              mode === "lists"
+                ? "border-transparent bg-black dark:bg-white text-white dark:text-black"
+                : "border-black/10 bg-white dark:bg-surface-2 text-text-primary hover:bg-surface"
+            }`}
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-4 h-4"
+            >
+              <path d="M7 5.5h9" />
+              <path d="M7 10h9" />
+              <path d="M7 14.5h9" />
+              <path d="M4 5.5h.01" />
+              <path d="M4 10h.01" />
+              <path d="M4 14.5h.01" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {mode === "data" ? (
@@ -205,6 +229,8 @@ export default function CardsClient({ initialResult, facets, setStats, initialPa
             setMode("catalog");
           }}
         />
+      ) : mode === "lists" ? (
+        <ListsView />
       ) : (
         <CatalogBody
           initialResult={initialResult}
@@ -645,101 +671,6 @@ function RangeFacet({
         />
       </div>
     </div>
-  );
-}
-
-function GridView({ cards }: { cards: CardIndexEntry[] }) {
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-      {cards.map((c, i) => (
-        <GridTile key={c.id} card={c} index={i} />
-      ))}
-    </div>
-  );
-}
-
-function ListView({ cards }: { cards: CardIndexEntry[] }) {
-  return (
-    <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated overflow-hidden">
-      <div className="hidden md:grid grid-cols-[64px_2fr_1.5fr_80px_80px_80px_80px_100px] gap-3 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-text-muted border-b border-black/8 dark:border-white/10">
-        <span></span>
-        <span>Name</span>
-        <span>Set</span>
-        <span>Number</span>
-        <span>Type</span>
-        <span>HP</span>
-        <span className="text-right">Price</span>
-        <span className="text-right">Owned</span>
-      </div>
-      <ul>
-        {cards.map((c, i) => (
-          <ListRow key={c.id} card={c} index={i} isFirst={i === 0} />
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function ListRow({
-  card: c,
-  index,
-  isFirst,
-}: {
-  card: CardIndexEntry;
-  index: number;
-  isFirst: boolean;
-}) {
-  const [mode, setMode] = useState<InventoryMenuMode | null>(null);
-  return (
-    <li className={`relative ${isFirst ? "" : "border-t border-black/8 dark:border-white/10"}`}>
-      <Link
-        href={`/cards/${encodeURIComponent(c.id)}`}
-        className="grid grid-cols-[48px_1fr_auto] md:grid-cols-[64px_2fr_1.5fr_80px_80px_80px_80px_100px] gap-3 px-4 py-2 items-center hover:bg-surface transition-colors"
-      >
-        <CardImage
-          src={cardImageSmall(c.setId, c.number)}
-          alt={`${c.name} — ${c.setName} ${c.number}`}
-          name={c.name}
-          setName={c.setName}
-          number={c.number}
-          index={index}
-          className="w-12 h-[68px] md:w-14 md:h-[78px] object-cover rounded-md bg-surface text-[9px]"
-        />
-        <div className="md:contents">
-          <span className="text-sm font-medium text-text-primary truncate">{c.name}</span>
-          <span className="hidden md:inline text-sm text-text-secondary truncate">
-            {c.setName}
-            {c.ptcgoCode ? ` · ${c.ptcgoCode}` : ""}
-          </span>
-          <span className="hidden md:inline text-sm text-text-secondary">{c.number}</span>
-          <span className="hidden md:inline text-sm text-text-secondary">
-            {c.types.join(", ") || c.supertype}
-          </span>
-          <span className="hidden md:inline text-sm text-text-secondary">{c.hp ?? "—"}</span>
-          <span className="hidden md:inline text-sm text-text-secondary text-right">
-            {c.marketPrice > 0 ? `$${c.marketPrice.toFixed(2)}` : "—"}
-          </span>
-        </div>
-        <div className="justify-self-end md:justify-self-end">
-          <InventoryCapsule
-            setId={c.setId}
-            number={c.number}
-            onOpenMenu={(m) => setMode(m)}
-          />
-        </div>
-      </Link>
-      {mode && (
-        <InventoryOverlay
-          setId={c.setId}
-          number={c.number}
-          rarity={c.rarity}
-          cardName={c.name}
-          mode={mode}
-          display="modal"
-          onClose={() => setMode(null)}
-        />
-      )}
-    </li>
   );
 }
 

@@ -244,6 +244,20 @@ function compareCards(a: CardIndexEntry, b: CardIndexEntry, sort: SortKey, dir: 
   }
 }
 
+/**
+ * Sorts a plain array of cards using the exact same comparator the catalog
+ * search uses — reused by the list-detail page so a list's cards rank
+ * identically to the catalog (same rarity tiers, same tie-breaks), instead
+ * of re-implementing the ordering rules a second time.
+ */
+export function sortCardEntries(
+  cards: CardIndexEntry[],
+  sort: SortKey,
+  dir: SortDir,
+): CardIndexEntry[] {
+  return [...cards].sort((a, b) => compareCards(a, b, sort, dir));
+}
+
 export function searchCards(params: CardSearchParams): CardSearchResult {
   const all = getAllCards();
   const page = Math.max(1, params.page ?? 1);
