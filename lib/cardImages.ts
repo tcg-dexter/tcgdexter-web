@@ -1,4 +1,24 @@
+import imageOverrides from "@/data/card-image-overrides.json";
+
 type ImageVariant = "small" | "large";
+
+/**
+ * Exact URLs for printings whose image address can't be built from
+ * (setId, number). Generated daily by
+ * `dexter-ops/scripts/export_cards_standard.py` — see `load_image_overrides`
+ * for how each entry is derived.
+ *
+ * Covers three kinds of exception the template below can't express: upstream
+ * URLs that don't follow the pattern (Celebrations: Classic Collection suffixes
+ * its reprints `107_A`; ex10's Unown "?" is served as `question.png`, since a
+ * literal `?` would start a query string), sets pokemontcg.io routes to
+ * scrydex, and the McDonald's collections it dropped entirely, which only
+ * TCGplayer's CDN still serves.
+ */
+const CARD_IMAGE_OVERRIDES = imageOverrides as Record<
+  string,
+  { s?: string; l?: string; fs?: string; fl?: string }
+>;
 
 type Template = { small: string; large: string };
 
@@ -93,7 +113,21 @@ export function cardImageCandidates(
   variant: ImageVariant,
 ): string[] {
   const sources = SET_IMAGE_SOURCES[setId] ?? [PTCG];
-  return sources.map((t) => fill(t[variant], setId, number));
+  const built = sources.map((t) => fill(t[variant], setId, number));
+  const override = CARD_IMAGE_OVERRIDES[`${setId}-${number}`];
+  if (!override) return built;
+
+  const large = variant === "large";
+  // `s`/`l` is a known-exact URL and wins over anything we construct. `fs`/`fl`
+  // is a last resort (a TCGplayer product photo rather than a card scan), so it
+  // trails everything the set's own CDNs offer. The constructed URLs stay in
+  // the list either way — the override is a daily snapshot of what upstream
+  // advertised, so if it goes stale the chain still has somewhere to fall.
+  const exact = large ? override.l : override.s;
+  const fallback = large ? override.fl : override.fs;
+  const chain = exact ? [exact, ...built] : [...built];
+  if (fallback) chain.push(fallback);
+  return chain.filter((u, i) => u && chain.indexOf(u) === i);
 }
 
 export function cardImageSmall(setId: string, number: string): string {
@@ -126,6 +160,8 @@ export const TRUSTED_CARD_IMAGE_PREFIXES = [
   "https://images.pokemontcg.io/",
   "https://images.scrydex.com/",
   "https://limitlesstcg.nyc3.digitaloceanspaces.com/",
+  // Only source still serving the McDonald's 2014/2015/2017/2018 collections.
+  "https://tcgplayer-cdn.tcgplayer.com/product/",
 ] as const;
 
 /** True when `url` is one of our trusted card-image hosts. */
