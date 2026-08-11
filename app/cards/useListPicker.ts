@@ -19,9 +19,9 @@ interface CreatedList {
 
 /**
  * Shared data layer behind every "add to list" picker (the card detail
- * page's dropdown, the catalog grid tile's in-card overlay): fetches the
- * caller's lists (with per-list `containsCard`) while `active`, and
- * exposes an optimistic toggle against POST/DELETE /api/lists/[id]/items.
+ * page and the catalog grid tile both use AddToListOverlay for this):
+ * fetches the caller's lists (with per-list `containsCard`) while `active`,
+ * and exposes an optimistic toggle against POST/DELETE /api/lists/[id]/items.
  */
 export function useListPicker(setId: string, number: string, active: boolean) {
   const [state, setState] = useState<PickerState>({ loading: false, lists: [], hasUsername: true });

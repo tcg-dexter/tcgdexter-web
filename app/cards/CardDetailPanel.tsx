@@ -10,10 +10,12 @@ import CardImage from "./CardImage";
 interface Props {
   card: CardIndexEntry;
   raw: RawCard;
-  /** Optional element rendered directly below the card image (e.g. Add to
-   *  list) — sits in the left column, so it's full-width on both the
-   *  mobile-stacked and desktop two-column layouts. */
-  belowImageAction?: ReactNode;
+  /** Optional wrapper around the card image (e.g. Add to list) — receives
+   *  the image element so the caller can overlay interactive UI directly
+   *  on top of it, plus render any trigger controls alongside. Sits in the
+   *  left column, so it's full-width on both the mobile-stacked and
+   *  desktop two-column layouts. */
+  renderCardImage?: (image: ReactNode) => ReactNode;
 }
 
 /**
@@ -24,7 +26,7 @@ interface Props {
  * the home page's catalog preview can show the same panels for a single
  * spotlighted card without duplicating the markup.
  */
-export default function CardDetailPanel({ card, raw, belowImageAction }: Props) {
+export default function CardDetailPanel({ card, raw, renderCardImage }: Props) {
   const isPokemon = card.supertype === "Pokémon";
   const fullCardNumber = `${card.numberPadded}/${String(card.setSize).padStart(3, "0")}`;
   const avatarSlug = isPokemon ? pokemonSlug(card.name) : null;
@@ -33,6 +35,21 @@ export default function CardDetailPanel({ card, raw, belowImageAction }: Props) 
     : null;
   const avatarColor = typeColor(card.types);
   const avatarBg = `linear-gradient(180deg, ${avatarColor} 0%, ${shade(avatarColor, -22)} 100%)`;
+
+  const cardImageEl = (
+    <CardImage
+      src={cardImageLarge(card.setId, card.number)}
+      fallbackSrcs={cardImageFallbacks(card.setId, card.number, "large")}
+      alt={`${card.name} — ${card.setName} ${card.number}`}
+      name={card.name}
+      setName={card.setName}
+      number={card.number}
+      loading="eager"
+      fetchPriority="high"
+      className="w-full rounded-2xl shadow-md bg-surface"
+      style={{ aspectRatio: "245 / 342" }}
+    />
+  );
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[minmax(0,400px)_1fr] gap-6">
@@ -57,19 +74,7 @@ export default function CardDetailPanel({ card, raw, belowImageAction }: Props) 
             </p>
           </div>
         </div>
-        <CardImage
-          src={cardImageLarge(card.setId, card.number)}
-          fallbackSrcs={cardImageFallbacks(card.setId, card.number, "large")}
-          alt={`${card.name} — ${card.setName} ${card.number}`}
-          name={card.name}
-          setName={card.setName}
-          number={card.number}
-          loading="eager"
-          fetchPriority="high"
-          className="w-full rounded-2xl shadow-md bg-surface"
-          style={{ aspectRatio: "245 / 342" }}
-        />
-        {belowImageAction}
+        {renderCardImage ? renderCardImage(cardImageEl) : cardImageEl}
       </div>
 
       <div className="flex flex-col gap-4">
