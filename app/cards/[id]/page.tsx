@@ -72,9 +72,14 @@ export default async function CardDetailPage({ params }: Props) {
       <CardDetailPanel
         card={card}
         raw={raw}
-        belowImageAction={
-          <AddToListButton setId={card.setId} number={card.number} isAuthenticated={Boolean(user)} />
-        }
+        renderCardImage={(image) => (
+          <AddToListButton
+            setId={card.setId}
+            number={card.number}
+            isAuthenticated={Boolean(user)}
+            image={image}
+          />
+        )}
       />
 
       {appearancesInitial.items.length > 0 && (

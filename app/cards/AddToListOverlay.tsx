@@ -12,11 +12,12 @@ interface Props {
 }
 
 /**
- * In-card "add to list" overlay for the catalog grid tile — the same
- * black rounded-overlay treatment as InventoryOverlay's "card" display
- * (the variant picker opened from the +/- capsule), reused here so the
- * tile has one consistent overlay language instead of a floating
- * dropdown positioned outside the card.
+ * In-card "add to list" overlay — the same black rounded-overlay
+ * treatment as InventoryOverlay's "card" display (the variant picker
+ * opened from the +/- capsule). Used by both the catalog grid tile
+ * (GridTile.tsx) and the card detail page (AddToListButton.tsx) so
+ * "add to list" has one consistent overlay language everywhere instead
+ * of a floating dropdown positioned outside the card.
  */
 export default function AddToListOverlay({ setId, number, onClose }: Props) {
   const { state, toggle, addCreatedList } = useListPicker(setId, number, true);
