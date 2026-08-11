@@ -67,7 +67,7 @@ export default function AvatarImageUploader({ spotlightId, initialUrl }: Props) 
 
   return (
     <div className="flex items-center gap-4">
-      <div className="w-20 h-20 rounded-2xl bg-[var(--surface)] border border-black/10 overflow-hidden flex items-center justify-center shrink-0">
+      <div className="w-20 h-20 rounded-2xl bg-[var(--surface)] border border-black/10 dark:border-white/10 overflow-hidden flex items-center justify-center shrink-0">
         {url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -87,7 +87,7 @@ export default function AvatarImageUploader({ spotlightId, initialUrl }: Props) 
             type="button"
             disabled={busy}
             onClick={() => inputRef.current?.click()}
-            className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-black/15 hover:bg-[var(--surface)] disabled:opacity-50"
+            className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-black/15 dark:border-white/10 hover:bg-[var(--surface)] disabled:opacity-50"
           >
             {url ? "Replace…" : "Upload image…"}
           </button>

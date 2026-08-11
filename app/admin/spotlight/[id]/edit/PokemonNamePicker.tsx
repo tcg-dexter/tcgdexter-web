@@ -94,7 +94,7 @@ export default function PokemonNamePicker({ value, onChange }: Props) {
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="w-20 h-20 rounded-full border-2 border-black/15 bg-[var(--surface)] flex items-center justify-center overflow-hidden shadow-sm hover:border-accent"
+          className="w-20 h-20 rounded-full border-2 border-black/15 dark:border-white/10 bg-[var(--surface)] flex items-center justify-center overflow-hidden shadow-sm hover:border-accent"
           aria-label={value ? `Change favorite Pokémon (${value.name})` : "Pick favorite Pokémon"}
         >
           {value ? (
@@ -129,7 +129,7 @@ export default function PokemonNamePicker({ value, onChange }: Props) {
         <div
           role="dialog"
           aria-label="Pick a Pokémon"
-          className="absolute left-0 top-full mt-2 z-30 w-[min(20rem,calc(100vw-1.5rem))] rounded-2xl border border-black/8 bg-white shadow-xl p-3"
+          className="absolute left-0 top-full mt-2 z-30 w-[min(20rem,calc(100vw-1.5rem))] rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated shadow-xl p-3"
         >
           <input
             ref={inputRef}

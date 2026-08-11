@@ -115,7 +115,7 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
   return (
     <div className="space-y-6">
       {/* Basics */}
-      <section className="rounded-2xl bg-white border border-black/8 shadow-sm p-5 space-y-4">
+      <section className="rounded-2xl bg-white dark:bg-surface-elevated border border-black/8 dark:border-white/10 shadow-sm p-5 space-y-4">
         <Field label="Slug">
           <input
             value={slug}
@@ -145,7 +145,7 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
       {/* Banner avatar image — uploaded foreground (e.g. TCG Live avatar)
           that overlays the banner gradient. Position is set later on the
           preview page via interactive drag. */}
-      <section className="rounded-2xl bg-white border border-black/8 shadow-sm p-5 space-y-3">
+      <section className="rounded-2xl bg-white dark:bg-surface-elevated border border-black/8 dark:border-white/10 shadow-sm p-5 space-y-3">
         <div>
           <h3 className="text-sm font-semibold text-text-primary">
             Banner image
@@ -161,7 +161,7 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
       </section>
 
       {/* Favorite Pokémon — sprite picker (TeamOfSix-style). */}
-      <section className="rounded-2xl bg-white border border-black/8 shadow-sm p-5 space-y-3">
+      <section className="rounded-2xl bg-white dark:bg-surface-elevated border border-black/8 dark:border-white/10 shadow-sm p-5 space-y-3">
         <div>
           <h3 className="text-sm font-semibold text-text-primary">
             Favorite Pokémon
@@ -177,7 +177,7 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
       </section>
 
       {/* Favorite cards — shared search drives both slots. */}
-      <section className="rounded-2xl bg-white border border-black/8 shadow-sm p-5 space-y-4">
+      <section className="rounded-2xl bg-white dark:bg-surface-elevated border border-black/8 dark:border-white/10 shadow-sm p-5 space-y-4">
         <div>
           <h3 className="text-sm font-semibold text-text-primary">
             Favorite cards
@@ -207,7 +207,7 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
       </section>
 
       {/* Featured decks */}
-      <section className="rounded-2xl bg-white border border-black/8 shadow-sm p-5 space-y-3">
+      <section className="rounded-2xl bg-white dark:bg-surface-elevated border border-black/8 dark:border-white/10 shadow-sm p-5 space-y-3">
         <h3 className="text-sm font-semibold text-text-primary">
           Featured decks (up to 3)
         </h3>
@@ -238,10 +238,10 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
       </section>
 
       {/* Q&A */}
-      <section className="rounded-2xl bg-white border border-black/8 shadow-sm p-5 space-y-3">
+      <section className="rounded-2xl bg-white dark:bg-surface-elevated border border-black/8 dark:border-white/10 shadow-sm p-5 space-y-3">
         <h3 className="text-sm font-semibold text-text-primary">Q&amp;A</h3>
         {qa.map((item, i) => (
-          <div key={i} className="space-y-2 border-t border-black/8 pt-3 first:border-t-0 first:pt-0">
+          <div key={i} className="space-y-2 border-t border-black/8 dark:border-white/10 pt-3 first:border-t-0 first:pt-0">
             <input
               value={item.q}
               onChange={(e) => {
@@ -275,7 +275,7 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
         <button
           type="button"
           onClick={() => setQa([...qa, { q: "", a: "" }])}
-          className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-black/15 hover:bg-[var(--surface)]"
+          className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-black/15 dark:border-white/10 hover:bg-[var(--surface)]"
         >
           + Add question
         </button>
@@ -302,7 +302,7 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
             type="button"
             onClick={onSave}
             disabled={saving || previewing}
-            className="text-sm font-semibold px-4 py-2 rounded-full bg-black text-white border border-transparent disabled:opacity-50"
+            className="text-sm font-semibold px-4 py-2 rounded-full bg-black dark:bg-white text-white dark:text-black border border-transparent disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save"}
           </button>
@@ -325,6 +325,10 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
           border-radius: 0.5rem;
           border: 1px solid rgba(0, 0, 0, 0.15);
           background: white;
+        }
+        :global(.dark .input) {
+          border-color: rgba(255, 255, 255, 0.1);
+          background: var(--surface-2);
         }
       `}</style>
     </div>

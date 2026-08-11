@@ -51,7 +51,7 @@ export default async function AdminSpotlightList() {
           </p>
         </header>
 
-        <section className="rounded-2xl bg-white border border-black/8 shadow-sm p-5 mb-6">
+        <section className="rounded-2xl bg-white dark:bg-surface-elevated border border-black/8 dark:border-white/10 shadow-sm p-5 mb-6">
           <h2 className="text-sm font-semibold text-text-primary mb-3">
             New spotlight
           </h2>
@@ -63,7 +63,7 @@ export default async function AdminSpotlightList() {
             All spotlights ({rows.length})
           </h2>
           {rows.length === 0 ? (
-            <div className="rounded-2xl bg-white border border-black/8 p-6 text-sm text-text-secondary text-center">
+            <div className="rounded-2xl bg-white dark:bg-surface-elevated border border-black/8 dark:border-white/10 p-6 text-sm text-text-secondary text-center">
               No spotlights yet.
             </div>
           ) : (
@@ -71,7 +71,7 @@ export default async function AdminSpotlightList() {
               {rows.map((r) => (
                 <li
                   key={r.id}
-                  className="rounded-2xl bg-white border border-black/8 shadow-sm p-4 flex items-center justify-between gap-3"
+                  className="rounded-2xl bg-white dark:bg-surface-elevated border border-black/8 dark:border-white/10 shadow-sm p-4 flex items-center justify-between gap-3"
                 >
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-text-primary truncate">
@@ -83,7 +83,7 @@ export default async function AdminSpotlightList() {
                     <div className="text-xs text-text-muted mt-0.5">
                       slug: <code>{r.slug}</code> ·{" "}
                       {r.is_published ? (
-                        <span className="text-emerald-600 font-semibold">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
                           Published
                         </span>
                       ) : (
@@ -95,14 +95,14 @@ export default async function AdminSpotlightList() {
                     {r.is_published && (
                       <Link
                         href={`/spotlight/${r.slug}`}
-                        className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-black/15 hover:bg-[var(--surface)]"
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-black/15 dark:border-white/10 hover:bg-[var(--surface)]"
                       >
                         View
                       </Link>
                     )}
                     <Link
                       href={`/admin/spotlight/${r.id}/edit`}
-                      className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-black text-white border border-transparent hover:opacity-90"
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-black dark:bg-white text-white dark:text-black border border-transparent hover:opacity-90"
                     >
                       Edit
                     </Link>
