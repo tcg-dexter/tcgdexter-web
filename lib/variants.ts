@@ -134,6 +134,36 @@ const STAMP_LABELS: Record<string, string> = {
   wotc: "WotC",
 };
 
+/** Subtypes whose slug doesn't title-case into readable English — mostly
+ *  copyright-year ranges and printing errors from the WotC and e-Card eras. */
+const SUBTYPE_LABELS: Record<string, string> = {
+  "1995-1998-copyright": "1995–1998 Copyright",
+  "1999-2000-copyright": "1999–2000 Copyright",
+  "1999-copyright": "1999 Copyright",
+  "2019-copyright": "2019 Copyright",
+  "2020-copyright": "2020 Copyright",
+  "missing-hp": "Missing HP",
+  "no-e-reader": "No e-Reader Strip",
+  "no-holo-error": "Missing Holo Error",
+  "d-ink-dot-error": "Ink Dot Error",
+  "aoki-error": "Aoki Error",
+  "nintedo-error": "\"Nintedo\" Misprint",
+  "energy-symbol-error": "Energy Symbol Error",
+  "evolution-box-error": "Evolution Box Error",
+  "shifted-energy-cost": "Shifted Energy Cost",
+  "text-error": "Text Error",
+  "rarity-error": "Rarity Error",
+  "missing-expansion-symbol": "Missing Expansion Symbol",
+  "missing-retreat-cost": "Missing Retreat Cost",
+  "phanphy-error": "Phanphy Error",
+  "peelable-ditto": "Peelable Ditto",
+  "shadowless-red-cheek": "Shadowless, Red Cheeks",
+  "gold-border": "Gold Border",
+  "blue-border": "Blue Border",
+  "japanese-back": "Japanese Back",
+  "no-rarity": "No Rarity Symbol",
+};
+
 const FOIL_LABELS: Record<string, string> = {
   cosmos: "Cosmos",
   "cracked-ice": "Cracked Ice",
@@ -173,7 +203,7 @@ export function variantLabel(key: string): string {
   const parts: string[] = [];
   if (v.foil) parts.push(`${labelFor(v.foil, FOIL_LABELS)} ${TYPE_LABELS[v.type]}`);
   else parts.push(TYPE_LABELS[v.type]);
-  if (v.subtype) parts.push(`(${labelFor(v.subtype, {})})`);
+  if (v.subtype) parts.push(`(${labelFor(v.subtype, SUBTYPE_LABELS)})`);
   if (v.stamps.length) {
     parts.push(`— ${v.stamps.map((s) => labelFor(s, STAMP_LABELS)).join(" + ")}`);
   }

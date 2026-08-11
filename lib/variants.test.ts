@@ -143,3 +143,41 @@ describe("isValidVariant", () => {
     }
   });
 });
+
+// The add menu is built from the card's real printings unioned with whatever is
+// already owned. Mirrors the derivation in InventoryOverlay; extracted here
+// because the real regression it guards is silent — a variant that's removable
+// but not addable splits a user's count across two keys the next time they add.
+function addMenu(variants: string[] | undefined, owned: string[]): string[] {
+  return Array.from(new Set([...allowedAddVariants(variants), ...owned])).sort(compareVariants);
+}
+
+describe("add menu", () => {
+  it("offers exactly the card's printings when nothing exotic is owned", () => {
+    expect(addMenu(["normal", "reverse"], [])).toEqual(["normal", "reverse"]);
+    expect(addMenu(["normal", "reverse"], ["normal"])).toEqual(["normal", "reverse"]);
+  });
+
+  it("keeps a WotC-era holding addable when no plain printing exists", () => {
+    // Every Base Set printing carries a subtype, so a bare "holo" — which is
+    // what the old four-key UI recorded — matches none of them.
+    const base = [
+      "holo:s=unlimited",
+      "holo:s=shadowless",
+      "holo:s=shadowless:t=1st-edition",
+      "holo:s=1999-2000-copyright",
+    ];
+    expect(addMenu(base, ["holo"])).toContain("holo");
+    expect(addMenu(base, ["holo"])).toHaveLength(base.length + 1);
+  });
+
+  it("keeps a printing upstream hasn't recorded yet", () => {
+    // Chaos Rising reverse holos exist but TCGdex doesn't list them; the owner
+    // is right and our data is incomplete, so their row must stay addable.
+    expect(addMenu(["normal", "holo"], ["reverse"])).toEqual(["normal", "holo", "reverse"]);
+  });
+
+  it("does not invent rows for a card with no variant data", () => {
+    expect(addMenu(undefined, [])).toEqual(["normal", "holo", "reverse"]);
+  });
+});

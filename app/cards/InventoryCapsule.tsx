@@ -150,19 +150,25 @@ export function InventoryOverlay({
   const title = mode === "add" ? "Add variant" : "Remove variant";
 
   /**
-   * Add mode lists the printings the card actually exists in; remove mode
-   * lists whatever is owned, so a finish recorded before we had variant data
-   * (or imported in bulk) stays removable even if it's no longer offered.
+   * Add mode lists the printings the card exists in, PLUS anything already
+   * owned. Remove mode lists only what's owned.
+   *
+   * Owned variants are unioned in because our data must never strand someone's
+   * collection. 8.6% of live rows name a printing TCGdex doesn't list, from two
+   * causes: WotC-era cards have no plain finish at all (every Base Set printing
+   * is shadowless / unlimited / copyright-dated, so a bare "Holo" matches
+   * nothing), and newer sets like Chaos Rising have reverse holos upstream
+   * hasn't recorded yet — there the owner is right and we're incomplete.
+   * Without the union those rows would be removable but not addable, so adding
+   * a second copy would silently split the count across two keys.
    *
    * Plain finishes come first and stamped/foiled printings collapse behind a
    * toggle — Base-era holos have four printings and some promos carry several
    * stamps, which would otherwise bury the common case under a long list.
    */
   const { plain, special } = useMemo(() => {
-    const keys =
-      mode === "add"
-        ? allowedAddVariants(variants)
-        : Object.keys(variantQty).filter((k) => (variantQty[k] ?? 0) > 0);
+    const owned = Object.keys(variantQty).filter((k) => (variantQty[k] ?? 0) > 0);
+    const keys = mode === "add" ? [...allowedAddVariants(variants), ...owned] : owned;
     const rows = Array.from(new Set(keys)).sort(compareVariants).map((k) => ({
       key: k,
       label: variantDisplayLabel(k),
