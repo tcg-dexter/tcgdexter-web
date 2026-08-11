@@ -60,7 +60,7 @@ const RARITY_RANK: Record<string, number> = {
   "MEGA_ATTACK_RARE": 14,
 };
 
-function rarityRank(r: string | null): number {
+export function rarityRank(r: string | null): number {
   if (!r) return -1;
   return RARITY_RANK[r] ?? -1;
 }
@@ -258,6 +258,81 @@ export function sortCardEntries(
   return [...cards].sort((a, b) => compareCards(a, b, sort, dir));
 }
 
+/**
+ * Filters a plain array of cards using the same query-match + facet rules
+ * `searchCards` applies against the full catalog index — reused by the
+ * list-detail page so its search box and filter panel behave identically
+ * to the catalog's, scoped to just that list's cards. Unlike `searchCards`
+ * this doesn't rank by relevance score (an unnecessary refinement for a
+ * small, already-curated set) — callers sort the result themselves, e.g.
+ * via `sortCardEntries`.
+ */
+export function filterCardEntries(
+  cards: CardIndexEntry[],
+  params: CardSearchParams,
+): CardIndexEntry[] {
+  const q = params.q?.trim();
+  if (!q) return cards.filter((c) => applyFilters(c, params));
+
+  const tokens = parseQueryTokens(q);
+  if (tokens.numeric.length === 0 && tokens.words.length === 0) {
+    return cards.filter((c) => applyFilters(c, params));
+  }
+  const out: CardIndexEntry[] = [];
+  for (const c of cards) {
+    if (!applyFilters(c, params)) continue;
+    if (matchAndScore(c, tokens) == null) continue;
+    out.push(c);
+  }
+  return out;
+}
+
+export interface CardFacets {
+  supertypes: string[];
+  types: string[];
+  regulations: string[];
+  rarities: string[];
+  retreatCosts: number[];
+  sets: Array<{ id: string; name: string; ptcgoCode: string | null }>;
+}
+
+/**
+ * Derives filter-panel facets from a given array of cards, rather than the
+ * whole catalog (`getFilterFacets`) — used by the list-detail page so its
+ * filter chips only ever offer options that actually appear in that list,
+ * instead of every type/set/rarity in the game.
+ */
+export function computeFacetsFromCards(cards: CardIndexEntry[]): CardFacets {
+  const supertypes = new Set<string>();
+  const types = new Set<string>();
+  const regulations = new Set<string>();
+  const rarities = new Set<string>();
+  const retreatCosts = new Set<number>();
+  const sets = new Map<string, { id: string; name: string; ptcgoCode: string | null }>();
+  for (const c of cards) {
+    supertypes.add(c.supertype);
+    c.types.forEach((t) => types.add(t));
+    if (c.regulationMark) regulations.add(c.regulationMark);
+    if (c.rarity) rarities.add(c.rarity);
+    if (c.supertype === "Pokémon") retreatCosts.add(c.retreatCost);
+    if (!sets.has(c.setId)) {
+      sets.set(c.setId, { id: c.setId, name: c.setName, ptcgoCode: c.ptcgoCode });
+    }
+  }
+  return {
+    supertypes: Array.from(supertypes).sort(),
+    types: Array.from(types).sort(),
+    regulations: Array.from(regulations).sort(),
+    rarities: Array.from(rarities).sort((a, b) => {
+      const ra = rarityRank(a);
+      const rb = rarityRank(b);
+      return (ra === -1 ? 999 : ra) - (rb === -1 ? 999 : rb);
+    }),
+    retreatCosts: Array.from(retreatCosts).sort((a, b) => a - b),
+    sets: Array.from(sets.values()).sort((a, b) => a.name.localeCompare(b.name)),
+  };
+}
+
 export function searchCards(params: CardSearchParams): CardSearchResult {
   const all = getAllCards();
   const page = Math.max(1, params.page ?? 1);
@@ -305,7 +380,7 @@ export function searchCards(params: CardSearchParams): CardSearchResult {
   };
 }
 
-export function getFilterFacets() {
+export function getFilterFacets(): CardFacets {
   const cards = getAllCards();
   const supertypes = new Set<string>();
   const types = new Set<string>();
