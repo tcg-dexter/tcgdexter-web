@@ -94,26 +94,41 @@ export default function SpotlightHeader({
           corner) → monogram. */}
       <div className="mx-auto max-w-2xl px-6">
         <div className="flex items-end justify-between gap-3 -mt-11 sm:-mt-20">
-          <div
-            className="relative z-10 rounded-full ring-4 ring-bg flex items-center justify-center overflow-hidden shrink-0 w-[90px] h-[90px] sm:w-32 sm:h-32"
-            style={{ background: avatarGradient }}
-          >
-            {avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatarUrl}
-                alt={displayName}
-                className="w-full h-full object-cover"
-              />
-            ) : favoritePokemon ? (
+          <div className="relative z-10 flex items-center justify-center shrink-0 w-[90px] h-[90px] sm:w-32 sm:h-32">
+            {/* Circle-clipped background layer — a real uploaded avatar
+                photo clips to this circle too (object-cover, meant to fill
+                the frame edge-to-edge). The favorite-Pokémon sprite below
+                is deliberately NOT inside this overflow-hidden box: sprite
+                art varies a lot in how close it sits to its own canvas
+                edges (a curled-up Espeon has room to spare; a lunging
+                Garchomp's fins reach toward the corners), and a square
+                canvas's corners fall outside its inscribed circle no
+                matter how the 78% scale is tuned — so a wide-silhouette
+                sprite would get its extremities clipped by this mask even
+                though it never overflows its own bounding box. */}
+            <div
+              className="absolute inset-0 rounded-full ring-4 ring-bg overflow-hidden"
+              style={{ background: avatarGradient }}
+            >
+              {avatarUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarUrl}
+                  alt={displayName}
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </div>
+            {!avatarUrl && favoritePokemon && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={`${SPRITE_BASE}/${pokemonSlug(favoritePokemon.name)}.png`}
                 alt={favoritePokemon.name}
-                className="w-[78%] h-[78%] object-contain drop-shadow-sm"
+                className="relative w-[78%] h-[78%] object-contain drop-shadow-sm"
               />
-            ) : (
-              <span className="text-4xl sm:text-5xl font-black text-white drop-shadow-sm">
+            )}
+            {!avatarUrl && !favoritePokemon && (
+              <span className="relative text-4xl sm:text-5xl font-black text-white drop-shadow-sm">
                 {monogram}
               </span>
             )}
