@@ -37,7 +37,9 @@ export default function AddToListButton({ setId, number, isAuthenticated, image 
     <>
       <div className="relative">
         {image}
-        {open && <AddToListOverlay setId={setId} number={number} onClose={() => setOpen(false)} />}
+        {open && (
+          <AddToListOverlay setId={setId} number={number} onClose={() => setOpen(false)} large />
+        )}
       </div>
 
       <button

@@ -9,6 +9,10 @@ interface Props {
   setId: string;
   number: string;
   onClose: () => void;
+  /** Doubles the text size of the overlay's contents — used on the card
+   *  detail page, where the overlay sits on a much larger hero image than
+   *  the catalog grid tile's small thumbnail. */
+  large?: boolean;
 }
 
 /**
@@ -19,9 +23,12 @@ interface Props {
  * "add to list" has one consistent overlay language everywhere instead
  * of a floating dropdown positioned outside the card.
  */
-export default function AddToListOverlay({ setId, number, onClose }: Props) {
+export default function AddToListOverlay({ setId, number, onClose, large = false }: Props) {
   const { state, toggle, addCreatedList } = useListPicker(setId, number, true);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  const captionSize = large ? "text-[20px]" : "text-[10px]";
+  const rowSize = large ? "text-[22px]" : "text-[11px]";
 
   return (
     <div
@@ -32,14 +39,14 @@ export default function AddToListOverlay({ setId, number, onClose }: Props) {
         onClose();
       }}
     >
-      <div className="text-white text-[10px] uppercase tracking-wider font-semibold mb-1.5 px-1">
+      <div className={`text-white ${captionSize} uppercase tracking-wider font-semibold mb-1.5 px-1`}>
         Add to list
       </div>
       <ul className="flex-1 overflow-y-auto flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
         {state.loading ? (
-          <li className="text-white/70 text-[11px] px-1.5 py-1">Loading…</li>
+          <li className={`text-white/70 ${rowSize} px-1.5 py-1`}>Loading…</li>
         ) : !state.hasUsername ? (
-          <li className="text-white/70 text-[11px] leading-relaxed px-1.5 py-1">
+          <li className={`text-white/70 ${rowSize} leading-relaxed px-1.5 py-1`}>
             <Link href="/welcome" className="font-semibold text-white underline">
               Set a username
             </Link>{" "}
@@ -48,7 +55,7 @@ export default function AddToListOverlay({ setId, number, onClose }: Props) {
         ) : (
           <>
             {state.lists.length === 0 && (
-              <li className="text-white/70 text-[11px] px-1.5 py-1">No lists yet.</li>
+              <li className={`text-white/70 ${rowSize} px-1.5 py-1`}>No lists yet.</li>
             )}
             {state.lists.map((l) => (
               <li key={l.id} className="flex items-center gap-2 px-1.5 py-1 rounded-md bg-white/10">
@@ -59,7 +66,7 @@ export default function AddToListOverlay({ setId, number, onClose }: Props) {
                     onChange={() => toggle(l)}
                     className="w-3.5 h-3.5 rounded accent-accent shrink-0"
                   />
-                  <span className="text-[11px] font-semibold text-white truncate">{l.name}</span>
+                  <span className={`${rowSize} font-semibold text-white truncate`}>{l.name}</span>
                 </label>
               </li>
             ))}
@@ -75,7 +82,7 @@ export default function AddToListOverlay({ setId, number, onClose }: Props) {
             e.stopPropagation();
             setDialogOpen(true);
           }}
-          className="mt-1 text-left text-[11px] font-semibold text-white/90 hover:text-white px-1.5 py-1"
+          className={`mt-1 text-left ${rowSize} font-semibold text-white/90 hover:text-white px-1.5 py-1`}
         >
           + New list
         </button>
