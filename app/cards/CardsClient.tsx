@@ -171,7 +171,7 @@ export default function CardsClient({ initialResult, facets, setStats, initialPa
             aria-pressed={mode === "data"}
             aria-label={mode === "data" ? "Switch to catalog view" : "Switch to set progress view"}
             title={mode === "data" ? "Switch to catalog view" : "Switch to set progress view"}
-            className={`inline-flex items-center justify-center h-[38px] w-[38px] rounded-full border transition-colors ${
+            className={`inline-flex items-center justify-center gap-1.5 h-[38px] w-[38px] sm:w-auto sm:px-4 rounded-full border transition-colors ${
               mode === "data"
                 ? "border-transparent bg-black dark:bg-white text-white dark:text-black"
                 : "border-black/10 bg-white dark:bg-surface-2 text-text-primary hover:bg-surface"
@@ -185,13 +185,14 @@ export default function CardsClient({ initialResult, facets, setStats, initialPa
               strokeWidth="1.75"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="w-4 h-4"
+              className="w-4 h-4 shrink-0"
             >
               <path d="M3 16.5h14" />
               <path d="M6 16.5V11" />
               <path d="M10 16.5V6" />
               <path d="M14 16.5v-7.5" />
             </svg>
+            <span className="hidden sm:inline text-xs font-semibold">Sets</span>
           </button>
           <button
             type="button"
@@ -199,7 +200,7 @@ export default function CardsClient({ initialResult, facets, setStats, initialPa
             aria-pressed={mode === "lists"}
             aria-label={mode === "lists" ? "Switch to catalog view" : "Switch to your lists"}
             title={mode === "lists" ? "Switch to catalog view" : "Switch to your lists"}
-            className={`inline-flex items-center justify-center h-[38px] w-[38px] rounded-full border transition-colors ${
+            className={`inline-flex items-center justify-center gap-1.5 h-[38px] w-[38px] sm:w-auto sm:px-4 rounded-full border transition-colors ${
               mode === "lists"
                 ? "border-transparent bg-black dark:bg-white text-white dark:text-black"
                 : "border-black/10 bg-white dark:bg-surface-2 text-text-primary hover:bg-surface"
@@ -213,7 +214,7 @@ export default function CardsClient({ initialResult, facets, setStats, initialPa
               strokeWidth="1.75"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="w-4 h-4"
+              className="w-4 h-4 shrink-0"
             >
               <path d="M7 5.5h9" />
               <path d="M7 10h9" />
@@ -222,6 +223,7 @@ export default function CardsClient({ initialResult, facets, setStats, initialPa
               <path d="M4 10h.01" />
               <path d="M4 14.5h.01" />
             </svg>
+            <span className="hidden sm:inline text-xs font-semibold">Lists</span>
           </button>
         </div>
       </div>
