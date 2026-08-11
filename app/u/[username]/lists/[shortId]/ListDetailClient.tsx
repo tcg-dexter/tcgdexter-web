@@ -513,7 +513,7 @@ function ListDetailBody({
                       : "border border-black/10 bg-white dark:bg-surface-2 hover:bg-surface"
                   }`}
                 >
-                  Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+                  {activeFilterCount > 0 ? "Filtered" : "Filters"}
                 </button>
                 <GridListToggle value={view} onChange={setView} />
               </div>
