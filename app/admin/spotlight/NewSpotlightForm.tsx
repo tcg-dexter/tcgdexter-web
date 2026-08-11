@@ -101,7 +101,7 @@ export default function NewSpotlightForm() {
       <div className="flex flex-col sm:flex-row gap-2">
         <div ref={containerRef} className="relative flex-1">
           {selected ? (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-black/15 bg-white">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-black/15 dark:border-white/10 bg-white dark:bg-surface-2">
               <Avatar user={selected} />
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold text-text-primary truncate">
@@ -130,11 +130,11 @@ export default function NewSpotlightForm() {
                 }}
                 onFocus={() => setOpen(true)}
                 placeholder="Search users by name or @username…"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-black/15 bg-white"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-black/15 dark:border-white/10 bg-white dark:bg-surface-2"
                 autoComplete="off"
               />
               {open && query.trim().length >= 2 && (
-                <div className="absolute left-0 right-0 top-full mt-1 z-10 rounded-lg border border-black/15 bg-white shadow-lg max-h-72 overflow-y-auto">
+                <div className="absolute left-0 right-0 top-full mt-1 z-10 rounded-lg border border-black/15 dark:border-white/10 bg-white dark:bg-surface-elevated shadow-lg max-h-72 overflow-y-auto">
                   {searching ? (
                     <div className="px-3 py-2 text-xs text-text-muted">
                       Searching…
@@ -174,7 +174,7 @@ export default function NewSpotlightForm() {
         <button
           type="submit"
           disabled={loading || !selected}
-          className="text-xs font-semibold px-4 py-2 rounded-lg bg-black text-white border border-transparent disabled:opacity-50"
+          className="text-xs font-semibold px-4 py-2 rounded-lg bg-black dark:bg-white text-white dark:text-black border border-transparent disabled:opacity-50"
         >
           {loading ? "Creating…" : "Create draft"}
         </button>
@@ -191,7 +191,7 @@ function Avatar({ user }: { user: UserResult }) {
       <img
         src={user.avatar_url}
         alt={user.display_name}
-        className="w-8 h-8 rounded-full object-cover border border-black/8 shrink-0"
+        className="w-8 h-8 rounded-full object-cover border border-black/8 dark:border-white/10 shrink-0"
       />
     );
   }

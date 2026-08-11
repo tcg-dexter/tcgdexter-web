@@ -120,13 +120,13 @@ export default function CardSearchPicker({ slots }: Props) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search cards by name (min 2 chars)…"
-          className="w-full px-3 py-2 text-sm rounded-lg border border-black/15 bg-white"
+          className="w-full px-3 py-2 text-sm rounded-lg border border-black/15 dark:border-white/10 bg-white dark:bg-surface-2"
           autoComplete="off"
         />
       </div>
 
       {query.trim().length >= 2 && (
-        <div className="rounded-lg border border-black/10 bg-white max-h-96 overflow-y-auto">
+        <div className="rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-surface-elevated max-h-96 overflow-y-auto">
           {searching ? (
             <div className="px-3 py-3 text-xs text-text-muted">Searching…</div>
           ) : error ? (
@@ -136,7 +136,7 @@ export default function CardSearchPicker({ slots }: Props) {
               No cards match &ldquo;{query}&rdquo;.
             </div>
           ) : (
-            <ul className="divide-y divide-black/8">
+            <ul className="divide-y divide-black/8 dark:divide-white/10">
               {results.map((c) => (
                 <ResultRow
                   key={`${c.set_id}-${c.number}`}
@@ -163,7 +163,7 @@ function SlotPanel({
   onCaption: (index: number, caption: string) => void;
 }) {
   return (
-    <div className="rounded-xl border border-black/10 bg-white p-3">
+    <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-surface-2 p-3">
       <div className="flex items-baseline justify-between mb-2">
         <div className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
           {slot.label}
@@ -212,7 +212,7 @@ function SlotPanel({
                 onChange={(e) => onCaption(i, e.target.value)}
                 placeholder="Optional caption (shown under the card)"
                 maxLength={280}
-                className="w-full px-2.5 py-1.5 text-[11px] rounded-md border border-black/10 bg-white focus:outline-none focus:border-accent"
+                className="w-full px-2.5 py-1.5 text-[11px] rounded-md border border-black/10 dark:border-white/10 bg-white dark:bg-surface-2 focus:outline-none focus:border-accent"
               />
             </li>
           ))}
@@ -272,10 +272,10 @@ function ResultRow({
               disabled={disabled}
               className={`text-[11px] font-semibold px-2 py-1 rounded-md border whitespace-nowrap ${
                 st === "added"
-                  ? "border-emerald-500 text-emerald-600 bg-emerald-50 cursor-default"
+                  ? "border-emerald-500 dark:border-emerald-500/50 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/15 cursor-default"
                   : st === "full"
-                    ? "border-black/10 text-text-muted bg-white cursor-not-allowed"
-                    : "border-black/15 text-text-primary hover:border-accent hover:text-accent"
+                    ? "border-black/10 dark:border-white/10 text-text-muted bg-white dark:bg-surface-2 cursor-not-allowed"
+                    : "border-black/15 dark:border-white/10 text-text-primary hover:border-accent hover:text-accent"
               }`}
             >
               {st === "added"
