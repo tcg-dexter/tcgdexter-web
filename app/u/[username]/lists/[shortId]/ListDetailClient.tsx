@@ -516,65 +516,8 @@ function ListDetailBody({
                   Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
                 </button>
                 <GridListToggle value={view} onChange={setView} />
-                <button
-                  type="button"
-                  onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
-                  aria-pressed={selectMode}
-                  aria-label={selectMode ? "Exit select mode" : "Select cards"}
-                  title={selectMode ? "Exit select mode" : "Select cards"}
-                  className={`inline-flex items-center justify-center h-[38px] w-[38px] rounded-full border transition-colors ${
-                    selectMode
-                      ? "border-transparent bg-black dark:bg-white text-white dark:text-black"
-                      : "border-black/10 bg-white dark:bg-surface-2 text-text-primary hover:bg-surface"
-                  }`}
-                >
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.75"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="w-4 h-4"
-                  >
-                    <circle cx="4.5" cy="6" r="1.6" />
-                    <path d="M9 6h7" />
-                    <circle cx="4.5" cy="14" r="1.6" />
-                    <path d="M9 14h7" />
-                  </svg>
-                </button>
               </div>
             </div>
-
-            {/* Multi-select bar */}
-            {selectMode && (
-              <div className="mb-4 flex items-center justify-between gap-3 rounded-full border border-black/10 bg-white dark:bg-surface-2 px-4 py-2">
-                <span className="text-sm font-medium text-text-secondary">
-                  {selected.size} selected
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setAddDialogOpen(true)}
-                  disabled={selected.size === 0}
-                  aria-label="Add selected cards to list"
-                  title="Add selected cards to list"
-                  className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-black dark:bg-white text-white dark:text-black disabled:opacity-40 hover:opacity-90 transition-opacity"
-                >
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.25"
-                    strokeLinecap="round"
-                    className="w-3.5 h-3.5"
-                  >
-                    <path d="M10 4v12M4 10h12" />
-                  </svg>
-                </button>
-              </div>
-            )}
 
             {/* Filter panel */}
             {showFilters && (
@@ -655,13 +598,42 @@ function ListDetailBody({
               </div>
             )}
 
-            {/* Ownership scope */}
-            <OwnershipRadios
-              value={filters.ownership}
-              onChange={(v) =>
-                updateFilters({ ownership: v, ...(v !== "owned" ? { variant: [] } : {}) })
-              }
-            />
+            {/* Ownership scope + select mode */}
+            {selectMode ? (
+              <div className="flex items-center gap-2 mb-4">
+                <button
+                  type="button"
+                  onClick={exitSelectMode}
+                  className="shrink-0 text-xs font-semibold h-[38px] px-4 rounded-full border border-black/10 bg-white dark:bg-surface-2 hover:bg-surface transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAddDialogOpen(true)}
+                  disabled={selected.size === 0}
+                  className="flex-1 text-xs font-semibold h-[38px] rounded-full border border-transparent bg-black dark:bg-white text-white dark:text-black disabled:opacity-40 hover:opacity-90 transition-opacity"
+                >
+                  Add {selected.size} {selected.size === 1 ? "card" : "cards"} to list
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <OwnershipRadios
+                  value={filters.ownership}
+                  onChange={(v) =>
+                    updateFilters({ ownership: v, ...(v !== "owned" ? { variant: [] } : {}) })
+                  }
+                />
+                <button
+                  type="button"
+                  onClick={() => setSelectMode(true)}
+                  className="shrink-0 text-xs font-semibold h-[38px] px-4 rounded-full border border-black/10 bg-white dark:bg-surface-2 text-text-primary hover:bg-surface transition-colors"
+                >
+                  Select
+                </button>
+              </div>
+            )}
 
             <VariantFilteredView
               cards={sortedCards}
