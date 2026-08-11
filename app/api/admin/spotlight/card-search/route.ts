@@ -1,41 +1,21 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import cardData from "@/data/cards-standard.json";
-import { normalizeForSearch } from "@/lib/searchNormalize";
+import { searchCards } from "@/lib/cardSearch";
 
-interface CardEntry {
-  name: string;
-  set_id: string;
-  set_name?: string;
-  number: string;
-  supertype?: string;
-  types?: string[];
-  rarity?: string;
-}
-
-const CARD_DB = cardData as unknown as Record<string, CardEntry[]>;
-
-// Flatten the catalog once per server instance. ~14MB JSON → one ~50k-entry
-// flat list. Cheap to scan with a substring match; we cap returned results.
-let FLAT: CardEntry[] | null = null;
-function flat(): CardEntry[] {
-  if (FLAT) return FLAT;
-  const out: CardEntry[] = [];
-  for (const [name, entries] of Object.entries(CARD_DB)) {
-    for (const e of entries) {
-      out.push({ ...e, name: e.name ?? name });
-    }
-  }
-  FLAT = out;
-  return out;
-}
-
-const RESULT_LIMIT = 20;
+// Higher than /api/cards/search's 20 — an admin hunting for one specific
+// printing of a popular Pokémon (many "Garchomp ex" reprints etc.) needs to
+// see deeper into the match list than a quick-pick autocomplete does. The
+// picker's result panel already scrolls (max-h-96 overflow-y-auto).
+const RESULT_LIMIT = 60;
 
 /**
  * GET /api/admin/spotlight/card-search?q=<query>
- * Admin-only. Substring search against the cards-standard.json catalog.
- * Prefix matches rank above substring matches. Returns at most 20 entries.
+ * Admin-only. Same tokenized name/effect/artist search and ranking as the
+ * public catalog (lib/cardSearch) — previously this route ran its own
+ * plain substring match against the raw JSON, which (a) couldn't match a
+ * query like "Garchomp EX" against the catalog's "Garchomp-EX" name (no
+ * hyphen/space normalization) and (b) capped at the first 20 catalog-order
+ * hits, silently hiding older printings of prolific cards.
  */
 export async function GET(req: Request) {
   const supabase = await createClient();
@@ -60,19 +40,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ results: [] });
   }
 
-  const needle = normalizeForSearch(q);
-  const prefix: CardEntry[] = [];
-  const sub: CardEntry[] = [];
-  for (const c of flat()) {
-    const lower = normalizeForSearch(c.name);
-    if (lower.startsWith(needle)) prefix.push(c);
-    else if (lower.includes(needle)) sub.push(c);
-    if (prefix.length >= RESULT_LIMIT) break;
-  }
-  const results = [...prefix, ...sub].slice(0, RESULT_LIMIT).map((c) => ({
+  const { cards } = searchCards({ q, pageSize: RESULT_LIMIT });
+  const results = cards.map((c) => ({
     name: c.name,
-    set_id: c.set_id,
-    set_name: c.set_name ?? null,
+    set_id: c.setId,
+    set_name: c.setName ?? null,
     number: c.number,
     supertype: c.supertype ?? null,
     types: c.types ?? [],
