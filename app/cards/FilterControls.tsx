@@ -31,7 +31,7 @@ export function OwnershipRadios({
     <div
       role="radiogroup"
       aria-label="Ownership scope"
-      className="flex items-center gap-4 mb-4"
+      className="flex items-center gap-4"
     >
       {options.map((o) => {
         const selected = value === o.key;
