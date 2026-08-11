@@ -72,7 +72,7 @@ export default async function CardDetailPage({ params }: Props) {
       <CardDetailPanel
         card={card}
         raw={raw}
-        titleAction={
+        belowImageAction={
           <AddToListButton setId={card.setId} number={card.number} isAuthenticated={Boolean(user)} />
         }
       />

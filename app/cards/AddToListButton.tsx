@@ -14,12 +14,12 @@ interface Props {
 }
 
 /**
- * Circular "add to list" trigger for the card detail page's title row.
- * Signed-out clicks redirect to sign-in (mirrors FollowButton). Signed-in
- * opens a portalled checkbox picker over the caller's lists — same
- * positioning convention as DeckCardMenu's dropdown — with optimistic
- * toggles against POST/DELETE /api/lists/[id]/items, plus a trailing
- * "+ New list" row.
+ * Full-width "+ Add to List" capsule trigger, rendered directly below the
+ * card image on the card detail page. Signed-out clicks redirect to
+ * sign-in (mirrors FollowButton). Signed-in opens a portalled checkbox
+ * picker over the caller's lists — same positioning convention as
+ * DeckCardMenu's dropdown — with optimistic toggles against
+ * POST/DELETE /api/lists/[id]/items, plus a trailing "+ New list" row.
  *
  * The catalog grid tile uses a different presentation for the same
  * picker data (AddToListOverlay, an in-card overlay) — see useListPicker.
@@ -28,7 +28,7 @@ export default function AddToListButton({ setId, number, isAuthenticated }: Prop
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
 
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -44,7 +44,7 @@ export default function AddToListButton({ setId, number, isAuthenticated }: Prop
       const btn = buttonRef.current;
       if (!btn) return;
       const rect = btn.getBoundingClientRect();
-      setMenuPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+      setMenuPos({ top: rect.bottom + 8, left: rect.left });
     }
     compute();
     window.addEventListener("scroll", compute, true);
@@ -91,7 +91,7 @@ export default function AddToListButton({ setId, number, isAuthenticated }: Prop
         aria-label="Add to list"
         aria-haspopup={isAuthenticated ? "menu" : undefined}
         aria-expanded={isAuthenticated ? open : undefined}
-        className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full border border-black/10 bg-white dark:bg-surface-2 text-text-primary hover:bg-surface transition-colors"
+        className="w-full inline-flex items-center justify-center gap-1.5 h-10 rounded-full bg-black dark:bg-white text-white dark:text-black text-sm font-semibold hover:opacity-90 transition-opacity"
       >
         <svg
           aria-hidden="true"
@@ -100,10 +100,11 @@ export default function AddToListButton({ setId, number, isAuthenticated }: Prop
           stroke="currentColor"
           strokeWidth="2.5"
           strokeLinecap="round"
-          className="w-3.5 h-3.5"
+          className="w-4 h-4"
         >
           <path d="M10 4v12M4 10h12" />
         </svg>
+        Add to List
       </button>
 
       {open &&
@@ -113,7 +114,7 @@ export default function AddToListButton({ setId, number, isAuthenticated }: Prop
           <div
             ref={menuRef}
             role="menu"
-            style={{ position: "fixed", top: menuPos.top, right: menuPos.right }}
+            style={{ position: "fixed", top: menuPos.top, left: menuPos.left }}
             className="w-56 rounded-xl bg-white dark:bg-surface-elevated border border-black/8 dark:border-white/10 shadow-lg p-1 z-50"
           >
             {state.loading ? (

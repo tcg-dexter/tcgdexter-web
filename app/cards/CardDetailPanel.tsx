@@ -10,8 +10,10 @@ import CardImage from "./CardImage";
 interface Props {
   card: CardIndexEntry;
   raw: RawCard;
-  /** Optional element rendered inline in the title row (e.g. Add to list). */
-  titleAction?: ReactNode;
+  /** Optional element rendered directly below the card image (e.g. Add to
+   *  list) — sits in the left column, so it's full-width on both the
+   *  mobile-stacked and desktop two-column layouts. */
+  belowImageAction?: ReactNode;
 }
 
 /**
@@ -22,7 +24,7 @@ interface Props {
  * the home page's catalog preview can show the same panels for a single
  * spotlighted card without duplicating the markup.
  */
-export default function CardDetailPanel({ card, raw, titleAction }: Props) {
+export default function CardDetailPanel({ card, raw, belowImageAction }: Props) {
   const isPokemon = card.supertype === "Pokémon";
   const fullCardNumber = `${card.numberPadded}/${String(card.setSize).padStart(3, "0")}`;
   const avatarSlug = isPokemon ? pokemonSlug(card.name) : null;
@@ -54,7 +56,6 @@ export default function CardDetailPanel({ card, raw, titleAction }: Props) {
               {card.ptcgoCode ? ` · ${card.ptcgoCode}` : ""} · {fullCardNumber}
             </p>
           </div>
-          {titleAction}
         </div>
         <CardImage
           src={cardImageLarge(card.setId, card.number)}
@@ -68,6 +69,7 @@ export default function CardDetailPanel({ card, raw, titleAction }: Props) {
           className="w-full rounded-2xl shadow-md bg-surface"
           style={{ aspectRatio: "245 / 342" }}
         />
+        {belowImageAction}
       </div>
 
       <div className="flex flex-col gap-4">
@@ -90,7 +92,6 @@ export default function CardDetailPanel({ card, raw, titleAction }: Props) {
               {card.ptcgoCode ? ` · ${card.ptcgoCode}` : ""} · {fullCardNumber}
             </p>
           </div>
-          {titleAction}
         </div>
 
         <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated p-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-base">
