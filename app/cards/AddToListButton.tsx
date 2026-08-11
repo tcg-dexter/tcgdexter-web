@@ -98,13 +98,11 @@ export default function AddToListButton({ setId, number, isAuthenticated }: Prop
           viewBox="0 0 20 20"
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.6"
+          strokeWidth="2.5"
           strokeLinecap="round"
-          strokeLinejoin="round"
-          className="w-4 h-4"
+          className="w-3.5 h-3.5"
         >
-          <path d="M5 3.5h10a.5.5 0 01.5.5v12.5l-5.5-3-5.5 3V4a.5.5 0 01.5-.5z" />
-          <path d="M7.25 8h5.5M10 5.25v5.5" />
+          <path d="M10 4v12M4 10h12" />
         </svg>
       </button>
 
