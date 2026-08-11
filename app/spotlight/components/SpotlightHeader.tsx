@@ -73,6 +73,22 @@ export default function SpotlightHeader({
     return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
   })();
 
+  // profiles.avatar_url doubles as "the user picked a Pokémon sprite as
+  // their avatar" (AvatarPicker.tsx PATCHes the resolved sprite CDN URL
+  // straight into that column, reusing the same field real uploaded
+  // photos use) — so a truthy avatarUrl isn't necessarily a full-bleed
+  // photo. Treating it as one and rendering with object-cover zooms into
+  // a sprite's transparent padding and crops the character. Route a
+  // sprite URL through the same object-contain, unclipped-circle
+  // treatment as the favoritePokemon fallback below instead.
+  const avatarIsSprite = avatarUrl?.startsWith(SPRITE_BASE) ?? false;
+  const photoUrl = avatarUrl && !avatarIsSprite ? avatarUrl : null;
+  const spriteUrl = avatarIsSprite
+    ? avatarUrl
+    : !avatarUrl && favoritePokemon
+      ? `${SPRITE_BASE}/${pokemonSlug(favoritePokemon.name)}.png`
+      : null;
+
   return (
     <header className="flex-shrink-0">
       <SpotlightBanner
@@ -95,10 +111,10 @@ export default function SpotlightHeader({
       <div className="mx-auto max-w-2xl px-6">
         <div className="flex items-end justify-between gap-3 -mt-11 sm:-mt-20">
           <div className="relative z-10 flex items-center justify-center shrink-0 w-[90px] h-[90px] sm:w-32 sm:h-32">
-            {/* Circle-clipped background layer — a real uploaded avatar
-                photo clips to this circle too (object-cover, meant to fill
-                the frame edge-to-edge). The favorite-Pokémon sprite below
-                is deliberately NOT inside this overflow-hidden box: sprite
+            {/* Circle-clipped background layer — only a real uploaded
+                photo (photoUrl) clips to this circle (object-cover, meant
+                to fill the frame edge-to-edge). Any sprite render is
+                deliberately NOT inside this overflow-hidden box: sprite
                 art varies a lot in how close it sits to its own canvas
                 edges (a curled-up Espeon has room to spare; a lunging
                 Garchomp's fins reach toward the corners), and a square
@@ -110,24 +126,24 @@ export default function SpotlightHeader({
               className="absolute inset-0 rounded-full ring-4 ring-bg overflow-hidden"
               style={{ background: avatarGradient }}
             >
-              {avatarUrl && (
+              {photoUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={avatarUrl}
+                  src={photoUrl}
                   alt={displayName}
                   className="w-full h-full object-cover"
                 />
               )}
             </div>
-            {!avatarUrl && favoritePokemon && (
+            {spriteUrl && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={`${SPRITE_BASE}/${pokemonSlug(favoritePokemon.name)}.png`}
-                alt={favoritePokemon.name}
+                src={spriteUrl}
+                alt={favoritePokemon?.name ?? displayName}
                 className="relative w-[78%] h-[78%] object-contain drop-shadow-sm"
               />
             )}
-            {!avatarUrl && !favoritePokemon && (
+            {!photoUrl && !spriteUrl && (
               <span className="relative text-4xl sm:text-5xl font-black text-white drop-shadow-sm">
                 {monogram}
               </span>

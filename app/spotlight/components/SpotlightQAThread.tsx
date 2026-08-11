@@ -79,7 +79,7 @@ export default function SpotlightQAThread({ qa, trainer }: Props) {
             <Post
               avatar={
                 <div
-                  className="h-9 w-9 rounded-full overflow-hidden flex items-center justify-center text-sm font-black text-white"
+                  className="h-9 w-9 rounded-full overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.18)] flex items-center justify-center text-sm font-black text-white"
                   style={trainer.avatarUrl ? undefined : { background: trainerGradient }}
                 >
                   {trainer.avatarUrl ? (
