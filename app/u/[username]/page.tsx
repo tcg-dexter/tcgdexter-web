@@ -37,6 +37,8 @@ import FollowButton from "./FollowButton";
 import { FollowPanelProvider } from "./FollowPanel";
 import FollowStats from "./FollowStats";
 import FollowPanelBody from "./FollowPanelBody";
+import { hydrateListPreviews, type ListRow } from "@/lib/lists";
+import ListPreviewCard from "@/app/cards/ListPreviewCard";
 
 interface ProfileRow {
   id: string;
@@ -171,6 +173,24 @@ export default async function ProfilePage({
         .order("like_count", { ascending: false })
         .order("updated_at", { ascending: false });
   const decks = (decksRaw ?? []) as DeckRow[];
+
+  const { data: listsRaw } = isOwner
+    ? await supabase
+        .from("lists")
+        .select("id, short_id, name, is_public")
+        .eq("user_id", profile.id)
+        .order("created_at", { ascending: false })
+    : await supabase
+        .from("lists")
+        .select("id, short_id, name, is_public")
+        .eq("user_id", profile.id)
+        .eq("is_public", true)
+        .order("created_at", { ascending: false });
+  const lists = await hydrateListPreviews(
+    supabase,
+    profile.username,
+    (listsRaw ?? []) as ListRow[],
+  );
 
   let manualMatches: MatchRow[] = [];
   if (isOwner) {
@@ -582,6 +602,39 @@ export default async function ProfilePage({
           </>
         )}
       </div>
+
+      {(isOwner || lists.length > 0) && (
+        <div className="px-4 sm:px-8 mt-6">
+          <h2 className="text-lg font-semibold text-text-primary mb-3 px-1">
+            Lists
+            {lists.length > 0 && (
+              <span className="ml-2 text-sm font-normal text-text-muted">({lists.length})</span>
+            )}
+          </h2>
+          {lists.length === 0 ? (
+            <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-8 text-center">
+              <p className="text-sm text-text-secondary">
+                {isOwner ? (
+                  <>
+                    No lists yet.{" "}
+                    <Link href="/cards" className="text-accent hover:underline">
+                      Start one from Card Catalog →
+                    </Link>
+                  </>
+                ) : (
+                  `${profile.display_name} hasn't shared any lists yet.`
+                )}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {lists.map((l) => (
+                <ListPreviewCard key={l.id} list={l} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       </FollowPanelBody>
       </FollowPanelProvider>
     </main>

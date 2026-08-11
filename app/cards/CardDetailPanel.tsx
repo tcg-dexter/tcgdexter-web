@@ -10,6 +10,8 @@ import CardImage from "./CardImage";
 interface Props {
   card: CardIndexEntry;
   raw: RawCard;
+  /** Optional element rendered inline in the title row (e.g. Add to list). */
+  titleAction?: ReactNode;
 }
 
 /**
@@ -20,7 +22,7 @@ interface Props {
  * the home page's catalog preview can show the same panels for a single
  * spotlighted card without duplicating the markup.
  */
-export default function CardDetailPanel({ card, raw }: Props) {
+export default function CardDetailPanel({ card, raw, titleAction }: Props) {
   const isPokemon = card.supertype === "Pokémon";
   const fullCardNumber = `${card.numberPadded}/${String(card.setSize).padStart(3, "0")}`;
   const avatarSlug = isPokemon ? pokemonSlug(card.name) : null;
@@ -45,13 +47,14 @@ export default function CardDetailPanel({ card, raw }: Props) {
               )}
             </span>
           )}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-semibold text-text-primary">{card.name}</h1>
             <p className="text-sm text-text-secondary mt-1">
               {card.setName}
               {card.ptcgoCode ? ` · ${card.ptcgoCode}` : ""} · {fullCardNumber}
             </p>
           </div>
+          {titleAction}
         </div>
         <CardImage
           src={cardImageLarge(card.setId, card.number)}
@@ -80,13 +83,14 @@ export default function CardDetailPanel({ card, raw }: Props) {
               )}
             </span>
           )}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-semibold text-text-primary">{card.name}</h1>
             <p className="text-sm text-text-secondary mt-1">
               {card.setName}
               {card.ptcgoCode ? ` · ${card.ptcgoCode}` : ""} · {fullCardNumber}
             </p>
           </div>
+          {titleAction}
         </div>
 
         <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated p-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-base">

@@ -135,6 +135,11 @@ export async function POST(req: Request) {
       label: "saved_decks",
       run: () => admin.from("saved_decks").delete().eq("user_id", userId),
     },
+    // list_items cascades via its own FK to lists.id — no separate step needed.
+    {
+      label: "lists",
+      run: () => admin.from("lists").delete().eq("user_id", userId),
+    },
     {
       label: "deck_shares",
       run: () => admin.from("deck_shares").delete().eq("user_id", userId),

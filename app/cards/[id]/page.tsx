@@ -8,8 +8,10 @@ import {
 } from "@/lib/cardsIndex";
 import { cardImageFallbacks, cardImageSmall } from "@/lib/cardImages";
 import BackButton from "@/app/components/ui/BackButton";
+import { createClient } from "@/lib/supabase/server";
 import CardImage from "../CardImage";
 import CardDetailPanel from "../CardDetailPanel";
+import AddToListButton from "../AddToListButton";
 import { findCardAppearances } from "@/lib/cardAppearances";
 import AppearsInCarousel from "./AppearsInCarousel";
 
@@ -26,11 +28,16 @@ export async function generateMetadata({ params }: Props) {
   };
 }
 
-export default function CardDetailPage({ params }: Props) {
+export default async function CardDetailPage({ params }: Props) {
   const id = decodeURIComponent(params.id);
   const card = getCardById(id);
   const raw = getRawCard(id);
   if (!card || !raw) notFound();
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   // First "Appears in" batch (top meta variants containing this exact
   // printing). Server-render the first 10 so the section paints with the
@@ -62,7 +69,13 @@ export default function CardDetailPage({ params }: Props) {
         <BackButton href="/cards" ariaLabel="Back to Cards" />
       </div>
 
-      <CardDetailPanel card={card} raw={raw} />
+      <CardDetailPanel
+        card={card}
+        raw={raw}
+        titleAction={
+          <AddToListButton setId={card.setId} number={card.number} isAuthenticated={Boolean(user)} />
+        }
+      />
 
       {appearancesInitial.items.length > 0 && (
         <AppearsInCarousel
