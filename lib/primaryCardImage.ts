@@ -21,6 +21,9 @@ interface CardEntry {
   rarity?: string | null;
   regulation_mark?: string | null;
   evolves_from?: string | null;
+  /** Canonical variant keys — see lib/variants.ts. Absent when upstream
+   *  hasn't described the printing. */
+  variants?: string[];
 }
 
 const CARD_DB = cardData as unknown as Record<string, CardEntry[]>;
@@ -342,8 +345,8 @@ export function cardPrintingsForName(
 }
 
 /** Resolve a deck-list card to the catalog "add" target for its specific
- *  printing: the (setId, number) the deck uses plus a sensible default
- *  variant for that rarity (the first finish the catalog's add menu offers).
+ *  printing: the (setId, number) the deck uses plus a default variant — the
+ *  first finish the printing actually exists in, per its TCGdex variant data.
  *  Returns null when the printing can't be resolved in the standard DB. */
 export interface DeckAddTarget {
   setId: string;
@@ -355,7 +358,7 @@ export function deckCardAddTarget(
 ): DeckAddTarget | null {
   const entry = resolveEntry(card);
   if (!entry?.set_id) return null;
-  const variant = allowedAddVariants(entry.rarity ?? null)[0] ?? "normal";
+  const variant = allowedAddVariants(entry.variants)[0] ?? "normal";
   return { setId: entry.set_id, number: entry.number, variant };
 }
 

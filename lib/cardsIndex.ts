@@ -1,4 +1,5 @@
 import cardData from "@/data/cards-standard.json";
+import setTotals from "@/data/set-totals.json";
 import { setReleaseDate } from "@/lib/setReleaseDates";
 import { setLogo, setSymbol } from "@/lib/setImages";
 import { normalizeForSearch } from "@/lib/searchNormalize";
@@ -61,6 +62,11 @@ export interface CardIndexEntry {
    *  card (rules text excluded — those sit on Trainers/Energy and are
    *  caught by `name`). Used for substring fallback matching. */
   effectText: string;
+  /** Canonical keys for every physical printing this card exists in — see
+   *  `lib/variants.ts`. Sourced from TCGdex via `card_variants`. Empty when
+   *  upstream hasn't described the card (168 of ~20.5k printings today);
+   *  callers should treat that as "unknown", not "no printings exist". */
+  variants: string[];
 }
 
 export interface CardAttack {
@@ -98,6 +104,9 @@ export interface RawCard {
   rules?: string[];
   weaknesses?: Array<{ type: string; value: string }>;
   evolves_from?: string | null;
+  /** Canonical variant keys — omitted entirely when we have no printing data
+   *  for the card (see `export_cards_standard.py`). */
+  variants?: string[];
 }
 
 export interface SetStats {
@@ -105,10 +114,19 @@ export interface SetStats {
   name: string;
   ptcgoCode: string | null;
   releaseDate: string | null;
-  /** Actual number of distinct cards in the set — includes secret rares
-   *  and other prints past the "official" set size. Used as the
-   *  denominator for completion progress in the catalog data view. */
+  /** How many cards the set actually contains — includes secret rares and
+   *  other prints past the "official" set size. The completion denominator in
+   *  the catalog data view.
+   *
+   *  Comes from `data/set-totals.json` (TCGdex's count), not from counting the
+   *  cards we hold: doing the latter made every set look complete, so a set
+   *  missing 26 printings still read 100%. Falls back to our own count for a
+   *  set the totals file doesn't cover. */
   size: number;
+  /** Cards we actually hold for the set. Below `size` when the catalog is
+   *  behind upstream — surfaced so the data view can say so rather than
+   *  quietly overstating progress. */
+  held: number;
   /** Wide transparent PNG of the set's banner logo. Null for sets we
    *  know aren't on pokemontcg.io's CDN — fall back to ptcgoCode. */
   logo: string | null;
@@ -205,6 +223,7 @@ function buildIndex(): CardIndexEntry[] {
         effectNames,
         effectNameTokens,
         effectText: effectTextParts.join(" "),
+        variants: c.variants ?? [],
       });
     }
   }
@@ -249,7 +268,7 @@ export function getAllSetStats(): SetStats[] {
   for (const c of getAllCards()) {
     const existing = seen.get(c.setId);
     if (existing) {
-      existing.size += 1;
+      existing.held += 1;
     } else {
       seen.set(c.setId, {
         id: c.setId,
@@ -257,11 +276,16 @@ export function getAllSetStats(): SetStats[] {
         ptcgoCode: c.ptcgoCode,
         releaseDate: c.setReleaseDate ?? null,
         size: 1,
+        held: 1,
         logo: setLogo(c.setId),
         symbol: setSymbol(c.setId),
       });
     }
   }
+  const totals = setTotals as Record<string, number>;
+  seen.forEach((s) => {
+    s.size = Math.max(totals[s.id] ?? 0, s.held);
+  });
   SET_STATS = Array.from(seen.values()).sort((a, b) => {
     const ad = a.releaseDate ?? "";
     const bd = b.releaseDate ?? "";
