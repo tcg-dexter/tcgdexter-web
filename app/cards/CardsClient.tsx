@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import type { CardIndexEntry, SetStats } from "@/lib/cardsIndex";
 import type { SortKey, SortDir, OwnershipFilter } from "@/lib/cardSearch";
-import { COLLECTION_VARIANTS } from "@/lib/inventory";
+import { variantDisplayLabel } from "@/lib/inventory";
 import { normalizeForSearch } from "@/lib/searchNormalize";
 import DataView from "./DataView";
 import ListsView from "./ListsView";
@@ -282,6 +282,14 @@ function CatalogBody({
   activeFilterCount,
 }: CatalogBodyProps) {
   const totalPages = Math.max(1, Math.ceil(initialResult.total / params.pageSize));
+  // Variant facet options come from the collection itself. The vocabulary is
+  // the open printing grammar now, so there's no fixed list to enumerate —
+  // and showing only what someone owns keeps the filter short and relevant.
+  const { ownedVariants } = useInventory();
+  const ownedVariantLabels = useMemo(
+    () => Array.from(new Set(ownedVariants.map(variantDisplayLabel))),
+    [ownedVariants],
+  );
   return (
     <>
       {/* Toolbar */}
@@ -387,7 +395,7 @@ function CatalogBody({
           {params.ownership === "owned" && (
             <FacetGroup
               label="Variant"
-              options={COLLECTION_VARIANTS.map((v) => v.label)}
+              options={ownedVariantLabels}
               selected={params.variant}
               onToggle={(v) => toggleArrayValue("variant", v)}
             />
@@ -474,7 +482,7 @@ function VariantFilteredView({
     if (variantFilter.length === 0) return cards;
     return cards.filter((c) =>
       presentVariants(c.setId, c.number).some((v) =>
-        variantFilter.includes(COLLECTION_VARIANTS.find((x) => x.key === v)?.label ?? "")
+        variantFilter.includes(variantDisplayLabel(v))
       )
     );
   }, [cards, variantFilter, presentVariants]);

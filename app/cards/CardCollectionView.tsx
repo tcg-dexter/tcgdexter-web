@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { cardImageSmall } from "@/lib/cardImages";
+import { cardImageFallbacks, cardImageSmall } from "@/lib/cardImages";
 import type { CardIndexEntry } from "@/lib/cardsIndex";
 import CardImage from "./CardImage";
 import GridTile from "./GridTile";
@@ -71,6 +71,7 @@ function ListRow({
       >
         <CardImage
           src={cardImageSmall(c.setId, c.number)}
+          fallbackSrcs={cardImageFallbacks(c.setId, c.number)}
           alt={`${c.name} — ${c.setName} ${c.number}`}
           name={c.name}
           setName={c.setName}
@@ -105,7 +106,7 @@ function ListRow({
         <InventoryOverlay
           setId={c.setId}
           number={c.number}
-          rarity={c.rarity}
+          variants={c.variants}
           cardName={c.name}
           mode={mode}
           display="modal"

@@ -1,41 +1,40 @@
-export const COLLECTION_VARIANTS = [
-  { key: "normal", label: "Normal" },
-  { key: "holo", label: "Holo" },
-  { key: "reverse_holo", label: "Reverse Holo" },
-  { key: "prize_pack", label: "Play! Pokémon Stamp" },
-] as const;
+import { FALLBACK_VARIANTS, isValidVariantKey, variantLabel } from "@/lib/variants";
 
-export type CollectionVariantKey = (typeof COLLECTION_VARIANTS)[number]["key"];
+/**
+ * A collection variant is a canonical variant key — see `lib/variants.ts`.
+ * It used to be one of four hardcoded strings; it's now the full printing
+ * grammar, so exotic finishes (cosmos holo, prerelease staff stamps, 1st
+ * Edition shadowless) are first-class rather than something bulk imports
+ * smuggled in as free text.
+ */
+export type CollectionVariantKey = string;
 
-const VALID_KEYS = new Set<string>(COLLECTION_VARIANTS.map((v) => v.key));
-
+/** Valid iff it parses as a canonical variant key. This replaces membership in
+ *  a fixed four-item list, so the API accepts any real printing while still
+ *  rejecting malformed input. */
 export function isValidVariant(v: string): v is CollectionVariantKey {
-  return VALID_KEYS.has(v);
+  return isValidVariantKey(v);
 }
 
 /**
- * Variants offered in the "add" menu for a given printing's rarity.
- * Removal still surfaces any owned variant — this filter only narrows
- * what a user can newly add, so the menu doesn't list finishes that
- * effectively never exist for that rarity.
+ * Variants offered in the "add" menu for a printing.
  *
- * - Common / Uncommon: printed Normal + Reverse Holo (no Holo finish).
- * - Rare: printed Holo + Reverse Holo (no Normal finish).
- * - All other rarities (Rare Holo, Ultras, IRs, SIRs, Hypers, Promos,
- *   etc.): only the single Holo finish exists.
+ * `variants` is the exact set of printings the card exists in, sourced from
+ * TCGdex (see `lib/variants.ts`). When it's missing — a card upstream hasn't
+ * described yet — we fall back to the three finishes common to every era
+ * rather than showing an empty menu.
  *
- * The Play! Pokémon Stamp is offered on every printing — it's a stamp
- * variant that can be applied to any rarity at events.
+ * Removal still surfaces any owned variant, so a finish someone already has
+ * recorded stays removable even if it isn't offered here.
  */
-export function allowedAddVariants(rarity: string | null): CollectionVariantKey[] {
-  const r = (rarity ?? "").trim().toLowerCase();
-  if (r === "common" || r === "uncommon") {
-    return ["normal", "reverse_holo", "prize_pack"];
-  }
-  if (r === "rare") {
-    return ["holo", "reverse_holo", "prize_pack"];
-  }
-  return ["holo", "prize_pack"];
+export function allowedAddVariants(variants: string[] | undefined | null): CollectionVariantKey[] {
+  return variants?.length ? variants : FALLBACK_VARIANTS;
+}
+
+/** Display name for a variant key, e.g. `holo:f=cosmos:t=player-rewards-program`
+ *  → "Play! Pokémon Stamp — Cosmos Holo". */
+export function variantDisplayLabel(key: string): string {
+  return variantLabel(key);
 }
 
 export interface CollectionEntry {

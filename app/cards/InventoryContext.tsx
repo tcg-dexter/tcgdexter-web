@@ -10,7 +10,8 @@ import {
   useState,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { COLLECTION_VARIANTS, type CollectionVariantKey } from "@/lib/inventory";
+import { type CollectionVariantKey } from "@/lib/inventory";
+import { compareVariants } from "@/lib/variants";
 
 type VariantMap = Partial<Record<CollectionVariantKey, number>>;
 type CollectionMap = Record<string, VariantMap>;
@@ -22,6 +23,10 @@ interface InventoryCtx {
   totalFor: (setId: string, number: string) => number;
   /** Variants this card has at least one of, in canonical order. */
   presentVariants: (setId: string, number: string) => CollectionVariantKey[];
+  /** Every distinct variant owned anywhere in the collection, in canonical
+   *  order. Drives the catalog's Variant facet — the vocabulary is open now,
+   *  so the options have to come from the data rather than a fixed list. */
+  ownedVariants: CollectionVariantKey[];
   /** Apply a delta. Optimistic; rolls back on server error. Requires sign-in. */
   adjust: (
     setId: string,
@@ -124,10 +129,24 @@ export default function InventoryProvider({
     (setId: string, number: string): CollectionVariantKey[] => {
       const v = collection[cardKey(setId, number)];
       if (!v) return [];
-      return COLLECTION_VARIANTS.map((x) => x.key).filter((k) => (v[k] ?? 0) > 0);
+      // Every owned key, not a fixed list — the vocabulary is now the full
+      // printing grammar, so exotic finishes must survive this filter.
+      return Object.keys(v)
+        .filter((k) => (v[k] ?? 0) > 0)
+        .sort(compareVariants);
     },
     [collection],
   );
+
+  const ownedVariants = useMemo(() => {
+    const seen = new Set<string>();
+    for (const variants of Object.values(collection)) {
+      for (const [key, qty] of Object.entries(variants)) {
+        if ((qty ?? 0) > 0) seen.add(key);
+      }
+    }
+    return Array.from(seen).sort(compareVariants);
+  }, [collection]);
 
   const adjust = useCallback(
     async (
@@ -212,10 +231,11 @@ export default function InventoryProvider({
       collection,
       totalFor,
       presentVariants,
+      ownedVariants,
       adjust,
       promptSignIn: () => setSignInOpen(true),
     }),
-    [signedIn, collection, totalFor, presentVariants, adjust],
+    [signedIn, collection, totalFor, presentVariants, ownedVariants, adjust],
   );
 
   return (

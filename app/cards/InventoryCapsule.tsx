@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  COLLECTION_VARIANTS,
   allowedAddVariants,
+  variantDisplayLabel,
   type CollectionVariantKey,
 } from "@/lib/inventory";
+import { compareVariants, isSpecialPrinting } from "@/lib/variants";
 import { useInventory } from "./InventoryContext";
 
 const ADD_CELEBRATION_MS = 1250;
@@ -99,7 +100,7 @@ export function InventoryCapsule({ setId, number, onOpenMenu }: CapsuleProps) {
 export function InventoryOverlay({
   setId,
   number,
-  rarity,
+  variants,
   cardName,
   mode,
   display,
@@ -107,7 +108,10 @@ export function InventoryOverlay({
 }: {
   setId: string;
   number: string;
-  rarity: string | null;
+  /** Canonical variant keys for this printing — the exact finishes it exists
+   *  in. Empty/undefined when upstream hasn't described the card, in which
+   *  case `allowedAddVariants` falls back to the universal finishes. */
+  variants?: string[];
   cardName?: string;
   mode: Mode;
   display: "card" | "modal";
@@ -116,9 +120,9 @@ export function InventoryOverlay({
   const { collection, adjust } = useInventory();
   const key = `${setId}::${number}`;
   const variantQty = collection[key] ?? {};
-  const addable = new Set<CollectionVariantKey>(allowedAddVariants(rarity));
 
   const [celebrating, setCelebrating] = useState<CollectionVariantKey | null>(null);
+  const [showSpecial, setShowSpecial] = useState(false);
   const [closing, setClosing] = useState(false);
   const celebrateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -144,13 +148,37 @@ export function InventoryOverlay({
   }
 
   const title = mode === "add" ? "Add variant" : "Remove variant";
-  const rows: Array<{ key: CollectionVariantKey; label: string; qty: number }> = [];
-  for (const v of COLLECTION_VARIANTS) {
-    const qty = variantQty[v.key] ?? 0;
-    if (mode === "remove" && qty <= 0) continue;
-    if (mode === "add" && !addable.has(v.key)) continue;
-    rows.push({ key: v.key, label: v.label, qty });
-  }
+
+  /**
+   * Add mode lists the printings the card actually exists in; remove mode
+   * lists whatever is owned, so a finish recorded before we had variant data
+   * (or imported in bulk) stays removable even if it's no longer offered.
+   *
+   * Plain finishes come first and stamped/foiled printings collapse behind a
+   * toggle — Base-era holos have four printings and some promos carry several
+   * stamps, which would otherwise bury the common case under a long list.
+   */
+  const { plain, special } = useMemo(() => {
+    const keys =
+      mode === "add"
+        ? allowedAddVariants(variants)
+        : Object.keys(variantQty).filter((k) => (variantQty[k] ?? 0) > 0);
+    const rows = Array.from(new Set(keys)).sort(compareVariants).map((k) => ({
+      key: k,
+      label: variantDisplayLabel(k),
+      qty: variantQty[k] ?? 0,
+    }));
+    return {
+      plain: rows.filter((r) => !isSpecialPrinting(r.key)),
+      special: rows.filter((r) => isSpecialPrinting(r.key)),
+    };
+  }, [mode, variants, variantQty]);
+
+  // Nothing plain to show (a promo that only exists stamped) — don't hide the
+  // only rows there are behind a toggle.
+  const specialsCollapsible = plain.length > 0 && special.length > 0;
+  const rows = specialsCollapsible && !showSpecial ? plain : [...plain, ...special];
+  const hiddenCount = specialsCollapsible && !showSpecial ? special.length : 0;
 
   if (display === "modal") {
     return (
@@ -205,6 +233,19 @@ export function InventoryOverlay({
               </li>
             ))}
           </ul>
+          {hiddenCount > 0 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowSpecial(true);
+              }}
+              className="mt-2 w-full text-xs font-semibold text-text-secondary hover:text-text-primary py-1.5 rounded-lg hover:bg-surface transition-colors"
+            >
+              Show {hiddenCount} special printing{hiddenCount === 1 ? "" : "s"}
+            </button>
+          )}
           <div className="mt-4 flex justify-center">
             <button
               type="button"
@@ -302,6 +343,21 @@ export function InventoryOverlay({
             })()}
           </li>
         ))}
+        {hiddenCount > 0 && (
+          <li>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowSpecial(true);
+              }}
+              className="w-full text-[10px] font-semibold text-white/70 hover:text-white py-1 rounded-md hover:bg-white/10 transition-colors"
+            >
+              Show {hiddenCount} special printing{hiddenCount === 1 ? "" : "s"}
+            </button>
+          </li>
+        )}
       </ul>
       <div className="mt-1.5 flex justify-center">
         <button

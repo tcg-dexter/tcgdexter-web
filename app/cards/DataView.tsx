@@ -239,6 +239,7 @@ function SetCompletionRow({
 }) {
   const pct = set.size > 0 ? Math.min(100, (owned / set.size) * 100) : 0;
   const released = formatReleaseDate(set.releaseDate);
+  const missing = Math.max(0, set.size - set.held);
   return (
     <li className="py-3">
       <button
@@ -273,6 +274,14 @@ function SetCompletionRow({
               </div>
               {released && (
                 <div className="text-xs text-text-muted truncate">{released}</div>
+              )}
+              {missing > 0 && (
+                // The denominator is the set's real size, so a set we haven't
+                // fully ingested can't reach 100%. Say why rather than letting
+                // it look like the collection is short.
+                <div className="text-xs text-text-muted truncate">
+                  {missing} not yet in catalog
+                </div>
               )}
             </div>
             <div className="flex flex-col items-end tabular-nums whitespace-nowrap leading-tight">

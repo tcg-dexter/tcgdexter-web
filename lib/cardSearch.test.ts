@@ -29,6 +29,7 @@ function card(overrides: Partial<CardIndexEntry> & { id: string; name: string })
     effectNames: [],
     effectNameTokens: [],
     effectText: "",
+    variants: [],
     ...overrides,
   };
 }

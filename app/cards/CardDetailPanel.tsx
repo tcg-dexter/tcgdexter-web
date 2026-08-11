@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { CardIndexEntry, RawCard } from "@/lib/cardsIndex";
-import { cardImageLarge } from "@/lib/cardImages";
+import { cardImageFallbacks, cardImageLarge } from "@/lib/cardImages";
 import { pokemonSlug } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
 import { shade } from "@/lib/color";
@@ -58,6 +58,7 @@ export default function CardDetailPanel({ card, raw, titleAction }: Props) {
         </div>
         <CardImage
           src={cardImageLarge(card.setId, card.number)}
+          fallbackSrcs={cardImageFallbacks(card.setId, card.number, "large")}
           alt={`${card.name} — ${card.setName} ${card.number}`}
           name={card.name}
           setName={card.setName}

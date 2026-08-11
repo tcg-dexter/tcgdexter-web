@@ -6,7 +6,7 @@ import {
   getCardsByName,
   getRawCard,
 } from "@/lib/cardsIndex";
-import { cardImageSmall } from "@/lib/cardImages";
+import { cardImageFallbacks, cardImageSmall } from "@/lib/cardImages";
 import BackButton from "@/app/components/ui/BackButton";
 import { createClient } from "@/lib/supabase/server";
 import CardImage from "../CardImage";
@@ -102,6 +102,7 @@ export default async function CardDetailPage({ params }: Props) {
               >
                 <CardImage
                   src={cardImageSmall(c.setId, c.number)}
+                  fallbackSrcs={cardImageFallbacks(c.setId, c.number)}
                   alt={`${c.name} — ${c.setName} ${c.number}`}
                   name={c.name}
                   setName={c.setName}
@@ -131,6 +132,7 @@ export default async function CardDetailPage({ params }: Props) {
               >
                 <CardImage
                   src={cardImageSmall(c.setId, c.number)}
+                  fallbackSrcs={cardImageFallbacks(c.setId, c.number)}
                   alt={`${c.name} — ${c.setName} ${c.number}`}
                   name={c.name}
                   setName={c.setName}

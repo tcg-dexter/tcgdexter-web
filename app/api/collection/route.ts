@@ -45,9 +45,11 @@ export async function GET() {
     if (data.length < PAGE) break;
   }
 
-  // CollectionEntry.variant is typed as the canonical key set but the table
-  // also stores exotic variants from bulk imports. The UI filters those out
-  // for per-variant rendering; here we just pass the raw string through.
+  // Variants are canonical keys (lib/variants.ts) — an open grammar covering
+  // every real printing, so exotic finishes are first-class rather than
+  // something the UI has to filter out. Legacy free-text rows are rewritten by
+  // dexter-ops/scripts/migrate_collection_variants.py; anything it couldn't
+  // resolve still round-trips here and stays removable in the UI.
   const items: CollectionEntry[] = all.map((r) => ({
     setId: r.set_id,
     number: r.number,
