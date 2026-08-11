@@ -251,8 +251,26 @@ export function pickPrintingForCard(c: Card): CardDataEntry | null {
  *  `hasLegalTrainerReprint` for the Trainer-card exception. Single
  *  source of truth: app/api/analyze/route.ts, lib/reprice-deck.ts, and
  *  lib/buildMetaAnalysis.ts all import this rather than keeping their
- *  own copy, so a future rotation only needs updating here. */
+ *  own copy, so a future rotation only needs updating here.
+ *
+ *  Standard is currently H and newer; G rotated out. */
 export const ROTATING_MARKS = new Set(["A", "B", "C", "D", "E", "F", "G"]);
+
+/**
+ * True when a printing's regulation mark is currently Standard-legal.
+ *
+ * The complement of ROTATING_MARKS, deliberately derived rather than listed:
+ * lib/engine/catalog.ts previously kept its own `CURRENT_STANDARD_MARKS` set
+ * and the two drifted — it still counted G as Standard after G rotated, which
+ * landed hardest on SVP promos, where 112 of 226 cards carry that mark.
+ *
+ * An unmarked printing is not Standard. Most are pre-mark promos and energies,
+ * whose legality is decided elsewhere; treating them as legal here would let
+ * any Base-era card through.
+ */
+export function isStandardMark(mark: string | null | undefined): boolean {
+  return Boolean(mark) && !ROTATING_MARKS.has(mark!.toUpperCase());
+}
 
 /**
  * True when `name` is a Trainer card with at least one printing in the DB

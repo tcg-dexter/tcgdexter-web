@@ -20,7 +20,8 @@
 // reached the simulator, where a 60-card list became a 35-card one.
 
 import { describe, it, expect } from "vitest";
-import { parseDeckListCards } from "./cardPrinting";
+import { ROTATING_MARKS, isStandardMark, parseDeckListCards } from "./cardPrinting";
+import { standardPrintingsOf } from "./engine/catalog";
 
 const names = (list: string) => parseDeckListCards(list).map((c) => c.name);
 const qtys = (list: string) => parseDeckListCards(list).reduce((n, c) => n + c.qty, 0);
@@ -94,5 +95,43 @@ describe("parseDeckListCards — mixing set-coded and set-code-less lines", () =
     ].join("\n");
     expect(qtys(list)).toBe(60);
     expect(parseDeckListCards(list)).toHaveLength(13); // 5 + 7 + 1 lines
+  });
+});
+
+// Regulation marks drifted once: lib/engine/catalog.ts kept its own
+// CURRENT_STANDARD_MARKS listing G as Standard after G had rotated out, while
+// cardPrinting.ts correctly treated it as rotated. The two disagreed for
+// ~1,600 printings — worst on SVP, where 112 of 226 cards carry mark G. These
+// guard the single source of truth that replaced the second list.
+describe("regulation marks", () => {
+  it("treats G and older as rotated, H and newer as Standard", () => {
+    for (const mark of ["A", "B", "C", "D", "E", "F", "G"]) {
+      expect(ROTATING_MARKS.has(mark)).toBe(true);
+      expect(isStandardMark(mark)).toBe(false);
+    }
+    for (const mark of ["H", "I", "J"]) {
+      expect(ROTATING_MARKS.has(mark)).toBe(false);
+      expect(isStandardMark(mark)).toBe(true);
+    }
+  });
+
+  it("is case-insensitive, and treats an absent mark as not Standard", () => {
+    expect(isStandardMark("i")).toBe(true);
+    expect(isStandardMark("g")).toBe(false);
+    // Pre-mark promos and energies: legality is decided elsewhere, and
+    // defaulting them to Standard would let any Base-era card through.
+    expect(isStandardMark(null)).toBe(false);
+    expect(isStandardMark(undefined)).toBe(false);
+    expect(isStandardMark("")).toBe(false);
+  });
+
+  it("keeps the engine catalog in agreement rather than on its own list", () => {
+    // Every printing the engine calls Standard must satisfy isStandardMark —
+    // the property that failed while the two lists were maintained separately.
+    const printings = standardPrintingsOf("Pikachu");
+    for (const p of printings) {
+      expect(isStandardMark(p.regulation_mark)).toBe(true);
+    }
+    expect(printings.every((p) => p.regulation_mark !== "G")).toBe(true);
   });
 });

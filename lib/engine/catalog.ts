@@ -14,6 +14,7 @@
 //     a "catalog_miss" diagnostic and continues with name-only tracking.
 
 import cardsRaw from "@/data/cards-standard.json";
+import { isStandardMark } from "@/lib/cardPrinting";
 import type { EngineAbility, EngineAttack, EngineCard } from "./types";
 
 interface PrintingRaw {
@@ -179,14 +180,11 @@ export function hasStandardVariant(name: string): boolean {
 /** All Standard-legal printings of a name, raw — the importer feeds these
  *  into the disambiguation form so the user can pick one. Returns []
  *  for names not in the catalog. */
-const CURRENT_STANDARD_MARKS = new Set(["G", "H", "I", "J"]);
 export function standardPrintingsOf(name: string): PrintingRaw[] {
   const prints = RAW[name];
   if (!prints) return [];
   return prints.filter(
-    (p) =>
-      p.supertype === "Pokémon" &&
-      CURRENT_STANDARD_MARKS.has(p.regulation_mark ?? ""),
+    (p) => p.supertype === "Pokémon" && isStandardMark(p.regulation_mark),
   );
 }
 
