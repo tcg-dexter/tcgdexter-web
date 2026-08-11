@@ -7,6 +7,7 @@ import { cardImageFallbacks, cardImageSmall } from "@/lib/cardImages";
 import type { CardIndexEntry } from "@/lib/cardsIndex";
 import CardImage from "./CardImage";
 import AddToListOverlay from "./AddToListOverlay";
+import SelectionCircle from "./SelectionCircle";
 import { useInventory } from "./InventoryContext";
 import { InventoryCapsule, InventoryOverlay, type InventoryMenuMode } from "./InventoryCapsule";
 
@@ -27,11 +28,27 @@ function padNumber(n: string): string {
  * the add-to-list trigger, price, and +/- collection controls. The
  * add-to-list picker and the +/- variant picker share one in-card overlay
  * language (AddToListOverlay / InventoryOverlay's "card" display) and are
- * mutually exclusive — opening one closes the other. Shared by the
- * /cards catalog grid and the home page's catalog preview; must be
- * rendered inside an InventoryProvider (see InventoryContext.tsx).
+ * mutually exclusive — opening one closes the other. When a toolbar's
+ * Select mode is active (selectMode), tapping the tile toggles selection
+ * instead of navigating, and a SelectionCircle appears in the corner.
+ * Shared by the /cards catalog grid and the home page's catalog preview;
+ * must be rendered inside an InventoryProvider (see InventoryContext.tsx).
  */
-export default function GridTile({ card: c, index }: { card: CardIndexEntry; index: number }) {
+export default function GridTile({
+  card: c,
+  index,
+  selectMode = false,
+  selectionOrder = null,
+  onToggleSelect,
+}: {
+  card: CardIndexEntry;
+  index: number;
+  /** When true, tapping the tile toggles selection instead of navigating. */
+  selectMode?: boolean;
+  /** This card's 1-indexed selection order, or null when not selected. */
+  selectionOrder?: number | null;
+  onToggleSelect?: () => void;
+}) {
   const router = useRouter();
   const [mode, setMode] = useState<InventoryMenuMode | null>(null);
   const [listPickerOpen, setListPickerOpen] = useState(false);
@@ -55,6 +72,12 @@ export default function GridTile({ card: c, index }: { card: CardIndexEntry; ind
       <div className="relative w-full" style={{ aspectRatio: "245 / 342" }}>
         <Link
           href={`/cards/${encodeURIComponent(c.id)}`}
+          onClick={(e) => {
+            if (selectMode) {
+              e.preventDefault();
+              onToggleSelect?.();
+            }
+          }}
           className="group absolute inset-0 block rounded-xl overflow-hidden bg-surface hover:shadow-md transition-shadow"
         >
           <CardImage
@@ -67,6 +90,11 @@ export default function GridTile({ card: c, index }: { card: CardIndexEntry; ind
             index={index}
             className="w-full h-full object-contain transition-transform group-hover:scale-[1.02]"
           />
+          {selectMode && (
+            <div className="absolute top-2 left-2 z-10">
+              <SelectionCircle order={selectionOrder} />
+            </div>
+          )}
           <div className="absolute inset-x-0 bottom-0 h-[15%] min-h-[36px] flex items-center gap-2 px-2 bg-gradient-to-b from-transparent to-neutral-800 to-80% text-white text-[12.5px] font-semibold leading-none tabular-nums overflow-hidden pointer-events-none">
             <span className="min-w-0 truncate rounded-md border border-white/70 bg-black px-0.5 py-0.5">
               {(c.ptcgoCode || c.setId).toUpperCase()}

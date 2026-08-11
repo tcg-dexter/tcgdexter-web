@@ -6,7 +6,7 @@ import { normalizeForSearch } from "@/lib/searchNormalize";
 import type { CardIndexEntry } from "@/lib/cardsIndex";
 import type { OwnershipFilter } from "@/lib/cardSearch";
 import { useInventory } from "./InventoryContext";
-import { GridView, ListView } from "./CardCollectionView";
+import { GridView, ListView, type SelectionProps } from "./CardCollectionView";
 
 /**
  * Filter-panel widgets and the ownership-scoped results view shared by the
@@ -209,11 +209,14 @@ export function VariantFilteredView({
   cards,
   variantFilter,
   view,
+  selectMode,
+  selectedOrder,
+  onToggleSelect,
 }: {
   cards: CardIndexEntry[];
   variantFilter: string[];
   view: "grid" | "list";
-}) {
+} & SelectionProps) {
   const { presentVariants } = useInventory();
   const displayed = useMemo(() => {
     if (variantFilter.length === 0) return cards;
@@ -231,5 +234,19 @@ export function VariantFilteredView({
       </div>
     );
   }
-  return view === "grid" ? <GridView cards={displayed} /> : <ListView cards={displayed} />;
+  return view === "grid" ? (
+    <GridView
+      cards={displayed}
+      selectMode={selectMode}
+      selectedOrder={selectedOrder}
+      onToggleSelect={onToggleSelect}
+    />
+  ) : (
+    <ListView
+      cards={displayed}
+      selectMode={selectMode}
+      selectedOrder={selectedOrder}
+      onToggleSelect={onToggleSelect}
+    />
+  );
 }
