@@ -600,7 +600,7 @@ function ListDetailBody({
 
             {/* Ownership scope + select mode */}
             {selectMode ? (
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 -mt-2 mb-4">
                 <button
                   type="button"
                   onClick={exitSelectMode}
@@ -618,7 +618,7 @@ function ListDetailBody({
                 </button>
               </div>
             ) : (
-              <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center justify-between gap-3 -mt-2 mb-4">
                 <OwnershipRadios
                   value={filters.ownership}
                   onChange={(v) =>
