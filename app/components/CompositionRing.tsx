@@ -21,8 +21,10 @@ const GAP = 10;
  * Three-arc rounded-cap donut showing a deck's Pokémon/Trainer/Energy
  * composition. Pokémon renders solid ink, Trainer uses the site's brand
  * gradient (via BrandGradientDefs, mounted once by the caller's page),
- * Energy renders white with a thin black border — an intentional one-off
- * treatment distinct from the site's default light-gray --border token.
+ * Energy renders as a bordered, unfilled arc — a thin border in light
+ * mode (--ring-energy-fill matches the light card background so the
+ * interior reads as empty) and a plain white border with no fill in
+ * dark mode (--ring-energy-fill is transparent there).
  */
 export default function CompositionRing({ counts, size = 58, className }: Props) {
   const { pokemon, trainer, energy } = counts;
@@ -91,7 +93,7 @@ export default function CompositionRing({ counts, size = 58, className }: Props)
         cx="29"
         cy="29"
         r={R}
-        stroke="#ffffff"
+        stroke="var(--ring-energy-fill)"
         strokeWidth={STROKE - 0.8}
         fill="none"
         strokeLinecap="round"
@@ -108,7 +110,7 @@ export function CompositionLegend({ counts }: { counts: CompositionCounts }) {
     {
       label: "Energy",
       n: counts.energy,
-      swatch: { background: "#ffffff", border: "1px solid var(--text-primary)", boxSizing: "border-box" },
+      swatch: { background: "var(--ring-energy-fill)", border: "1px solid var(--text-primary)", boxSizing: "border-box" },
     },
   ];
   return (

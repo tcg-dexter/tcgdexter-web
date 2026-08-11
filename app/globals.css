@@ -71,6 +71,7 @@
   --accent-light:     #e74c3c;
   --accent-dark:      #A60D0D;
   --gradient-brand:   linear-gradient(90deg, #F2A20C 0%, #D91E0D 50%, #A60D0D 100%);
+  --ring-energy-fill: #ffffff;
 }
 
 /* Dark mode — same token names, new values. Surfaces ascend in
@@ -87,6 +88,7 @@
   --text-primary:     #ffffff;
   --text-secondary:   #b8b8b8;
   --text-muted:       #808080;
+  --ring-energy-fill: transparent;
 }
 
 @layer base {
