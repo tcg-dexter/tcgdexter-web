@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { CardIndexEntry } from "@/lib/cardsIndex";
-import { sortCardEntries } from "./cardSearch";
+import { sortCardEntries, filterCardEntries, computeFacetsFromCards } from "./cardSearch";
 
 function card(overrides: Partial<CardIndexEntry> & { id: string; name: string }): CardIndexEntry {
   return {
@@ -77,5 +77,60 @@ describe("sortCardEntries", () => {
     ];
     expect(sortCardEntries(cards, "rarity", "desc").map((c) => c.id)).toEqual(["c", "a", "b"]);
     expect(sortCardEntries(cards, "rarity", "asc").map((c) => c.id)).toEqual(["a", "c", "b"]);
+  });
+});
+
+describe("filterCardEntries", () => {
+  const cards = [
+    card({ id: "a", name: "Charizard", supertype: "Pokémon", types: ["Fire"], hp: 180, marketPrice: 40, rarity: "Rare Holo" }),
+    card({ id: "b", name: "Blastoise", supertype: "Pokémon", types: ["Water"], hp: 160, marketPrice: 10, rarity: "Rare" }),
+    card({ id: "c", name: "Professor's Research", supertype: "Trainer", types: [], hp: null, marketPrice: 1, rarity: "Uncommon" }),
+  ];
+
+  it("with no params, returns every card", () => {
+    expect(filterCardEntries(cards, {}).map((c) => c.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("matches by name query (prefix/substring), case-insensitively", () => {
+    expect(filterCardEntries(cards, { q: "char" }).map((c) => c.id)).toEqual(["a"]);
+  });
+
+  it("applies facet filters (supertype, hp range, price range)", () => {
+    expect(filterCardEntries(cards, { supertype: ["Trainer"] }).map((c) => c.id)).toEqual(["c"]);
+    expect(filterCardEntries(cards, { hpMin: 170 }).map((c) => c.id)).toEqual(["a"]);
+    expect(filterCardEntries(cards, { priceMax: 15 }).map((c) => c.id)).toEqual(["b", "c"]);
+  });
+
+  it("combines a query with facet filters (AND, not OR)", () => {
+    expect(filterCardEntries(cards, { q: "charizard", supertype: ["Trainer"] })).toEqual([]);
+  });
+});
+
+describe("computeFacetsFromCards", () => {
+  it("derives facets scoped to only the given cards, not the whole catalog", () => {
+    const cards = [
+      card({ id: "a", name: "Charizard", setId: "sv1", setName: "Scarlet & Violet", supertype: "Pokémon", types: ["Fire"], rarity: "Rare Holo", retreatCost: 2 }),
+      card({ id: "b", name: "Blastoise", setId: "sv1", setName: "Scarlet & Violet", supertype: "Pokémon", types: ["Water"], rarity: "Rare", retreatCost: 3 }),
+      card({ id: "c", name: "Boss's Orders", setId: "sv2", setName: "Paldea Evolved", supertype: "Trainer", types: [], rarity: "Uncommon" }),
+    ];
+    const facets = computeFacetsFromCards(cards);
+    expect(facets.supertypes).toEqual(["Pokémon", "Trainer"]);
+    expect(facets.types).toEqual(["Fire", "Water"]);
+    expect(facets.retreatCosts).toEqual([2, 3]);
+    expect(facets.sets.map((s) => s.id)).toEqual(["sv2", "sv1"]);
+    // Lower-ranked (more common) rarities sort first, mirroring getFilterFacets' order.
+    expect(facets.rarities).toEqual(["Uncommon", "Rare", "Rare Holo"]);
+  });
+
+  it("returns empty facets for an empty list", () => {
+    const facets = computeFacetsFromCards([]);
+    expect(facets).toEqual({
+      supertypes: [],
+      types: [],
+      regulations: [],
+      rarities: [],
+      retreatCosts: [],
+      sets: [],
+    });
   });
 });

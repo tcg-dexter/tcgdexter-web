@@ -6,10 +6,24 @@ import { useRouter } from "next/navigation";
 import BackButton from "@/app/components/ui/BackButton";
 import PillSelect from "@/app/components/ui/PillSelect";
 import GridListToggle from "@/app/components/ui/GridListToggle";
-import InventoryProvider from "@/app/cards/InventoryContext";
-import { GridView, ListView } from "@/app/cards/CardCollectionView";
+import InventoryProvider, { useInventory } from "@/app/cards/InventoryContext";
+import {
+  OwnershipRadios,
+  FacetGroup,
+  SetFacet,
+  RangeFacet,
+  VariantFilteredView,
+} from "@/app/cards/FilterControls";
+import { variantDisplayLabel } from "@/lib/inventory";
 import type { CardIndexEntry } from "@/lib/cardsIndex";
-import { sortCardEntries, type SortKey, type SortDir } from "@/lib/cardSearch";
+import {
+  sortCardEntries,
+  filterCardEntries,
+  computeFacetsFromCards,
+  type SortKey,
+  type SortDir,
+  type OwnershipFilter,
+} from "@/lib/cardSearch";
 
 interface Props {
   isOwner: boolean;
@@ -21,7 +35,46 @@ interface Props {
   canonicalShareUrl: string;
 }
 
-export default function ListDetailClient({
+interface FilterState {
+  q: string;
+  supertype: string[];
+  type: string[];
+  regulation: string[];
+  setId: string[];
+  hpMin?: number;
+  hpMax?: number;
+  priceMin?: number;
+  priceMax?: number;
+  rarity: string[];
+  retreatCost: number[];
+  ownership: OwnershipFilter;
+  variant: string[];
+}
+
+const EMPTY_FILTERS: FilterState = {
+  q: "",
+  supertype: [],
+  type: [],
+  regulation: [],
+  setId: [],
+  rarity: [],
+  retreatCost: [],
+  ownership: "all",
+  variant: [],
+};
+
+export default function ListDetailClient(props: Props) {
+  return (
+    <InventoryProvider>
+      <ListDetailBody {...props} />
+    </InventoryProvider>
+  );
+}
+
+// useInventory() must be called from a component rendered *inside*
+// InventoryProvider — split out from ListDetailClient the same way
+// CardsClient.tsx splits into CardsClient + CatalogBody.
+function ListDetailBody({
   isOwner,
   username,
   listId,
@@ -36,6 +89,11 @@ export default function ListDetailClient({
   const [sort, setSort] = useState<SortKey>("released");
   const [dir, setDir] = useState<SortDir>("desc");
   const [view, setView] = useState<"grid" | "list">("grid");
+
+  const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
+  const [searchInput, setSearchInput] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState(initialName);
@@ -71,7 +129,69 @@ export default function ListDetailClient({
     };
   }, [menuOpen]);
 
-  const sortedCards = useMemo(() => sortCardEntries(cards, sort, dir), [cards, sort, dir]);
+  // Variant facet options come from the collection itself (same convention
+  // as CardsClient.tsx's CatalogBody) — the printing grammar is open-ended,
+  // so there's no fixed list to enumerate.
+  const { ownedVariants } = useInventory();
+  const ownedVariantLabels = useMemo(
+    () => Array.from(new Set(ownedVariants.map(variantDisplayLabel))),
+    [ownedVariants],
+  );
+
+  const facets = useMemo(() => computeFacetsFromCards(cards), [cards]);
+  const filteredCards = useMemo(() => filterCardEntries(cards, filters), [cards, filters]);
+  const sortedCards = useMemo(
+    () => sortCardEntries(filteredCards, sort, dir),
+    [filteredCards, sort, dir],
+  );
+
+  const updateFilters = (patch: Partial<FilterState>) => {
+    setFilters((f) => ({ ...f, ...patch }));
+  };
+
+  const toggleArrayValue = (key: keyof FilterState, value: string) => {
+    setFilters((f) => {
+      const cur = (f[key] as string[]) ?? [];
+      const next = cur.includes(value) ? cur.filter((v) => v !== value) : [...cur, value];
+      return { ...f, [key]: next };
+    });
+  };
+
+  const handleSearchInput = (v: string) => {
+    setSearchInput(v);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => updateFilters({ q: v }), 250);
+  };
+
+  const activeFilterCount =
+    filters.supertype.length +
+    filters.type.length +
+    filters.regulation.length +
+    (filters.ownership === "owned" ? filters.variant.length : 0) +
+    filters.setId.length +
+    (filters.hpMin != null ? 1 : 0) +
+    (filters.hpMax != null ? 1 : 0) +
+    (filters.priceMin != null ? 1 : 0) +
+    (filters.priceMax != null ? 1 : 0) +
+    filters.rarity.length +
+    filters.retreatCost.length;
+
+  const clearFilters = () => {
+    setFilters((f) => ({
+      ...f,
+      supertype: [],
+      type: [],
+      regulation: [],
+      setId: [],
+      hpMin: undefined,
+      hpMax: undefined,
+      priceMin: undefined,
+      priceMax: undefined,
+      rarity: [],
+      retreatCost: [],
+      variant: [],
+    }));
+  };
 
   async function saveRename() {
     const trimmed = nameDraft.trim();
@@ -141,7 +261,6 @@ export default function ListDetailClient({
   }
 
   return (
-    <InventoryProvider>
       <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] xl:pt-[calc(env(safe-area-inset-top)_+_0.75rem)] pb-24">
         <div className="hidden xl:block mb-6">
           <BackButton href={`/u/${username}`} ariaLabel={`Back to @${username}'s lists`} />
@@ -171,27 +290,6 @@ export default function ListDetailClient({
             <h2 className="min-w-0 flex-1 truncate text-3xl md:text-4xl font-semibold tracking-tight text-text-primary">
               {name}
             </h2>
-          )}
-
-          {isOwner && !renaming && (
-            <button
-              type="button"
-              onClick={() => {
-                setNameDraft(name);
-                setRenaming(true);
-              }}
-              aria-label="Rename list"
-              className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full text-text-muted hover:text-text-primary hover:bg-black/5 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"
-                />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12v6.75a2.25 2.25 0 01-2.25 2.25H5.25a2.25 2.25 0 01-2.25-2.25V6.75a2.25 2.25 0 012.25-2.25H12" />
-              </svg>
-            </button>
           )}
 
           {isOwner && (
@@ -232,6 +330,18 @@ export default function ListDetailClient({
               style={{ position: "fixed", top: menuPos.top, right: menuPos.right }}
               className="w-48 rounded-xl bg-white dark:bg-surface-elevated border border-black/8 dark:border-white/10 shadow-lg p-1 z-50"
             >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setNameDraft(name);
+                  setRenaming(true);
+                  setMenuOpen(false);
+                }}
+                className="w-full text-left rounded-lg px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface-2 transition-colors"
+              >
+                Rename list
+              </button>
               <button
                 type="button"
                 role="menuitem"
@@ -321,33 +431,162 @@ export default function ListDetailClient({
           </div>
         ) : (
           <>
-            <div className="mb-4 flex items-center justify-end gap-2">
-              <PillSelect
-                value={`${sort}:${dir}`}
-                onChange={(e) => {
-                  const [s, d] = e.target.value.split(":") as [SortKey, SortDir];
-                  setSort(s);
-                  setDir(d);
-                }}
-              >
-                <option value="released:desc">Set (New to Old)</option>
-                <option value="released:asc">Set (Old to New)</option>
-                <option value="name:asc">Card Name (A–Z)</option>
-                <option value="name:desc">Card Name (Z–A)</option>
-                <option value="hp:desc">Hit Points (High to Low)</option>
-                <option value="hp:asc">Hit Points (Low to High)</option>
-                <option value="price:desc">Market Price (High to Low)</option>
-                <option value="price:asc">Market Price (Low to High)</option>
-                <option value="rarity:desc">Rarity ↓</option>
-                <option value="rarity:asc">Rarity ↑</option>
-              </PillSelect>
-              <GridListToggle value={view} onChange={setView} />
+            {/* Toolbar */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
+              <div className="flex-1 relative">
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted"
+                >
+                  <circle cx="9" cy="9" r="6" />
+                  <path d="m17 17-3.5-3.5" />
+                </svg>
+                <input
+                  type="text"
+                  value={searchInput}
+                  onChange={(e) => handleSearchInput(e.target.value)}
+                  placeholder="Search this list"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  className="w-full pl-10 pr-4 py-2 rounded-full border border-black/10 bg-white dark:bg-surface-2 text-[16px] sm:text-sm focus:outline-none focus-gradient-border transition-colors"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <PillSelect
+                  value={`${sort}:${dir}`}
+                  onChange={(e) => {
+                    const [s, d] = e.target.value.split(":") as [SortKey, SortDir];
+                    setSort(s);
+                    setDir(d);
+                  }}
+                >
+                  <option value="released:desc">Set (New to Old)</option>
+                  <option value="released:asc">Set (Old to New)</option>
+                  <option value="name:asc">Card Name (A–Z)</option>
+                  <option value="name:desc">Card Name (Z–A)</option>
+                  <option value="hp:desc">Hit Points (High to Low)</option>
+                  <option value="hp:asc">Hit Points (Low to High)</option>
+                  <option value="price:desc">Market Price (High to Low)</option>
+                  <option value="price:asc">Market Price (Low to High)</option>
+                  <option value="rarity:desc">Rarity ↓</option>
+                  <option value="rarity:asc">Rarity ↑</option>
+                </PillSelect>
+                <button
+                  onClick={() => setShowFilters((s) => !s)}
+                  className={`text-xs font-semibold h-[38px] px-3 rounded-full transition ${
+                    activeFilterCount > 0
+                      ? "border border-transparent bg-gradient-brand bg-origin-border text-white shadow-brand hover:shadow-brand-lg"
+                      : "border border-black/10 bg-white dark:bg-surface-2 hover:bg-surface"
+                  }`}
+                >
+                  Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+                </button>
+                <GridListToggle value={view} onChange={setView} />
+              </div>
             </div>
 
-            {view === "grid" ? <GridView cards={sortedCards} /> : <ListView cards={sortedCards} />}
+            {/* Filter panel */}
+            {showFilters && (
+              <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated p-4 mb-4 space-y-4">
+                {activeFilterCount > 0 && (
+                  <div className="pb-3 border-b border-black/8 dark:border-white/10">
+                    <button
+                      onClick={clearFilters}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white dark:bg-surface-2 hover:bg-surface transition-colors"
+                    >
+                      Clear all filters
+                    </button>
+                  </div>
+                )}
+                <SetFacet
+                  sets={facets.sets}
+                  selected={filters.setId}
+                  onToggle={(v) => toggleArrayValue("setId", v)}
+                />
+                <FacetGroup
+                  label="Rarity"
+                  options={facets.rarities}
+                  selected={filters.rarity}
+                  onToggle={(v) => toggleArrayValue("rarity", v)}
+                />
+                <FacetGroup
+                  label="Card Type"
+                  options={facets.supertypes}
+                  selected={filters.supertype}
+                  onToggle={(v) => toggleArrayValue("supertype", v)}
+                />
+                <FacetGroup
+                  label="Energy"
+                  options={facets.types}
+                  selected={filters.type}
+                  onToggle={(v) => toggleArrayValue("type", v)}
+                />
+                {filters.ownership === "owned" && (
+                  <FacetGroup
+                    label="Variant"
+                    options={ownedVariantLabels}
+                    selected={filters.variant}
+                    onToggle={(v) => toggleArrayValue("variant", v)}
+                  />
+                )}
+                <FacetGroup
+                  label="Regulation"
+                  options={facets.regulations}
+                  selected={filters.regulation}
+                  onToggle={(v) => toggleArrayValue("regulation", v)}
+                />
+                <FacetGroup
+                  label="Retreat Cost"
+                  options={facets.retreatCosts.map(String)}
+                  selected={filters.retreatCost.map(String)}
+                  onToggle={(v) => {
+                    const n = Number(v);
+                    setFilters((f) => {
+                      const cur = f.retreatCost;
+                      const next = cur.includes(n) ? cur.filter((x) => x !== n) : [...cur, n];
+                      return { ...f, retreatCost: next };
+                    });
+                  }}
+                />
+                <RangeFacet
+                  label="HP"
+                  min={filters.hpMin}
+                  max={filters.hpMax}
+                  onChange={(min, max) => updateFilters({ hpMin: min, hpMax: max })}
+                />
+                <RangeFacet
+                  label="Market Price"
+                  min={filters.priceMin}
+                  max={filters.priceMax}
+                  step={0.5}
+                  onChange={(min, max) => updateFilters({ priceMin: min, priceMax: max })}
+                />
+              </div>
+            )}
+
+            {/* Ownership scope */}
+            <OwnershipRadios
+              value={filters.ownership}
+              onChange={(v) =>
+                updateFilters({ ownership: v, ...(v !== "owned" ? { variant: [] } : {}) })
+              }
+            />
+
+            <VariantFilteredView
+              cards={sortedCards}
+              variantFilter={filters.ownership === "owned" ? filters.variant : []}
+              view={view}
+            />
           </>
         )}
       </main>
-    </InventoryProvider>
   );
 }
