@@ -6,6 +6,7 @@ import { cardImageFallbacks, cardImageSmall } from "@/lib/cardImages";
 import type { CardIndexEntry } from "@/lib/cardsIndex";
 import CardImage from "./CardImage";
 import GridTile from "./GridTile";
+import SelectionCircle from "./SelectionCircle";
 import {
   InventoryCapsule,
   InventoryOverlay,
@@ -21,17 +22,42 @@ import {
  * ListRow both call useInventory().
  */
 
-export function GridView({ cards }: { cards: CardIndexEntry[] }) {
+/** Multi-select props shared by GridView and ListView — see SelectionCircle. */
+export interface SelectionProps {
+  selectMode?: boolean;
+  /** Card id -> 1-indexed selection order. */
+  selectedOrder?: Map<string, number>;
+  onToggleSelect?: (card: CardIndexEntry) => void;
+}
+
+export function GridView({
+  cards,
+  selectMode,
+  selectedOrder,
+  onToggleSelect,
+}: { cards: CardIndexEntry[] } & SelectionProps) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
       {cards.map((c, i) => (
-        <GridTile key={c.id} card={c} index={i} />
+        <GridTile
+          key={c.id}
+          card={c}
+          index={i}
+          selectMode={selectMode}
+          selectionOrder={selectedOrder?.get(c.id) ?? null}
+          onToggleSelect={() => onToggleSelect?.(c)}
+        />
       ))}
     </div>
   );
 }
 
-export function ListView({ cards }: { cards: CardIndexEntry[] }) {
+export function ListView({
+  cards,
+  selectMode,
+  selectedOrder,
+  onToggleSelect,
+}: { cards: CardIndexEntry[] } & SelectionProps) {
   return (
     <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated overflow-hidden">
       <div className="hidden md:grid grid-cols-[64px_2fr_1.5fr_80px_80px_80px_80px_100px] gap-3 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-text-muted border-b border-black/8 dark:border-white/10">
@@ -46,7 +72,15 @@ export function ListView({ cards }: { cards: CardIndexEntry[] }) {
       </div>
       <ul>
         {cards.map((c, i) => (
-          <ListRow key={c.id} card={c} index={i} isFirst={i === 0} />
+          <ListRow
+            key={c.id}
+            card={c}
+            index={i}
+            isFirst={i === 0}
+            selectMode={selectMode}
+            selectionOrder={selectedOrder?.get(c.id) ?? null}
+            onToggleSelect={() => onToggleSelect?.(c)}
+          />
         ))}
       </ul>
     </div>
@@ -57,28 +91,47 @@ function ListRow({
   card: c,
   index,
   isFirst,
+  selectMode = false,
+  selectionOrder = null,
+  onToggleSelect,
 }: {
   card: CardIndexEntry;
   index: number;
   isFirst: boolean;
+  selectMode?: boolean;
+  selectionOrder?: number | null;
+  onToggleSelect?: () => void;
 }) {
   const [mode, setMode] = useState<InventoryMenuMode | null>(null);
   return (
     <li className={`relative ${isFirst ? "" : "border-t border-black/8 dark:border-white/10"}`}>
       <Link
         href={`/cards/${encodeURIComponent(c.id)}`}
+        onClick={(e) => {
+          if (selectMode) {
+            e.preventDefault();
+            onToggleSelect?.();
+          }
+        }}
         className="grid grid-cols-[48px_1fr_auto] md:grid-cols-[64px_2fr_1.5fr_80px_80px_80px_80px_100px] gap-3 px-4 py-2 items-center hover:bg-surface transition-colors"
       >
-        <CardImage
-          src={cardImageSmall(c.setId, c.number)}
-          fallbackSrcs={cardImageFallbacks(c.setId, c.number)}
-          alt={`${c.name} — ${c.setName} ${c.number}`}
-          name={c.name}
-          setName={c.setName}
-          number={c.number}
-          index={index}
-          className="w-12 h-[68px] md:w-14 md:h-[78px] object-cover rounded-md bg-surface text-[9px]"
-        />
+        <div className="relative shrink-0">
+          <CardImage
+            src={cardImageSmall(c.setId, c.number)}
+            fallbackSrcs={cardImageFallbacks(c.setId, c.number)}
+            alt={`${c.name} — ${c.setName} ${c.number}`}
+            name={c.name}
+            setName={c.setName}
+            number={c.number}
+            index={index}
+            className="w-12 h-[68px] md:w-14 md:h-[78px] object-cover rounded-md bg-surface text-[9px]"
+          />
+          {selectMode && (
+            <div className="absolute -top-1 -left-1">
+              <SelectionCircle order={selectionOrder} />
+            </div>
+          )}
+        </div>
         <div className="md:contents">
           <span className="text-sm font-medium text-text-primary truncate">{c.name}</span>
           <span className="hidden md:inline text-sm text-text-secondary truncate">
