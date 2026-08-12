@@ -647,7 +647,7 @@ function ListDetailBody({
                     type="button"
                     onClick={handleRemoveSelected}
                     disabled={selected.size === 0 || removing}
-                    className="flex-1 text-xs font-semibold h-[38px] rounded-full border border-accent/30 bg-white dark:bg-surface-2 text-accent disabled:opacity-40 hover:bg-accent/5 transition-colors"
+                    className="flex-1 text-xs font-semibold h-[38px] rounded-full border border-accent/30 dark:border-accent bg-white dark:bg-surface-2 text-accent dark:text-white disabled:opacity-40 hover:bg-accent/5 transition-colors"
                   >
                     {removing
                       ? "Removing…"
