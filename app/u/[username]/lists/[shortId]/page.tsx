@@ -24,16 +24,27 @@ export async function generateMetadata({
     .from("profiles")
     .select("id, display_name, username, is_public")
     .eq("username", username.toLowerCase())
-    .eq("is_public", true)
     .maybeSingle();
   if (!owner) return { title: "List Not Found — TCG Dexter" };
-  const { data: list } = await supabase
+
+  // Mirror the page component's ownership check below — a signed-in owner
+  // can see their own private list (and even a private profile's list), so
+  // metadata must bypass the is_public filters in that case too, or the tab
+  // title falls through to "List Not Found" while the page itself renders.
+  const {
+    data: { user: viewer },
+  } = await supabase.auth.getUser();
+  const isOwner = viewer?.id === owner.id;
+
+  if (!isOwner && !owner.is_public) return { title: "List Not Found — TCG Dexter" };
+
+  let listQuery = supabase
     .from("lists")
     .select("name")
     .eq("short_id", shortId)
-    .eq("user_id", owner.id)
-    .eq("is_public", true)
-    .maybeSingle();
+    .eq("user_id", owner.id);
+  if (!isOwner) listQuery = listQuery.eq("is_public", true);
+  const { data: list } = await listQuery.maybeSingle();
   if (!list) return { title: "List Not Found — TCG Dexter" };
 
   const title = `${list.name} by @${owner.username} — TCG Dexter`;
