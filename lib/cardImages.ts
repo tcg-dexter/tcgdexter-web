@@ -72,6 +72,15 @@ const SET_IMAGE_SOURCES: Record<string, Template[]> = {
   me4: [scrydex("me4")],
   me5: [scrydex("me5")],
 
+  // ── Scarlet & Violet basic energies ──
+  // This set grows a run of 8 with each product wave and pokemontcg.io stopped
+  // at 16, so it 404s on 17-24. scrydex covers all 24, which is why it leads
+  // here: most callers (deck tiles, spotlight, meta primary card) take only
+  // `cardImageCandidates[0]` and never see the fallback chain, so the first URL
+  // has to be one that resolves for every card in the set. pokemontcg.io and
+  // Limitless stay on as fallbacks — both serve 1-16 fine.
+  sve: [scrydex("sve"), PTCG, limitless("SVE")],
+
   // ── Black Star Promos ──
   // MEP and MEE are TCGdex-sourced sets pokemontcg.io doesn't index, so
   // Limitless is the only source; it covers both completely.
