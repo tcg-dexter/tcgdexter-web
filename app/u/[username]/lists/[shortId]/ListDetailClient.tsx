@@ -81,10 +81,11 @@ function ListDetailBody({
   listId,
   initialName,
   initialIsPublic,
-  cards,
+  cards: initialCards,
   canonicalShareUrl,
 }: Props) {
   const router = useRouter();
+  const [cards, setCards] = useState(initialCards);
   const [name, setName] = useState(initialName);
   const [isPublic, setIsPublic] = useState(initialIsPublic);
   const [sort, setSort] = useState<SortKey>("released");
@@ -151,6 +152,7 @@ function ListDetailBody({
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Map<string, CardIndexEntry>>(new Map());
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const selectedOrder = useMemo(() => {
     const m = new Map<string, number>();
     Array.from(selected.keys()).forEach((id, i) => m.set(id, i + 1));
@@ -169,6 +171,38 @@ function ListDetailBody({
   function exitSelectMode() {
     setSelectMode(false);
     setSelected(new Map());
+  }
+
+  // Removes the current selection from THIS list (unlike Add, there's no
+  // target-list picker — the list being viewed is the only target). Each
+  // DELETE is independent/idempotent, so a partial failure just leaves the
+  // failed cards in place rather than rolling back the whole batch.
+  async function handleRemoveSelected() {
+    if (selected.size === 0 || removing) return;
+    setRemoving(true);
+    const toRemove = Array.from(selected.values());
+    try {
+      const results = await Promise.all(
+        toRemove.map(async (c) => {
+          try {
+            const res = await fetch(
+              `/api/lists/${listId}/items?setId=${encodeURIComponent(c.setId)}&number=${encodeURIComponent(c.number)}`,
+              { method: "DELETE" },
+            );
+            return res.ok ? c.id : null;
+          } catch {
+            return null;
+          }
+        }),
+      );
+      const removedIds = new Set(results.filter((id): id is string => id !== null));
+      if (removedIds.size > 0) {
+        setCards((prev) => prev.filter((c) => !removedIds.has(c.id)));
+      }
+      exitSelectMode();
+    } finally {
+      setRemoving(false);
+    }
   }
 
   const updateFilters = (patch: Partial<FilterState>) => {
@@ -608,6 +642,18 @@ function ListDetailBody({
                 >
                   Cancel
                 </button>
+                {isOwner && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveSelected}
+                    disabled={selected.size === 0 || removing}
+                    className="flex-1 text-xs font-semibold h-[38px] rounded-full border border-accent/30 bg-white dark:bg-surface-2 text-accent disabled:opacity-40 hover:bg-accent/5 transition-colors"
+                  >
+                    {removing
+                      ? "Removing…"
+                      : `Remove ${selected.size} ${selected.size === 1 ? "card" : "cards"} from list`}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setAddDialogOpen(true)}
