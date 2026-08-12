@@ -460,7 +460,7 @@ export default function HomeClient({
                 />
               </Link>
               <div className="mt-10 max-w-4xl mx-auto text-center text-3xl md:text-4xl font-semibold tracking-tight leading-tight text-text-primary">
-                &ldquo;TCG is a cerebral game first and foremost and I want to find THE deck for me and help others along the way.&rdquo;
+                &ldquo;I&rsquo;m very proud to say that I&rsquo;ve reached Arceus rank on the TCGLive ladder every reset since BB/WF with only Garchomp!&rdquo;
               </div>
               <div className="mt-4 text-center text-lg md:text-xl font-semibold tracking-tight">
                 <span className="bg-gradient-brand bg-clip-text text-transparent">
