@@ -14,6 +14,8 @@ import CardDetailPanel from "../CardDetailPanel";
 import AddToListButton from "../AddToListButton";
 import { findCardAppearances } from "@/lib/cardAppearances";
 import AppearsInCarousel from "./AppearsInCarousel";
+import { shopListingsForCard } from "@/lib/shopListings";
+import ShopListingsPanel from "../ShopListingsPanel";
 
 interface Props {
   params: { id: string };
@@ -49,6 +51,9 @@ export default async function CardDetailPage({ params }: Props) {
     10,
   );
 
+  // Empty for almost every card — the shop stocks a few hundred printings.
+  const shopListings = shopListingsForCard(card.setId, card.number);
+
   const otherPrintings = getCardsByName(card.name).filter((c) => c.id !== card.id);
   // Pull other cards illustrated by the same artist. Cap to ~3 rows at lg
   // (8 cols) so a prolific illustrator's catalog doesn't take over the
@@ -81,6 +86,8 @@ export default async function CardDetailPage({ params }: Props) {
           />
         )}
       />
+
+      <ShopListingsPanel listings={shopListings} cardName={card.name} />
 
       {appearancesInitial.items.length > 0 && (
         <AppearsInCarousel
