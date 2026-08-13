@@ -10,6 +10,7 @@ import {
 } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
 import { stripCardIds } from "@/lib/battle-log";
+import { idColumn } from "@/lib/shortId";
 import BattleLogPage from "./BattleLogPage";
 
 type AnalysisCard = {
@@ -36,15 +37,20 @@ export default async function BattleRoute({
     data: { user: viewer },
   } = await supabase.auth.getUser();
 
+  // The route param is the match's short_id; UUID-shaped values still
+  // resolve so links shared before short_ids existed keep working.
   const { data: match } = await admin
     .from("matches")
     .select(
-      "id, result, opponent_archetype, created_at, played_at, saved_deck_id, source, total_turns, player_handle, opponent_handle",
+      "id, short_id, result, opponent_archetype, created_at, played_at, saved_deck_id, source, total_turns, player_handle, opponent_handle",
     )
-    .eq("id", id)
+    .eq(idColumn(id), id)
     .maybeSingle();
 
   if (!match) notFound();
+
+  // Child-table lookups below key off the real row id, not the URL param.
+  const matchId = match.id as string;
 
   const { data: deck } = await admin
     .from("saved_decks")
@@ -89,7 +95,7 @@ export default async function BattleRoute({
     const { data: statRows } = await admin
       .from("match_actions")
       .select("actor, action_type, payload")
-      .eq("match_id", id)
+      .eq("match_id", matchId)
       .in("action_type", [
         "attack",
         "play_to_active",
@@ -153,7 +159,7 @@ export default async function BattleRoute({
       const { data: playRows } = await admin
         .from("match_actions")
         .select("action_type, payload")
-        .eq("match_id", id)
+        .eq("match_id", matchId)
         .eq("actor", "opponent")
         .in("action_type", ["play_to_active", "play_to_bench", "evolve"]);
 
@@ -212,7 +218,7 @@ export default async function BattleRoute({
 
   return (
     <BattleLogPage
-      matchId={id}
+      matchId={match.short_id as string}
       result={match.result as "win" | "loss" | "draw"}
       opponentArchetype={match.opponent_archetype as string | null}
       createdAt={match.created_at as string}

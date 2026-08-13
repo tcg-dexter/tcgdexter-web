@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { supporterNames } from "@/lib/supporterNames";
+import { idColumn } from "@/lib/shortId";
 
 /**
  * GET /api/battles/[id]/log
@@ -19,11 +20,14 @@ export async function GET(
 
   const { data: match } = await admin
     .from("matches")
-    .select("id, player_handle, opponent_handle, parser_version, source, saved_deck_id")
-    .eq("id", id)
+    .select("id, short_id, player_handle, opponent_handle, parser_version, source, saved_deck_id")
+    .eq(idColumn(id), id)
     .maybeSingle();
 
   if (!match) return NextResponse.json({ error: "Not found." }, { status: 404 });
+
+  // Turns/actions key off the real row id, not the URL param.
+  const matchId = match.id as string;
 
   const { data: deck } = await admin
     .from("saved_decks")
@@ -50,12 +54,12 @@ export async function GET(
       admin
         .from("match_turns")
         .select("id, turn_number, player_turn_number, actor, actor_handle, phase")
-        .eq("match_id", id)
+        .eq("match_id", matchId)
         .order("turn_number", { ascending: true }),
       admin
         .from("match_actions")
         .select("id, turn_id, sequence, actor, action_type, payload, raw_text")
-        .eq("match_id", id)
+        .eq("match_id", matchId)
         .order("sequence", { ascending: true }),
     ]);
 

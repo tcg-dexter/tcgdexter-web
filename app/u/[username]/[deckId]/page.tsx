@@ -31,6 +31,7 @@ interface ProfileRecord {
 
 interface MatchRecord {
   id: string;
+  short_id: string;
   result: "win" | "loss" | "draw";
   opponent_name: string | null;
   opponent_archetype: string | null;
@@ -159,7 +160,7 @@ export default async function DeckPage({
   if (isOwner) {
     const { data: matches } = await supabase
       .from("matches")
-      .select("id, result, opponent_name, opponent_archetype, opponent_deck_list, notes, played_at, source, game_results, prizes_taken_player, prizes_taken_opponent, game_prizes")
+      .select("id, short_id, result, opponent_name, opponent_archetype, opponent_deck_list, notes, played_at, source, game_results, prizes_taken_player, prizes_taken_opponent, game_prizes")
       .eq("saved_deck_id", deck.id)
       .order("played_at", { ascending: false });
     initialMatches = (matches ?? []) as MatchRecord[];
