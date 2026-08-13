@@ -13,7 +13,9 @@ import CardImage from "../CardImage";
 import CardDetailPanel from "../CardDetailPanel";
 import AddToListButton from "../AddToListButton";
 import { findCardAppearances } from "@/lib/cardAppearances";
+import { hydrateListPreviews, type ListRow, type ListSummary } from "@/lib/lists";
 import AppearsInCarousel from "./AppearsInCarousel";
+import ListsCarousel from "./ListsCarousel";
 import { shopListingsForCard } from "@/lib/shopListings";
 import ShopListingsPanel from "../ShopListingsPanel";
 
@@ -53,6 +55,28 @@ export default async function CardDetailPage({ params }: Props) {
 
   // Empty for almost every card — the shop stocks a few hundred printings.
   const shopListings = shopListingsForCard(card.setId, card.number);
+
+  // The viewer's own lists that already contain this printing. Signed-out
+  // visitors and users whose lists don't include it get nothing — RLS scopes
+  // the query to the caller, so this is never another user's lists.
+  let listsWithCard: ListSummary[] = [];
+  if (user) {
+    const [{ data: viewerProfile }, { data: listsRaw }] = await Promise.all([
+      supabase.from("profiles").select("username").eq("id", user.id).maybeSingle(),
+      supabase
+        .from("lists")
+        .select("id, short_id, name, is_public")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false }),
+    ]);
+    const hydrated = await hydrateListPreviews(
+      supabase,
+      (viewerProfile?.username as string | undefined) ?? null,
+      (listsRaw ?? []) as ListRow[],
+      { checkCard: { setId: card.setId, number: card.number } },
+    );
+    listsWithCard = hydrated.filter((l) => l.containsCard);
+  }
 
   const otherPrintings = getCardsByName(card.name).filter((c) => c.id !== card.id);
   // Pull other cards illustrated by the same artist. Cap to ~3 rows at lg
@@ -97,6 +121,8 @@ export default async function CardDetailPage({ params }: Props) {
           initialHasMore={appearancesInitial.hasMore}
         />
       )}
+
+      <ListsCarousel lists={listsWithCard} />
 
       {moreByArtist.length > 0 && (
         <div className="mt-10">
