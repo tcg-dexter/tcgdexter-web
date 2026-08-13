@@ -152,6 +152,7 @@ function ListDetailBody({
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Map<string, CardIndexEntry>>(new Map());
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [removing, setRemoving] = useState(false);
   const selectedOrder = useMemo(() => {
     const m = new Map<string, number>();
@@ -177,6 +178,8 @@ function ListDetailBody({
   // target-list picker — the list being viewed is the only target). Each
   // DELETE is independent/idempotent, so a partial failure just leaves the
   // failed cards in place rather than rolling back the whole batch.
+  // Only reached via the confirmation dialog — removal is destructive and
+  // there's no undo.
   async function handleRemoveSelected() {
     if (selected.size === 0 || removing) return;
     setRemoving(true);
@@ -202,6 +205,7 @@ function ListDetailBody({
       exitSelectMode();
     } finally {
       setRemoving(false);
+      setConfirmingRemove(false);
     }
   }
 
@@ -483,6 +487,45 @@ function ListDetailBody({
             document.body,
           )}
 
+        {confirmingRemove &&
+          typeof window !== "undefined" &&
+          createPortal(
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="remove-cards-title"
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+              onClick={() => setConfirmingRemove(false)}
+            >
+              <div
+                className="w-full max-w-sm rounded-2xl bg-white/95 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h2 id="remove-cards-title" className="text-base font-semibold text-text-primary">
+                  Are you sure?
+                </h2>
+                <div className="mt-5 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingRemove(false)}
+                    className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white dark:bg-surface-2 px-4 py-1.5 text-xs font-semibold text-text-secondary hover:bg-black/5 transition touch-manipulation"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRemoveSelected}
+                    disabled={removing}
+                    className="inline-flex items-center justify-center rounded-full bg-black dark:bg-white px-4 py-1.5 text-xs font-semibold text-white dark:text-black disabled:opacity-50 hover:opacity-80 transition-opacity touch-manipulation"
+                  >
+                    {removing ? "Removing…" : "Remove"}
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )}
+
         {cards.length === 0 ? (
           <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated p-6 text-center">
             <p className="text-sm text-text-secondary">
@@ -645,7 +688,7 @@ function ListDetailBody({
                 {isOwner && (
                   <button
                     type="button"
-                    onClick={handleRemoveSelected}
+                    onClick={() => setConfirmingRemove(true)}
                     disabled={selected.size === 0 || removing}
                     className="flex-1 text-xs font-semibold h-[38px] rounded-full border border-accent/30 dark:border-accent bg-white dark:bg-surface-2 text-accent dark:text-white disabled:opacity-40 hover:bg-accent/5 transition-colors"
                   >
