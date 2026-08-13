@@ -24,6 +24,9 @@ export interface ShopListing {
   listingUrl: string;
   condition: string;
   bestOffer: boolean;
+  /** Cheapest shipping option costs nothing. Absent on entries written before
+   *  the exporter started capturing it — treat undefined as "not known free". */
+  freeShipping?: boolean;
   itemId: string;
   /** How the exporter tied this listing to a printing — "unique", "set code", … */
   matchedBy?: string;

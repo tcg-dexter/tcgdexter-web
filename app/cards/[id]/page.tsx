@@ -87,7 +87,7 @@ export default async function CardDetailPage({ params }: Props) {
         )}
       />
 
-      <ShopListingsPanel listings={shopListings} cardName={card.name} />
+      <ShopListingsPanel listings={shopListings} />
 
       {appearancesInitial.items.length > 0 && (
         <AppearsInCarousel

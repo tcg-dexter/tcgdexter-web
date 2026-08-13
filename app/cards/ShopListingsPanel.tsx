@@ -7,42 +7,31 @@ import type { ShopListing } from "@/lib/shopListings";
  * there it summarises up to 60 cards and would otherwise bury the rest of the
  * analysis. Here the page is already about one card and the listings are the
  * answer to a question the reader is actively asking, so it renders open with
- * room for the seller's own photo, condition and offer status.
+ * room for the seller's own photo.
  *
  * Rendered only when there's at least one listing — the shop stocks a few
  * hundred cards against ~20,600 printings, so an empty state would be the
- * overwhelmingly common case and pure noise.
+ * overwhelmingly common case and pure noise. The heading carries no card name
+ * or count for the same reason: the page states which card this is, and the
+ * listings are right there to be counted.
  */
 export default function ShopListingsPanel({
   listings,
-  cardName,
 }: {
   listings: ShopListing[];
-  cardName: string;
 }) {
   if (listings.length === 0) return null;
 
   return (
     <section className="mt-10 rounded-2xl p-[1.5px] bg-gradient-brand shadow-sm">
       <div className="rounded-[14.5px] bg-white/95 dark:bg-surface-elevated backdrop-blur-xl p-5">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-lg font-semibold text-text-primary">
-            Available in the Shop
-          </h2>
-          <span className="text-xs text-text-muted whitespace-nowrap">
-            {listings.length === 1 ? "1 listing" : `${listings.length} listings`}
-          </span>
-        </div>
-        <p className="text-xs text-text-secondary mt-0.5">
-          {cardName} from the TCG Dexter eBay shop
-        </p>
+        <h2 className="text-lg font-semibold text-text-primary">
+          Available in the Shop
+        </h2>
 
         <ul className="mt-4 flex flex-col gap-3">
           {listings.map((listing) => (
-            <li
-              key={listing.itemId}
-              className="flex items-center gap-4 rounded-xl border border-border bg-surface/60 dark:bg-surface-2/40 p-3"
-            >
+            <li key={listing.itemId} className="flex items-center gap-4">
               {listing.imageUrl && (
                 /* The seller's own photo, not a catalog scan — it's the actual
                    card being sold, wear and all, which is the point. */
@@ -62,14 +51,9 @@ export default function ShopListingsPanel({
                   <span className="text-base font-semibold text-text-primary">
                     ${listing.price.toFixed(2)}
                   </span>
-                  {listing.condition && (
+                  {listing.freeShipping && (
                     <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-medium text-text-secondary">
-                      {listing.condition}
-                    </span>
-                  )}
-                  {listing.bestOffer && (
-                    <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-medium text-text-secondary">
-                      Offers accepted
+                      Free shipping
                     </span>
                   )}
                 </div>
