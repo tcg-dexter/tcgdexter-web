@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import MetaVariantCard from "@/app/meta-archetypes/[slug]/MetaVariantCard";
+import CarouselChevron from "./CarouselChevron";
+import { useCarousel } from "./useCarousel";
 import type { CardAppearance } from "@/lib/cardAppearances";
 
 interface Props {
@@ -37,14 +39,17 @@ export default function AppearsInCarousel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const listRef = useRef<HTMLUListElement | null>(null);
-  const itemRef = useRef<HTMLLIElement | null>(null);
   const sentinelRef = useRef<HTMLLIElement | null>(null);
   const offsetRef = useRef(initialItems.length);
 
-  const [atStart, setAtStart] = useState(true);
-  const [atEnd, setAtEnd] = useState(false);
+  const tilesPerView = useCallback(
+    () => (window.matchMedia(DESKTOP_MQ).matches ? 3 : 1),
+    [],
+  );
+  const { scrollerRef, listRef, itemRef, atStart, atEnd, step } = useCarousel({
+    tilesPerView,
+    itemCount: items.length,
+  });
 
   const loadMore = useCallback(async () => {
     if (loading || !hasMore) return;
@@ -87,55 +92,6 @@ export default function AppearsInCarousel({
     return () => io.disconnect();
   }, [loadMore, hasMore]);
 
-  /** Measure the pitch (tile width + flex gap) so chevron steps land
-   *  exactly on a tile boundary regardless of viewport width. */
-  const getPitch = useCallback((): number => {
-    const item = itemRef.current;
-    const list = listRef.current;
-    if (!item || !list) return 0;
-    const gap = parseFloat(getComputedStyle(list).columnGap || "0") || 0;
-    return item.getBoundingClientRect().width + gap;
-  }, []);
-
-  const updateEdges = useCallback(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    setAtStart(el.scrollLeft <= 1);
-    setAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 1);
-  }, []);
-
-  useEffect(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    updateEdges();
-    el.addEventListener("scroll", updateEdges, { passive: true });
-    window.addEventListener("resize", updateEdges);
-    return () => {
-      el.removeEventListener("scroll", updateEdges);
-      window.removeEventListener("resize", updateEdges);
-    };
-  }, [updateEdges, items.length]);
-
-  const step = useCallback(
-    (direction: 1 | -1) => {
-      const el = scrollerRef.current;
-      const pitch = getPitch();
-      if (!el || !pitch) return;
-      const tilesPerView = window.matchMedia(DESKTOP_MQ).matches ? 3 : 1;
-      // Round the current position to the nearest tile boundary, then
-      // advance by N tiles. Snaps "back into" alignment whether or not
-      // the user is currently mid-scroll between tiles.
-      const aligned = Math.round(el.scrollLeft / pitch) * pitch;
-      const target = aligned + direction * tilesPerView * pitch;
-      const max = el.scrollWidth - el.clientWidth;
-      el.scrollTo({
-        left: Math.max(0, Math.min(max, target)),
-        behavior: "smooth",
-      });
-    },
-    [getPitch],
-  );
-
   if (items.length === 0) return null;
 
   return (
@@ -143,13 +99,15 @@ export default function AppearsInCarousel({
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold text-text-primary">Appears in</h2>
         <div className="flex items-center gap-1.5">
-          <ChevronButton
+          <CarouselChevron
             direction="left"
+            noun="decks"
             disabled={atStart}
             onClick={() => step(-1)}
           />
-          <ChevronButton
+          <CarouselChevron
             direction="right"
+            noun="decks"
             disabled={atEnd && !hasMore}
             onClick={() => step(1)}
           />
@@ -206,43 +164,5 @@ export default function AppearsInCarousel({
         <p className="mt-2 text-xs text-accent">Couldn’t load more: {error}</p>
       )}
     </section>
-  );
-}
-
-function ChevronButton({
-  direction,
-  disabled,
-  onClick,
-}: {
-  direction: "left" | "right";
-  disabled: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={direction === "left" ? "Previous decks" : "Next decks"}
-      className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-black/10 bg-white dark:bg-surface-2 text-text-primary disabled:text-text-muted disabled:bg-surface disabled:cursor-not-allowed hover:bg-surface transition-colors"
-    >
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.25"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
-        {direction === "left" ? (
-          <polyline points="15 18 9 12 15 6" />
-        ) : (
-          <polyline points="9 18 15 12 9 6" />
-        )}
-      </svg>
-    </button>
   );
 }
