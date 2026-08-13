@@ -3,6 +3,8 @@ import { shade } from "@/lib/color";
 
 export type RecentMatch = {
   id: string;
+  /** Short, shareable id used in the /battles URL (never the UUID). */
+  shortId: string;
   result: "win" | "loss" | "draw";
   opponentArchetype: string | null;
   opponentHandle: string | null;
@@ -123,7 +125,7 @@ export function MatchCard({ match }: { match: RecentMatch }) {
   if (leftSide.imageUrl && rightSide.imageUrl) {
     return (
       <Link
-        href={`/battles/${match.id}`}
+        href={`/battles/${match.shortId}`}
         className="block rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       >
         <div className="relative overflow-hidden">
@@ -218,7 +220,7 @@ export function MatchCard({ match }: { match: RecentMatch }) {
     : null;
   return (
     <Link
-      href={`/battles/${match.id}`}
+      href={`/battles/${match.shortId}`}
       className="block rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
     >
       <div className="relative flex gap-3.5 p-3.5">

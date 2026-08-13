@@ -7,6 +7,7 @@
 // keeping it here prevents the page and its routes from drifting apart.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { idColumn } from "@/lib/shortId";
 
 export interface BattleAccess {
   allowed: boolean;
@@ -25,10 +26,14 @@ export interface BattleAccess {
  * Load a match and decide whether `viewerId` (null = anonymous) may see it.
  * `admin` must be the service-role client — visibility is enforced HERE, in
  * application code, exactly as the battles page does it.
+ *
+ * `matchRef` accepts either the match's short_id (what battle URLs carry) or
+ * its UUID (legacy links). The returned `match.id` is always the real row id,
+ * so callers can key child-table queries off it directly.
  */
 export async function loadBattleWithAccess(
   admin: SupabaseClient,
-  matchId: string,
+  matchRef: string,
   viewerId: string | null,
 ): Promise<BattleAccess> {
   const none: BattleAccess = { allowed: false, isOwner: false, match: null, deckList: null };
@@ -36,7 +41,7 @@ export async function loadBattleWithAccess(
   const { data: match } = await admin
     .from("matches")
     .select("id, result, battle_log_raw, player_handle, saved_deck_id")
-    .eq("id", matchId)
+    .eq(idColumn(matchRef), matchRef)
     .maybeSingle();
   if (!match || !match.saved_deck_id) return none;
 

@@ -128,7 +128,7 @@ export async function POST(req: Request) {
   const { data, error } = await supabase
     .from("matches")
     .insert(insertRow)
-    .select("id, result, opponent_archetype, played_at, created_at")
+    .select("id, short_id, result, opponent_archetype, played_at, created_at")
     .single();
 
   if (error) {

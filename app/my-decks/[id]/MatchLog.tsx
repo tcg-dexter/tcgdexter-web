@@ -12,6 +12,8 @@ import { clientTz, celebrateStreak } from "@/lib/streak-client";
 
 interface Match {
   id: string;
+  /** Short, shareable id used in the /battles URL (never the UUID). */
+  short_id: string;
   result: "win" | "loss" | "draw";
   opponent_name: string | null;
   opponent_archetype: string | null;
@@ -111,6 +113,7 @@ export default function MatchLog({
     celebrateStreak(json.streak);
     const newMatch: Match = {
       id: json.id,
+      short_id: json.short_id,
       result: data.result,
       opponent_name: data.opponent_name ?? null,
       opponent_archetype: data.opponent_archetype ?? null,
@@ -329,7 +332,7 @@ export default function MatchLog({
                   <div className="flex-shrink-0 flex items-center gap-2">
                     {hasLog && (
                       <Link
-                        href={`/battles/${match.id}`}
+                        href={`/battles/${match.short_id}`}
                         className="inline-flex items-center gap-1 rounded-full border border-black/10 bg-white dark:bg-surface-2 px-3 py-1 text-[11px] font-semibold text-text-primary hover:bg-black/5 transition-colors"
                       >
                         View Battle
