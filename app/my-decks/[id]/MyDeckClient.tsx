@@ -15,6 +15,7 @@ import DeckNotes from "./DeckNotes";
 
 interface Match {
   id: string;
+  short_id: string;
   result: "win" | "loss" | "draw";
   opponent_name: string | null;
   opponent_archetype: string | null;

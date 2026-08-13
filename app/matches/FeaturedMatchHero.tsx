@@ -293,7 +293,7 @@ export default function FeaturedMatchHero({
               Details
             </button>
             <Link
-              href={`/battles/${match.id}`}
+              href={`/battles/${match.shortId}`}
               className="h-[38px] flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-black px-[1px] text-sm font-semibold text-white transition-opacity hover:opacity-80 touch-manipulation dark:bg-white dark:text-black"
             >
               View battle

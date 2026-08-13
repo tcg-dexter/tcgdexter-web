@@ -33,7 +33,7 @@ interface ProfileRef {
 }
 
 const MATCH_ROW_SELECT =
-  "id, result, opponent_archetype, opponent_handle, created_at, saved_deck_id, source, prizes_taken_player, prizes_taken_opponent, game_prizes, game_results";
+  "id, short_id, result, opponent_archetype, opponent_handle, created_at, saved_deck_id, source, prizes_taken_player, prizes_taken_opponent, game_prizes, game_results";
 
 /**
  * Builds RecentMatch cards from a set of match rows + the decks/profiles
@@ -210,6 +210,7 @@ async function assembleRecentMatches(
 
     return [{
       id: m.id as string,
+      shortId: m.short_id as string,
       result: m.result as "win" | "loss" | "draw",
       opponentArchetype: m.opponent_archetype as string | null,
       opponentHandle: (m.opponent_handle as string | null) ?? null,
