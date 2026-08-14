@@ -7,6 +7,7 @@ const TABS = [
   { href: "/dashboard", label: "Mission control" },
   { href: "/dashboard/analytics", label: "Analytics" },
   { href: "/dashboard/crm", label: "CRM" },
+  { href: "/dashboard/partnerships", label: "Partnerships" },
 ] as const;
 
 export default function DashboardNav() {
