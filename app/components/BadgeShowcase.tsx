@@ -15,11 +15,12 @@ import { CATALOG, type AchievementDef, type AchievementKey } from "@/lib/learn/a
  * then spins back after FLIP_BACK_MS.
  */
 
-/** Hardest badges first: the top of the deck-building track (50 decks),
- *  the top of the match-logging grind (100 matches), then the next
- *  deck-building tier (40 decks). Anything listed here is pulled out of
- *  the secondary grid below. */
-const HERO_KEYS: AchievementKey[] = ["decks_50", "matches_100", "decks_40"];
+/** The three headline badges, one per earning path rather than simply the
+ *  three hardest: the top of the deck-building track (50 decks), the top
+ *  of the match-logging grind (100 matches), and the knowledge badge
+ *  (Trainer Quiz), which is the only one earned outside those two counts.
+ *  Anything listed here is pulled out of the secondary grid below. */
+const HERO_KEYS: AchievementKey[] = ["decks_50", "matches_100", "certified_trainer"];
 
 const FLIP_BACK_MS = 3000;
 
