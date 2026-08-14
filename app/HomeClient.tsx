@@ -29,6 +29,7 @@ import type { CardIndexEntry, RawCard } from "@/lib/cardsIndex";
 import GridTile from "@/app/cards/GridTile";
 import CardDetailPanel from "@/app/cards/CardDetailPanel";
 import InventoryProvider, { useInventory } from "@/app/cards/InventoryContext";
+import BadgeShowcase from "@/app/components/BadgeShowcase";
 
 export type CurrentSpotlight = {
   id: string;
@@ -411,6 +412,7 @@ export default function HomeClient({
             <div className="text-3xl md:text-4xl font-semibold tracking-tight leading-tight text-text-primary">
               A dex for your decks. Save your own lists, share with fellow trainers, and browse the top meta archetypes. Track your progress and earn badges.
             </div>
+            <BadgeShowcase />
           </section>
 
           {/* Recent Matches */}
