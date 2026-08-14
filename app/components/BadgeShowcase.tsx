@@ -9,10 +9,10 @@ import { CATALOG, type AchievementDef, type AchievementKey } from "@/lib/learn/a
  * a progress view, so every badge renders earned-looking (full color)
  * regardless of who's viewing.
  *
- * The three hardest badges lead as large heroes with their titles
- * underneath; the rest follow in a compact grid. Tapping any badge spins
- * it on its Y axis to reveal the badge name, then spins back after
- * FLIP_BACK_MS.
+ * The three hardest badges lead as large heroes with their names +
+ * requirement underneath; the rest follow in a compact grid. Tapping any
+ * badge spins it on its Y axis to reveal the same name + requirement,
+ * then spins back after FLIP_BACK_MS.
  */
 
 /** Hardest badges first: the top of the deck-building track (50 decks),
@@ -22,6 +22,32 @@ import { CATALOG, type AchievementDef, type AchievementKey } from "@/lib/learn/a
 const HERO_KEYS: AchievementKey[] = ["decks_50", "matches_100", "decks_40"];
 
 const FLIP_BACK_MS = 3000;
+
+/** Pointy-top hexagon matching the badge art's silhouette. */
+const HEX_CLIP = "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)";
+
+/**
+ * Terse "how you earn it" line, shown under every badge name. Deliberately
+ * shorter than the catalog's `description` (which is a full sentence) —
+ * these sit in tight hexagons and under hero titles, where a sentence
+ * wraps badly. Exhaustive by type, so adding a catalog badge fails the
+ * typecheck here until its copy is written.
+ */
+const REQUIREMENT: Record<AchievementKey, string> = {
+  first_save: "Save a deck",
+  first_match: "Log a match",
+  first_battle_log: "Import a log",
+  certified_trainer: "Ace the quiz",
+  matches_10: "Log 10 matches",
+  matches_50: "Log 50 matches",
+  matches_100: "Log 100 matches",
+  decks_5: "Save 5 decks",
+  decks_10: "Save 10 decks",
+  decks_20: "Save 20 decks",
+  decks_30: "Save 30 decks",
+  decks_40: "Save 40 decks",
+  decks_50: "Save 50 decks",
+};
 
 export default function BadgeShowcase() {
   const heroDefs = HERO_KEYS.map((key) => CATALOG.find((d) => d.key === key)).filter(
@@ -89,9 +115,9 @@ function FlipBadge({
       <button
         type="button"
         onClick={handleClick}
-        aria-label={`${def.name} badge — reveal name`}
+        aria-label={`${def.name} badge — ${REQUIREMENT[def.key]}`}
         aria-pressed={flipped}
-        className="w-full block rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+        className="w-full block focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 rounded-lg"
         style={{ perspective: "800px" }}
       >
         <div
@@ -116,36 +142,67 @@ function FlipBadge({
             />
           </div>
 
-          {/* Back — the reveal. Rotated a half-turn so it reads upright
-              once the front has spun away. */}
+          {/* Back — the reveal, cut to the same hexagon as the art so the
+              tile keeps its silhouette through the spin. Rotated a
+              half-turn so it reads upright once the front spins away.
+              The outer hex is the border tone; the inner one scales down
+              inside it to leave an even rim. */}
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-full border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated px-2 text-center shadow-sm"
+            className="absolute inset-0 flex items-center justify-center"
             style={{
               backfaceVisibility: "hidden",
               WebkitBackfaceVisibility: "hidden",
               transform: "rotateY(180deg)",
             }}
           >
-            <span
-              className={`font-bold leading-tight text-text-primary ${
-                isHero ? "text-sm sm:text-base" : "text-[10px] sm:text-xs"
-              }`}
-            >
-              {def.name}
-            </span>
-            {isHero && (
-              <span className="hidden sm:block text-[11px] leading-snug text-text-secondary">
-                {def.description}
-              </span>
-            )}
+            {/* Sized to the hexagon's real extent inside the PNG (measured:
+                80.3% × 95.3% of the canvas) so the back tile lands exactly
+                on the front's silhouette instead of the art's padded box. */}
+            <div className="relative" style={{ width: "80.3%", height: "95.3%" }}>
+              <div
+                className="absolute inset-0 bg-black/15 dark:bg-white/20"
+                style={{ clipPath: HEX_CLIP }}
+              />
+              <div
+                className="absolute inset-[2px] bg-white dark:bg-surface-elevated"
+                style={{ clipPath: HEX_CLIP }}
+              />
+              {/* Text sits in its own unclipped layer — scaling or clipping
+                  the copy alongside the shape would distort it. */}
+              <div
+                className={`absolute inset-0 flex flex-col items-center justify-center text-center ${
+                  isHero ? "px-3 gap-1" : "px-1 gap-0.5"
+                }`}
+              >
+                <span
+                  className={`font-bold leading-tight text-text-primary ${
+                    isHero ? "text-sm sm:text-base" : "text-[10px] sm:text-xs"
+                  }`}
+                >
+                  {def.name}
+                </span>
+                <span
+                  className={`leading-snug text-text-secondary ${
+                    isHero ? "text-[11px] sm:text-xs" : "text-[8px] sm:text-[10px]"
+                  }`}
+                >
+                  {REQUIREMENT[def.key]}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </button>
 
       {isHero && (
-        <p className="text-sm sm:text-base font-semibold text-text-primary text-center leading-tight">
-          {def.name}
-        </p>
+        <div className="text-center">
+          <p className="text-sm sm:text-base font-semibold text-text-primary leading-tight">
+            {def.name}
+          </p>
+          <p className="mt-0.5 text-xs sm:text-sm text-text-secondary leading-snug">
+            {REQUIREMENT[def.key]}
+          </p>
+        </div>
       )}
     </div>
   );
