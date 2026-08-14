@@ -64,7 +64,7 @@ export default function BadgeShowcase() {
         ))}
       </div>
 
-      <div className="mt-8 grid grid-cols-4 sm:grid-cols-5 gap-4 sm:gap-6 max-w-3xl mx-auto">
+      <div className="mt-8 flex flex-wrap justify-center gap-4 sm:gap-6 max-w-3xl mx-auto">
         {restDefs.map((def) => (
           <FlipBadge key={def.key} def={def} variant="compact" />
         ))}
@@ -138,7 +138,7 @@ function FlipBadge({
   }
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-2 w-[calc(25%-0.75rem)] sm:w-[calc(20%-1.2rem)]">
       <button
         type="button"
         onClick={handleClick}
