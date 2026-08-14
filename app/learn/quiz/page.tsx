@@ -6,6 +6,7 @@ import {
   hasAchievement,
 } from "@/lib/learn/achievements";
 import { questionsForClient } from "./questions";
+import { POST_QUIZ_HREF as NEXT_LESSON_HREF } from "@/lib/learn/quiz-constants";
 import QuizClient from "./QuizClient";
 import CertifiedTrainerBadge from "./CertifiedTrainerBadge";
 import TrackView from "@/app/components/TrackView";
@@ -18,8 +19,6 @@ export const metadata: Metadata = {
 
 // Quiz state is per-user; never cache.
 export const dynamic = "force-dynamic";
-
-const NEXT_LESSON_HREF = "/learn/reading-a-deck-list";
 
 export default async function QuizPage() {
   const supabase = await createClient();
@@ -47,8 +46,8 @@ export default async function QuizPage() {
             Earn your Certified Trainer badge
           </h1>
           <p className="text-base text-text-secondary leading-relaxed">
-            Ten multiple-choice questions covering lessons 1 through 7. Score
-            10 / 10 and the Certified Trainer badge lands on your profile.
+            One question from each of the ten lessons. Score 10 / 10 and the
+            Certified Trainer badge lands on your profile.
           </p>
         </header>
 
@@ -143,8 +142,8 @@ export default async function QuizPage() {
           Earn your Certified Trainer badge
         </h1>
         <p className="text-base text-text-secondary leading-relaxed">
-          Ten multiple-choice questions covering lessons 1 through 7. Score
-          10 / 10 to earn the badge.
+          One question from each of the ten lessons. Score 10 / 10 to earn the
+          badge.
         </p>
       </header>
 

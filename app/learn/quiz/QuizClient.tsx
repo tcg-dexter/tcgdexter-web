@@ -4,11 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import CertifiedTrainerBadge from "./CertifiedTrainerBadge";
 import type { ClientQuizQuestion } from "./questions";
+import {
+  QUIZ_LENGTH,
+  POST_QUIZ_HREF as NEXT_LESSON_HREF,
+} from "@/lib/learn/quiz-constants";
 
 type Result = { score: number; passed: boolean };
-
-const QUIZ_LENGTH = 10;
-const NEXT_LESSON_HREF = "/learn/reading-a-deck-list";
 
 export default function QuizClient({
   questions,

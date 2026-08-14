@@ -1,44 +1,60 @@
 ---
 slug: anatomy-energy-card
 title: Anatomy of an Energy card
-module: basics
-moduleTitle: The Basics
-order: 4
-estimatedMinutes: 3
 ---
 
 # Anatomy of an Energy card
 
-Energy is the fuel that powers your Pokémon's attacks. No energy, no attack. It sounds simple, and it mostly is — but how much energy you run and what kind matters more than almost anything else when you're building a deck.
+Energy is the fuel. No Energy attached, no attack — it really is that simple. What isn't simple is how *slowly* you're allowed to add it, and that single restriction shapes every deck ever built.
 
-## Two kinds: Basic and Special
+## The rule that matters most
 
-**Basic Energy** is the plain stuff. There's one for each of the nine types — Fire, Water, Grass, Lightning, Psychic, Fighting, Darkness, Metal, and Dragon. (Dragon Pokémon use other types' energy in modern Standard; there's no Basic Dragon Energy.)
+<Callout kind="rule">
+**One Energy card from your hand per turn**, attached to any one of your Pokémon — Active or Benched.
+</Callout>
 
-![Basic Darkness Energy](https://images.pokemontcg.io/sv6pt5/98.png)
+That's the throttle on the entire game. A Pokémon needing three Energy is a Pokémon you're spending three turns on, and three turns is a long time when your opponent is attacking every one of them.
 
-Basic energies have no text — they just provide one energy of their type when attached. You can run as many copies of any Basic Energy as you want in your deck. The normal **4-copy rule does not apply** to Basic Energy.
+It's also why **Energy acceleration** — any card that gets Energy into play *without* using your one attachment — is so prized. Abilities that attach from the deck, attacks that attach on the way through, Trainers that pull Energy out of the discard: all of them are buying turns.
 
-**Special Energy** has a name and an effect. They count toward the 4-copy rule like any other card.
+## Basic Energy
 
-![Neo Upper Energy](https://images.pokemontcg.io/sv5/162.png)
+<Card id="sv6pt5-98" />
 
-Neo Upper Energy provides 2 Colorless energy when attached, but only while you have fewer Prize cards remaining than your opponent. That's the trade-off — Special Energy gives you something extra, but almost always with a condition attached.
+Basic Energy has no text. It provides one Energy of its type and nothing else. There's one for each of the nine types — Fire, Water, Grass, Lightning, Psychic, Fighting, Darkness, Metal and Dragon.
 
-## The "one energy per turn" rule
+<Callout kind="gotcha">
+Basic Energy is the one card the 4-copy rule doesn't apply to. Run 8, run 15, run 20 — all legal.
+</Callout>
 
-This is the single most important rule about energy:
+## Special Energy
 
-**You can only attach one energy card from your hand per turn.**
+<Card id="sv8-252" />
 
-That's the throttle on the whole game. It's why decks care so much about energy *acceleration* — anything that lets you put extra energy in play without using your once-per-turn attachment (abilities, certain attacks, certain Trainer cards).
+Special Energy has a name and does something extra. Jet Energy provides one Colorless Energy, and when you attach it to a Benched Pokémon it immediately switches that Pokémon into the Active Spot — a free retreat, folded into an attachment you were making anyway.
 
-## How energy goes onto Pokémon
+The catch: Special Energy counts toward the 4-copy limit like any other card, and it's a real card slot. Every Special Energy you run is a Basic Energy you don't.
 
-You attach energy from your hand to *any* Pokémon you have in play — Active or Benched. Once attached, energy stays there until the Pokémon is knocked out, retreats, or an effect discards it.
+## Colorless costs
 
-A Pokémon attacks if it has the right energy attached *and* it's in the Active spot. The attack's cost shows you exactly which energy you need.
+Look at an attack cost and you'll see two kinds of symbol. A **typed** symbol (Lightning, Water, and so on) must be paid with that type. A **Colorless** symbol — the plain star — can be paid with *any* Energy at all.
 
-## How much should you run?
+So an attack costing Lightning + Colorless needs one Lightning Energy and one of anything. That's why decks can splash a single off-type attacker without rebuilding their whole Energy line.
 
-A rough rule for beginners: most decks run **8–14 energy cards** total. Decks with high energy costs run more; decks that splash a couple of energy run less. Dexter flags it on every deck profile if your energy count looks off for your attackers.
+<Check
+  question="Your Active Pokémon needs two Energy to attack and has none. It's your turn. What's the earliest you can attack with it?"
+  options={[
+    "This turn — attach both from your hand",
+    "Next turn, after a second attachment",
+    "This turn, if you also play an Item",
+    "Never, unless you retreat first",
+  ]}
+  answer={1}
+  explain="One Energy attachment per turn from your hand, so two Energy takes two turns — unless you have an acceleration effect that attaches outside your normal attachment. That two-turn wind-up is exactly what your opponent is racing against."
+/>
+
+## How much Energy should a deck run?
+
+A rough starting point: **8–14 Energy cards** in a 60-card deck. Decks built around expensive attacks run more; decks that only need one or two Energy in play run less.
+
+It's a genuinely easy number to get wrong, in both directions — too few and your attacker sits there doing nothing, too many and you draw Energy when you needed Pokémon. Dexter flags it on every deck profile when the count looks off for the attackers you're running.

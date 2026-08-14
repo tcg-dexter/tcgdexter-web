@@ -6,13 +6,23 @@ import { notFound } from "next/navigation";
 import { compileMDX } from "next-mdx-remote/rsc";
 import matter from "gray-matter";
 import TrackView from "@/app/components/TrackView";
+import Board from "@/app/learn/components/Board";
+import Callout from "@/app/learn/components/Callout";
+import CardAnatomyBlock from "@/app/learn/components/CardAnatomyBlock";
+import Check from "@/app/learn/components/Check";
+import LessonCard from "@/app/learn/components/LessonCard";
 import {
   lessons,
+  curriculumLessons,
+  isCurriculumLesson,
+  isLastCurriculumLesson,
   getLesson,
-  getLessonsByModule,
+  getModule,
   getNextLesson,
   getPreviousLesson,
 } from "@/lib/learn/curriculum";
+import { POST_QUIZ_HREF } from "@/lib/learn/quiz-constants";
+import { LESSON_MDX_OPTIONS } from "@/lib/learn/mdx-options";
 
 export const dynamicParams = false;
 
@@ -33,10 +43,18 @@ export async function generateMetadata({
   };
 }
 
-/* Tailwind-tokened MDX component overrides. The lesson MDX files are plain
-   markdown today (no custom components), so we only need to style the basic
-   element set: headings, paragraphs, lists, code, links, images. */
+/* Tailwind-tokened MDX component overrides, plus the teaching components the
+   lessons render by name. Anything listed here is in scope inside every
+   lesson `.mdx` without an import statement. */
 const mdxComponents = {
+  /* Teaching components — see app/learn/components/. */
+  Board,
+  Callout,
+  CardAnatomy: CardAnatomyBlock,
+  Check,
+  Card: LessonCard,
+
+  /* Base markdown elements. */
   h1: (props: React.HTMLAttributes<HTMLHeadingElement>) => (
     <h1
       className="text-3xl font-bold text-text-primary mt-2 mb-5 leading-tight"
@@ -151,6 +169,9 @@ export default async function LessonPage({
   const { content: mdx } = await compileMDX({
     source: body,
     components: mdxComponents,
+    // See lib/learn/mdx-options.ts — without this, every JSX expression prop
+    // in a lesson is silently stripped before compile.
+    options: LESSON_MDX_OPTIONS,
   });
 
   const prev = getPreviousLesson(params.slug);
@@ -164,33 +185,36 @@ export default async function LessonPage({
           Learn to Play
         </Link>
         <span aria-hidden>›</span>
-        <span>
-          Lesson {lesson.order} of {lessons.length}
-        </span>
+        {isCurriculumLesson(lesson) ? (
+          <span>
+            {getModule(lesson.module)?.title} · Lesson {lesson.order} of{" "}
+            {curriculumLessons.length}
+          </span>
+        ) : (
+          /* The unlisted product-tour track isn't part of the graded count. */
+          <span>Next steps</span>
+        )}
         <span className="ml-auto">{lesson.estimatedMinutes} min read</span>
       </nav>
 
       <article>{mdx}</article>
 
       {(() => {
-        const basicsLessons = getLessonsByModule("basics");
-        const isBasicsEnd =
-          lesson.module === "basics" &&
-          lesson.order === basicsLessons[basicsLessons.length - 1].order;
+        const isCurriculumEnd = isLastCurriculumLesson(lesson.slug);
         const isLast = !next;
 
         const backHref = prev ? `/learn/${prev.slug}` : "/learn";
 
         /* Three routing outcomes after a lesson:
-           - End of the "basics" module → Trainer Quiz
-           - Final lesson overall (last of "first-deck") → Profile a deck
+           - End of the graded curriculum → Trainer Quiz
+           - Final lesson overall (last of the product tour) → Profile a deck
            - Anything else → next lesson in order */
         let nextHref: string;
         let nextLabel: string;
         let nextContextItem: { href: string; label: string; order: number | null };
         let footerCaption: string | null = null;
 
-        if (isBasicsEnd) {
+        if (isCurriculumEnd) {
           nextHref = "/learn/quiz";
           nextLabel = "Take the quiz";
           nextContextItem = {

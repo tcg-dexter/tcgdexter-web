@@ -1,57 +1,92 @@
 ---
 slug: how-a-turn-works
 title: How a turn works
-module: basics
-moduleTitle: The Basics
-order: 5
-estimatedMinutes: 4
 ---
 
 # How a turn works
 
-A turn in the Pokémon TCG has a strict order with a *lot* of flexibility in the middle. Once you internalize the rhythm, you'll start seeing turns as a budget — and the goal is to spend that budget as well as possible.
+A turn has a strict beginning and end, and a lot of freedom in the middle. Once the shape is familiar, you'll start seeing a turn as a budget — and playing well is mostly about spending it well.
 
 ## The fixed parts
 
-Every turn:
+1. **Draw a card.** Always first. If your deck is empty when you have to draw, you lose on the spot.
+2. **Do things.** The flexible middle — everything below.
+3. **Attack.** Optional, and it *ends your turn* the moment you do it. You can also just pass.
 
-1. **Draw a card.** Always step one. If your deck is empty when you try to draw, you lose.
-2. **Take actions** — the flexible middle, more below.
-3. **Attack** — optional. If you attack, your turn ends. You can also pass without attacking.
+## The flexible middle
 
-That's it at the highest level. The flexible middle is where the game lives.
+In any order, as often as the limits allow:
 
-## The flexible middle — your turn "budget"
+- Play **Basic Pokémon** onto your Bench — as many as you like, up to 5 on the Bench
+- **Evolve** your Pokémon — each one once per turn
+- **Attach one Energy** from your hand, to any Pokémon
+- Play **Item** cards — unlimited
+- Play **one Supporter**
+- Play **one Stadium**
+- Attach **Tools** — unlimited, but one per Pokémon
+- Use **Abilities** — usually once per turn each
+- **Retreat** your Active Pokémon — once per turn
 
-Between drawing and attacking, you can do any of these in any order:
+The hard caps are worth memorising, because they're the whole shape of a turn:
 
-- Play as many **Basic Pokémon** to your Bench as you want (Bench holds up to 5)
-- **Evolve** any of your Pokémon — each one can evolve once per turn, and not the turn it was played
-- **Attach one Energy** to any of your Pokémon
-- Play as many **Item cards** as you want
-- Play **one Supporter card**
-- Play **one Stadium card** (it replaces any current Stadium)
-- Attach **Tool cards** to your Pokémon (one Tool per Pokémon)
-- Use any **Abilities** you have available — most are once per turn each
-- **Retreat** your Active Pokémon (once per turn, paying its retreat cost)
+<Callout kind="rule">
+One Energy attachment. One Supporter. One Stadium. One retreat. One attack.
+Everything else is unlimited.
+</Callout>
 
-The hard limits are: **one energy attachment, one Supporter, one retreat, one attack.** Everything else is "as many as you can pay for."
+## Evolution timing
 
-## A worked example
+Evolving is the rule that trips up new players most, so here it is precisely:
 
-You start your turn with Charmander Active, an empty Bench, and a hand full of stuff.
+- A Pokémon **cannot evolve the turn you play it.** It has to have been in play since the start of your turn.
+- No Pokémon can evolve **on your very first turn of the game** — for the same reason: everything came down during setup.
+- Each Pokémon can evolve **once per turn**. Basic → Stage 1 this turn, Stage 1 → Stage 2 next turn.
+- Evolving **removes all Special Conditions** from that Pokémon. Damage stays; conditions don't.
 
-1. **Draw** — you draw Rare Candy.
-2. Play **Ultra Ball** (Item, discard 2 to grab any Pokémon) → search out Charizard ex.
-3. Play **Rare Candy** (Item) → evolve your Charmander directly into Charizard ex, skipping Stage 1.
-4. Play **Iono** (Supporter) → shuffle your hand, draw fresh.
-5. **Attach a Fire Energy** → your one attachment for the turn.
-6. **Attack** with Charizard ex → turn ends.
+<Card id="sv5-102" size="sm" />
 
-That's a full turn: two Items, a Supporter, an energy attach, and an attack. The hard limits were respected; everything else stacked.
+So Gastly comes down on turn one. On turn two it can become Haunter. On turn three, Gengar. Three turns to get a Stage 2 online — unless you shortcut it:
 
-## Mulligans (the one weird thing)
+<Card id="me1-125" />
 
-If your opening hand has no Basic Pokémon, that's a **mulligan**. You reveal your hand, shuffle it back, and draw a new 7. Your opponent draws an extra card for each mulligan you take.
+Rare Candy takes a Basic already in play and evolves it **straight to Stage 2**, skipping the middle. It's an Item, so it doesn't use your Supporter, and it's the reason Stage 2 decks are playable at all.
 
-We'll talk more about this in a later strategy lesson — for now, just know that mulligans are why decks always include "enough" Basics. Run too few and you'll be handing your opponent free cards game after game.
+<Check
+  question="You play Gastly onto your Bench, then want to evolve it into Haunter the same turn. Can you?"
+  options={[
+    "Yes — evolving is free",
+    "Yes, but only with Rare Candy",
+    "No — it must have been in play since the start of your turn",
+    "No — Gastly can never evolve on the Bench",
+  ]}
+  answer={2}
+  explain="A Pokémon can't evolve the turn it's played, on the Bench or in the Active Spot. It has to survive to your next turn. (Rare Candy doesn't dodge this either — it still needs a Basic that's already been in play.)"
+/>
+
+## A worked turn
+
+You have Gastly Active from last turn, one Bench slot filled, and a hand with options.
+
+1. **Draw** — you get Rare Candy.
+2. Play **Ultra Ball**, discarding 2 cards, to search out Gengar.
+3. Play **Rare Candy** on Gastly → it becomes **Gengar** immediately, skipping Haunter.
+4. Play **Cheren** to draw 3. That's your Supporter for the turn.
+5. **Attach a Darkness Energy** to Gengar. That's your attachment for the turn.
+6. **Attack.** Turn over.
+
+Two Items, one Supporter, one attachment, one attack. Every cap respected, and everything uncapped stacked as high as the hand allowed.
+
+<Callout kind="gotcha">
+Notice the order. Cheren was played *after* the searching, not before — once you draw into a turn you can't undo it, so spend the cards you already know about before you go looking for new ones.
+</Callout>
+
+## Retreating
+
+Once per turn you may retreat your Active Pokémon: discard Energy from it equal to its Retreat Cost, then swap it with a Benched Pokémon.
+
+Two things fall out of that:
+
+- The Energy is **gone**, not moved. Retreating a loaded attacker is expensive.
+- Retreating **clears all Special Conditions**, because the Pokémon leaves the Active Spot. That's often the real reason to do it.
+
+Next: what actually happens when you attack.
