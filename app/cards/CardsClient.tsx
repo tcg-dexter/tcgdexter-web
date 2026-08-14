@@ -38,6 +38,8 @@ interface Params {
   hpMax?: number;
   priceMin?: number;
   priceMax?: number;
+  qtyMin?: number;
+  qtyMax?: number;
   rarity: string[];
   retreatCost: number[];
   sort: SortKey;
@@ -67,6 +69,8 @@ function buildUrl(pathname: string, params: Params): string {
   if (params.hpMax != null) sp.set("hpMax", String(params.hpMax));
   if (params.priceMin != null) sp.set("priceMin", String(params.priceMin));
   if (params.priceMax != null) sp.set("priceMax", String(params.priceMax));
+  if (params.qtyMin != null) sp.set("qtyMin", String(params.qtyMin));
+  if (params.qtyMax != null) sp.set("qtyMax", String(params.qtyMax));
   if (params.rarity.length) sp.set("rarity", params.rarity.join(","));
   if (params.retreatCost.length) sp.set("retreatCost", params.retreatCost.map(String).join(","));
   const defaultDir = params.sort === "name" || params.sort === "number" ? "asc" : "desc";
@@ -137,6 +141,8 @@ export default function CardsClient({ initialResult, facets, setStats, initialPa
     (params.hpMax != null ? 1 : 0) +
     (params.priceMin != null ? 1 : 0) +
     (params.priceMax != null ? 1 : 0) +
+    (params.qtyMin != null ? 1 : 0) +
+    (params.qtyMax != null ? 1 : 0) +
     params.rarity.length +
     params.retreatCost.length;
 
@@ -151,6 +157,8 @@ export default function CardsClient({ initialResult, facets, setStats, initialPa
       hpMax: undefined,
       priceMin: undefined,
       priceMax: undefined,
+      qtyMin: undefined,
+      qtyMax: undefined,
       rarity: [],
       retreatCost: [],
       variant: [],
@@ -411,6 +419,13 @@ function CatalogBody({
             max={params.priceMax}
             step={0.5}
             onChange={(min, max) => updateParams({ priceMin: min, priceMax: max })}
+          />
+          <RangeFacet
+            label="Quantity Owned"
+            min={params.qtyMin}
+            max={params.qtyMax}
+            step={1}
+            onChange={(min, max) => updateParams({ qtyMin: min, qtyMax: max })}
           />
         </div>
       )}

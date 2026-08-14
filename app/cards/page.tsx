@@ -43,18 +43,23 @@ export default async function CardsPage({
   const rawOwnership = asString(searchParams.ownership);
   const ownership: OwnershipFilter =
     rawOwnership === "owned" || rawOwnership === "unowned" ? rawOwnership : "all";
+  const qtyMin = asNumber(searchParams.qtyMin);
+  const qtyMax = asNumber(searchParams.qtyMax);
 
-  // Only round-trip to Supabase when an ownership filter is active —
-  // the catalog renders fine without auth otherwise. If the viewer is
-  // signed out, the filter resolves against an empty set: "owned"
-  // returns nothing, "unowned" returns everything.
+  // Only round-trip to Supabase when an ownership or quantity filter is
+  // active — the catalog renders fine without auth otherwise. If the
+  // viewer is signed out, both filters resolve against an empty
+  // collection: "owned" returns nothing, "unowned" returns everything,
+  // and quantity filters treat every card as owning 0.
   let ownedKeys: Set<string> | undefined;
-  if (ownership !== "all") {
+  let ownedQuantities: Map<string, number> | undefined;
+  if (ownership !== "all" || qtyMin != null || qtyMax != null) {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
     ownedKeys = new Set<string>();
+    ownedQuantities = new Map<string, number>();
     if (user) {
       // Paginate — PostgREST caps a single response at db.maxRows (default
       // 1000). Without this, large collections silently truncate and the
@@ -63,13 +68,15 @@ export default async function CardsPage({
       for (let from = 0; ; from += PAGE) {
         const { data } = await supabase
           .from("user_card_collection")
-          .select("set_id, number")
+          .select("set_id, number, quantity")
           .eq("user_id", user.id)
           .gt("quantity", 0)
           .range(from, from + PAGE - 1);
         if (!data?.length) break;
         for (const row of data) {
-          ownedKeys.add(`${row.set_id}-${row.number}`);
+          const key = `${row.set_id}-${row.number}`;
+          ownedKeys.add(key);
+          ownedQuantities.set(key, (ownedQuantities.get(key) ?? 0) + row.quantity);
         }
         if (data.length < PAGE) break;
       }
@@ -98,6 +105,9 @@ export default async function CardsPage({
     pageSize,
     ownership,
     ownedKeys,
+    qtyMin,
+    qtyMax,
+    ownedQuantities,
   };
 
   const result = searchCards(params);
@@ -119,6 +129,8 @@ export default async function CardsPage({
         hpMax: params.hpMax,
         priceMin: params.priceMin,
         priceMax: params.priceMax,
+        qtyMin: params.qtyMin,
+        qtyMax: params.qtyMax,
         rarity: params.rarity ?? [],
         retreatCost: params.retreatCost ?? [],
         sort,

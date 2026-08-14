@@ -88,6 +88,15 @@ export interface CardSearchParams {
    */
   ownership?: OwnershipFilter;
   ownedKeys?: Set<string>;
+  /**
+   * Quantity-owned range filter. Both bounds compare against
+   * `ownedQuantities.get(card.id) ?? 0` — a card absent from the map (never
+   * owned) is treated as quantity 0, so e.g. `qtyMax: 0` matches unowned
+   * cards too.
+   */
+  qtyMin?: number;
+  qtyMax?: number;
+  ownedQuantities?: Map<string, number>;
 }
 
 export interface CardSearchResult {
@@ -200,6 +209,11 @@ function applyFilters(card: CardIndexEntry, p: CardSearchParams): boolean {
     const owned = p.ownedKeys?.has(card.id) ?? false;
     if (p.ownership === "owned" && !owned) return false;
     if (p.ownership === "unowned" && owned) return false;
+  }
+  if (p.qtyMin != null || p.qtyMax != null) {
+    const qty = p.ownedQuantities?.get(card.id) ?? 0;
+    if (p.qtyMin != null && qty < p.qtyMin) return false;
+    if (p.qtyMax != null && qty > p.qtyMax) return false;
   }
   return true;
 }
