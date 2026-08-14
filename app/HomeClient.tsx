@@ -461,7 +461,7 @@ export default function HomeClient({
                   className="relative w-full overflow-hidden aspect-[3/1]"
                 />
               </Link>
-              <div className="mt-10 max-w-4xl mx-auto text-center text-3xl md:text-4xl font-semibold tracking-tight leading-tight text-text-primary">
+              <div className="mt-10 max-w-4xl mx-auto text-center text-2xl md:text-3xl font-medium tracking-tight leading-tight text-text-primary">
                 &ldquo;I&rsquo;m very proud to say that I&rsquo;ve reached Arceus rank on the TCGLive ladder every reset since BB/WF with only Garchomp!&rdquo;
               </div>
               <div className="mt-4 text-center text-lg md:text-xl font-semibold tracking-tight">
