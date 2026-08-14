@@ -84,6 +84,32 @@ function FlipBadge({
   const [flipped, setFlipped] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Heroes are static: their name and requirement already sit under the
+  // medallion, so flipping would only reveal what's on screen already.
+  if (isHero) {
+    return (
+      <div className="flex flex-col items-center gap-2">
+        <div className="w-full" style={{ aspectRatio: "1 / 1" }}>
+          <Image
+            src={`/badges/${def.key}.png`}
+            alt={def.name}
+            width={160}
+            height={160}
+            className="w-full h-full object-contain drop-shadow-sm"
+          />
+        </div>
+        <div className="text-center">
+          <p className="text-sm sm:text-base font-semibold text-text-primary leading-tight">
+            {def.name}
+          </p>
+          <p className="mt-0.5 text-xs sm:text-sm text-text-secondary leading-snug">
+            {REQUIREMENT[def.key]}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const clearTimer = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
@@ -137,8 +163,8 @@ function FlipBadge({
             <Image
               src={`/badges/${def.key}.png`}
               alt={def.name}
-              width={isHero ? 160 : 96}
-              height={isHero ? 160 : 96}
+              width={96}
+              height={96}
               className="w-full h-full object-contain drop-shadow-sm"
             />
           </div>
@@ -170,23 +196,11 @@ function FlipBadge({
               />
               {/* Text sits in its own unclipped layer — scaling or clipping
                   the copy alongside the shape would distort it. */}
-              <div
-                className={`absolute inset-0 flex flex-col items-center justify-center text-center ${
-                  isHero ? "px-3 gap-1" : "px-1 gap-0.5"
-                }`}
-              >
-                <span
-                  className={`font-bold leading-tight text-text-primary ${
-                    isHero ? "text-sm sm:text-base" : "text-[10px] sm:text-xs"
-                  }`}
-                >
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-1 gap-0.5">
+                <span className="font-bold leading-tight text-text-primary text-[10px] sm:text-xs">
                   {def.name}
                 </span>
-                <span
-                  className={`leading-snug text-text-secondary ${
-                    isHero ? "text-[11px] sm:text-xs" : "text-[8px] sm:text-[10px]"
-                  }`}
-                >
+                <span className="leading-snug text-text-secondary text-[8px] sm:text-[10px]">
                   {REQUIREMENT[def.key]}
                 </span>
               </div>
@@ -194,17 +208,6 @@ function FlipBadge({
           </div>
         </div>
       </button>
-
-      {isHero && (
-        <div className="text-center">
-          <p className="text-sm sm:text-base font-semibold text-text-primary leading-tight">
-            {def.name}
-          </p>
-          <p className="mt-0.5 text-xs sm:text-sm text-text-secondary leading-snug">
-            {REQUIREMENT[def.key]}
-          </p>
-        </div>
-      )}
     </div>
   );
 }

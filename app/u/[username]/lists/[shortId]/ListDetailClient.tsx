@@ -15,6 +15,7 @@ import {
   VariantFilteredView,
 } from "@/app/cards/FilterControls";
 import AddSelectionToListDialog from "@/app/cards/AddSelectionToListDialog";
+import ListDetails from "./ListDetails";
 import { variantDisplayLabel } from "@/lib/inventory";
 import type { CardIndexEntry } from "@/lib/cardsIndex";
 import {
@@ -534,6 +535,8 @@ function ListDetailBody({
           </div>
         ) : (
           <>
+            <ListDetails cards={cards} />
+
             {/* Toolbar */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
               <div className="flex-1 relative">
