@@ -1,7 +1,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import TrackView from "@/app/components/TrackView";
-import { lessons, modules } from "@/lib/learn/curriculum";
+import {
+  modules,
+  curriculumLessons,
+  curriculumMinutes,
+  getLessonsByModule,
+} from "@/lib/learn/curriculum";
 import { TYPE_COLOR } from "@/lib/metaPrimaryCard";
 import { shade } from "@/lib/color";
 
@@ -32,18 +37,6 @@ function gradientFor(index: number): string {
 }
 
 export default function LearnIndexPage() {
-  // Filter lessons to only those whose module is still presented on the
-  // index. (The first-deck lessons remain routable for the post-quiz CTA.)
-  const visibleModuleIds = new Set(modules.map((m) => m.id));
-  const visibleLessons = lessons
-    .filter((l) => visibleModuleIds.has(l.module))
-    .sort((a, b) => a.order - b.order);
-
-  const totalMinutes = visibleLessons.reduce(
-    (sum, l) => sum + l.estimatedMinutes,
-    0,
-  );
-
   return (
     <main className="mx-auto max-w-5xl px-6 py-10 sm:py-14">
       <TrackView event="learn.index_viewed" />
@@ -54,37 +47,62 @@ export default function LearnIndexPage() {
           Pokémon TCG
         </h1>
         <p className="text-base sm:text-lg text-text-secondary leading-relaxed">
-          {visibleLessons.length} short lessons, about {totalMinutes} minutes
-          total.
+          {curriculumLessons.length} lessons, about {curriculumMinutes} minutes
+          total. By the end you&rsquo;ll be able to sit down and play a real
+          game — then take the Trainer Quiz for your badge.
         </p>
       </header>
 
-      <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {visibleLessons.map((lesson, i) => (
-          <li key={lesson.slug}>
-            <Link
-              href={`/learn/${lesson.slug}`}
-              className="relative flex flex-col h-full rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow"
-              style={{
-                background: gradientFor(i),
-                aspectRatio: "5 / 3",
-              }}
-            >
-              <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-text-primary/60">
-                <span>Lesson {String(lesson.order).padStart(2, "0")}</span>
-                <span>{lesson.estimatedMinutes} min</span>
-              </div>
-              <h3 className="mt-auto text-2xl sm:text-3xl font-bold text-text-primary leading-tight">
-                {lesson.title}
-              </h3>
-            </Link>
-          </li>
-        ))}
-      </ol>
+      {modules.map((mod) => {
+        const modLessons = getLessonsByModule(mod.id);
+        return (
+          <section key={mod.id} className="mb-10 last:mb-0">
+            <header className="mb-3">
+              <h2 className="text-xl font-bold text-text-primary">
+                <span className="text-text-muted font-mono text-base mr-2 tabular-nums">
+                  {String(mod.order).padStart(2, "0")}
+                </span>
+                {mod.title}
+              </h2>
+              <p className="text-sm text-text-secondary mt-1">
+                {mod.description}
+              </p>
+            </header>
+
+            <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {modLessons.map((lesson) => (
+                <li key={lesson.slug}>
+                  <Link
+                    href={`/learn/${lesson.slug}`}
+                    className="relative flex flex-col h-full rounded-2xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow"
+                    style={{
+                      // Index by lesson order so each lesson keeps a stable
+                      // colour regardless of which module it sits in.
+                      background: gradientFor(lesson.order - 1),
+                      aspectRatio: "5 / 3",
+                    }}
+                  >
+                    <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-text-primary/60">
+                      <span>Lesson {String(lesson.order).padStart(2, "0")}</span>
+                      <span>{lesson.estimatedMinutes} min</span>
+                    </div>
+                    <h3 className="mt-auto text-2xl sm:text-3xl font-bold text-text-primary leading-tight">
+                      {lesson.title}
+                    </h3>
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          </section>
+        );
+      })}
 
       <p className="mt-12 text-xs text-text-muted text-center">
-        Learn to Play is a v1 preview. More modules — deck building, beginner
-        strategy, and getting plugged into the community — are coming soon.
+        Finish all {curriculumLessons.length} lessons, then take the{" "}
+        <Link href="/learn/quiz" className="text-accent hover:underline">
+          Trainer Quiz
+        </Link>{" "}
+        to earn your Certified Trainer badge.
       </p>
     </main>
   );

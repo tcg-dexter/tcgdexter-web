@@ -17,107 +17,133 @@ export type QuizQuestion = {
   sourceLesson: string;
 };
 
-export const PASSING_SCORE = 10;
-export const QUIZ_LENGTH = 10;
+// The values live in lib/learn/quiz-constants.ts because QuizClient needs them
+// too and cannot import this (server-only) module. Re-exported here so existing
+// server-side importers keep a single import site.
+import { PASSING_SCORE, QUIZ_LENGTH } from "@/lib/learn/quiz-constants";
 
+export { PASSING_SCORE, QUIZ_LENGTH };
+
+/**
+ * One question per lesson, in lesson order. Keeping the mapping 1:1 means the
+ * quiz can't drift away from what the curriculum actually teaches — the
+ * previous set drew three of ten from `win-conditions` and never touched game
+ * setup or Special Conditions.
+ *
+ * `curriculum.test.ts` asserts every `sourceLesson` resolves to a real lesson
+ * and that each curriculum lesson is covered exactly once.
+ */
 export const QUESTIONS: QuizQuestion[] = [
   {
     id: 1,
     sourceLesson: "what-is-pokemon-tcg",
-    prompt: "How many prize cards do you need to take to win a game?",
+    prompt: "How many Prize cards do you need to take to win a game?",
     options: ["3", "4", "6", "8"],
     answerIndex: 2,
   },
   {
     id: 2,
-    sourceLesson: "what-is-pokemon-tcg",
-    prompt: "Which format does TCG Dexter check decks against by default?",
-    options: ["Expanded", "Standard", "Unlimited", "Theme"],
+    sourceLesson: "anatomy-pokemon-card",
+    prompt:
+      "Your opponent Knocks Out your Pokémon ex. How many Prize cards do they take?",
+    options: ["1", "2", "3", "6"],
     answerIndex: 1,
   },
   {
     id: 3,
-    sourceLesson: "anatomy-pokemon-card",
+    sourceLesson: "anatomy-trainer-card",
     prompt:
-      "What does the big number in the top-right corner of a Pokémon card represent?",
+      "You've already played a Supporter this turn. Which of these can you still do?",
     options: [
-      "Damage it deals",
-      "Hit Points (HP)",
-      "Retreat cost",
-      "Prize cards given up",
+      "Play a second Supporter, if it has a different name",
+      "Play as many Item cards as your hand allows",
+      "Nothing else until your next turn",
+      "Play one more Supporter, but only from the discard pile",
     ],
     answerIndex: 1,
   },
   {
     id: 4,
-    sourceLesson: "anatomy-pokemon-card",
-    prompt: "Which kind of Pokémon can you play directly from your hand to the Bench?",
-    options: ["Stage 1", "Stage 2", "Basic", "Any Evolution may be played"],
-    answerIndex: 2,
+    sourceLesson: "anatomy-energy-card",
+    prompt:
+      "How many Energy cards may you attach from your hand during your turn?",
+    options: [
+      "One",
+      "One per Pokémon in play",
+      "As many as you like",
+      "Two, but only to the Active Pokémon",
+    ],
+    answerIndex: 0,
   },
   {
     id: 5,
-    sourceLesson: "anatomy-trainer-card",
-    prompt:
-      "How many copies of any single ACE SPEC card can you have in your deck?",
-    options: ["2", "4", "1", "Unlimited"],
+    sourceLesson: "deck-legality",
+    prompt: "How many ACE SPEC cards may a 60-card deck contain?",
+    options: [
+      "One of each ACE SPEC card",
+      "Four, like any other card",
+      "One in the entire deck",
+      "Unlimited",
+    ],
     answerIndex: 2,
   },
   {
     id: 6,
-    sourceLesson: "anatomy-energy-card",
-    prompt: "A Special Energy card differs from a basic Energy because it…",
+    sourceLesson: "game-setup",
+    prompt:
+      "Your opening hand of 7 contains no Basic Pokémon. What happens?",
     options: [
-      "Has no effect",
-      "Does something extra in addition to providing energy",
-      "Counts as a Trainer card",
-      "Cannot be attached to a Pokémon",
+      "You lose the game immediately",
+      "You reveal your hand, shuffle and redraw — and your opponent draws an extra card",
+      "You draw 3 more cards and keep going",
+      "You start with your Active Spot empty",
     ],
     answerIndex: 1,
   },
   {
     id: 7,
     sourceLesson: "how-a-turn-works",
-    prompt: "When does drawing a card happen on your turn?",
+    prompt:
+      "You just played a Basic Pokémon from your hand onto your Bench. Can you evolve it this same turn?",
     options: [
-      "At the end of your turn",
-      "Only when an effect says so",
-      "At the start of your turn, before anything else",
-      "Right before attacking",
+      "Yes — evolving is free",
+      "Yes, but only into a Stage 1",
+      "No — it must have been in play since the start of your turn",
+      "Only if it is in the Active Spot",
     ],
     answerIndex: 2,
   },
   {
     id: 8,
-    sourceLesson: "win-conditions",
-    prompt: "Which of these is NOT a way to win the game?",
-    options: [
-      "Take all 6 of your prize cards",
-      "Your opponent has no Pokémon in play",
-      "Your opponent can't draw a card at the start of their turn",
-      "Knock out the opponent's Active three turns in a row",
-    ],
-    answerIndex: 3,
+    sourceLesson: "attacking-and-damage",
+    prompt:
+      "Your attack does 90 damage, and the defending Pokémon is Weak to your Pokémon's type. How much damage does it take?",
+    options: ["90", "120", "180", "90, plus a Prize card"],
+    answerIndex: 2,
   },
   {
     id: 9,
-    sourceLesson: "win-conditions",
-    prompt: "How many prize cards does a Mega Pokémon give up when it's knocked out?",
-    options: ["1", "2", "3", "4"],
+    sourceLesson: "special-conditions",
+    prompt: "Which of these removes every Special Condition from a Pokémon?",
+    options: [
+      "Ending your turn",
+      "Attacking with it",
+      "Moving it out of the Active Spot",
+      "Attaching an Energy to it",
+    ],
     answerIndex: 2,
   },
   {
     id: 10,
     sourceLesson: "win-conditions",
-    prompt:
-      "When your opponent's Active is knocked out, what happens if they have no Pokémon on the Bench to promote?",
+    prompt: "Which of these is NOT a way to win the game?",
     options: [
-      "The game continues with their next draw",
-      "You win the game immediately",
-      "A coin flip decides the next Active",
-      "You take a bonus prize card but the match continues",
+      "Take all 6 of your Prize cards",
+      "Your opponent has no Pokémon in play",
+      "Your opponent can't draw a card at the start of their turn",
+      "Knock Out the opponent's Active three turns in a row",
     ],
-    answerIndex: 1,
+    answerIndex: 3,
   },
 ];
 

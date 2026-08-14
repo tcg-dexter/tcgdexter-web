@@ -1,56 +1,72 @@
 ---
 slug: anatomy-trainer-card
 title: Anatomy of a Trainer card
-module: basics
-moduleTitle: The Basics
-order: 3
-estimatedMinutes: 3
 ---
 
 # Anatomy of a Trainer card
 
-If Pokémon are the fighters, **Trainer cards** are everything else — the actions, items, and effects that let you find cards, recover energy, disrupt your opponent, and change the board.
+If Pokémon do the fighting, Trainer cards do everything else — finding the card you need, moving Pokémon around, recovering Energy, disrupting your opponent.
 
-There are five kinds of Trainer cards, and the rules around each are different. Knowing which is which is the difference between an okay turn and a great one.
+Most of a deck is Trainer cards. There are five kinds, and each has a different limit. Knowing which is which is the difference between an ordinary turn and a great one.
 
-## Supporters — one per turn
+## Supporter — one per turn
 
-![Boss's Orders](https://images.pokemontcg.io/me1/114.png)
+<Card id="me1-114" />
 
-Supporters are the powerhouse Trainer cards. They draw cards, shuffle opponents' hands, search your deck, or do something else big.
+Supporters are the big ones. They draw cards, search your deck, or force your opponent to do something they don't want to.
 
-**Rule:** you can only play **one Supporter per turn**. Choose wisely.
+Boss's Orders drags one of your opponent's Benched Pokémon into the Active Spot. That's often the whole game: they've been carefully building something on the Bench, and you pull out the one that can't defend itself.
 
-Boss's Orders, for example, lets you switch in any of your opponent's Benched Pokémon to the Active Spot. That's a huge swing — pulling out a high-retreat Pokémon your opponent didn't want to expose.
+<Callout kind="rule">
+**One Supporter per turn.** No exceptions, no way around it. Every Supporter card says so in its own text.
+</Callout>
 
-## Items — as many as you want
+## Item — as many as you like
 
-![Ultra Ball](https://images.pokemontcg.io/me1/131.png)
+<Card id="me1-131" />
 
-Items are smaller effects, but you can play as many as you have in your hand. They search your deck, discard cards for value, draw, heal — anything.
+Items are smaller, and you can play as many as your hand allows. Ultra Ball discards 2 cards to search your deck for any Pokémon — playing three of them in one turn is completely legal, and sometimes exactly right.
 
-Ultra Ball lets you discard 2 cards to search your deck for any Pokémon. Playing 3 Ultra Balls in a single turn is totally legal, and sometimes necessary.
+## Pokémon Tool — attached, one per Pokémon
 
-## Tools — attached to a Pokémon
+<Card id="me1-166" />
 
-![Air Balloon](https://images.pokemontcg.io/me1/166.png)
+Tools attach to one of your Pokémon and stay there. Air Balloon makes retreating two Energy cheaper, which quietly solves the "my attacker is stuck out front" problem.
 
-Tools attach to one of your Pokémon and stay there. Each Pokémon can have **one Tool attached at a time**. Tools usually boost HP, change damage math, or grant a special effect — and they're discarded if the Pokémon is knocked out.
+Each Pokémon holds **one Tool at a time**, and the Tool goes to the discard pile with it when it's Knocked Out.
 
-## ACE SPEC — one per deck
+## Stadium — one in play, shared
 
-![Hyper Aroma](https://images.pokemontcg.io/sv6/152.png)
+<Card id="sv9-152" />
 
-ACE SPEC cards are the most powerful Items in the game — and the most restricted. **You can only include one ACE SPEC card in your entire deck**, full stop.
+Stadiums sit between the two players and affect **both sides**. Only one can be in play at a time: play a new one and the old one is discarded, whoever it belonged to.
 
-Hyper Aroma, for example, lets you search your deck for up to 3 Stage 1 Pokémon and put them directly into your hand. That kind of raw power is why the limit exists.
+That makes a Stadium two cards in one. It does its own job, and it removes whatever your opponent had down.
 
-## Stadiums — one in play
+## ACE SPEC — one per deck, total
 
-![N's Castle](https://images.pokemontcg.io/sv9/152.png)
+<Card id="sv6-152" />
 
-Stadiums sit between the players and affect both sides. Only **one Stadium can be in play at a time** — if either player plays a new one, the old one is discarded. This means dropping your Stadium can be a way to kill an opponent's Stadium that's helping them.
+ACE SPEC cards are the strongest Trainers printed, and the most restricted. Hyper Aroma searches out **three** Stage 1 Pokémon and puts them straight into your hand.
 
-## How to spot them in a deck list
+<Callout kind="rule">
+**One ACE SPEC card in your entire deck.** Not one per name — one, full stop. If you run Hyper Aroma, you cannot also run any other ACE SPEC.
+</Callout>
 
-When you're reading a deck list, the Trainer types are sometimes grouped together. Other times they're split out as "Supporter," "Item," "Tool," and "Stadium" sub-counts. ACE SPEC cards count as Items. Dexter shows the sub-counts on every deck profile, because the balance between them tells you a lot about how a deck wants to play.
+<Check
+  question="You've already played a Supporter this turn. Which of these can you still play?"
+  options={[
+    "Another Supporter, if it's a different card",
+    "Three Items and a Stadium",
+    "Nothing else until next turn",
+    "One more Supporter, but only from the discard pile",
+  ]}
+  answer={1}
+  explain="Only the Supporter is capped at one per turn. Items are unlimited, and you may play one Stadium per turn on top of that. The per-turn limits are: one Supporter, one Stadium, one Energy attachment, one retreat, one attack."
+/>
+
+## Spotting them on a deck list
+
+Trainer cards are sometimes listed all together, sometimes split into Supporter / Item / Tool / Stadium sub-counts. ACE SPEC cards count as whatever they are — Hyper Aroma is an Item, Neo Upper Energy is an Energy.
+
+Dexter shows the sub-counts on every deck profile, because the balance between them tells you how a deck wants to play before you've read a single card name.

@@ -15,6 +15,7 @@ import {
   VariantFilteredView,
 } from "@/app/cards/FilterControls";
 import AddSelectionToListDialog from "@/app/cards/AddSelectionToListDialog";
+import ListDetails from "./ListDetails";
 import { variantDisplayLabel } from "@/lib/inventory";
 import type { CardIndexEntry } from "@/lib/cardsIndex";
 import {
@@ -723,6 +724,8 @@ function ListDetailBody({
                 </button>
               </div>
             )}
+
+            <ListDetails cards={cards} />
 
             <VariantFilteredView
               cards={sortedCards}

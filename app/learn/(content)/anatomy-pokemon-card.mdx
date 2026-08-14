@@ -1,60 +1,61 @@
 ---
 slug: anatomy-pokemon-card
 title: Anatomy of a Pokémon card
-module: basics
-moduleTitle: The Basics
-order: 2
-estimatedMinutes: 4
 ---
 
 # Anatomy of a Pokémon card
 
-Pokémon cards are the stars of the show — they're your attackers, your blockers, and the way you take prize cards. Let's break down everything on the card so you can read any new one at a glance.
+Pokémon cards are your attackers and your Prize cards rolled into one. Learn to read one and you can read all of them — the layout never changes.
 
-![N's Zoroark ex from Journey Together](https://images.pokemontcg.io/sv9/175.png)
+Here's Miraidon. Every number below sits on the part it describes.
 
-Looking at a card like N's Zoroark ex, you'll see seven things worth knowing.
+<CardAnatomy
+  id="me5-28"
+  parts={[
+    { label: "Name and Stage", text: "The Stage sits just above the name. \"Basic\" means you can play it straight from your hand onto your Bench. Stage 1 and Stage 2 have to be played on top of something already in play.", x: 30, y: 7 },
+    { label: "HP", text: "Hit Points — 120 here. When damage on this Pokémon reaches 120, it's Knocked Out. A typical Basic runs 60–130; the big attackers go past 200.", x: 76, y: 6.5 },
+    { label: "Type", text: "Lightning. Type decides what Energy powers its attacks and what it's Weak to. There are nine in Standard, plus Colorless.", x: 90, y: 6.5 },
+    { label: "Ability", text: "Photon Cord. Abilities work without attacking — some from the Bench, some from your hand. They cost nothing, and they're usually what makes a card worth playing.", x: 20, y: 62 },
+    { label: "Attack", text: "Thunder: two Lightning Energy for 90 damage, and it puts 30 on itself. The symbols on the left are the cost, the number on the right is the damage, and the small text is everything else.", x: 20, y: 77 },
+    { label: "Weakness", text: "Fighting ×2. If a Fighting Pokémon attacks this one, the damage doubles — 90 becomes 180. One symbol, and it decides whole games.", x: 15, y: 90.5 },
+    { label: "Resistance", text: "Empty here, and empty on every current Standard card. The slot still exists on the layout, and older cards use it to subtract damage, but nothing you'll face in Standard prints one.", x: 42, y: 90.5 },
+    { label: "Retreat Cost", text: "One Energy. To move this Pokémon out of the Active Spot you discard that many Energy from it — any type. High retreat costs strand a Pokémon out front.", x: 70, y: 90.5 },
+  ]}
+/>
 
-## 1. Name and stage
+## Stages, and how a Pokémon enters play
 
-The name is at the top. Next to it is the **stage**, which tells you how this Pokémon enters play:
+- **Basic** — play it from your hand straight onto your Bench.
+- **Stage 1** — play it on top of the matching Basic already in play.
+- **Stage 2** — play it on top of the matching Stage 1.
 
-- **Basic** — you can play it directly from your hand to your Bench
-- **Stage 1** — you can play it on top of a matching Basic that's already in play
-- **Stage 2** — you can play it on top of a matching Stage 1
+You can't skip a step by playing a Stage 2 onto a Basic. (One Item card, Rare Candy, does let you — more on that in lesson 7.)
 
-Cards marked **ex** are special: they're stronger, but they give up **2 prize cards** when knocked out instead of 1. We'll talk about that trade-off in a later lesson.
+<Callout kind="rule">
+Evolving isn't optional and it isn't automatic — it's something you choose to do on your turn, and each Pokémon can evolve **once per turn**.
+</Callout>
 
-A **Mega** Pokémon is the next step up — a Pokémon ex that has Mega Evolved. It plays like a Stage 1: you put it on top of a matching basic ex already in play. Mega Pokémon hit hard and have huge HP, but the trade-off is steep — they give up **3 prize cards** when knocked out.
+## Rule boxes: ex and Mega
 
-## 2. HP
+Some Pokémon carry an extra box of text at the bottom. That box is a warning label.
 
-The big number in the top-right corner is **Hit Points**. When damage on a Pokémon equals or exceeds its HP, it's knocked out. N's Zoroark ex has 280 HP — high for a Stage 1 ex. A typical Basic might have 60–80.
+<Card id="sv8-57" />
 
-## 3. Type
+Pikachu ex hits for 300. The rule box is the price: **when a Pokémon ex is Knocked Out, your opponent takes 2 Prize cards** instead of 1. A **Mega** Pokémon — a Pokémon ex that has Mega Evolved — gives up **3**.
 
-The colored symbol near the HP is the Pokémon's **type** (Fire, Water, Grass, Lightning, Psychic, Fighting, Darkness, Metal, Dragon, or Colorless). Type determines which energy powers its attacks and what it's weak to.
+So a deck full of ex Pokémon is a deck where your opponent only needs three good turns. That trade-off drives most deckbuilding decisions you'll ever make.
 
-## 4. Abilities
+<Check
+  question="Your opponent Knocks Out your Pikachu ex. How many Prize cards do they take?"
+  options={["1", "2", "3", "6"]}
+  answer={1}
+  explain="Pokémon ex give up 2 Prizes. Mega Pokémon give up 3, and everything else gives up 1. It's printed in the rule box at the bottom of the card, so you never have to guess."
+/>
 
-Some Pokémon have an **Ability** — a special power you can use without attacking. Abilities trigger from your hand, your Bench, or your Active spot depending on the wording. They're free, and they're often what makes a card good.
+## Damage stays put
 
-## 5. Attacks
+When a Pokémon takes damage, that damage **stays on it** between turns. It doesn't heal at end of turn. Players track it with damage counters — small markers worth 10 each — or with dice.
 
-Each attack has three parts:
+So a Pokémon with 120 HP that took 90 last turn is sitting one small attack away from a Knock Out. Reading the board means reading the damage already on it, not just the printed HP.
 
-- **Energy cost** (the symbols on the left) — what you need attached to attack
-- **Name and damage** — how much it hits for
-- **Effect text** — what else it does, if anything
-
-To attack, your Pokémon needs the right energy attached *and* must be in the Active spot.
-
-## 6. Weakness
-
-If your opponent's Pokémon's type matches your weakness, their attacks do double damage to you. A Fire Pokémon weak to Water takes 2× damage from Water attacks. This single number can swing whole games.
-
-## 7. Retreat cost
-
-The energy symbols at the bottom show how many energies you have to **discard** to retreat your Active back to the Bench. High retreat cost = hard to swap out, which matters more than it sounds.
-
-That's a Pokémon card. In the next lesson, we'll look at Trainer cards — the actions and tools that make the Pokémon work.
+Next: the Trainer cards that make all of this actually work.
