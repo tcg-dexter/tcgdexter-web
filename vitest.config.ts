@@ -15,6 +15,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname),
+      // Next resolves `server-only` through its own bundler alias; there is no
+      // such package on disk, so tests that import a server-only module (e.g.
+      // the quiz question bank) can't resolve it without this stub.
+      "server-only": path.resolve(__dirname, "test/stubs/server-only.ts"),
     },
   },
 });

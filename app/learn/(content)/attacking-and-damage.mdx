@@ -1,0 +1,84 @@
+---
+slug: attacking-and-damage
+title: Attacking and damage
+---
+
+# Attacking and damage
+
+Attacking is the only way to take Prize cards, and it's the last thing you do on a turn. Here's exactly how one resolves.
+
+## What you need to attack
+
+Three things, all at once:
+
+1. The Pokémon is in the **Active Spot**. Benched Pokémon never attack.
+2. It has **the right Energy attached** to pay the attack's cost.
+3. It isn't Asleep or Paralyzed (lesson 9).
+
+<Card id="me5-28" />
+
+Miraidon's Thunder costs two Lightning Energy and does 90. Two Lightning attached means you can use it. One Lightning and one Water means you can't — a typed symbol needs that type.
+
+Colorless symbols are the exception: any Energy pays a Colorless cost.
+
+<Callout kind="gotcha">
+Attacking does **not** discard the Energy. It stays attached, and you can attack again next turn. Only an attack that explicitly says to discard Energy — like Miraidon's bigger cousins — actually costs you anything.
+</Callout>
+
+## Damage, counted in tens
+
+Damage is always a multiple of 10, tracked with counters worth 10 each. It **stays on the Pokémon** across turns until something heals it.
+
+A Pokémon is **Knocked Out** the moment damage on it is **equal to or greater than its HP**. Exactly equal counts — 120 damage on a 120 HP Pokémon is a Knock Out.
+
+When that happens: the Pokémon, its Energy, and its Tools all go to the discard pile, and the attacking player takes their Prize card or cards.
+
+## Weakness
+
+<Callout kind="rule">
+If the defending Pokémon's **Weakness** matches the attacking Pokémon's type, the damage is **doubled**.
+</Callout>
+
+Miraidon's Thunder does 90. Against a Pokémon Weak to Lightning, it does **180**. That's not a bonus — it's a different attack entirely, and it's why matchups swing so hard.
+
+Weakness is checked against the **type of the attacking Pokémon**, not the type of Energy you paid with.
+
+## Resistance
+
+Resistance is the mirror image: it subtracts damage instead of doubling it. It's printed in the slot between Weakness and Retreat Cost.
+
+<Callout kind="gotcha">
+In current Standard you can safely ignore it. **No Standard-legal Pokémon prints a Resistance** — the slot is on the card layout but it's left empty. You'll only meet it in Expanded and older cards, where it typically reads −30.
+</Callout>
+
+## The order things apply
+
+When an attack does several things at once, resolve it in this order:
+
+1. Start with the **printed damage**.
+2. Apply anything that **adds** damage (the attack's own text, Tools, Stadiums, Abilities).
+3. Apply **Weakness** — double it.
+4. Apply **Resistance** — subtract it.
+5. Apply anything that **reduces** damage (defensive Tools, protective Abilities).
+
+Getting the order wrong matters. Weakness doubles the *boosted* number, not the printed one — a +30 effect on a 90 attack against Weakness is (90+30) × 2 = 240, not 90 × 2 + 30 = 210.
+
+<Check
+  question="Your Lightning Pokémon attacks for 90. The defender has 200 HP, is Weak to Lightning, and already has 40 damage on it. Is it Knocked Out?"
+  options={[
+    "No — 90 damage isn't enough",
+    "No — 130 total, it survives on 200 HP",
+    "Yes — 180 from this attack plus 40 already there is 220",
+    "Yes — Weakness is an automatic Knock Out",
+  ]}
+  answer={2}
+  explain="Weakness doubles 90 to 180. Damage already on a Pokémon stays there, so add the 40 from before: 220 total against 200 HP. Knocked Out. Always read the damage already on the board before you decide an attack isn't lethal."
+/>
+
+## Healing and moving damage
+
+Some cards heal — remove damage counters — and some move damage from one Pokémon to another. Both matter more than they look.
+
+A Pokémon healed back to full is a Pokémon your opponent has to spend *another* two turns knocking out, while your Prize count hasn't moved. That's why "just heal it" decks are genuinely competitive even though they never seem to be doing anything.
+
+Next: the five Special Conditions, and the step between turns where they resolve.
