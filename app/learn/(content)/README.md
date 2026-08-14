@@ -65,14 +65,19 @@ Cross-check anything mechanical against `lib/engine/sim/` — it's a working
 simulator with its own tests. `conditions.ts` in particular is a precise spec
 of the five Special Conditions and the Pokémon Checkup.
 
-Two things it does **not** currently agree with, both checked while writing
-lesson 6 — the lessons follow the official rules, not the engine:
+Treat the engine as authoritative and check it *before* the lesson, not after.
+An earlier draft of this file claimed the engine had the first-turn rules wrong;
+it doesn't, and the lesson did. The three gates, all correct:
 
-- The engine bans Supporters on the game's first turn (`validate.ts`,
-  `moves.ts`, gating on `state.turn.number === 1`). That was the Sun & Moon-era
-  rule.
-- The engine does not stop the first player attacking on their first turn,
-  which is the rule that replaced it.
+| Rule | Enforced at |
+|---|---|
+| Player going first can't **attack** | `moves.ts:493` — `state.turn.number > 1` |
+| Player going first can't play a **Supporter** | `moves.ts:309`, `validate.ts:290` — `state.turn.number === 1` |
+| Neither player may **evolve** on their own first turn | `moves.ts:307` — `playerTurnNumber > 1` |
+
+Note that `validate.ts` carries no turn check for attacks — it validates against
+the move list `moves.ts` generates, so the gate only has to exist once. Grepping
+`validate.ts` alone will make a correctly-enforced rule look missing.
 
 Card references must be Standard-legal. `data/cards-standard.json` spans every
 era, so filter on the regulation mark — `isStandardMark()` in
