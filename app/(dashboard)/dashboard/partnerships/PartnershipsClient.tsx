@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SectionHeader } from "../components/Card";
 import type {
@@ -14,6 +14,7 @@ import {
   PARTNER_PRIORITIES,
   PARTNER_STATUSES,
 } from "./lib/types";
+import { getAvatarUrl, getInitials } from "./lib/avatar";
 
 const PRIORITY_LABEL: Record<PartnerPriority, string> = {
   high: "High",
@@ -208,40 +209,45 @@ export default function PartnershipsClient({
                     className="border-t border-black/5 dark:border-white/10 hover:bg-[var(--surface)]/40"
                   >
                     <td className="px-2 py-2 align-top">
-                      <div className="font-medium text-[var(--text-primary)]">
-                        {p.name}
-                      </div>
-                      {p.handle ? (
-                        <div className="text-[11px] text-[var(--text-muted)]">
-                          @{p.handle.replace(/^@/, "")}
-                        </div>
-                      ) : null}
-                      {links.length > 0 ? (
-                        <div className="mt-1 flex flex-wrap gap-1.5">
-                          {links.map((l) => (
+                      <div className="flex items-start gap-2">
+                        <Avatar prospect={p} />
+                        <div>
+                          <div className="font-medium text-[var(--text-primary)]">
+                            {p.name}
+                          </div>
+                          {p.handle ? (
+                            <div className="text-[11px] text-[var(--text-muted)]">
+                              @{p.handle.replace(/^@/, "")}
+                            </div>
+                          ) : null}
+                          {links.length > 0 ? (
+                            <div className="mt-1 flex flex-wrap gap-1.5">
+                              {links.map((l) => (
+                                <a
+                                  key={l.label}
+                                  href={l.href}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[10px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
+                                >
+                                  {l.label}
+                                </a>
+                              ))}
+                            </div>
+                          ) : null}
+                          {!p.links_verified ? (
                             <a
-                              key={l.label}
-                              href={l.href}
+                              href={p.source_url ?? undefined}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-[10px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:underline"
+                              title="Handle/links haven't been confirmed to resolve yet — check before reaching out"
+                              className="mt-1 inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400 hover:underline"
                             >
-                              {l.label}
+                              ⚠ unverified
                             </a>
-                          ))}
+                          ) : null}
                         </div>
-                      ) : null}
-                      {!p.links_verified ? (
-                        <a
-                          href={p.source_url ?? undefined}
-                          target="_blank"
-                          rel="noreferrer"
-                          title="Handle/links haven't been confirmed to resolve yet — check before reaching out"
-                          className="mt-1 inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400 hover:underline"
-                        >
-                          ⚠ unverified
-                        </a>
-                      ) : null}
+                      </div>
                     </td>
                     <td className="px-2 py-2 align-top text-[var(--text-secondary)]">
                       {KIND_LABEL[p.kind]}
@@ -301,6 +307,55 @@ export default function PartnershipsClient({
         </table>
       </div>
     </section>
+  );
+}
+
+// Live-proxied avatar (see lib/avatar.ts) with an initials fallback for
+// rows that have no direct profile/website URL, or whose proxied image
+// fails to load (dead handle, unavatar miss, etc).
+function Avatar({ prospect }: { prospect: PartnerProspect }) {
+  const src = useMemo(() => getAvatarUrl(prospect), [prospect]);
+  const [failed, setFailed] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Belt-and-suspenders alongside onError: a proxy/tunnel-level connection
+  // failure (as opposed to a clean HTTP 404) doesn't reliably fire the
+  // <img> error event in every browser, which can otherwise leave a
+  // permanently broken-image glyph instead of falling back to initials.
+  useEffect(() => {
+    if (!src) return;
+    timeoutRef.current = setTimeout(() => setFailed(true), 5000);
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [src]);
+
+  if (!src || failed) {
+    return (
+      <div
+        aria-hidden
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--surface)] dark:bg-surface-elevated text-[10px] font-semibold text-[var(--text-secondary)]"
+      >
+        {getInitials(prospect.name)}
+      </div>
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt=""
+      aria-hidden
+      width={28}
+      height={28}
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onLoad={() => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      }}
+      onError={() => setFailed(true)}
+      className="h-7 w-7 shrink-0 rounded-full bg-[var(--surface)] dark:bg-surface-elevated object-cover"
+    />
   );
 }
 
