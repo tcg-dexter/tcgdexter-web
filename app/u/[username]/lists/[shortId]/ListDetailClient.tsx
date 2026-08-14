@@ -535,8 +535,6 @@ function ListDetailBody({
           </div>
         ) : (
           <>
-            <ListDetails cards={cards} />
-
             {/* Toolbar */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
               <div className="flex-1 relative">
@@ -726,6 +724,8 @@ function ListDetailBody({
                 </button>
               </div>
             )}
+
+            <ListDetails cards={cards} />
 
             <VariantFilteredView
               cards={sortedCards}

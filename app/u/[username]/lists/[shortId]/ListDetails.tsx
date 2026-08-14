@@ -29,6 +29,8 @@ const TYPE_ORDER = [
 
 type CountRow = { label: string; count: number };
 
+const money = (n: number) => `$${n.toFixed(2)}`;
+
 /**
  * Energy types a card contributes to the "Energy" row. Pokémon carry their
  * type directly. Energy cards ship with an empty `types` array in the
@@ -133,14 +135,17 @@ export default function ListDetails({ cards }: { cards: CardIndexEntry[] }) {
       >
         <div className="overflow-hidden">
           <div className="px-4 pb-4 space-y-4">
-            <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <Stat label="Cards" value={String(stats.cardCount)} />
               <Stat label={stats.setCount === 1 ? "Set" : "Sets"} value={String(stats.setCount)} />
               <Stat
                 label={stats.artistCount === 1 ? "Artist" : "Artists"}
                 value={String(stats.artistCount)}
               />
-              <Stat label="Market price" value={`$${stats.marketPrice.toFixed(2)}`} />
+              <Stat label="Market price" value={money(stats.marketPrice)} />
+              {/* Common trade-in / bulk-buy reference points against MP. */}
+              <Stat label="85% MP" value={money(stats.marketPrice * 0.85)} />
+              <Stat label="70% MP" value={money(stats.marketPrice * 0.7)} />
             </dl>
 
             {stats.energyTypes.length > 0 && (
