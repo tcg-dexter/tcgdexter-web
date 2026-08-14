@@ -16,6 +16,7 @@ import {
 } from "./curriculum";
 import { QUESTIONS, QUIZ_LENGTH, PASSING_SCORE, gradeAnswers } from "@/app/learn/quiz/questions";
 import { getCardById } from "@/lib/cardsIndex";
+import { isStandardMark } from "@/lib/cardPrinting";
 
 const CONTENT_DIR = path.join(process.cwd(), "app/learn/(content)");
 
@@ -208,6 +209,33 @@ describe("card references", () => {
       }
     }
     expect(bad).toEqual([]);
+  });
+
+  it("every card shown in a lesson is Standard-legal", () => {
+    // Lessons teach the current Standard format, so a rotated printing on the
+    // page is a factual error — a beginner would copy a card they can't play.
+    // `isStandardMark` is the same authority the deck analyzer uses, so this
+    // tightens automatically at the next rotation instead of drifting.
+    const offenders: string[] = [];
+    for (const lesson of lessons) {
+      for (const id of cardIdsIn(readLesson(lesson.slug))) {
+        const card = getCardById(id);
+        if (!card) continue; // absence is the previous test's job
+        // Basic Energy is printed without a regulation mark and never
+        // rotates — its legality comes from a separate rule. Every one of
+        // the 16 Basic Darkness Energy printings in the catalog is unmarked,
+        // so there is no "marked" alternative to prefer here.
+        const isBasicEnergy =
+          card.supertype === "Energy" && card.subtypes.includes("Basic");
+        if (isBasicEnergy) continue;
+        if (!isStandardMark(card.regulationMark)) {
+          offenders.push(
+            `${lesson.slug}: ${id} ${card.name} (mark ${card.regulationMark ?? "none"})`,
+          );
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 
   it("no lesson inlines a raw card-image URL", () => {
