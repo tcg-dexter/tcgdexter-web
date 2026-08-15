@@ -516,9 +516,15 @@ interface Props {
   /** When true, post avatars render 25% smaller for tighter side-panel
    *  presentations (e.g. the Replay thread next to the board). */
   compactAvatars?: boolean;
+  /** The thread's own scrollable ancestor (Replay's `overflow-y-auto`
+   *  aside). Playhead mode re-centers the current post by scrolling only
+   *  this element directly — without it, native scrollIntoView would walk
+   *  every scrollable ancestor, including the page itself, and drag the
+   *  whole viewport back whenever the user had scrolled away. */
+  scrollContainerRef?: MutableRefObject<HTMLDivElement | null>;
 }
 
-export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, opponentColor, maxSequence, hideScoreCards, compactAvatars }: Props) {
+export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, opponentColor, maxSequence, hideScoreCards, compactAvatars, scrollContainerRef }: Props) {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -563,16 +569,27 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
   // Playhead mode (maxSequence set — the Replay tool): the post the
   // playhead currently sits inside is kept smoothly recentered as it
   // grows, rather than the thread snapping to a bottom-pinned scrollTop
-  // every time a new action lands. block: "center" re-targets the same
-  // browser-native smooth-scroll animation on every tick instead of
-  // racing a growing scrollHeight, which is what produced the stutter.
+  // every time a new action lands. We scroll scrollContainerRef directly
+  // (with a manually computed offset) rather than el.scrollIntoView(),
+  // which walks and re-centers *every* scrollable ancestor — including
+  // the page itself — and would drag the whole viewport back to the
+  // thread any time the user had scrolled away from it.
   const currentPostRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (maxSequence == null) return;
+    const container = scrollContainerRef?.current;
     const el = currentPostRef.current;
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [maxSequence, data]);
+    if (!container || !el) return;
+    // getBoundingClientRect rather than offsetTop — el's offsetParent may
+    // be an ancestor further up than container (e.g. a positioned wrapper
+    // around it), so offsetTop alone wouldn't reliably measure position
+    // relative to container specifically.
+    const containerRect = container.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const delta =
+      elRect.top - containerRect.top + elRect.height / 2 - containerRect.height / 2;
+    container.scrollTo({ top: container.scrollTop + delta, behavior: "smooth" });
+  }, [maxSequence, data, scrollContainerRef]);
 
   if (loading) {
     return (

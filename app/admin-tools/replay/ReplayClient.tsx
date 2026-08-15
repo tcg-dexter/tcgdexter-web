@@ -153,6 +153,10 @@ export default function ReplayClient({ options }: ReplayClientProps) {
   const canTurnForward =
     turnStartIndices.some((i) => i > frameIndex);
 
+  // Passed to BattleLogDetail so it can scroll only this element as the
+  // playhead advances, instead of scrollIntoView dragging the whole page.
+  const threadScrollRef = useRef<HTMLDivElement>(null);
+
   // Pin the thread aside to the board's measured height so it scrolls
   // inside a fixed envelope instead of stretching the row to fit its own
   // content (which would otherwise push the navigator away from the
@@ -228,6 +232,7 @@ export default function ReplayClient({ options }: ReplayClientProps) {
             >
               <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-gradient-to-b from-[#f2f2f2] to-[#f2f2f2]/0" />
               <div
+                ref={threadScrollRef}
                 className="h-full overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 style={boardHeight != null ? { paddingBottom: boardHeight / 2 } : undefined}
               >
@@ -237,6 +242,7 @@ export default function ReplayClient({ options }: ReplayClientProps) {
                   maxSequence={frame?.actionIndex ?? -1}
                   hideScoreCards
                   compactAvatars
+                  scrollContainerRef={threadScrollRef}
                 />
               </div>
               <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-12 bg-gradient-to-t from-[#f2f2f2] to-[#f2f2f2]/0" />
