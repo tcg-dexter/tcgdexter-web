@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties, type SVGProps } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type MutableRefObject, type SVGProps } from "react";
 import { cleanPayloadCardIds, stripCardIds } from "@/lib/battle-log";
 
 /* ─── Types (mirror lib/battle-log + the API response) ────────── */
@@ -560,6 +560,20 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
     };
   }, [matchId]);
 
+  // Playhead mode (maxSequence set — the Replay tool): the post the
+  // playhead currently sits inside is kept smoothly recentered as it
+  // grows, rather than the thread snapping to a bottom-pinned scrollTop
+  // every time a new action lands. block: "center" re-targets the same
+  // browser-native smooth-scroll animation on every tick instead of
+  // racing a growing scrollHeight, which is what produced the stutter.
+  const currentPostRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (maxSequence == null) return;
+    const el = currentPostRef.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [maxSequence, data]);
+
   if (loading) {
     return (
       <div className="mt-3 rounded-lg bg-bg p-4 text-xs text-text-muted">
@@ -850,6 +864,15 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
     .map((post) => ({ ...post, actions: post.actions.filter((a) => !COIN_TOSS_TYPES.has(a.action_type)) }))
     .filter((post) => post.actions.length > 0);
 
+  // In playhead mode, the post the playhead is currently inside is the
+  // last one rendered (visibleActions/renderableTurns already stop there)
+  // — spotlight it at full opacity and dim everything already scrolled
+  // past above it.
+  const currentPostKey =
+    maxSequence != null
+      ? (gamePosts[gamePosts.length - 1] ?? filteredPregamePosts[filteredPregamePosts.length - 1])?.key ?? null
+      : null;
+
   return (
     <div className="mt-3 flex flex-col rounded-lg bg-bg overflow-hidden">
       {pregamePosts.length > 0 && (
@@ -868,6 +891,8 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
               compactAvatars={compactAvatars}
               playerHandle={playerHandle}
               opponentHandle={opponentHandle}
+              dimmed={currentPostKey != null && post.key !== currentPostKey}
+              rootRef={post.key === currentPostKey ? currentPostRef : undefined}
             />
           ))}
           {!hideScoreCards && (
@@ -899,6 +924,8 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
             compactAvatars={compactAvatars}
             playerHandle={playerHandle}
             opponentHandle={opponentHandle}
+            dimmed={currentPostKey != null && post.key !== currentPostKey}
+            rootRef={post.key === currentPostKey ? currentPostRef : undefined}
           />,
         ];
         if (hasPrizes && !hideScoreCards) {
@@ -995,12 +1022,20 @@ function ThreadPost({
   compactAvatars,
   playerHandle,
   opponentHandle,
+  dimmed,
+  rootRef,
 }: {
   post: ThreadPostInput;
   isLast: boolean;
   compactAvatars?: boolean;
   playerHandle: string;
   opponentHandle: string;
+  /** Playhead mode only — true once a later post has become current,
+   *  fading this one out of the spotlight. */
+  dimmed?: boolean;
+  /** Attached only to the current post, so the parent can smoothly
+   *  scrollIntoView-center it as the playhead advances. */
+  rootRef?: MutableRefObject<HTMLDivElement | null>;
 }) {
   const isSystem = post.kind === "system";
   // "Opponent" in a post's actions means the side opposite its author.
@@ -1022,7 +1057,8 @@ function ThreadPost({
 
   return (
     <div
-      className={`flex gap-3 pt-3 ${isResult ? "bg-accent/[0.06]" : ""}`}
+      ref={rootRef}
+      className={`flex gap-3 pt-3 transition-opacity duration-500 ease-out ${dimmed ? "opacity-40" : "opacity-100"} ${isResult ? "bg-accent/[0.06]" : ""}`}
     >
       <div className="flex flex-col items-center self-stretch">
         <div
