@@ -19,6 +19,7 @@ import {
   computeReplayCardWidth,
   type InspectTarget,
 } from "./BoardKit";
+import { MAT_ASPECT } from "@/lib/playmat-layout";
 
 // Fires synchronously before first paint on the client (prevents card-width
 // overflow flash) and falls back to useEffect during SSR to avoid the
@@ -157,6 +158,38 @@ export default function ReplayClient({ options }: ReplayClientProps) {
   // playhead advances, instead of scrollIntoView dragging the whole page.
   const threadScrollRef = useRef<HTMLDivElement>(null);
 
+  // The thread + board row is only laid out side-by-side at lg: — below
+  // that the thread is hidden and mats size themselves the old way (full
+  // width, content-driven height). Mirrors Tailwind's default lg breakpoint.
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    setIsDesktop(mq.matches);
+    const onChange = () => setIsDesktop(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  // Width available to the thread+board row — the budget the whole 16:9
+  // rect has to fit into. Board derives its own width from the resulting
+  // height budget (rowWidth * 9/16) rather than the other way around, so
+  // mats are only ever as large as the 16:9 envelope allows.
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [rowWidth, setRowWidth] = useState<number | null>(null);
+  useEffect(() => {
+    const el = rowRef.current;
+    if (!el) return;
+    setRowWidth(el.getBoundingClientRect().width);
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) setRowWidth(entry.contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const heightBudget =
+    isDesktop && rowWidth != null ? (rowWidth * 9) / 16 : null;
+
   // Pin the thread aside to the board's measured height so it scrolls
   // inside a fixed envelope instead of stretching the row to fit its own
   // content (which would otherwise push the navigator away from the
@@ -214,12 +247,13 @@ export default function ReplayClient({ options }: ReplayClientProps) {
           onTurnForward={() => { setPlaying(false); stepTurnForward(); }}
         />
 
-        {/* Row 1: thread (lg only) + board side-by-side. The aside is
-            pinned to the board's measured height so its inner scroll
-            container has something to clip against — without this the
-            thread would stretch the row taller than the board, pushing
-            the navigator out of arm's reach. */}
-        <div className="lg:flex lg:items-start lg:gap-6">
+        {/* Row 1: thread (lg only) + board side-by-side, together forming
+            a 16:9 rect (rowWidth x rowWidth*9/16). The aside is pinned to
+            the board's measured height so its inner scroll container has
+            something to clip against — without this the thread would
+            stretch the row taller than the board, pushing the navigator
+            out of arm's reach. */}
+        <div ref={rowRef} className="lg:flex lg:items-start lg:gap-6">
           {selectedId && (
             <aside
               key={selectedId}
@@ -248,8 +282,8 @@ export default function ReplayClient({ options }: ReplayClientProps) {
               <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-12 bg-gradient-to-t from-[#f2f2f2] to-[#f2f2f2]/0" />
             </aside>
           )}
-          <div ref={boardRef} className="lg:w-[720px] lg:shrink-0">
-            <Board frame={frame} loading={loading} error={error} />
+          <div ref={boardRef} className="lg:shrink-0">
+            <Board frame={frame} loading={loading} error={error} heightBudget={heightBudget} />
           </div>
         </div>
 
@@ -427,37 +461,63 @@ function ReplayHeader({
 /* Board                                                            */
 /* ──────────────────────────────────────────────────────────────── */
 
+// Fixed vertical chrome inside the mat column besides the two mats
+// themselves: Board's own mt-4 (16px) + two gap-3 row gaps (12px each,
+// mat-to-bar and bar-to-mat) + BetweenMatsBar's height. The bar is a
+// text-sm label row (20px) + a fixed 2.5rem/40px two-line action row
+// (see the `h-[2.5rem]` on its second row below) = 62px, so the whole
+// bar never varies and this can stay a plain constant instead of
+// something measured live (which risked feeding back into its own
+// width — the bar sits inside the very column this constant sizes).
+const BOARD_VERTICAL_CHROME_PX = 16 + 2 * 12 + 62;
+
 function Board({
   frame,
   loading,
   error,
+  heightBudget,
 }: {
   frame: ReplayFrame | null;
   loading: boolean;
   error: string | null;
+  /** When set (desktop, thread+board forming a 16:9 rect), the mat width
+   *  is derived from this height budget instead of measured from an
+   *  ambient container width — see BOARD_VERTICAL_CHROME_PX. Null falls
+   *  back to the original measure-the-container behavior (mobile). */
+  heightBudget: number | null;
 }) {
   const matContainerRef = useRef<HTMLDivElement>(null);
-  const [matWidth, setMatWidth] = useState(300);
+  const [measuredWidth, setMeasuredWidth] = useState(300);
 
   useIsomorphicLayoutEffect(() => {
+    if (heightBudget != null) return;
     const el = matContainerRef.current;
     if (!el) return;
     const measure = () => {
       const w = el.getBoundingClientRect().width;
-      if (w > 0) setMatWidth(w);
+      if (w > 0) setMeasuredWidth(w);
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [heightBudget]);
+
+  const matWidth =
+    heightBudget != null
+      ? Math.max(20, (heightBudget - BOARD_VERTICAL_CHROME_PX) / (2 * MAT_ASPECT))
+      : measuredWidth;
 
   const cardWidth = computeReplayCardWidth(matWidth);
   const [inspect, setInspect] = useState<InspectTarget | null>(null);
 
   return (
     <InspectContext.Provider value={setInspect}>
-    <div ref={matContainerRef} className="mt-4">
+    <div
+      ref={matContainerRef}
+      className="mt-4"
+      style={heightBudget != null ? { width: matWidth } : undefined}
+    >
       {error ? (
         <div className="rounded-2xl border border-accent/40 bg-white p-6 text-sm text-accent">
           {error}
@@ -582,7 +642,7 @@ function BetweenMatsBar({ frame }: { frame: ReplayFrame }) {
           </span>
         )}
       </div>
-      <div className="line-clamp-2 min-h-[2.5rem] py-1 text-center text-xs leading-snug text-text-secondary">
+      <div className="line-clamp-2 h-[2.5rem] overflow-hidden py-1 text-center text-xs leading-snug text-text-secondary">
         {actionText}
       </div>
     </div>
