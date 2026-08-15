@@ -505,9 +505,11 @@ interface Props {
   result?: "win" | "loss" | "draw" | null;
   playerColor?: string;
   opponentColor?: string;
-  /** When set, only actions with `sequence <= maxSequence` are rendered.
-   *  Lets a caller (e.g. the Replay tool) reveal/hide the thread in lockstep
-   *  with an external playhead. Null/undefined renders the full log. */
+  /** When set, marks which post is "current" for the Replay tool's
+   *  playhead — the last post with an action at or before this sequence.
+   *  That post gets full opacity + auto-centering; every other post
+   *  (including ones after it) is dimmed. The thread itself is always
+   *  rendered in full — this drives the spotlight, not what's in the DOM. */
   maxSequence?: number | null;
   /** When true, the inline ScoreCards (initial board snapshot + each
    *  prize-taking moment) are omitted. Used by the Replay tool where the
@@ -609,13 +611,10 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
 
   if (!data) return null;
 
-  // Caller-controlled clipping: when a playhead drives the thread (e.g. the
-  // Replay tool), drop everything past the current sequence so the visible
-  // posts grow/shrink in lockstep with the board state.
-  const visibleActions =
-    maxSequence != null
-      ? data.actions.filter((a) => a.sequence <= maxSequence)
-      : data.actions;
+  // The thread always renders in full — maxSequence (playhead mode) only
+  // picks out which post is "current" for the spotlight below, it no
+  // longer hides future turns from the DOM.
+  const visibleActions = data.actions;
 
   // Group actions by turn_id, preserving sequence order.
   const actionsByTurn = new Map<string, ApiAction[]>();
@@ -881,14 +880,22 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
     .map((post) => ({ ...post, actions: post.actions.filter((a) => !COIN_TOSS_TYPES.has(a.action_type)) }))
     .filter((post) => post.actions.length > 0);
 
-  // In playhead mode, the post the playhead is currently inside is the
-  // last one rendered (visibleActions/renderableTurns already stop there)
-  // — spotlight it at full opacity and dim everything already scrolled
-  // past above it.
-  const currentPostKey =
-    maxSequence != null
-      ? (gamePosts[gamePosts.length - 1] ?? filteredPregamePosts[filteredPregamePosts.length - 1])?.key ?? null
-      : null;
+  // In playhead mode, find which post the playhead currently sits inside —
+  // the thread is fully populated now, so unlike a clip boundary this has
+  // to be located explicitly: the last post (in render order) holding an
+  // action at or before maxSequence. Everything else, before OR after it,
+  // gets dimmed — including the upcoming post, which stays visible as a
+  // dimmed preview directly below the spotlighted one instead of being
+  // hidden until the playhead reaches it.
+  const orderedPosts = [...filteredPregamePosts, ...gamePosts];
+  let currentPostKey: string | null = null;
+  if (maxSequence != null) {
+    for (const post of orderedPosts) {
+      if (post.actions.some((a) => a.sequence <= maxSequence)) {
+        currentPostKey = post.key;
+      }
+    }
+  }
 
   return (
     <div className="mt-3 flex flex-col rounded-lg bg-bg overflow-hidden">
