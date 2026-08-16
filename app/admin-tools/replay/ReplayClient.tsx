@@ -6,6 +6,7 @@
 // playback controls, frame stepping, and the battle-log thread.
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import BattleLogDetail, { formatActionLabel } from "@/app/components/BattleLogDetail";
 import type {
@@ -90,6 +91,10 @@ export default function ReplayClient({ options }: ReplayClientProps) {
   }, [data, frameIndex]);
 
   const frameCount = data?.frames.length ?? 0;
+  // Turn numbers are monotonic (0 = setup, then 1, 2, 3… per lib/engine/sim's
+  // state.turn.number), so the last frame's is the match's turn total.
+  const totalTurns =
+    data && data.frames.length > 0 ? data.frames[data.frames.length - 1].turn : 0;
 
   // Auto-advance at the selected speed while playing.
   useEffect(() => {
@@ -282,6 +287,8 @@ export default function ReplayClient({ options }: ReplayClientProps) {
           frameIndex={frameIndex}
           frameCount={frameCount}
           turnStartIndices={turnStartIndices}
+          currentTurn={frame?.turn ?? null}
+          totalTurns={totalTurns}
           canStepBack={canStepBack}
           canStepForward={canStepForward}
           canTurnBack={canTurnBack}
@@ -289,7 +296,7 @@ export default function ReplayClient({ options }: ReplayClientProps) {
           playing={playing}
           speed={speed}
           onTogglePlay={() => setPlaying((p) => !p)}
-          onCycleSpeed={() => setSpeed((s) => s === 0.5 ? 1 : s === 1 ? 2 : s === 2 ? 4 : 0.5)}
+          onSelectSpeed={(s) => setSpeed(s)}
           onStepBack={() => { setPlaying(false); canStepBack && setFrameIndex((i) => i - 1); }}
           onStepForward={() => { setPlaying(false); canStepForward && setFrameIndex((i) => i + 1); }}
           onTurnBack={() => { setPlaying(false); stepTurnBack(); }}
@@ -567,6 +574,8 @@ function PlaybackModule({
   frameIndex,
   frameCount,
   turnStartIndices,
+  currentTurn,
+  totalTurns,
   canStepBack,
   canStepForward,
   canTurnBack,
@@ -574,7 +583,7 @@ function PlaybackModule({
   playing,
   speed,
   onTogglePlay,
-  onCycleSpeed,
+  onSelectSpeed,
   onStepBack,
   onStepForward,
   onTurnBack,
@@ -584,6 +593,9 @@ function PlaybackModule({
   frameIndex: number;
   frameCount: number;
   turnStartIndices: number[];
+  /** state.turn.number for the current frame — 0 during setup, then 1, 2… */
+  currentTurn: number | null;
+  totalTurns: number;
   canStepBack: boolean;
   canStepForward: boolean;
   canTurnBack: boolean;
@@ -591,13 +603,21 @@ function PlaybackModule({
   playing: boolean;
   speed: 0.5 | 1 | 2 | 4;
   onTogglePlay: () => void;
-  onCycleSpeed: () => void;
+  onSelectSpeed: (speed: 0.5 | 1 | 2 | 4) => void;
   onStepBack: () => void;
   onStepForward: () => void;
   onTurnBack: () => void;
   onTurnForward: () => void;
   onScrub: (frameIndex: number) => void;
 }) {
+  const pillClass =
+    "inline-flex items-center gap-1.5 rounded-full border border-black/10 dark:border-white/10 px-4 py-2 text-xs font-semibold text-text-secondary hover:bg-surface disabled:opacity-30";
+  const turnLabel =
+    frameCount === 0
+      ? "—"
+      : currentTurn === 0
+        ? "Setup"
+        : `Turn ${currentTurn} / ${totalTurns}`;
   return (
     <div className="mt-6 rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated p-4">
       <Scrubber
@@ -606,75 +626,189 @@ function PlaybackModule({
         turnStartIndices={turnStartIndices}
         onScrub={onScrub}
       />
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={onTurnBack}
-          disabled={!canTurnBack}
-          className="rounded-md border border-black/10 dark:border-white/10 px-2.5 py-1 text-xs font-semibold text-text-secondary hover:bg-surface disabled:opacity-30"
-          aria-label="Previous turn"
-          title="Previous turn"
-        >
-          ⟪
-        </button>
+
+      {/* Action stepping on top, turn stepping below — each row's pair
+          spread to the module's edges, with the play/pause + speed +
+          turn readout sharing one centered column spanning both rows. */}
+      <div className="mt-4 grid grid-cols-[auto_1fr_auto] grid-rows-2 items-center gap-x-3 gap-y-2">
         <button
           type="button"
           onClick={onStepBack}
           disabled={!canStepBack}
-          className="rounded-md border border-black/10 dark:border-white/10 px-3 py-1 text-xs font-semibold text-text-secondary hover:bg-surface disabled:opacity-30"
+          className={`${pillClass} col-start-1 row-start-1 justify-self-start`}
           aria-label="Previous action"
           title="Previous action"
         >
-          ‹
+          <span aria-hidden>‹</span> Action
         </button>
-        <div className="flex flex-1 flex-col items-center text-center">
-          <div className="text-[10px] tabular-nums text-text-muted">
-            Step {frameCount > 0 ? frameIndex + 1 : 0} / {frameCount}
-          </div>
-          <div className="mt-2 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onTogglePlay}
-              disabled={!playing && !canStepForward}
-              aria-label={playing ? "Pause" : "Play"}
-              title={playing ? "Pause" : "Play"}
-              className="rounded-md border border-black/10 dark:border-white/10 px-3 py-1.5 text-text-secondary hover:bg-surface disabled:opacity-30"
-            >
-              <PlayPauseIcon playing={playing} />
-            </button>
-            <button
-              type="button"
-              onClick={onCycleSpeed}
-              aria-label={`Playback speed: ${speedLabel(speed)}`}
-              title="Cycle playback speed"
-              className="rounded-md border border-black/10 dark:border-white/10 px-2.5 py-1.5 text-xs font-semibold tabular-nums text-text-secondary hover:bg-surface"
-            >
-              {speedLabel(speed)}
-            </button>
-          </div>
+        <button
+          type="button"
+          onClick={onTurnBack}
+          disabled={!canTurnBack}
+          className={`${pillClass} col-start-1 row-start-2 justify-self-start`}
+          aria-label="Previous turn"
+          title="Previous turn"
+        >
+          <span aria-hidden>‹</span> Turn
+        </button>
+
+        <div className="col-start-2 row-start-1 row-span-2 flex flex-col items-center gap-1.5">
+          <div className="text-[10px] tabular-nums text-text-muted">{turnLabel}</div>
+          <button
+            type="button"
+            onClick={onTogglePlay}
+            disabled={!playing && !canStepForward}
+            aria-label={playing ? "Pause" : "Play"}
+            title={playing ? "Pause" : "Play"}
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-black/10 dark:border-white/10 text-text-primary hover:bg-surface disabled:opacity-30"
+          >
+            <PlayPauseIcon playing={playing} />
+          </button>
+          <SpeedMenu speed={speed} onSelect={onSelectSpeed} />
         </div>
+
         <button
           type="button"
           onClick={onStepForward}
           disabled={!canStepForward}
-          className="rounded-md border border-black/10 dark:border-white/10 px-3 py-1 text-xs font-semibold text-text-secondary hover:bg-surface disabled:opacity-30"
+          className={`${pillClass} col-start-3 row-start-1 justify-self-end`}
           aria-label="Next action"
           title="Next action"
         >
-          ›
+          Action <span aria-hidden>›</span>
         </button>
         <button
           type="button"
           onClick={onTurnForward}
           disabled={!canTurnForward}
-          className="rounded-md border border-black/10 dark:border-white/10 px-2.5 py-1 text-xs font-semibold text-text-secondary hover:bg-surface disabled:opacity-30"
+          className={`${pillClass} col-start-3 row-start-2 justify-self-end`}
           aria-label="Next turn"
           title="Next turn"
         >
-          ⟫
+          Turn <span aria-hidden>›</span>
         </button>
       </div>
     </div>
+  );
+}
+
+// Speed control: no button chrome of its own, just the current value next
+// to an up/down chevron glyph signaling "opens a menu" — clicking it opens
+// a portalled dropdown (same position/outside-click/Escape pattern as
+// DeckCardMenu) to pick a speed directly, replacing the old cycle-on-click.
+const SPEED_OPTIONS: (0.5 | 1 | 2 | 4)[] = [0.5, 1, 2, 4];
+
+function SpeedMenu({
+  speed,
+  onSelect,
+}: {
+  speed: 0.5 | 1 | 2 | 4;
+  onSelect: (speed: 0.5 | 1 | 2 | 4) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuPos(null);
+      return;
+    }
+    function compute() {
+      const btn = buttonRef.current;
+      if (!btn) return;
+      const rect = btn.getBoundingClientRect();
+      setMenuPos({ top: rect.bottom + 6, left: rect.left + rect.width / 2 });
+    }
+    compute();
+    window.addEventListener("scroll", compute, true);
+    window.addEventListener("resize", compute);
+    return () => {
+      window.removeEventListener("scroll", compute, true);
+      window.removeEventListener("resize", compute);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(e: PointerEvent) {
+      const target = e.target as Node;
+      if (!buttonRef.current?.contains(target) && !menuRef.current?.contains(target)) {
+        setOpen(false);
+      }
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Playback speed: ${speedLabel(speed)}`}
+        className="inline-flex items-center gap-0.5 text-[11px] font-semibold tabular-nums text-text-secondary hover:text-text-primary transition-colors"
+      >
+        {speedLabel(speed)}
+        <ChevronsUpDownIcon className="h-3 w-3" />
+      </button>
+
+      {open && menuPos !== null && typeof window !== "undefined" &&
+        createPortal(
+          <div
+            ref={menuRef}
+            role="menu"
+            style={{ position: "fixed", top: menuPos.top, left: menuPos.left, transform: "translateX(-50%)" }}
+            className="w-16 rounded-xl bg-white dark:bg-surface-elevated border border-black/8 dark:border-white/10 shadow-lg p-1 z-50"
+          >
+            {SPEED_OPTIONS.map((s) => (
+              <button
+                key={s}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onSelect(s);
+                  setOpen(false);
+                }}
+                className={`w-full rounded-lg px-2 py-1.5 text-center text-xs font-semibold tabular-nums transition-colors hover:bg-surface-2 ${
+                  s === speed ? "text-accent" : "text-text-primary"
+                }`}
+              >
+                {speedLabel(s)}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
+
+function ChevronsUpDownIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M7 15l5 5 5-5M7 9l5-5 5 5" />
+    </svg>
   );
 }
 
@@ -709,10 +843,10 @@ function Scrubber({
         disabled={max === 0}
         onChange={(e) => onScrub(Number(e.target.value))}
         aria-label="Scrub through the replay"
-        style={{ background: `linear-gradient(to right, var(--accent) ${pct}%, var(--border) ${pct}%)` }}
+        style={{ background: `linear-gradient(to right, #ffffff ${pct}%, var(--border) ${pct}%)` }}
         className="block h-1.5 w-full cursor-pointer appearance-none rounded-full disabled:cursor-not-allowed
-          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:-mt-[5px] [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:shadow
-          [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-accent
+          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:-mt-[5px] [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-brand [&::-webkit-slider-thumb]:shadow
+          [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gradient-brand
           [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-transparent"
       />
       {/* Turn boundaries, positioned by frame fraction along the track. */}
