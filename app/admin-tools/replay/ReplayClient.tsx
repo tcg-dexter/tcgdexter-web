@@ -698,21 +698,26 @@ function StepCapsule({
   onBack: () => void;
   onForward: () => void;
 }) {
+  // Shared with the capsule's own outline so the segment rules read as part
+  // of the same frame. The rules live on the chevron buttons rather than as
+  // separate elements: the buttons are the tallest children, so their
+  // borders span the capsule's full inner height on their own.
+  const edge = "border-black/10 dark:border-white/10";
   const arrowClass =
-    "px-2.5 py-2 text-text-secondary transition-colors hover:text-text-primary disabled:opacity-30 disabled:hover:text-text-secondary";
+    "self-stretch px-2.5 py-2 text-text-secondary transition-colors hover:text-text-primary disabled:opacity-30 disabled:hover:text-text-secondary";
   return (
-    <div className="inline-flex shrink-0 items-center rounded-full border border-black/10 dark:border-white/10">
+    <div className={`inline-flex shrink-0 items-center rounded-full border ${edge}`}>
       <button
         type="button"
         onClick={onBack}
         disabled={!canBack}
         aria-label={`Previous ${label.toLowerCase()}`}
         title={`Previous ${label.toLowerCase()}`}
-        className={`${arrowClass} rounded-l-full pl-3`}
+        className={`${arrowClass} rounded-l-full border-r ${edge} pl-3`}
       >
         <span aria-hidden>‹</span>
       </button>
-      <span className="select-none px-0.5 text-xs font-semibold text-text-secondary">
+      <span className="select-none px-2.5 text-xs font-semibold text-text-secondary">
         {label}
       </span>
       <button
@@ -721,7 +726,7 @@ function StepCapsule({
         disabled={!canForward}
         aria-label={`Next ${label.toLowerCase()}`}
         title={`Next ${label.toLowerCase()}`}
-        className={`${arrowClass} rounded-r-full pr-3`}
+        className={`${arrowClass} rounded-r-full border-l ${edge} pr-3`}
       >
         <span aria-hidden>›</span>
       </button>
