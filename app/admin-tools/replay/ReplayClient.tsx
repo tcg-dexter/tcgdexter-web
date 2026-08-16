@@ -836,8 +836,35 @@ function Scrubber({
   const max = Math.max(0, frameCount - 1);
   const clamped = Math.min(frameIndex, max);
   const pct = max > 0 ? (clamped / max) * 100 : 0;
+  // The track is painted as its own decorative layer rather than as the
+  // input's background. That lets the input stand a full thumb tall, so the
+  // thumb centers on its own (margin-top 0) instead of being nudged onto a
+  // 6px-tall input by a hand-tuned negative offset — which is what left the
+  // puck sitting a few pixels high, since the offset had to guess at the
+  // UA's default runnable-track box.
   return (
     <div className="relative py-2">
+      {/* Track: progress up to the playhead, then the unplayed remainder. */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full"
+        style={{
+          background: `linear-gradient(to right, var(--text-primary) ${pct}%, var(--border) ${pct}%)`,
+        }}
+      />
+      {/* Turn boundaries, positioned by frame fraction along the track.
+          Drawn in the page colour so each reads as a notch cut through the
+          track — a tinted tick would disappear against the progress fill,
+          which is now the same tone as the text (black in light, white in
+          dark) on the played side. */}
+      <div className="pointer-events-none absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2">
+        {turnStartIndices.map((i) => (
+          <span
+            key={i}
+            className="absolute top-0 h-1.5 w-px bg-bg"
+            style={{ left: `${max > 0 ? (i / max) * 100 : 0}%` }}
+          />
+        ))}
+      </div>
       <input
         type="range"
         min={0}
@@ -847,22 +874,12 @@ function Scrubber({
         disabled={max === 0}
         onChange={(e) => onScrub(Number(e.target.value))}
         aria-label="Scrub through the replay"
-        style={{ background: `linear-gradient(to right, #ffffff ${pct}%, var(--border) ${pct}%)` }}
-        className="block h-1.5 w-full cursor-pointer appearance-none rounded-full disabled:cursor-not-allowed
-          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:-mt-[5px] [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-black/20 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow
+        className="relative block h-4 w-full cursor-pointer appearance-none bg-transparent disabled:cursor-not-allowed
+          [&::-webkit-slider-runnable-track]:h-4 [&::-webkit-slider-runnable-track]:bg-transparent
+          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-black/20 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow
           [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-black/20 [&::-moz-range-thumb]:bg-white
-          [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-transparent"
+          [&::-moz-range-track]:h-4 [&::-moz-range-track]:bg-transparent"
       />
-      {/* Turn boundaries, positioned by frame fraction along the track. */}
-      <div className="pointer-events-none absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2">
-        {turnStartIndices.map((i) => (
-          <span
-            key={i}
-            className="absolute top-0 h-1.5 w-px bg-black/25 dark:bg-white/25"
-            style={{ left: `${max > 0 ? (i / max) * 100 : 0}%` }}
-          />
-        ))}
-      </div>
     </div>
   );
 }
