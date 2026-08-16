@@ -78,4 +78,41 @@ describe("engine.replay (example-1)", () => {
     const errors = result.diagnostics.filter((d) => d.severity === "error");
     expect(errors).toEqual([]);
   });
+
+  // The Replay board keys React elements and framer-motion layoutIds off
+  // each Pokémon's engine id. Names are NOT unique — this fixture puts three
+  // N's Zorua in play at once — so if two in-play Pokémon on a side ever
+  // shared an id, the board would key them identically and framer-motion
+  // would animate unrelated cards into each other's slots, stranding ghost
+  // cards outside the bench row (the phantom "6th bench card" bug).
+  describe("in-play Pokémon ids (the board's element identity)", () => {
+    const inPlayOn = (state: (typeof result.states)[number], side: "player" | "opponent") => {
+      const s = state.sides[side];
+      return [...(s.active ? [s.active] : []), ...s.bench];
+    };
+
+    it("stay unique per side in every state of the replay", () => {
+      for (const state of result.states) {
+        for (const side of ["player", "opponent"] as const) {
+          const ids = inPlayOn(state, side).map((mon) => mon.id);
+          expect(new Set(ids).size).toBe(ids.length);
+        }
+      }
+    });
+
+    it("is not a vacuous guard — this replay really does field same-named Pokémon together", () => {
+      const maxSameName = result.states.reduce((max, state) => {
+        for (const side of ["player", "opponent"] as const) {
+          const counts = new Map<string, number>();
+          for (const mon of inPlayOn(state, side)) {
+            const n = (counts.get(mon.card.name) ?? 0) + 1;
+            counts.set(mon.card.name, n);
+            if (n > max) max = n;
+          }
+        }
+        return max;
+      }, 0);
+      expect(maxSameName).toBeGreaterThanOrEqual(2);
+    });
+  });
 });

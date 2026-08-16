@@ -52,6 +52,13 @@ export default function ReplayClient({ options }: ReplayClientProps) {
   const [frameIndex, setFrameIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<0.5 | 1 | 2 | 4>(1);
+  // True when the pending frame change is a *jump* (scrub, turn skip, match
+  // load) rather than a single step. Board/bench layout animations model a
+  // card physically moving between slots, which is only meaningful one
+  // action at a time — across a jump they animate cards along routes the
+  // game never took, and a fast drag leaves them mid-flight. Jumps therefore
+  // cut straight to the destination state.
+  const [instant, setInstant] = useState(false);
 
   useEffect(() => {
     if (!selectedId) {
@@ -70,6 +77,7 @@ export default function ReplayClient({ options }: ReplayClientProps) {
       .then((payload) => {
         if (cancelled) return;
         setData(payload);
+        setInstant(true);
         setFrameIndex(0);
       })
       .catch((e) => {
@@ -100,6 +108,7 @@ export default function ReplayClient({ options }: ReplayClientProps) {
   useEffect(() => {
     if (!playing) return;
     const id = setInterval(() => {
+      setInstant(false);
       setFrameIndex((i) => {
         if (i >= frameCount - 1) return i;
         return i + 1;
@@ -275,7 +284,7 @@ export default function ReplayClient({ options }: ReplayClientProps) {
             </aside>
           )}
           <div ref={boardRef} className="lg:shrink-0">
-            <Board frame={frame} loading={loading} error={error} heightBudget={heightBudget} />
+            <Board frame={frame} loading={loading} error={error} heightBudget={heightBudget} instant={instant} />
           </div>
         </div>
 
@@ -297,11 +306,11 @@ export default function ReplayClient({ options }: ReplayClientProps) {
           speed={speed}
           onTogglePlay={() => setPlaying((p) => !p)}
           onSelectSpeed={(s) => setSpeed(s)}
-          onStepBack={() => { setPlaying(false); canStepBack && setFrameIndex((i) => i - 1); }}
-          onStepForward={() => { setPlaying(false); canStepForward && setFrameIndex((i) => i + 1); }}
-          onTurnBack={() => { setPlaying(false); stepTurnBack(); }}
-          onTurnForward={() => { setPlaying(false); stepTurnForward(); }}
-          onScrub={(i) => { setPlaying(false); setFrameIndex(i); }}
+          onStepBack={() => { setPlaying(false); setInstant(false); canStepBack && setFrameIndex((i) => i - 1); }}
+          onStepForward={() => { setPlaying(false); setInstant(false); canStepForward && setFrameIndex((i) => i + 1); }}
+          onTurnBack={() => { setPlaying(false); setInstant(true); stepTurnBack(); }}
+          onTurnForward={() => { setPlaying(false); setInstant(true); stepTurnForward(); }}
+          onScrub={(i) => { setPlaying(false); setInstant(true); setFrameIndex(i); }}
         />
 
         <MatchSelector
@@ -389,10 +398,14 @@ function Board({
   loading,
   error,
   heightBudget,
+  instant,
 }: {
   frame: ReplayFrame | null;
   loading: boolean;
   error: string | null;
+  /** Skip card layout animations because the playhead jumped rather than
+   *  stepped — see the `instant` state in ReplayClient. */
+  instant: boolean;
   /** When set (desktop, thread+board forming a 16:9 rect), the mat width
    *  is derived from this height budget instead of measured from an
    *  ambient container width — see BOARD_VERTICAL_CHROME_PX. Null falls
@@ -459,6 +472,7 @@ function Board({
             }
             cardWidth={cardWidth}
             matWidth={matWidth}
+            instant={instant}
           />
           <BetweenMatsBar frame={frame} />
           <PlayerMat
@@ -479,6 +493,7 @@ function Board({
             }
             cardWidth={cardWidth}
             matWidth={matWidth}
+            instant={instant}
           />
         </div>
       )}

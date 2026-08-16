@@ -17,6 +17,12 @@ import { cardImageSmall } from "@/lib/cardImages";
  */
 
 interface PokemonFrame {
+  /** Engine instance id — stable across turns, unique per Pokémon in play.
+   *  The UI keys React elements and framer-motion layoutIds off this, so it
+   *  must NOT fall back to the card name: a bench holding three Noctowl
+   *  would collide, and colliding layoutIds animate unrelated cards into
+   *  each other's slots (stale ghosts, phantom 6th bench card). */
+  id: string;
   name: string;
   damage: number;
   /** Printed HP — null when the name doesn't resolve in the catalog. */
@@ -31,6 +37,10 @@ interface PokemonFrame {
   evolutionStack: string[];
   /** Resolved most-recent printing image URL; null on catalog miss. */
   imageUrl: string | null;
+  /** Attached Pokémon Tools. The board renders these behind the card with
+   *  their title peeking above; without them an equipped Pokémon reads as
+   *  bare, so this is board state the replay was previously dropping. */
+  tools: { name: string; imageUrl: string | null }[];
 }
 
 interface SideFrame {
@@ -142,6 +152,7 @@ function mapPokemon(
     ? cardImageSmall(catalog.set_id, catalog.number)
     : cardImageUrlForName(mon.card.name);
   return {
+    id: mon.id,
     name: mon.card.name,
     damage: mon.damage,
     hp: catalog?.hp ?? null,
@@ -150,6 +161,13 @@ function mapPokemon(
     conditions: [...mon.conditions],
     evolutionStack: mon.stack.map((c) => c.name),
     imageUrl,
+    // Tools are Trainer cards, so resolve through the supertype-agnostic
+    // helper — cardImageUrlForName filters to Pokémon and would silently
+    // fall back to the card-back here.
+    tools: mon.attachedTools.map((c) => ({
+      name: c.name,
+      imageUrl: cardImageUrlForAnyName(c.name),
+    })),
   };
 }
 

@@ -24,6 +24,13 @@ const BOARD_GRADIENT = MAT_STYLES.find((s) => s.key === "fire-lightning")!.gradi
 const BOARD_TEXTURE = TEXTURES.find((t) => t.key === "lines")!;
 
 export interface PokemonFrame {
+  /** Engine instance id — stable across turns, unique per Pokémon in play.
+   *  Required: React keys and framer-motion layoutIds derive from it, and
+   *  names are NOT unique (three Noctowl on one bench is ordinary). When
+   *  this fell back to the name, colliding layoutIds let framer-motion
+   *  animate unrelated cards into each other's slots, stranding ghost
+   *  cards outside the bench row after a scrub. */
+  id: string;
   name: string;
   damage: number;
   hp: number | null;
@@ -32,12 +39,9 @@ export interface PokemonFrame {
   conditions: string[];
   evolutionStack: string[];
   imageUrl: string | null;
-  /** Stable key for motion layout ids. Play mode sets this (duplicate
-   *  names are common on a bench); replay frames omit it and fall back to
-   *  the name, preserving existing behavior. */
-  id?: string;
   /** Attached Pokémon Tools, rendered behind the card with the title
-   *  peeking above. Omitted by replay frames. */
+   *  peeking above. Both surfaces populate this (empty array when the
+   *  Pokémon holds none). */
   tools?: { name: string; imageUrl: string | null }[];
 }
 
@@ -643,6 +647,7 @@ export function PlayerMat({
   cardWidth,
   matWidth,
   interact,
+  instant,
 }: {
   side: "player" | "opponent";
   bench: PokemonFrame[];
@@ -658,8 +663,16 @@ export function PlayerMat({
   cardWidth: number;
   matWidth: number;
   interact?: MatInteraction;
+  /** Render the destination state immediately instead of animating cards
+   *  into it. Replay sets this when the playhead jumps (scrub / turn skip),
+   *  where a slot-to-slot animation would trace a path the game never took
+   *  and can strand cards mid-flight. Play mode never jumps, so it animates. */
+  instant?: boolean;
 }) {
   const isPlayer = side === "player";
+  // 0s still runs through the same framer-motion code path, so layout
+  // bookkeeping stays consistent — the move just lands on the same tick.
+  const moveTransition = { duration: instant ? 0 : 0.3, ease: "easeInOut" } as const;
   const texScale = matWidth > 0 ? matWidth / 600 : 1;
   const inspect = useContext(InspectContext);
 
@@ -727,8 +740,8 @@ export function PlayerMat({
       <AnimatePresence mode="wait">
         {active && (
           <motion.div
-            key={active.id ?? active.name}
-            layoutId={`${side}-${active.id ?? active.name}`}
+            key={active.id}
+            layoutId={`${side}-${active.id}`}
             // The expanded holder grows down into the bench overlay's band,
             // and that overlay is positioned (z-0) while this column is not —
             // so without an explicit layer the bench would paint over the
@@ -739,7 +752,7 @@ export function PlayerMat({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, layout: { duration: 0.3, ease: "easeInOut" } }}
+            transition={{ duration: instant ? 0 : 0.2, layout: moveTransition }}
           >
             <PokemonCardImage
               mon={active}
@@ -814,11 +827,11 @@ export function PlayerMat({
           >
             {bench.map((mon, i) => (
               <motion.div
-                key={mon.id ?? mon.name}
-                layoutId={`${side}-${mon.id ?? mon.name}`}
+                key={mon.id}
+                layoutId={`${side}-${mon.id}`}
                 className="shrink-0"
                 style={{ width: benchTray.containerW }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
+                transition={moveTransition}
               >
                 <PokemonCardImage
                   mon={mon}
