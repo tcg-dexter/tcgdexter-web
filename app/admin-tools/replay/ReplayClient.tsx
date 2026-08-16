@@ -634,7 +634,7 @@ function PlaybackModule({
         ? "Setup"
         : `Turn ${currentTurn} / ${totalTurns}`;
   return (
-    <div className="mt-6 rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated p-4">
+    <div className="mt-6">
       <Scrubber
         frameIndex={frameIndex}
         frameCount={frameCount}
