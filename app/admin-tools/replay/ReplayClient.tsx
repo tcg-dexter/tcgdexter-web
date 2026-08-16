@@ -625,8 +625,6 @@ function PlaybackModule({
   onTurnForward: () => void;
   onScrub: (frameIndex: number) => void;
 }) {
-  const pillClass =
-    "inline-flex items-center gap-1.5 rounded-full border border-black/10 dark:border-white/10 px-4 py-2 text-xs font-semibold text-text-secondary hover:bg-surface disabled:opacity-30";
   const turnLabel =
     frameCount === 0
       ? "—"
@@ -642,32 +640,21 @@ function PlaybackModule({
         onScrub={onScrub}
       />
 
-      {/* Action stepping on top, turn stepping below — each row's pair
-          spread to the module's edges, with the play/pause + speed +
-          turn readout sharing one centered column spanning both rows. */}
-      <div className="mt-4 grid grid-cols-[auto_1fr_auto] grid-rows-2 items-center gap-x-3 gap-y-2">
-        <button
-          type="button"
-          onClick={onStepBack}
-          disabled={!canStepBack}
-          className={`${pillClass} col-start-1 row-start-1 justify-self-start`}
-          aria-label="Previous action"
-          title="Previous action"
-        >
-          <span aria-hidden>‹</span> Action
-        </button>
-        <button
-          type="button"
-          onClick={onTurnBack}
-          disabled={!canTurnBack}
-          className={`${pillClass} col-start-1 row-start-2 justify-self-start`}
-          aria-label="Previous turn"
-          title="Previous turn"
-        >
-          <span aria-hidden>‹</span> Turn
-        </button>
+      {/* One row: Action stepper on the left, Turn stepper on the right,
+          both inline with the play button. The centre stack is vertically
+          symmetric about the play button (readout above, speed below, each
+          the same height), so items-center lands the capsules exactly on
+          the play button's midline. */}
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <StepCapsule
+          label="Action"
+          canBack={canStepBack}
+          canForward={canStepForward}
+          onBack={onStepBack}
+          onForward={onStepForward}
+        />
 
-        <div className="col-start-2 row-start-1 row-span-2 flex flex-col items-center gap-1.5">
+        <div className="flex flex-col items-center gap-1.5">
           <div className="text-[10px] tabular-nums text-text-muted">{turnLabel}</div>
           <button
             type="button"
@@ -682,27 +669,62 @@ function PlaybackModule({
           <SpeedMenu speed={speed} onSelect={onSelectSpeed} />
         </div>
 
-        <button
-          type="button"
-          onClick={onStepForward}
-          disabled={!canStepForward}
-          className={`${pillClass} col-start-3 row-start-1 justify-self-end`}
-          aria-label="Next action"
-          title="Next action"
-        >
-          Action <span aria-hidden>›</span>
-        </button>
-        <button
-          type="button"
-          onClick={onTurnForward}
-          disabled={!canTurnForward}
-          className={`${pillClass} col-start-3 row-start-2 justify-self-end`}
-          aria-label="Next turn"
-          title="Next turn"
-        >
-          Turn <span aria-hidden>›</span>
-        </button>
+        <StepCapsule
+          label="Turn"
+          canBack={canTurnBack}
+          canForward={canTurnForward}
+          onBack={onTurnBack}
+          onForward={onTurnForward}
+        />
       </div>
+    </div>
+  );
+}
+
+// A single stepping unit — "‹ Action ›" / "‹ Turn ›" — as one capsule with
+// both directions inside it, rather than a separate pill per direction. The
+// label names the unit each press moves by, so the two chevrons and the
+// noun read as one control.
+function StepCapsule({
+  label,
+  canBack,
+  canForward,
+  onBack,
+  onForward,
+}: {
+  label: string;
+  canBack: boolean;
+  canForward: boolean;
+  onBack: () => void;
+  onForward: () => void;
+}) {
+  const arrowClass =
+    "px-2.5 py-2 text-text-secondary transition-colors hover:text-text-primary disabled:opacity-30 disabled:hover:text-text-secondary";
+  return (
+    <div className="inline-flex shrink-0 items-center rounded-full border border-black/10 dark:border-white/10">
+      <button
+        type="button"
+        onClick={onBack}
+        disabled={!canBack}
+        aria-label={`Previous ${label.toLowerCase()}`}
+        title={`Previous ${label.toLowerCase()}`}
+        className={`${arrowClass} rounded-l-full pl-3`}
+      >
+        <span aria-hidden>‹</span>
+      </button>
+      <span className="select-none px-0.5 text-xs font-semibold text-text-secondary">
+        {label}
+      </span>
+      <button
+        type="button"
+        onClick={onForward}
+        disabled={!canForward}
+        aria-label={`Next ${label.toLowerCase()}`}
+        title={`Next ${label.toLowerCase()}`}
+        className={`${arrowClass} rounded-r-full pr-3`}
+      >
+        <span aria-hidden>›</span>
+      </button>
     </div>
   );
 }
