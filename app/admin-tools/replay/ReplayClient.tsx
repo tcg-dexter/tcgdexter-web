@@ -640,12 +640,21 @@ function PlaybackModule({
         onScrub={onScrub}
       />
 
-      {/* One row clustered at the centre: Action stepper left of the play
-          button, Turn stepper right of it. The centre stack is vertically
-          symmetric about the play button (readout above, speed below, each
-          the same height), so items-center lands the capsules exactly on
-          the play button's midline. */}
-      <div className="mt-4 flex items-center justify-center gap-3">
+      {/* Three centred lines. The readout and the speed picker each get
+          their own, rather than stacking inside the control row's middle
+          column: both change width in use — the readout between "Setup"
+          and "Turn 13 / 13", the picker every time it expands to its
+          options — and while they shared a column with the play button,
+          that width fed the row and shoved the capsules in and out. On
+          their own lines their width is nobody else's business, so the
+          steppers hold a fixed spread. */}
+      <div className="mt-4 text-center text-[10px] tabular-nums text-text-muted">
+        {turnLabel}
+      </div>
+
+      {/* Control row: capsules flank the play button and nothing else lives
+          here, so items-center puts them on its midline by construction. */}
+      <div className="mt-1.5 flex items-center justify-center gap-3">
         <StepCapsule
           label="Action"
           canBack={canStepBack}
@@ -654,20 +663,16 @@ function PlaybackModule({
           onForward={onStepForward}
         />
 
-        <div className="flex flex-col items-center gap-1.5">
-          <div className="text-[10px] tabular-nums text-text-muted">{turnLabel}</div>
-          <button
-            type="button"
-            onClick={onTogglePlay}
-            disabled={!playing && !canStepForward}
-            aria-label={playing ? "Pause" : "Play"}
-            title={playing ? "Pause" : "Play"}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-black/10 dark:border-white/10 text-text-primary hover:bg-surface disabled:opacity-30"
-          >
-            <PlayPauseIcon playing={playing} />
-          </button>
-          <SpeedMenu speed={speed} onSelect={onSelectSpeed} />
-        </div>
+        <button
+          type="button"
+          onClick={onTogglePlay}
+          disabled={!playing && !canStepForward}
+          aria-label={playing ? "Pause" : "Play"}
+          title={playing ? "Pause" : "Play"}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 dark:border-white/10 text-text-primary hover:bg-surface disabled:opacity-30"
+        >
+          <PlayPauseIcon playing={playing} />
+        </button>
 
         <StepCapsule
           label="Turn"
@@ -676,6 +681,10 @@ function PlaybackModule({
           onBack={onTurnBack}
           onForward={onTurnForward}
         />
+      </div>
+
+      <div className="mt-1.5 flex justify-center">
+        <SpeedMenu speed={speed} onSelect={onSelectSpeed} />
       </div>
     </div>
   );
