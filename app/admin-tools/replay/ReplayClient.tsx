@@ -640,12 +640,12 @@ function PlaybackModule({
         onScrub={onScrub}
       />
 
-      {/* One row: Action stepper on the left, Turn stepper on the right,
-          both inline with the play button. The centre stack is vertically
+      {/* One row clustered at the centre: Action stepper left of the play
+          button, Turn stepper right of it. The centre stack is vertically
           symmetric about the play button (readout above, speed below, each
           the same height), so items-center lands the capsules exactly on
           the play button's midline. */}
-      <div className="mt-4 flex items-center justify-between gap-3">
+      <div className="mt-4 flex items-center justify-center gap-3">
         <StepCapsule
           label="Action"
           canBack={canStepBack}
@@ -717,7 +717,7 @@ function StepCapsule({
       >
         <span aria-hidden>‹</span>
       </button>
-      <span className="select-none px-2.5 text-xs font-semibold text-text-secondary">
+      <span className="select-none px-5 text-xs font-semibold text-text-secondary">
         {label}
       </span>
       <button
