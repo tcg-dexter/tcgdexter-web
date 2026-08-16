@@ -226,25 +226,12 @@ export default function ReplayClient({ options }: ReplayClientProps) {
           </div>
         </header>
 
-        {/* Desktop header (above the thread + board row): match name
-            on the left, wordmark in the center, the four stepper
-            controls on the right. Replaces the lower TurnNavigator on
-            lg+; mobile keeps the navigator below the board. */}
+        {/* Desktop header (above the thread + board row): match name on
+            the left, wordmark centered. Playback controls live in the
+            dedicated module below the row instead (all breakpoints). */}
         <ReplayHeader
           playerPrimaryName={data?.playerPrimaryName ?? null}
           opponentPrimaryName={data?.opponentPrimaryName ?? null}
-          canStepBack={canStepBack}
-          canStepForward={canStepForward}
-          canTurnBack={canTurnBack}
-          canTurnForward={canTurnForward}
-          playing={playing}
-          speed={speed}
-          onTogglePlay={() => setPlaying((p) => !p)}
-          onCycleSpeed={() => setSpeed((s) => s === 0.5 ? 1 : s === 1 ? 2 : s === 2 ? 4 : 0.5)}
-          onStepBack={() => { setPlaying(false); canStepBack && setFrameIndex((i) => i - 1); }}
-          onStepForward={() => { setPlaying(false); canStepForward && setFrameIndex((i) => i + 1); }}
-          onTurnBack={() => { setPlaying(false); stepTurnBack(); }}
-          onTurnForward={() => { setPlaying(false); stepTurnForward(); }}
         />
 
         {/* Row 1: thread (lg only) + board side-by-side, together forming
@@ -287,35 +274,34 @@ export default function ReplayClient({ options }: ReplayClientProps) {
           </div>
         </div>
 
-        {/* Row 2: navigator (mobile only — desktop uses the header above)
-            + match selector pinned under the board column on desktop,
-            full-width on mobile. */}
-        <div className="lg:ml-auto lg:w-[720px]">
-          <div className="lg:hidden">
-            <TurnNavigator
-              frameIndex={frameIndex}
-              frameCount={frameCount}
-              canStepBack={canStepBack}
-              canStepForward={canStepForward}
-              canTurnBack={canTurnBack}
-              canTurnForward={canTurnForward}
-              playing={playing}
-              speed={speed}
-              onTogglePlay={() => setPlaying((p) => !p)}
-              onCycleSpeed={() => setSpeed((s) => s === 0.5 ? 1 : s === 1 ? 2 : s === 2 ? 4 : 0.5)}
-              onStepBack={() => { setPlaying(false); canStepBack && setFrameIndex((i) => i - 1); }}
-              onStepForward={() => { setPlaying(false); canStepForward && setFrameIndex((i) => i + 1); }}
-              onTurnBack={() => { setPlaying(false); stepTurnBack(); }}
-              onTurnForward={() => { setPlaying(false); stepTurnForward(); }}
-            />
-          </div>
+        {/* Playback module: transport controls + scrubbable timeline,
+            spanning the full thread+board row above (not just the mat
+            column) so it reads as one wide player bar underneath the
+            whole 16:9 viewport, at every breakpoint. */}
+        <PlaybackModule
+          frameIndex={frameIndex}
+          frameCount={frameCount}
+          turnStartIndices={turnStartIndices}
+          canStepBack={canStepBack}
+          canStepForward={canStepForward}
+          canTurnBack={canTurnBack}
+          canTurnForward={canTurnForward}
+          playing={playing}
+          speed={speed}
+          onTogglePlay={() => setPlaying((p) => !p)}
+          onCycleSpeed={() => setSpeed((s) => s === 0.5 ? 1 : s === 1 ? 2 : s === 2 ? 4 : 0.5)}
+          onStepBack={() => { setPlaying(false); canStepBack && setFrameIndex((i) => i - 1); }}
+          onStepForward={() => { setPlaying(false); canStepForward && setFrameIndex((i) => i + 1); }}
+          onTurnBack={() => { setPlaying(false); stepTurnBack(); }}
+          onTurnForward={() => { setPlaying(false); stepTurnForward(); }}
+          onScrub={(i) => { setPlaying(false); setFrameIndex(i); }}
+        />
 
-          <MatchSelector
-            options={options}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-          />
-        </div>
+        <MatchSelector
+          options={options}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+        />
       </div>
     </main>
   );
@@ -345,38 +331,12 @@ function speedLabel(s: 0.5 | 1 | 2 | 4): string {
 function ReplayHeader({
   playerPrimaryName,
   opponentPrimaryName,
-  canStepBack,
-  canStepForward,
-  canTurnBack,
-  canTurnForward,
-  playing,
-  speed,
-  onTogglePlay,
-  onCycleSpeed,
-  onStepBack,
-  onStepForward,
-  onTurnBack,
-  onTurnForward,
 }: {
   playerPrimaryName: string | null;
   opponentPrimaryName: string | null;
-  canStepBack: boolean;
-  canStepForward: boolean;
-  canTurnBack: boolean;
-  canTurnForward: boolean;
-  playing: boolean;
-  speed: 0.5 | 1 | 2 | 4;
-  onTogglePlay: () => void;
-  onCycleSpeed: () => void;
-  onStepBack: () => void;
-  onStepForward: () => void;
-  onTurnBack: () => void;
-  onTurnForward: () => void;
 }) {
   const left = playerPrimaryName ?? "?";
   const right = opponentPrimaryName ?? "?";
-  const buttonClass =
-    "rounded-md border border-black/10 px-4 py-1.5 text-sm font-semibold text-text-secondary hover:bg-surface disabled:opacity-30";
   return (
     <div className="mt-4 hidden items-center gap-6 lg:flex">
       <div className="flex flex-1 min-w-0 items-baseline gap-2 text-xl font-semibold text-text-primary">
@@ -398,67 +358,7 @@ function ReplayHeader({
           className="hidden h-[42px] w-auto opacity-90 dark:block"
         />
       </div>
-      <div className="flex flex-1 items-center justify-end gap-1.5">
-        <button
-          type="button"
-          onClick={onTurnBack}
-          disabled={!canTurnBack}
-          aria-label="Previous turn"
-          title="Previous turn"
-          className={buttonClass}
-        >
-          ⟪
-        </button>
-        <button
-          type="button"
-          onClick={onStepBack}
-          disabled={!canStepBack}
-          aria-label="Previous action"
-          title="Previous action"
-          className={buttonClass}
-        >
-          ‹
-        </button>
-        <button
-          type="button"
-          onClick={onTogglePlay}
-          disabled={!playing && !canStepForward}
-          aria-label={playing ? "Pause" : "Play"}
-          title={playing ? "Pause" : "Play"}
-          className={`${buttonClass} px-3`}
-        >
-          <PlayPauseIcon playing={playing} />
-        </button>
-        <button
-          type="button"
-          onClick={onCycleSpeed}
-          aria-label={`Playback speed: ${speedLabel(speed)}`}
-          title="Cycle playback speed"
-          className="rounded-md border border-black/10 px-2.5 py-1.5 text-xs font-semibold tabular-nums text-text-secondary hover:bg-surface"
-        >
-          {speedLabel(speed)}
-        </button>
-        <button
-          type="button"
-          onClick={onStepForward}
-          disabled={!canStepForward}
-          aria-label="Next action"
-          title="Next action"
-          className={buttonClass}
-        >
-          ›
-        </button>
-        <button
-          type="button"
-          onClick={onTurnForward}
-          disabled={!canTurnForward}
-          aria-label="Next turn"
-          title="Next turn"
-          className={buttonClass}
-        >
-          ⟫
-        </button>
-      </div>
+      <div className="flex-1" />
     </div>
   );
 }
@@ -656,12 +556,17 @@ function BetweenMatsBar({ frame }: { frame: ReplayFrame }) {
 }
 
 /* ──────────────────────────────────────────────────────────────── */
-/* Turn navigator                                                   */
+/* Playback module                                                  */
 /* ──────────────────────────────────────────────────────────────── */
 
-function TurnNavigator({
+// Dedicated transport module below the thread+board row — the scrubbable
+// timeline plus the same step/turn/play controls at every breakpoint
+// (replaces the old split between ReplayHeader's desktop button cluster
+// and the mobile-only TurnNavigator).
+function PlaybackModule({
   frameIndex,
   frameCount,
+  turnStartIndices,
   canStepBack,
   canStepForward,
   canTurnBack,
@@ -674,9 +579,11 @@ function TurnNavigator({
   onStepForward,
   onTurnBack,
   onTurnForward,
+  onScrub,
 }: {
   frameIndex: number;
   frameCount: number;
+  turnStartIndices: number[];
   canStepBack: boolean;
   canStepForward: boolean;
   canTurnBack: boolean;
@@ -689,15 +596,22 @@ function TurnNavigator({
   onStepForward: () => void;
   onTurnBack: () => void;
   onTurnForward: () => void;
+  onScrub: (frameIndex: number) => void;
 }) {
   return (
-    <div className="mt-4 rounded-2xl border border-black/8 bg-white p-4">
-      <div className="flex items-center justify-between gap-3">
+    <div className="mt-6 rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated p-4">
+      <Scrubber
+        frameIndex={frameIndex}
+        frameCount={frameCount}
+        turnStartIndices={turnStartIndices}
+        onScrub={onScrub}
+      />
+      <div className="mt-3 flex items-center justify-between gap-3">
         <button
           type="button"
           onClick={onTurnBack}
           disabled={!canTurnBack}
-          className="rounded-md border border-black/10 px-2.5 py-1 text-xs font-semibold text-text-secondary hover:bg-surface disabled:opacity-30"
+          className="rounded-md border border-black/10 dark:border-white/10 px-2.5 py-1 text-xs font-semibold text-text-secondary hover:bg-surface disabled:opacity-30"
           aria-label="Previous turn"
           title="Previous turn"
         >
@@ -707,7 +621,7 @@ function TurnNavigator({
           type="button"
           onClick={onStepBack}
           disabled={!canStepBack}
-          className="rounded-md border border-black/10 px-3 py-1 text-xs font-semibold text-text-secondary hover:bg-surface disabled:opacity-30"
+          className="rounded-md border border-black/10 dark:border-white/10 px-3 py-1 text-xs font-semibold text-text-secondary hover:bg-surface disabled:opacity-30"
           aria-label="Previous action"
           title="Previous action"
         >
@@ -724,7 +638,7 @@ function TurnNavigator({
               disabled={!playing && !canStepForward}
               aria-label={playing ? "Pause" : "Play"}
               title={playing ? "Pause" : "Play"}
-              className="rounded-md border border-black/10 px-3 py-1.5 text-text-secondary hover:bg-surface disabled:opacity-30"
+              className="rounded-md border border-black/10 dark:border-white/10 px-3 py-1.5 text-text-secondary hover:bg-surface disabled:opacity-30"
             >
               <PlayPauseIcon playing={playing} />
             </button>
@@ -733,7 +647,7 @@ function TurnNavigator({
               onClick={onCycleSpeed}
               aria-label={`Playback speed: ${speedLabel(speed)}`}
               title="Cycle playback speed"
-              className="rounded-md border border-black/10 px-2.5 py-1.5 text-xs font-semibold tabular-nums text-text-secondary hover:bg-surface"
+              className="rounded-md border border-black/10 dark:border-white/10 px-2.5 py-1.5 text-xs font-semibold tabular-nums text-text-secondary hover:bg-surface"
             >
               {speedLabel(speed)}
             </button>
@@ -743,7 +657,7 @@ function TurnNavigator({
           type="button"
           onClick={onStepForward}
           disabled={!canStepForward}
-          className="rounded-md border border-black/10 px-3 py-1 text-xs font-semibold text-text-secondary hover:bg-surface disabled:opacity-30"
+          className="rounded-md border border-black/10 dark:border-white/10 px-3 py-1 text-xs font-semibold text-text-secondary hover:bg-surface disabled:opacity-30"
           aria-label="Next action"
           title="Next action"
         >
@@ -753,12 +667,63 @@ function TurnNavigator({
           type="button"
           onClick={onTurnForward}
           disabled={!canTurnForward}
-          className="rounded-md border border-black/10 px-2.5 py-1 text-xs font-semibold text-text-secondary hover:bg-surface disabled:opacity-30"
+          className="rounded-md border border-black/10 dark:border-white/10 px-2.5 py-1 text-xs font-semibold text-text-secondary hover:bg-surface disabled:opacity-30"
           aria-label="Next turn"
           title="Next turn"
         >
           ⟫
         </button>
+      </div>
+    </div>
+  );
+}
+
+// Draggable timeline scrubbing straight through replay frames. Dragging,
+// clicking, or arrow-keying (all free from the native range input) sets
+// frameIndex, the single value both the board (via `frame`) and the
+// thread (via BattleLogDetail's maxSequence) already derive from — so
+// scrubbing keeps them in sync without any extra wiring. Turn boundaries
+// render as tick marks under the track so a turn is easy to aim for.
+function Scrubber({
+  frameIndex,
+  frameCount,
+  turnStartIndices,
+  onScrub,
+}: {
+  frameIndex: number;
+  frameCount: number;
+  turnStartIndices: number[];
+  onScrub: (frameIndex: number) => void;
+}) {
+  const max = Math.max(0, frameCount - 1);
+  const clamped = Math.min(frameIndex, max);
+  const pct = max > 0 ? (clamped / max) * 100 : 0;
+  return (
+    <div className="relative py-2">
+      <input
+        type="range"
+        min={0}
+        max={max}
+        step={1}
+        value={clamped}
+        disabled={max === 0}
+        onChange={(e) => onScrub(Number(e.target.value))}
+        aria-label="Scrub through the replay"
+        style={{ background: `linear-gradient(to right, var(--accent) ${pct}%, var(--border) ${pct}%)` }}
+        className="block h-1.5 w-full cursor-pointer appearance-none rounded-full disabled:cursor-not-allowed
+          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:-mt-[5px] [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:shadow
+          [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-accent
+          [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-transparent"
+      />
+      {/* Turn boundaries, positioned by frame fraction along the track. */}
+      <div className="pointer-events-none absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2">
+        {turnStartIndices.map((i) => (
+          <span
+            key={i}
+            className="absolute top-0 h-1.5 w-px bg-black/25 dark:bg-white/25"
+            style={{ left: `${max > 0 ? (i / max) * 100 : 0}%` }}
+          />
+        ))}
       </div>
     </div>
   );
