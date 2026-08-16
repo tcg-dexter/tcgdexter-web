@@ -6,7 +6,7 @@
 // playback controls, frame stepping, and the battle-log thread.
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import BattleLogDetail, { formatActionLabel } from "@/app/components/BattleLogDetail";
 import type {
@@ -692,10 +692,11 @@ function PlaybackModule({
   );
 }
 
-// Speed control: no button chrome of its own, just the current value next
-// to an up/down chevron glyph signaling "opens a menu" — clicking it opens
-// a portalled dropdown (same position/outside-click/Escape pattern as
-// DeckCardMenu) to pick a speed directly, replacing the old cycle-on-click.
+// Speed control: no button chrome of its own — the current value next to
+// an up/down arrows glyph. Clicking it doesn't open a dropdown; it expands
+// in place into a horizontal row of every option (framer-motion's layout
+// animation grows the shared container to fit), and picking one collapses
+// the row back down to just the new value.
 const SPEED_OPTIONS: (0.5 | 1 | 2 | 4)[] = [0.5, 1, 2, 4];
 
 function SpeedMenu({
@@ -706,37 +707,12 @@ function SpeedMenu({
   onSelect: (speed: 0.5 | 1 | 2 | 4) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    if (!open) {
-      setMenuPos(null);
-      return;
-    }
-    function compute() {
-      const btn = buttonRef.current;
-      if (!btn) return;
-      const rect = btn.getBoundingClientRect();
-      setMenuPos({ top: rect.bottom + 6, left: rect.left + rect.width / 2 });
-    }
-    compute();
-    window.addEventListener("scroll", compute, true);
-    window.addEventListener("resize", compute);
-    return () => {
-      window.removeEventListener("scroll", compute, true);
-      window.removeEventListener("resize", compute);
-    };
-  }, [open]);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     function onPointerDown(e: PointerEvent) {
-      const target = e.target as Node;
-      if (!buttonRef.current?.contains(target) && !menuRef.current?.contains(target)) {
-        setOpen(false);
-      }
+      if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
     }
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -750,48 +726,61 @@ function SpeedMenu({
   }, [open]);
 
   return (
-    <>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={`Playback speed: ${speedLabel(speed)}`}
-        className="inline-flex items-center gap-0.5 text-[11px] font-semibold tabular-nums text-text-secondary hover:text-text-primary transition-colors"
-      >
-        {speedLabel(speed)}
-        <ChevronsUpDownIcon className="h-3 w-3" />
-      </button>
-
-      {open && menuPos !== null && typeof window !== "undefined" &&
-        createPortal(
-          <div
-            ref={menuRef}
-            role="menu"
-            style={{ position: "fixed", top: menuPos.top, left: menuPos.left, transform: "translateX(-50%)" }}
-            className="w-16 rounded-xl bg-white dark:bg-surface-elevated border border-black/8 dark:border-white/10 shadow-lg p-1 z-50"
+    <motion.div
+      ref={containerRef}
+      layout
+      transition={{ duration: 0.22, ease: "easeInOut" }}
+      className="flex items-center justify-center overflow-hidden rounded-full"
+    >
+      <AnimatePresence mode="popLayout" initial={false}>
+        {open ? (
+          <motion.div
+            key="options"
+            layout
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="flex items-center gap-2.5 px-1"
           >
             {SPEED_OPTIONS.map((s) => (
               <button
                 key={s}
                 type="button"
-                role="menuitem"
                 onClick={() => {
                   onSelect(s);
                   setOpen(false);
                 }}
-                className={`w-full rounded-lg px-2 py-1.5 text-center text-xs font-semibold tabular-nums transition-colors hover:bg-surface-2 ${
-                  s === speed ? "text-accent" : "text-text-primary"
+                aria-label={`Set playback speed to ${speedLabel(s)}`}
+                className={`text-[11px] font-semibold tabular-nums transition-colors ${
+                  s === speed ? "text-accent" : "text-text-secondary hover:text-text-primary"
                 }`}
               >
                 {speedLabel(s)}
               </button>
             ))}
-          </div>,
-          document.body,
+          </motion.div>
+        ) : (
+          <motion.button
+            key="trigger"
+            layout
+            type="button"
+            onClick={() => setOpen(true)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            aria-haspopup="true"
+            aria-expanded={open}
+            aria-label={`Playback speed: ${speedLabel(speed)}`}
+            className="inline-flex items-center gap-0.5 text-[11px] font-semibold tabular-nums text-text-secondary hover:text-text-primary transition-colors"
+          >
+            {speedLabel(speed)}
+            <ChevronsUpDownIcon className="h-3 w-3" />
+          </motion.button>
         )}
-    </>
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
@@ -845,8 +834,8 @@ function Scrubber({
         aria-label="Scrub through the replay"
         style={{ background: `linear-gradient(to right, #ffffff ${pct}%, var(--border) ${pct}%)` }}
         className="block h-1.5 w-full cursor-pointer appearance-none rounded-full disabled:cursor-not-allowed
-          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:-mt-[5px] [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-brand [&::-webkit-slider-thumb]:shadow
-          [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-gradient-brand
+          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:-mt-[5px] [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-black/20 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow
+          [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-black/20 [&::-moz-range-thumb]:bg-white
           [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-transparent"
       />
       {/* Turn boundaries, positioned by frame fraction along the track. */}
