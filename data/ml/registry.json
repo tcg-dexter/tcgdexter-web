@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-08-09T11:00:12.049767+00:00",
+  "updated_at": "2026-08-16T11:00:11.679060+00:00",
   "models": {
     "winprob": {
       "model_version": "winprob-v1",
@@ -65,17 +65,17 @@
     "winprob": {
       "enabled": true,
       "threshold_matches": 100,
-      "n_matches": 153
+      "n_matches": 176
     },
     "turn_quality_learned": {
       "enabled": false,
       "threshold_matches": 1000,
-      "n_matches": 153
+      "n_matches": 176
     },
     "sequence_models": {
       "enabled": false,
       "threshold_matches": 10000,
-      "n_matches": 153
+      "n_matches": 176
     }
   }
 }
