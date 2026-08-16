@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import BattleLogDetail from "@/app/components/BattleLogDetail";
+import ReplayViewer from "@/app/components/replay/ReplayViewer";
 import BackButton from "@/app/components/ui/BackButton";
 import ThemeColor from "@/app/components/ThemeColor";
 import {
@@ -209,10 +209,12 @@ export default function BattleLogPage({
         </div>
       </div>
 
-      {/* Battle log — full width. The heading sits above the thread
-          as a strong section break: bold uppercase title flanked by a
-          short accent rule, with a turn-count caption underneath. */}
-      <div className="px-4 pb-16">
+      {/* Battle log — the playback viewer, capped to the same max-width
+          the rest of the page uses so the 16:9 window doesn't run wider
+          than the stats above it. The heading sits above as a strong
+          section break: bold uppercase title flanked by a short accent
+          rule, with a turn-count caption underneath. */}
+      <div className="mx-auto w-full max-w-6xl px-4 pb-16">
         {hasBattleLog ? (
           <>
             <div className="mt-8 mb-2">
@@ -228,9 +230,10 @@ export default function BattleLogPage({
                 )}
               </div>
             </div>
-            <BattleLogDetail
+            <ReplayViewer
               matchId={matchId}
-              apiUrl={`/api/battles/${matchId}/log`}
+              replayUrl={`/api/battles/${matchId}/replay`}
+              logUrl={`/api/battles/${matchId}/log`}
               result={result}
               playerColor={playerColor}
               opponentColor={opponentColor}
