@@ -121,17 +121,6 @@ export default function BattleLogPage({
       : `linear-gradient(180deg, ${winnerColor} 0%, ${loserColor} 100%)`;
   const themeColor = winnerColor;
 
-  // Ghost card: the winner's hero card, blown up behind the banner. Keyed
-  // off `result` the same way the gradient's colours are, so the wash and
-  // the tint always belong to the same side. A draw falls back to the
-  // player's card, matching what winnerColor does.
-  const winnerImageUrl =
-    result === "win"
-      ? deckImageUrl
-      : result === "loss"
-      ? opponentImageUrl
-      : deckImageUrl;
-
   return (
     <main className="min-h-dvh flex flex-col bg-bg">
       {/* Paint the mobile sticky toolbar so it reads as one continuous
@@ -155,31 +144,6 @@ export default function BattleLogPage({
         className="relative w-full overflow-hidden h-[calc(30.6vw-10.8px)] sm:h-auto sm:aspect-[3/1]"
         style={{ background: bannerGradient }}
       >
-        {/* Ghost card — the same faded, grayscale, slightly-rotated wash
-            the deck preview cards use, full-bleed behind the banner's
-            content. Sized off the banner's own height rather than a fixed
-            px box + scale(): the banner holds roughly 3:1 at every
-            breakpoint, so a card-aspect box at 460% height always spans
-            past both edges and the crop stays put as the banner resizes.
-            No bg fill, so a card image that fails to load leaves nothing
-            behind rather than a pale slab. */}
-        {winnerImageUrl && (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute left-[44%] top-1/2 overflow-hidden rounded-lg"
-            style={{
-              height: "460%",
-              aspectRatio: "245 / 342",
-              opacity: 0.2,
-              filter: "grayscale(1)",
-              transform: "translate(-50%, -50%) rotate(-4deg)",
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={winnerImageUrl} alt="" className="h-full w-full object-cover" />
-          </div>
-        )}
-
         <div className="absolute inset-0 mx-auto max-w-6xl">
           <div className="relative h-full mx-6">
             {deckImageUrl && (
