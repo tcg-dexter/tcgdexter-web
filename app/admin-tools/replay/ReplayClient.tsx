@@ -264,7 +264,7 @@ export default function ReplayClient({ options }: ReplayClientProps) {
                   : undefined
               }
             >
-              <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-gradient-to-b from-[#f2f2f2] to-[#f2f2f2]/0" />
+              <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-gradient-to-b from-[var(--bg)] to-transparent" />
               <div
                 ref={threadScrollRef}
                 className="h-full overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -279,7 +279,7 @@ export default function ReplayClient({ options }: ReplayClientProps) {
                   scrollContainerRef={threadScrollRef}
                 />
               </div>
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-12 bg-gradient-to-t from-[#f2f2f2] to-[#f2f2f2]/0" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-12 bg-gradient-to-t from-[var(--bg)] to-transparent" />
             </aside>
           )}
           <div ref={boardRef} className="lg:shrink-0">
