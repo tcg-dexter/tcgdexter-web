@@ -387,9 +387,15 @@ function ReplayHeader({
       <div className="flex shrink-0 justify-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/logo-wordmark.png"
+          src="/logo-wordmark-light.png"
           alt="TCG Dexter"
-          className="h-[42px] w-auto opacity-90"
+          className="h-[42px] w-auto opacity-90 dark:hidden"
+        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logo-wordmark-dark.png"
+          alt="TCG Dexter"
+          className="hidden h-[42px] w-auto opacity-90 dark:block"
         />
       </div>
       <div className="flex flex-1 items-center justify-end gap-1.5">
