@@ -62,12 +62,18 @@ function relativeTime(iso: string): string {
 //
 // Cards are sized off the banner's HEIGHT rather than its width. The
 // banner's aspect differs between mobile and desktop, so a width-based
-// card size would peek above the bottom edge by a different fraction of
-// the banner at each breakpoint and need a compensating scale on every
-// one; height-based sizing is self-correcting. Overlap is expressed in
-// percent of the card's own width for the same reason.
-const CARD_HEIGHT_PCT = 107;
-const BOTTOM_CLIP_PCT = 30;
+// card size would sit differently against the banner at each breakpoint
+// and need a compensating scale on every one; height-based sizing is
+// self-correcting. Overlap is expressed in percent of the card's own
+// width for the same reason.
+//
+// CARD_HEIGHT_PCT is capped well under 100 because a tilted card's
+// bounding box is taller than the card: h·cos(θ) + w·sin(θ). At 4.5° and
+// the 245:342 card aspect that costs ~5.3%, so 87% of the banner's height
+// occupies ~91.6% of it, leaving ~4% clear above and below. Raising the
+// rotation eats into that margin — the two constants have to move
+// together or the corners start clipping again.
+const CARD_HEIGHT_PCT = 87;
 const CARD_OVERLAP_PCT = 30;
 const CARD_ROTATION_DEG = 4.5;
 const CARD_RIGHT_INSET_PCT = 2;
@@ -405,14 +411,16 @@ function BannerCard({
       aria-hidden="true"
       className="absolute pointer-events-none select-none drop-shadow-md"
       style={{
-        bottom: 0,
+        top: "50%",
         right: `${CARD_RIGHT_INSET_PCT}%`,
         height: `${CARD_HEIGHT_PCT}%`,
         width: "auto",
-        // Rotate about the bottom centre, then drop the card so a fixed
-        // share of it clears the banner's floor.
-        transform: `translate(${offsetXPct}%, ${BOTTOM_CLIP_PCT}%) rotate(${rotationDeg}deg)`,
-        transformOrigin: "50% 100%",
+        // Rotate about the card's own centre, then pull it up half its
+        // height against `top: 50%` so that centre lands on the banner's
+        // midline. Centre-rotation is what keeps the tilt from pushing
+        // one end out of the banner the way bottom-anchored rotation did.
+        transform: `translate(${offsetXPct}%, -50%) rotate(${rotationDeg}deg)`,
+        transformOrigin: "50% 50%",
       }}
     />
   );
