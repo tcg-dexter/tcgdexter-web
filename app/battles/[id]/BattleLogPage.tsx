@@ -69,7 +69,7 @@ function relativeTime(iso: string): string {
 const CARD_HEIGHT_PCT = 107;
 const BOTTOM_CLIP_PCT = 30;
 const CARD_OVERLAP_PCT = 30;
-const CARD_ROTATION_DEG = 9;
+const CARD_ROTATION_DEG = 4.5;
 const CARD_RIGHT_INSET_PCT = 2;
 
 export default function BattleLogPage({
@@ -177,20 +177,25 @@ export default function BattleLogPage({
               />
             )}
 
-            {/* Matchup text — left-aligned, vertically centred, capped in
-                width so it never runs under the cards. It paints over them
-                without needing a z-index, being the later sibling.
+            {/* Matchup text — left-aligned and vertically centred. The deck
+                names run at full length and are free to overlay the cards
+                (they paint over them without a z-index, being the later
+                sibling); the drop shadow is what keeps them legible where
+                they cross card art. `whitespace-nowrap` is the load-bearing
+                bit: unconstrained text would otherwise wrap instead of
+                overhanging, and the extra lines would spill out of a banner
+                that's only as tall as its aspect allows.
 
                 Type steps across three desktop tiers rather than jumping
                 straight to 5xl at `sm:`. The banner is a fixed 1/4.6875 of
                 viewport width, so just above the 640px breakpoint it's only
                 ~137px tall; each tier below fits its narrowest viewport. */}
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex max-w-[52%] sm:max-w-[62%] flex-col justify-center">
-              <div className="min-w-0 text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]">
-                <p className="truncate text-lg sm:text-2xl lg:text-4xl xl:text-5xl font-bold leading-tight">
+            <div className="pointer-events-none absolute inset-y-0 left-0 right-0 flex flex-col justify-center">
+              <div className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]">
+                <p className="whitespace-nowrap text-lg sm:text-2xl lg:text-4xl xl:text-5xl font-bold leading-tight">
                   {playerLabel}
                 </p>
-                <p className="truncate text-lg sm:text-2xl lg:text-4xl xl:text-5xl font-bold leading-tight">
+                <p className="whitespace-nowrap text-lg sm:text-2xl lg:text-4xl xl:text-5xl font-bold leading-tight">
                   <span className="opacity-70">vs </span>
                   {opponentLabel}
                 </p>
