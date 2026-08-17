@@ -406,7 +406,7 @@ export function stripLeadingActorName(text: string, name?: string | null): strin
  * "Opponent" placeholder for the other player's actual name, then strip the
  * redundant leading author name. `otherName` is the side opposite the author.
  */
-export function formatActionLabel(
+function formatActionLabel(
   text: string,
   opts: { authorName?: string | null; otherName?: string | null },
 ): string {

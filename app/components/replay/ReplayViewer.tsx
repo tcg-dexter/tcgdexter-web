@@ -10,7 +10,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import BattleLogDetail, { formatActionLabel } from "@/app/components/BattleLogDetail";
+import BattleLogDetail from "@/app/components/BattleLogDetail";
 import type { ReplayFrame, ReplayPayload } from "@/lib/replay/frames";
 import {
   InspectContext,
@@ -68,15 +68,110 @@ function speedLabel(s: 0.5 | 1 | 2 | 4): string {
 /* Board                                                            */
 /* ──────────────────────────────────────────────────────────────── */
 
+// Name-tab geometry. Each tab tucks TAB_TUCK_PX under its mat so the mat's
+// rounded-xl corner sits on top of it (a folder tab), which is why the tuck
+// tracks the mat's 12px radius: any less and the corner's curve would leave
+// a notch of background showing between mat and tab.
+const TAB_TUCK_PX = 12;
+const TAB_CONTENT_PX = 24;
+const TAB_GAP_PX = 8;
+
 // Fixed vertical chrome inside the mat column besides the two mats
-// themselves: Board's own mt-4 (16px) + two gap-3 row gaps (12px each,
-// mat-to-bar and bar-to-mat) + BetweenMatsBar's height. The bar is a
-// text-sm label row (20px) + a fixed 2.5rem/40px two-line action row
-// (see the `h-[2.5rem]` on its second row below) = 62px, so the whole
-// bar never varies and this can stay a plain constant instead of
-// something measured live (which risked feeding back into its own
-// width — the bar sits inside the very column this constant sizes).
-const BOARD_VERTICAL_CHROME_PX = 16 + 2 * 12 + 62;
+// themselves: Board's own mt-4 (16px) + the visible height of both name
+// tabs + the gap between them. The tucked portion of each tab is cancelled
+// by its own negative margin, so only TAB_CONTENT_PX of each is chrome.
+// All of it is constant, which is what lets this stay a plain number
+// instead of something measured live — the tabs sit inside the very column
+// this constant sizes, so measuring them would feed back into their width.
+const BOARD_VERTICAL_CHROME_PX = 16 + 2 * TAB_CONTENT_PX + TAB_GAP_PX;
+
+const TOTAL_PRIZES = 6;
+
+/**
+ * Prize scorekeeper — one pip per prize card that side started with, filled
+ * in as they take them. A taken prize reads as a Poké Ball (red over white);
+ * an untaken one stays a flat grey.
+ *
+ * Note this counts prizes *taken by* this side, which is why it's driven by
+ * the side's own remaining pile: you draw from your own prizes when you
+ * knock out the opposing Pokémon, so a shrinking pile is that player
+ * scoring, not being scored on.
+ */
+function PrizePips({ remaining }: { remaining: number }) {
+  const taken = Math.max(0, Math.min(TOTAL_PRIZES, TOTAL_PRIZES - remaining));
+  return (
+    <span
+      className="flex shrink-0 items-center gap-1"
+      role="img"
+      aria-label={`${taken} of ${TOTAL_PRIZES} prizes taken`}
+    >
+      {Array.from({ length: TOTAL_PRIZES }, (_, i) => (
+        <span
+          key={i}
+          aria-hidden
+          className={`h-2.5 w-2.5 rounded-full ring-1 ring-inset ring-black/25 transition-colors duration-300 ${
+            i < taken ? "bg-white" : "bg-[#6b6b6b]"
+          }`}
+          // The filled state is a Poké Ball: red top half over the white
+          // background above, with a hairline seam. A background-image
+          // gradient (rather than a child element) keeps the pip a single
+          // box so the ring and rounding apply to the whole thing.
+          style={
+            i < taken
+              ? {
+                  backgroundImage:
+                    "linear-gradient(180deg, var(--accent) 0 45%, rgba(0,0,0,0.35) 45% 55%, #fff 55% 100%)",
+                }
+              : undefined
+          }
+        />
+      ))}
+    </span>
+  );
+}
+
+/**
+ * Folder-style name tab clipped to a mat's inner edge — the player's handle
+ * plus their prize scorekeeper. The top mat's tab hangs below it anchored
+ * left; the bottom mat's sits above it anchored right, so the two read as
+ * belonging to the mats they touch rather than to the gap between them.
+ * Pips sit on the side of the name nearer the middle of the board in both
+ * cases (right of the top name, left of the bottom one).
+ */
+function MatTab({
+  name,
+  prizesRemaining,
+  edge,
+}: {
+  name: string;
+  prizesRemaining: number;
+  /** Which mat edge the tab hangs off: "bottom" tucks up under the mat
+   *  above it, "top" tucks down under the mat below it. */
+  edge: "bottom" | "top";
+}) {
+  const hangsBelow = edge === "bottom";
+  return (
+    <div
+      // z-0 against the mats' z-10: the tab has to paint *under* the mat for
+      // the tuck to read, and DOM order alone would put the top mat's tab
+      // (a later sibling) on top of it.
+      className={`relative z-0 flex w-fit max-w-full items-center gap-2 bg-[#1a1a1a] px-3 text-white ${
+        hangsBelow ? "self-start rounded-b-xl" : "self-end rounded-t-xl"
+      }`}
+      style={{
+        height: TAB_CONTENT_PX + TAB_TUCK_PX,
+        marginTop: hangsBelow ? -TAB_TUCK_PX : undefined,
+        paddingTop: hangsBelow ? TAB_TUCK_PX : undefined,
+        marginBottom: hangsBelow ? undefined : -TAB_TUCK_PX,
+        paddingBottom: hangsBelow ? undefined : TAB_TUCK_PX,
+      }}
+    >
+      {!hangsBelow && <PrizePips remaining={prizesRemaining} />}
+      <span className="min-w-0 truncate text-xs font-bold">{name}</span>
+      {hangsBelow && <PrizePips remaining={prizesRemaining} />}
+    </div>
+  );
+}
 
 function Board({
   frame,
@@ -138,48 +233,64 @@ function Board({
           {loading ? "Loading replay…" : "Pick a match below to begin."}
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          <PlayerMat
-            side="player"
-            bench={frame.player.bench}
-            active={frame.player.active}
-            discardCount={frame.player.discardCount}
-            discardTop={frame.player.discardTop}
-            discardTopImageUrl={frame.player.discardTopImageUrl}
-            deckCount={frame.player.deckCount}
-            handCount={frame.player.handCount}
+        <div className="flex flex-col" style={{ gap: TAB_GAP_PX }}>
+          {/* z-10 on the mat wrappers so each mat paints over the tab tucked
+              beneath it. The wrappers are plain positioning shells — mat
+              geometry stays entirely inside PlayerMat. */}
+          <div className="relative z-10">
+            <PlayerMat
+              side="player"
+              bench={frame.player.bench}
+              active={frame.player.active}
+              discardCount={frame.player.discardCount}
+              discardTop={frame.player.discardTop}
+              discardTopImageUrl={frame.player.discardTopImageUrl}
+              deckCount={frame.player.deckCount}
+              handCount={frame.player.handCount}
+              prizesRemaining={frame.player.prizesRemaining}
+              stadium={frame.stadium?.owner === "player" ? frame.stadium : null}
+              lastPlayedTrainer={
+                frame.lastPlayedTrainer?.actor === "player"
+                  ? frame.lastPlayedTrainer
+                  : null
+              }
+              cardWidth={cardWidth}
+              matWidth={matWidth}
+              instant={instant}
+            />
+          </div>
+          <MatTab
+            edge="bottom"
+            name={frame.player.handle ?? "Player"}
             prizesRemaining={frame.player.prizesRemaining}
-            stadium={frame.stadium?.owner === "player" ? frame.stadium : null}
-            lastPlayedTrainer={
-              frame.lastPlayedTrainer?.actor === "player"
-                ? frame.lastPlayedTrainer
-                : null
-            }
-            cardWidth={cardWidth}
-            matWidth={matWidth}
-            instant={instant}
           />
-          <BetweenMatsBar frame={frame} />
-          <PlayerMat
-            side="opponent"
-            bench={frame.opponent.bench}
-            active={frame.opponent.active}
-            discardCount={frame.opponent.discardCount}
-            discardTop={frame.opponent.discardTop}
-            discardTopImageUrl={frame.opponent.discardTopImageUrl}
-            deckCount={frame.opponent.deckCount}
-            handCount={frame.opponent.handCount}
+          <MatTab
+            edge="top"
+            name={frame.opponent.handle ?? "Opponent"}
             prizesRemaining={frame.opponent.prizesRemaining}
-            stadium={frame.stadium?.owner === "opponent" ? frame.stadium : null}
-            lastPlayedTrainer={
-              frame.lastPlayedTrainer?.actor === "opponent"
-                ? frame.lastPlayedTrainer
-                : null
-            }
-            cardWidth={cardWidth}
-            matWidth={matWidth}
-            instant={instant}
           />
+          <div className="relative z-10">
+            <PlayerMat
+              side="opponent"
+              bench={frame.opponent.bench}
+              active={frame.opponent.active}
+              discardCount={frame.opponent.discardCount}
+              discardTop={frame.opponent.discardTop}
+              discardTopImageUrl={frame.opponent.discardTopImageUrl}
+              deckCount={frame.opponent.deckCount}
+              handCount={frame.opponent.handCount}
+              prizesRemaining={frame.opponent.prizesRemaining}
+              stadium={frame.stadium?.owner === "opponent" ? frame.stadium : null}
+              lastPlayedTrainer={
+                frame.lastPlayedTrainer?.actor === "opponent"
+                  ? frame.lastPlayedTrainer
+                  : null
+              }
+              cardWidth={cardWidth}
+              matWidth={matWidth}
+              instant={instant}
+            />
+          </div>
         </div>
       )}
       {inspect && (
@@ -187,78 +298,6 @@ function Board({
       )}
     </div>
     </InspectContext.Provider>
-  );
-}
-
-// Thread-style current-action strip slotted between the two mats. Repurposes
-// the battle-log thread's vocabulary — actor name + concise action + a
-// black "Turn N" pill — but collapses to a single row showing only the
-// action for the board state on screen. Left: actor (or "Setup" / "Pokémon
-// Checkup" for the synthetic phases). Center: the current action. Right: the
-// turn number.
-function BetweenMatsBar({ frame }: { frame: ReplayFrame }) {
-  const leftLabel =
-    frame.phase === "setup"
-      ? "Setup"
-      : frame.phase === "checkup"
-        ? "Pokémon Checkup"
-        : frame.actor === "player"
-          ? frame.player.handle ?? "Player"
-          : frame.actor === "opponent"
-            ? frame.opponent.handle ?? "Opponent"
-            : "Game";
-  // Setup has no turn yet; turns and between-turn checkups do.
-  const showTurn = frame.phase === "turn" || frame.phase === "checkup";
-
-  // Turn bookends ("… ended their turn", "<player>'s turn") are implied by
-  // whatever action follows, so we suppress them here and leave the action
-  // line blank rather than echoing redundant scaffolding.
-  const summary = frame.summary ?? "";
-  const s = summary.toLowerCase();
-  const handles = [frame.player.handle, frame.opponent.handle]
-    .filter((h): h is string => Boolean(h))
-    .map((h) => h.toLowerCase());
-  const isImplied =
-    s.includes("ended their turn") ||
-    handles.some((h) => s.includes(`${h}'s turn`) || s.includes(`${h} turn`));
-  // During a player's turn the holder is named on the line above, so strip a
-  // leading "<holder> " / "<holder>'s " from the action (and recapitalize).
-  // Setup/checkup keep the name since the left label doesn't identify who acted.
-  const turnHolder =
-    frame.phase === "turn"
-      ? frame.actor === "player"
-        ? frame.player.handle
-        : frame.actor === "opponent"
-          ? frame.opponent.handle
-          : null
-      : null;
-  // "Opponent" in the action means the side opposite the actor.
-  const otherName =
-    frame.actor === "player"
-      ? frame.opponent.handle
-      : frame.actor === "opponent"
-        ? frame.player.handle
-        : null;
-  const actionText = isImplied
-    ? ""
-    : formatActionLabel(summary, { authorName: turnHolder, otherName });
-
-  return (
-    <div className="flex flex-col gap-0.5 px-1">
-      <div className="flex items-center justify-between gap-2">
-        <span className="min-w-0 truncate text-sm font-bold text-text-primary">
-          {leftLabel}
-        </span>
-        {showTurn && (
-          <span className="shrink-0 rounded-full bg-[#1a1a1a] px-2.5 py-0.5 text-[10px] font-bold tabular-nums text-white">
-            Turn {frame.turn}
-          </span>
-        )}
-      </div>
-      <div className="line-clamp-2 h-[2.5rem] overflow-hidden py-1 text-center text-xs leading-snug text-text-secondary">
-        {actionText}
-      </div>
-    </div>
   );
 }
 
