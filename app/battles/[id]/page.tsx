@@ -202,25 +202,12 @@ export default async function BattleRoute({
   const opponentHandle = (match.opponent_handle as string | null) ?? null;
   const playedAt =
     (match.played_at as string | null) ?? (match.created_at as string);
-  const winnerName =
-    match.result === "win"
-      ? playerHandle ?? (profile.username as string)
-      : match.result === "loss"
-      ? opponentHandle ?? (match.opponent_archetype as string | null) ?? "Opponent"
-      : null;
-  const loserName =
-    match.result === "win"
-      ? opponentHandle ?? (match.opponent_archetype as string | null) ?? "Opponent"
-      : match.result === "loss"
-      ? playerHandle ?? (profile.username as string)
-      : null;
 
   return (
     <BattleLogPage
       matchId={match.short_id as string}
       result={match.result as "win" | "loss" | "draw"}
       opponentArchetype={match.opponent_archetype as string | null}
-      createdAt={match.created_at as string}
       playedAt={playedAt}
       deckName={deck.name as string}
       username={profile.username as string}
@@ -232,8 +219,6 @@ export default async function BattleRoute({
       opponentImageUrl={opponentImageUrl}
       opponentColor={opponentColor}
       opponentHandle={opponentHandle}
-      winnerName={winnerName}
-      loserName={loserName}
       playerStats={stats.player}
       opponentStats={stats.opponent}
       hasBattleLog={hasBattleLog}
