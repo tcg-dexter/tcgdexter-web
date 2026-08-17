@@ -115,4 +115,31 @@ describe("engine.replay (example-1)", () => {
       expect(maxSameName).toBeGreaterThanOrEqual(2);
     });
   });
+
+  // A promotion line is the log stating outright which Pokémon is now
+  // Active, so the board must show one afterwards. It used to be dropped
+  // when the target wasn't on the engine's tracked bench — which happens
+  // whenever the parser doesn't split a bulk bench line into per-card
+  // actions — leaving the Active spot empty for every frame from the
+  // knockout onward. This fixture promotes a Frogadier benched exactly
+  // that way.
+  describe("promotions always seat an Active Pokémon", () => {
+    const promotions = parsed.actions
+      .map((action, index) => ({ action, index }))
+      .filter(({ action }) => action.action_type === "switch_active");
+
+    it("is not a vacuous guard — the replay contains promotions", () => {
+      expect(promotions.length).toBeGreaterThan(0);
+    });
+
+    it("seats the named Pokémon, even one never tracked onto the bench", () => {
+      for (const { action, index } of promotions) {
+        if (action.actor !== "player" && action.actor !== "opponent") continue;
+        const named = String(
+          (action.payload as Record<string, unknown>).pokemon ?? "",
+        );
+        expect(result.states[index].sides[action.actor].active?.card.name).toBe(named);
+      }
+    });
+  });
 });

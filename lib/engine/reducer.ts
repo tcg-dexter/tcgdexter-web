@@ -478,7 +478,20 @@ export function applyAction(
           event.detail = { promoted: targetName, noop: true };
           break;
         }
-        diag("warn", "switch_target_missing", `Promote ${targetName} but not on bench`, { targetName });
+        // Not tracked on the bench — but the log is authoritative that
+        // this Pokémon is now Active, so materialize it rather than
+        // leaving the slot empty. Same conjuring play_to_active does for
+        // a card that was never tracked into hand, and it matters more
+        // here: bench arrivals go untracked whenever the parser doesn't
+        // split a bulk line into per-card actions (Buddy-Buddy Poffin's
+        // "drew 2 cards and played them to the Bench" is the known case),
+        // and dropping the promotion strands the board with no Active for
+        // every frame after a knockout.
+        diag("info", "switch_target_missing", `Promote ${targetName} but not on bench; conjured it`, { targetName });
+        const conjured = makePokemon(makeCard(targetName), state.turn.number);
+        if (side.active) side.bench.push(side.active);
+        side.active = conjured;
+        event.detail = { promoted: targetName, conjured: true };
         break;
       }
       const incoming = side.bench.splice(benchIdx, 1)[0];
