@@ -69,11 +69,14 @@ function speedLabel(s: 0.5 | 1 | 2 | 4): string {
 /* ──────────────────────────────────────────────────────────────── */
 
 // Name-tab geometry. Each tab tucks TAB_TUCK_PX under its mat so the mat's
-// rounded-xl corner sits on top of it (a folder tab), which is why the tuck
-// tracks the mat's 12px radius: any less and the corner's curve would leave
-// a notch of background showing between mat and tab.
-const TAB_TUCK_PX = 12;
-const TAB_CONTENT_PX = 24;
+// rounded-xl corner sits on top of it (a folder tab). The tuck has to clear
+// the mat's 12px corner radius by a comfortable margin, not just match it:
+// at exactly 12px the tab's square top corner landed on the tangent point
+// where the mat's curve pulls away, so the corner poked out as a small dark
+// nub. Doubling it puts the tab's top edge well inside the mat's straight
+// run, where it's covered outright.
+const TAB_TUCK_PX = 24;
+const TAB_CONTENT_PX = 28;
 const TAB_GAP_PX = 8;
 
 // Fixed vertical chrome inside the mat column besides the two mats
@@ -109,18 +112,18 @@ function PrizePips({ remaining }: { remaining: number }) {
         <span
           key={i}
           aria-hidden
-          className={`h-2.5 w-2.5 rounded-full ring-1 ring-inset ring-black/25 transition-colors duration-300 ${
+          className={`h-2.5 w-2.5 rounded-full transition-colors duration-300 ${
             i < taken ? "bg-white" : "bg-[#6b6b6b]"
           }`}
-          // The filled state is a Poké Ball: red top half over the white
-          // background above, with a hairline seam. A background-image
-          // gradient (rather than a child element) keeps the pip a single
-          // box so the ring and rounding apply to the whole thing.
+          // The filled state is a Poké Ball: a hard red-over-white split at
+          // the midline, no seam and no outline. A background-image gradient
+          // (rather than a child element) keeps the pip a single box, so the
+          // rounding clips both halves in one go.
           style={
             i < taken
               ? {
                   backgroundImage:
-                    "linear-gradient(180deg, var(--accent) 0 45%, rgba(0,0,0,0.35) 45% 55%, #fff 55% 100%)",
+                    "linear-gradient(180deg, var(--accent) 0 50%, #fff 50% 100%)",
                 }
               : undefined
           }
@@ -155,20 +158,32 @@ function MatTab({
       // z-0 against the mats' z-10: the tab has to paint *under* the mat for
       // the tuck to read, and DOM order alone would put the top mat's tab
       // (a later sibling) on top of it.
-      className={`relative z-0 flex w-fit max-w-full items-center gap-2 bg-[#1a1a1a] px-3 text-white ${
+      className={`relative z-0 w-fit max-w-full bg-[#1a1a1a] px-3 text-white ${
         hangsBelow ? "self-start rounded-b-xl" : "self-end rounded-t-xl"
       }`}
+      // The tucked strip is expressed as padding rather than as part of a
+      // fixed overall height, so the box below is exactly the band that
+      // shows past the mat — no arithmetic to keep in sync.
       style={{
-        height: TAB_CONTENT_PX + TAB_TUCK_PX,
         marginTop: hangsBelow ? -TAB_TUCK_PX : undefined,
         paddingTop: hangsBelow ? TAB_TUCK_PX : undefined,
         marginBottom: hangsBelow ? undefined : -TAB_TUCK_PX,
         paddingBottom: hangsBelow ? undefined : TAB_TUCK_PX,
       }}
     >
-      {!hangsBelow && <PrizePips remaining={prizesRemaining} />}
-      <span className="min-w-0 truncate text-xs font-bold">{name}</span>
-      {hangsBelow && <PrizePips remaining={prizesRemaining} />}
+      {/* Centring the row in this band — not in the full box — is what puts
+          the name and pips in the middle of the tab as seen, since the
+          tucked half is hidden behind the mat. */}
+      <div
+        className="flex items-center gap-2"
+        style={{ height: TAB_CONTENT_PX }}
+      >
+        {!hangsBelow && <PrizePips remaining={prizesRemaining} />}
+        <span className="min-w-0 truncate text-xs font-bold leading-none">
+          {name}
+        </span>
+        {hangsBelow && <PrizePips remaining={prizesRemaining} />}
+      </div>
     </div>
   );
 }

@@ -57,14 +57,20 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// Banner card tuning — mirrors the meta-archetype geometry so the two
-// banners feel the same size, but reduced to two cards. Each card sits
-// flush with the banner's bottom edge and is shifted down by a fraction
-// of its own height so a fixed portion peeks above the bottom edge
-// regardless of banner height.
-const CARD_WIDTH_PCT = 28;
+// Banner card tuning. The pair sits at the right of the banner, angled
+// apart and overlapping, with the matchup text to their left.
+//
+// Cards are sized off the banner's HEIGHT rather than its width. The
+// banner's aspect differs between mobile and desktop, so a width-based
+// card size would peek above the bottom edge by a different fraction of
+// the banner at each breakpoint and need a compensating scale on every
+// one; height-based sizing is self-correcting. Overlap is expressed in
+// percent of the card's own width for the same reason.
+const CARD_HEIGHT_PCT = 107;
 const BOTTOM_CLIP_PCT = 30;
-const CARD_ROTATION_DEG = 10;
+const CARD_OVERLAP_PCT = 30;
+const CARD_ROTATION_DEG = 9;
+const CARD_RIGHT_INSET_PCT = 2;
 
 export default function BattleLogPage({
   matchId,
@@ -137,64 +143,55 @@ export default function BattleLogPage({
       />
       <ThemeColor color={themeColor} />
 
-      {/* Banner — same dimensions as the meta archetype and user profile
-          banners, with two cards bottom-anchored and the matchup label
-          centered between them in white.
+      {/* Banner — same box as the meta archetype and user profile banners:
+          `sm:aspect-[4.6875/1]` on desktop (the original 3:1 ÷ 0.64), and
+          its own `h-[calc(30.6vw-10.8px)]` on mobile, which solves for the
+          same ~4px gap above the cards the profile banner's 34vw does at
+          this banner's narrower cards. See MetaProfileHeader for the full
+          derivation.
 
-          Desktop height is `sm:aspect-[4.6875/1]`, matching those two
-          headers (the original 3:1 ÷ 0.64). Mobile keeps its own
-          `h-[calc(30.6vw-10.8px)]`: that formula targets the same ~4px
-          gap above the cards the profile banner's 34vw does, just solved
-          for this banner's narrower CARD_WIDTH_PCT, so the two are already
-          equivalent there. See MetaProfileHeader for the full derivation. */}
+          Layout is matchup text on the left, the two decks' cards angled
+          and overlapping at the right. */}
       <div
         className="relative w-full overflow-hidden h-[calc(30.6vw-10.8px)] sm:h-auto sm:aspect-[4.6875/1]"
         style={{ background: bannerGradient }}
       >
         <div className="absolute inset-0 mx-auto max-w-6xl">
           <div className="relative h-full mx-6">
-            {/* Cards get the reciprocal 0.64 shrink about their bottom edge
-                so the slice peeking above the banner floor stays the same
-                fraction of the (now shorter) banner it was at 3:1. Mobile
-                is unscaled — its height wasn't reduced. */}
-            <div className="absolute inset-0 sm:scale-[0.64] sm:origin-bottom">
-              {deckImageUrl && (
-                <BannerCard
-                  src={deckImageUrl}
-                  alt={playerLabel}
-                  leftPct={6}
-                  rotationDeg={-CARD_ROTATION_DEG}
-                />
-              )}
-              {opponentImageUrl && (
-                <BannerCard
-                  src={opponentImageUrl}
-                  alt={opponentLabel}
-                  leftPct={100 - 6 - CARD_WIDTH_PCT}
-                  rotationDeg={CARD_ROTATION_DEG}
-                />
-              )}
-            </div>
+            {deckImageUrl && (
+              <BannerCard
+                src={deckImageUrl}
+                alt={playerLabel}
+                // Shifted left by all but the overlap, so the two cards
+                // sit as a pair against the banner's right edge.
+                offsetXPct={-(100 - CARD_OVERLAP_PCT)}
+                rotationDeg={-CARD_ROTATION_DEG}
+              />
+            )}
+            {opponentImageUrl && (
+              <BannerCard
+                src={opponentImageUrl}
+                alt={opponentLabel}
+                offsetXPct={0}
+                rotationDeg={CARD_ROTATION_DEG}
+              />
+            )}
 
-            {/* Centered matchup text. Stays vertically and horizontally
-                centered in the banner; cards sit beneath it visually
-                because zIndex isn't set, so the text paints on top.
+            {/* Matchup text — left-aligned, vertically centred, capped in
+                width so it never runs under the cards. It paints over them
+                without needing a z-index, being the later sibling.
 
-                Type steps up across three desktop tiers rather than
-                jumping straight to 5xl at `sm:`. The banner is now a
-                fixed 1/4.6875 of viewport width, so just above the 640px
-                breakpoint it's only ~137px tall — the old flat
-                `sm:text-5xl` block ran ~205px and would have spilled out
-                of it. Each tier below fits its narrowest viewport. */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-6 pb-[3.4vw] sm:pb-0">
-              <div className="text-center text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]">
-                <p className="text-lg sm:text-2xl lg:text-4xl xl:text-5xl font-bold leading-tight truncate">
+                Type steps across three desktop tiers rather than jumping
+                straight to 5xl at `sm:`. The banner is a fixed 1/4.6875 of
+                viewport width, so just above the 640px breakpoint it's only
+                ~137px tall; each tier below fits its narrowest viewport. */}
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex max-w-[52%] sm:max-w-[62%] flex-col justify-center">
+              <div className="min-w-0 text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]">
+                <p className="truncate text-lg sm:text-2xl lg:text-4xl xl:text-5xl font-bold leading-tight">
                   {playerLabel}
                 </p>
-                <p className="my-0.5 sm:my-1 lg:my-2 text-xs sm:text-sm lg:text-xl xl:text-2xl font-semibold uppercase tracking-[0.25em] opacity-90">
-                  vs
-                </p>
-                <p className="text-lg sm:text-2xl lg:text-4xl xl:text-5xl font-bold leading-tight truncate">
+                <p className="truncate text-lg sm:text-2xl lg:text-4xl xl:text-5xl font-bold leading-tight">
+                  <span className="opacity-70">vs </span>
                   {opponentLabel}
                 </p>
                 <p className="mt-1.5 sm:mt-2 lg:mt-3 text-[11px] sm:text-xs lg:text-sm font-medium uppercase tracking-[0.2em] opacity-80">
@@ -385,12 +382,14 @@ function FitText({
 function BannerCard({
   src,
   alt,
-  leftPct,
+  offsetXPct,
   rotationDeg,
 }: {
   src: string;
   alt: string;
-  leftPct: number;
+  /** Horizontal shift off the shared right anchor, in percent of the
+   *  card's own width — so the overlap holds at any banner size. */
+  offsetXPct: number;
   rotationDeg: number;
 }) {
   return (
@@ -402,10 +401,12 @@ function BannerCard({
       className="absolute pointer-events-none select-none drop-shadow-md"
       style={{
         bottom: 0,
-        left: `${leftPct}%`,
-        width: `${CARD_WIDTH_PCT}%`,
-        height: "auto",
-        transform: `translateY(${BOTTOM_CLIP_PCT}%) rotate(${rotationDeg}deg)`,
+        right: `${CARD_RIGHT_INSET_PCT}%`,
+        height: `${CARD_HEIGHT_PCT}%`,
+        width: "auto",
+        // Rotate about the bottom centre, then drop the card so a fixed
+        // share of it clears the banner's floor.
+        transform: `translate(${offsetXPct}%, ${BOTTOM_CLIP_PCT}%) rotate(${rotationDeg}deg)`,
         transformOrigin: "50% 100%",
       }}
     />
