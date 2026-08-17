@@ -76,7 +76,10 @@ function speedLabel(s: 0.5 | 1 | 2 | 4): string {
 // nub. Doubling it puts the tab's top edge well inside the mat's straight
 // run, where it's covered outright.
 const TAB_TUCK_PX = 24;
-const TAB_CONTENT_PX = 28;
+// Height of the band that shows past the mat. The tuck is unaffected by
+// this — it's covered either way — so trimming here only shortens what the
+// eye actually sees.
+const TAB_CONTENT_PX = 22;
 const TAB_GAP_PX = 8;
 
 // Fixed vertical chrome inside the mat column besides the two mats
@@ -92,8 +95,8 @@ const TOTAL_PRIZES = 6;
 
 /**
  * Prize scorekeeper — one pip per prize card that side started with, filled
- * in as they take them. A taken prize reads as a Poké Ball (red over white);
- * an untaken one stays a flat grey.
+ * in as they take them. A taken prize reads as a Poké Ball; an untaken one
+ * stays a flat grey.
  *
  * Note this counts prizes *taken by* this side, which is why it's driven by
  * the side's own remaining pile: you draw from your own prizes when you
@@ -113,17 +116,22 @@ function PrizePips({ remaining }: { remaining: number }) {
           key={i}
           aria-hidden
           className={`h-2.5 w-2.5 rounded-full transition-colors duration-300 ${
-            i < taken ? "bg-white" : "bg-[#6b6b6b]"
+            i < taken ? "bg-current" : "bg-[#6b6b6b]"
           }`}
-          // The filled state is a Poké Ball: a hard red-over-white split at
-          // the midline, no seam and no outline. A background-image gradient
-          // (rather than a child element) keeps the pip a single box, so the
+          // The filled state is a Poké Ball: a hard split at the midline,
+          // no seam and no outline. A background-image gradient (rather
+          // than a child element) keeps the pip a single box, so the
           // rounding clips both halves in one go.
+          //
+          // The lower half is `currentColor`, not a literal white, because
+          // the tab inverts between themes — a fixed white half would
+          // vanish into the white dark-mode tab. Inheriting the tab's own
+          // text color keeps the ball contrasting in both.
           style={
             i < taken
               ? {
                   backgroundImage:
-                    "linear-gradient(180deg, var(--accent) 0 50%, #fff 50% 100%)",
+                    "linear-gradient(180deg, var(--accent) 0 50%, currentColor 50% 100%)",
                 }
               : undefined
           }
@@ -158,7 +166,11 @@ function MatTab({
       // z-0 against the mats' z-10: the tab has to paint *under* the mat for
       // the tuck to read, and DOM order alone would put the top mat's tab
       // (a later sibling) on top of it.
-      className={`relative z-0 w-fit max-w-full bg-[#1a1a1a] px-3 text-white ${
+      // The tab inverts with the theme — near-black on light, white on
+      // dark. Its text color is load-bearing beyond the name: the prize
+      // pips' lower half reads it via currentColor, so the two stay in
+      // step without a second theme rule.
+      className={`relative z-0 w-fit max-w-full bg-[#1a1a1a] px-3 text-white dark:bg-white dark:text-[#1a1a1a] ${
         hangsBelow ? "self-start rounded-b-xl" : "self-end rounded-t-xl"
       }`}
       // The tucked strip is expressed as padding rather than as part of a
