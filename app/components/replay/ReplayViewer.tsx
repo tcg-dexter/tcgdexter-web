@@ -116,22 +116,26 @@ function PrizePips({ remaining }: { remaining: number }) {
           key={i}
           aria-hidden
           className={`h-2.5 w-2.5 rounded-full transition-colors duration-300 ${
-            i < taken ? "bg-current" : "bg-[#6b6b6b]"
+            i < taken
+              ? "bg-white ring-[0.5px] ring-inset ring-black"
+              : "bg-[#6b6b6b]"
           }`}
-          // The filled state is a Poké Ball: a hard split at the midline,
-          // no seam and no outline. A background-image gradient (rather
-          // than a child element) keeps the pip a single box, so the
-          // rounding clips both halves in one go.
+          // The filled state is a Poké Ball: a hard red-over-white split at
+          // the midline. A background-image gradient (rather than a child
+          // element) keeps the pip a single box, so the rounding clips both
+          // halves in one go.
           //
-          // The lower half is `currentColor`, not a literal white, because
-          // the tab inverts between themes — a fixed white half would
-          // vanish into the white dark-mode tab. Inheriting the tab's own
-          // text color keeps the ball contrasting in both.
+          // Both halves are fixed colors in either theme — a Poké Ball that
+          // recolored with the theme wouldn't read as one. The hairline
+          // outline is what makes that survivable on the white dark-mode
+          // tab, where the ball's lower half would otherwise disappear into
+          // the background. It's `ring-inset` so the pip keeps its exact
+          // 10px footprint rather than growing by the outline's width.
           style={
             i < taken
               ? {
                   backgroundImage:
-                    "linear-gradient(180deg, var(--accent) 0 50%, currentColor 50% 100%)",
+                    "linear-gradient(180deg, var(--accent) 0 50%, #fff 50% 100%)",
                 }
               : undefined
           }
@@ -167,9 +171,8 @@ function MatTab({
       // the tuck to read, and DOM order alone would put the top mat's tab
       // (a later sibling) on top of it.
       // The tab inverts with the theme — near-black on light, white on
-      // dark. Its text color is load-bearing beyond the name: the prize
-      // pips' lower half reads it via currentColor, so the two stay in
-      // step without a second theme rule.
+      // dark. The prize pips deliberately don't invert with it; see
+      // PrizePips for how they stay legible against both.
       className={`relative z-0 w-fit max-w-full bg-[#1a1a1a] px-3 text-white dark:bg-white dark:text-[#1a1a1a] ${
         hangsBelow ? "self-start rounded-b-xl" : "self-end rounded-t-xl"
       }`}
