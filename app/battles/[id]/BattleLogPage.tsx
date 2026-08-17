@@ -137,47 +137,67 @@ export default function BattleLogPage({
       />
       <ThemeColor color={themeColor} />
 
-      {/* Banner — same dimensions as the meta archetype banner, with two
-          cards bottom-anchored and the matchup label centered between
-          them in white. */}
+      {/* Banner — same dimensions as the meta archetype and user profile
+          banners, with two cards bottom-anchored and the matchup label
+          centered between them in white.
+
+          Desktop height is `sm:aspect-[4.6875/1]`, matching those two
+          headers (the original 3:1 ÷ 0.64). Mobile keeps its own
+          `h-[calc(30.6vw-10.8px)]`: that formula targets the same ~4px
+          gap above the cards the profile banner's 34vw does, just solved
+          for this banner's narrower CARD_WIDTH_PCT, so the two are already
+          equivalent there. See MetaProfileHeader for the full derivation. */}
       <div
-        className="relative w-full overflow-hidden h-[calc(30.6vw-10.8px)] sm:h-auto sm:aspect-[3/1]"
+        className="relative w-full overflow-hidden h-[calc(30.6vw-10.8px)] sm:h-auto sm:aspect-[4.6875/1]"
         style={{ background: bannerGradient }}
       >
         <div className="absolute inset-0 mx-auto max-w-6xl">
           <div className="relative h-full mx-6">
-            {deckImageUrl && (
-              <BannerCard
-                src={deckImageUrl}
-                alt={playerLabel}
-                leftPct={6}
-                rotationDeg={-CARD_ROTATION_DEG}
-              />
-            )}
-            {opponentImageUrl && (
-              <BannerCard
-                src={opponentImageUrl}
-                alt={opponentLabel}
-                leftPct={100 - 6 - CARD_WIDTH_PCT}
-                rotationDeg={CARD_ROTATION_DEG}
-              />
-            )}
+            {/* Cards get the reciprocal 0.64 shrink about their bottom edge
+                so the slice peeking above the banner floor stays the same
+                fraction of the (now shorter) banner it was at 3:1. Mobile
+                is unscaled — its height wasn't reduced. */}
+            <div className="absolute inset-0 sm:scale-[0.64] sm:origin-bottom">
+              {deckImageUrl && (
+                <BannerCard
+                  src={deckImageUrl}
+                  alt={playerLabel}
+                  leftPct={6}
+                  rotationDeg={-CARD_ROTATION_DEG}
+                />
+              )}
+              {opponentImageUrl && (
+                <BannerCard
+                  src={opponentImageUrl}
+                  alt={opponentLabel}
+                  leftPct={100 - 6 - CARD_WIDTH_PCT}
+                  rotationDeg={CARD_ROTATION_DEG}
+                />
+              )}
+            </div>
 
             {/* Centered matchup text. Stays vertically and horizontally
                 centered in the banner; cards sit beneath it visually
-                because zIndex isn't set, so the text paints on top. */}
+                because zIndex isn't set, so the text paints on top.
+
+                Type steps up across three desktop tiers rather than
+                jumping straight to 5xl at `sm:`. The banner is now a
+                fixed 1/4.6875 of viewport width, so just above the 640px
+                breakpoint it's only ~137px tall — the old flat
+                `sm:text-5xl` block ran ~205px and would have spilled out
+                of it. Each tier below fits its narrowest viewport. */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-6 pb-[3.4vw] sm:pb-0">
               <div className="text-center text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]">
-                <p className="text-lg sm:text-5xl font-bold leading-tight truncate">
+                <p className="text-lg sm:text-2xl lg:text-4xl xl:text-5xl font-bold leading-tight truncate">
                   {playerLabel}
                 </p>
-                <p className="my-0.5 sm:my-2 text-xs sm:text-2xl font-semibold uppercase tracking-[0.25em] opacity-90">
+                <p className="my-0.5 sm:my-1 lg:my-2 text-xs sm:text-sm lg:text-xl xl:text-2xl font-semibold uppercase tracking-[0.25em] opacity-90">
                   vs
                 </p>
-                <p className="text-lg sm:text-5xl font-bold leading-tight truncate">
+                <p className="text-lg sm:text-2xl lg:text-4xl xl:text-5xl font-bold leading-tight truncate">
                   {opponentLabel}
                 </p>
-                <p className="mt-1.5 sm:mt-3 text-[11px] sm:text-sm font-medium uppercase tracking-[0.2em] opacity-80">
+                <p className="mt-1.5 sm:mt-2 lg:mt-3 text-[11px] sm:text-xs lg:text-sm font-medium uppercase tracking-[0.2em] opacity-80">
                   {formatPlayedAt(playedAt)}
                 </p>
               </div>

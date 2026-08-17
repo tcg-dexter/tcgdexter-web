@@ -1040,6 +1040,29 @@ interface ThreadPostInput {
 const WIN_GRADIENT = "linear-gradient(135deg,#F2A20C 0%,#D91E0D 50%,#A60D0D 100%)";
 const LOSS_COLOR = "#1a1a1a";
 
+/**
+ * Per-density post metrics. The avatar sits at the very top of its column
+ * and the name row starts at the same y, so the name only reads as centred
+ * on the avatar when `nameRow`'s min-height matches the avatar's diameter.
+ * Keeping the pair in one table is what makes that invariant checkable:
+ * they drifted apart in the compact side panel (27px avatar against a 36px
+ * row), which dropped the name ~4px and made the two look bottom-aligned.
+ */
+const POST_DENSITY = {
+  compact: {
+    avatar: "h-[27px] w-[27px] text-[11px]",
+    nameRow: "min-h-[27px]",
+    systemLabel: "text-[9px]",
+    glyph: "w-3 h-3",
+  },
+  regular: {
+    avatar: "h-9 w-9 text-sm",
+    nameRow: "min-h-9",
+    systemLabel: "text-[11px]",
+    glyph: "w-4 h-4",
+  },
+} as const;
+
 function ThreadPost({
   post,
   isLast,
@@ -1078,6 +1101,7 @@ function ThreadPost({
     ? { background: LOSS_COLOR }
     : { background: avatarBg(post.displayName) };
   const SystemGlyph = post.system ? ICONS[post.system.glyph] : null;
+  const density = POST_DENSITY[compactAvatars ? "compact" : "regular"];
 
   return (
     <div
@@ -1086,19 +1110,15 @@ function ThreadPost({
     >
       <div className="flex flex-col items-center self-stretch">
         <div
-          className={`relative flex shrink-0 items-center justify-center rounded-full font-bold text-white ${
-            compactAvatars ? "h-[27px] w-[27px] text-[11px]" : "h-9 w-9 text-sm"
-          }`}
+          className={`relative flex shrink-0 items-center justify-center rounded-full font-bold text-white ${density.avatar}`}
           style={avatarStyle}
         >
           {post.system?.label ? (
-            <span
-              className={`font-bold tracking-tight ${compactAvatars ? "text-[9px]" : "text-[11px]"}`}
-            >
+            <span className={`font-bold tracking-tight ${density.systemLabel}`}>
               {post.system.label}
             </span>
           ) : SystemGlyph ? (
-            <SystemGlyph className={compactAvatars ? "w-3 h-3" : "w-4 h-4"} />
+            <SystemGlyph className={density.glyph} />
           ) : (
             avatarInitial(post.displayName)
           )}
@@ -1123,7 +1143,7 @@ function ThreadPost({
           isLast ? "" : "border-b border-black/[0.08] dark:border-white/10"
         }`}
       >
-        <div className="flex items-center justify-between gap-2 min-h-[2.25rem]">
+        <div className={`flex items-center justify-between gap-2 ${density.nameRow}`}>
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="text-sm font-bold text-text-primary truncate">
               {post.displayName}
