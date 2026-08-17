@@ -149,17 +149,19 @@ export default function BattleLogPage({
       />
       <ThemeColor color={themeColor} />
 
-      {/* Banner — same box as the meta archetype and user profile banners:
-          `sm:aspect-[4.6875/1]` on desktop (the original 3:1 ÷ 0.64), and
-          its own `h-[calc(30.6vw-10.8px)]` on mobile, which solves for the
-          same ~4px gap above the cards the profile banner's 34vw does at
-          this banner's narrower cards. See MetaProfileHeader for the full
-          derivation.
+      {/* Banner — matchup text on the left, the two decks' cards angled and
+          overlapping at the right.
 
-          Layout is matchup text on the left, the two decks' cards angled
-          and overlapping at the right. */}
+          Desktop runs 10% taller than the meta archetype and user profile
+          banners: `sm:aspect-[4.2614/1]` is their shared 4.6875 ÷ 1.1 (a
+          taller box means a smaller aspect denominator at the same width).
+          Mobile keeps `h-[calc(30.6vw-10.8px)]`, which solves for the same
+          ~4px gap above the cards the profile banner's 34vw does at this
+          banner's narrower cards — see MetaProfileHeader for the full
+          derivation. The cards need no matching change: CARD_HEIGHT_PCT is
+          a share of banner height, so they grow with it. */}
       <div
-        className="relative w-full overflow-hidden h-[calc(30.6vw-10.8px)] sm:h-auto sm:aspect-[4.6875/1]"
+        className="relative w-full overflow-hidden h-[calc(30.6vw-10.8px)] sm:h-auto sm:aspect-[4.2614/1]"
         style={{ background: bannerGradient }}
       >
         <div className="absolute inset-0 mx-auto max-w-6xl">
@@ -192,16 +194,19 @@ export default function BattleLogPage({
                 overhanging, and the extra lines would spill out of a banner
                 that's only as tall as its aspect allows.
 
-                Type steps across three desktop tiers rather than jumping
-                straight to 5xl at `sm:`. The banner is a fixed 1/4.6875 of
-                viewport width, so just above the 640px breakpoint it's only
-                ~137px tall; each tier below fits its narrowest viewport. */}
+                Type steps across three desktop tiers rather than jumping to
+                one size at `sm:`. The banner is a fixed fraction of viewport
+                width, so just above the 640px breakpoint it's only ~150px
+                tall; each tier below fits its narrowest viewport. The ramp
+                is the previous one × 0.75 — two tiers land on Tailwind's
+                scale (24→18, 48→36), the other two need arbitrary values to
+                hit the same ratio. */}
             <div className="pointer-events-none absolute inset-y-0 left-0 right-0 flex flex-col justify-center">
               <div className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]">
-                <p className="whitespace-nowrap text-lg sm:text-2xl lg:text-4xl xl:text-5xl font-bold leading-tight">
+                <p className="whitespace-nowrap text-[13.5px] sm:text-lg lg:text-[27px] xl:text-4xl font-bold leading-tight">
                   {playerLabel}
                 </p>
-                <p className="whitespace-nowrap text-lg sm:text-2xl lg:text-4xl xl:text-5xl font-bold leading-tight">
+                <p className="whitespace-nowrap text-[13.5px] sm:text-lg lg:text-[27px] xl:text-4xl font-bold leading-tight">
                   <span className="opacity-70">vs </span>
                   {opponentLabel}
                 </p>
