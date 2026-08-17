@@ -67,19 +67,41 @@ export function BattleStatChart({
   );
 }
 
-/** Builds the six stat rows in the canonical order the battle page uses.
- *  Kept here rather than at the call sites so both surfaces stay in sync
- *  if row labels or order ever shift. */
+export type BattleStatKey = keyof BattleSideStats;
+
+const BATTLE_STAT_LABELS: Record<BattleStatKey, string> = {
+  damage: "Damage Dealt",
+  pokemon: "Pokémon Played",
+  supporters: "Supporters Played",
+  items: "Items Played",
+  energy: "Energy Attached",
+  prizes: "Prizes Taken",
+};
+
+/** Canonical row order. Callers that want a subset pass their own list to
+ *  `buildBattleStatRows`, but anything showing the full table gets this
+ *  order — and `BattleStatChart` styles the final row as a footer, so the
+ *  last entry should always be the one worth landing on. */
+export const BATTLE_STAT_ORDER: BattleStatKey[] = [
+  "damage",
+  "pokemon",
+  "supporters",
+  "items",
+  "energy",
+  "prizes",
+];
+
+/** Builds stat rows from the canonical labels, defaulting to all six in
+ *  the order above. Kept here rather than at the call sites so every
+ *  surface stays in sync if a label or the ordering ever shifts. */
 export function buildBattleStatRows(
   playerStats: BattleSideStats,
   opponentStats: BattleSideStats,
+  keys: BattleStatKey[] = BATTLE_STAT_ORDER,
 ): { label: string; left: number; right: number }[] {
-  return [
-    { label: "Damage Dealt", left: playerStats.damage, right: opponentStats.damage },
-    { label: "Pokémon Played", left: playerStats.pokemon, right: opponentStats.pokemon },
-    { label: "Supporters Played", left: playerStats.supporters, right: opponentStats.supporters },
-    { label: "Items Played", left: playerStats.items, right: opponentStats.items },
-    { label: "Energy Attached", left: playerStats.energy, right: opponentStats.energy },
-    { label: "Prizes Taken", left: playerStats.prizes, right: opponentStats.prizes },
-  ];
+  return keys.map((key) => ({
+    label: BATTLE_STAT_LABELS[key],
+    left: playerStats[key],
+    right: opponentStats[key],
+  }));
 }
