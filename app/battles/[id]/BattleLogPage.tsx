@@ -56,21 +56,23 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// Hero-card placement inside the artwork panel. Both cards anchor to the
-// panel's centre and step apart by a share of their OWN width, so the
-// overlap is identical at every panel size. Positioning them at fixed
-// percentages of the panel instead would drift — the same pair that
-// overlaps on a 360px desktop column opens into a gap on a wide phone.
-// Sizing comes from the `--battle-card-w` custom property set on the
-// panel (see BattleBanner), which is what lets the pair grow at `md:`
-// from a single value.
+// Hero-card placement inside the artwork panel. Both cards sit on the
+// panel's centre in both axes, then step apart horizontally by a share of
+// their OWN width, so the overlap is identical at every panel size.
+// Positioning them at fixed percentages of the panel instead would drift —
+// the same pair that overlaps in a 360px desktop column opens into a gap
+// on a wide phone.
 const HERO_OVERLAP_PCT = 20;
 const HERO_STEP_PCT = (100 - HERO_OVERLAP_PCT) / 2;
 const HERO_ROTATION_DEG = 5;
-// Share of a hero card's own height that hangs below the panel's floor —
-// the deck collection's pinned hero uses the same 40%, which is what
-// gives these banners their "card tucked behind the edge" read.
-const HERO_BOTTOM_OVERHANG_PCT = 40;
+// Card height as a share of the panel's, with width following from the
+// printed card aspect. Sizing off the panel rather than in pixels is what
+// keeps a centred card inside it: the panel is a fixed height on mobile
+// but stretches to the details column on desktop, and a pixel size that
+// fit one would overflow the other. The tilt costs headroom too — a
+// rotated card's bounding box is h·cos(θ) + w·sin(θ), ~5.9% taller than
+// the card at 5° — so 80% here occupies ~85% of the panel.
+const HERO_HEIGHT_PCT = 80;
 
 export default function BattleLogPage({
   matchId,
@@ -192,20 +194,22 @@ export default function BattleLogPage({
 
               {/* Two rows only — the headline exchange (damage) and the one
                   that decides the game (prizes). The full six-row table
-                  still lives on the /matches Featured Match drawer. */}
-              <div className="mt-4">
-                <BattleStatChart
-                  playerName={playerSideName}
-                  opponentName={opponentSideName}
-                  winnerSide={
-                    result === "win" ? "left" : result === "loss" ? "right" : null
-                  }
-                  rows={buildBattleStatRows(playerStats, opponentStats, [
-                    "damage",
-                    "prizes",
-                  ])}
-                />
-              </div>
+                  still lives on the /matches Featured Match drawer.
+
+                  Butted straight against the date with no margin: the
+                  chart's own header row carries `pb-2`, so the two still
+                  read as separate lines rather than colliding. */}
+              <BattleStatChart
+                playerName={playerSideName}
+                opponentName={opponentSideName}
+                winnerSide={
+                  result === "win" ? "left" : result === "loss" ? "right" : null
+                }
+                rows={buildBattleStatRows(playerStats, opponentStats, [
+                  "damage",
+                  "prizes",
+                ])}
+              />
             </div>
           </div>
         </div>
@@ -373,10 +377,12 @@ function FitText({
  * differences are that there are two heroes rather than one, the ghost is
  * the winner's card, and the pinned banner's favourite toggle, W/L ribbon
  * and avatar stack are all dropped — nothing on a finished match is
- * actionable.
+ * actionable, and the heroes sit centred in the panel rather than tucked
+ * behind its floor.
  *
- * `--battle-card-w` drives both hero cards' size; the height follows from
- * the printed card aspect, so the pair scales at `md:` from one value.
+ * The mobile height is taller than the pinned banner's 150px because of
+ * that centring: a tucked card can be any size and just show less of
+ * itself, but a centred one has to fit, so the panel has to give it room.
  */
 function BattleBanner({
   gradient,
@@ -395,7 +401,7 @@ function BattleBanner({
 }) {
   return (
     <div
-      className="relative h-[150px] shrink-0 overflow-hidden [--battle-card-w:112px] md:h-auto md:w-[360px] md:[--battle-card-w:132px]"
+      className="relative h-[190px] shrink-0 overflow-hidden md:h-auto md:w-[360px]"
       style={{ background: gradient }}
     >
       {/* Ghost. Geometry lifted from DeckBanner: a card-sized box scaled 3×
@@ -458,11 +464,14 @@ function BannerHeroCard({
     <div
       className="absolute overflow-hidden rounded-lg bg-white shadow-[0_8px_18px_rgba(0,0,0,0.3)]"
       style={{
-        width: "var(--battle-card-w)",
-        height: "calc(var(--battle-card-w) * 342 / 245)",
+        // Percentage height against the panel, with the width derived by
+        // aspect-ratio rather than stated — one number to keep in sync
+        // instead of a matching pair.
+        height: `${HERO_HEIGHT_PCT}%`,
+        aspectRatio: "245 / 342",
+        top: "50%",
         left: "50%",
-        bottom: 0,
-        transform: `translate(${xOffsetPct}%, ${HERO_BOTTOM_OVERHANG_PCT}%) rotate(${rotationDeg}deg)`,
+        transform: `translate(${xOffsetPct}%, -50%) rotate(${rotationDeg}deg)`,
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
