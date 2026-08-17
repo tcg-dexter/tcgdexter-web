@@ -1009,9 +1009,15 @@ export function ReplayCardInspector({
       aria-modal="true"
       aria-label={`${targetName} preview`}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      // Scrim is built from --bg rather than a literal, so it follows the
+      // theme instead of washing the dark board in light-mode grey. The
+      // solid backgroundColor is the fallback layer: if color-mix isn't
+      // supported the gradient is dropped and the scrim stays a correct,
+      // if unfaded, themed surface.
       style={{
-        background:
-          "linear-gradient(180deg, rgba(242, 242, 242, 1) 0%, rgba(242, 242, 242, 0.85) 100%)",
+        backgroundColor: "var(--bg)",
+        backgroundImage:
+          "linear-gradient(180deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 85%, transparent) 100%)",
       }}
       onClick={onClose}
     >
