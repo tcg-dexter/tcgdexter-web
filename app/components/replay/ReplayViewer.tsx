@@ -40,6 +40,27 @@ function PlayPauseIcon({ playing }: { playing: boolean }) {
   );
 }
 
+/** Circular arrow, shown in place of the play glyph once the playhead is
+ *  parked on the final frame — the press restarts the match rather than
+ *  resuming it, so the button says so. */
+function ReplayIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.25}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M3 12a9 9 0 1 0 3-6.7" />
+      <path d="M3 4v5h5" />
+    </svg>
+  );
+}
+
 function speedLabel(s: 0.5 | 1 | 2 | 4): string {
   return s === 0.5 ? "½×" : `${s}×`;
 }
@@ -260,6 +281,7 @@ function PlaybackModule({
   canTurnBack,
   canTurnForward,
   playing,
+  atEnd,
   speed,
   onTogglePlay,
   onSelectSpeed,
@@ -280,6 +302,9 @@ function PlaybackModule({
   canTurnBack: boolean;
   canTurnForward: boolean;
   playing: boolean;
+  /** Playhead is parked on the final frame — the play button restarts
+   *  from the beginning instead of resuming. */
+  atEnd: boolean;
   speed: 0.5 | 1 | 2 | 4;
   onTogglePlay: () => void;
   onSelectSpeed: (speed: 0.5 | 1 | 2 | 4) => void;
@@ -327,15 +352,18 @@ function PlaybackModule({
           onForward={onStepForward}
         />
 
+        {/* Enabled whenever there are frames at all — parked on the last
+            one it restarts rather than sitting dead, so a finished replay
+            can be watched again without reaching for the scrubber. */}
         <button
           type="button"
           onClick={onTogglePlay}
-          disabled={!playing && !canStepForward}
-          aria-label={playing ? "Pause" : "Play"}
-          title={playing ? "Pause" : "Play"}
+          disabled={frameCount === 0}
+          aria-label={playing ? "Pause" : atEnd ? "Replay from the start" : "Play"}
+          title={playing ? "Pause" : atEnd ? "Replay from the start" : "Play"}
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 dark:border-white/10 text-text-primary hover:bg-surface disabled:opacity-30"
         >
-          <PlayPauseIcon playing={playing} />
+          {!playing && atEnd ? <ReplayIcon /> : <PlayPauseIcon playing={playing} />}
         </button>
 
         <StepCapsule
@@ -377,7 +405,7 @@ function StepCapsule({
   // borders span the capsule's full inner height on their own.
   const edge = "border-black/10 dark:border-white/10";
   const arrowClass =
-    "self-stretch px-2.5 py-2 text-text-secondary transition-colors hover:text-text-primary disabled:opacity-30 disabled:hover:text-text-secondary";
+    "self-stretch px-5 py-2 text-text-secondary transition-colors hover:text-text-primary disabled:opacity-30 disabled:hover:text-text-secondary";
   return (
     <div className={`inline-flex shrink-0 items-center rounded-full border ${edge}`}>
       <button
@@ -386,7 +414,7 @@ function StepCapsule({
         disabled={!canBack}
         aria-label={`Previous ${label.toLowerCase()}`}
         title={`Previous ${label.toLowerCase()}`}
-        className={`${arrowClass} rounded-l-full border-r ${edge} pl-3`}
+        className={`${arrowClass} rounded-l-full border-r ${edge} pl-6`}
       >
         <span aria-hidden>‹</span>
       </button>
@@ -399,7 +427,7 @@ function StepCapsule({
         disabled={!canForward}
         aria-label={`Next ${label.toLowerCase()}`}
         title={`Next ${label.toLowerCase()}`}
-        className={`${arrowClass} rounded-r-full border-l ${edge} pr-3`}
+        className={`${arrowClass} rounded-r-full border-l ${edge} pr-6`}
       >
         <span aria-hidden>›</span>
       </button>
@@ -686,6 +714,25 @@ export default function ReplayViewer({
     if (playing && frameIndex >= frameCount - 1) setPlaying(false);
   }, [playing, frameIndex, frameCount]);
 
+  const atEnd = frameCount > 0 && frameIndex >= frameCount - 1;
+
+  // Play/pause, plus restart: pressing play while parked on the last frame
+  // rewinds to the start and runs again. Both state updates batch into one
+  // render, so the auto-pause effect above sees frameIndex 0 alongside
+  // playing=true and doesn't immediately stop it. The rewind is a jump, so
+  // it cuts rather than animating cards across the whole match.
+  function togglePlay() {
+    if (playing) {
+      setPlaying(false);
+      return;
+    }
+    if (atEnd) {
+      setInstant(true);
+      setFrameIndex(0);
+    }
+    setPlaying(true);
+  }
+
   // Index of every frame that opens a new turn (turn number changes vs the
   // prior frame). Drives the outer chevrons — back/forward by whole turn —
   // without scanning the frame array on every click.
@@ -855,7 +902,8 @@ export default function ReplayViewer({
         canTurnForward={canTurnForward}
         playing={playing}
         speed={speed}
-        onTogglePlay={() => setPlaying((p) => !p)}
+        atEnd={atEnd}
+        onTogglePlay={togglePlay}
         onSelectSpeed={(s) => setSpeed(s)}
         onStepBack={() => { setPlaying(false); setInstant(false); canStepBack && setFrameIndex((i) => i - 1); }}
         onStepForward={() => { setPlaying(false); setInstant(false); canStepForward && setFrameIndex((i) => i + 1); }}
