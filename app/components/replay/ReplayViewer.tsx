@@ -116,9 +116,7 @@ function PrizePips({ remaining }: { remaining: number }) {
           key={i}
           aria-hidden
           className={`h-2.5 w-2.5 rounded-full transition-colors duration-300 ${
-            i < taken
-              ? "bg-white ring-[0.5px] ring-inset ring-black"
-              : "bg-[#6b6b6b]"
+            i < taken ? "border border-black bg-white" : "bg-[#6b6b6b]"
           }`}
           // The filled state is a Poké Ball: a hard red-over-white split at
           // the midline. A background-image gradient (rather than a child
@@ -126,11 +124,19 @@ function PrizePips({ remaining }: { remaining: number }) {
           // halves in one go.
           //
           // Both halves are fixed colors in either theme — a Poké Ball that
-          // recolored with the theme wouldn't read as one. The hairline
-          // outline is what makes that survivable on the white dark-mode
-          // tab, where the ball's lower half would otherwise disappear into
-          // the background. It's `ring-inset` so the pip keeps its exact
-          // 10px footprint rather than growing by the outline's width.
+          // recolored with the theme wouldn't read as one. The outline is
+          // what makes that survivable on the white dark-mode tab, where
+          // the ball's lower half would otherwise disappear into the
+          // background.
+          //
+          // A whole-pixel `border`, not a fractional inset ring: at 0.5px
+          // the stroke is 1.5 device pixels on a 3x screen, which can't be
+          // spread evenly around the circle, so it antialiased heavier on
+          // some arcs and read as a lopsided, off-centre outline. Border
+          // also traces the border-radius concentrically by construction.
+          // The 10px footprint is unchanged (border-box), and the gradient
+          // still splits on the true midline: background-origin is the
+          // padding box, so 50% of the inner 8px lands 1 + 4 = 5px down.
           style={
             i < taken
               ? {
