@@ -42,7 +42,7 @@ export default async function BattleRoute({
   const { data: match } = await admin
     .from("matches")
     .select(
-      "id, short_id, result, opponent_archetype, created_at, played_at, saved_deck_id, source, total_turns, player_handle, opponent_handle",
+      "id, short_id, result, opponent_archetype, created_at, played_at, saved_deck_id, source, player_handle, opponent_handle",
     )
     .eq(idColumn(id), id)
     .maybeSingle();
@@ -202,7 +202,6 @@ export default async function BattleRoute({
   const opponentHandle = (match.opponent_handle as string | null) ?? null;
   const playedAt =
     (match.played_at as string | null) ?? (match.created_at as string);
-  const totalTurns = (match.total_turns as number | null) ?? null;
   const winnerName =
     match.result === "win"
       ? playerHandle ?? (profile.username as string)
@@ -235,7 +234,6 @@ export default async function BattleRoute({
       opponentHandle={opponentHandle}
       winnerName={winnerName}
       loserName={loserName}
-      totalTurns={totalTurns}
       playerStats={stats.player}
       opponentStats={stats.opponent}
       hasBattleLog={hasBattleLog}

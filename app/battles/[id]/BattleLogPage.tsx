@@ -30,7 +30,6 @@ interface Props {
   opponentHandle: string | null;
   winnerName: string | null;
   loserName: string | null;
-  totalTurns: number | null;
   playerStats: BattleSideStats;
   opponentStats: BattleSideStats;
   hasBattleLog: boolean;
@@ -92,7 +91,6 @@ export default function BattleLogPage({
   opponentHandle,
   winnerName,
   loserName,
-  totalTurns,
   playerStats,
   opponentStats,
   hasBattleLog,
@@ -217,34 +215,19 @@ export default function BattleLogPage({
 
       {/* Battle log — the playback viewer, capped to the same max-width
           the rest of the page uses so the 16:9 window doesn't run wider
-          than the stats above it. The heading sits above as a strong
-          section break: bold uppercase title flanked by a short accent
-          rule, with a turn-count caption underneath. */}
+          than the hero above it. It follows the hero directly, with no
+          section heading: the viewer is the only thing left on the page,
+          so there's nothing for a divider to separate it from. */}
       <div className="mx-auto w-full max-w-6xl px-4 pb-16">
         {hasBattleLog ? (
-          <>
-            <div className="mt-8 mb-2">
-              <div className="flex items-baseline gap-3">
-                <h2 className="text-xl font-black uppercase tracking-[0.15em] text-text-primary">
-                  Battle Log
-                </h2>
-                <span className="h-px flex-1 bg-text-primary/15" />
-                {totalTurns != null && (
-                  <span className="text-[11px] font-semibold uppercase tracking-widest text-text-muted">
-                    {totalTurns} turn{totalTurns === 1 ? "" : "s"}
-                  </span>
-                )}
-              </div>
-            </div>
-            <ReplayViewer
-              matchId={matchId}
-              replayUrl={`/api/battles/${matchId}/replay`}
-              logUrl={`/api/battles/${matchId}/log`}
-              result={result}
-              playerColor={playerColor}
-              opponentColor={opponentColor}
-            />
-          </>
+          <ReplayViewer
+            matchId={matchId}
+            replayUrl={`/api/battles/${matchId}/replay`}
+            logUrl={`/api/battles/${matchId}/log`}
+            result={result}
+            playerColor={playerColor}
+            opponentColor={opponentColor}
+          />
         ) : (
           <div className="mt-4 rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5 text-sm text-text-muted text-center dark:bg-surface-elevated dark:border-white/10">
             No battle log available for this match.
