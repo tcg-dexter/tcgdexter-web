@@ -39,6 +39,8 @@ import { usePathname } from "next/navigation";
  *    (`/spotlight/<slug>`) — the detail page paints the toolbar in the
  *    banner's accent color, same overlay treatment as meta archetypes.
  *  - Card detail pages (`/cards/<id>`).
+ *  - Battle log pages (`/battles/<id>`) — the match replay surface,
+ *    reached from the Matches feed.
  *  All of the above except the bare `/`-adjacent front-door pages DO
  *  render a `BackButton` portaled into `#mobile-back-slot`; the logo
  *  sits centered between it and the hamburger menu.
@@ -71,6 +73,10 @@ function isTopLevelPath(pathname: string): boolean {
   if (/^\/meta-archetypes\/[^/]+(\/[^/]+)?$/.test(pathname)) return true;
   // Trainer Spotlight detail page: /spotlight/<slug>.
   if (/^\/spotlight\/[^/]+$/.test(pathname)) return true;
+  // Battle log page: /battles/<id>. Like the meta archetype and card
+  // detail pages, it also portals a BackButton into the back-slot; the
+  // logo centres between that and the menu trigger.
+  if (/^\/battles\/[^/]+$/.test(pathname)) return true;
   // Card detail page: /cards/<id>.
   return /^\/cards\/[^/]+$/.test(pathname);
 }
