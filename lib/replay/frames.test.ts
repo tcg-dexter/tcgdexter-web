@@ -136,3 +136,60 @@ describe("replay frames: mulligan staging", () => {
     }
   });
 });
+
+// The player/opponent hand asymmetry the mulligan and discard/draw work
+// above already leans on is worth its own explicit test: TCG Live's export
+// only names the exporting account's own drawn cards, so `player_handle`
+// isn't just a display label — it decides which side's SideFrame.hand comes
+// back as real, image-resolved cards versus CardInstance.unrevealed
+// placeholders. example-1.txt's raw text names a11father's cards throughout
+// (draws, prize pickups) and anonymises MoonSheikah's, so a11father is this
+// fixture's actual "exporting account" regardless of which side other tests
+// in this file pick as the perspective.
+describe("replay frames: hand visibility follows player_handle", () => {
+  const asExporter = buildReplayPayload("m1", EXAMPLE, "a11father");
+  const asOtherSide = buildReplayPayload("m1", EXAMPLE, "MoonSheikah");
+
+  it("gives the exporting account's perspective real, resolved hand cards", () => {
+    const midGame = asExporter.frames.find(
+      (f) => f.player.hand.length > 0 && f.turn > 3,
+    );
+    expect(midGame).toBeDefined();
+    for (const card of midGame!.player.hand) {
+      expect(card.revealed).toBe(true);
+      expect(card.name).not.toBe("(unrevealed)");
+      expect(card.imageUrl).not.toBeNull();
+    }
+  });
+
+  it("keeps the non-exporting side's hand as unrevealed placeholders", () => {
+    const midGame = asExporter.frames.find(
+      (f) => f.opponent.hand.length > 0 && f.turn > 3,
+    );
+    expect(midGame).toBeDefined();
+    for (const card of midGame!.opponent.hand) {
+      expect(card.revealed).toBe(false);
+      expect(card.imageUrl).toBeNull();
+    }
+  });
+
+  it("flips which side is which when the chosen perspective flips", () => {
+    // Same raw log, opposite player_handle — the exporting account
+    // (a11father) is now `opponent`, so it should be its hand that's real.
+    const midGame = asOtherSide.frames.find(
+      (f) => f.opponent.hand.length > 0 && f.turn > 3,
+    );
+    expect(midGame).toBeDefined();
+    expect(midGame!.opponent.hand.every((c) => c.revealed)).toBe(true);
+  });
+
+  it("keeps hand count accurate even when contents are hidden", () => {
+    // handCount has to stay trustworthy on its own — the UI's other hand
+    // affordances (deck/hand tallies elsewhere on the mat) read it
+    // independent of whether the strip can show real art for it.
+    for (const f of asExporter.frames) {
+      expect(f.opponent.handCount).toBe(f.opponent.hand.length);
+      expect(f.player.handCount).toBe(f.player.hand.length);
+    }
+  });
+});

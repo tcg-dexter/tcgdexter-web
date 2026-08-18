@@ -42,10 +42,28 @@ export interface PokemonFrame {
   tools: { name: string; imageUrl: string | null }[];
 }
 
+export interface HandCard {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  /** False for a card the log never named — see CardInstance.unrevealed.
+   *  The UI should show a face-down back for these, not the literal
+   *  placeholder name. Normal for the opponent side; on the player side
+   *  it should be rare-to-never, since the log names the exporting
+   *  account's own cards (see the grounding discussion this is built on) —
+   *  present in the type regardless, since "should be rare" isn't "can't
+   *  happen" and a parser gap shouldn't render a broken card. */
+  revealed: boolean;
+}
+
 export interface SideFrame {
   handle: string | null;
   active: PokemonFrame | null;
   bench: PokemonFrame[];
+  /** Actual hand contents, not just the count below — see HandCard on why
+   *  the opponent's is mostly unrevealed placeholders while the player's
+   *  is real cards. */
+  hand: HandCard[];
   handCount: number;
   deckCount: number;
   discardCount: number;
@@ -281,6 +299,12 @@ function mapSide(
     handle: side.handle,
     active: side.active ? mapPokemon(side.active, cardIds) : null,
     bench: side.bench.map((mon) => mapPokemon(mon, cardIds)),
+    hand: side.hand.map((c) => ({
+      id: c.id,
+      name: c.name,
+      imageUrl: c.unrevealed ? null : cardImageUrlForAnyName(c.name),
+      revealed: !c.unrevealed,
+    })),
     handCount: side.hand.length,
     deckCount: Math.max(0, DECK_SIZE - outOfDeck),
     discardCount: side.discard.length,

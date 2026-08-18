@@ -15,11 +15,13 @@ import { DISCARD_DRAW_STAGES } from "@/lib/replay/frames";
 import type {
   DiscardDrawCard,
   DiscardDrawFrame,
+  HandCard,
   MulliganFrame,
   ReplayFrame,
   ReplayPayload,
 } from "@/lib/replay/frames";
 import {
+  CARD_BACK_URL,
   InspectContext,
   PlayerMat,
   ReplayCardInspector,
@@ -557,6 +559,88 @@ function MulliganOverlay({
   );
 }
 
+// Share the card's cropped top half, in units of the card's own width — the
+// aspect ratio pins height to width, so this is the one number that decides
+// how much of each card shows.
+const HAND_STRIP_VISIBLE_PCT = 50;
+
+/**
+ * The submitting user's hand, in a strip below their mat — always the
+ * bottom mat now that Board pins the player there (see Board's comment on
+ * why side/edge stay fixed to visual slot). Every card renders cropped to
+ * its top half with a gradient fading the cut edge into the page
+ * background, rather than showing full cards or hiding the row entirely:
+ * a hand can run to seven-plus cards, and this is what lets the strip stay
+ * compact without either overflowing or needing its own scroll.
+ *
+ * Recomputed every frame like the rest of the board, so it always shows
+ * the hand as of wherever the playhead currently sits — cards drawn appear,
+ * cards played or discarded disappear, live as the viewer steps or scrubs.
+ * An unrevealed card (the log never named it — see HandCard) renders as a
+ * face-down back rather than the literal placeholder name.
+ */
+function HandStrip({
+  cards,
+  cardWidth,
+  instant,
+}: {
+  cards: HandCard[];
+  cardWidth: number;
+  instant: boolean;
+}) {
+  if (cards.length === 0) return null;
+  const cardHeight = Math.round((cardWidth * 342) / 245);
+  const visibleHeight = Math.round((cardHeight * HAND_STRIP_VISIBLE_PCT) / 100);
+
+  return (
+    <div className="mt-4">
+      <p className="mb-2 text-center text-[10px] font-bold uppercase tracking-wider text-text-muted">
+        Your Hand
+      </p>
+      <div className="flex flex-wrap items-start justify-center gap-x-2 gap-y-3">
+        <AnimatePresence initial={false}>
+          {cards.map((card) => (
+            <motion.div
+              key={card.id}
+              layout
+              className="relative overflow-hidden rounded shadow-[0_4px_10px_rgba(0,0,0,0.25)]"
+              style={{ width: cardWidth, height: visibleHeight }}
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: instant ? 0 : 0.25, ease: "easeOut" }}
+              title={card.revealed ? card.name : undefined}
+            >
+              {/* The image renders at the card's FULL height inside a
+                  wrapper cropped to visibleHeight — top-anchored, so it's
+                  the bottom that's cut off rather than the top. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={card.revealed ? card.imageUrl ?? undefined : CARD_BACK_URL}
+                alt={card.revealed ? card.name : "Face-down card"}
+                className="absolute inset-x-0 top-0 w-full object-cover"
+                style={{ height: cardHeight }}
+              />
+              {card.revealed && !card.imageUrl && (
+                // Catalog miss on a revealed card — same treatment as the
+                // overlay cards: show the name rather than nothing.
+                <div className="absolute inset-0 flex items-center justify-center bg-white p-1 text-center text-[8px] font-semibold leading-tight text-black">
+                  {card.name}
+                </div>
+              )}
+              {/* Fades the cropped edge into the page background instead of
+                  ending the card on a hard cut line — the same "peeking
+                  content, gradient into var(--bg)" treatment the desktop
+                  thread uses at its own scroll edges. */}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-b from-transparent to-[var(--bg)]" />
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
 function Board({
   frame,
   loading,
@@ -617,65 +701,24 @@ function Board({
           {loading ? "Loading replay…" : "Pick a match below to begin."}
         </div>
       ) : (
+        <>
         <div className="flex flex-col" style={{ gap: TAB_GAP_PX }}>
           {/* z-10 on the mat wrappers so each mat paints over the tab tucked
               beneath it. The wrappers are plain positioning shells — mat
-              geometry stays entirely inside PlayerMat. */}
+              geometry stays entirely inside PlayerMat.
+
+              `side`/`edge` are pinned to which visual slot a block renders
+              (top, oriented "player"-style with its tray pinned to the
+              slot's own floor; bottom, oriented "opponent"-style) — they
+              are NOT which actor's data the block shows. The opponent
+              always occupies the top slot and the submitting user (the log
+              owner — see PokemonFrame) always occupies the bottom one, so
+              the hand strip below the board always has a stable mat to sit
+              under. Swap the data bound to each block, never `side`/`edge`
+              themselves, if this ever needs to change. */}
           <div className="relative z-10">
             <PlayerMat
               side="player"
-              bench={frame.player.bench}
-              active={frame.player.active}
-              discardCount={frame.player.discardCount}
-              discardTop={frame.player.discardTop}
-              discardTopImageUrl={frame.player.discardTopImageUrl}
-              deckCount={frame.player.deckCount}
-              handCount={frame.player.handCount}
-              prizesRemaining={frame.player.prizesRemaining}
-              stadium={frame.stadium?.owner === "player" ? frame.stadium : null}
-              lastPlayedTrainer={
-                frame.lastPlayedTrainer?.actor === "player"
-                  ? frame.lastPlayedTrainer
-                  : null
-              }
-              cardWidth={cardWidth}
-              matWidth={matWidth}
-              instant={instant}
-            />
-            <AnimatePresence>
-              {frame.discardDraw?.actor === "player" && (
-                <DiscardDrawOverlay
-                  key={frame.actionIndex}
-                  detail={frame.discardDraw}
-                  cardWidth={cardWidth}
-                  matWidth={matWidth}
-                />
-              )}
-            </AnimatePresence>
-            <AnimatePresence>
-              {frame.mulligan?.actor === "player" && (
-                <MulliganOverlay
-                  key="mulligan-player"
-                  detail={frame.mulligan}
-                  cardWidth={cardWidth}
-                  matWidth={matWidth}
-                />
-              )}
-            </AnimatePresence>
-          </div>
-          <MatTab
-            edge="bottom"
-            name={frame.player.handle ?? "Player"}
-            prizesRemaining={frame.player.prizesRemaining}
-          />
-          <MatTab
-            edge="top"
-            name={frame.opponent.handle ?? "Opponent"}
-            prizesRemaining={frame.opponent.prizesRemaining}
-          />
-          <div className="relative z-10">
-            <PlayerMat
-              side="opponent"
               bench={frame.opponent.bench}
               active={frame.opponent.active}
               discardCount={frame.opponent.discardCount}
@@ -715,7 +758,63 @@ function Board({
               )}
             </AnimatePresence>
           </div>
+          <MatTab
+            edge="bottom"
+            name={frame.opponent.handle ?? "Opponent"}
+            prizesRemaining={frame.opponent.prizesRemaining}
+          />
+          <MatTab
+            edge="top"
+            name={frame.player.handle ?? "Player"}
+            prizesRemaining={frame.player.prizesRemaining}
+          />
+          <div className="relative z-10">
+            <PlayerMat
+              side="opponent"
+              bench={frame.player.bench}
+              active={frame.player.active}
+              discardCount={frame.player.discardCount}
+              discardTop={frame.player.discardTop}
+              discardTopImageUrl={frame.player.discardTopImageUrl}
+              deckCount={frame.player.deckCount}
+              handCount={frame.player.handCount}
+              prizesRemaining={frame.player.prizesRemaining}
+              stadium={frame.stadium?.owner === "player" ? frame.stadium : null}
+              lastPlayedTrainer={
+                frame.lastPlayedTrainer?.actor === "player"
+                  ? frame.lastPlayedTrainer
+                  : null
+              }
+              cardWidth={cardWidth}
+              matWidth={matWidth}
+              instant={instant}
+            />
+            <AnimatePresence>
+              {frame.discardDraw?.actor === "player" && (
+                <DiscardDrawOverlay
+                  key={frame.actionIndex}
+                  detail={frame.discardDraw}
+                  cardWidth={cardWidth}
+                  matWidth={matWidth}
+                />
+              )}
+            </AnimatePresence>
+            <AnimatePresence>
+              {frame.mulligan?.actor === "player" && (
+                <MulliganOverlay
+                  key="mulligan-player"
+                  detail={frame.mulligan}
+                  cardWidth={cardWidth}
+                  matWidth={matWidth}
+                />
+              )}
+            </AnimatePresence>
+          </div>
         </div>
+        {/* Player's hand, always the bottom mat's now that the swap above
+            pins the submitting user there — see HandStrip. */}
+        <HandStrip cards={frame.player.hand} cardWidth={cardWidth} instant={instant} />
+        </>
       )}
       {inspect && (
         <ReplayCardInspector target={inspect} onClose={() => setInspect(null)} />
