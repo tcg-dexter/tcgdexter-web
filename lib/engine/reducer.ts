@@ -74,19 +74,41 @@ function makePokemon(card: CardInstance, turn: number, evolvedFromStack: CardIns
 
 /** Find an in-play Pokémon by display name on a given side. Active is
  *  searched first, then bench. */
+/**
+ * Find a Pokémon by name, active checked before bench unless `preferLocation`
+ * says otherwise. Several action types the parser produces — attach_energy,
+ * evolve — carry the log's own "in the Active Spot" / "on the Bench"
+ * qualifier as a `location` field precisely so a same-named Pokémon in the
+ * OTHER zone can't be mistaken for the target; before this parameter existed
+ * that field was parsed and then silently dropped, so "attached X to Y on
+ * the Bench" would still resolve to an active Y with the same name whenever
+ * one happened to be there, attaching to (and, via evolve, permanently
+ * carrying forward into) the wrong Pokémon instead of leaving it correctly
+ * on the bench. Falls back to the other zone if the preferred one has no
+ * name match, rather than failing outright — the caller's own name-only
+ * fallback would have found it there anyway, and callers with no hint at
+ * all (KO, conditions, damage counters — the parser gives them no zone to
+ * prefer) keep exactly their previous active-first behavior.
+ */
 function findPokemon(
   side: PlayerSide,
   name: string,
+  preferLocation?: "active" | "bench",
 ): { mon: PokemonInPlay; where: "active" | "bench"; benchIndex: number } | null {
-  if (side.active && side.active.card.name === name) {
-    return { mon: side.active, where: "active", benchIndex: -1 };
-  }
-  for (let i = 0; i < side.bench.length; i++) {
-    if (side.bench[i].card.name === name) {
-      return { mon: side.bench[i], where: "bench", benchIndex: i };
+  const active =
+    side.active && side.active.card.name === name
+      ? { mon: side.active, where: "active" as const, benchIndex: -1 }
+      : null;
+  const bench = () => {
+    for (let i = 0; i < side.bench.length; i++) {
+      if (side.bench[i].card.name === name) {
+        return { mon: side.bench[i], where: "bench" as const, benchIndex: i };
+      }
     }
-  }
-  return null;
+    return null;
+  };
+  if (preferLocation === "bench") return bench() ?? active;
+  return active ?? bench();
 }
 
 function indexOfCardInZone(zone: CardInstance[], name: string): number {
@@ -390,7 +412,8 @@ export function applyAction(
       const energyName = String(payload.energy ?? "");
       const targetName = String(payload.target ?? "");
       const viaEffect = Boolean(payload.via_effect);
-      const found = findPokemon(side, targetName);
+      const location = payload.location as "active" | "bench" | undefined;
+      const found = findPokemon(side, targetName, location);
       if (!found) {
         diag("warn", "attach_target_missing", `Attached ${energyName} to ${targetName} but target not in play`, { targetName });
         break;
@@ -416,7 +439,8 @@ export function applyAction(
       if (!side) break;
       const fromName = String(payload.from ?? "");
       const toName = String(payload.to ?? "");
-      const found = findPokemon(side, fromName);
+      const location = payload.location as "active" | "bench" | undefined;
+      const found = findPokemon(side, fromName, location);
       if (!found) {
         diag("warn", "evolve_source_missing", `Evolved ${fromName} → ${toName} but base not in play`, { fromName, toName });
         break;

@@ -143,3 +143,84 @@ describe("engine.replay (example-1)", () => {
     });
   });
 });
+
+const SAME_NAME_ATTACH = readFileSync(
+  join(
+    __dirname,
+    "..",
+    "battle-log",
+    "fixtures",
+    "example-3-same-name-attach.txt",
+  ),
+  "utf8",
+);
+
+// A real reported bug: turn 17 showed two Cynthia's Power Weight (a
+// Pokémon Tool, one-per-Pokémon by the actual game rules) on one
+// Pokémon. findPokemon() checked the active slot before the bench
+// regardless of what the log said, so "attached X to Y on the Bench"
+// resolved to an active same-named Y whenever one happened to be
+// there — attaching to (and, through evolve, permanently carrying
+// forward into) the wrong Pokémon instead of the bench one the log
+// named. This fixture is the real match, trimmed to nothing: it's
+// the actual battle_log_raw the bug was filed against.
+describe("engine.replay (example-3: same-name active/bench attach target)", () => {
+  const parsed = normalizePerspective(parseBattleLog(SAME_NAME_ATTACH), "Nnova12");
+  const result = replay(parsed);
+
+  function actionIndex(rawText: string): number {
+    const i = parsed.actions.findIndex((a) => a.raw_text === rawText);
+    expect(i, `expected to find action: ${rawText}`).toBeGreaterThanOrEqual(0);
+    return i;
+  }
+
+  it("is not a vacuous guard — the fixture contains the colliding attach pair", () => {
+    expect(
+      parsed.actions.some(
+        (a) =>
+          a.action_type === "attach_energy" &&
+          a.payload.target === "Cynthia's Gabite" &&
+          a.payload.location === "bench",
+      ),
+    ).toBe(true);
+    expect(
+      parsed.actions.some(
+        (a) =>
+          a.action_type === "attach_energy" &&
+          a.payload.target === "Cynthia's Gabite" &&
+          a.payload.location === "active",
+      ),
+    ).toBe(true);
+  });
+
+  it("attaches a bench-targeted card to the bench Pokémon, not the active one", () => {
+    const idx = actionIndex(
+      "Nnova12 attached Cynthia's Power Weight to Cynthia's Gabite on the Bench.",
+    );
+    const side = result.states[idx].sides.player;
+    const activeHasIt = side.active?.attachedEnergy.some(
+      (c) => c.name === "Cynthia's Power Weight",
+    );
+    const benchHolder = side.bench.find((mon) =>
+      mon.attachedEnergy.some((c) => c.name === "Cynthia's Power Weight"),
+    );
+    expect(activeHasIt).toBe(false);
+    expect(benchHolder).toBeDefined();
+  });
+
+  it("doesn't let the bench attach linger on the later active Pokémon it evolves into", () => {
+    // The bench Gabite above is knocked out and its Power Weight discarded
+    // before this second, unrelated Power Weight is drawn and attached to
+    // whichever Garchomp ex is active by then. The bug made the first one
+    // stick around on the wrong (active) lineage the whole time, so by
+    // this point the active Pokémon held both.
+    const idx = actionIndex(
+      "Nnova12 attached Cynthia's Power Weight to Cynthia's Garchomp ex in the Active Spot.",
+    );
+    const active = result.states[idx].sides.player.active;
+    const count = active?.attachedEnergy.filter(
+      (c) => c.name === "Cynthia's Power Weight",
+    ).length;
+    expect(count).toBe(1);
+  });
+});
