@@ -86,8 +86,10 @@ const TAB_GAP_PX = 8;
 
 // Fixed vertical chrome inside the mat column besides the two mats
 // themselves: Board's own mt-4 (16px) + the visible height of both name
-// tabs + the gap between them. The tucked portion of each tab is cancelled
-// by its own negative margin, so only TAB_CONTENT_PX of each is chrome.
+// tabs + the one gap that survives between them. Each tab's negative
+// margin swallows both its own tucked padding and the gap at its mat
+// seam (see MatTab), so of the column's three gaps only the tab↔tab one
+// is left, and each tab contributes just TAB_CONTENT_PX.
 // All of it is constant, which is what lets this stay a plain number
 // instead of something measured live — the tabs sit inside the very column
 // this constant sizes, so measuring them would feed back into their width.
@@ -173,6 +175,16 @@ function MatTab({
   edge: "bottom" | "top";
 }) {
   const hangsBelow = edge === "bottom";
+  // The column's flex `gap` lands between every pair of its children —
+  // including mat↔tab, where the tab is supposed to overlap the mat, not
+  // stand off it. Cancelling the gap here is what makes the tuck actually
+  // TAB_TUCK_PX: without it the gap gave back 8px of the tuck, and that
+  // strip of tucked padding showed as slack on the mat-facing side of the
+  // label. It reads differently on each tab — above the name on the top
+  // one, below it on the bottom one — and the top mat's drop shadow falls
+  // across its share, which is why the two tabs looked like different
+  // heights rather than both looking too tall.
+  const tuckMargin = -(TAB_TUCK_PX + TAB_GAP_PX);
   return (
     <div
       // z-0 against the mats' z-10: the tab has to paint *under* the mat for
@@ -188,9 +200,9 @@ function MatTab({
       // fixed overall height, so the box below is exactly the band that
       // shows past the mat — no arithmetic to keep in sync.
       style={{
-        marginTop: hangsBelow ? -TAB_TUCK_PX : undefined,
+        marginTop: hangsBelow ? tuckMargin : undefined,
         paddingTop: hangsBelow ? TAB_TUCK_PX : undefined,
-        marginBottom: hangsBelow ? undefined : -TAB_TUCK_PX,
+        marginBottom: hangsBelow ? undefined : tuckMargin,
         paddingBottom: hangsBelow ? undefined : TAB_TUCK_PX,
       }}
     >
