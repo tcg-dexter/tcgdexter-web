@@ -11,6 +11,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import BattleLogDetail from "@/app/components/BattleLogDetail";
+import { DISCARD_DRAW_STAGES } from "@/lib/replay/frames";
 import type {
   DiscardDrawCard,
   DiscardDrawFrame,
@@ -274,11 +275,19 @@ const DISCARD_DRAW_MIN_CARD_PX = 26;
  * right as the transaction itself: what was played, what it cost, what it
  * bought.
  *
+ * The three groups arrive a stage at a time as the playhead advances
+ * through the exchange's frames, with the row re-centring as it grows. The
+ * whole overlay stays mounted across all three (they share an actionIndex,
+ * which is the AnimatePresence key), so it fades in once at the start and
+ * out once at the end rather than blinking between beats.
+ *
  * Card size is solved for rather than fixed. The mat's own dimensions come
  * from a height budget that moves with the viewport, and the number of
  * cards on show is whatever the action happened to involve, so the width is
  * clamped against both: the row has to fit the mat's width, and a card plus
- * its label has to fit the mat's height.
+ * its label has to fit the mat's height. It's computed from the *final*
+ * stage's card count on every stage, so cards keep one size as groups
+ * appear instead of shrinking under the viewer mid-exchange.
  */
 function DiscardDrawOverlay({
   detail,
@@ -310,47 +319,49 @@ function DiscardDrawOverlay({
     Math.round(Math.min(cardWidth * 0.92, fromWidth, fromHeight)),
   );
 
+  const reached = DISCARD_DRAW_STAGES.indexOf(detail.stage);
+
   return (
     <motion.div
       className="absolute inset-0 z-30 flex items-center justify-center overflow-hidden rounded-xl px-2"
-      // 70% of the page background rather than a flat black scrim, so the
+      // 90% of the page background rather than a flat black scrim, so the
       // overlay reads as the app dimming the mat rather than a modal.
-      style={{ backgroundColor: "color-mix(in srgb, var(--bg) 70%, transparent)" }}
+      style={{ backgroundColor: "color-mix(in srgb, var(--bg) 90%, transparent)" }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
     >
-      <div className="flex items-center gap-3 sm:gap-4">
-        <DiscardDrawGroup
-          label={detail.abilityName ?? "Played"}
-          cards={[detail.source]}
-          width={w}
-        />
-        <DiscardDrawArrow />
-        <DiscardDrawGroup
-          label={detail.discarded.length === 1 ? "Discarded" : `Discarded ${detail.discarded.length}`}
-          cards={detail.discarded}
-          width={w}
-          dimmed
-        />
-        <DiscardDrawArrow />
-        <DiscardDrawGroup
-          label={detail.drawnCount === 1 ? "Drew" : `Drew ${detail.drawnCount}`}
-          cards={detail.drawn}
-          unknownCount={unknownDrawn}
-          width={w}
-        />
-      </div>
+      {/* `layout` on the row is what re-centres it as each group lands:
+          justify-center alone would jump, since the row's width changes in
+          one frame. AnimatePresence has no exit variants here on purpose —
+          groups only ever appear, and the whole overlay leaves at once. */}
+      <motion.div layout className="flex items-center gap-3 sm:gap-4">
+        <AnimatePresence initial={false}>
+          <DiscardDrawGroup key="play" label="Play" cards={[detail.source]} width={w} />
+          {reached >= 1 && (
+            <DiscardDrawGroup
+              key="discard"
+              label="Discard"
+              cards={detail.discarded}
+              width={w}
+              dimmed
+              leadWithArrow
+            />
+          )}
+          {reached >= 2 && (
+            <DiscardDrawGroup
+              key="draw"
+              label="Draw"
+              cards={detail.drawn}
+              unknownCount={unknownDrawn}
+              width={w}
+              leadWithArrow
+            />
+          )}
+        </AnimatePresence>
+      </motion.div>
     </motion.div>
-  );
-}
-
-function DiscardDrawArrow() {
-  return (
-    <span aria-hidden className="shrink-0 text-sm font-bold text-text-muted">
-      ›
-    </span>
   );
 }
 
@@ -360,6 +371,7 @@ function DiscardDrawGroup({
   width,
   unknownCount = 0,
   dimmed,
+  leadWithArrow,
 }: {
   label: string;
   cards: DiscardDrawCard[];
@@ -368,6 +380,9 @@ function DiscardDrawGroup({
   unknownCount?: number;
   /** Discards read as spent, so they sit back a little from the other two. */
   dimmed?: boolean;
+  /** Chevron before the group. Carried by the group rather than placed
+   *  between siblings so it animates in with the stage it introduces. */
+  leadWithArrow?: boolean;
 }) {
   const total = cards.length + unknownCount;
   if (total === 0) return null;
@@ -380,7 +395,19 @@ function DiscardDrawGroup({
   );
   const hidden = total - shownCards.length - shownUnknown;
   return (
-    <div className="flex min-w-0 shrink flex-col items-center gap-1.5">
+    <motion.div
+      layout
+      className="flex min-w-0 shrink items-center gap-3 sm:gap-4"
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+    >
+      {leadWithArrow && (
+        <span aria-hidden className="shrink-0 text-sm font-bold text-text-muted">
+          ›
+        </span>
+      )}
+      <div className="flex min-w-0 shrink flex-col items-center gap-1.5">
       <div className="flex items-center" style={{ gap: Math.round(width * 0.08) }}>
         {shownCards.map((card, i) => (
           <div
@@ -424,7 +451,8 @@ function DiscardDrawGroup({
       <span className="whitespace-nowrap text-[9px] font-bold uppercase tracking-wider text-text-secondary">
         {label}
       </span>
-    </div>
+      </div>
+    </motion.div>
   );
 }
 

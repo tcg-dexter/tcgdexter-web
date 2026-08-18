@@ -73,13 +73,31 @@ export interface DiscardDrawCard {
   imageUrl: string | null;
 }
 
+/** Which beat of the exchange a frame sits on. The overlay reveals one more
+ *  group at each: the card played, then what it cost, then what it bought. */
+export type DiscardDrawStage = "play" | "discard" | "draw";
+
+export const DISCARD_DRAW_STAGES: DiscardDrawStage[] = [
+  "play",
+  "discard",
+  "draw",
+];
+
 /**
  * A "pay cards to get cards" moment — Ultra Ball discarding two to fetch a
- * Pokémon, N's Zoroark ex's Trade, and so on. Present only on the frame of
- * the action that caused it, so the viewer can raise an overlay for exactly
- * as long as the playhead sits on it.
+ * Pokémon, N's Zoroark ex's Trade, and so on.
+ *
+ * The log makes this one action: TCG Live writes the discard and the draw as
+ * child lines under the card that caused them, not as their own entries, so
+ * the parser folds them into that action's payload. To let the viewer walk
+ * the exchange a beat at a time, `buildReplayPayload` emits one frame per
+ * stage — same board state and same actionIndex on all three, differing only
+ * in `stage`. Board state can't differ: the engine has a single post-action
+ * state for the whole exchange, and inventing intermediate ones would mean
+ * teaching the engine to split an action it currently applies atomically.
  */
 export interface DiscardDrawFrame {
+  stage: DiscardDrawStage;
   /** Whose mat the overlay belongs over. */
   actor: "player" | "opponent";
   /** Card whose art represents the cause: the item itself, or — for an
@@ -308,7 +326,7 @@ function toDiscardDrawCard(name: string): DiscardDrawCard {
 function discardDrawFromAction(
   action: { action_type: string; payload: Record<string, unknown> },
   actor: "player" | "opponent" | "system",
-): DiscardDrawFrame | null {
+): Omit<DiscardDrawFrame, "stage"> | null {
   if (actor !== "player" && actor !== "opponent") return null;
 
   const payload = action.payload;
@@ -389,17 +407,28 @@ export function buildReplayPayload(
       };
     }
 
-    frames.push(
-      frameFromState(
-        state,
-        idx,
-        action.raw_text,
-        actor,
-        cardIds,
-        lastPlayedTrainer,
-        discardDrawFromAction(action, actor),
-      ),
-    );
+    // An exchange occupies one frame per stage rather than one in total, so
+    // the playhead can rest on each beat — which also means playback paces
+    // it and scrubbing can land inside it. All three share this action's
+    // index, so the thread keeps one post spotlighted throughout.
+    const exchange = discardDrawFromAction(action, actor);
+    const stages: (DiscardDrawFrame | null)[] = exchange
+      ? DISCARD_DRAW_STAGES.map((stage) => ({ ...exchange, stage }))
+      : [null];
+
+    for (const discardDraw of stages) {
+      frames.push(
+        frameFromState(
+          state,
+          idx,
+          action.raw_text,
+          actor,
+          cardIds,
+          lastPlayedTrainer,
+          discardDraw,
+        ),
+      );
+    }
   });
 
   // Primary attacker per side = highest-damage Pokémon over the whole
