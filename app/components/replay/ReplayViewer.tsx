@@ -462,8 +462,13 @@ function PlaybackModule({
       </div>
 
       {/* Control row: capsules flank the play button and nothing else lives
-          here, so items-center puts them on its midline by construction. */}
-      <div className="mt-1.5 flex items-center justify-center gap-3">
+          here, so items-center puts them on its midline by construction.
+          Padding and the gap both step up at sm: — below that, the two
+          capsules at their full spread ran past a phone's content width
+          (~343px at 375px viewport) and forced the row to overflow rather
+          than wrap, since nothing here is allowed to shrink onto a second
+          line. */}
+      <div className="mt-1.5 flex items-center justify-center gap-1.5 sm:gap-3">
         <StepCapsule
           label="Action"
           canBack={canStepBack}
@@ -481,7 +486,7 @@ function PlaybackModule({
           disabled={frameCount === 0}
           aria-label={playing ? "Pause" : atEnd ? "Replay from the start" : "Play"}
           title={playing ? "Pause" : atEnd ? "Replay from the start" : "Play"}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/10 dark:border-white/10 text-text-primary hover:bg-surface disabled:opacity-30"
+          className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-full border border-black/10 dark:border-white/10 text-text-primary hover:bg-surface disabled:opacity-30"
         >
           {!playing && atEnd ? <ReplayIcon /> : <PlayPauseIcon playing={playing} />}
         </button>
@@ -529,8 +534,12 @@ function StepCapsule({
   // separate elements: the buttons are the tallest children, so their
   // borders span the capsule's full inner height on their own.
   const edge = "border-black/10 dark:border-white/10";
+  // Padding steps up at sm: (see the control row's comment) — this is the
+  // capsule's half of that: the two chevron paddings plus the label's give
+  // each capsule its width, and both were sized for the wide desktop
+  // spread rather than a phone's content column.
   const arrowClass =
-    "self-stretch px-5 py-2 text-text-secondary transition-colors hover:text-text-primary disabled:opacity-30 disabled:hover:text-text-secondary";
+    "self-stretch px-2 py-2 sm:px-5 text-text-secondary transition-colors hover:text-text-primary disabled:opacity-30 disabled:hover:text-text-secondary";
   return (
     <div className={`inline-flex shrink-0 items-center rounded-full border ${edge}`}>
       <button
@@ -539,7 +548,7 @@ function StepCapsule({
         disabled={!canBack}
         aria-label={`Previous ${label.toLowerCase()}`}
         title={`Previous ${label.toLowerCase()}`}
-        className={`${arrowClass} rounded-l-full border-r ${edge} pl-6`}
+        className={`${arrowClass} rounded-l-full border-r ${edge} pl-3 sm:pl-6`}
       >
         <span aria-hidden>‹</span>
       </button>
@@ -547,7 +556,7 @@ function StepCapsule({
           hidden. The browser sizes the cell to the widest of them, so both
           capsules match without measuring text or hard-coding a width —
           and it stays true if a label is ever renamed. */}
-      <span className="grid select-none px-5 text-xs font-semibold text-text-secondary">
+      <span className="grid select-none px-2 sm:px-5 text-xs font-semibold text-text-secondary">
         {STEP_LABELS.map((candidate) => (
           <span
             key={candidate}
@@ -566,7 +575,7 @@ function StepCapsule({
         disabled={!canForward}
         aria-label={`Next ${label.toLowerCase()}`}
         title={`Next ${label.toLowerCase()}`}
-        className={`${arrowClass} rounded-r-full border-l ${edge} pr-6`}
+        className={`${arrowClass} rounded-r-full border-l ${edge} pr-3 sm:pr-6`}
       >
         <span aria-hidden>›</span>
       </button>
