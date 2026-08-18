@@ -675,12 +675,16 @@ const ATTACHED_ROW_PCT = 33;
  * their hand strip) inspects over the player's.
  *
  * A Pokémon target also gets a row of everything attached to it — energy
- * and Tools alike, see PokemonFrame.attachedCards — laid over the bottom of
- * the big card rather than occupying space below it, so the primary card
- * stays exactly the same full size the plain-card case already used
- * (fit-to-mat on both axes, independent of whether anything is attached).
- * A gradient scrim behind the row is what keeps small thumbnails legible
- * against whatever's printed on the card underneath them.
+ * and Tools alike, see PokemonFrame.attachedCards — pinned to the bottom
+ * edge of the MAT (this overlay's own footprint), not the card: the card
+ * centres in the mat and is usually shorter than it, so anchoring to the
+ * card left the row floating over the middle of the mat rather than
+ * sitting at its floor. This also keeps the primary card at exactly the
+ * same full size the plain-card case already used (fit-to-mat on both
+ * axes, independent of whether anything is attached) — the row overlays
+ * whatever it overlaps rather than sharing space with the card. A gradient
+ * scrim behind the row is what keeps small thumbnails legible against
+ * whatever's behind them, mat or card art alike.
  *
  * Tapping the big card again escalates to the existing full-screen
  * ReplayCardInspector (onExpand); the small circled X closes back to the
@@ -754,16 +758,12 @@ function MatCardInspector({
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
-      {/* This wrapper is exactly the card's own footprint — the row below
-          is an absolutely-positioned child of it specifically so it
-          overlays the card's bottom rather than the whole mat, and so it
-          stays centred on the card regardless of how wide the mat is. */}
-      <div className="relative" style={{ width: w, height: cardH }}>
       <button
         type="button"
         onClick={onExpand}
         aria-label={`Open ${card.name} full screen`}
-        className="relative h-full w-full overflow-hidden rounded-lg shadow-[0_8px_20px_rgba(0,0,0,0.4)]"
+        className="relative overflow-hidden rounded-lg shadow-[0_8px_20px_rgba(0,0,0,0.4)]"
+        style={{ width: w, aspectRatio: "245 / 342" }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -778,11 +778,18 @@ function MatCardInspector({
         )}
       </button>
       {attachedCards.length > 0 && (
+        // Anchored to the MAT's own bottom edge (this div's positioning
+        // parent is the full-mat overlay, not the card button above), not
+        // the card's — the card centres in the mat and is usually shorter
+        // than it, so anchoring to the card instead left the row floating
+        // near the middle of the mat rather than sitting at its floor. z-10
+        // over the card so it still reads as "on top of" wherever the two
+        // happen to overlap.
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-center gap-1.5 px-2 pb-2 pt-6"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-wrap items-end justify-center gap-1.5 px-2 pb-3 pt-6"
           style={{
             // Scrim sized to the row's own content rather than a fixed
-            // fraction of the card, so it grows with a wrapped second row
+            // fraction of the mat, so it grows with a wrapped second row
             // instead of cutting the first one off.
             backgroundImage: "linear-gradient(to top, rgba(0,0,0,0.75), transparent)",
           }}
@@ -792,7 +799,6 @@ function MatCardInspector({
           ))}
         </div>
       )}
-      </div>
     </motion.div>
   );
 }
