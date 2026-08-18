@@ -11,7 +11,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import BattleLogDetail from "@/app/components/BattleLogDetail";
-import type { ReplayFrame, ReplayPayload } from "@/lib/replay/frames";
+import type {
+  DiscardDrawCard,
+  DiscardDrawFrame,
+  ReplayFrame,
+  ReplayPayload,
+} from "@/lib/replay/frames";
 import {
   InspectContext,
   PlayerMat,
@@ -254,6 +259,175 @@ function MatTab({
   );
 }
 
+// At most this many cards render per group; the rest collapse into a "+N"
+// chip. Ultra Ball and Trade never come close, but a Professor's Research
+// discards a whole hand and draws seven, and a dozen-plus cards on one mat
+// would shrink past the point of being recognisable art.
+const DISCARD_DRAW_MAX_PER_GROUP = 5;
+// Below this the card art stops reading as a card at all, so the group cap
+// takes over instead of shrinking further.
+const DISCARD_DRAW_MIN_CARD_PX = 26;
+
+/**
+ * Full-mat overlay for a discard-then-draw exchange — Ultra Ball paying two
+ * cards for one, N's Zoroark ex's Trade, and the like. It reads left to
+ * right as the transaction itself: what was played, what it cost, what it
+ * bought.
+ *
+ * Card size is solved for rather than fixed. The mat's own dimensions come
+ * from a height budget that moves with the viewport, and the number of
+ * cards on show is whatever the action happened to involve, so the width is
+ * clamped against both: the row has to fit the mat's width, and a card plus
+ * its label has to fit the mat's height.
+ */
+function DiscardDrawOverlay({
+  detail,
+  cardWidth,
+  matWidth,
+}: {
+  detail: DiscardDrawFrame;
+  cardWidth: number;
+  matWidth: number;
+}) {
+  // Cards the log counted but couldn't name — the verbose export reports
+  // "drew 3 cards" with no list. Shown as facedown backs so the count still
+  // reads honestly instead of the overlay silently showing fewer.
+  const unknownDrawn = Math.max(0, detail.drawnCount - detail.drawn.length);
+  const shown =
+    Math.min(1, DISCARD_DRAW_MAX_PER_GROUP) +
+    Math.min(detail.discarded.length, DISCARD_DRAW_MAX_PER_GROUP) +
+    Math.min(detail.drawn.length + unknownDrawn, DISCARD_DRAW_MAX_PER_GROUP);
+
+  // Width budget: mat, less the overlay's own px-2, the two arrows, and the
+  // three inter-group gaps. Each card also carries an 8%-of-itself gap.
+  const widthBudget = matWidth - 16 - 2 * 12 - 2 * 16;
+  const fromWidth = widthBudget / (shown * 1.08);
+  // Height budget: mat height, less breathing room, the label line and the
+  // gap above it. 342/245 converts a card's width to its height.
+  const fromHeight = (matWidth * MAT_ASPECT - 24 - 12 - 6) / (342 / 245);
+  const w = Math.max(
+    DISCARD_DRAW_MIN_CARD_PX,
+    Math.round(Math.min(cardWidth * 0.92, fromWidth, fromHeight)),
+  );
+
+  return (
+    <motion.div
+      className="absolute inset-0 z-30 flex items-center justify-center overflow-hidden rounded-xl px-2"
+      // 70% of the page background rather than a flat black scrim, so the
+      // overlay reads as the app dimming the mat rather than a modal.
+      style={{ backgroundColor: "color-mix(in srgb, var(--bg) 70%, transparent)" }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+    >
+      <div className="flex items-center gap-3 sm:gap-4">
+        <DiscardDrawGroup
+          label={detail.abilityName ?? "Played"}
+          cards={[detail.source]}
+          width={w}
+        />
+        <DiscardDrawArrow />
+        <DiscardDrawGroup
+          label={detail.discarded.length === 1 ? "Discarded" : `Discarded ${detail.discarded.length}`}
+          cards={detail.discarded}
+          width={w}
+          dimmed
+        />
+        <DiscardDrawArrow />
+        <DiscardDrawGroup
+          label={detail.drawnCount === 1 ? "Drew" : `Drew ${detail.drawnCount}`}
+          cards={detail.drawn}
+          unknownCount={unknownDrawn}
+          width={w}
+        />
+      </div>
+    </motion.div>
+  );
+}
+
+function DiscardDrawArrow() {
+  return (
+    <span aria-hidden className="shrink-0 text-sm font-bold text-text-muted">
+      ›
+    </span>
+  );
+}
+
+function DiscardDrawGroup({
+  label,
+  cards,
+  width,
+  unknownCount = 0,
+  dimmed,
+}: {
+  label: string;
+  cards: DiscardDrawCard[];
+  width: number;
+  /** Facedown placeholders for cards the log counted but didn't name. */
+  unknownCount?: number;
+  /** Discards read as spent, so they sit back a little from the other two. */
+  dimmed?: boolean;
+}) {
+  const total = cards.length + unknownCount;
+  if (total === 0) return null;
+  // Trim the named cards first and the facedown placeholders after, so what
+  // survives the cap is the part a viewer can actually learn something from.
+  const shownCards = cards.slice(0, DISCARD_DRAW_MAX_PER_GROUP);
+  const shownUnknown = Math.min(
+    unknownCount,
+    DISCARD_DRAW_MAX_PER_GROUP - shownCards.length,
+  );
+  const hidden = total - shownCards.length - shownUnknown;
+  return (
+    <div className="flex min-w-0 shrink flex-col items-center gap-1.5">
+      <div className="flex items-center" style={{ gap: Math.round(width * 0.08) }}>
+        {shownCards.map((card, i) => (
+          <div
+            key={`${card.name}-${i}`}
+            className={`overflow-hidden rounded shadow-[0_4px_10px_rgba(0,0,0,0.35)] ${
+              dimmed ? "opacity-70" : ""
+            }`}
+            style={{ width, aspectRatio: "245 / 342" }}
+            title={card.name}
+          >
+            {card.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={card.imageUrl}
+                alt={card.name}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              // Catalog miss — the name still carries the information the
+              // art would have, so show it rather than an empty rectangle.
+              <div className="flex h-full w-full items-center justify-center bg-white p-1 text-center text-[8px] font-semibold leading-tight text-black">
+                {card.name}
+              </div>
+            )}
+          </div>
+        ))}
+        {Array.from({ length: shownUnknown }, (_, i) => (
+          <div
+            key={`unknown-${i}`}
+            aria-label="Unrevealed card"
+            className="rounded bg-gradient-to-br from-[#3b4a63] to-[#1f2733] shadow-[0_4px_10px_rgba(0,0,0,0.35)]"
+            style={{ width, aspectRatio: "245 / 342" }}
+          />
+        ))}
+        {hidden > 0 && (
+          <span className="shrink-0 pl-0.5 text-[10px] font-bold tabular-nums text-text-secondary">
+            +{hidden}
+          </span>
+        )}
+      </div>
+      <span className="whitespace-nowrap text-[9px] font-bold uppercase tracking-wider text-text-secondary">
+        {label}
+      </span>
+    </div>
+  );
+}
+
 function Board({
   frame,
   loading,
@@ -339,6 +513,16 @@ function Board({
               matWidth={matWidth}
               instant={instant}
             />
+            <AnimatePresence>
+              {frame.discardDraw?.actor === "player" && (
+                <DiscardDrawOverlay
+                  key={frame.actionIndex}
+                  detail={frame.discardDraw}
+                  cardWidth={cardWidth}
+                  matWidth={matWidth}
+                />
+              )}
+            </AnimatePresence>
           </div>
           <MatTab
             edge="bottom"
@@ -371,6 +555,16 @@ function Board({
               matWidth={matWidth}
               instant={instant}
             />
+            <AnimatePresence>
+              {frame.discardDraw?.actor === "opponent" && (
+                <DiscardDrawOverlay
+                  key={frame.actionIndex}
+                  detail={frame.discardDraw}
+                  cardWidth={cardWidth}
+                  matWidth={matWidth}
+                />
+              )}
+            </AnimatePresence>
           </div>
         </div>
       )}

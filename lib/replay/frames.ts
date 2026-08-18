@@ -68,6 +68,34 @@ export interface LastPlayedTrainerFrame {
   actor: "player" | "opponent";
 }
 
+export interface DiscardDrawCard {
+  name: string;
+  imageUrl: string | null;
+}
+
+/**
+ * A "pay cards to get cards" moment — Ultra Ball discarding two to fetch a
+ * Pokémon, N's Zoroark ex's Trade, and so on. Present only on the frame of
+ * the action that caused it, so the viewer can raise an overlay for exactly
+ * as long as the playhead sits on it.
+ */
+export interface DiscardDrawFrame {
+  /** Whose mat the overlay belongs over. */
+  actor: "player" | "opponent";
+  /** Card whose art represents the cause: the item itself, or — for an
+   *  ability — the Pokémon that used it. */
+  source: DiscardDrawCard;
+  /** Ability name when the cause was an ability, else null. The source
+   *  card's own name is already the label in that case. */
+  abilityName: string | null;
+  discarded: DiscardDrawCard[];
+  drawn: DiscardDrawCard[];
+  /** Total cards drawn. Can exceed `drawn.length`: the log sometimes gives
+   *  a count with no card list, in which case the UI has a number to show
+   *  even though it has no art. */
+  drawnCount: number;
+}
+
 export interface ReplayFrame {
   /** Index into the original parsed action stream. */
   actionIndex: number;
@@ -88,6 +116,8 @@ export interface ReplayFrame {
    *  draw/discard piles and clears it on the next frame (it's already in
    *  the discard by the time the frame is snapshotted). */
   lastPlayedTrainer: LastPlayedTrainerFrame | null;
+  /** Set only on frames whose action both discarded and drew cards. */
+  discardDraw: DiscardDrawFrame | null;
 }
 
 export interface ReplayPayload {
@@ -231,6 +261,7 @@ function frameFromState(
   actor: "player" | "opponent" | "system",
   cardIds: Record<string, string>,
   lastPlayedTrainer: LastPlayedTrainerFrame | null = null,
+  discardDraw: DiscardDrawFrame | null = null,
 ): ReplayFrame {
   return {
     actionIndex,
@@ -259,6 +290,54 @@ function frameFromState(
     prizesTaken: state.prizesTaken,
     winner: state.winner,
     lastPlayedTrainer,
+    discardDraw,
+  };
+}
+
+function toDiscardDrawCard(name: string): DiscardDrawCard {
+  return { name, imageUrl: cardImageUrlForAnyName(name) };
+}
+
+/**
+ * Reads the discard-then-draw overlay off an action, or null when the
+ * action isn't one. Both halves are required: a bare discard (a retreat
+ * cost, a KO) and a bare draw (the start-of-turn card) are ordinary board
+ * events, and raising a full-mat overlay for them would bury the board in
+ * interruptions. It's the exchange that's worth stopping on.
+ */
+function discardDrawFromAction(
+  action: { action_type: string; payload: Record<string, unknown> },
+  actor: "player" | "opponent" | "system",
+): DiscardDrawFrame | null {
+  if (actor !== "player" && actor !== "opponent") return null;
+
+  const payload = action.payload;
+  const discarded = Array.isArray(payload.discarded_cards)
+    ? (payload.discarded_cards as string[])
+    : [];
+  const drawn = Array.isArray(payload.drawn_cards)
+    ? (payload.drawn_cards as string[])
+    : [];
+  const drawnCount =
+    typeof payload.drawn_count === "number" ? payload.drawn_count : 0;
+  if (discarded.length === 0 || drawnCount === 0) return null;
+
+  // For an ability the acting card is the Pokémon, which the parser puts in
+  // `source`; for a trainer it's the card named in `card`.
+  const isAbility = action.action_type === "ability_used";
+  const sourceName = isAbility ? payload.source : payload.card;
+  if (typeof sourceName !== "string") return null;
+
+  return {
+    actor,
+    source: toDiscardDrawCard(sourceName),
+    abilityName:
+      isAbility && typeof payload.ability_name === "string"
+        ? payload.ability_name
+        : null,
+    discarded: discarded.map(toDiscardDrawCard),
+    drawn: drawn.map(toDiscardDrawCard),
+    drawnCount,
   };
 }
 
@@ -310,7 +389,17 @@ export function buildReplayPayload(
       };
     }
 
-    frames.push(frameFromState(state, idx, action.raw_text, actor, cardIds, lastPlayedTrainer));
+    frames.push(
+      frameFromState(
+        state,
+        idx,
+        action.raw_text,
+        actor,
+        cardIds,
+        lastPlayedTrainer,
+        discardDrawFromAction(action, actor),
+      ),
+    );
   });
 
   // Primary attacker per side = highest-damage Pokémon over the whole

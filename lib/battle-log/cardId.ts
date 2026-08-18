@@ -53,6 +53,11 @@ export const CARD_NAME_ARRAY_FIELDS = [
   "revealed_cards",
   "replaced_stadium",
   "discarded_energies",
+  "discarded_cards",
+  "drawn_cards",
+  // Legacy alias of discarded_cards on ability_used. Listed so the verbose
+  // export's id prefixes get stripped from it too — they never were.
+  "discards",
 ] as const;
 
 /** Return a copy of an action payload with card-id prefixes stripped from its

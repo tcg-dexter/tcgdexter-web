@@ -243,3 +243,70 @@ describe("normalize + summarize (example-1)", () => {
     expect(s.prizes_taken_opponent).toBe(2);
   });
 });
+
+// The overlay the Replay viewer raises for an Ultra Ball / Trade-style
+// exchange is driven entirely by these payload fields, and the way TCG Live
+// writes them is the trap: a single card is named inline on the dash line,
+// but multiples are summarised there ("discarded 2 cards.") with the names
+// on bullet children *below* it. Nothing marks which dash a bullet belongs
+// to except document order, so a block that both discards and draws — where
+// two bullet lists appear under two different dashes — is the case that
+// tells a correct implementation from one that merges the two.
+describe("discard-then-draw extraction", () => {
+  const parsed = parseBattleLog(EXAMPLE);
+  const events = parsed.actions.filter(
+    (a) =>
+      Array.isArray(a.payload.discarded_cards) &&
+      (a.payload.discarded_cards as string[]).length > 0 &&
+      (a.payload.drawn_count as number) > 0,
+  );
+
+  it("is not a vacuous guard — the fixture contains both item and ability forms", () => {
+    expect(events.some((a) => a.action_type === "play_item")).toBe(true);
+    expect(events.some((a) => a.action_type === "ability_used")).toBe(true);
+  });
+
+  it("keeps a bulleted discard list off the draw that follows it", () => {
+    // "played Ultra Ball." → "- discarded 2 cards." → bullet pair
+    //                     → "- drew N's Zoroark ex."
+    // The bullet sits between the two dashes, so an implementation that
+    // collects every bullet in the block lands both names in `drawn_cards`
+    // as well.
+    const ultraBall = events.find(
+      (a) => a.action_type === "play_item" && a.payload.card === "Ultra Ball",
+    );
+    expect(ultraBall).toBeDefined();
+    expect(ultraBall!.payload.discarded_cards).toEqual([
+      "N's PP Up",
+      "Fezandipiti ex",
+    ]);
+    expect(ultraBall!.payload.drawn_cards).toEqual(["N's Zoroark ex"]);
+    expect(ultraBall!.payload.drawn_count).toBe(1);
+  });
+
+  it("keeps an inline discard off the bulleted draw that follows it", () => {
+    // The mirror case: "used Trade." → "- discarded N's PP Up."
+    //                                → "- drew 2 cards." → bullet pair.
+    const trade = events.find(
+      (a) => a.action_type === "ability_used" && a.payload.ability_name === "Trade",
+    );
+    expect(trade).toBeDefined();
+    expect(trade!.payload.discarded_cards).toEqual(["N's PP Up"]);
+    expect(trade!.payload.drawn_cards).toEqual(["N's Zekrom", "N's PP Up"]);
+    expect(trade!.payload.drawn_count).toBe(2);
+  });
+
+  it("counts draws the log never names, and strips card-id prefixes", () => {
+    // The verbose export reports "drew 3 cards" with no bullet list at all,
+    // so drawn_count has to stand alone rather than being derived from
+    // drawn_cards — the viewer shows facedown backs for the difference.
+    const lunar = parseBattleLog(VERBOSE).actions.find(
+      (a) => a.payload.ability_name === "Lunar Cycle",
+    );
+    expect(lunar).toBeDefined();
+    expect(lunar!.payload.drawn_count).toBe(3);
+    expect(lunar!.payload.drawn_cards).toEqual([]);
+    // "(mee_6) Basic Fighting Energy" — the id prefix must be gone.
+    expect(lunar!.payload.discarded_cards).toEqual(["Basic Fighting Energy"]);
+  });
+});
