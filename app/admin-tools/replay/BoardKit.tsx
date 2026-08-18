@@ -349,6 +349,94 @@ export function ConditionPill({ condition }: { condition: string }) {
   );
 }
 
+// Above this many attachments the row collapses to one icon and a count.
+// Four is what the card footer fits at board scale; past that the icons
+// start running the width of the card and stop being countable at a glance,
+// which is the only thing the row is there to convey.
+const ENERGY_ICONS_MAX = 4;
+
+/**
+ * The single type that stands in for a collapsed stack: whichever is
+ * attached most, ties going to whichever was attached first. A mixed stack
+ * has no honest single answer, but the plurality is the least misleading of
+ * the options — and the count beside it is exact either way.
+ */
+function dominantEnergyType(types: string[]): string {
+  const counts = new Map<string, number>();
+  for (const t of types) counts.set(t, (counts.get(t) ?? 0) + 1);
+  let best = types[0];
+  let bestCount = 0;
+  // Iterating the original order (not the map) is what makes ties resolve
+  // to the earliest attachment: a later type has to strictly beat the
+  // incumbent to replace it.
+  for (const t of types) {
+    const n = counts.get(t) ?? 0;
+    if (n > bestCount) {
+      best = t;
+      bestCount = n;
+    }
+  }
+  return best;
+}
+
+/** Attached-energy icons for a card footer, in attach order — or, once past
+ *  ENERGY_ICONS_MAX, one icon and an "×N" total. */
+function EnergyRow({
+  types,
+  iconSize,
+}: {
+  types: string[];
+  /** Explicit px size (inspector). Omitted on the board, which uses the
+   *  responsive classes instead. */
+  iconSize?: number;
+}) {
+  // On the board: 25% smaller on mobile, full size on sm+. In the
+  // inspector: scaled proportionally to the enlarged card.
+  const iconClass =
+    iconSize == null ? "h-[7.5px] w-[7.5px] sm:h-[10px] sm:w-[10px]" : undefined;
+  const iconStyle =
+    iconSize == null ? undefined : { height: iconSize, width: iconSize };
+
+  if (types.length > ENERGY_ICONS_MAX) {
+    const type = dominantEnergyType(types);
+    return (
+      <>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`/types/${type.toLowerCase()}.png`}
+          alt={type}
+          className={iconClass}
+          style={iconStyle}
+        />
+        <span
+          // Tracks the icon so the pair scales together at either size.
+          className={`font-bold leading-none text-white tabular-nums ${
+            iconSize == null ? "text-[7px] sm:text-[9px]" : ""
+          }`}
+          style={iconSize == null ? undefined : { fontSize: Math.round(iconSize * 0.95) }}
+        >
+          ×{types.length}
+        </span>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {types.map((t, i) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={i}
+          src={`/types/${t.toLowerCase()}.png`}
+          alt={t}
+          className={iconClass}
+          style={iconStyle}
+        />
+      ))}
+    </>
+  );
+}
+
 export function PokemonCardImage({
   mon,
   width,
@@ -484,26 +572,7 @@ export function PokemonCardImage({
           // the energy icons sit on the same darkened band shape across the
           // app. Energies render left-to-right in attach order.
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-start gap-[2px] px-0 pb-1 pt-3 bg-gradient-to-b from-transparent to-black to-80%">
-            {mon.energyTypes.map((t, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={i}
-                src={`/types/${t.toLowerCase()}.png`}
-                alt={t}
-                // On the board: 25% smaller on mobile, full size on sm+. In
-                // the inspector: scaled proportionally to the enlarged card.
-                className={
-                  energyIconSize == null
-                    ? "h-[7.5px] w-[7.5px] sm:h-[10px] sm:w-[10px]"
-                    : undefined
-                }
-                style={
-                  energyIconSize == null
-                    ? undefined
-                    : { height: energyIconSize, width: energyIconSize }
-                }
-              />
-            ))}
+            <EnergyRow types={mon.energyTypes} iconSize={energyIconSize} />
           </div>
         )}
       </div>
