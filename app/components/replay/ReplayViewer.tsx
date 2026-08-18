@@ -76,12 +76,14 @@ function speedLabel(s: 0.5 | 1 | 2 | 4): string {
 // nub. Doubling it puts the tab's top edge well inside the mat's straight
 // run, where it's covered outright.
 const TAB_TUCK_PX = 24;
-// Height of the band that shows past the mat, and the reason it's 16: that
-// is text-xs's line-height, so the band is the name's line box exactly and
-// the tab has no vertical slack to sit unevenly in. Keep the two in step —
-// a band taller than the line box reads as padding above and below the
-// label. The tuck is unaffected either way, being covered by the mat.
-const TAB_CONTENT_PX = 16;
+// Height of the band that shows past the mat, built from the name's line
+// box plus deliberate padding rather than stated as one number — that way
+// the padding stays visible as a choice, and the line-box term still has
+// to track text-xs if the label's type ever changes. The tuck is
+// unaffected by both, being covered by the mat either way.
+const TAB_LABEL_LINE_PX = 16; // text-xs line-height
+const TAB_LABEL_PAD_Y_PX = 2;
+const TAB_CONTENT_PX = TAB_LABEL_LINE_PX + 2 * TAB_LABEL_PAD_Y_PX;
 const TAB_GAP_PX = 8;
 
 // Fixed vertical chrome inside the mat column besides the two mats
@@ -160,8 +162,8 @@ function PrizePips({ remaining }: { remaining: number }) {
  * plus their prize scorekeeper. The top mat's tab hangs below it anchored
  * left; the bottom mat's sits above it anchored right, so the two read as
  * belonging to the mats they touch rather than to the gap between them.
- * Pips sit on the side of the name nearer the middle of the board in both
- * cases (right of the top name, left of the bottom one).
+ * Pips sit on the side of the name nearer the board's outer edge in both
+ * cases (left of the top name, right of the bottom one).
  */
 function MatTab({
   name,
@@ -206,19 +208,24 @@ function MatTab({
         paddingBottom: hangsBelow ? undefined : TAB_TUCK_PX,
       }}
     >
-      {/* The band is exactly the name's line box, so the tab hugs the label
-          with no slack to distribute. The 10px pips centre inside it.
-          Note the name deliberately keeps text-xs's default line-height
-          rather than leading-none: `truncate` brings overflow:hidden with
-          it, and a line box tightened to the font size would clip the
-          descenders on handles like "brockling12". */}
+      {/* The band is the name's line box plus TAB_LABEL_PAD_Y_PX either
+          side; the 10px pips centre inside it. Note the name deliberately
+          keeps text-xs's default line-height rather than leading-none:
+          `truncate` brings overflow:hidden with it, and a line box
+          tightened to the font size would clip the descenders on handles
+          like "brockling12".
+
+          Pips lead on the top tab and trail on the bottom one. Since the
+          tabs anchor to opposite sides — top left, bottom right — that
+          puts both scorekeepers on the board's outer edges, flush with
+          the mats they belong to, and both names inboard. */}
       <div
         className="flex items-center gap-2"
         style={{ height: TAB_CONTENT_PX }}
       >
-        {!hangsBelow && <PrizePips remaining={prizesRemaining} />}
-        <span className="min-w-0 truncate text-xs font-bold">{name}</span>
         {hangsBelow && <PrizePips remaining={prizesRemaining} />}
+        <span className="min-w-0 truncate text-xs font-bold">{name}</span>
+        {!hangsBelow && <PrizePips remaining={prizesRemaining} />}
       </div>
     </div>
   );
