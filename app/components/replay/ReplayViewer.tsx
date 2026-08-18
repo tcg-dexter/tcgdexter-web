@@ -664,6 +664,119 @@ function HandStrip({
 // inspector: each attached card's height as a percentage of the big
 // card's own — width follows from the card aspect ratio.
 const ATTACHED_ROW_PCT = 33;
+// The row's viewport is capped to this many cards; anything past it stays a
+// single row and scrolls (swipe, or the chevrons) instead of wrapping to a
+// second line, which would need the whole overlay resized to make room.
+const ATTACHED_ROW_MAX_VISIBLE = 7;
+const ATTACHED_ROW_GAP_PX = 6;
+// A chevron button's own width (h-5 w-5 = 20px) plus the gap-1 (4px)
+// beside it — the fixed allowance each side of the row spends on chrome
+// rather than card content.
+const ATTACHED_ROW_CHEVRON_PX = 24;
+
+/**
+ * A single-row, horizontally scrollable strip of attached-card thumbnails.
+ * Sized to show ATTACHED_ROW_MAX_VISIBLE at once — seven is rarely all of
+ * them (a heavily-loaded Pokémon can carry more energy than that alone —
+ * see the energy footer's own >4 collapse rule elsewhere on the board) —
+ * so anything past that scrolls into view rather than wrapping to a second
+ * row, which the inspector isn't laid out to make room for.
+ *
+ * Scrolling works two ways at once: native horizontal overflow gives swipe
+ * on touch and trackpad for free, and the chevrons step exactly one card
+ * at a time for a mouse. Both drive the same underlying scrollLeft, so
+ * they can't disagree about position. Chevrons render only when there's
+ * something to scroll to — `overflow.left`/`overflow.right` — and disable
+ * themselves via CSS pointer-events rather than being removed, so the
+ * button geometry (and the strip's width) doesn't jump as attachments are
+ * scrolled through.
+ */
+function AttachedCardsRow({
+  cards,
+  cardWidth,
+}: {
+  cards: DiscardDrawCard[];
+  cardWidth: number;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [overflow, setOverflow] = useState({ left: false, right: false });
+
+  const updateOverflow = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setOverflow({
+      left: el.scrollLeft > 1,
+      right: el.scrollLeft < el.scrollWidth - el.clientWidth - 1,
+    });
+  };
+
+  useIsomorphicLayoutEffect(() => {
+    updateOverflow();
+    // Card count changes as the playhead moves between the discard/draw
+    // and mulligan-style beats this same board renders — re-measure
+    // whenever the set of cards shown changes rather than only once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cards.length, cardWidth]);
+
+  const step = cardWidth + ATTACHED_ROW_GAP_PX;
+  function scrollByCard(dir: 1 | -1) {
+    scrollRef.current?.scrollBy({ left: dir * step, behavior: "smooth" });
+  }
+
+  const viewportWidth =
+    Math.min(cards.length, ATTACHED_ROW_MAX_VISIBLE) * cardWidth +
+    (Math.min(cards.length, ATTACHED_ROW_MAX_VISIBLE) - 1) * ATTACHED_ROW_GAP_PX;
+
+  return (
+    <div className="flex items-center gap-1">
+      <AttachedRowChevron direction="left" visible={overflow.left} onClick={() => scrollByCard(-1)} />
+      <div
+        ref={scrollRef}
+        onScroll={updateOverflow}
+        className="flex items-end overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        style={{ width: viewportWidth, gap: ATTACHED_ROW_GAP_PX, scrollSnapType: "x proximity" }}
+      >
+        {cards.map((c, i) => (
+          <div key={`${c.name}-${i}`} className="shrink-0" style={{ scrollSnapAlign: "start" }}>
+            <OverlayCardThumb card={c} width={cardWidth} />
+          </div>
+        ))}
+      </div>
+      <AttachedRowChevron direction="right" visible={overflow.right} onClick={() => scrollByCard(1)} />
+    </div>
+  );
+}
+
+function AttachedRowChevron({
+  direction,
+  visible,
+  onClick,
+}: {
+  direction: "left" | "right";
+  /** There's nothing that way to scroll to. Kept mounted rather than
+   *  unmounted so the row's own width never shifts as the user scrolls
+   *  between having and not having room left in a given direction. */
+  visible: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!visible}
+      aria-label={direction === "left" ? "Scroll attached cards left" : "Scroll attached cards right"}
+      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md transition disabled:opacity-0"
+    >
+      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d={direction === "left" ? "M15 18l-6-6 6-6" : "M9 18l6-6-6-6"}
+        />
+      </svg>
+    </button>
+  );
+}
 
 /**
  * First stage of the two-stage card inspector: an XL card image on the
@@ -724,12 +837,31 @@ function MatCardInspector({
   const w = Math.max(OVERLAY_CARD_MIN_PX, Math.round(Math.min(fromWidth, fromHeight)));
   const cardH = Math.round((w * 342) / 245);
   const attachedH = Math.round((cardH * ATTACHED_ROW_PCT) / 100);
+  // Clamped against the mat's width too, not just the card's height: at up
+  // to ATTACHED_ROW_MAX_VISIBLE cards wide plus a chevron on each side, the
+  // row's own natural (33%-of-card-height) size could ask for more width
+  // than a narrow mat has — and unlike the vertical floor below, a chevron
+  // pushed outside the mat isn't just clipped by the mat's overflow-hidden,
+  // it's clipped UNREACHABLE, since it's what the user would tap to see the
+  // rest. ATTACHED_ROW_CHEVRON_PX is that button's own width plus its gap
+  // to the strip, counted on both sides.
+  const attachedWFromMat =
+    (matWidth - 32 - 2 * ATTACHED_ROW_CHEVRON_PX - (ATTACHED_ROW_MAX_VISIBLE - 1) * ATTACHED_ROW_GAP_PX) /
+    ATTACHED_ROW_MAX_VISIBLE;
   // Same floor the discard/draw and mulligan overlays hold their own
-  // thumbnails to. On a narrow enough mat this can floor the row taller
-  // than ATTACHED_ROW_PCT would give it — the card's own overflow-hidden
-  // simply clips the excess at its top edge rather than the row spilling
-  // past the mat, which is an acceptable trade for keeping it legible.
-  const attachedW = Math.max(OVERLAY_CARD_MIN_PX, Math.round((attachedH * 245) / 342));
+  // thumbnails to — it wins over the mat-width clamp above on a narrow
+  // enough mat (a phone-width mat, roughly), so the row can end up wider
+  // than the mat has room for. The overlay's own overflow-hidden then
+  // clips whatever doesn't fit, right chevron included. That's an
+  // acceptable trade for keeping the visible thumbnails legible rather
+  // than shrinking them past recognition to make room for the affordance
+  // that reveals more of them — and native swipe still works to reach the
+  // clipped cards even when the chevron that would have done the same
+  // job is the part that's cut off.
+  const attachedW = Math.max(
+    OVERLAY_CARD_MIN_PX,
+    Math.round(Math.min((attachedH * 245) / 342, attachedWFromMat)),
+  );
 
   return (
     <motion.div
@@ -784,19 +916,22 @@ function MatCardInspector({
         // than it, so anchoring to the card instead left the row floating
         // near the middle of the mat rather than sitting at its floor. z-10
         // over the card so it still reads as "on top of" wherever the two
-        // happen to overlap.
+        // happen to overlap. Not pointer-events-none like the rest of this
+        // overlay's decoration: the row is interactive now (scroll,
+        // chevrons), so it has to actually receive the taps/swipes aimed
+        // at it rather than passing them through to the card underneath —
+        // it's a sibling of the card button, not nested inside it, so this
+        // can't accidentally trigger the card's own onExpand.
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-wrap items-end justify-center gap-1.5 px-2 pb-3 pt-6"
+          className="absolute inset-x-0 bottom-0 z-10 flex justify-center px-2 pb-3 pt-6"
           style={{
-            // Scrim sized to the row's own content rather than a fixed
-            // fraction of the mat, so it grows with a wrapped second row
-            // instead of cutting the first one off.
+            // Scrim sized to the row's own fixed height rather than a
+            // fraction of the mat — the row no longer grows into a second
+            // line, so there's no variable height left to size against.
             backgroundImage: "linear-gradient(to top, rgba(0,0,0,0.75), transparent)",
           }}
         >
-          {attachedCards.map((c, i) => (
-            <OverlayCardThumb key={`${c.name}-${i}`} card={c} width={attachedW} />
-          ))}
+          <AttachedCardsRow cards={attachedCards} cardWidth={attachedW} />
         </div>
       )}
     </motion.div>
