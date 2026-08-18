@@ -82,3 +82,57 @@ describe("replay frames: discard-then-draw staging", () => {
     expect(cards.filter((c) => !c.imageUrl)).toEqual([]);
   });
 });
+
+// The mulligan overlay's row count only ever grows and its cards only ever
+// come from a fixed sequence of "mulligan" then "mulligan_total" actions —
+// but that sequence can span TWO source actions with a running per-actor
+// accumulator threading them together (see buildReplayPayload), which is
+// exactly the kind of state that's easy to get right for one player and
+// wrong for interleaved cases, or right for row 1 and wrong once a second
+// action starts appending to it.
+describe("replay frames: mulligan staging", () => {
+  // MoonSheikah mulligans 3 times in this fixture: once via a standalone
+  // "mulligan" action, then twice more bundled into one "mulligan_total".
+  const beats = payload.frames
+    .map((f, i) => ({ f, i }))
+    .filter(({ f }) => f.mulligan);
+
+  it("is not a vacuous guard — the fixture contains a multi-mulligan sequence", () => {
+    expect(beats.length).toBeGreaterThan(1);
+  });
+
+  it("reveals exactly one new row per beat, in order", () => {
+    beats.forEach(({ f }, i) => {
+      expect(f.mulligan!.rows.length).toBe(i + 1);
+    });
+  });
+
+  it("carries every earlier row forward unchanged as later rows land", () => {
+    const rowNames = (rows: { name: string }[][]) =>
+      rows.map((r) => r.map((c) => c.name));
+    for (let i = 1; i < beats.length; i++) {
+      const prev = rowNames(beats[i - 1].f.mulligan!.rows);
+      const cur = rowNames(beats[i].f.mulligan!.rows).slice(0, prev.length);
+      expect(cur).toEqual(prev);
+    }
+  });
+
+  it("reports the same final total row count on every beat", () => {
+    const totals = Array.from(new Set(beats.map(({ f }) => f.mulligan!.totalRows)));
+    expect(totals.length).toBe(1);
+    expect(totals[0]).toBe(beats.length);
+  });
+
+  it("clears immediately after the sequence's last beat", () => {
+    const lastBeatFrameIndex = beats[beats.length - 1].i;
+    expect(payload.frames[lastBeatFrameIndex + 1].mulligan).toBeNull();
+  });
+
+  it("each row holds a full opening hand and resolves art for every card", () => {
+    const last = beats[beats.length - 1].f.mulligan!;
+    for (const row of last.rows) {
+      expect(row.length).toBe(7);
+      expect(row.filter((c) => !c.imageUrl)).toEqual([]);
+    }
+  });
+});

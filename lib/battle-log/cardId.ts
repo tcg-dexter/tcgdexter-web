@@ -60,6 +60,12 @@ export const CARD_NAME_ARRAY_FIELDS = [
   "discards",
 ] as const;
 
+/** Payload fields holding an array of { cards: string[] } groups — one
+ *  card-name array nested inside each element, rather than the flat list
+ *  CARD_NAME_ARRAY_FIELDS expects. mulligan / mulligan_total's per-mulligan
+ *  reveals are the one case of this shape today. */
+export const CARD_NAME_GROUPED_FIELDS = ["mulligan_reveals"] as const;
+
 /** Return a copy of an action payload with card-id prefixes stripped from its
  *  card-name fields. Used at display time to clean actions that were parsed
  *  and persisted before the verbose-export id stripping landed. */

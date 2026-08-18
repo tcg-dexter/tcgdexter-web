@@ -15,6 +15,7 @@ import { DISCARD_DRAW_STAGES } from "@/lib/replay/frames";
 import type {
   DiscardDrawCard,
   DiscardDrawFrame,
+  MulliganFrame,
   ReplayFrame,
   ReplayPayload,
 } from "@/lib/replay/frames";
@@ -265,9 +266,45 @@ function MatTab({
 // discards a whole hand and draws seven, and a dozen-plus cards on one mat
 // would shrink past the point of being recognisable art.
 const DISCARD_DRAW_MAX_PER_GROUP = 5;
-// Below this the card art stops reading as a card at all, so the group cap
-// takes over instead of shrinking further.
-const DISCARD_DRAW_MIN_CARD_PX = 26;
+// Below this the card art stops reading as a card at all, so a group cap or
+// a row cap takes over instead of shrinking further. Shared by every
+// full-mat card overlay (discard/draw, mulligan) rather than redeclared per
+// one, since it's the same "unrecognisable" threshold regardless of which
+// overlay is asking.
+const OVERLAY_CARD_MIN_PX = 26;
+
+/** A single card face for any full-mat overlay: art when the catalog
+ *  resolved it, the bare name over a plain card back otherwise — a
+ *  catalog miss still carries the information the art would have, so it's
+ *  shown rather than left as an empty rectangle. */
+function OverlayCardThumb({
+  card,
+  width,
+  dimmed,
+}: {
+  card: DiscardDrawCard;
+  width: number;
+  dimmed?: boolean;
+}) {
+  return (
+    <div
+      className={`overflow-hidden rounded shadow-[0_4px_10px_rgba(0,0,0,0.35)] ${
+        dimmed ? "opacity-70" : ""
+      }`}
+      style={{ width, aspectRatio: "245 / 342" }}
+      title={card.name}
+    >
+      {card.imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={card.imageUrl} alt={card.name} className="h-full w-full object-cover" />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center bg-white p-1 text-center text-[8px] font-semibold leading-tight text-black">
+          {card.name}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * Full-mat overlay for a discard-then-draw exchange — Ultra Ball paying two
@@ -315,7 +352,7 @@ function DiscardDrawOverlay({
   // gap above it. 342/245 converts a card's width to its height.
   const fromHeight = (matWidth * MAT_ASPECT - 24 - 12 - 6) / (342 / 245);
   const w = Math.max(
-    DISCARD_DRAW_MIN_CARD_PX,
+    OVERLAY_CARD_MIN_PX,
     Math.round(Math.min(cardWidth * 0.92, fromWidth, fromHeight)),
   );
 
@@ -410,29 +447,7 @@ function DiscardDrawGroup({
       <div className="flex min-w-0 shrink flex-col items-center gap-1.5">
       <div className="flex items-center" style={{ gap: Math.round(width * 0.08) }}>
         {shownCards.map((card, i) => (
-          <div
-            key={`${card.name}-${i}`}
-            className={`overflow-hidden rounded shadow-[0_4px_10px_rgba(0,0,0,0.35)] ${
-              dimmed ? "opacity-70" : ""
-            }`}
-            style={{ width, aspectRatio: "245 / 342" }}
-            title={card.name}
-          >
-            {card.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={card.imageUrl}
-                alt={card.name}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              // Catalog miss — the name still carries the information the
-              // art would have, so show it rather than an empty rectangle.
-              <div className="flex h-full w-full items-center justify-center bg-white p-1 text-center text-[8px] font-semibold leading-tight text-black">
-                {card.name}
-              </div>
-            )}
-          </div>
+          <OverlayCardThumb key={`${card.name}-${i}`} card={card} width={width} dimmed={dimmed} />
         ))}
         {Array.from({ length: shownUnknown }, (_, i) => (
           <div
@@ -452,6 +467,92 @@ function DiscardDrawGroup({
         {label}
       </span>
       </div>
+    </motion.div>
+  );
+}
+
+// Vertical space between mulligan rows in the overlay.
+const MULLIGAN_ROW_GAP_PX = 10;
+
+/**
+ * Full-mat overlay for a mulligan sequence — one row per mulligan taken,
+ * each row the full hand it revealed. Unlike the discard/draw overlay's
+ * three differently-labelled groups, every row here is the same kind of
+ * thing, so the rows carry no individual label; a single "Mulligan" caption
+ * over the stack is enough to say what's being shown.
+ *
+ * The overlay mounts once at the first row and stays mounted as later ones
+ * land — see ReplayViewer's key on this component, a fixed per-actor string
+ * rather than the per-beat actionIndex the discard/draw overlay uses,
+ * because a mulligan beat's underlying action changes partway through the
+ * sequence (see MulliganFrame) and keying on it would restart the fade
+ * mid-sequence.
+ *
+ * Card size solves against the mat's width (fitting the widest row) and
+ * its height (fitting every eventual row stacked), using `totalRows` so
+ * cards hold one size across the whole sequence instead of shrinking each
+ * time a row lands — the same principle as the discard/draw overlay.
+ */
+function MulliganOverlay({
+  detail,
+  cardWidth,
+  matWidth,
+}: {
+  detail: MulliganFrame;
+  cardWidth: number;
+  matWidth: number;
+}) {
+  const cardsPerRow = Math.max(1, ...detail.rows.map((r) => r.length));
+
+  // Width budget: mat, less the overlay's own px-2. Each card carries an
+  // 8%-of-itself gap, same ratio the discard/draw overlay uses.
+  const widthBudget = matWidth - 16;
+  const fromWidth = widthBudget / (cardsPerRow * 1.08);
+  // Height budget: mat height, less breathing room and the caption line,
+  // divided across every row the sequence will eventually show — not just
+  // the ones revealed so far — with a gap between each. 342/245 converts a
+  // card's height back to the width that produces it.
+  const availableForRows =
+    matWidth * MAT_ASPECT - 24 - 16 - (detail.totalRows - 1) * MULLIGAN_ROW_GAP_PX;
+  const fromHeight = availableForRows / detail.totalRows / (342 / 245);
+  const w = Math.max(
+    OVERLAY_CARD_MIN_PX,
+    Math.round(Math.min(cardWidth * 0.92, fromWidth, fromHeight)),
+  );
+
+  return (
+    <motion.div
+      className="absolute inset-0 z-30 flex items-center justify-center overflow-hidden rounded-xl px-2"
+      style={{ backgroundColor: "color-mix(in srgb, var(--bg) 90%, transparent)" }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+    >
+      {/* `layout` re-centres the stack vertically as rows land, the same
+          way the discard/draw overlay's row re-centres horizontally. */}
+      <motion.div layout className="flex flex-col items-center" style={{ gap: MULLIGAN_ROW_GAP_PX }}>
+        <span className="whitespace-nowrap text-[9px] font-bold uppercase tracking-wider text-text-secondary">
+          Mulligan
+        </span>
+        <AnimatePresence initial={false}>
+          {detail.rows.map((row, i) => (
+            <motion.div
+              key={i}
+              layout
+              className="flex items-center"
+              style={{ gap: Math.round(w * 0.08) }}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+            >
+              {row.map((card, j) => (
+                <OverlayCardThumb key={`${card.name}-${j}`} card={card} width={w} />
+              ))}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </motion.div>
     </motion.div>
   );
 }
@@ -551,6 +652,16 @@ function Board({
                 />
               )}
             </AnimatePresence>
+            <AnimatePresence>
+              {frame.mulligan?.actor === "player" && (
+                <MulliganOverlay
+                  key="mulligan-player"
+                  detail={frame.mulligan}
+                  cardWidth={cardWidth}
+                  matWidth={matWidth}
+                />
+              )}
+            </AnimatePresence>
           </div>
           <MatTab
             edge="bottom"
@@ -588,6 +699,16 @@ function Board({
                 <DiscardDrawOverlay
                   key={frame.actionIndex}
                   detail={frame.discardDraw}
+                  cardWidth={cardWidth}
+                  matWidth={matWidth}
+                />
+              )}
+            </AnimatePresence>
+            <AnimatePresence>
+              {frame.mulligan?.actor === "opponent" && (
+                <MulliganOverlay
+                  key="mulligan-opponent"
+                  detail={frame.mulligan}
                   cardWidth={cardWidth}
                   matWidth={matWidth}
                 />

@@ -310,3 +310,44 @@ describe("discard-then-draw extraction", () => {
     expect(lunar!.payload.discarded_cards).toEqual(["Basic Fighting Energy"]);
   });
 });
+
+// A "took N mulligans." block can carry TWO "Cards revealed from Mulligan
+// K" dash+bullet pairs in one action (mulligan 2's hand, then mulligan 3's)
+// — the same shape as the discard-then-draw exchange above, and the same
+// trap: nothing marks which bullet run belongs to which dash except
+// document order, so a naive "collect every bullet" read merges two
+// separate 7-card hands into one 14-card list.
+describe("mulligan reveal extraction", () => {
+  const parsed = parseBattleLog(EXAMPLE);
+
+  it("keeps each mulligan's hand as its own 7-card group", () => {
+    const single = parsed.actions.find((a) => a.action_type === "mulligan");
+    expect(single).toBeDefined();
+    expect(single!.payload.mulligan_reveals).toEqual([
+      {
+        index: 1,
+        cards: [
+          "Buddy-Buddy Poffin",
+          "Hilda",
+          "Basic Water Energy",
+          "Basic Water Energy",
+          "Mega Starmie ex",
+          "Dawn",
+          "Mega Greninja ex",
+        ],
+      },
+    ]);
+
+    const total = parsed.actions.find((a) => a.action_type === "mulligan_total");
+    expect(total).toBeDefined();
+    const groups = total!.payload.mulligan_reveals as { index: number; cards: string[] }[];
+    expect(groups.map((g) => g.index)).toEqual([2, 3]);
+    expect(groups.map((g) => g.cards.length)).toEqual([7, 7]);
+    expect(groups[0].cards).toContain("Frogadier");
+    expect(groups[1].cards).toContain("Surfing Beach");
+    // Not the flattened 14-card union a naive "every bullet in the block"
+    // read would produce.
+    expect(groups[0].cards).not.toContain("Surfing Beach");
+    expect(groups[1].cards).not.toContain("Frogadier");
+  });
+});

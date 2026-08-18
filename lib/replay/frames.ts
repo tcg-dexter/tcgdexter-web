@@ -114,6 +114,30 @@ export interface DiscardDrawFrame {
   drawnCount: number;
 }
 
+/**
+ * Overlay data for a mulligan sequence: one row per mulligan taken, each
+ * row the full hand that mulligan revealed. A player mulligans at most
+ * once per game, in one unbroken run at the very start, so this needs no
+ * "which sequence" bookkeeping the way a repeatable action would.
+ *
+ * The log spreads a run of mulligans across up to two actions — an initial
+ * "took a mulligan" for the first, then one "took N mulligans" bundling
+ * every reveal after it (see extractMulliganReveals) — but the viewer
+ * reveals a row at a time regardless of which action supplied it, so
+ * `buildReplayPayload` flattens both into one per-actor beat sequence, the
+ * same way it stages a discard-then-draw exchange.
+ */
+export interface MulliganFrame {
+  actor: "player" | "opponent";
+  /** Rows revealed so far, oldest first. */
+  rows: DiscardDrawCard[][];
+  /** Row count this sequence ends at. Known from the start (mulligan_total
+   *  states it outright, or there's only the one row if that action never
+   *  appears) so cards can be sized once for the whole sequence instead of
+   *  shrinking each time a row lands. */
+  totalRows: number;
+}
+
 export interface ReplayFrame {
   /** Index into the original parsed action stream. */
   actionIndex: number;
@@ -136,6 +160,10 @@ export interface ReplayFrame {
   lastPlayedTrainer: LastPlayedTrainerFrame | null;
   /** Set only on frames whose action both discarded and drew cards. */
   discardDraw: DiscardDrawFrame | null;
+  /** Set on every frame that falls inside a mulligan sequence, player or
+   *  opponent. Null once the last row has been shown for a full frame — see
+   *  MulliganFrame. */
+  mulligan: MulliganFrame | null;
 }
 
 export interface ReplayPayload {
@@ -280,6 +308,7 @@ function frameFromState(
   cardIds: Record<string, string>,
   lastPlayedTrainer: LastPlayedTrainerFrame | null = null,
   discardDraw: DiscardDrawFrame | null = null,
+  mulligan: MulliganFrame | null = null,
 ): ReplayFrame {
   return {
     actionIndex,
@@ -309,6 +338,7 @@ function frameFromState(
     winner: state.winner,
     lastPlayedTrainer,
     discardDraw,
+    mulligan,
   };
 }
 
@@ -359,6 +389,22 @@ function discardDrawFromAction(
   };
 }
 
+/** Card-name groups off a mulligan / mulligan_total action's
+ *  `mulligan_reveals` payload, sorted by mulligan index — extractMulliganReveals
+ *  in the parser already orders them this way, but a plain-data payload
+ *  crossing the parse/replay boundary isn't a type-checked guarantee of that,
+ *  so this re-asserts it rather than trusting the order it arrives in. */
+function mulliganRevealGroups(
+  payload: Record<string, unknown>,
+): DiscardDrawCard[][] {
+  const reveals = Array.isArray(payload.mulligan_reveals)
+    ? (payload.mulligan_reveals as { index: number; cards: string[] }[])
+    : [];
+  return [...reveals]
+    .sort((a, b) => a.index - b.index)
+    .map((g) => g.cards.map(toDiscardDrawCard));
+}
+
 /** Highest-damage attacker for a side, used for the "{X} vs {Y}" header. */
 function topAttacker(bucket: Map<string, number>): string | null {
   let topName: string | null = null;
@@ -385,6 +431,31 @@ export function buildReplayPayload(
   const parsed = parseBattleLog(battleLogRaw);
   const normalized = normalizePerspective(parsed, playerHandle);
   const result = replay(normalized);
+
+  // Row count each actor's mulligan sequence ends at, known up front so
+  // every beat in the sequence sizes its cards for the eventual total
+  // instead of growing/shrinking as later rows land. A "mulligan" action
+  // with no accompanying "mulligan_total" means the player mulliganed
+  // exactly once; mulligan_total's own `total` field is authoritative
+  // whenever it appears, since it's what the log itself claims.
+  const mulliganTotalByActor: Partial<Record<"player" | "opponent", number>> = {};
+  for (const a of normalized.actions) {
+    if (a.actor !== "player" && a.actor !== "opponent") continue;
+    if (a.action_type === "mulligan" && mulliganTotalByActor[a.actor] == null) {
+      mulliganTotalByActor[a.actor] = 1;
+    }
+    if (a.action_type === "mulligan_total" && typeof a.payload.total === "number") {
+      mulliganTotalByActor[a.actor] = a.payload.total;
+    }
+  }
+  // Running per-actor row accumulator for the mulligan overlay. A fresh
+  // array is assigned (not pushed in place) each time a row lands, so a
+  // frame built from an earlier beat keeps the shorter snapshot it was
+  // given rather than seeing later rows appear in it retroactively.
+  const mulliganRowsByActor: Record<"player" | "opponent", DiscardDrawCard[][]> = {
+    player: [],
+    opponent: [],
+  };
 
   // Frame 0 = initial state, before any action. Then one frame per action.
   const cardIds = normalized.cardIds;
@@ -416,7 +487,29 @@ export function buildReplayPayload(
       ? DISCARD_DRAW_STAGES.map((stage) => ({ ...exchange, stage }))
       : [null];
 
-    for (const discardDraw of stages) {
+    // Mirror of the exchange staging above, but the beats can come from
+    // either of two actions ("mulligan" for the first, "mulligan_total"
+    // bundling every reveal after it) rather than always one — see
+    // MulliganFrame. Reading and writing mulliganRowsByActor here, in
+    // action order, is what lets a "mulligan_total" action's rows build on
+    // top of whatever a prior "mulligan" action already contributed.
+    let mulliganBeats: (MulliganFrame | null)[] = [null];
+    if (
+      (action.action_type === "mulligan" || action.action_type === "mulligan_total") &&
+      (actor === "player" || actor === "opponent")
+    ) {
+      const groups = mulliganRevealGroups(action.payload);
+      const totalRows = mulliganTotalByActor[actor] ?? groups.length;
+      if (groups.length > 0) {
+        mulliganBeats = groups.map((cards) => {
+          mulliganRowsByActor[actor] = [...mulliganRowsByActor[actor], cards];
+          return { actor, rows: mulliganRowsByActor[actor], totalRows };
+        });
+      }
+    }
+
+    const beatCount = Math.max(stages.length, mulliganBeats.length);
+    for (let i = 0; i < beatCount; i++) {
       frames.push(
         frameFromState(
           state,
@@ -425,7 +518,8 @@ export function buildReplayPayload(
           actor,
           cardIds,
           lastPlayedTrainer,
-          discardDraw,
+          i < stages.length ? stages[i] : null,
+          i < mulliganBeats.length ? mulliganBeats[i] : null,
         ),
       );
     }

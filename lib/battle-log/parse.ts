@@ -21,6 +21,7 @@ import { tokenize, type Block, type Section } from "./tokenize";
 import {
   CARD_NAME_ARRAY_FIELDS,
   CARD_NAME_FIELDS,
+  CARD_NAME_GROUPED_FIELDS,
   splitCardId,
   stripCardIds,
 } from "./cardId";
@@ -51,6 +52,29 @@ function stripActionCardIds(a: ParsedAction, ids: Record<string, string>): void 
         const { name, id } = splitCardId(item);
         if (id && !(name in ids)) ids[name] = id;
         return name;
+      });
+    }
+  }
+  for (const f of CARD_NAME_GROUPED_FIELDS) {
+    const v = a.payload[f];
+    if (Array.isArray(v)) {
+      a.payload[f] = v.map((group) => {
+        if (
+          typeof group !== "object" ||
+          group === null ||
+          !Array.isArray((group as { cards?: unknown }).cards)
+        ) {
+          return group;
+        }
+        const g = group as { cards: string[] };
+        return {
+          ...g,
+          cards: g.cards.map((item) => {
+            const { name, id } = splitCardId(item);
+            if (id && !(name in ids)) ids[name] = id;
+            return name;
+          }),
+        };
       });
     }
   }
@@ -160,6 +184,38 @@ function extractDiscardDraw(block: Block): DiscardDraw {
   return { discarded, drawn, drawnCount, drawCounts };
 }
 
+export interface MulliganReveal {
+  /** The mulligan's 1-indexed number for this player — "Mulligan 1",
+   *  "Mulligan 2", etc. — as printed in the log, not a position in this
+   *  action's own array (mulligan_total's array can start at 2). */
+  index: number;
+  cards: string[];
+}
+
+/**
+ * Pulls each "Cards revealed from Mulligan N" dash's own bullet list into
+ * its own group, rather than flattening every bullet in the block together
+ * — the same document-order trap extractDiscardDraw guards against. It
+ * matters here because a single "took 3 mulligans." block carries TWO
+ * dash+bullet pairs (mulligan 2's hand, then mulligan 3's), and collapsing
+ * them would present a mulliganing player's two separate 7-card hands as
+ * one 14-card hand.
+ */
+function extractMulliganReveals(block: Block): MulliganReveal[] {
+  const out: MulliganReveal[] = [];
+  let current: MulliganReveal | null = null;
+  for (const child of block.children) {
+    if (child.kind === "bullet") {
+      current?.cards.push(...splitCardList(child.text));
+      continue;
+    }
+    const m = normalizeQuotes(child.text).match(/^Cards revealed from Mulligan (\d+)$/);
+    current = m ? { index: Number(m[1]), cards: [] } : null;
+    if (current) out.push(current);
+  }
+  return out;
+}
+
 /** Build a payload-augmented ParsedAction. */
 function action(
   action_type: ParsedAction["action_type"],
@@ -213,6 +269,7 @@ const PATTERNS: Pattern[] = [
     handle: (m, b) =>
       action("mulligan", m[1], b.text, {
         revealed_cards: collectRevealedCards(b),
+        mulligan_reveals: extractMulliganReveals(b),
       }),
   },
   {
@@ -221,6 +278,7 @@ const PATTERNS: Pattern[] = [
       action("mulligan_total", m[1], b.text, {
         total: Number(m[2]),
         revealed_cards: collectRevealedCards(b),
+        mulligan_reveals: extractMulliganReveals(b),
       }),
   },
   {
