@@ -660,11 +660,10 @@ function HandStrip({
   );
 }
 
-// Attached-cards row, below the big card in the inspector: each attached
-// card's height as a percentage of the big card's own — width follows from
-// the card aspect ratio. Gap is the space between the big card and the row.
+// Attached-cards row, overlaid on the bottom of the big card in the
+// inspector: each attached card's height as a percentage of the big
+// card's own — width follows from the card aspect ratio.
 const ATTACHED_ROW_PCT = 33;
-const ATTACHED_ROW_GAP_PX = 10;
 
 /**
  * First stage of the two-stage card inspector: an XL card image on the
@@ -676,10 +675,12 @@ const ATTACHED_ROW_GAP_PX = 10;
  * their hand strip) inspects over the player's.
  *
  * A Pokémon target also gets a row of everything attached to it — energy
- * and Tools alike, see PokemonFrame.attachedCards — below the big card.
- * Its size is solved together with the big card's rather than after it:
- * the row's height is defined as a share of the big card's, so growing the
- * card grows the row too, and both have to fit the mat's height at once.
+ * and Tools alike, see PokemonFrame.attachedCards — laid over the bottom of
+ * the big card rather than occupying space below it, so the primary card
+ * stays exactly the same full size the plain-card case already used
+ * (fit-to-mat on both axes, independent of whether anything is attached).
+ * A gradient scrim behind the row is what keeps small thumbnails legible
+ * against whatever's printed on the card underneath them.
  *
  * Tapping the big card again escalates to the existing full-screen
  * ReplayCardInspector (onExpand); the small circled X closes back to the
@@ -710,23 +711,21 @@ function MatCardInspector({
 
   // Fit the mat on both axes, same clamp-against-both-dimensions approach
   // as the discard/draw and mulligan overlays' card sizing. 32px reserves
-  // breathing room from the mat edges on every side. When an attached-cards
-  // row will render below the big card, its own height (ATTACHED_ROW_PCT of
-  // the big card's) and the gap above it come out of the same height
-  // budget up front, rather than being sized independently and risking an
-  // overflow past the mat's floor — the two have to be solved together
-  // since the row's height is itself a function of the card width this
-  // solves for.
+  // breathing room from the mat edges on every side. Unaffected by
+  // attachedCards — the row below overlays the card rather than sharing
+  // its footprint, so there's nothing extra to budget for here.
   const heightBudget = matWidth * MAT_ASPECT - 32;
   const fromWidth = matWidth - 32;
-  const fromHeight =
-    attachedCards.length > 0
-      ? (((heightBudget - ATTACHED_ROW_GAP_PX) / (1 + ATTACHED_ROW_PCT / 100)) * 245) / 342
-      : (heightBudget * 245) / 342;
+  const fromHeight = (heightBudget * 245) / 342;
   const w = Math.max(OVERLAY_CARD_MIN_PX, Math.round(Math.min(fromWidth, fromHeight)));
   const cardH = Math.round((w * 342) / 245);
   const attachedH = Math.round((cardH * ATTACHED_ROW_PCT) / 100);
-  const attachedW = Math.round((attachedH * 245) / 342);
+  // Same floor the discard/draw and mulligan overlays hold their own
+  // thumbnails to. On a narrow enough mat this can floor the row taller
+  // than ATTACHED_ROW_PCT would give it — the card's own overflow-hidden
+  // simply clips the excess at its top edge rather than the row spilling
+  // past the mat, which is an acceptable trade for keeping it legible.
+  const attachedW = Math.max(OVERLAY_CARD_MIN_PX, Math.round((attachedH * 245) / 342));
 
   return (
     <motion.div
@@ -744,19 +743,27 @@ function MatCardInspector({
           onClose();
         }}
         aria-label="Close card preview"
-        className="absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md transition hover:bg-black/70"
+        // Empty-fill, bordered circle in the theme's own primary-text
+        // colour — text-primary already flips between light and dark mode
+        // via its CSS variable, so this needs no separate dark: variant,
+        // unlike the filled bg-black/50 treatment it replaces (which read
+        // fine on either theme purely by coincidence, not by tracking it).
+        className="absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-text-primary text-text-primary transition hover:bg-text-primary/10"
       >
         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
-      <div className="flex flex-col items-center" style={{ gap: ATTACHED_ROW_GAP_PX }}>
+      {/* This wrapper is exactly the card's own footprint — the row below
+          is an absolutely-positioned child of it specifically so it
+          overlays the card's bottom rather than the whole mat, and so it
+          stays centred on the card regardless of how wide the mat is. */}
+      <div className="relative" style={{ width: w, height: cardH }}>
       <button
         type="button"
         onClick={onExpand}
         aria-label={`Open ${card.name} full screen`}
-        className="relative overflow-hidden rounded-lg shadow-[0_8px_20px_rgba(0,0,0,0.4)]"
-        style={{ width: w, aspectRatio: "245 / 342" }}
+        className="relative h-full w-full overflow-hidden rounded-lg shadow-[0_8px_20px_rgba(0,0,0,0.4)]"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -771,7 +778,15 @@ function MatCardInspector({
         )}
       </button>
       {attachedCards.length > 0 && (
-        <div className="flex flex-wrap items-center justify-center gap-1.5">
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-center gap-1.5 px-2 pb-2 pt-6"
+          style={{
+            // Scrim sized to the row's own content rather than a fixed
+            // fraction of the card, so it grows with a wrapped second row
+            // instead of cutting the first one off.
+            backgroundImage: "linear-gradient(to top, rgba(0,0,0,0.75), transparent)",
+          }}
+        >
           {attachedCards.map((c, i) => (
             <OverlayCardThumb key={`${c.name}-${i}`} card={c} width={attachedW} />
           ))}
