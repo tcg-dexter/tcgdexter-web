@@ -109,11 +109,22 @@ const TOTAL_PRIZES = 6;
  * knock out the opposing Pokémon, so a shrinking pile is that player
  * scoring, not being scored on.
  */
-function PrizePips({ remaining }: { remaining: number }) {
+function PrizePips({
+  remaining,
+  reverse,
+}: {
+  remaining: number;
+  /** Renders the pip row right-to-left. Fill order is always index 0
+   *  first regardless — this only mirrors where that pip lands, so the
+   *  side whose cluster would otherwise fill outward from its inboard
+   *  edge fills outward from the board's edge instead. Both tabs then
+   *  read as progressing toward the board's centre as prizes come in. */
+  reverse?: boolean;
+}) {
   const taken = Math.max(0, Math.min(TOTAL_PRIZES, TOTAL_PRIZES - remaining));
   return (
     <span
-      className="flex shrink-0 items-center gap-1"
+      className={`flex shrink-0 items-center gap-1 ${reverse ? "flex-row-reverse" : ""}`}
       role="img"
       aria-label={`${taken} of ${TOTAL_PRIZES} prizes taken`}
     >
@@ -218,14 +229,26 @@ function MatTab({
           Pips lead on the top tab and trail on the bottom one. Since the
           tabs anchor to opposite sides — top left, bottom right — that
           puts both scorekeepers on the board's outer edges, flush with
-          the mats they belong to, and both names inboard. */}
+          the mats they belong to, and both names inboard.
+
+          The bottom tab's pips also render right-to-left (`reverse`). The
+          top tab's cluster already fills outward from the board's edge
+          toward its name without any help — index 0 sits at the outer
+          edge and fills first. The bottom cluster is the mirror image of
+          that layout, so left-to-right there would fill from its
+          inboard/name-adjacent edge outward instead — away from centre,
+          not toward it. Reversing its render order (not its fill order)
+          is what puts index 0 back at its own outer edge, so both tabs
+          converge on the board's centre the same way. */}
       <div
         className="flex items-center gap-2"
         style={{ height: TAB_CONTENT_PX }}
       >
         {hangsBelow && <PrizePips remaining={prizesRemaining} />}
         <span className="min-w-0 truncate text-xs font-bold">{name}</span>
-        {!hangsBelow && <PrizePips remaining={prizesRemaining} />}
+        {!hangsBelow && (
+          <PrizePips remaining={prizesRemaining} reverse />
+        )}
       </div>
     </div>
   );

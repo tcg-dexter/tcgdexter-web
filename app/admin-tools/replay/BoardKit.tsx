@@ -776,7 +776,6 @@ export function PlayerMat({
           height: matWidth > 0 ? matWidth * MAT_ASPECT : undefined,
           backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(BOARD_TEXTURE.svg)}"), ${BOARD_GRADIENT}`,
           backgroundSize: `${BOARD_TEXTURE.w * texScale}px ${BOARD_TEXTURE.h * texScale}px, auto`,
-          boxShadow: "0 4px 4px rgba(0,0,0,0.66)",
         }}
       >
         {/* ── 3-column grid: left-rail | center | right-rail. Rails are sized
