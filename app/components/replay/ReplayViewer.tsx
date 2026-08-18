@@ -559,16 +559,20 @@ function MulliganOverlay({
   );
 }
 
-// Share the card's cropped top half, in units of the card's own width — the
-// aspect ratio pins height to width, so this is the one number that decides
-// how much of each card shows.
-const HAND_STRIP_VISIBLE_PCT = 50;
+// Share of the card's cropped top that shows, in units of the card's own
+// width — the aspect ratio pins height to width, so this is the one number
+// that decides how much of each card is visible above the fade.
+const HAND_STRIP_VISIBLE_PCT = 70;
+// Distance from the mat above, standing in for the label's old margin now
+// that there's no label to carry it — the strip needs to read as attached
+// to the mat, not as a floating, unrelated row.
+const HAND_STRIP_TOP_GAP_PX = 6;
 
 /**
- * The submitting user's hand, in a strip below their mat — always the
- * bottom mat now that Board pins the player there (see Board's comment on
- * why side/edge stay fixed to visual slot). Every card renders cropped to
- * its top half with a gradient fading the cut edge into the page
+ * The submitting user's hand, anchored directly below their mat — always
+ * the bottom mat now that Board pins the player there (see Board's comment
+ * on why side/edge stay fixed to visual slot). Every card renders cropped
+ * to its top 70% with a gradient fading the cut edge into the page
  * background, rather than showing full cards or hiding the row entirely:
  * a hand can run to seven-plus cards, and this is what lets the strip stay
  * compact without either overflowing or needing its own scroll.
@@ -593,10 +597,7 @@ function HandStrip({
   const visibleHeight = Math.round((cardHeight * HAND_STRIP_VISIBLE_PCT) / 100);
 
   return (
-    <div className="mt-4">
-      <p className="mb-2 text-center text-[10px] font-bold uppercase tracking-wider text-text-muted">
-        Your Hand
-      </p>
+    <div style={{ marginTop: HAND_STRIP_TOP_GAP_PX }}>
       <div className="flex flex-wrap items-start justify-center gap-x-2 gap-y-3">
         <AnimatePresence initial={false}>
           {cards.map((card) => (
