@@ -76,10 +76,12 @@ function speedLabel(s: 0.5 | 1 | 2 | 4): string {
 // nub. Doubling it puts the tab's top edge well inside the mat's straight
 // run, where it's covered outright.
 const TAB_TUCK_PX = 24;
-// Height of the band that shows past the mat. The tuck is unaffected by
-// this — it's covered either way — so trimming here only shortens what the
-// eye actually sees.
-const TAB_CONTENT_PX = 22;
+// Height of the band that shows past the mat, and the reason it's 16: that
+// is text-xs's line-height, so the band is the name's line box exactly and
+// the tab has no vertical slack to sit unevenly in. Keep the two in step —
+// a band taller than the line box reads as padding above and below the
+// label. The tuck is unaffected either way, being covered by the mat.
+const TAB_CONTENT_PX = 16;
 const TAB_GAP_PX = 8;
 
 // Fixed vertical chrome inside the mat column besides the two mats
@@ -192,17 +194,18 @@ function MatTab({
         paddingBottom: hangsBelow ? undefined : TAB_TUCK_PX,
       }}
     >
-      {/* Centring the row in this band — not in the full box — is what puts
-          the name and pips in the middle of the tab as seen, since the
-          tucked half is hidden behind the mat. */}
+      {/* The band is exactly the name's line box, so the tab hugs the label
+          with no slack to distribute. The 10px pips centre inside it.
+          Note the name deliberately keeps text-xs's default line-height
+          rather than leading-none: `truncate` brings overflow:hidden with
+          it, and a line box tightened to the font size would clip the
+          descenders on handles like "brockling12". */}
       <div
         className="flex items-center gap-2"
         style={{ height: TAB_CONTENT_PX }}
       >
         {!hangsBelow && <PrizePips remaining={prizesRemaining} />}
-        <span className="min-w-0 truncate text-xs font-bold leading-none">
-          {name}
-        </span>
+        <span className="min-w-0 truncate text-xs font-bold">{name}</span>
         {hangsBelow && <PrizePips remaining={prizesRemaining} />}
       </div>
     </div>
