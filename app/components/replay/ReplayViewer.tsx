@@ -1036,13 +1036,17 @@ export default function ReplayViewer({
       {/* Mobile: the thread sits under the controls, rendered in full with
           no scroll envelope of its own — the page scrolls it. Deliberately
           no scrollContainerRef, so the playhead never yanks the page as it
-          advances; the spotlight/dimming alone marks where playback is. */}
+          advances. maxSequence is likewise omitted: that's what drives the
+          desktop spotlight/dimming, and dimming exists there to mark
+          progress through a thread the user isn't seeing all of at once.
+          Mobile already shows the whole thread at full opacity, so there's
+          nothing for it to spotlight against — passing it would just dim
+          everything after the playhead for no reason. */}
       {isDesktop === false && (
         <div className="mt-6">
           <BattleLogDetail
             matchId={matchId}
             apiUrl={logUrl}
-            maxSequence={frame?.actionIndex ?? -1}
             result={result}
             playerColor={playerColor}
             opponentColor={opponentColor}
