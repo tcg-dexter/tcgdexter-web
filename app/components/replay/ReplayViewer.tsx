@@ -660,20 +660,33 @@ function HandStrip({
   );
 }
 
+// Attached-cards row, below the big card in the inspector: each attached
+// card's height as a percentage of the big card's own — width follows from
+// the card aspect ratio. Gap is the space between the big card and the row.
+const ATTACHED_ROW_PCT = 33;
+const ATTACHED_ROW_GAP_PX = 10;
+
 /**
  * First stage of the two-stage card inspector: an XL card image on the
  * SAME full-mat overlay treatment as the discard/draw and mulligan
  * overlays, rather than jumping straight to the full-screen viewer. It
- * mounts on whichever mat the tapped card belongs to — see MAT_INSPECT_ZONE
- * in Board — so a tap on an opponent card inspects over the opponent's mat
- * and a tap on the player's own card (on their mat OR in their hand strip)
- * inspects over the player's.
+ * mounts on whichever mat the tapped card belongs to — see Board's two
+ * InspectContext.Provider — so a tap on an opponent card inspects over the
+ * opponent's mat and a tap on the player's own card (on their mat OR in
+ * their hand strip) inspects over the player's.
  *
- * Tapping the card again escalates to the existing full-screen
+ * A Pokémon target also gets a row of everything attached to it — energy
+ * and Tools alike, see PokemonFrame.attachedCards — below the big card.
+ * Its size is solved together with the big card's rather than after it:
+ * the row's height is defined as a share of the big card's, so growing the
+ * card grows the row too, and both have to fit the mat's height at once.
+ *
+ * Tapping the big card again escalates to the existing full-screen
  * ReplayCardInspector (onExpand); the small circled X closes back to the
- * board instead. z-40, one above the discard/draw and mulligan overlays'
- * z-30, since it's the more focused of the two if a tap ever lands while
- * one of those is already showing.
+ * board instead. Attached cards themselves aren't tappable — they're a
+ * reference row, not their own inspector target. z-40, one above the
+ * discard/draw and mulligan overlays' z-30, since it's the more focused of
+ * the two if a tap ever lands while one of those is already showing.
  */
 function MatCardInspector({
   target,
@@ -692,17 +705,32 @@ function MatCardInspector({
     target.kind === "pokemon"
       ? { name: target.mon.name, imageUrl: target.mon.imageUrl }
       : { name: target.name, imageUrl: target.imageUrl };
+  const attachedCards =
+    target.kind === "pokemon" ? target.mon.attachedCards ?? [] : [];
 
   // Fit the mat on both axes, same clamp-against-both-dimensions approach
   // as the discard/draw and mulligan overlays' card sizing. 32px reserves
-  // breathing room from the mat edges on every side.
+  // breathing room from the mat edges on every side. When an attached-cards
+  // row will render below the big card, its own height (ATTACHED_ROW_PCT of
+  // the big card's) and the gap above it come out of the same height
+  // budget up front, rather than being sized independently and risking an
+  // overflow past the mat's floor — the two have to be solved together
+  // since the row's height is itself a function of the card width this
+  // solves for.
+  const heightBudget = matWidth * MAT_ASPECT - 32;
   const fromWidth = matWidth - 32;
-  const fromHeight = ((matWidth * MAT_ASPECT - 32) * 245) / 342;
+  const fromHeight =
+    attachedCards.length > 0
+      ? (((heightBudget - ATTACHED_ROW_GAP_PX) / (1 + ATTACHED_ROW_PCT / 100)) * 245) / 342
+      : (heightBudget * 245) / 342;
   const w = Math.max(OVERLAY_CARD_MIN_PX, Math.round(Math.min(fromWidth, fromHeight)));
+  const cardH = Math.round((w * 342) / 245);
+  const attachedH = Math.round((cardH * ATTACHED_ROW_PCT) / 100);
+  const attachedW = Math.round((attachedH * 245) / 342);
 
   return (
     <motion.div
-      className="absolute inset-0 z-40 flex items-center justify-center overflow-hidden rounded-xl"
+      className="absolute inset-0 z-40 flex items-center justify-center overflow-hidden rounded-xl px-2"
       style={{ backgroundColor: "color-mix(in srgb, var(--bg) 90%, transparent)" }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -722,6 +750,7 @@ function MatCardInspector({
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
+      <div className="flex flex-col items-center" style={{ gap: ATTACHED_ROW_GAP_PX }}>
       <button
         type="button"
         onClick={onExpand}
@@ -741,6 +770,14 @@ function MatCardInspector({
           </div>
         )}
       </button>
+      {attachedCards.length > 0 && (
+        <div className="flex flex-wrap items-center justify-center gap-1.5">
+          {attachedCards.map((c, i) => (
+            <OverlayCardThumb key={`${c.name}-${i}`} card={c} width={attachedW} />
+          ))}
+        </div>
+      )}
+      </div>
     </motion.div>
   );
 }

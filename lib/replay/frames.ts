@@ -40,6 +40,13 @@ export interface PokemonFrame {
    *  their title peeking above; without them an equipped Pokémon reads as
    *  bare, so this is board state the replay was previously dropping. */
   tools: { name: string; imageUrl: string | null }[];
+  /** Every card physically attached to this Pokémon — energy then tools,
+   *  each resolved to art — for the card inspector's attached-cards row.
+   *  `energy` above already carries the same energy names but not their
+   *  art, and `tools` above is the tools half of this on its own; this is
+   *  the two combined into one image-resolved list so the inspector
+   *  doesn't need to know the difference between the two attachment kinds. */
+  attachedCards: { name: string; imageUrl: string | null }[];
 }
 
 export interface HandCard {
@@ -244,6 +251,17 @@ function mapPokemon(
   const imageUrl = catalog?.set_id
     ? cardImageSmall(catalog.set_id, catalog.number)
     : cardImageUrlForName(mon.card.name);
+  // Both attachment kinds resolve through the supertype-agnostic helper —
+  // cardImageUrlForName filters to Pokémon and would silently fall back to
+  // the card-back for an Energy or a Tool.
+  const energyCards = mon.attachedEnergy.map((c) => ({
+    name: c.name,
+    imageUrl: cardImageUrlForAnyName(c.name),
+  }));
+  const toolCards = mon.attachedTools.map((c) => ({
+    name: c.name,
+    imageUrl: cardImageUrlForAnyName(c.name),
+  }));
   return {
     id: mon.id,
     name: mon.card.name,
@@ -254,13 +272,8 @@ function mapPokemon(
     conditions: [...mon.conditions],
     evolutionStack: mon.stack.map((c) => c.name),
     imageUrl,
-    // Tools are Trainer cards, so resolve through the supertype-agnostic
-    // helper — cardImageUrlForName filters to Pokémon and would silently
-    // fall back to the card-back here.
-    tools: mon.attachedTools.map((c) => ({
-      name: c.name,
-      imageUrl: cardImageUrlForAnyName(c.name),
-    })),
+    tools: toolCards,
+    attachedCards: [...energyCards, ...toolCards],
   };
 }
 

@@ -193,3 +193,39 @@ describe("replay frames: hand visibility follows player_handle", () => {
     }
   });
 });
+
+// The card inspector's attached-cards row reads PokemonFrame.attachedCards
+// directly, so it has to agree with the energy names the board's own
+// footer already shows (PokemonFrame.energy) and resolve art for each —
+// unlike energy, which frames.ts already exposed as bare names with no
+// image, attachedCards is new and is the row's only data source.
+describe("replay frames: attached cards", () => {
+  const asExporter = buildReplayPayload("m1", EXAMPLE, "a11father");
+
+  it("is not a vacuous guard — some in-play Pokémon has energy attached", () => {
+    const hasAttached = asExporter.frames.some((f) =>
+      [f.player.active, ...f.player.bench, f.opponent.active, ...f.opponent.bench].some(
+        (mon) => mon && mon.attachedCards.length > 0,
+      ),
+    );
+    expect(hasAttached).toBe(true);
+  });
+
+  it("matches energy's own names, in order, each resolved to art", () => {
+    for (const f of asExporter.frames) {
+      for (const mon of [
+        f.player.active,
+        ...f.player.bench,
+        f.opponent.active,
+        ...f.opponent.bench,
+      ]) {
+        if (!mon) continue;
+        // attachedCards is energy-then-tools; this fixture's Pokémon carry
+        // no tools, so it should equal `energy` name-for-name here.
+        const energyPortion = mon.attachedCards.slice(0, mon.energy.length);
+        expect(energyPortion.map((c) => c.name)).toEqual(mon.energy);
+        for (const c of mon.attachedCards) expect(c.imageUrl).not.toBeNull();
+      }
+    }
+  });
+});

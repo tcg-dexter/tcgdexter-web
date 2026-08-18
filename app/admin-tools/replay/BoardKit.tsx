@@ -43,6 +43,13 @@ export interface PokemonFrame {
    *  peeking above. Both surfaces populate this (empty array when the
    *  Pokémon holds none). */
   tools?: { name: string; imageUrl: string | null }[];
+  /** Every card attached to this Pokémon — energy then Tools, each
+   *  resolved to art — for the replay viewer's card inspector. Optional
+   *  like `tools` above: only the replay pipeline (lib/replay/frames.ts)
+   *  populates it today: the AI-player practice mode's own PokemonFrame
+   *  producer has no inspector row to feed. Treat a missing array the
+   *  same as an empty one. */
+  attachedCards?: { name: string; imageUrl: string | null }[];
 }
 
 // pokemontcg.io serves the standard Pokémon card-back PNG as the body of
