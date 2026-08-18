@@ -587,10 +587,15 @@ function HandStrip({
   cards,
   cardWidth,
   instant,
+  onCardClick,
 }: {
   cards: HandCard[];
   cardWidth: number;
   instant: boolean;
+  /** Opens the mat-overlay inspector for a tapped card. Omitted (or a
+   *  card that isn't `revealed`) means the card isn't clickable — there's
+   *  nothing to inspect about a card the log never named. */
+  onCardClick?: (target: InspectTarget) => void;
 }) {
   if (cards.length === 0) return null;
   const cardHeight = Math.round((cardWidth * 342) / 245);
@@ -600,17 +605,29 @@ function HandStrip({
     <div style={{ marginTop: HAND_STRIP_TOP_GAP_PX }}>
       <div className="flex flex-wrap items-start justify-center gap-x-2 gap-y-3">
         <AnimatePresence initial={false}>
-          {cards.map((card) => (
+          {cards.map((card) => {
+            const clickable = card.revealed && onCardClick != null;
+            return (
             <motion.div
               key={card.id}
               layout
-              className="relative overflow-hidden rounded shadow-[0_4px_10px_rgba(0,0,0,0.25)]"
+              // No drop shadow: it would sit below the card's cropped edge,
+              // right where the gradient is trying to fade the card into
+              // the background — a shadow there reads as a hard edge under
+              // the fade, contradicting it.
+              className={`relative overflow-hidden rounded ${clickable ? "cursor-pointer" : ""}`}
               style={{ width: cardWidth, height: visibleHeight }}
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: instant ? 0 : 0.25, ease: "easeOut" }}
               title={card.revealed ? card.name : undefined}
+              role={clickable ? "button" : undefined}
+              onClick={
+                clickable
+                  ? () => onCardClick!({ kind: "card", name: card.name, imageUrl: card.imageUrl })
+                  : undefined
+              }
             >
               {/* The image renders at the card's FULL height inside a
                   wrapper cropped to visibleHeight — top-anchored, so it's
@@ -635,10 +652,96 @@ function HandStrip({
                   thread uses at its own scroll edges. */}
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-b from-transparent to-[var(--bg)]" />
             </motion.div>
-          ))}
+            );
+          })}
         </AnimatePresence>
       </div>
     </div>
+  );
+}
+
+/**
+ * First stage of the two-stage card inspector: an XL card image on the
+ * SAME full-mat overlay treatment as the discard/draw and mulligan
+ * overlays, rather than jumping straight to the full-screen viewer. It
+ * mounts on whichever mat the tapped card belongs to — see MAT_INSPECT_ZONE
+ * in Board — so a tap on an opponent card inspects over the opponent's mat
+ * and a tap on the player's own card (on their mat OR in their hand strip)
+ * inspects over the player's.
+ *
+ * Tapping the card again escalates to the existing full-screen
+ * ReplayCardInspector (onExpand); the small circled X closes back to the
+ * board instead. z-40, one above the discard/draw and mulligan overlays'
+ * z-30, since it's the more focused of the two if a tap ever lands while
+ * one of those is already showing.
+ */
+function MatCardInspector({
+  target,
+  cardWidth,
+  matWidth,
+  onExpand,
+  onClose,
+}: {
+  target: InspectTarget;
+  cardWidth: number;
+  matWidth: number;
+  onExpand: () => void;
+  onClose: () => void;
+}) {
+  const card: DiscardDrawCard =
+    target.kind === "pokemon"
+      ? { name: target.mon.name, imageUrl: target.mon.imageUrl }
+      : { name: target.name, imageUrl: target.imageUrl };
+
+  // Fit the mat on both axes, same clamp-against-both-dimensions approach
+  // as the discard/draw and mulligan overlays' card sizing. 32px reserves
+  // breathing room from the mat edges on every side.
+  const fromWidth = matWidth - 32;
+  const fromHeight = ((matWidth * MAT_ASPECT - 32) * 245) / 342;
+  const w = Math.max(OVERLAY_CARD_MIN_PX, Math.round(Math.min(fromWidth, fromHeight)));
+
+  return (
+    <motion.div
+      className="absolute inset-0 z-40 flex items-center justify-center overflow-hidden rounded-xl"
+      style={{ backgroundColor: "color-mix(in srgb, var(--bg) 90%, transparent)" }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+        aria-label="Close card preview"
+        className="absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md transition hover:bg-black/70"
+      >
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        onClick={onExpand}
+        aria-label={`Open ${card.name} full screen`}
+        className="relative overflow-hidden rounded-lg shadow-[0_8px_20px_rgba(0,0,0,0.4)]"
+        style={{ width: w, aspectRatio: "245 / 342" }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={card.imageUrl ?? CARD_BACK_URL}
+          alt={card.name}
+          className="h-full w-full object-cover"
+        />
+        {!card.imageUrl && (
+          <div className="absolute inset-x-2 top-2 rounded bg-black/60 px-2 py-1 text-center text-sm font-semibold leading-tight text-white line-clamp-2">
+            {card.name}
+          </div>
+        )}
+      </button>
+    </motion.div>
   );
 }
 
@@ -684,10 +787,20 @@ function Board({
       : measuredWidth;
 
   const cardWidth = computeReplayCardWidth(matWidth);
+  // Stage 2: the existing full-screen viewer, unchanged — only reachable
+  // now by tapping the card again inside stage 1 (see onExpand below).
   const [inspect, setInspect] = useState<InspectTarget | null>(null);
+  // Stage 1: which actor's mat the mat-overlay inspector is showing over,
+  // and what it's showing. A tap anywhere always names an actor (the two
+  // InspectContext.Provider below are each scoped to one mat's data, and
+  // HandStrip's cards are always the player's), so there's one flag for
+  // both "is it open" and "which mat it belongs on."
+  const [matInspect, setMatInspect] = useState<{
+    actor: "player" | "opponent";
+    target: InspectTarget;
+  } | null>(null);
 
   return (
-    <InspectContext.Provider value={setInspect}>
     <div
       ref={matContainerRef}
       className="mt-4"
@@ -717,6 +830,12 @@ function Board({
               the hand strip below the board always has a stable mat to sit
               under. Swap the data bound to each block, never `side`/`edge`
               themselves, if this ever needs to change. */}
+          {/* Scoped to just this mat's data, so a tap anywhere inside knows
+              it's the opponent's card without threading an actor prop
+              through BoardKit's shared card components. */}
+          <InspectContext.Provider
+            value={(target) => setMatInspect({ actor: "opponent", target })}
+          >
           <div className="relative z-10">
             <PlayerMat
               side="player"
@@ -758,7 +877,22 @@ function Board({
                 />
               )}
             </AnimatePresence>
+            <AnimatePresence>
+              {matInspect?.actor === "opponent" && (
+                <MatCardInspector
+                  target={matInspect.target}
+                  cardWidth={cardWidth}
+                  matWidth={matWidth}
+                  onExpand={() => {
+                    setInspect(matInspect.target);
+                    setMatInspect(null);
+                  }}
+                  onClose={() => setMatInspect(null)}
+                />
+              )}
+            </AnimatePresence>
           </div>
+          </InspectContext.Provider>
           <MatTab
             edge="bottom"
             name={frame.opponent.handle ?? "Opponent"}
@@ -769,6 +903,9 @@ function Board({
             name={frame.player.handle ?? "Player"}
             prizesRemaining={frame.player.prizesRemaining}
           />
+          <InspectContext.Provider
+            value={(target) => setMatInspect({ actor: "player", target })}
+          >
           <div className="relative z-10">
             <PlayerMat
               side="opponent"
@@ -810,18 +947,40 @@ function Board({
                 />
               )}
             </AnimatePresence>
+            <AnimatePresence>
+              {matInspect?.actor === "player" && (
+                <MatCardInspector
+                  target={matInspect.target}
+                  cardWidth={cardWidth}
+                  matWidth={matWidth}
+                  onExpand={() => {
+                    setInspect(matInspect.target);
+                    setMatInspect(null);
+                  }}
+                  onClose={() => setMatInspect(null)}
+                />
+              )}
+            </AnimatePresence>
           </div>
+          </InspectContext.Provider>
         </div>
         {/* Player's hand, always the bottom mat's now that the swap above
-            pins the submitting user there — see HandStrip. */}
-        <HandStrip cards={frame.player.hand} cardWidth={cardWidth} instant={instant} />
+            pins the submitting user there — see HandStrip. Cards open
+            through the same mat-overlay inspector as the mat itself,
+            always on the player's (bottom) mat, since a hand card is
+            always the player's own. */}
+        <HandStrip
+          cards={frame.player.hand}
+          cardWidth={cardWidth}
+          instant={instant}
+          onCardClick={(target) => setMatInspect({ actor: "player", target })}
+        />
         </>
       )}
       {inspect && (
         <ReplayCardInspector target={inspect} onClose={() => setInspect(null)} />
       )}
     </div>
-    </InspectContext.Provider>
   );
 }
 
