@@ -377,7 +377,19 @@ function DiscardDrawOverlay({
           groups only ever appear, and the whole overlay leaves at once. */}
       <motion.div layout className="flex items-center gap-3 sm:gap-4">
         <AnimatePresence initial={false}>
-          <DiscardDrawGroup key="play" label="Play" cards={[detail.source]} width={w} />
+          <DiscardDrawGroup
+            key="play"
+            // A Pokémon-triggered exchange (ability or attack — the parser
+            // doesn't distinguish the two textually, both come through as
+            // "X's Y used Z") names the ability/attack itself here instead
+            // of the generic "Play", since "Play" would be a false claim —
+            // nothing was played, the Pokémon already in play acted.
+            // abilityName is null for the trainer-card case (Ultra Ball and
+            // the like), where "Play" is accurate.
+            label={detail.abilityName ?? "Play"}
+            cards={[detail.source]}
+            width={w}
+          />
           {reached >= 1 && (
             <DiscardDrawGroup
               key="discard"
