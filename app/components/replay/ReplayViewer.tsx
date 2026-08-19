@@ -850,6 +850,75 @@ function OverlayCloseButton({
  * discard/draw and mulligan overlays' z-30, since it's the more focused of
  * the two if a tap ever lands while one of those is already showing.
  */
+/** A card sized to fit a mat on both axes — the inspector's own big card,
+ *  and the reference size every smaller thumbnail row (attached cards,
+ *  the discard pile grid) scales off of. 32px reserves breathing room from
+ *  the mat edges on every side. */
+function fitCardToMat(matWidth: number): { w: number; h: number } {
+  const heightBudget = matWidth * MAT_ASPECT - 32;
+  const fromWidth = matWidth - 32;
+  const fromHeight = (heightBudget * 245) / 342;
+  const w = Math.max(OVERLAY_CARD_MIN_PX, Math.round(Math.min(fromWidth, fromHeight)));
+  const h = Math.round((w * 342) / 245);
+  return { w, h };
+}
+
+/**
+ * The small-thumbnail width used by both the card inspector's attached-cards
+ * row and the discard-pile grid — one shared formula so a thumbnail reads as
+ * the same size everywhere it shows up, rather than each overlay solving its
+ * own size independently and drifting apart. Sized off `fitCardToMat`'s big
+ * card (ATTACHED_ROW_PCT of its height) since that's the one fixed reference
+ * point every overlay on a given mat shares, regardless of whether that
+ * overlay actually renders a big card of its own (the discard pile doesn't).
+ */
+function attachedScaleCardWidth(matWidth: number): number {
+  const { h: primaryH } = fitCardToMat(matWidth);
+  const attachedH = Math.round((primaryH * ATTACHED_ROW_PCT) / 100);
+  // Clamped against the mat's width too, not just the card's height: at up
+  // to ATTACHED_ROW_MAX_VISIBLE cards wide plus a chevron on each side, the
+  // row's own natural (33%-of-card-height) size could ask for more width
+  // than a narrow mat has — and unlike the vertical floor below, a chevron
+  // pushed outside the mat isn't just clipped by the mat's overflow-hidden,
+  // it's clipped UNREACHABLE, since it's what the user would tap to see the
+  // rest. ATTACHED_ROW_CHEVRON_PX is that button's own width plus its gap
+  // to the strip, counted on both sides. The discard-pile grid has no
+  // chevrons of its own, but shares this same width anyway — the point is
+  // for the two thumbnail sizes to match, not for this clamp to describe
+  // the grid's own layout.
+  const attachedWFromMat =
+    (matWidth - 32 - 2 * ATTACHED_ROW_CHEVRON_PX - (ATTACHED_ROW_MAX_VISIBLE - 1) * ATTACHED_ROW_GAP_PX) /
+    ATTACHED_ROW_MAX_VISIBLE;
+  // Same floor the discard/draw and mulligan overlays hold their own
+  // thumbnails to — it wins over the mat-width clamp above on a narrow
+  // enough mat (a phone-width mat, roughly), so the row can end up wider
+  // than the mat has room for. The overlay's own overflow-hidden then
+  // clips whatever doesn't fit, right chevron included. That's an
+  // acceptable trade for keeping the visible thumbnails legible rather
+  // than shrinking them past recognition to make room for the affordance
+  // that reveals more of them — and native swipe still works to reach the
+  // clipped cards even when the chevron that would have done the same
+  // job is the part that's cut off.
+  return Math.max(
+    OVERLAY_CARD_MIN_PX,
+    Math.round(Math.min((attachedH * 245) / 342, attachedWFromMat)),
+  );
+}
+
+/** Bottom-anchored dark fade behind a row/grid of small card thumbnails —
+ *  the same treatment everywhere a thumbnail group needs to read clearly
+ *  against whatever mat or card art sits behind it. */
+function OverlayGradientScrim({ children }: { children: ReactNode }) {
+  return (
+    <div
+      className="absolute inset-x-0 bottom-0 z-10 flex justify-center px-2 pb-3 pt-6"
+      style={{ backgroundImage: CARD_GROUP_GRADIENT_BG }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function MatCardInspector({
   target,
   cardWidth,
@@ -871,41 +940,11 @@ function MatCardInspector({
     target.kind === "pokemon" ? target.mon.attachedCards ?? [] : [];
 
   // Fit the mat on both axes, same clamp-against-both-dimensions approach
-  // as the discard/draw and mulligan overlays' card sizing. 32px reserves
-  // breathing room from the mat edges on every side. Unaffected by
+  // as the discard/draw and mulligan overlays' card sizing. Unaffected by
   // attachedCards — the row below overlays the card rather than sharing
   // its footprint, so there's nothing extra to budget for here.
-  const heightBudget = matWidth * MAT_ASPECT - 32;
-  const fromWidth = matWidth - 32;
-  const fromHeight = (heightBudget * 245) / 342;
-  const w = Math.max(OVERLAY_CARD_MIN_PX, Math.round(Math.min(fromWidth, fromHeight)));
-  const cardH = Math.round((w * 342) / 245);
-  const attachedH = Math.round((cardH * ATTACHED_ROW_PCT) / 100);
-  // Clamped against the mat's width too, not just the card's height: at up
-  // to ATTACHED_ROW_MAX_VISIBLE cards wide plus a chevron on each side, the
-  // row's own natural (33%-of-card-height) size could ask for more width
-  // than a narrow mat has — and unlike the vertical floor below, a chevron
-  // pushed outside the mat isn't just clipped by the mat's overflow-hidden,
-  // it's clipped UNREACHABLE, since it's what the user would tap to see the
-  // rest. ATTACHED_ROW_CHEVRON_PX is that button's own width plus its gap
-  // to the strip, counted on both sides.
-  const attachedWFromMat =
-    (matWidth - 32 - 2 * ATTACHED_ROW_CHEVRON_PX - (ATTACHED_ROW_MAX_VISIBLE - 1) * ATTACHED_ROW_GAP_PX) /
-    ATTACHED_ROW_MAX_VISIBLE;
-  // Same floor the discard/draw and mulligan overlays hold their own
-  // thumbnails to — it wins over the mat-width clamp above on a narrow
-  // enough mat (a phone-width mat, roughly), so the row can end up wider
-  // than the mat has room for. The overlay's own overflow-hidden then
-  // clips whatever doesn't fit, right chevron included. That's an
-  // acceptable trade for keeping the visible thumbnails legible rather
-  // than shrinking them past recognition to make room for the affordance
-  // that reveals more of them — and native swipe still works to reach the
-  // clipped cards even when the chevron that would have done the same
-  // job is the part that's cut off.
-  const attachedW = Math.max(
-    OVERLAY_CARD_MIN_PX,
-    Math.round(Math.min((attachedH * 245) / 342, attachedWFromMat)),
-  );
+  const { w } = fitCardToMat(matWidth);
+  const attachedW = attachedScaleCardWidth(matWidth);
 
   return (
     <motion.div
@@ -937,42 +976,42 @@ function MatCardInspector({
         )}
       </button>
       {attachedCards.length > 0 && (
-        // Anchored to the MAT's own bottom edge (this div's positioning
-        // parent is the full-mat overlay, not the card button above), not
-        // the card's — the card centres in the mat and is usually shorter
-        // than it, so anchoring to the card instead left the row floating
-        // near the middle of the mat rather than sitting at its floor. z-10
-        // over the card so it still reads as "on top of" wherever the two
-        // happen to overlap. Not pointer-events-none like the rest of this
-        // overlay's decoration: the row is interactive now (scroll,
-        // chevrons), so it has to actually receive the taps/swipes aimed
-        // at it rather than passing them through to the card underneath —
-        // it's a sibling of the card button, not nested inside it, so this
-        // can't accidentally trigger the card's own onExpand.
-        <div
-          className="absolute inset-x-0 bottom-0 z-10 flex justify-center px-2 pb-3 pt-6"
-          style={{
-            // Scrim sized to the row's own fixed height rather than a
-            // fraction of the mat — the row no longer grows into a second
-            // line, so there's no variable height left to size against.
-            backgroundImage: "linear-gradient(to top, rgba(0,0,0,0.75), transparent)",
-          }}
-        >
+        // Anchored to the MAT's own bottom edge (OverlayGradientScrim's
+        // positioning parent is the full-mat overlay, not the card button
+        // above), not the card's — the card centres in the mat and is
+        // usually shorter than it, so anchoring to the card instead left
+        // the row floating near the middle of the mat rather than sitting
+        // at its floor. z-10 over the card so it still reads as "on top of"
+        // wherever the two happen to overlap. Not pointer-events-none like
+        // the rest of this overlay's decoration: the row is interactive now
+        // (scroll, chevrons), so it has to actually receive the taps/swipes
+        // aimed at it rather than passing them through to the card
+        // underneath — it's a sibling of the card button, not nested inside
+        // it, so this can't accidentally trigger the card's own onExpand.
+        <OverlayGradientScrim>
           <AttachedCardsRow cards={attachedCards} cardWidth={attachedW} />
-        </div>
+        </OverlayGradientScrim>
       )}
     </motion.div>
   );
 }
 
 // Grid geometry for the discard-pile inspector. Fixed at 7 columns per the
-// request; 4 rows is what fits comfortably above a phone-width mat without
-// shrinking cards past legibility, so a pile beyond that (28 cards — a
-// realistic late-game count) scrolls vertically inside the grid rather than
-// growing the overlay or shrinking further.
+// request, at the same thumbnail size the card inspector's attached-cards
+// row uses (see attachedScaleCardWidth) rather than a size solved to fit
+// exactly 7×4 into the mat — 4 rows is just the TARGET visible window
+// height at that shared size, clamped to whatever the mat actually has room
+// for; either way, a pile beyond what's visible (28 cards at the target, or
+// fewer on a mat too short to fit even that) scrolls vertically inside the
+// grid rather than growing the overlay or shrinking the cards to fit.
 const DISCARD_GRID_COLS = 7;
 const DISCARD_GRID_VISIBLE_ROWS = 4;
 const DISCARD_GRID_GAP_PX = 6;
+// The dark-to-transparent fade behind any group of small card thumbnails —
+// same value OverlayGradientScrim uses for the attached-cards row, factored
+// out so the discard-pile grid (which needs its own centered panel rather
+// than that component's bottom-anchored strip) can't drift from it.
+const CARD_GROUP_GRADIENT_BG = "linear-gradient(to top, rgba(0,0,0,0.75), transparent)";
 
 /**
  * Full-mat overlay showing the ENTIRE discard pile as a grid, rather than
@@ -996,24 +1035,21 @@ function DiscardPileOverlay({
   onClose: () => void;
 }) {
   const matHeight = matWidth * MAT_ASPECT;
-  // Width budget: mat, less the overlay's own px-2, seven cards and six
-  // inter-card gaps.
-  const fromWidth =
-    (matWidth - 16 - (DISCARD_GRID_COLS - 1) * DISCARD_GRID_GAP_PX) / DISCARD_GRID_COLS;
-  // Height budget: mat height, less room for the close button up top and
-  // the caption + breathing room below it, divided across the four visible
-  // rows with a gap between each. 342/245 converts a card's height back to
-  // the width that produces it — same conversion every other overlay here
-  // uses for the same reason.
-  const fromHeight =
-    ((matHeight - 56 - (DISCARD_GRID_VISIBLE_ROWS - 1) * DISCARD_GRID_GAP_PX) /
-      DISCARD_GRID_VISIBLE_ROWS) *
-    (245 / 342);
-  const w = Math.max(OVERLAY_CARD_MIN_PX, Math.round(Math.min(fromWidth, fromHeight)));
+  // Same thumbnail size the card inspector's attached-cards row uses, so a
+  // card reads as the same size wherever it shows up rather than each
+  // overlay solving its own size independently.
+  const w = attachedScaleCardWidth(matWidth);
   const cardH = Math.round((w * 342) / 245);
   const gridWidth = DISCARD_GRID_COLS * w + (DISCARD_GRID_COLS - 1) * DISCARD_GRID_GAP_PX;
-  const gridVisibleHeight =
+  // Target DISCARD_GRID_VISIBLE_ROWS tall, but never more height than the
+  // mat actually has above the close button and caption — at this shared
+  // (not solved-to-fit) thumbnail size, a 4-row target can ask for more
+  // than a short mat has room for, and without this clamp it would get cut
+  // off by the overlay's own overflow-hidden instead of scrolling the way
+  // a genuinely oversized pile (28+ cards) already does.
+  const targetVisibleHeight =
     DISCARD_GRID_VISIBLE_ROWS * cardH + (DISCARD_GRID_VISIBLE_ROWS - 1) * DISCARD_GRID_GAP_PX;
+  const gridVisibleHeight = Math.min(targetVisibleHeight, matHeight - 56);
 
   return (
     <motion.div
@@ -1025,13 +1061,21 @@ function DiscardPileOverlay({
       transition={{ duration: 0.25, ease: "easeOut" }}
     >
       <OverlayCloseButton onClick={onClose} label="Close discard pile" />
-      <div className="flex flex-col items-center gap-1.5" style={{ maxHeight: matHeight - 24 }}>
+      {/* Same dark-to-transparent card-group fade as the attached-cards row
+          (CARD_GROUP_GRADIENT_BG), applied directly as a panel background
+          here rather than through OverlayGradientScrim's own bottom-anchored
+          positioning — this grid is centered on the mat, not floating over
+          a card below it. */}
+      <div
+        className="flex flex-col items-center gap-1.5 rounded-lg px-3 pb-3 pt-2"
+        style={{ maxHeight: matHeight - 24, backgroundImage: CARD_GROUP_GRADIENT_BG }}
+      >
         <span className="whitespace-nowrap text-[9px] font-bold uppercase tracking-wider text-text-secondary">
           Discard Pile · {cards.length}
         </span>
-        {/* The only scrolling surface in this overlay — a pile past
-            DISCARD_GRID_VISIBLE_ROWS rows scrolls here instead of growing
-            the grid past the mat or shrinking cards further. */}
+        {/* The only scrolling surface in this overlay — a pile past what
+            fits vertically scrolls here instead of growing the grid past
+            the mat or shrinking the cards further. */}
         <div
           className="grid overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           style={{
