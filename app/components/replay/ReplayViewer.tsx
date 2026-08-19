@@ -813,7 +813,11 @@ function OverlayCloseButton({
         onClick();
       }}
       aria-label={label}
-      className="absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-text-primary text-text-primary transition hover:bg-text-primary/10"
+      // Fixed white rather than text-primary: both callers now always sit
+      // on INSPECTOR_OVERLAY_GRADIENT_BG's dark backdrop, so there's no
+      // light-background case left for a theme-tracking color to earn its
+      // keep against — white reads clearly on the gradient in either theme.
+      className="absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-white text-white transition hover:bg-white/10"
     >
       <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
