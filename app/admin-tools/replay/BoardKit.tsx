@@ -237,6 +237,7 @@ export function Pile({
   topImageUrl,
   hint,
   useCardBack,
+  onClick,
   className = "",
 }: {
   label: string;
@@ -251,6 +252,10 @@ export function Pile({
   hint?: string;
   /** Render the standard card-back image as the face. */
   useCardBack?: boolean;
+  /** Overrides the default single-card InspectContext tap (top card only)
+   *  with a caller-supplied handler — the Replay viewer's discard pile uses
+   *  this to open its full-pile inspector instead. */
+  onClick?: () => void;
   className?: string;
 }) {
   const inspect = useContext(InspectContext);
@@ -266,8 +271,10 @@ export function Pile({
   // actual top card. An empty pile stays a translucent slot.
   const hasFace = useCardBack || Boolean(topName);
   // Only the face-up top discard is worth inspecting (the draw pile is a
-  // card back, an empty pile has nothing to show).
-  const clickable = inspect != null && !useCardBack && Boolean(topName);
+  // card back, an empty pile has nothing to show) — same "is there
+  // anything to inspect" gate applies whether the click opens the default
+  // single-card inspector or a caller's own handler.
+  const clickable = onClick != null ? count > 0 : inspect != null && !useCardBack && Boolean(topName);
 
   return (
     <div
@@ -285,14 +292,15 @@ export function Pile({
         }}
         role={clickable ? "button" : undefined}
         onClick={
-          clickable
-            ? () =>
+          !clickable
+            ? undefined
+            : onClick ??
+              (() =>
                 inspect!({
                   kind: "card",
                   name: topName as string,
                   imageUrl: topImageUrl ?? null,
-                })
-            : undefined
+                }))
         }
       >
         {useCardBack ? (
@@ -724,6 +732,7 @@ export function PlayerMat({
   matWidth,
   interact,
   instant,
+  onDiscardClick,
 }: {
   side: "player" | "opponent";
   bench: PokemonFrame[];
@@ -739,6 +748,11 @@ export function PlayerMat({
   cardWidth: number;
   matWidth: number;
   interact?: MatInteraction;
+  /** Overrides the discard pile's default tap (open the top card alone) —
+   *  the Replay viewer wires this to its full-pile inspector. Omitted
+   *  elsewhere (AI-player practice mode), where the pile keeps its default
+   *  single-card behavior. */
+  onDiscardClick?: () => void;
   /** Render the destination state immediately instead of animating cards
    *  into it. Replay sets this when the playhead jumps (scrub / turn skip),
    *  where a slot-to-slot animation would trace a path the game never took
@@ -865,7 +879,7 @@ export function PlayerMat({
           <div className={`flex h-full flex-col gap-1.5 sm:gap-3 ${isPlayer ? "justify-end" : ""}`}>
             {isPlayer ? (
               <>
-                <Pile label="Discard" count={discardCount} width={cardWidth} rotate="ccw" topName={discardTop} topImageUrl={discardTopImageUrl} />
+                <Pile label="Discard" count={discardCount} width={cardWidth} rotate="ccw" topName={discardTop} topImageUrl={discardTopImageUrl} onClick={onDiscardClick} />
                 <Pile label="Draw" count={deckCount} width={cardWidth} rotate="ccw" hint={`${handCount} in hand`} useCardBack />
               </>
             ) : (
@@ -884,7 +898,7 @@ export function PlayerMat({
             ) : (
               <>
                 <Pile label="Draw" count={deckCount} width={cardWidth} rotate="cw" hint={`${handCount} in hand`} useCardBack />
-                <Pile label="Discard" count={discardCount} width={cardWidth} rotate="cw" topName={discardTop} topImageUrl={discardTopImageUrl} />
+                <Pile label="Discard" count={discardCount} width={cardWidth} rotate="cw" topName={discardTop} topImageUrl={discardTopImageUrl} onClick={onDiscardClick} />
               </>
             )}
           </div>

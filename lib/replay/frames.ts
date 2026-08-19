@@ -77,6 +77,13 @@ export interface SideFrame {
   discardTop: string | null;
   /** Image URL for the most-recently discarded card (face-up top). */
   discardTopImageUrl: string | null;
+  /** The full discard pile, each card resolved to art, most-recently
+   *  discarded first — the same "top of the pile" ordering discardTop
+   *  above already uses (it's `side.discard`'s last element), just
+   *  spelled out for every card instead of only the last one. Backs the
+   *  discard-pile inspector's grid, where seeing the pile in play order
+   *  (not shuffled by name or supertype) is the point. */
+  discard: DiscardDrawCard[];
   prizesRemaining: number;
 }
 
@@ -333,6 +340,14 @@ function mapSide(
       side.discard.length > 0
         ? cardImageUrlForAnyName(side.discard[side.discard.length - 1].name)
         : null,
+    // Reversed so index 0 is the most recently discarded card — same card
+    // discardTop names — rather than the chronological-first one, which
+    // would put the game's very first discard at the grid's most prominent
+    // spot instead of the pile's actual top.
+    discard: [...side.discard].reverse().map((c) => ({
+      name: c.name,
+      imageUrl: cardImageUrlForAnyName(c.name),
+    })),
     prizesRemaining: side.prizes.length,
   };
 }

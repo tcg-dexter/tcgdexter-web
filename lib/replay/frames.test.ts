@@ -229,3 +229,54 @@ describe("replay frames: attached cards", () => {
     }
   });
 });
+
+// The discard-pile inspector's grid reads SideFrame.discard directly, so it
+// has to track discardCount/discardTop (already trusted elsewhere) rather
+// than drifting from them, and resolve art for every card, not just the top.
+describe("replay frames: full discard pile", () => {
+  const asExporter = buildReplayPayload("m1", EXAMPLE, "a11father");
+
+  it("is not a vacuous guard — some frame has cards in the discard pile", () => {
+    const hasDiscards = asExporter.frames.some(
+      (f) => f.player.discard.length > 0 || f.opponent.discard.length > 0,
+    );
+    expect(hasDiscards).toBe(true);
+  });
+
+  it("matches discardCount and, when non-empty, discardTop for every frame/side", () => {
+    for (const f of asExporter.frames) {
+      for (const side of [f.player, f.opponent]) {
+        expect(side.discard.length).toBe(side.discardCount);
+        if (side.discard.length > 0) {
+          // Index 0 is the pile's top — the same card discardTop names.
+          expect(side.discard[0].name).toBe(side.discardTop);
+          expect(side.discard[0].imageUrl).toBe(side.discardTopImageUrl);
+        }
+      }
+    }
+  });
+
+  it("orders the pile most-recently-discarded first", () => {
+    // MoonSheikah's Budew is Knocked Out, then — in the same block, right
+    // after — their (second, Buddy-Buddy Poffin-fetched) Froakie is too.
+    // Once both have landed in the discard pile, the more recent KO
+    // (Froakie) should read before the earlier one (Budew), not in the
+    // order they actually happened.
+    const afterBothKOs = asExporter.frames.find(
+      (f) =>
+        f.opponent.discard.some((c) => c.name === "Budew") &&
+        f.opponent.discard.some((c) => c.name === "Froakie"),
+    );
+    expect(afterBothKOs).toBeDefined();
+    const names = afterBothKOs!.opponent.discard.map((c) => c.name);
+    expect(names.indexOf("Froakie")).toBeLessThan(names.indexOf("Budew"));
+  });
+
+  it("resolves art for every card in the pile", () => {
+    const withDiscards = asExporter.frames.find((f) => f.player.discard.length >= 3);
+    expect(withDiscards).toBeDefined();
+    for (const c of withDiscards!.player.discard) {
+      expect(c.imageUrl).not.toBeNull();
+    }
+  });
+});

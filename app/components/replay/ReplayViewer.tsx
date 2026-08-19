@@ -779,6 +779,38 @@ function AttachedRowChevron({
 }
 
 /**
+ * Empty-fill, bordered circle close button shared by every full-mat overlay
+ * that needs one (the card inspector, the discard-pile inspector) — an
+ * outline in the theme's own primary-text colour rather than a filled
+ * bg-black/50 treatment, so it tracks light/dark mode automatically via
+ * text-primary's own CSS variable instead of needing a separate dark:
+ * variant per overlay.
+ */
+function OverlayCloseButton({
+  onClick,
+  label,
+}: {
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      aria-label={label}
+      className="absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-text-primary text-text-primary transition hover:bg-text-primary/10"
+    >
+      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  );
+}
+
+/**
  * First stage of the two-stage card inspector: an XL card image on the
  * SAME full-mat overlay treatment as the discard/draw and mulligan
  * overlays, rather than jumping straight to the full-screen viewer. It
@@ -872,24 +904,7 @@ function MatCardInspector({
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
     >
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose();
-        }}
-        aria-label="Close card preview"
-        // Empty-fill, bordered circle in the theme's own primary-text
-        // colour — text-primary already flips between light and dark mode
-        // via its CSS variable, so this needs no separate dark: variant,
-        // unlike the filled bg-black/50 treatment it replaces (which read
-        // fine on either theme purely by coincidence, not by tracking it).
-        className="absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-text-primary text-text-primary transition hover:bg-text-primary/10"
-      >
-        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
+      <OverlayCloseButton onClick={onClose} label="Close card preview" />
       <button
         type="button"
         onClick={onExpand}
@@ -934,6 +949,91 @@ function MatCardInspector({
           <AttachedCardsRow cards={attachedCards} cardWidth={attachedW} />
         </div>
       )}
+    </motion.div>
+  );
+}
+
+// Grid geometry for the discard-pile inspector. Fixed at 7 columns per the
+// request; 4 rows is what fits comfortably above a phone-width mat without
+// shrinking cards past legibility, so a pile beyond that (28 cards — a
+// realistic late-game count) scrolls vertically inside the grid rather than
+// growing the overlay or shrinking further.
+const DISCARD_GRID_COLS = 7;
+const DISCARD_GRID_VISIBLE_ROWS = 4;
+const DISCARD_GRID_GAP_PX = 6;
+
+/**
+ * Full-mat overlay showing the ENTIRE discard pile as a grid, rather than
+ * just its top card — opened from the discard pile itself (see PlayerMat's
+ * onDiscardClick), a different trigger from the tap-any-card MatCardInspector
+ * above, so this is its own component rather than a third InspectTarget
+ * kind threaded through BoardKit's shared card components.
+ *
+ * Cards aren't individually tappable here, same as the discard/draw and
+ * mulligan overlays' groups — this grid already IS the "look closer" step
+ * for these cards, sized to read at a glance rather than needing its own
+ * escalation to something bigger.
+ */
+function DiscardPileOverlay({
+  cards,
+  matWidth,
+  onClose,
+}: {
+  cards: DiscardDrawCard[];
+  matWidth: number;
+  onClose: () => void;
+}) {
+  const matHeight = matWidth * MAT_ASPECT;
+  // Width budget: mat, less the overlay's own px-2, seven cards and six
+  // inter-card gaps.
+  const fromWidth =
+    (matWidth - 16 - (DISCARD_GRID_COLS - 1) * DISCARD_GRID_GAP_PX) / DISCARD_GRID_COLS;
+  // Height budget: mat height, less room for the close button up top and
+  // the caption + breathing room below it, divided across the four visible
+  // rows with a gap between each. 342/245 converts a card's height back to
+  // the width that produces it — same conversion every other overlay here
+  // uses for the same reason.
+  const fromHeight =
+    ((matHeight - 56 - (DISCARD_GRID_VISIBLE_ROWS - 1) * DISCARD_GRID_GAP_PX) /
+      DISCARD_GRID_VISIBLE_ROWS) *
+    (245 / 342);
+  const w = Math.max(OVERLAY_CARD_MIN_PX, Math.round(Math.min(fromWidth, fromHeight)));
+  const cardH = Math.round((w * 342) / 245);
+  const gridWidth = DISCARD_GRID_COLS * w + (DISCARD_GRID_COLS - 1) * DISCARD_GRID_GAP_PX;
+  const gridVisibleHeight =
+    DISCARD_GRID_VISIBLE_ROWS * cardH + (DISCARD_GRID_VISIBLE_ROWS - 1) * DISCARD_GRID_GAP_PX;
+
+  return (
+    <motion.div
+      className="absolute inset-0 z-40 flex items-center justify-center overflow-hidden rounded-xl px-2"
+      style={{ backgroundColor: "color-mix(in srgb, var(--bg) 90%, transparent)" }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+    >
+      <OverlayCloseButton onClick={onClose} label="Close discard pile" />
+      <div className="flex flex-col items-center gap-1.5" style={{ maxHeight: matHeight - 24 }}>
+        <span className="whitespace-nowrap text-[9px] font-bold uppercase tracking-wider text-text-secondary">
+          Discard Pile · {cards.length}
+        </span>
+        {/* The only scrolling surface in this overlay — a pile past
+            DISCARD_GRID_VISIBLE_ROWS rows scrolls here instead of growing
+            the grid past the mat or shrinking cards further. */}
+        <div
+          className="grid overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          style={{
+            gridTemplateColumns: `repeat(${DISCARD_GRID_COLS}, ${w}px)`,
+            gap: DISCARD_GRID_GAP_PX,
+            width: gridWidth,
+            maxHeight: gridVisibleHeight,
+          }}
+        >
+          {cards.map((c, i) => (
+            <OverlayCardThumb key={`${c.name}-${i}`} card={c} width={w} />
+          ))}
+        </div>
+      </div>
     </motion.div>
   );
 }
@@ -992,6 +1092,22 @@ function Board({
     actor: "player" | "opponent";
     target: InspectTarget;
   } | null>(null);
+  // Discard-pile inspector: which actor's mat it's showing over, same
+  // one-flag-does-both-jobs shape as matInspect above. A separate slot from
+  // matInspect rather than a third InspectTarget kind — see
+  // DiscardPileOverlay's own comment — so opening one explicitly clears the
+  // other below, keeping only one mat overlay up at a time per mat.
+  const [discardInspect, setDiscardInspect] = useState<"player" | "opponent" | null>(
+    null,
+  );
+  // Every path that opens the card inspector goes through this, so it can't
+  // forget to close whichever discard-pile overlay happens to be open —
+  // the reverse (discard pile clearing matInspect) is handled inline at its
+  // own two call sites below since there's only one of it.
+  function openMatInspect(actor: "player" | "opponent", target: InspectTarget) {
+    setDiscardInspect(null);
+    setMatInspect({ actor, target });
+  }
 
   return (
     <div
@@ -1027,7 +1143,7 @@ function Board({
               it's the opponent's card without threading an actor prop
               through BoardKit's shared card components. */}
           <InspectContext.Provider
-            value={(target) => setMatInspect({ actor: "opponent", target })}
+            value={(target) => openMatInspect("opponent", target)}
           >
           <div className="relative z-10">
             <PlayerMat
@@ -1049,6 +1165,10 @@ function Board({
               cardWidth={cardWidth}
               matWidth={matWidth}
               instant={instant}
+              onDiscardClick={() => {
+                setMatInspect(null);
+                setDiscardInspect("opponent");
+              }}
             />
             <AnimatePresence>
               {frame.discardDraw?.actor === "opponent" && (
@@ -1084,6 +1204,15 @@ function Board({
                 />
               )}
             </AnimatePresence>
+            <AnimatePresence>
+              {discardInspect === "opponent" && (
+                <DiscardPileOverlay
+                  cards={frame.opponent.discard}
+                  matWidth={matWidth}
+                  onClose={() => setDiscardInspect(null)}
+                />
+              )}
+            </AnimatePresence>
           </div>
           </InspectContext.Provider>
           <MatTab
@@ -1097,7 +1226,7 @@ function Board({
             prizesRemaining={frame.player.prizesRemaining}
           />
           <InspectContext.Provider
-            value={(target) => setMatInspect({ actor: "player", target })}
+            value={(target) => openMatInspect("player", target)}
           >
           <div className="relative z-10">
             <PlayerMat
@@ -1119,6 +1248,10 @@ function Board({
               cardWidth={cardWidth}
               matWidth={matWidth}
               instant={instant}
+              onDiscardClick={() => {
+                setMatInspect(null);
+                setDiscardInspect("player");
+              }}
             />
             <AnimatePresence>
               {frame.discardDraw?.actor === "player" && (
@@ -1154,6 +1287,15 @@ function Board({
                 />
               )}
             </AnimatePresence>
+            <AnimatePresence>
+              {discardInspect === "player" && (
+                <DiscardPileOverlay
+                  cards={frame.player.discard}
+                  matWidth={matWidth}
+                  onClose={() => setDiscardInspect(null)}
+                />
+              )}
+            </AnimatePresence>
           </div>
           </InspectContext.Provider>
         </div>
@@ -1166,7 +1308,7 @@ function Board({
           cards={frame.player.hand}
           cardWidth={cardWidth}
           instant={instant}
-          onCardClick={(target) => setMatInspect({ actor: "player", target })}
+          onCardClick={(target) => openMatInspect("player", target)}
         />
         </>
       )}
