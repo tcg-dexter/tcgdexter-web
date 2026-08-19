@@ -1749,6 +1749,13 @@ interface ReplayViewerProps {
   result?: "win" | "loss" | "draw" | null;
   playerColor?: string;
   opponentColor?: string;
+  /** Drop the mobile action thread, leaving just the board and transport.
+   *  Desktop is unaffected — its thread lives in a height-capped aside, so
+   *  it costs no extra page length. The mobile thread instead renders in
+   *  full and is scrolled by the page itself, which is right on a dedicated
+   *  battle page but would bury everything below it when the viewer is one
+   *  module among many (see the home page showcase). */
+  hideThreadOnMobile?: boolean;
 }
 
 export default function ReplayViewer({
@@ -1759,6 +1766,7 @@ export default function ReplayViewer({
   result,
   playerColor,
   opponentColor,
+  hideThreadOnMobile = false,
 }: ReplayViewerProps) {
   const [data, setData] = useState<ReplayPayload | null>(null);
   const [loading, setLoading] = useState(false);
@@ -2125,7 +2133,7 @@ export default function ReplayViewer({
           Mobile already shows the whole thread at full opacity, so there's
           nothing for it to spotlight against — passing it would just dim
           everything after the playhead for no reason. */}
-      {isDesktop === false && (
+      {isDesktop === false && !hideThreadOnMobile && (
         <div className="mt-6">
           <BattleLogDetail
             matchId={matchId}

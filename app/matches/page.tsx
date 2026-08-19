@@ -1,4 +1,8 @@
-import { loadRecentMatches } from "@/lib/recent-matches";
+import {
+  FEATURED_MATCH_POOL,
+  loadRecentMatches,
+  pickFeaturedMatch,
+} from "@/lib/recent-matches";
 import { loadPlayerLeaderboard } from "@/lib/player-leaderboard";
 import { loadMatchSideStats } from "@/lib/match-side-stats";
 import { createClient } from "@/lib/supabase/server";
@@ -27,26 +31,13 @@ export default async function MatchesPage({
   }
 
   const [matches, leaderboard] = await Promise.all([
-    loadRecentMatches(200),
+    loadRecentMatches(FEATURED_MATCH_POOL),
     loadPlayerLeaderboard(),
   ]);
 
-  // Featured Match: within the last 7 days, the match with the most
-  // total damage dealt across both sides. Rank ties by createdAt (most
-  // recent wins) so the fresher of two similar bloodbaths surfaces.
-  const sevenDaysAgoMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const featuredMatch =
-    matches
-      .filter(
-        (m) =>
-          m.totalDamage != null &&
-          new Date(m.createdAt).getTime() >= sevenDaysAgoMs,
-      )
-      .sort((a, b) => {
-        const dt = (b.totalDamage ?? 0) - (a.totalDamage ?? 0);
-        if (dt !== 0) return dt;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      })[0] ?? null;
+  // Shared with the home page's showcase so both name the same match — see
+  // pickFeaturedMatch.
+  const featuredMatch = pickFeaturedMatch(matches);
 
   // Per-side stat table for the featured match's Details drawer. Aggregated
   // server-side up front so the drawer opens without a client fetch (and

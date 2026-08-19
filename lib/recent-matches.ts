@@ -317,3 +317,38 @@ export async function loadOwnerRecentMatches(
     return [];
   }
 }
+
+/**
+ * Candidate pool size for `pickFeaturedMatch`. Both surfaces that show the
+ * Featured Match must load the SAME pool — the picker only ranks what it's
+ * handed, so a smaller pool silently yields a different "featured" match.
+ */
+export const FEATURED_MATCH_POOL = 200;
+
+/** Days back the Featured Match is drawn from. */
+const FEATURED_MATCH_WINDOW_DAYS = 7;
+
+/**
+ * The current Featured Match: within the last week, the match with the most
+ * total damage dealt across both sides, ties going to the more recent one —
+ * so the fresher of two similar bloodbaths surfaces.
+ *
+ * Shared by /matches (which renders the hero) and the home page (which
+ * showcases that same match plus its replay), so the two can't drift about
+ * what is currently featured. Pass `FEATURED_MATCH_POOL` to
+ * `loadRecentMatches` on both.
+ */
+export function pickFeaturedMatch(matches: RecentMatch[]): RecentMatch | null {
+  const cutoff = Date.now() - FEATURED_MATCH_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  return (
+    matches
+      .filter(
+        (m) => m.totalDamage != null && new Date(m.createdAt).getTime() >= cutoff,
+      )
+      .sort((a, b) => {
+        const dt = (b.totalDamage ?? 0) - (a.totalDamage ?? 0);
+        if (dt !== 0) return dt;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      })[0] ?? null
+  );
+}

@@ -16,6 +16,8 @@ import metaDecksRaw from "@/data/meta-decks.json";
 import { MetaDeckCard } from "@/app/components/DeckPostCard";
 import { metaPrimaryCard, typeColor } from "@/lib/metaPrimaryCard";
 import { MatchCard, type RecentMatch } from "@/app/components/MatchCard";
+import FeaturedMatchShowcase from "@/app/components/FeaturedMatchShowcase";
+import type { MatchSideStats } from "@/lib/match-side-stats";
 import SpotlightBanner from "@/app/spotlight/components/SpotlightBanner";
 import type {
   SpotlightBannerLayout,
@@ -147,6 +149,8 @@ const top3Cards = (() => {
 export default function HomeClient({
   stats,
   recentMatches = [],
+  featuredMatch = null,
+  featuredMatchStats = null,
   currentSpotlight = null,
   showcaseTiles = [],
   cardCatalogTopCards = [],
@@ -154,6 +158,10 @@ export default function HomeClient({
 }: {
   stats: Array<{ label: string; value: string }>;
   recentMatches?: RecentMatch[];
+  /** Current Featured Match, showcased with its replay above Recent
+   *  Battles. Null when nothing qualifies (see pickFeaturedMatch). */
+  featuredMatch?: RecentMatch | null;
+  featuredMatchStats?: MatchSideStats | null;
   currentSpotlight?: CurrentSpotlight | null;
   showcaseTiles?: ResolvedDeckTile[];
   cardCatalogTopCards?: CardIndexEntry[];
@@ -414,6 +422,12 @@ export default function HomeClient({
             </div>
             <BadgeShowcase />
           </section>
+
+          {/* Featured Match showcase — the /matches hero plus that match's
+              replay, sitting directly above Recent Battles. */}
+          {featuredMatch && (
+            <FeaturedMatchShowcase match={featuredMatch} stats={featuredMatchStats} />
+          )}
 
           {/* Recent Matches */}
           {recentMatches.length > 0 && (
