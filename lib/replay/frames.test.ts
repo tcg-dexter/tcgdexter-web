@@ -277,10 +277,10 @@ describe("replay frames: attachments are grouped, not in attach order", () => {
     }
   });
 
-  it("orders energy ahead of Tools even when a Tool arrived via the energy array", () => {
-    // Cynthia's Power Weight is a Trainer / Pokémon Tool, but TCG Live logs
-    // it as an "attached" line, so the engine files it under attachedEnergy —
-    // classification has to come from the catalog, not the array it sat in.
+  it("orders energy ahead of Tools", () => {
+    // Cynthia's Power Weight is a Trainer / Pokémon Tool that TCG Live logs
+    // as an ordinary "attached" line; the reducer routes it to attachedTools
+    // and the row has to keep it behind the real energies.
     // Needs a Pokémon holding the Tool *alongside* energy — early on it's
     // the only attachment, which wouldn't exercise the ordering at all.
     const withBoth = allMons.find(

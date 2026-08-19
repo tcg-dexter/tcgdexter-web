@@ -248,12 +248,12 @@ function energyTypeFromName(name: string): string {
  * then anything the catalog doesn't recognize.
  *
  * Classified from the CATALOG rather than from which engine array the card
- * arrived in, because those two disagree: TCG Live writes "attached X to Y"
- * for Tools as well as energy, so the parser files both under `attach_energy`
- * and the engine lands a Tool in `attachedEnergy`. Cynthia's Power Weight —
- * a Trainer / Pokémon Tool — reaches this function from the energy array in
- * the example-3 fixture, so trusting the array would leave it grouped in
- * amongst real energies.
+ * arrived in. The engine now routes Tools into `attachedTools` itself (see
+ * isPokemonTool in the reducer), so the two agree for anything the catalog
+ * knows — but that routing is a catalog lookup too, and this keeps the row's
+ * ordering correct rather than inheriting whatever bucket a future action
+ * type drops a card into. A card the catalog doesn't recognize sorts last
+ * either way.
  */
 function attachmentKindRank(name: string): number {
   const card = lookupCard(name);

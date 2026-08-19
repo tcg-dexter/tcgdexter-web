@@ -193,16 +193,23 @@ describe("engine.replay (example-3: same-name active/bench attach target)", () =
     ).toBe(true);
   });
 
+  // Which array a card lands in is the routing tests' business below; these
+  // two are about WHICH POKÉMON it lands on, so they look across both.
+  const attachedNames = (mon: {
+    attachedEnergy: { name: string }[];
+    attachedTools: { name: string }[];
+  }) => [...mon.attachedEnergy, ...mon.attachedTools].map((c) => c.name);
+
   it("attaches a bench-targeted card to the bench Pokémon, not the active one", () => {
     const idx = actionIndex(
       "Nnova12 attached Cynthia's Power Weight to Cynthia's Gabite on the Bench.",
     );
     const side = result.states[idx].sides.player;
-    const activeHasIt = side.active?.attachedEnergy.some(
-      (c) => c.name === "Cynthia's Power Weight",
-    );
+    const activeHasIt = side.active
+      ? attachedNames(side.active).includes("Cynthia's Power Weight")
+      : false;
     const benchHolder = side.bench.find((mon) =>
-      mon.attachedEnergy.some((c) => c.name === "Cynthia's Power Weight"),
+      attachedNames(mon).includes("Cynthia's Power Weight"),
     );
     expect(activeHasIt).toBe(false);
     expect(benchHolder).toBeDefined();
@@ -218,9 +225,48 @@ describe("engine.replay (example-3: same-name active/bench attach target)", () =
       "Nnova12 attached Cynthia's Power Weight to Cynthia's Garchomp ex in the Active Spot.",
     );
     const active = result.states[idx].sides.player.active;
-    const count = active?.attachedEnergy.filter(
-      (c) => c.name === "Cynthia's Power Weight",
-    ).length;
+    const count = active
+      ? attachedNames(active).filter((n) => n === "Cynthia's Power Weight").length
+      : 0;
     expect(count).toBe(1);
+  });
+
+  // TCG Live phrases a Tool's attachment exactly like an energy's ("attached
+  // X to Y"), so the parser files both under attach_energy. The engine used
+  // to push whatever arrived straight into attachedEnergy, which left Tools
+  // sitting among the energies: the board drew them as Colorless energy
+  // icons, never as the Tool card behind the Pokémon, and they counted
+  // against the one-energy-per-turn rule.
+  describe("Pokémon Tools attached through an energy line", () => {
+    const finalPlayer = result.finalState.sides.player;
+    const holder = [finalPlayer.active, ...finalPlayer.bench].find(
+      (mon) => mon && attachedNames(mon).includes("Cynthia's Power Weight"),
+    );
+
+    it("is not a vacuous guard — the fixture really does attach a Tool", () => {
+      expect(holder).toBeDefined();
+    });
+
+    it("routes the Tool into attachedTools, not attachedEnergy", () => {
+      expect(holder!.attachedTools.map((c) => c.name)).toContain("Cynthia's Power Weight");
+      expect(holder!.attachedEnergy.map((c) => c.name)).not.toContain(
+        "Cynthia's Power Weight",
+      );
+    });
+
+    it("still keeps the real energies on the same Pokémon", () => {
+      // Guards against over-correcting into "route everything to tools".
+      expect(holder!.attachedEnergy.length).toBeGreaterThan(0);
+      for (const c of holder!.attachedEnergy) {
+        expect(c.name).toMatch(/Energy$/);
+      }
+    });
+
+    it("doesn't let a Tool consume the turn's one energy attachment", () => {
+      // Attaching the Tool alongside an energy previously tripped this
+      // warning twice in this very fixture.
+      const extra = result.diagnostics.filter((d) => d.code === "extra_energy_attach");
+      expect(extra).toEqual([]);
+    });
   });
 });
