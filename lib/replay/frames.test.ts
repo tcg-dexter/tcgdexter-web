@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { buildReplayPayload } from "./frames";
+import { buildReplayPayload, groupAttachments } from "./frames";
 
 const EXAMPLE = readFileSync(
   join(__dirname, "..", "battle-log", "fixtures", "example-1.txt"),
+  "utf8",
+);
+
+// Real match with interleaved duplicate energies and a Pokémon Tool that
+// the log attaches through an energy line — see the grouping suite below.
+const SAME_NAME_ATTACH = readFileSync(
+  join(__dirname, "..", "battle-log", "fixtures", "example-3-same-name-attach.txt"),
   "utf8",
 );
 
@@ -211,7 +218,10 @@ describe("replay frames: attached cards", () => {
     expect(hasAttached).toBe(true);
   });
 
-  it("matches energy's own names, in order, each resolved to art", () => {
+  it("carries exactly the same cards as energy + tools, each resolved to art", () => {
+    // Ordering is deliberately NOT asserted here — attachedCards is grouped
+    // rather than in attach order (see the grouping suite below). What must
+    // hold is that grouping neither drops nor invents a card.
     for (const f of asExporter.frames) {
       for (const mon of [
         f.player.active,
@@ -220,13 +230,112 @@ describe("replay frames: attached cards", () => {
         ...f.opponent.bench,
       ]) {
         if (!mon) continue;
-        // attachedCards is energy-then-tools; this fixture's Pokémon carry
-        // no tools, so it should equal `energy` name-for-name here.
-        const energyPortion = mon.attachedCards.slice(0, mon.energy.length);
-        expect(energyPortion.map((c) => c.name)).toEqual(mon.energy);
+        const expected = [...mon.energy, ...mon.tools.map((t) => t.name)].sort();
+        expect(mon.attachedCards.map((c) => c.name).sort()).toEqual(expected);
         for (const c of mon.attachedCards) expect(c.imageUrl).not.toBeNull();
       }
     }
+  });
+});
+
+// The inspector's attached row should read as "two Fire, one Psychic", not
+// as three unrelated cards, so attachedCards clusters like with like. This
+// fixture is the real match that motivated it: its Dragapult ex takes a
+// Fire, then a Psychic, then a second Fire, and its Cynthia's Garchomp ex
+// ends up holding a Pokémon Tool alongside three energies.
+describe("replay frames: attachments are grouped, not in attach order", () => {
+  const payload = buildReplayPayload("m3", SAME_NAME_ATTACH, "Nnova12");
+  const allMons = payload.frames.flatMap((f) =>
+    [f.player.active, ...f.player.bench, f.opponent.active, ...f.opponent.bench].filter(
+      (m): m is NonNullable<typeof m> => m != null,
+    ),
+  );
+
+  it("is not a vacuous guard — raw attach order really does interleave duplicates", () => {
+    // Proves the fixture exercises the bug: some Pokémon's `energy` (which
+    // stays in true attach order) has a name recurring after a different one.
+    const interleaved = allMons.some((mon) => {
+      const seenRun = new Set<string>();
+      let prev: string | null = null;
+      for (const name of mon.energy) {
+        if (name !== prev && seenRun.has(name)) return true;
+        seenRun.add(name);
+        prev = name;
+      }
+      return false;
+    });
+    expect(interleaved).toBe(true);
+  });
+
+  it("keeps every copy of a card adjacent to its twins", () => {
+    for (const mon of allMons) {
+      const names = mon.attachedCards.map((c) => c.name);
+      const runs: string[] = [];
+      for (const n of names) if (n !== runs[runs.length - 1]) runs.push(n);
+      // A name appearing in two separate runs means the copies got split.
+      expect(runs.length).toBe(new Set(runs).size);
+    }
+  });
+
+  it("orders energy ahead of Tools even when a Tool arrived via the energy array", () => {
+    // Cynthia's Power Weight is a Trainer / Pokémon Tool, but TCG Live logs
+    // it as an "attached" line, so the engine files it under attachedEnergy —
+    // classification has to come from the catalog, not the array it sat in.
+    // Needs a Pokémon holding the Tool *alongside* energy — early on it's
+    // the only attachment, which wouldn't exercise the ordering at all.
+    const withBoth = allMons.find(
+      (mon) =>
+        mon.attachedCards.some((c) => c.name === "Cynthia's Power Weight") &&
+        mon.energy.some((n) => n !== "Cynthia's Power Weight"),
+    );
+    expect(withBoth).toBeDefined();
+    const names = withBoth!.attachedCards.map((c) => c.name);
+    expect(names.length).toBeGreaterThan(1);
+    expect(names[names.length - 1]).toBe("Cynthia's Power Weight");
+    // And nothing else may sit after the first Tool.
+    expect(names.indexOf("Cynthia's Power Weight")).toBe(names.length - 1);
+  });
+
+  // The fixtures above all happen to attach their Tool last, so they'd pass
+  // even with kind-classification switched off entirely (verified by
+  // mutation). Only a Tool-FIRST list actually proves the catalog lookup is
+  // doing the work, and no real log in the repo produces one — hence
+  // driving groupAttachments directly.
+  describe("groupAttachments (direct)", () => {
+    const card = (name: string) => ({ name, imageUrl: null });
+
+    it("pulls a Tool behind energy that was attached after it", () => {
+      const grouped = groupAttachments([
+        card("Cynthia's Power Weight"), // Trainer / Pokémon Tool
+        card("Basic Fire Energy"),
+        card("Basic Psychic Energy"),
+      ]);
+      expect(grouped.map((c) => c.name)).toEqual([
+        "Basic Fire Energy",
+        "Basic Psychic Energy",
+        "Cynthia's Power Weight",
+      ]);
+    });
+
+    it("clusters duplicates while keeping first-appearance order between groups", () => {
+      const grouped = groupAttachments([
+        card("Basic Psychic Energy"),
+        card("Basic Fire Energy"),
+        card("Basic Psychic Energy"),
+      ]);
+      // Psychic leads because it was attached first, and both copies of it
+      // sit together — alphabetical ordering would have put Fire first.
+      expect(grouped.map((c) => c.name)).toEqual([
+        "Basic Psychic Energy",
+        "Basic Psychic Energy",
+        "Basic Fire Energy",
+      ]);
+    });
+
+    it("leaves an already-grouped list untouched", () => {
+      const names = ["Basic Fire Energy", "Basic Fire Energy", "Cynthia's Power Weight"];
+      expect(groupAttachments(names.map(card)).map((c) => c.name)).toEqual(names);
+    });
   });
 });
 

@@ -40,12 +40,17 @@ export interface PokemonFrame {
    *  their title peeking above; without them an equipped Pokémon reads as
    *  bare, so this is board state the replay was previously dropping. */
   tools: { name: string; imageUrl: string | null }[];
-  /** Every card physically attached to this Pokémon — energy then tools,
-   *  each resolved to art — for the card inspector's attached-cards row.
-   *  `energy` above already carries the same energy names but not their
-   *  art, and `tools` above is the tools half of this on its own; this is
-   *  the two combined into one image-resolved list so the inspector
-   *  doesn't need to know the difference between the two attachment kinds. */
+  /** Every card physically attached to this Pokémon, each resolved to art,
+   *  for the card inspector's attached-cards row. `energy` above carries the
+   *  same energy names but not their art, and `tools` is the tools half on
+   *  its own; this is the two combined so the inspector doesn't need to know
+   *  the difference between the attachment kinds.
+   *
+   *  NOT in attach order: grouped so like sits with like — all energy, then
+   *  all Tools, with every copy of a card adjacent to its twins (see
+   *  groupAttachments). Kinds are classified from the catalog, not from which
+   *  engine array a card came from, since Tools can arrive via
+   *  `attachedEnergy` — see attachmentKindRank. */
   attachedCards: { name: string; imageUrl: string | null }[];
 }
 
@@ -238,6 +243,54 @@ function energyTypeFromName(name: string): string {
   return "Colorless";
 }
 
+/**
+ * Sort rank for an attached card's kind: energy first, then Pokémon Tools,
+ * then anything the catalog doesn't recognize.
+ *
+ * Classified from the CATALOG rather than from which engine array the card
+ * arrived in, because those two disagree: TCG Live writes "attached X to Y"
+ * for Tools as well as energy, so the parser files both under `attach_energy`
+ * and the engine lands a Tool in `attachedEnergy`. Cynthia's Power Weight —
+ * a Trainer / Pokémon Tool — reaches this function from the energy array in
+ * the example-3 fixture, so trusting the array would leave it grouped in
+ * amongst real energies.
+ */
+function attachmentKindRank(name: string): number {
+  const card = lookupCard(name);
+  if (!card) return 2;
+  if (card.supertype === "Energy") return 0;
+  if (card.subtypes?.includes("Pokémon Tool")) return 1;
+  return 2;
+}
+
+/**
+ * Cluster a Pokémon's attachments so like sits with like: all energy before
+ * all Tools, and every copy of the same card adjacent to its twins.
+ *
+ * Raw attach order interleaves them — a Fire, then a Psychic, then another
+ * Fire renders as three unrelated cards in the inspector even though two are
+ * the same card. Groups are ordered by where each name FIRST appeared rather
+ * than alphabetically, so the row still reads roughly chronologically instead
+ * of reshuffling every time a duplicate lands. Sort is stable and every copy
+ * of a name shares one key, so copies keep their relative order.
+ *
+ * Exported for its own unit test: the fixtures happen to attach their Tool
+ * last anyway, so only a synthetic Tool-first list actually exercises the
+ * catalog-classification half of the ordering.
+ */
+export function groupAttachments(
+  cards: { name: string; imageUrl: string | null }[],
+): { name: string; imageUrl: string | null }[] {
+  const firstSeen = new Map<string, number>();
+  cards.forEach((c, i) => {
+    if (!firstSeen.has(c.name)) firstSeen.set(c.name, i);
+  });
+  return cards
+    .map((c) => ({ c, rank: attachmentKindRank(c.name), first: firstSeen.get(c.name)! }))
+    .sort((a, b) => a.rank - b.rank || a.first - b.first)
+    .map((x) => x.c);
+}
+
 function mapPokemon(
   mon: PokemonInPlay,
   cardIds: Record<string, string>,
@@ -280,7 +333,7 @@ function mapPokemon(
     evolutionStack: mon.stack.map((c) => c.name),
     imageUrl,
     tools: toolCards,
-    attachedCards: [...energyCards, ...toolCards],
+    attachedCards: groupAttachments([...energyCards, ...toolCards]),
   };
 }
 
