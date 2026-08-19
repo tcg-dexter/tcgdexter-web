@@ -2,6 +2,7 @@ import {
   cardImageUrlForName,
   cardTypesForName,
   findPokemonNameInText,
+  headlineVariantForName,
   highestEvolutionForName,
 } from "@/lib/primaryCardImage";
 import { metaArchetypeCard } from "@/lib/metaArchetypeCards";
@@ -62,8 +63,17 @@ export function resolveOpponentHero({
   return gameplayName ? escalateAndResolve(gameplayName) : null;
 }
 
+/**
+ * Two escalations, in order: up the evolution line to its final stage, then
+ * across to that species' headline rule-box variant. Both are needed — the
+ * first turns a "Drakloak" attacker into a Dragapult, the second turns a
+ * bare "Dragapult" (which is where a free-text archetype like "Dragapult
+ * Dusknoir" parses to) into the Standard-legal "Dragapult ex" rather than a
+ * rotated-out Sword & Shield print. See headlineVariantForName for why the
+ * evolution walk alone can't cover the second case.
+ */
 function escalateAndResolve(name: string): OpponentHeroCard | null {
-  const escalated = highestEvolutionForName(name);
+  const escalated = headlineVariantForName(highestEvolutionForName(name));
   const imageUrl = cardImageUrlForName(escalated);
   if (!imageUrl) return null;
   return { name: escalated, imageUrl, color: typeColor(cardTypesForName(escalated)) };

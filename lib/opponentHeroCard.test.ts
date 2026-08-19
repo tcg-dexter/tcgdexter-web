@@ -45,6 +45,34 @@ describe("resolveOpponentHero: archetype beats gameplay inference", () => {
     expect(hero?.name).toBe("Dusknoir");
   });
 
+  // The reported battle: a compound archetype that isn't an exact top-30
+  // match, so it goes through the free-text parse — which pulls out the bare
+  // species "Dragapult" (the "ex" isn't in the string to match on). Before
+  // headlineVariantForName that bare name stopped at plain Dragapult, whose
+  // newest print is swsh12/89, mark F — rotated out of Standard.
+  it("resolves a compound archetype to the Standard-legal ex, not a rotated plain print", () => {
+    for (const archetype of ["Dragapult Dusknoir", "Dragapult Blaziken"]) {
+      const hero = resolveOpponentHero({ opponentArchetype: archetype, gameplayName: null });
+      expect(hero?.name).toBe("Dragapult ex");
+      expect(hero?.imageUrl).not.toContain("swsh12");
+      // Dragapult ex is a Dragon-type; the rotated plain print is Psychic,
+      // so a regression here would silently recolor the banner too.
+      expect(hero?.color).toBe("#C7A126");
+    }
+  });
+
+  it("agrees on the same card whichever signal supplies it", () => {
+    // Archetype text, the bare species, and a mid-line gameplay attacker
+    // must all land on one card — otherwise the /matches preview and the
+    // battle banner could still disagree about the same match.
+    const names = [
+      resolveOpponentHero({ opponentArchetype: "Dragapult Dusknoir", gameplayName: null })?.name,
+      resolveOpponentHero({ opponentArchetype: null, gameplayName: "Dragapult" })?.name,
+      resolveOpponentHero({ opponentArchetype: null, gameplayName: "Drakloak" })?.name,
+    ];
+    expect(names).toEqual(["Dragapult ex", "Dragapult ex", "Dragapult ex"]);
+  });
+
   it("returns null when neither an archetype nor a gameplay signal resolves", () => {
     expect(resolveOpponentHero({ opponentArchetype: null, gameplayName: null })).toBeNull();
     expect(

@@ -1,6 +1,7 @@
 import cardData from "@/data/cards-standard.json";
 import { cardImageSmall } from "@/lib/cardImages";
 import { basicEnergyAliasKeys } from "@/lib/basicEnergyAlias";
+import { isStandardMark } from "@/lib/cardPrinting";
 import { allowedAddVariants } from "@/lib/inventory";
 
 interface AnalysisCard {
@@ -188,6 +189,100 @@ export function highestEvolutionForName(name: string): string {
     current = next;
   }
   return current;
+}
+
+/** Trailing name tokens that mark a rule-box VARIANT of a species rather
+ *  than a different Pokémon: "Dragapult ex" and "Dragapult" are the same
+ *  species, as are "Charizard V" / "Charizard VMAX" / "Charizard".
+ *  Deliberately excludes legacy mechanic suffixes (LV.X, BREAK, LEGEND, ★,
+ *  δ, GL, …) — those are genuinely their own cards, and being older than
+ *  regulation marks entirely they could never win the rank comparison in
+ *  `headlineVariantForName` anyway, so grouping them would add risk for no
+ *  benefit. */
+const RULE_BOX_NAME_SUFFIXES = new Set(["ex", "EX", "V", "VMAX", "VSTAR", "GX"]);
+
+/** Grouping key for `headlineVariantForName`: the card name with any
+ *  rule-box suffix removed. Only the FINAL token is stripped, which is what
+ *  keeps "Mega Greninja ex" distinct from "Greninja ex" and "N's Zoroark
+ *  ex" from "Zoroark ex" — the qualifier that makes them different cards
+ *  sits at the front, not the back. */
+function baseSpeciesKey(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2 && RULE_BOX_NAME_SUFFIXES.has(parts[parts.length - 1])) {
+    return parts.slice(0, -1).join(" ").toLowerCase();
+  }
+  return name.trim().toLowerCase();
+}
+
+function nameHasRuleBox(name: string): boolean {
+  const entries = CARD_DB[name] ?? CARD_DB_LOWER.get(name.toLowerCase()) ?? [];
+  return entries.some((e) => isRuleBox(e.subtypes ?? []));
+}
+
+/** True when any printing of `name` is currently Standard-legal. Routed
+ *  through lib/cardPrinting's `isStandardMark` — the app's single source of
+ *  truth for rotation — so the next rotation updates this automatically
+ *  instead of drifting the way a local copy of the mark list would. */
+function nameHasStandardPrint(name: string): boolean {
+  const entries = CARD_DB[name] ?? CARD_DB_LOWER.get(name.toLowerCase()) ?? [];
+  return entries.some((e) => isStandardMark(e.regulation_mark));
+}
+
+/** Every Pokémon card name grouped by base species, so the plain form and
+ *  its rule-box variants can be compared against each other. */
+const SPECIES_VARIANT_INDEX: Map<string, string[]> = (() => {
+  const out = new Map<string, string[]>();
+  for (const [name, entries] of Object.entries(CARD_DB)) {
+    if (!entries.some((e) => e.supertype === "Pokémon")) continue;
+    const key = baseSpeciesKey(name);
+    const arr = out.get(key);
+    if (arr) arr.push(name);
+    else out.set(key, [name]);
+  }
+  return out;
+})();
+
+/**
+ * The card that currently headlines a species — "Dragapult" resolves to
+ * "Dragapult ex", the reverse never happens.
+ *
+ * `highestEvolutionForName` above only walks evolves_from links, which
+ * leaves a real gap: a plain final-stage Pokémon and its ex are SIBLINGS
+ * (both "Dragapult" and "Dragapult ex" evolve from Drakloak), not parent
+ * and child. So starting from Drakloak correctly escalated to Dragapult ex,
+ * but starting from "Dragapult" itself had no forward step left to take and
+ * stopped there — landing on swsh12/89, a rotated-out Sword & Shield print,
+ * for a deck built around the Standard-legal ex.
+ *
+ * Selection is Standard-legality first, rule-box second, recency third.
+ * Legality has to lead so a species whose only ex is ancient (a 2004
+ * "Foo ex" against a currently-legal plain "Foo") isn't dragged back to a
+ * card no one can play. Rule-box has to beat raw recency, because among
+ * cards that are *all* legal the ex is the archetype's face while a plain
+ * reprint usually isn't: Blaziken's newest plain print (mark I) and Pikachu's
+ * (mark J) are both more recent than their ex (both H), yet "Blaziken" and
+ * "Pikachu" decks are unmistakably built around Blaziken ex and Pikachu ex.
+ *
+ * Every member of a species group resolves to the same answer, so this is
+ * idempotent and callers can apply it without checking what they have.
+ */
+export function headlineVariantForName(name: string): string {
+  const variants = SPECIES_VARIANT_INDEX.get(baseSpeciesKey(name));
+  if (!variants || variants.length < 2) return name;
+  return [...variants]
+    .map((n) => ({
+      name: n,
+      legal: nameHasStandardPrint(n),
+      ruleBox: nameHasRuleBox(n),
+      rank: maxRegRankForName(n),
+    }))
+    .sort(
+      (a, b) =>
+        Number(b.legal) - Number(a.legal) ||
+        Number(b.ruleBox) - Number(a.ruleBox) ||
+        b.rank - a.rank ||
+        a.name.localeCompare(b.name),
+    )[0].name;
 }
 
 /** Derive a card image URL from a Pokémon name alone (no set/number).

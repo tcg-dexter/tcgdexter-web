@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { primaryPokemonCard } from "./primaryCardImage";
+import cardData from "@/data/cards-standard.json";
+import { isStandardMark } from "./cardPrinting";
+import { headlineVariantForName, primaryPokemonCard } from "./primaryCardImage";
+
+const CARD_DB = cardData as unknown as Record<
+  string,
+  { regulation_mark?: string | null }[]
+>;
 
 // Real subtypes (from data/cards-standard.json) driving these cases:
 //   Dragapult ex: ["Stage 2", "Tera", "ex"]  — a Stage 2 AND rule-box at once
@@ -67,5 +74,58 @@ describe("primaryPokemonCard: rule-box status beats evolution stage", () => {
       pkmn("Iron Leaves ex", "186", "TEF", 2), // Basic, rule-box — same qty
     ];
     expect(primaryPokemonCard(cards)?.card.name).toBe("Dragapult ex");
+  });
+});
+
+// The reported bug: a battle whose opponent archetype read "Dragapult
+// Dusknoir" showed a rotated-out Sword & Shield Dragapult (swsh12/89, mark
+// F) instead of the Standard-legal Dragapult ex. highestEvolutionForName
+// couldn't fix it on its own — "Dragapult" and "Dragapult ex" both evolve
+// from Drakloak, so they're SIBLINGS, and a name already at its final stage
+// has no forward step left to take.
+describe("headlineVariantForName: plain species resolve to their headline card", () => {
+  it("escalates a plain final-stage name to its rule-box variant", () => {
+    expect(headlineVariantForName("Dragapult")).toBe("Dragapult ex");
+  });
+
+  it("is idempotent — every member of a species resolves to the same card", () => {
+    expect(headlineVariantForName("Dragapult ex")).toBe("Dragapult ex");
+    expect(headlineVariantForName(headlineVariantForName("Dragapult"))).toBe("Dragapult ex");
+  });
+
+  it("prefers the rule-box card even when a plain print is more recent", () => {
+    // Blaziken's newest plain print is mark I and Pikachu's is mark J —
+    // both strictly newer than their ex (mark H) — so a recency-first rule
+    // picks the wrong card here. These decks are built around the ex.
+    expect(headlineVariantForName("Blaziken")).toBe("Blaziken ex");
+    expect(headlineVariantForName("Pikachu")).toBe("Pikachu ex");
+  });
+
+  it("always lands on a Standard-legal card when the species has one", () => {
+    for (const species of ["Dragapult", "Greninja", "Blaziken", "Pikachu", "Charizard"]) {
+      const chosen = headlineVariantForName(species);
+      const prints = CARD_DB[chosen] ?? [];
+      // Charizard is the deliberate exception: its whole species rotated
+      // (plain mark F, ex mark G), so there is no legal card to land on.
+      if (species === "Charizard") {
+        expect(chosen).toBe("Charizard ex");
+        continue;
+      }
+      expect(prints.some((p) => isStandardMark(p.regulation_mark))).toBe(true);
+    }
+  });
+
+  it("keeps a leading qualifier as a different species, not a variant", () => {
+    // Only the trailing rule-box token is stripped, so the qualifier that
+    // makes these distinct cards ("Mega", "N's") can't be collapsed away.
+    expect(headlineVariantForName("Mega Greninja ex")).toBe("Mega Greninja ex");
+    expect(headlineVariantForName("N's Zoroark ex")).toBe("N's Zoroark ex");
+    expect(headlineVariantForName("Greninja")).toBe("Greninja ex");
+  });
+
+  it("leaves a species alone when it has no rule-box variant", () => {
+    // Dusknoir is the real partner card in the reported archetype — it
+    // should stay itself rather than being escalated to something else.
+    expect(headlineVariantForName("Dusknoir")).toBe("Dusknoir");
   });
 });
