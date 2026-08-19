@@ -828,7 +828,14 @@ function OverlayCloseButton({
 // It's the overlay's backdrop now, not a panel scoped to whichever card row
 // happens to sit on top of it, so a card row rendered over it (the attached-
 // cards row) needs no background of its own — see MatCardInspector.
-const INSPECTOR_OVERLAY_GRADIENT_BG = "linear-gradient(to top, rgba(0,0,0,0.75), transparent)";
+//
+// Five stops rather than a single fade-to-transparent: a flat 0.25 dim
+// across the upper two-thirds (top, 75%, 50%) keeps the mat/card art behind
+// it legible up there, then ramps through 0.5 (25%) to 0.75 at the very
+// bottom edge, where the card row/grid actually sits and needs the most
+// contrast to read against whatever's behind it.
+const INSPECTOR_OVERLAY_GRADIENT_BG =
+  "linear-gradient(to top, rgba(0,0,0,0.75), rgba(0,0,0,0.5), rgba(0,0,0,0.25), rgba(0,0,0,0.25), rgba(0,0,0,0.25))";
 
 /** A card sized to fit a mat on both axes — the inspector's own big card,
  *  and the reference size every smaller thumbnail row (attached cards,
