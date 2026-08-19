@@ -822,34 +822,14 @@ function OverlayCloseButton({
   );
 }
 
-/**
- * First stage of the two-stage card inspector: an XL card image on the
- * SAME full-mat overlay treatment as the discard/draw and mulligan
- * overlays, rather than jumping straight to the full-screen viewer. It
- * mounts on whichever mat the tapped card belongs to — see Board's two
- * InspectContext.Provider — so a tap on an opponent card inspects over the
- * opponent's mat and a tap on the player's own card (on their mat OR in
- * their hand strip) inspects over the player's.
- *
- * A Pokémon target also gets a row of everything attached to it — energy
- * and Tools alike, see PokemonFrame.attachedCards — pinned to the bottom
- * edge of the MAT (this overlay's own footprint), not the card: the card
- * centres in the mat and is usually shorter than it, so anchoring to the
- * card left the row floating over the middle of the mat rather than
- * sitting at its floor. This also keeps the primary card at exactly the
- * same full size the plain-card case already used (fit-to-mat on both
- * axes, independent of whether anything is attached) — the row overlays
- * whatever it overlaps rather than sharing space with the card. A gradient
- * scrim behind the row is what keeps small thumbnails legible against
- * whatever's behind them, mat or card art alike.
- *
- * Tapping the big card again escalates to the existing full-screen
- * ReplayCardInspector (onExpand); the small circled X closes back to the
- * board instead. Attached cards themselves aren't tappable — they're a
- * reference row, not their own inspector target. z-40, one above the
- * discard/draw and mulligan overlays' z-30, since it's the more focused of
- * the two if a tap ever lands while one of those is already showing.
- */
+// The dark-to-transparent fade every full-mat inspector overlay (the card
+// inspector, the discard-pile grid) uses as its own background — replacing
+// the flat color-mix scrim the discard/draw and mulligan overlays still use.
+// It's the overlay's backdrop now, not a panel scoped to whichever card row
+// happens to sit on top of it, so a card row rendered over it (the attached-
+// cards row) needs no background of its own — see MatCardInspector.
+const INSPECTOR_OVERLAY_GRADIENT_BG = "linear-gradient(to top, rgba(0,0,0,0.75), transparent)";
+
 /** A card sized to fit a mat on both axes — the inspector's own big card,
  *  and the reference size every smaller thumbnail row (attached cards,
  *  the discard pile grid) scales off of. 32px reserves breathing room from
@@ -905,20 +885,35 @@ function attachedScaleCardWidth(matWidth: number): number {
   );
 }
 
-/** Bottom-anchored dark fade behind a row/grid of small card thumbnails —
- *  the same treatment everywhere a thumbnail group needs to read clearly
- *  against whatever mat or card art sits behind it. */
-function OverlayGradientScrim({ children }: { children: ReactNode }) {
-  return (
-    <div
-      className="absolute inset-x-0 bottom-0 z-10 flex justify-center px-2 pb-3 pt-6"
-      style={{ backgroundImage: CARD_GROUP_GRADIENT_BG }}
-    >
-      {children}
-    </div>
-  );
-}
-
+/**
+ * First stage of the two-stage card inspector: an XL card image on the
+ * SAME full-mat overlay treatment as the discard/draw and mulligan
+ * overlays, rather than jumping straight to the full-screen viewer. It
+ * mounts on whichever mat the tapped card belongs to — see Board's two
+ * InspectContext.Provider — so a tap on an opponent card inspects over the
+ * opponent's mat and a tap on the player's own card (on their mat OR in
+ * their hand strip) inspects over the player's.
+ *
+ * A Pokémon target also gets a row of everything attached to it — energy
+ * and Tools alike, see PokemonFrame.attachedCards — pinned to the bottom
+ * edge of the MAT (this overlay's own footprint), not the card: the card
+ * centres in the mat and is usually shorter than it, so anchoring to the
+ * card left the row floating over the middle of the mat rather than
+ * sitting at its floor. This also keeps the primary card at exactly the
+ * same full size the plain-card case already used (fit-to-mat on both
+ * axes, independent of whether anything is attached) — the row overlays
+ * whatever it overlaps rather than sharing space with the card. Legibility
+ * against whatever's behind the row (mat or card art alike) comes from the
+ * overlay's own INSPECTOR_OVERLAY_GRADIENT_BG background now, not a scrim
+ * scoped to the row itself.
+ *
+ * Tapping the big card again escalates to the existing full-screen
+ * ReplayCardInspector (onExpand); the small circled X closes back to the
+ * board instead. Attached cards themselves aren't tappable — they're a
+ * reference row, not their own inspector target. z-40, one above the
+ * discard/draw and mulligan overlays' z-30, since it's the more focused of
+ * the two if a tap ever lands while one of those is already showing.
+ */
 function MatCardInspector({
   target,
   cardWidth,
@@ -949,7 +944,7 @@ function MatCardInspector({
   return (
     <motion.div
       className="absolute inset-0 z-40 flex items-center justify-center overflow-hidden rounded-xl px-2"
-      style={{ backgroundColor: "color-mix(in srgb, var(--bg) 90%, transparent)" }}
+      style={{ backgroundImage: INSPECTOR_OVERLAY_GRADIENT_BG }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -976,21 +971,24 @@ function MatCardInspector({
         )}
       </button>
       {attachedCards.length > 0 && (
-        // Anchored to the MAT's own bottom edge (OverlayGradientScrim's
-        // positioning parent is the full-mat overlay, not the card button
-        // above), not the card's — the card centres in the mat and is
-        // usually shorter than it, so anchoring to the card instead left
-        // the row floating near the middle of the mat rather than sitting
-        // at its floor. z-10 over the card so it still reads as "on top of"
-        // wherever the two happen to overlap. Not pointer-events-none like
-        // the rest of this overlay's decoration: the row is interactive now
-        // (scroll, chevrons), so it has to actually receive the taps/swipes
-        // aimed at it rather than passing them through to the card
-        // underneath — it's a sibling of the card button, not nested inside
-        // it, so this can't accidentally trigger the card's own onExpand.
-        <OverlayGradientScrim>
+        // Anchored to the MAT's own bottom edge (this div's positioning
+        // parent is the full-mat overlay, not the card button above), not
+        // the card's — the card centres in the mat and is usually shorter
+        // than it, so anchoring to the card instead left the row floating
+        // near the middle of the mat rather than sitting at its floor. z-10
+        // over the card so it still reads as "on top of" wherever the two
+        // happen to overlap. No background of its own — the overlay's
+        // INSPECTOR_OVERLAY_GRADIENT_BG behind everything already provides
+        // the legibility a per-row scrim used to. Not pointer-events-none
+        // like the rest of this overlay's decoration: the row is
+        // interactive now (scroll, chevrons), so it has to actually
+        // receive the taps/swipes aimed at it rather than passing them
+        // through to the card underneath — it's a sibling of the card
+        // button, not nested inside it, so this can't accidentally
+        // trigger the card's own onExpand.
+        <div className="absolute inset-x-0 bottom-0 z-10 flex justify-center px-2 pb-3">
           <AttachedCardsRow cards={attachedCards} cardWidth={attachedW} />
-        </OverlayGradientScrim>
+        </div>
       )}
     </motion.div>
   );
@@ -1007,11 +1005,6 @@ function MatCardInspector({
 const DISCARD_GRID_COLS = 7;
 const DISCARD_GRID_VISIBLE_ROWS = 4;
 const DISCARD_GRID_GAP_PX = 6;
-// The dark-to-transparent fade behind any group of small card thumbnails —
-// same value OverlayGradientScrim uses for the attached-cards row, factored
-// out so the discard-pile grid (which needs its own centered panel rather
-// than that component's bottom-anchored strip) can't drift from it.
-const CARD_GROUP_GRADIENT_BG = "linear-gradient(to top, rgba(0,0,0,0.75), transparent)";
 
 /**
  * Full-mat overlay showing the ENTIRE discard pile as a grid, rather than
@@ -1054,22 +1047,14 @@ function DiscardPileOverlay({
   return (
     <motion.div
       className="absolute inset-0 z-40 flex items-center justify-center overflow-hidden rounded-xl px-2"
-      style={{ backgroundColor: "color-mix(in srgb, var(--bg) 90%, transparent)" }}
+      style={{ backgroundImage: INSPECTOR_OVERLAY_GRADIENT_BG }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
     >
       <OverlayCloseButton onClick={onClose} label="Close discard pile" />
-      {/* Same dark-to-transparent card-group fade as the attached-cards row
-          (CARD_GROUP_GRADIENT_BG), applied directly as a panel background
-          here rather than through OverlayGradientScrim's own bottom-anchored
-          positioning — this grid is centered on the mat, not floating over
-          a card below it. */}
-      <div
-        className="flex flex-col items-center gap-1.5 rounded-lg px-3 pb-3 pt-2"
-        style={{ maxHeight: matHeight - 24, backgroundImage: CARD_GROUP_GRADIENT_BG }}
-      >
+      <div className="flex flex-col items-center gap-1.5" style={{ maxHeight: matHeight - 24 }}>
         <span className="whitespace-nowrap text-[9px] font-bold uppercase tracking-wider text-text-secondary">
           Discard Pile · {cards.length}
         </span>
