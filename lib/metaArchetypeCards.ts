@@ -21,6 +21,11 @@ const METADECKS = metaDecksRaw as MetaDeck[];
 export interface MetaArchetypeCard {
   imageUrl: string;
   types: string[];
+  /** The specific Pokémon card name this archetype resolved to (e.g.
+   *  "Dragapult ex" for the "Dragapult" archetype) — lets callers show a
+   *  precise card name instead of falling back to the archetype's own
+   *  (sometimes multi-word, sometimes compound) display name. */
+  name: string;
 }
 
 let cache: Map<string, MetaArchetypeCard> | null = null;
@@ -39,7 +44,9 @@ function build(): Map<string, MetaArchetypeCard> {
       iconList = [];
     }
     const primary = metaPrimaryCard(cards, iconList);
-    if (primary) map.set(arch.name, { imageUrl: primary.imageUrl, types: primary.types });
+    if (primary) {
+      map.set(arch.name, { imageUrl: primary.imageUrl, types: primary.types, name: primary.name });
+    }
   }
   return map;
 }

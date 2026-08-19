@@ -31,21 +31,30 @@ const CARD_DB_LOWER = new Map(
   Object.entries(CARD_DB).map(([k, v]) => [k.toLowerCase(), v as CardEntry[]])
 );
 
-const SUBTYPE_RANK: Record<string, number> = {
-  "Stage 2": 6,
-  VMAX: 5,
-  VSTAR: 5,
-  ex: 4,
-  EX: 4,
-  GX: 4,
-  "TAG TEAM": 4,
-  V: 3,
+// Rule-box status (ex/GX/V-family) beats evolution stage outright, rather
+// than competing on the same scale — a Stage 2 ex like Dragapult ex is
+// "Stage 2" AND "ex" at once, so ranking Stage 2 above ex meant the ex
+// added nothing once a card was already Stage 2: it tied dead even with a
+// plain non-ex Stage 2 partner (Dusknoir) or another Stage 2 ex (Blaziken
+// ex), leaving a 1-copy qty difference to decide the deck's "hero" instead
+// of which card is actually the rarer, more recognizable face of the
+// archetype. Two separate scales — ruleBoxRank as the primary sort key,
+// stageRank only a tiebreak among cards that are equally rule-box (or
+// equally not) — fixes that without changing how ties are broken within
+// either tier.
+const RULE_BOX_SUBTYPES = new Set(["VMAX", "VSTAR", "ex", "EX", "GX", "TAG TEAM", "V"]);
+const STAGE_RANK: Record<string, number> = {
+  "Stage 2": 3,
   "Stage 1": 2,
   Basic: 1,
 };
 
+function isRuleBox(subtypes: string[]): boolean {
+  return subtypes.some((s) => RULE_BOX_SUBTYPES.has(s));
+}
+
 function stageRank(subtypes: string[]): number {
-  return subtypes.reduce((max, s) => Math.max(max, SUBTYPE_RANK[s] ?? 0), 0);
+  return subtypes.reduce((max, s) => Math.max(max, STAGE_RANK[s] ?? 0), 0);
 }
 
 function resolveEntry(card: Pick<AnalysisCard, "name" | "number" | "setCode">):
@@ -273,15 +282,22 @@ export function primaryPokemonCard(cards: AnalysisCard[]): PrimaryPokemonCard | 
 
   const annotated = pokemon.map((card) => {
     const match = resolveEntry(card);
+    const subtypes = match?.subtypes ?? [];
     return {
       card,
       set_id: match?.set_id ?? null,
       types: match?.types ?? [],
-      rank: match ? stageRank(match.subtypes) : 0,
+      ruleBox: match ? isRuleBox(subtypes) : false,
+      stage: match ? stageRank(subtypes) : 0,
     };
   });
 
-  annotated.sort((a, b) => b.rank - a.rank || b.card.qty - a.card.qty);
+  annotated.sort(
+    (a, b) =>
+      Number(b.ruleBox) - Number(a.ruleBox) ||
+      b.stage - a.stage ||
+      b.card.qty - a.card.qty,
+  );
   const best = annotated[0];
   if (!best) return null;
   return { card: best.card, set_id: best.set_id, types: best.types };

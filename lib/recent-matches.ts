@@ -1,14 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  primaryCardImageUrl,
-  cardImageUrlForName,
-  primaryPokemonCard,
-  cardTypesForName,
-  findPokemonNameInText,
-} from "@/lib/primaryCardImage";
+import { primaryCardImageUrl, primaryPokemonCard } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
-import { metaArchetypeCard } from "@/lib/metaArchetypeCards";
+import { resolveOpponentHero } from "@/lib/opponentHeroCard";
 import { manualPrizeTotals } from "@/lib/bo3";
 import { stripCardIds } from "@/lib/battle-log";
 import type { RecentMatch } from "@/app/components/MatchCard";
@@ -169,33 +163,22 @@ async function assembleRecentMatches(
     const playerPrimary = analysis?.cards ? primaryPokemonCard(analysis.cards) : null;
     const playerColor = typeColor(playerPrimary?.types);
 
-    // Opponent art cascade, most-confident signal first:
-    //   1. Battle-log top attacker (real card played, requires parsed actions)
-    //   2. opponent_archetype exact match against the top-30 meta list
-    //   3. A known Pokémon name pulled out of the free-text opponent_archetype
-    //      field — catches manually-typed archetypes that aren't an exact
-    //      top-30 match (typos, older/rotated-out decks, casing) but still
-    //      name a real card, e.g. "Charizard ex / Pidgeot ex".
-    const topAttacker = topAttackerByMatch.get(m.id as string) ?? null;
-    const archetypeCard = m.opponent_archetype
-      ? metaArchetypeCard(m.opponent_archetype as string)
-      : null;
-    const fallbackPokemonName =
-      !topAttacker && !archetypeCard && m.opponent_archetype
-        ? findPokemonNameInText(m.opponent_archetype as string)
-        : null;
+    // A recognized archetype beats gameplay inference — see
+    // resolveOpponentHero's own comment for why. gameplayName is the one
+    // gameplay-inference signal this cascade already has: the opponent's
+    // top-damage attacker, or (folded into the same map above, when nobody
+    // attacked) their most-played/evolved-into Pokémon.
+    const gameplayName = topAttackerByMatch.get(m.id as string) ?? null;
+    const hero = resolveOpponentHero({
+      opponentArchetype: (m.opponent_archetype as string | null) ?? null,
+      gameplayName,
+    });
 
     let opponentImageUrl: string | null;
     let opponentColor: string;
-    if (topAttacker) {
-      opponentImageUrl = cardImageUrlForName(topAttacker);
-      opponentColor = typeColor(cardTypesForName(topAttacker));
-    } else if (archetypeCard) {
-      opponentImageUrl = archetypeCard.imageUrl;
-      opponentColor = typeColor(archetypeCard.types);
-    } else if (fallbackPokemonName) {
-      opponentImageUrl = cardImageUrlForName(fallbackPokemonName);
-      opponentColor = typeColor(cardTypesForName(fallbackPokemonName));
+    if (hero) {
+      opponentImageUrl = hero.imageUrl;
+      opponentColor = hero.color;
     } else {
       if (dropIfNoOpponentArt) return [];
       opponentImageUrl = null;
@@ -221,7 +204,10 @@ async function assembleRecentMatches(
       deckImageUrl: deckImageUrl ?? null,
       deckCardNames,
       opponentImageUrl,
-      opponentAttackerName: topAttacker,
+      // Falls back to the raw gameplay name (not just null) on the rare
+      // edge case where a name resolved but its card image didn't — same
+      // as the old topAttacker-only value's own robustness there.
+      opponentAttackerName: hero?.name ?? gameplayName,
       playerColor,
       opponentColor,
       playerPrizes: playerPrizesByMatch.get(m.id as string) ?? manualPrizes?.player ?? 0,

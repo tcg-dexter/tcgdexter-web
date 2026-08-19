@@ -1,14 +1,9 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import {
-  primaryCardImageUrl,
-  primaryPokemonCard,
-  cardImageUrlForName,
-  cardTypesForName,
-  highestEvolutionForName,
-} from "@/lib/primaryCardImage";
+import { primaryCardImageUrl, primaryPokemonCard } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
+import { resolveOpponentHero } from "@/lib/opponentHeroCard";
 import { stripCardIds } from "@/lib/battle-log";
 import { idColumn } from "@/lib/shortId";
 import BattleLogPage from "./BattleLogPage";
@@ -181,22 +176,24 @@ export default async function BattleRoute({
         if (primary) opponentAttackerName = primary.card.name;
       }
     }
-
-    // Escalate to the line's headline Pokémon — battle-log inference
-    // lands on whatever attacker dealt the most damage, but the deck is
-    // usually built around the highest evolution of that line (e.g.
-    // Kadabra → Alakazam ex). cardImageUrlForName + cardTypesForName
-    // also escalate internally, but doing it here too keeps the name we
-    // pass downstream (banner header, social card) in sync.
-    if (opponentAttackerName) {
-      opponentAttackerName = highestEvolutionForName(opponentAttackerName);
-      opponentImageUrl = cardImageUrlForName(opponentAttackerName);
-    }
   }
 
-  const opponentColor: string = typeColor(
-    opponentAttackerName ? cardTypesForName(opponentAttackerName) : undefined,
-  );
+  // A recognized archetype beats gameplay inference — see
+  // resolveOpponentHero's own comment for why — and this is the same
+  // resolver lib/recent-matches.ts uses for the /matches preview cards, so
+  // a battle's banner can never show different art than its own card in
+  // that list. opponentAttackerName above is exactly the one gameplay
+  // signal this cascade needs: the top-damage attacker, or (when nobody
+  // attacked) the opponent's most-played/evolved-into Pokémon.
+  const hero = resolveOpponentHero({
+    opponentArchetype: match.opponent_archetype as string | null,
+    gameplayName: opponentAttackerName,
+  });
+  if (hero) {
+    opponentAttackerName = hero.name;
+    opponentImageUrl = hero.imageUrl;
+  }
+  const opponentColor: string = hero ? hero.color : typeColor(undefined);
 
   const playerHandle = (match.player_handle as string | null) ?? null;
   const opponentHandle = (match.opponent_handle as string | null) ?? null;
