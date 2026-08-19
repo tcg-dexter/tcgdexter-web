@@ -1044,7 +1044,7 @@ function DiscardPileOverlay({
   // overlay solving its own size independently.
   const w = attachedScaleCardWidth(matWidth);
   const cardH = Math.round((w * 342) / 245);
-  const gridWidth = DISCARD_GRID_COLS * w + (DISCARD_GRID_COLS - 1) * DISCARD_GRID_GAP_PX;
+  const rowWidth = DISCARD_GRID_COLS * w + (DISCARD_GRID_COLS - 1) * DISCARD_GRID_GAP_PX;
   // Target DISCARD_GRID_VISIBLE_ROWS tall, but never more height than the
   // mat actually has above the close button and caption — at this shared
   // (not solved-to-fit) thumbnail size, a 4-row target can ask for more
@@ -1071,18 +1071,28 @@ function DiscardPileOverlay({
         </span>
         {/* The only scrolling surface in this overlay — a pile past what
             fits vertically scrolls here instead of growing the grid past
-            the mat or shrinking the cards further. */}
+            the mat or shrinking the cards further.
+
+            Flex-wrap rather than CSS grid: a grid auto-places every row
+            starting from its left edge regardless of how many cells that
+            row has, so a partial bottom row (a pile that isn't a multiple
+            of DISCARD_GRID_COLS) reads left-aligned. justify-center on a
+            wrapping flex row centers each row independently instead — a
+            full row already spans rowWidth edge to edge so centering does
+            nothing to it, but a short last row centers within the same
+            width rather than hugging the left side. */}
         <div
-          className="grid overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex flex-wrap justify-center overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           style={{
-            gridTemplateColumns: `repeat(${DISCARD_GRID_COLS}, ${w}px)`,
             gap: DISCARD_GRID_GAP_PX,
-            width: gridWidth,
+            width: rowWidth,
             maxHeight: gridVisibleHeight,
           }}
         >
           {cards.map((c, i) => (
-            <OverlayCardThumb key={`${c.name}-${i}`} card={c} width={w} />
+            <div key={`${c.name}-${i}`} className="shrink-0">
+              <OverlayCardThumb card={c} width={w} />
+            </div>
           ))}
         </div>
       </div>
@@ -1096,6 +1106,15 @@ function Board({
   error,
   heightBudget,
   instant,
+  matInspect,
+  discardInspect,
+  inspect,
+  onOpenMatInspect,
+  onCloseMatInspect,
+  onOpenDiscardInspect,
+  onCloseDiscardInspect,
+  onExpandInspect,
+  onCloseInspect,
 }: {
   frame: ReplayFrame | null;
   loading: boolean;
@@ -1108,6 +1127,26 @@ function Board({
    *  ambient container width — see BOARD_VERTICAL_CHROME_PX. Null falls
    *  back to the original measure-the-container behavior (mobile). */
   heightBudget: number | null;
+  /** Stage 1 (per mat): what the mat-overlay card inspector is showing over
+   *  each mat, if anything. Both mats can hold one at once — see
+   *  ReplayViewer, which owns this (and everything else inspector-related)
+   *  so a keyboard Escape or hitting Play can dismiss every open inspector
+   *  in one place regardless of which mat(s) opened them. */
+  matInspect: Record<"player" | "opponent", InspectTarget | null>;
+  /** Discard-pile inspector open state per mat — a separate slot from
+   *  matInspect rather than a third InspectTarget kind, see
+   *  DiscardPileOverlay's own comment. */
+  discardInspect: Record<"player" | "opponent", boolean>;
+  /** Stage 2: the existing full-screen viewer. Global rather than per-mat
+   *  — it covers the whole screen, so only one can make sense at a time —
+   *  reachable by tapping the card again inside stage 1 (see onExpandInspect). */
+  inspect: InspectTarget | null;
+  onOpenMatInspect: (actor: "player" | "opponent", target: InspectTarget) => void;
+  onCloseMatInspect: (actor: "player" | "opponent") => void;
+  onOpenDiscardInspect: (actor: "player" | "opponent") => void;
+  onCloseDiscardInspect: (actor: "player" | "opponent") => void;
+  onExpandInspect: (actor: "player" | "opponent", target: InspectTarget) => void;
+  onCloseInspect: () => void;
 }) {
   const matContainerRef = useRef<HTMLDivElement>(null);
   const [measuredWidth, setMeasuredWidth] = useState(300);
@@ -1132,34 +1171,6 @@ function Board({
       : measuredWidth;
 
   const cardWidth = computeReplayCardWidth(matWidth);
-  // Stage 2: the existing full-screen viewer, unchanged — only reachable
-  // now by tapping the card again inside stage 1 (see onExpand below).
-  const [inspect, setInspect] = useState<InspectTarget | null>(null);
-  // Stage 1: which actor's mat the mat-overlay inspector is showing over,
-  // and what it's showing. A tap anywhere always names an actor (the two
-  // InspectContext.Provider below are each scoped to one mat's data, and
-  // HandStrip's cards are always the player's), so there's one flag for
-  // both "is it open" and "which mat it belongs on."
-  const [matInspect, setMatInspect] = useState<{
-    actor: "player" | "opponent";
-    target: InspectTarget;
-  } | null>(null);
-  // Discard-pile inspector: which actor's mat it's showing over, same
-  // one-flag-does-both-jobs shape as matInspect above. A separate slot from
-  // matInspect rather than a third InspectTarget kind — see
-  // DiscardPileOverlay's own comment — so opening one explicitly clears the
-  // other below, keeping only one mat overlay up at a time per mat.
-  const [discardInspect, setDiscardInspect] = useState<"player" | "opponent" | null>(
-    null,
-  );
-  // Every path that opens the card inspector goes through this, so it can't
-  // forget to close whichever discard-pile overlay happens to be open —
-  // the reverse (discard pile clearing matInspect) is handled inline at its
-  // own two call sites below since there's only one of it.
-  function openMatInspect(actor: "player" | "opponent", target: InspectTarget) {
-    setDiscardInspect(null);
-    setMatInspect({ actor, target });
-  }
 
   return (
     <div
@@ -1195,7 +1206,7 @@ function Board({
               it's the opponent's card without threading an actor prop
               through BoardKit's shared card components. */}
           <InspectContext.Provider
-            value={(target) => openMatInspect("opponent", target)}
+            value={(target) => onOpenMatInspect("opponent", target)}
           >
           <div className="relative z-10">
             <PlayerMat
@@ -1217,10 +1228,7 @@ function Board({
               cardWidth={cardWidth}
               matWidth={matWidth}
               instant={instant}
-              onDiscardClick={() => {
-                setMatInspect(null);
-                setDiscardInspect("opponent");
-              }}
+              onDiscardClick={() => onOpenDiscardInspect("opponent")}
             />
             <AnimatePresence>
               {frame.discardDraw?.actor === "opponent" && (
@@ -1243,25 +1251,22 @@ function Board({
               )}
             </AnimatePresence>
             <AnimatePresence>
-              {matInspect?.actor === "opponent" && (
+              {matInspect.opponent && (
                 <MatCardInspector
-                  target={matInspect.target}
+                  target={matInspect.opponent}
                   cardWidth={cardWidth}
                   matWidth={matWidth}
-                  onExpand={() => {
-                    setInspect(matInspect.target);
-                    setMatInspect(null);
-                  }}
-                  onClose={() => setMatInspect(null)}
+                  onExpand={() => onExpandInspect("opponent", matInspect.opponent!)}
+                  onClose={() => onCloseMatInspect("opponent")}
                 />
               )}
             </AnimatePresence>
             <AnimatePresence>
-              {discardInspect === "opponent" && (
+              {discardInspect.opponent && (
                 <DiscardPileOverlay
                   cards={frame.opponent.discard}
                   matWidth={matWidth}
-                  onClose={() => setDiscardInspect(null)}
+                  onClose={() => onCloseDiscardInspect("opponent")}
                 />
               )}
             </AnimatePresence>
@@ -1278,7 +1283,7 @@ function Board({
             prizesRemaining={frame.player.prizesRemaining}
           />
           <InspectContext.Provider
-            value={(target) => openMatInspect("player", target)}
+            value={(target) => onOpenMatInspect("player", target)}
           >
           <div className="relative z-10">
             <PlayerMat
@@ -1300,10 +1305,7 @@ function Board({
               cardWidth={cardWidth}
               matWidth={matWidth}
               instant={instant}
-              onDiscardClick={() => {
-                setMatInspect(null);
-                setDiscardInspect("player");
-              }}
+              onDiscardClick={() => onOpenDiscardInspect("player")}
             />
             <AnimatePresence>
               {frame.discardDraw?.actor === "player" && (
@@ -1326,25 +1328,22 @@ function Board({
               )}
             </AnimatePresence>
             <AnimatePresence>
-              {matInspect?.actor === "player" && (
+              {matInspect.player && (
                 <MatCardInspector
-                  target={matInspect.target}
+                  target={matInspect.player}
                   cardWidth={cardWidth}
                   matWidth={matWidth}
-                  onExpand={() => {
-                    setInspect(matInspect.target);
-                    setMatInspect(null);
-                  }}
-                  onClose={() => setMatInspect(null)}
+                  onExpand={() => onExpandInspect("player", matInspect.player!)}
+                  onClose={() => onCloseMatInspect("player")}
                 />
               )}
             </AnimatePresence>
             <AnimatePresence>
-              {discardInspect === "player" && (
+              {discardInspect.player && (
                 <DiscardPileOverlay
                   cards={frame.player.discard}
                   matWidth={matWidth}
-                  onClose={() => setDiscardInspect(null)}
+                  onClose={() => onCloseDiscardInspect("player")}
                 />
               )}
             </AnimatePresence>
@@ -1360,12 +1359,12 @@ function Board({
           cards={frame.player.hand}
           cardWidth={cardWidth}
           instant={instant}
-          onCardClick={(target) => openMatInspect("player", target)}
+          onCardClick={(target) => onOpenMatInspect("player", target)}
         />
         </>
       )}
       {inspect && (
-        <ReplayCardInspector target={inspect} onClose={() => setInspect(null)} />
+        <ReplayCardInspector target={inspect} onClose={onCloseInspect} />
       )}
     </div>
   );
@@ -1774,12 +1773,84 @@ export default function ReplayViewer({
   // game never took, and a fast drag leaves them mid-flight. Jumps therefore
   // cut straight to the destination state.
   const [instant, setInstant] = useState(false);
+  // Board's card inspectors, lifted up here (rather than owned by Board
+  // itself) so playback and a keyboard Escape can reach every one of them
+  // regardless of which mat opened it. Both mats can hold a stage-1
+  // mat-overlay inspector at once — matInspect/discardInspect are keyed
+  // per actor rather than a single "whichever mat asked last" slot. Stage
+  // 2 (the full-screen viewer) stays a single global slot since it covers
+  // the whole screen and only one can make sense at a time.
+  const [matInspect, setMatInspect] = useState<
+    Record<"player" | "opponent", InspectTarget | null>
+  >({ player: null, opponent: null });
+  const [discardInspect, setDiscardInspect] = useState<
+    Record<"player" | "opponent", boolean>
+  >({ player: false, opponent: false });
+  const [inspect, setInspect] = useState<InspectTarget | null>(null);
+
+  const anyInspectorOpen =
+    matInspect.player != null ||
+    matInspect.opponent != null ||
+    discardInspect.player ||
+    discardInspect.opponent ||
+    inspect != null;
+
+  // Opening any inspector pauses playback — an inspector reads the board at
+  // a single frozen frame, and cards would keep advancing underneath it
+  // otherwise. Each opener below sets both this mat's inspector state and
+  // pauses; closing never resumes on its own (see togglePlay for the one
+  // path that does).
+  function openMatInspect(actor: "player" | "opponent", target: InspectTarget) {
+    setDiscardInspect((d) => ({ ...d, [actor]: false }));
+    setMatInspect((m) => ({ ...m, [actor]: target }));
+    setPlaying(false);
+  }
+  function closeMatInspect(actor: "player" | "opponent") {
+    setMatInspect((m) => ({ ...m, [actor]: null }));
+  }
+  function openDiscardInspect(actor: "player" | "opponent") {
+    setMatInspect((m) => ({ ...m, [actor]: null }));
+    setDiscardInspect((d) => ({ ...d, [actor]: true }));
+    setPlaying(false);
+  }
+  function closeDiscardInspect(actor: "player" | "opponent") {
+    setDiscardInspect((d) => ({ ...d, [actor]: false }));
+  }
+  function expandInspect(actor: "player" | "opponent", target: InspectTarget) {
+    setInspect(target);
+    setMatInspect((m) => ({ ...m, [actor]: null }));
+    setPlaying(false);
+  }
+  function closeAllInspectors() {
+    setMatInspect({ player: null, opponent: null });
+    setDiscardInspect({ player: false, opponent: false });
+    setInspect(null);
+  }
+
+  // Keyboard Escape dismisses every open inspector at once, on either mat.
+  // Scoped to only attach while something's actually open, so an Escape
+  // press aimed at something else (closing a browser find bar, say) doesn't
+  // churn this component's state for no reason.
+  useEffect(() => {
+    if (!anyInspectorOpen) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      setMatInspect({ player: null, opponent: null });
+      setDiscardInspect({ player: false, opponent: false });
+      setInspect(null);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [anyInspectorOpen]);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
     setPlaying(false);
+    setMatInspect({ player: null, opponent: null });
+    setDiscardInspect({ player: false, opponent: false });
+    setInspect(null);
     fetch(replayUrl)
       .then(async (r) => {
         if (!r.ok) throw new Error(`Replay failed (${r.status})`);
@@ -1845,6 +1916,11 @@ export default function ReplayViewer({
       setPlaying(false);
       return;
     }
+    // Resuming with an inspector open would leave it showing a frame that's
+    // no longer current the instant playback advances — close everything
+    // first (same batch of updates as the rewind/play below, so this reads
+    // as one click: inspectors close and playback starts together).
+    if (anyInspectorOpen) closeAllInspectors();
     if (atEnd) {
       setInstant(true);
       setFrameIndex(0);
@@ -2002,6 +2078,15 @@ export default function ReplayViewer({
             error={error}
             heightBudget={heightBudget}
             instant={instant}
+            matInspect={matInspect}
+            discardInspect={discardInspect}
+            inspect={inspect}
+            onOpenMatInspect={openMatInspect}
+            onCloseMatInspect={closeMatInspect}
+            onOpenDiscardInspect={openDiscardInspect}
+            onCloseDiscardInspect={closeDiscardInspect}
+            onExpandInspect={expandInspect}
+            onCloseInspect={() => setInspect(null)}
           />
         </div>
       </div>
