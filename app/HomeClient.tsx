@@ -33,6 +33,13 @@ import CardDetailPanel from "@/app/cards/CardDetailPanel";
 import InventoryProvider, { useInventory } from "@/app/cards/InventoryContext";
 import BadgeShowcase from "@/app/components/BadgeShowcase";
 
+/** Recent Battles cards shown on phones. The full set (whatever the home
+ *  page passes, currently 6) returns at sm: — the trim exists because a
+ *  single-column stack of 6 runs very long under the Featured Match
+ *  showcase above it, and sm: is exactly where the grid stops being one
+ *  column, so 6 is only 2-3 tidy rows from there up. */
+const HOME_RECENT_MATCHES_MOBILE = 3;
+
 export type CurrentSpotlight = {
   id: string;
   slug: string;
@@ -433,10 +440,26 @@ export default function HomeClient({
           {recentMatches.length > 0 && (
             <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
               <h2 className="text-3xl font-semibold tracking-tight mb-4">Recent Battles</h2>
+              {/* Trimmed to HOME_RECENT_MATCHES_MOBILE on phones. The cut is
+                  pure CSS rather than a viewport check so it survives SSR
+                  with no hydration mismatch and no layout shift.
+                  `hidden sm:contents` is what makes that work: display:none
+                  drops the overflow entirely on mobile, and display:contents
+                  dissolves the wrapper above it so those cards become direct
+                  grid items again — wrapping them in a normal div would make
+                  the wrapper a single grid cell and collapse all three into
+                  one column. */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {recentMatches.map((m) => (
+                {recentMatches.slice(0, HOME_RECENT_MATCHES_MOBILE).map((m) => (
                   <MatchCard key={m.id} match={m} />
                 ))}
+                {recentMatches.length > HOME_RECENT_MATCHES_MOBILE && (
+                  <div className="hidden sm:contents">
+                    {recentMatches.slice(HOME_RECENT_MATCHES_MOBILE).map((m) => (
+                      <MatchCard key={m.id} match={m} />
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="mt-6 flex justify-center">
                 <Link href="/matches" className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition dark:bg-white dark:text-black dark:hover:bg-white/85">
