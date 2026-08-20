@@ -2,7 +2,6 @@
 
 import ReplayViewer from "@/app/components/replay/ReplayViewer";
 import BackButton from "@/app/components/ui/BackButton";
-import SectionHeader from "@/app/components/ui/SectionHeader";
 import {
   BattleStatChart,
   buildBattleStatRows,
@@ -118,7 +117,7 @@ export default function BattleLogPage({
   const winnerLabelClass = "bg-gradient-brand bg-clip-text text-transparent";
 
   return (
-    // Page shell copied from /my-decks and /matches so the hero below sits
+    // Page shell copied from /my-decks and /battles so the hero below sits
     // on the same rails as the deck collection and the matches feed.
     <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
       {/* Back button — it used to overlay a full-bleed banner, which no
@@ -131,17 +130,16 @@ export default function BattleLogPage({
         <BackButton href="/" ariaLabel="Back" />
       </div>
 
-      <div className="mb-6">
-        <SectionHeader title="Battle Log" />
-      </div>
-
       {/* Match hero — built to read as a sibling of the deck collection's
           pinned deck: a rounded card sitting on the page background, lit by
           a gradient glow bleeding out from under it, with the artwork panel
           on the left and the details on the right. The one substitution is
           color — the pinned deck glows in the brand gradient, this glows in
-          the match's own winner→loser gradient. */}
-      <div className="relative">
+          the match's own winner→loser gradient.
+          mt-6 stands in for the removed "Battle Log" header's own mb-6 —
+          on mobile the back-button block above is hidden entirely, so this
+          is the only thing keeping the hero off the safe-area padding. */}
+      <div className="relative mt-6">
         <div
           aria-hidden
           className="absolute -inset-px rounded-2xl opacity-30 blur-md"
@@ -188,7 +186,7 @@ export default function BattleLogPage({
 
             {/* Two rows only — the headline exchange (damage) and the one
                 that decides the game (prizes). The full six-row table
-                still lives on the /matches Featured Match drawer.
+                still lives on the /battles Featured Battle drawer.
 
                 Butted straight against the date with no margin: the
                 chart's own header row carries `pb-2`, so the two still

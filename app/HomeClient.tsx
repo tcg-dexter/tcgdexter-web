@@ -35,7 +35,7 @@ import BadgeShowcase from "@/app/components/BadgeShowcase";
 
 /** Recent Battles cards shown on phones. The full set (whatever the home
  *  page passes, currently 6) returns at sm: — the trim exists because a
- *  single-column stack of 6 runs very long under the Featured Match
+ *  single-column stack of 6 runs very long under the Featured Battle
  *  showcase above it, and sm: is exactly where the grid stops being one
  *  column, so 6 is only 2-3 tidy rows from there up. */
 const HOME_RECENT_MATCHES_MOBILE = 3;
@@ -165,7 +165,7 @@ export default function HomeClient({
 }: {
   stats: Array<{ label: string; value: string }>;
   recentMatches?: RecentMatch[];
-  /** Current Featured Match, showcased with its replay above Recent
+  /** Current Featured Battle, showcased with its replay above Recent
    *  Battles. Null when nothing qualifies (see pickFeaturedMatch). */
   featuredMatch?: RecentMatch | null;
   featuredMatchStats?: MatchSideStats | null;
@@ -430,7 +430,7 @@ export default function HomeClient({
             <BadgeShowcase />
           </section>
 
-          {/* Featured Match showcase — the /matches hero plus that match's
+          {/* Featured Battle showcase — the /battles hero plus that match's
               replay, sitting directly above Recent Battles. */}
           {featuredMatch && (
             <FeaturedMatchShowcase match={featuredMatch} stats={featuredMatchStats} />
@@ -462,7 +462,7 @@ export default function HomeClient({
                 )}
               </div>
               <div className="mt-6 flex justify-center">
-                <Link href="/matches" className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition dark:bg-white dark:text-black dark:hover:bg-white/85">
+                <Link href="/battles" className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition dark:bg-white dark:text-black dark:hover:bg-white/85">
                   View all
                 </Link>
               </div>

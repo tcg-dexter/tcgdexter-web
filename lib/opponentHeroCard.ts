@@ -17,7 +17,7 @@ export interface OpponentHeroCard {
 
 /**
  * Resolves which Pokémon "fronts" an opponent's deck for a match — the
- * single source of truth shared by the /matches preview cards
+ * single source of truth shared by the /battles preview cards
  * (lib/recent-matches.ts) and the /battles/[id] banner
  * (app/battles/[id]/page.tsx) so the two surfaces can never disagree about
  * the same match.

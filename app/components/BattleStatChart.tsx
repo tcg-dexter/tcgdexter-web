@@ -2,7 +2,7 @@ import { Fragment } from "react";
 
 /** Per-side aggregate stats for a single match. Sourced from
  *  match_actions rows and shared between the /battles detail page and
- *  the /matches Featured Match drawer so the two surfaces render the
+ *  the /battles Featured Battle drawer so the two surfaces render the
  *  same numbers. */
 export interface BattleSideStats {
   damage: number;

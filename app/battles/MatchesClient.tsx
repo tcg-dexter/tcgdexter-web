@@ -22,7 +22,7 @@ interface Props {
   currentUsername?: string | null;
   /** Pre-select the "My Matches" filter on load — used by the "View All"
    *  link from the profile page's Recent Battles section
-   *  (/matches?filter=mine). No-op when the viewer isn't signed in. */
+   *  (/battles?filter=mine). No-op when the viewer isn't signed in. */
   initialMyMatches?: boolean;
 }
 
@@ -148,7 +148,7 @@ export default function MatchesClient({
       {/* Header: title + view toggle (mirrors the Card Catalog data toggle) */}
       <div className="mb-6 flex items-end justify-between gap-3">
         <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-text-primary">
-          Matches
+          Battles
         </h2>
         <button
           type="button"
@@ -186,7 +186,7 @@ export default function MatchesClient({
         <PlayerLeaderboard players={leaderboard} currentUsername={currentUsername} />
       ) : (
       <>
-      {/* Featured Match hero — shown in the default "sections" view; a
+      {/* Featured Battle hero — shown in the default "sections" view; a
           search or filter takes over the surface, so the hero yields when
           the user is drilling into something specific. */}
       {featuredMatch && !isSearching && effectiveViewMode === "sections" && (

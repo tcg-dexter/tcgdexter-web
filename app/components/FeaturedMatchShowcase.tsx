@@ -1,19 +1,19 @@
 "use client";
 
 import ReplayViewer from "@/app/components/replay/ReplayViewer";
-import FeaturedMatchHero from "@/app/matches/FeaturedMatchHero";
+import FeaturedMatchHero from "@/app/battles/FeaturedMatchHero";
 import type { RecentMatch } from "@/app/components/MatchCard";
 import type { MatchSideStats } from "@/lib/match-side-stats";
 
 /**
- * Home-page showcase for the current Featured Match: the same hero the
- * /matches page renders, with that match's replay playing underneath it.
+ * Home-page showcase for the current Featured Battle: the same hero the
+ * /battles page renders, with that match's replay playing underneath it.
  *
- * Which match this is comes from `pickFeaturedMatch`, shared with /matches,
+ * Which match this is comes from `pickFeaturedMatch`, shared with /battles,
  * so the showcase follows whatever is currently featured rather than pinning
  * one — and the two pages can't name different matches.
  *
- * The hero carries its own "Featured Match" label, so this adds no heading
+ * The hero carries its own "Featured Battle" label, so this adds no heading
  * of its own.
  *
  * Mobile drops the replay's action thread (`hideThreadOnMobile`): there the
@@ -37,7 +37,7 @@ export default function FeaturedMatchShowcase({
   return (
     <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
       <FeaturedMatchHero match={match} stats={stats} />
-      {/* Guarded rather than assumed: the Featured Match is ranked on
+      {/* Guarded rather than assumed: the Featured Battle is ranked on
           total damage, which only parsed battle logs carry, so this should
           always hold — but a manual match reaching here would otherwise
           mount a viewer whose replay endpoint has nothing to return. */}

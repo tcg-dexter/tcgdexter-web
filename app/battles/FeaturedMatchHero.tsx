@@ -11,7 +11,7 @@ import {
 import type { MatchSideStats } from "@/lib/match-side-stats";
 
 /** Short month/day for the "Played" stat value — no year, since the
- *  Featured Match is by definition within the last 7 days. */
+ *  Featured Battle is by definition within the last 7 days. */
 function playedDateLabel(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
     month: "short",
@@ -20,7 +20,7 @@ function playedDateLabel(iso: string): string {
 }
 
 /**
- * Featured Match hero — an amalgamation of two existing patterns:
+ * Featured Battle hero — an amalgamation of two existing patterns:
  *
  *  1. The /my-decks pinned-deck hero shell (glow, rounded card, two-column
  *     desktop split, gradient-brand shadow) from MyDecksClient's
@@ -221,7 +221,7 @@ export default function FeaturedMatchHero({
             numbers instead of deck record. */}
         <div className="flex-1 p-5 md:p-6 flex flex-col">
           <div className="text-[11px] font-bold uppercase tracking-[0.15em] bg-gradient-brand bg-clip-text text-transparent">
-            Featured Match
+            Featured Battle
           </div>
           {/* Title — two lines: "<player>'s <deck>" then "vs <player>'s
               <deck>". Player names live in the banner too so this line is

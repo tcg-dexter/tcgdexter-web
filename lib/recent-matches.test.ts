@@ -15,7 +15,7 @@ function match(id: string, totalDamage: number | null, daysAgo: number): RecentM
   } as unknown as RecentMatch;
 }
 
-// Both /matches and the home-page showcase call this, so it decides what
+// Both /battles and the home-page showcase call this, so it decides what
 // "the current featured match" means for the whole app. If it ever returned
 // different answers for the same pool, the two surfaces would disagree.
 describe("pickFeaturedMatch", () => {

@@ -65,7 +65,7 @@ export interface SiteModules {
 }
 
 /** The Battle of the Week: highest total-damage match in the window,
- *  mirroring the /matches Featured Match ranking. */
+ *  mirroring the /battles Featured Battle ranking. */
 export async function pickBattleOfWeek(sinceMs: number): Promise<RecentMatch | null> {
   const matches = await loadRecentMatches(200);
   return (

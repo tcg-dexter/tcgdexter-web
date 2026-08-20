@@ -76,7 +76,7 @@ describe("resolveOpponentHero: archetype beats gameplay inference", () => {
 
   it("agrees on the same card whichever signal supplies it", () => {
     // Archetype text, the bare species, and a mid-line gameplay attacker
-    // must all land on one card — otherwise the /matches preview and the
+    // must all land on one card — otherwise the /battles preview and the
     // battle banner could still disagree about the same match.
     const names = [
       resolveOpponentHero({ opponentArchetype: "Dragapult Dusknoir", gameplayName: null })?.name,

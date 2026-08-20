@@ -180,7 +180,7 @@ export default async function BattleRoute({
 
   // A recognized archetype beats gameplay inference — see
   // resolveOpponentHero's own comment for why — and this is the same
-  // resolver lib/recent-matches.ts uses for the /matches preview cards, so
+  // resolver lib/recent-matches.ts uses for the /battles preview cards, so
   // a battle's banner can never show different art than its own card in
   // that list. opponentAttackerName above is exactly the one gameplay
   // signal this cascade needs: the top-damage attacker, or (when nobody

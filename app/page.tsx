@@ -184,8 +184,8 @@ async function loadCurrentSpotlight(): Promise<CurrentSpotlight | null> {
 const HOME_RECENT_MATCHES = 6;
 
 export default async function DeckProfilerPage() {
-  // One pool serves both surfaces: the Featured Match showcase ranks over
-  // all of it (FEATURED_MATCH_POOL must match what /matches loads, or the
+  // One pool serves both surfaces: the Featured Battle showcase ranks over
+  // all of it (FEATURED_MATCH_POOL must match what /battles loads, or the
   // two pages would feature different matches), while the Recent Battles
   // grid below shows only the newest few.
   const [stats, matchPool, currentSpotlight] = await Promise.all([
@@ -195,7 +195,7 @@ export default async function DeckProfilerPage() {
   ]);
   const recentMatches = matchPool.slice(0, HOME_RECENT_MATCHES);
   const featuredMatch = pickFeaturedMatch(matchPool);
-  // Backs the hero's Details drawer, same as on /matches.
+  // Backs the hero's Details drawer, same as on /battles.
   const featuredMatchStats = featuredMatch
     ? await loadMatchSideStats(featuredMatch.id)
     : null;

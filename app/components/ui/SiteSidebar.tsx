@@ -71,7 +71,7 @@ export default function SiteSidebar({
     { href: "/cards", label: "Card Catalog", Icon: CardsIcon },
     { href: "/my-decks", label: "Deck Collection", Icon: BookmarkIcon },
     { href: "/meta-archetypes", label: "Meta Archetypes", Icon: ChartBarIcon },
-    { href: "/matches", label: "Matches", Icon: VersusIcon },
+    { href: "/battles", label: "Battles", Icon: VersusIcon },
     // Notifications — authed only; badge shows unread count.
     ...(isAuthed
       ? [{ href: "/notifications", label: "Notifications", Icon: BellIcon, badge: unreadCount }]

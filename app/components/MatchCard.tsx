@@ -28,7 +28,7 @@ export type RecentMatch = {
   /** Total damage dealt across BOTH sides for this match, summed from
    *  match_actions.attack rows. Populated only for imported battle logs
    *  (source = 'tcg_live_log'); null for manual and prize-only matches.
-   *  Drives the /matches Featured Match ranking. */
+   *  Drives the /battles Featured Battle ranking. */
   totalDamage: number | null;
 };
 

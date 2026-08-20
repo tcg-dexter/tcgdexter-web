@@ -82,7 +82,7 @@ async function assembleRecentMatches(
   const deckDetailById = new Map((deckDetailRows ?? []).map((d) => [d.id as string, d]));
 
   // Aggregate opponent damage per match → top attacker name, and total
-  // damage across both sides per match (drives the /matches Featured
+  // damage across both sides per match (drives the /battles Featured
   // Match ranking).
   const opponentDmg = new Map<string, Map<string, number>>();
   const totalDamageByMatch = new Map<string, number>();
@@ -220,7 +220,7 @@ async function assembleRecentMatches(
 }
 
 /**
- * Cross-user public matches feed — powers the /matches page. Only matches
+ * Cross-user public matches feed — powers the /battles page. Only matches
  * on public decks owned by public profiles, and only matches with either
  * a parsed battle log or a recognized opponent archetype/prize data (kept
  * visually rich for anonymous browsing; see assembleRecentMatches).
@@ -320,20 +320,20 @@ export async function loadOwnerRecentMatches(
 
 /**
  * Candidate pool size for `pickFeaturedMatch`. Both surfaces that show the
- * Featured Match must load the SAME pool — the picker only ranks what it's
+ * Featured Battle must load the SAME pool — the picker only ranks what it's
  * handed, so a smaller pool silently yields a different "featured" match.
  */
 export const FEATURED_MATCH_POOL = 200;
 
-/** Days back the Featured Match is drawn from. */
+/** Days back the Featured Battle is drawn from. */
 const FEATURED_MATCH_WINDOW_DAYS = 7;
 
 /**
- * The current Featured Match: within the last week, the match with the most
+ * The current Featured Battle: within the last week, the match with the most
  * total damage dealt across both sides, ties going to the more recent one —
  * so the fresher of two similar bloodbaths surfaces.
  *
- * Shared by /matches (which renders the hero) and the home page (which
+ * Shared by /battles (which renders the hero) and the home page (which
  * showcases that same match plus its replay), so the two can't drift about
  * what is currently featured. Pass `FEATURED_MATCH_POOL` to
  * `loadRecentMatches` on both.

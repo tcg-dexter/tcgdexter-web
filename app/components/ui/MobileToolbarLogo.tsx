@@ -21,7 +21,7 @@ import { usePathname } from "next/navigation";
  *  - Home (`/`) — the hero no longer has its own logo, so this is the
  *    only logo mobile/tablet visitors see there.
  *  - The "front door" pages the nav menu links to (Card Catalog,
- *    Deck Collection, Meta Archetypes, Matches, Learn to Play).
+ *    Deck Collection, Meta Archetypes, Battles, Learn to Play).
  *  - Every page inside the Learn UX (`/learn/*`) — lessons, quiz, etc.
  *    Lesson pages don't render a `BackButton` portaled into the mobile
  *    back-slot, so the logo sits centered with no conflict.
@@ -40,7 +40,7 @@ import { usePathname } from "next/navigation";
  *    banner's accent color, same overlay treatment as meta archetypes.
  *  - Card detail pages (`/cards/<id>`).
  *  - Battle log pages (`/battles/<id>`) — the match replay surface,
- *    reached from the Matches feed.
+ *    reached from the Battles feed.
  *  All of the above except the bare `/`-adjacent front-door pages DO
  *  render a `BackButton` portaled into `#mobile-back-slot`; the logo
  *  sits centered between it and the hamburger menu.
@@ -55,7 +55,7 @@ const TOP_LEVEL_EXACT = new Set<string>([
   "/cards",
   "/my-decks",
   "/meta-archetypes",
-  "/matches",
+  "/battles",
   "/learn",
   "/admin-tools/deck-mat",
   "/spotlight",
