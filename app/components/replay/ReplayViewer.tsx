@@ -1756,6 +1756,17 @@ interface ReplayViewerProps {
    *  battle page but would bury everything below it when the viewer is one
    *  module among many (see the home page showcase). */
   hideThreadOnMobile?: boolean;
+  /** Start playing as soon as the replay loads, instead of parked on frame
+   *  0 waiting for Play. For a viewer embedded in a scrolling page (the home
+   *  page showcase) rather than one the visitor deliberately navigated to,
+   *  arriving mid-action reads as "a match is already underway" instead of
+   *  a static board that needs a click to prove it's interactive. */
+  autoPlay?: boolean;
+  /** Playback speed autoPlay starts at. Independent of autoPlay so a caller
+   *  could set one without the other, though today only the showcase sets
+   *  either. Still just the initial value — the speed picker remains live,
+   *  so a viewer can slow back down once they've engaged with it. */
+  initialSpeed?: 0.5 | 1 | 2 | 4;
 }
 
 export default function ReplayViewer({
@@ -1767,13 +1778,20 @@ export default function ReplayViewer({
   playerColor,
   opponentColor,
   hideThreadOnMobile = false,
+  autoPlay = false,
+  initialSpeed = 1,
 }: ReplayViewerProps) {
   const [data, setData] = useState<ReplayPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [frameIndex, setFrameIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [speed, setSpeed] = useState<0.5 | 1 | 2 | 4>(1);
+  const [speed, setSpeed] = useState<0.5 | 1 | 2 | 4>(initialSpeed);
+  // Read inside the load effect via ref rather than listed as a dependency:
+  // autoPlay isn't a reason to re-fetch replayUrl, just data the effect
+  // consults once the fetch it's already doing resolves.
+  const autoPlayRef = useRef(autoPlay);
+  autoPlayRef.current = autoPlay;
   // True when the pending frame change is a *jump* (scrub, turn skip, match
   // load) rather than a single step. Board/bench layout animations model a
   // card physically moving between slots, which is only meaningful one
@@ -1869,6 +1887,11 @@ export default function ReplayViewer({
         setData(payload);
         setInstant(true);
         setFrameIndex(0);
+        // Gated on the payload actually having frames — an empty replay has
+        // nothing to play, and the auto-advance effect's own frameCount - 1
+        // check would immediately re-pause it anyway, but there's no reason
+        // to flip playing on just to flip it back off next tick.
+        if (autoPlayRef.current && payload.frames.length > 0) setPlaying(true);
       })
       .catch((e) => {
         if (cancelled) return;

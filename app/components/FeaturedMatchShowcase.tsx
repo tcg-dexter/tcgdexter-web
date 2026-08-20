@@ -21,6 +21,11 @@ import type { MatchSideStats } from "@/lib/match-side-stats";
  * dedicated battle page but would bury the rest of the home page under one
  * module. Phones get the board and transport; the thread stays on
  * /battles/[shortId], which the hero's own CTA links to.
+ *
+ * Autoplays at 2x, unlike every other ReplayViewer mounting: a visitor
+ * scrolling the home page didn't navigate here to watch one specific match,
+ * so arriving mid-action is what sells "there's a live-feeling feature
+ * here" — a board parked on frame 0 waiting for a click reads as static.
  */
 export default function FeaturedMatchShowcase({
   match,
@@ -46,6 +51,8 @@ export default function FeaturedMatchShowcase({
             playerColor={match.playerColor}
             opponentColor={match.opponentColor}
             hideThreadOnMobile
+            autoPlay
+            initialSpeed={2}
           />
         </div>
       )}
