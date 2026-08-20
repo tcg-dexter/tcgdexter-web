@@ -224,6 +224,30 @@ export function CardSleeve({ radius, shadow }: { radius: number; shadow?: boolea
   );
 }
 
+/** How a face-up card renders. "art" (the default, and what both game
+ *  surfaces use) shows the card image. "label" replaces the art with the
+ *  card's name set as plain text — the Learn to Play board renders the real
+ *  mat this way, because a beginner learning where the Active sits is served
+ *  by the word "Active", not by a particular Charizard. */
+export type CardFace = "art" | "label";
+
+/** The "label" face: a card-shaped slot naming what the card is. Sized off
+ *  the card-image width so it scales with the mat like the art it replaces.
+ *  Fills its positioned parent, same as CardSleeve. */
+export function CardLabelFace({ text, width }: { text: string; width: number }) {
+  return (
+    <div
+      // Deliberately a fixed dark ink, not a theme token: the slot behind it
+      // is hard-coded white (that's what card art sits on), so a token that
+      // lightens in dark mode would leave white-on-white.
+      className="absolute inset-0 flex items-center justify-center px-1 text-center font-bold uppercase leading-tight tracking-wide text-neutral-700"
+      style={{ fontSize: Math.max(7, Math.round(width * 0.13)) }}
+    >
+      {text}
+    </div>
+  );
+}
+
 // Draw / discard pile, in the same black holder as the Pokémon cards, but
 // turned on its side so the card's printed top faces the mat's outer edge.
 // The card art fills a landscape slot; the footer (label + count) stays
@@ -238,6 +262,7 @@ export function Pile({
   hint,
   useCardBack,
   onClick,
+  face = "art",
   className = "",
 }: {
   label: string;
@@ -256,6 +281,8 @@ export function Pile({
    *  with a caller-supplied handler — the Replay viewer's discard pile uses
    *  this to open its full-pile inspector instead. */
   onClick?: () => void;
+  /** See CardFace — "label" names the top card instead of showing its art. */
+  face?: CardFace;
   className?: string;
 }) {
   const inspect = useContext(InspectContext);
@@ -305,7 +332,9 @@ export function Pile({
       >
         {useCardBack ? (
           <CardSleeve radius={m.cardRadius} />
-        ) : hasFace ? (
+        ) : !hasFace ? null : face === "label" ? (
+          <CardLabelFace text={topName ?? ""} width={width} />
+        ) : (
           <>
             <RotatedCardFace
               src={topImageUrl ?? CARD_BACK_URL}
@@ -321,7 +350,7 @@ export function Pile({
               </div>
             )}
           </>
-        ) : null}
+        )}
       </div>
 
       {/* Label row — mirrors the HP header: label left, count right. */}
@@ -460,6 +489,7 @@ export function PokemonCardImage({
   onClick,
   footer,
   dimmed,
+  face = "art",
 }: {
   mon: PokemonFrame;
   width: number;
@@ -485,6 +515,8 @@ export function PokemonCardImage({
    *  dimming leaves the eligible cards looking exactly like themselves and
    *  simply pushes the rest back. */
   dimmed?: boolean;
+  /** See CardFace — "label" names the Pokémon instead of showing its art. */
+  face?: CardFace;
 }) {
   const inspect = useContext(InspectContext);
   const clickable = onClick != null || (inspectable && inspect != null);
@@ -496,7 +528,9 @@ export function PokemonCardImage({
   // A tool sits behind the Pokémon card, shifted up so its title peeks
   // above (a stack read). The peek height reserves space at the top of the
   // black holder so it stays contained.
-  const tools = mon.tools ?? [];
+  // Tools render as art behind the Pokémon card; a label face has no art for
+  // them to peek out from, so the label mode drops them.
+  const tools = face === "label" ? [] : (mon.tools ?? []);
   const toolPeek = tools.length > 0 ? Math.round(m.cardH * 0.13) : 0;
 
   // HP as a percentage of the card's printed maximum.
@@ -558,21 +592,27 @@ export function PokemonCardImage({
         className="relative w-full overflow-hidden bg-white"
         style={{ height: m.cardH, borderRadius: m.cardRadius, marginTop: toolPeek, zIndex: 1 }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={mon.imageUrl ?? CARD_BACK_URL}
-          alt={mon.name}
-          className="h-full w-full object-cover"
-          onError={(e) => {
-            if (e.currentTarget.src !== CARD_BACK_URL) {
-              e.currentTarget.src = CARD_BACK_URL;
-            }
-          }}
-        />
-        {hadFallback && (
-          <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[7px] font-semibold leading-tight text-white line-clamp-2">
-            {mon.name}
-          </div>
+        {face === "label" ? (
+          <CardLabelFace text={mon.name} width={width} />
+        ) : (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={mon.imageUrl ?? CARD_BACK_URL}
+              alt={mon.name}
+              className="h-full w-full object-cover"
+              onError={(e) => {
+                if (e.currentTarget.src !== CARD_BACK_URL) {
+                  e.currentTarget.src = CARD_BACK_URL;
+                }
+              }}
+            />
+            {hadFallback && (
+              <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[7px] font-semibold leading-tight text-white line-clamp-2">
+                {mon.name}
+              </div>
+            )}
+          </>
         )}
         {mon.conditions.length > 0 && (
           // Status pills stay on the card, stacked up from the bottom-right.
@@ -585,8 +625,14 @@ export function PokemonCardImage({
         {mon.energyTypes.length > 0 && (
           // Gradient footer matches the Card Catalog's CardFooterOverlay so
           // the energy icons sit on the same darkened band shape across the
-          // app. Energies render left-to-right in attach order.
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-start gap-[2px] px-0 pb-1 pt-3 bg-gradient-to-b from-transparent to-black to-80%">
+          // app. Energies render left-to-right in attach order. The band is
+          // there to lift the icons off busy card art; a label face has no
+          // art, and the gradient just reads as a smudge, so it drops out.
+          <div
+            className={`pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-start gap-[2px] px-0 pb-1 ${
+              face === "label" ? "" : "pt-3 bg-gradient-to-b from-transparent to-black to-80%"
+            }`}
+          >
             <EnergyRow types={mon.energyTypes} iconSize={energyIconSize} />
           </div>
         )}
@@ -733,6 +779,7 @@ export function PlayerMat({
   interact,
   instant,
   onDiscardClick,
+  face = "art",
 }: {
   side: "player" | "opponent";
   bench: PokemonFrame[];
@@ -758,6 +805,10 @@ export function PlayerMat({
    *  where a slot-to-slot animation would trace a path the game never took
    *  and can strand cards mid-flight. Play mode never jumps, so it animates. */
   instant?: boolean;
+  /** See CardFace. "label" renders every face-up card as its name in text
+   *  rather than its art — the Learn to Play board draws this mat that way
+   *  so the regions read as regions instead of as a particular matchup. */
+  face?: CardFace;
 }) {
   const isPlayer = side === "player";
   // 0s still runs through the same framer-motion code path, so layout
@@ -850,6 +901,7 @@ export function PlayerMat({
               onClick={interact?.onActiveClick}
               footer={interact?.activeFooter}
               dimmed={interact?.dimActive}
+              face={face}
             />
           </motion.div>
         )}
@@ -879,7 +931,7 @@ export function PlayerMat({
           <div className={`flex h-full flex-col gap-1.5 sm:gap-3 ${isPlayer ? "justify-end" : ""}`}>
             {isPlayer ? (
               <>
-                <Pile label="Discard" count={discardCount} width={cardWidth} rotate="ccw" topName={discardTop} topImageUrl={discardTopImageUrl} onClick={onDiscardClick} />
+                <Pile label="Discard" count={discardCount} width={cardWidth} rotate="ccw" topName={discardTop} topImageUrl={discardTopImageUrl} onClick={onDiscardClick} face={face} />
                 <Pile label="Draw" count={deckCount} width={cardWidth} rotate="ccw" hint={`${handCount} in hand`} useCardBack />
               </>
             ) : (
@@ -898,7 +950,7 @@ export function PlayerMat({
             ) : (
               <>
                 <Pile label="Draw" count={deckCount} width={cardWidth} rotate="cw" hint={`${handCount} in hand`} useCardBack />
-                <Pile label="Discard" count={discardCount} width={cardWidth} rotate="cw" topName={discardTop} topImageUrl={discardTopImageUrl} onClick={onDiscardClick} />
+                <Pile label="Discard" count={discardCount} width={cardWidth} rotate="cw" topName={discardTop} topImageUrl={discardTopImageUrl} onClick={onDiscardClick} face={face} />
               </>
             )}
           </div>
@@ -929,6 +981,7 @@ export function PlayerMat({
                     interact?.onBenchClick ? () => interact.onBenchClick!(i) : undefined
                   }
                   dimmed={interact?.dimBench?.[i]}
+                  face={face}
                 />
               </motion.div>
             ))}
@@ -948,7 +1001,12 @@ export function PlayerMat({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.25 }}
             >
-              <FloatingCard name={stadium.name} imageUrl={stadium.imageUrl} />
+              <FloatingCard
+                name={stadium.name}
+                imageUrl={stadium.imageUrl}
+                width={cardWidth}
+                face={face}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -967,6 +1025,8 @@ export function PlayerMat({
               <FloatingCard
                 name={lastPlayedTrainer.name}
                 imageUrl={lastPlayedTrainer.imageUrl}
+                width={cardWidth}
+                face={face}
               />
             </motion.div>
           )}
@@ -977,7 +1037,18 @@ export function PlayerMat({
 }
 
 /** Bare floating card (stadium / last-played trainer) with inspector tap. */
-function FloatingCard({ name, imageUrl }: { name: string; imageUrl: string | null }) {
+function FloatingCard({
+  name,
+  imageUrl,
+  width,
+  face = "art",
+}: {
+  name: string;
+  imageUrl: string | null;
+  /** Card-image width — only the label face needs it, to size its text. */
+  width: number;
+  face?: CardFace;
+}) {
   const inspect = useContext(InspectContext);
   return (
     <div
@@ -986,19 +1057,25 @@ function FloatingCard({ name, imageUrl }: { name: string; imageUrl: string | nul
       role={inspect ? "button" : undefined}
       onClick={inspect ? () => inspect({ kind: "card", name, imageUrl }) : undefined}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={imageUrl ?? CARD_BACK_URL}
-        alt={name}
-        className="h-full w-full object-cover"
-        onError={(e) => {
-          if (e.currentTarget.src !== CARD_BACK_URL) e.currentTarget.src = CARD_BACK_URL;
-        }}
-      />
-      {!imageUrl && (
-        <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[7px] font-semibold leading-tight text-white line-clamp-2">
-          {name}
-        </div>
+      {face === "label" ? (
+        <CardLabelFace text={name} width={width} />
+      ) : (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageUrl ?? CARD_BACK_URL}
+            alt={name}
+            className="h-full w-full object-cover"
+            onError={(e) => {
+              if (e.currentTarget.src !== CARD_BACK_URL) e.currentTarget.src = CARD_BACK_URL;
+            }}
+          />
+          {!imageUrl && (
+            <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[7px] font-semibold leading-tight text-white line-clamp-2">
+              {name}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
