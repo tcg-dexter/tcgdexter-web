@@ -234,10 +234,10 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
     Icon: (props: { className?: string }) => JSX.Element;
     badge?: number;
   }> = [
+    { href: "/battles", label: "Battles", Icon: VersusIcon },
     { href: "/cards", label: "Card Catalog", Icon: CardsIcon },
     { href: "/my-decks", label: "Deck Collection", Icon: BookmarkIcon },
     { href: "/meta-archetypes", label: "Meta Archetypes", Icon: ChartBarIcon },
-    { href: "/battles", label: "Battles", Icon: VersusIcon },
     ...(isAuthed
       ? [{ href: "/notifications", label: "Notifications", Icon: BellIcon, badge: unreadCount }]
       : []),
