@@ -81,6 +81,11 @@ export default function MatchesClient({
   currentUsername = null,
   initialMyMatches = false,
 }: Props) {
+  // The leaderboard view/toggle are hidden, not removed — the top-user list
+  // isn't robust enough yet to surface. Everything below (mode state,
+  // PlayerLeaderboard render branch, the leaderboard prop/data plumbing)
+  // stays intact; flipping this back to true is the whole reversal.
+  const LEADERBOARD_ENABLED = false;
   const preselectMyMatches = initialMyMatches && Boolean(currentUsername);
   const [mode, setMode] = useState<"matches" | "leaderboard">("matches");
   const [viewMode, setViewMode] = useState<ViewMode>("sections");
@@ -150,6 +155,7 @@ export default function MatchesClient({
         <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-text-primary">
           Battles
         </h2>
+        {LEADERBOARD_ENABLED && (
         <button
           type="button"
           onClick={() => setMode((m) => (m === "leaderboard" ? "matches" : "leaderboard"))}
@@ -180,6 +186,7 @@ export default function MatchesClient({
             <path d="M3.5 13.5h.01" />
           </svg>
         </button>
+        )}
       </div>
 
       {mode === "leaderboard" ? (
