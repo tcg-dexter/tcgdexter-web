@@ -1,9 +1,7 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
-import BattleLogDetail from "@/app/components/BattleLogDetail";
+import ReplayViewer from "@/app/components/replay/ReplayViewer";
 import BackButton from "@/app/components/ui/BackButton";
-import ThemeColor from "@/app/components/ThemeColor";
 import {
   BattleStatChart,
   buildBattleStatRows,
@@ -17,7 +15,6 @@ interface Props {
   matchId: string;
   result: "win" | "loss" | "draw";
   opponentArchetype: string | null;
-  createdAt: string;
   playedAt: string;
   deckName: string;
   username: string;
@@ -29,9 +26,6 @@ interface Props {
   opponentImageUrl: string | null;
   opponentColor: string;
   opponentHandle: string | null;
-  winnerName: string | null;
-  loserName: string | null;
-  totalTurns: number | null;
   playerStats: BattleSideStats;
   opponentStats: BattleSideStats;
   hasBattleLog: boolean;
@@ -46,31 +40,28 @@ function formatPlayedAt(iso: string): string {
   });
 }
 
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 60) return `${Math.max(mins, 1)}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-// Banner card tuning — mirrors the meta-archetype geometry so the two
-// banners feel the same size, but reduced to two cards. Each card sits
-// flush with the banner's bottom edge and is shifted down by a fraction
-// of its own height so a fixed portion peeks above the bottom edge
-// regardless of banner height.
-const CARD_WIDTH_PCT = 28;
-const BOTTOM_CLIP_PCT = 30;
-const CARD_ROTATION_DEG = 10;
+// Hero-card placement inside the artwork panel. Both cards sit on the
+// panel's centre in both axes, then step apart horizontally by a share of
+// their OWN width, so the overlap is identical at every panel size.
+// Positioning them at fixed percentages of the panel instead would drift —
+// the same pair that overlaps in a 360px desktop column opens into a gap
+// on a wide phone.
+const HERO_OVERLAP_PCT = 20;
+const HERO_STEP_PCT = (100 - HERO_OVERLAP_PCT) / 2;
+const HERO_ROTATION_DEG = 5;
+// Card height as a share of the panel's, with width following from the
+// printed card aspect. Sizing off the panel rather than in pixels is what
+// keeps a centred card inside it: the panel is a fixed height on mobile
+// but stretches to the details column on desktop, and a pixel size that
+// fit one would overflow the other. The tilt costs headroom too — a
+// rotated card's bounding box is h·cos(θ) + w·sin(θ), ~5.9% taller than
+// the card at 5° — so 80% here occupies ~85% of the panel.
+const HERO_HEIGHT_PCT = 80;
 
 export default function BattleLogPage({
   matchId,
   result,
   opponentArchetype,
-  createdAt,
   playedAt,
   deckName,
   username,
@@ -82,9 +73,6 @@ export default function BattleLogPage({
   opponentImageUrl,
   opponentColor,
   opponentHandle,
-  winnerName,
-  loserName,
-  totalTurns,
   playerStats,
   opponentStats,
   hasBattleLog,
@@ -98,11 +86,10 @@ export default function BattleLogPage({
     opponentHandle ?? opponentArchetype ?? "Opponent";
 
   // Vertical gradient anchored to the winner: winner's color at the top,
-  // loser's color at the bottom. The top color is a single solid hex,
-  // which lets us paint the sticky toolbar + iOS status bar with the
-  // exact same color so the gradient reads as continuing up through
-  // the device's top edge — the meta archetype banner uses the same
-  // trick (solid color matches across toolbar/banner/safe-area).
+  // loser's color at the bottom. It paints the artwork panel behind the
+  // hero cards and, at low opacity, the glow bleeding out from under the
+  // whole card — the deck collection's pinned hero does the same with the
+  // brand gradient, and this substitutes the match's own colors for it.
   const winnerColor =
     result === "win"
       ? playerColor
@@ -119,125 +106,121 @@ export default function BattleLogPage({
     winnerColor === loserColor
       ? `linear-gradient(180deg, ${winnerColor} 0%, ${shade(winnerColor, -18)} 100%)`
       : `linear-gradient(180deg, ${winnerColor} 0%, ${loserColor} 100%)`;
-  const themeColor = winnerColor;
+  // The ghost behind the hero cards is the winner's, so the artwork states
+  // the result before any label does. A draw has no winner to feature, so
+  // it falls back to the page owner's deck.
+  const ghostImageUrl =
+    (result === "loss" ? opponentImageUrl : deckImageUrl) ?? null;
+  // The winning deck's name gets the brand gradient, matching the treatment
+  // BattleStatChart gives the winning player's column header. A draw has no
+  // winner, so neither name takes it.
+  const winnerLabelClass = "bg-gradient-brand bg-clip-text text-transparent";
 
   return (
-    <main className="min-h-dvh flex flex-col bg-bg">
-      {/* Paint the mobile sticky toolbar so it reads as one continuous
-          surface with the banner. */}
-      <style
-        dangerouslySetInnerHTML={{
-          __html:
-            // Toolbar + iOS status bar share the winner's solid color
-            // (the top of the vertical gradient), so the gradient
-            // visually continues all the way to the device top.
-            `[data-site-toolbar]{background:${winnerColor};backdrop-filter:none;-webkit-backdrop-filter:none}` +
-            `[data-site-toolbar] button[aria-label="Toggle navigation menu"]{color:#fff}`,
-        }}
-      />
-      <ThemeColor color={themeColor} />
+    // Page shell copied from /my-decks and /battles so the hero below sits
+    // on the same rails as the deck collection and the matches feed.
+    <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
+      {/* Back button — it used to overlay a full-bleed banner, which no
+          longer exists, so the desktop (xl+) copy renders here above the
+          title. The wrapper is hidden below xl to avoid leaving its margin
+          behind as dead space: the sub-xl copy portals itself into the
+          sticky toolbar and isn't a descendant of this div, so hiding the
+          wrapper doesn't hide it. */}
+      <div className="mb-3 hidden xl:block">
+        <BackButton href="/" ariaLabel="Back" />
+      </div>
 
-      {/* Banner — same dimensions as the meta archetype banner, with two
-          cards bottom-anchored and the matchup label centered between
-          them in white. */}
-      <div
-        className="relative w-full overflow-hidden h-[calc(30.6vw-10.8px)] sm:h-auto sm:aspect-[3/1]"
-        style={{ background: bannerGradient }}
-      >
-        <div className="absolute inset-0 mx-auto max-w-6xl">
-          <div className="relative h-full mx-6">
-            {deckImageUrl && (
-              <BannerCard
-                src={deckImageUrl}
-                alt={playerLabel}
-                leftPct={6}
-                rotationDeg={-CARD_ROTATION_DEG}
-              />
-            )}
-            {opponentImageUrl && (
-              <BannerCard
-                src={opponentImageUrl}
-                alt={opponentLabel}
-                leftPct={100 - 6 - CARD_WIDTH_PCT}
-                rotationDeg={CARD_ROTATION_DEG}
-              />
-            )}
+      {/* Match hero — built to read as a sibling of the deck collection's
+          pinned deck: a rounded card sitting on the page background, lit by
+          a gradient glow bleeding out from under it, with the artwork panel
+          on the left and the details on the right. The one substitution is
+          color — the pinned deck glows in the brand gradient, this glows in
+          the match's own winner→loser gradient.
+          mt-6 stands in for the removed "Battle Log" header's own mb-6 —
+          on mobile the back-button block above is hidden entirely, so this
+          is the only thing keeping the hero off the safe-area padding. */}
+      <div className="relative mt-6">
+        <div
+          aria-hidden
+          className="absolute -inset-px rounded-2xl opacity-30 blur-md"
+          style={{ background: bannerGradient }}
+        />
+        <div
+          className="relative flex flex-col overflow-hidden rounded-2xl border border-black/8 bg-bg md:flex-row dark:border-white/10"
+          style={{
+            // The drop shadow tints to the winner's color the way the
+            // pinned deck's tints to the brand red. color-mix keeps this
+            // in CSS rather than needing a hex→rgba helper for what is
+            // only ever one alpha.
+            boxShadow: `0 20px 30px -15px color-mix(in srgb, ${winnerColor} 45%, transparent)`,
+          }}
+        >
+          <BattleBanner
+            gradient={bannerGradient}
+            ghostImageUrl={ghostImageUrl}
+            leftImageUrl={deckImageUrl}
+            leftAlt={playerLabel}
+            rightImageUrl={opponentImageUrl}
+            rightAlt={opponentLabel}
+          />
 
-            {/* Centered matchup text. Stays vertically and horizontally
-                centered in the banner; cards sit beneath it visually
-                because zIndex isn't set, so the text paints on top. */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-6 pb-[3.4vw] sm:pb-0">
-              <div className="text-center text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]">
-                <p className="text-lg sm:text-5xl font-bold leading-tight truncate">
-                  {playerLabel}
-                </p>
-                <p className="my-0.5 sm:my-2 text-xs sm:text-2xl font-semibold uppercase tracking-[0.25em] opacity-90">
-                  vs
-                </p>
-                <p className="text-lg sm:text-5xl font-bold leading-tight truncate">
-                  {opponentLabel}
-                </p>
-                <p className="mt-1.5 sm:mt-3 text-[11px] sm:text-sm font-medium uppercase tracking-[0.2em] opacity-80">
-                  {formatPlayedAt(playedAt)}
-                </p>
-              </div>
-            </div>
+          <div className="flex-1 p-5 md:p-6">
+            {/* Archetype pair + date. Truncated rather than wrapped: these
+                sit in a fixed column now, so a second line on a long
+                archetype would push the stat table down instead of
+                overhanging the way it did on the full-bleed banner. */}
+            <p className="truncate text-xl md:text-2xl font-bold leading-tight text-text-primary">
+              <span className={result === "win" ? winnerLabelClass : undefined}>
+                {playerLabel}
+              </span>
+            </p>
+            <p className="truncate text-xl md:text-2xl font-bold leading-tight text-text-primary">
+              <span className="text-text-muted">vs </span>
+              <span className={result === "loss" ? winnerLabelClass : undefined}>
+                {opponentLabel}
+              </span>
+            </p>
+            <p className="mt-1.5 text-[11px] font-medium uppercase tracking-[0.2em] text-text-muted">
+              {formatPlayedAt(playedAt)}
+            </p>
+
+            {/* Two rows only — the headline exchange (damage) and the one
+                that decides the game (prizes). The full six-row table
+                still lives on the /battles Featured Battle drawer.
+
+                Butted straight against the date with no margin: the
+                chart's own header row carries `pb-2`, so the two still
+                read as separate lines rather than colliding. */}
+            <BattleStatChart
+              playerName={playerSideName}
+              opponentName={opponentSideName}
+              winnerSide={
+                result === "win" ? "left" : result === "loss" ? "right" : null
+              }
+              rows={buildBattleStatRows(playerStats, opponentStats, [
+                "damage",
+                "prizes",
+              ])}
+            />
           </div>
         </div>
-
-        {/* Back button — desktop overlay; mobile copy portals into the
-            sticky toolbar's slot. */}
-        <div
-          className="absolute left-4 z-10"
-          style={{ top: "calc(env(safe-area-inset-top) + 0.75rem)" }}
-        >
-          <BackButton href="/" ariaLabel="Back" />
-        </div>
       </div>
 
-      {/* Battle stats — match-level tiles on top, per-side stat table
-          underneath, with no section headings so the whole block reads
-          as one continuous summary. */}
-      <div className="mx-auto w-full max-w-2xl px-4 mt-4">
-        <div className="px-1">
-          <BattleStatChart
-            playerName={playerSideName}
-            opponentName={opponentSideName}
-            winnerSide={result === "win" ? "left" : result === "loss" ? "right" : null}
-            rows={buildBattleStatRows(playerStats, opponentStats)}
-          />
-        </div>
-      </div>
-
-      {/* Battle log — full width. The heading sits above the thread
-          as a strong section break: bold uppercase title flanked by a
-          short accent rule, with a turn-count caption underneath. */}
-      <div className="px-4 pb-16">
+      {/* The playback viewer follows the hero directly — with the stat
+          table moved into the hero it's the only thing left below, so
+          there's nothing for a section heading to separate it from. */}
+      <div className="mt-6">
         {hasBattleLog ? (
-          <>
-            <div className="mt-8 mb-2">
-              <div className="flex items-baseline gap-3">
-                <h2 className="text-xl font-black uppercase tracking-[0.15em] text-text-primary">
-                  Battle Log
-                </h2>
-                <span className="h-px flex-1 bg-text-primary/15" />
-                {totalTurns != null && (
-                  <span className="text-[11px] font-semibold uppercase tracking-widest text-text-muted">
-                    {totalTurns} turn{totalTurns === 1 ? "" : "s"}
-                  </span>
-                )}
-              </div>
-            </div>
-            <BattleLogDetail
-              matchId={matchId}
-              apiUrl={`/api/battles/${matchId}/log`}
-              result={result}
-              playerColor={playerColor}
-              opponentColor={opponentColor}
-            />
-          </>
+          <ReplayViewer
+            matchId={matchId}
+            replayUrl={`/api/battles/${matchId}/replay`}
+            logUrl={`/api/battles/${matchId}/log`}
+            result={result}
+            playerColor={playerColor}
+            opponentColor={opponentColor}
+          />
         ) : (
-          <div className="mt-4 rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5 text-sm text-text-muted text-center dark:bg-surface-elevated dark:border-white/10">
+          <div className="rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5 text-sm text-text-muted text-center dark:bg-surface-elevated dark:border-white/10">
             No battle log available for this match.
           </div>
         )}
@@ -246,146 +229,111 @@ export default function BattleLogPage({
   );
 }
 
-/** Headline tile matching the meta archetype StatCard tones so the
- *  result panel reads as one consistent design language across the
- *  site. Tones mirror the W/L/T tiles on /meta-archetypes/[slug]. The
- *  value auto-shrinks to fit the tile width so long handles like
- *  "MoonSheikah" don't truncate. */
-function StatCard({
-  label,
-  value,
-  tone = "default",
+/**
+ * Artwork panel — the battle page's take on the deck collection's pinned
+ * deck banner. Same construction: a gradient field with one blown-up
+ * desaturated card as a ghost behind everything. The differences are that
+ * there are two heroes rather than one and they sit centred rather than
+ * tucked behind the panel's floor, the ghost is the winner's card, and the
+ * pinned banner's favourite toggle, W/L ribbon and avatar stack are all
+ * dropped — nothing on a finished match is actionable.
+ *
+ * The mobile height is taller than the pinned banner's 150px because of
+ * that centring: a tucked card can be any size and just show less of
+ * itself, but a centred one has to fit, so the panel has to give it room.
+ */
+function BattleBanner({
+  gradient,
+  ghostImageUrl,
+  leftImageUrl,
+  leftAlt,
+  rightImageUrl,
+  rightAlt,
 }: {
-  label?: string;
-  value: string;
-  tone?: "default" | "gradient" | "dark" | "ringed";
+  gradient: string;
+  ghostImageUrl: string | null;
+  leftImageUrl: string | null;
+  leftAlt: string;
+  rightImageUrl: string | null;
+  rightAlt: string;
 }) {
-  const chrome =
-    tone === "gradient"
-      ? "rounded-2xl bg-gradient-brand shadow-sm px-4 py-3 text-center text-white"
-      : tone === "dark"
-      ? "rounded-2xl bg-black dark:bg-white shadow-sm px-4 py-3 text-center text-white dark:text-black"
-      : tone === "ringed"
-      ? "rounded-2xl bg-white/90 backdrop-blur-xl shadow-[inset_0_0_0_1px_black] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35)] px-4 py-3 text-center dark:bg-surface-elevated"
-      : "rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm px-4 py-3 text-center dark:bg-surface-elevated dark:border-white/10";
-
-  const valueClass =
-    tone === "gradient" || tone === "dark"
-      ? "font-bold tabular-nums"
-      : "font-bold text-text-primary tabular-nums";
-
-  const labelClass =
-    tone === "gradient" || tone === "dark"
-      ? "text-xs mt-0.5 opacity-90"
-      : tone === "ringed"
-      ? "text-xs text-text-primary mt-0.5"
-      : "text-xs text-text-muted mt-0.5";
-
   return (
-    <div className={`${chrome} flex flex-col justify-center`}>
-      <FitText text={value} className={valueClass} maxSize={18} minSize={10} />
-      {label && <p className={labelClass}>{label}</p>}
+    <div
+      className="relative h-[190px] shrink-0 overflow-hidden md:h-auto md:w-[360px]"
+      style={{ background: gradient }}
+    >
+      {/* Ghost. Geometry lifted from DeckBanner: a card-sized box scaled 3×
+          about its own centre, so the art reads as a texture rather than a
+          card. */}
+      <div
+        aria-hidden
+        className="absolute overflow-hidden rounded-lg bg-white"
+        style={{
+          width: 166,
+          height: 229,
+          left: "44%",
+          top: "50%",
+          opacity: 0.2,
+          filter: "grayscale(1)",
+          transform: "translate(-50%, 5%) scale(3) rotate(-4deg)",
+        }}
+      >
+        {ghostImageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={ghostImageUrl} alt="" className="h-full w-full object-cover" />
+        ) : null}
+      </div>
+
+      {leftImageUrl && (
+        <BannerHeroCard
+          src={leftImageUrl}
+          alt={leftAlt}
+          xOffsetPct={-50 - HERO_STEP_PCT}
+          rotationDeg={-HERO_ROTATION_DEG}
+        />
+      )}
+      {rightImageUrl && (
+        <BannerHeroCard
+          src={rightImageUrl}
+          alt={rightAlt}
+          xOffsetPct={-50 + HERO_STEP_PCT}
+          rotationDeg={HERO_ROTATION_DEG}
+        />
+      )}
     </div>
   );
 }
 
-/** Render `text` at the largest font-size between `minSize` and
- *  `maxSize` that still fits on a single line inside the parent
- *  container. Measures via a hidden span on layout + on container
- *  resize, then picks the largest size whose rendered width is ≤
- *  the available width. Keeps the chosen size monotonic (never
- *  bouncing up and down) by re-measuring on every observer fire. */
-function FitText({
-  text,
-  className = "",
-  maxSize = 18,
-  minSize = 10,
-}: {
-  text: string;
-  className?: string;
-  maxSize?: number;
-  minSize?: number;
-}) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const measureRef = useRef<HTMLSpanElement | null>(null);
-  const [size, setSize] = useState(maxSize);
-
-  useLayoutEffect(() => {
-    const container = containerRef.current;
-    const measure = measureRef.current;
-    if (!container || !measure) return;
-
-    const fit = () => {
-      const cw = container.clientWidth;
-      if (cw <= 0) return;
-      // Measure at the maximum candidate size, then scale down.
-      measure.style.fontSize = `${maxSize}px`;
-      const tw = measure.scrollWidth;
-      if (tw <= cw) {
-        setSize(maxSize);
-        return;
-      }
-      const scaled = Math.max(minSize, Math.floor((maxSize * cw) / tw));
-      setSize(scaled);
-    };
-
-    fit();
-    const ro = new ResizeObserver(fit);
-    ro.observe(container);
-    return () => ro.disconnect();
-  }, [text, maxSize, minSize]);
-
-  return (
-    <div ref={containerRef} className="w-full overflow-hidden">
-      {/* The visible, fitted line. */}
-      <p
-        className={`whitespace-nowrap leading-tight ${className}`}
-        style={{ fontSize: `${size}px` }}
-      >
-        {text}
-      </p>
-      {/* Hidden measurer — same text, sized at maxSize so we can
-          divide to derive the fit-size. Absolutely sized off-flow so
-          it doesn't affect layout. */}
-      <span
-        ref={measureRef}
-        aria-hidden="true"
-        className={`invisible absolute -left-[9999px] whitespace-nowrap ${className}`}
-      >
-        {text}
-      </span>
-    </div>
-  );
-}
-
-
-function BannerCard({
+function BannerHeroCard({
   src,
   alt,
-  leftPct,
+  xOffsetPct,
   rotationDeg,
 }: {
   src: string;
   alt: string;
-  leftPct: number;
+  /** Shift off the panel's horizontal centre, in percent of the card's own
+   *  width. -50 sits the card dead centre; stepping either side of that
+   *  keeps the pair's overlap independent of the panel's width. */
+  xOffsetPct: number;
   rotationDeg: number;
 }) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt={alt}
-      aria-hidden="true"
-      className="absolute pointer-events-none select-none drop-shadow-md"
+    <div
+      className="absolute overflow-hidden rounded-lg bg-white shadow-[0_8px_18px_rgba(0,0,0,0.3)]"
       style={{
-        bottom: 0,
-        left: `${leftPct}%`,
-        width: `${CARD_WIDTH_PCT}%`,
-        height: "auto",
-        transform: `translateY(${BOTTOM_CLIP_PCT}%) rotate(${rotationDeg}deg)`,
-        transformOrigin: "50% 100%",
+        // Percentage height against the panel, with the width derived by
+        // aspect-ratio rather than stated — one number to keep in sync
+        // instead of a matching pair.
+        height: `${HERO_HEIGHT_PCT}%`,
+        aspectRatio: "245 / 342",
+        top: "50%",
+        left: "50%",
+        transform: `translate(${xOffsetPct}%, -50%) rotate(${rotationDeg}deg)`,
       }}
-    />
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt={alt} className="h-full w-full object-cover" />
+    </div>
   );
 }
-

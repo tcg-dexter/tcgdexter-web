@@ -273,7 +273,7 @@ export default async function ProfilePage({
     : decks;
 
   // Recent Battles — owner-only (manual match data is private). Reuses
-  // the same MatchCard/RecentMatch pipeline as the public /matches feed,
+  // the same MatchCard/RecentMatch pipeline as the public /battles feed,
   // scoped to just this owner's own decks.
   const recentBattles = isOwner
     ? await loadOwnerRecentMatches(supabase, profile.id, profile.username, 3)
@@ -528,7 +528,7 @@ export default async function ProfilePage({
               )
             }
             battlesCount={manualMatches.length}
-            battlesViewAllHref="/matches?filter=mine"
+            battlesViewAllHref="/battles?filter=mine"
             showBattlesViewAll={recentBattles.length > 0}
             battlesContent={
               recentBattles.length === 0 ? (

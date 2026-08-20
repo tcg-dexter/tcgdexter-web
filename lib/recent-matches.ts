@@ -1,14 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  primaryCardImageUrl,
-  cardImageUrlForName,
-  primaryPokemonCard,
-  cardTypesForName,
-  findPokemonNameInText,
-} from "@/lib/primaryCardImage";
+import { primaryCardImageUrl, primaryPokemonCard } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
-import { metaArchetypeCard } from "@/lib/metaArchetypeCards";
+import { resolveOpponentHero } from "@/lib/opponentHeroCard";
 import { manualPrizeTotals } from "@/lib/bo3";
 import { stripCardIds } from "@/lib/battle-log";
 import type { RecentMatch } from "@/app/components/MatchCard";
@@ -88,7 +82,7 @@ async function assembleRecentMatches(
   const deckDetailById = new Map((deckDetailRows ?? []).map((d) => [d.id as string, d]));
 
   // Aggregate opponent damage per match → top attacker name, and total
-  // damage across both sides per match (drives the /matches Featured
+  // damage across both sides per match (drives the /battles Featured
   // Match ranking).
   const opponentDmg = new Map<string, Map<string, number>>();
   const totalDamageByMatch = new Map<string, number>();
@@ -169,33 +163,22 @@ async function assembleRecentMatches(
     const playerPrimary = analysis?.cards ? primaryPokemonCard(analysis.cards) : null;
     const playerColor = typeColor(playerPrimary?.types);
 
-    // Opponent art cascade, most-confident signal first:
-    //   1. Battle-log top attacker (real card played, requires parsed actions)
-    //   2. opponent_archetype exact match against the top-30 meta list
-    //   3. A known Pokémon name pulled out of the free-text opponent_archetype
-    //      field — catches manually-typed archetypes that aren't an exact
-    //      top-30 match (typos, older/rotated-out decks, casing) but still
-    //      name a real card, e.g. "Charizard ex / Pidgeot ex".
-    const topAttacker = topAttackerByMatch.get(m.id as string) ?? null;
-    const archetypeCard = m.opponent_archetype
-      ? metaArchetypeCard(m.opponent_archetype as string)
-      : null;
-    const fallbackPokemonName =
-      !topAttacker && !archetypeCard && m.opponent_archetype
-        ? findPokemonNameInText(m.opponent_archetype as string)
-        : null;
+    // A recognized archetype beats gameplay inference — see
+    // resolveOpponentHero's own comment for why. gameplayName is the one
+    // gameplay-inference signal this cascade already has: the opponent's
+    // top-damage attacker, or (folded into the same map above, when nobody
+    // attacked) their most-played/evolved-into Pokémon.
+    const gameplayName = topAttackerByMatch.get(m.id as string) ?? null;
+    const hero = resolveOpponentHero({
+      opponentArchetype: (m.opponent_archetype as string | null) ?? null,
+      gameplayName,
+    });
 
     let opponentImageUrl: string | null;
     let opponentColor: string;
-    if (topAttacker) {
-      opponentImageUrl = cardImageUrlForName(topAttacker);
-      opponentColor = typeColor(cardTypesForName(topAttacker));
-    } else if (archetypeCard) {
-      opponentImageUrl = archetypeCard.imageUrl;
-      opponentColor = typeColor(archetypeCard.types);
-    } else if (fallbackPokemonName) {
-      opponentImageUrl = cardImageUrlForName(fallbackPokemonName);
-      opponentColor = typeColor(cardTypesForName(fallbackPokemonName));
+    if (hero) {
+      opponentImageUrl = hero.imageUrl;
+      opponentColor = hero.color;
     } else {
       if (dropIfNoOpponentArt) return [];
       opponentImageUrl = null;
@@ -221,7 +204,10 @@ async function assembleRecentMatches(
       deckImageUrl: deckImageUrl ?? null,
       deckCardNames,
       opponentImageUrl,
-      opponentAttackerName: topAttacker,
+      // Falls back to the raw gameplay name (not just null) on the rare
+      // edge case where a name resolved but its card image didn't — same
+      // as the old topAttacker-only value's own robustness there.
+      opponentAttackerName: hero?.name ?? gameplayName,
       playerColor,
       opponentColor,
       playerPrizes: playerPrizesByMatch.get(m.id as string) ?? manualPrizes?.player ?? 0,
@@ -234,7 +220,7 @@ async function assembleRecentMatches(
 }
 
 /**
- * Cross-user public matches feed — powers the /matches page. Only matches
+ * Cross-user public matches feed — powers the /battles page. Only matches
  * on public decks owned by public profiles, and only matches with either
  * a parsed battle log or a recognized opponent archetype/prize data (kept
  * visually rich for anonymous browsing; see assembleRecentMatches).
@@ -330,4 +316,39 @@ export async function loadOwnerRecentMatches(
     console.error("[recent-matches] owner load failed:", err);
     return [];
   }
+}
+
+/**
+ * Candidate pool size for `pickFeaturedMatch`. Both surfaces that show the
+ * Featured Battle must load the SAME pool — the picker only ranks what it's
+ * handed, so a smaller pool silently yields a different "featured" match.
+ */
+export const FEATURED_MATCH_POOL = 200;
+
+/** Days back the Featured Battle is drawn from. */
+const FEATURED_MATCH_WINDOW_DAYS = 7;
+
+/**
+ * The current Featured Battle: within the last week, the match with the most
+ * total damage dealt across both sides, ties going to the more recent one —
+ * so the fresher of two similar bloodbaths surfaces.
+ *
+ * Shared by /battles (which renders the hero) and the home page (which
+ * showcases that same match plus its replay), so the two can't drift about
+ * what is currently featured. Pass `FEATURED_MATCH_POOL` to
+ * `loadRecentMatches` on both.
+ */
+export function pickFeaturedMatch(matches: RecentMatch[]): RecentMatch | null {
+  const cutoff = Date.now() - FEATURED_MATCH_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  return (
+    matches
+      .filter(
+        (m) => m.totalDamage != null && new Date(m.createdAt).getTime() >= cutoff,
+      )
+      .sort((a, b) => {
+        const dt = (b.totalDamage ?? 0) - (a.totalDamage ?? 0);
+        if (dt !== 0) return dt;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      })[0] ?? null
+  );
 }

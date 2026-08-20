@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties, type SVGProps } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type MutableRefObject, type SVGProps } from "react";
 import { cleanPayloadCardIds, stripCardIds } from "@/lib/battle-log";
 
 /* ─── Types (mirror lib/battle-log + the API response) ────────── */
@@ -406,7 +406,7 @@ export function stripLeadingActorName(text: string, name?: string | null): strin
  * "Opponent" placeholder for the other player's actual name, then strip the
  * redundant leading author name. `otherName` is the side opposite the author.
  */
-export function formatActionLabel(
+function formatActionLabel(
   text: string,
   opts: { authorName?: string | null; otherName?: string | null },
 ): string {
@@ -505,9 +505,11 @@ interface Props {
   result?: "win" | "loss" | "draw" | null;
   playerColor?: string;
   opponentColor?: string;
-  /** When set, only actions with `sequence <= maxSequence` are rendered.
-   *  Lets a caller (e.g. the Replay tool) reveal/hide the thread in lockstep
-   *  with an external playhead. Null/undefined renders the full log. */
+  /** When set, marks which post is "current" for the Replay tool's
+   *  playhead — the last post with an action at or before this sequence.
+   *  That post gets full opacity + auto-centering; every other post
+   *  (including ones after it) is dimmed. The thread itself is always
+   *  rendered in full — this drives the spotlight, not what's in the DOM. */
   maxSequence?: number | null;
   /** When true, the inline ScoreCards (initial board snapshot + each
    *  prize-taking moment) are omitted. Used by the Replay tool where the
@@ -516,9 +518,15 @@ interface Props {
   /** When true, post avatars render 25% smaller for tighter side-panel
    *  presentations (e.g. the Replay thread next to the board). */
   compactAvatars?: boolean;
+  /** The thread's own scrollable ancestor (Replay's `overflow-y-auto`
+   *  aside). Playhead mode re-centers the current post by scrolling only
+   *  this element directly — without it, native scrollIntoView would walk
+   *  every scrollable ancestor, including the page itself, and drag the
+   *  whole viewport back whenever the user had scrolled away. */
+  scrollContainerRef?: MutableRefObject<HTMLDivElement | null>;
 }
 
-export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, opponentColor, maxSequence, hideScoreCards, compactAvatars }: Props) {
+export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, opponentColor, maxSequence, hideScoreCards, compactAvatars, scrollContainerRef }: Props) {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -560,6 +568,31 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
     };
   }, [matchId]);
 
+  // Playhead mode (maxSequence set — the Replay tool): the post the
+  // playhead currently sits inside is kept smoothly recentered as it
+  // grows, rather than the thread snapping to a bottom-pinned scrollTop
+  // every time a new action lands. We scroll scrollContainerRef directly
+  // (with a manually computed offset) rather than el.scrollIntoView(),
+  // which walks and re-centers *every* scrollable ancestor — including
+  // the page itself — and would drag the whole viewport back to the
+  // thread any time the user had scrolled away from it.
+  const currentPostRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (maxSequence == null) return;
+    const container = scrollContainerRef?.current;
+    const el = currentPostRef.current;
+    if (!container || !el) return;
+    // getBoundingClientRect rather than offsetTop — el's offsetParent may
+    // be an ancestor further up than container (e.g. a positioned wrapper
+    // around it), so offsetTop alone wouldn't reliably measure position
+    // relative to container specifically.
+    const containerRect = container.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const delta =
+      elRect.top - containerRect.top + elRect.height / 2 - containerRect.height / 2;
+    container.scrollTo({ top: container.scrollTop + delta, behavior: "smooth" });
+  }, [maxSequence, data, scrollContainerRef]);
+
   if (loading) {
     return (
       <div className="mt-3 rounded-lg bg-bg p-4 text-xs text-text-muted">
@@ -578,13 +611,10 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
 
   if (!data) return null;
 
-  // Caller-controlled clipping: when a playhead drives the thread (e.g. the
-  // Replay tool), drop everything past the current sequence so the visible
-  // posts grow/shrink in lockstep with the board state.
-  const visibleActions =
-    maxSequence != null
-      ? data.actions.filter((a) => a.sequence <= maxSequence)
-      : data.actions;
+  // The thread always renders in full — maxSequence (playhead mode) only
+  // picks out which post is "current" for the spotlight below, it no
+  // longer hides future turns from the DOM.
+  const visibleActions = data.actions;
 
   // Group actions by turn_id, preserving sequence order.
   const actionsByTurn = new Map<string, ApiAction[]>();
@@ -850,6 +880,23 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
     .map((post) => ({ ...post, actions: post.actions.filter((a) => !COIN_TOSS_TYPES.has(a.action_type)) }))
     .filter((post) => post.actions.length > 0);
 
+  // In playhead mode, find which post the playhead currently sits inside —
+  // the thread is fully populated now, so unlike a clip boundary this has
+  // to be located explicitly: the last post (in render order) holding an
+  // action at or before maxSequence. Everything else, before OR after it,
+  // gets dimmed — including the upcoming post, which stays visible as a
+  // dimmed preview directly below the spotlighted one instead of being
+  // hidden until the playhead reaches it.
+  const orderedPosts = [...filteredPregamePosts, ...gamePosts];
+  let currentPostKey: string | null = null;
+  if (maxSequence != null) {
+    for (const post of orderedPosts) {
+      if (post.actions.some((a) => a.sequence <= maxSequence)) {
+        currentPostKey = post.key;
+      }
+    }
+  }
+
   return (
     <div className="mt-3 flex flex-col rounded-lg bg-bg overflow-hidden">
       {pregamePosts.length > 0 && (
@@ -868,6 +915,8 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
               compactAvatars={compactAvatars}
               playerHandle={playerHandle}
               opponentHandle={opponentHandle}
+              dimmed={currentPostKey != null && post.key !== currentPostKey}
+              rootRef={post.key === currentPostKey ? currentPostRef : undefined}
             />
           ))}
           {!hideScoreCards && (
@@ -899,6 +948,8 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
             compactAvatars={compactAvatars}
             playerHandle={playerHandle}
             opponentHandle={opponentHandle}
+            dimmed={currentPostKey != null && post.key !== currentPostKey}
+            rootRef={post.key === currentPostKey ? currentPostRef : undefined}
           />,
         ];
         if (hasPrizes && !hideScoreCards) {
@@ -989,18 +1040,49 @@ interface ThreadPostInput {
 const WIN_GRADIENT = "linear-gradient(135deg,#F2A20C 0%,#D91E0D 50%,#A60D0D 100%)";
 const LOSS_COLOR = "#1a1a1a";
 
+/**
+ * Per-density post metrics. The avatar sits at the very top of its column
+ * and the name row starts at the same y, so the name only reads as centred
+ * on the avatar when `nameRow`'s min-height matches the avatar's diameter.
+ * Keeping the pair in one table is what makes that invariant checkable:
+ * they drifted apart in the compact side panel (27px avatar against a 36px
+ * row), which dropped the name ~4px and made the two look bottom-aligned.
+ */
+const POST_DENSITY = {
+  compact: {
+    avatar: "h-[27px] w-[27px] text-[11px]",
+    nameRow: "min-h-[27px]",
+    systemLabel: "text-[9px]",
+    glyph: "w-3 h-3",
+  },
+  regular: {
+    avatar: "h-9 w-9 text-sm",
+    nameRow: "min-h-9",
+    systemLabel: "text-[11px]",
+    glyph: "w-4 h-4",
+  },
+} as const;
+
 function ThreadPost({
   post,
   isLast,
   compactAvatars,
   playerHandle,
   opponentHandle,
+  dimmed,
+  rootRef,
 }: {
   post: ThreadPostInput;
   isLast: boolean;
   compactAvatars?: boolean;
   playerHandle: string;
   opponentHandle: string;
+  /** Playhead mode only — true once a later post has become current,
+   *  fading this one out of the spotlight. */
+  dimmed?: boolean;
+  /** Attached only to the current post, so the parent can smoothly
+   *  scrollIntoView-center it as the playhead advances. */
+  rootRef?: MutableRefObject<HTMLDivElement | null>;
 }) {
   const isSystem = post.kind === "system";
   // "Opponent" in a post's actions means the side opposite its author.
@@ -1019,26 +1101,24 @@ function ThreadPost({
     ? { background: LOSS_COLOR }
     : { background: avatarBg(post.displayName) };
   const SystemGlyph = post.system ? ICONS[post.system.glyph] : null;
+  const density = POST_DENSITY[compactAvatars ? "compact" : "regular"];
 
   return (
     <div
-      className={`flex gap-3 pt-3 ${isResult ? "bg-accent/[0.06]" : ""}`}
+      ref={rootRef}
+      className={`flex gap-3 pt-3 transition-opacity duration-500 ease-out ${dimmed ? "opacity-40" : "opacity-100"} ${isResult ? "bg-accent/[0.06]" : ""}`}
     >
       <div className="flex flex-col items-center self-stretch">
         <div
-          className={`relative flex shrink-0 items-center justify-center rounded-full font-bold text-white ${
-            compactAvatars ? "h-[27px] w-[27px] text-[11px]" : "h-9 w-9 text-sm"
-          }`}
+          className={`relative flex shrink-0 items-center justify-center rounded-full font-bold text-white ${density.avatar}`}
           style={avatarStyle}
         >
           {post.system?.label ? (
-            <span
-              className={`font-bold tracking-tight ${compactAvatars ? "text-[9px]" : "text-[11px]"}`}
-            >
+            <span className={`font-bold tracking-tight ${density.systemLabel}`}>
               {post.system.label}
             </span>
           ) : SystemGlyph ? (
-            <SystemGlyph className={compactAvatars ? "w-3 h-3" : "w-4 h-4"} />
+            <SystemGlyph className={density.glyph} />
           ) : (
             avatarInitial(post.displayName)
           )}
@@ -1063,7 +1143,7 @@ function ThreadPost({
           isLast ? "" : "border-b border-black/[0.08] dark:border-white/10"
         }`}
       >
-        <div className="flex items-center justify-between gap-2 min-h-[2.25rem]">
+        <div className={`flex items-center justify-between gap-2 ${density.nameRow}`}>
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="text-sm font-bold text-text-primary truncate">
               {post.displayName}

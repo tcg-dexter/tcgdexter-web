@@ -1,0 +1,449 @@
+Setup
+ruukipookie chose heads for the opening coin flip.
+ruukipookie won the coin toss.
+ruukipookie decided to go first.
+ruukipookie drew 7 cards for the opening hand.
+- 7 drawn cards.
+Nnova12 drew 7 cards for the opening hand.
+- 7 drawn cards.
+   • Battle Cage, Basic Fighting Energy, Cynthia's Gible, Team Rocket's Petrel, Night Stretcher, Cynthia's Garchomp ex, Cynthia's Roselia
+ruukipookie played Budew to the Active Spot.
+Nnova12 played Cynthia's Gible to the Active Spot.
+
+ruukipookie's Turn
+ruukipookie drew a card.
+ruukipookie played Poké Pad.
+- ruukipookie drew Dreepy.
+- ruukipookie shuffled their deck.
+ruukipookie played Dreepy to the Bench.
+ruukipookie played Ultra Ball.
+- ruukipookie discarded 2 cards.
+   • Basic Darkness Energy, Dragapult ex
+- ruukipookie drew Dreepy.
+- ruukipookie shuffled their deck.
+ruukipookie played Dreepy to the Bench.
+ruukipookie ended their turn.
+
+Nnova12's Turn
+Nnova12 drew Battle Cage.
+Nnova12 played Team Rocket's Petrel.
+- Nnova12 drew Lillie's Determination.
+- Nnova12 shuffled their deck.
+Nnova12 played Cynthia's Roselia to the Bench.
+Nnova12 ended their turn.
+
+ruukipookie's Turn
+ruukipookie drew a card.
+ruukipookie played Dunsparce to the Bench.
+ruukipookie played Lillie's Determination.
+- ruukipookie shuffled 2 cards into their deck.
+- ruukipookie drew 8 cards.
+ruukipookie evolved Dreepy to Drakloak on the Bench.
+ruukipookie evolved Dreepy to Drakloak on the Bench.
+ruukipookie played Buddy-Buddy Poffin.
+- ruukipookie drew Dreepy and played it to the Bench.
+- ruukipookie shuffled their deck.
+ruukipookie attached Basic Fire Energy to Drakloak on the Bench.
+ruukipookie's Drakloak used Recon Directive.
+- ruukipookie drew a card.
+ruukipookie's Drakloak used Recon Directive.
+- ruukipookie drew a card.
+ruukipookie played Risky Ruins to the Stadium spot.
+ruukipookie played Poké Pad.
+- ruukipookie drew Munkidori.
+- ruukipookie shuffled their deck.
+ruukipookie played Munkidori to the Bench.
+Risky Ruins was activated.
+- ruukipookie put 2 damage counters on ruukipookie's Munkidori.
+ruukipookie's Budew used Itchy Pollen on Nnova12’s Cynthia's Gible for 20 damage. Nnova12's Cynthia's Gible took 10 more damage because of Grass Weakness.
+- Damage breakdown:
+   • Base damage: 10 damage
+   • Weakness to Grass: 10 damage
+   • Total damage: 20 damage
+
+
+Nnova12's Turn
+Nnova12 drew Rocky Fighting Energy.
+Nnova12 attached Rocky Fighting Energy to Cynthia's Gible in the Active Spot.
+Nnova12 played Battle Cage to the Stadium spot.
+- Nnova12 discarded Risky Ruins.
+Nnova12 played Lillie's Determination.
+- Nnova12 shuffled 4 cards into their deck.
+   • Battle Cage, Basic Fighting Energy, Night Stretcher, Cynthia's Garchomp ex
+- Nnova12 drew 8 cards.
+   • Premium Power Pro, Cynthia's Gabite, Basic Fighting Energy, Buddy-Buddy Poffin, Boss's Orders, Night Stretcher, Basic Fighting Energy, Poké Pad
+Nnova12 evolved Cynthia's Gible to Cynthia's Gabite in the Active Spot.
+Nnova12's Cynthia's Gabite used Champion's Call.
+- Nnova12 drew Cynthia's Gible.
+- Nnova12 shuffled their deck.
+Nnova12 played Cynthia's Gible to the Bench.
+Nnova12 retreated Cynthia's Gabite to the Bench.
+- Rocky Fighting Energy was discarded from Nnova12's Cynthia's Gabite.
+Nnova12's Cynthia's Gible is now in the Active Spot.
+Nnova12 ended their turn.
+
+ruukipookie's Turn
+ruukipookie drew a card.
+ruukipookie evolved Dreepy to Drakloak on the Bench.
+ruukipookie's Drakloak used Recon Directive.
+- ruukipookie drew a card.
+ruukipookie's Drakloak used Recon Directive.
+- ruukipookie drew a card.
+ruukipookie's Drakloak used Recon Directive.
+- ruukipookie drew a card.
+ruukipookie played Night Stretcher.
+- ruukipookie moved ruukipookie's Basic Darkness Energy to their hand.
+ruukipookie attached Basic Darkness Energy to Munkidori on the Bench.
+ruukipookie played Ultra Ball.
+- ruukipookie discarded 2 cards.
+   • Buddy-Buddy Poffin, Buddy-Buddy Poffin
+- ruukipookie drew Dragapult ex.
+- ruukipookie shuffled their deck.
+ruukipookie evolved Drakloak to Dragapult ex on the Bench.
+ruukipookie retreated Budew to the Bench.
+ruukipookie's Dragapult ex is now in the Active Spot.
+ruukipookie played Boss's Orders.
+- Nnova12's Cynthia's Gabite was switched with Nnova12's Cynthia's Gible to become the Active Pokémon.
+Nnova12's Cynthia's Gabite is now in the Active Spot.
+ruukipookie's Munkidori used Adrena-Brain.
+- ruukipookie moved a damage counter from ruukipookie's Munkidori to ruukipookie's Cynthia's Gabite.
+Battle Cage was activated.
+- Damage to Cynthia's Roselia was prevented.
+Battle Cage was activated.
+- Damage to Cynthia's Gible was prevented.
+ruukipookie's Dragapult ex used Jet Headbutt on Nnova12’s Cynthia's Gabite for 70 damage.
+Nnova12's Cynthia's Gabite was Knocked Out!
+Cynthia's Gible was discarded from Nnova12's Cynthia's Gabite.
+ruukipookie took a Prize card.
+A card was added to ruukipookie's hand.
+Nnova12's Cynthia's Gible is now in the Active Spot.
+
+Nnova12's Turn
+Nnova12 drew Judge.
+Nnova12 played Buddy-Buddy Poffin.
+- Nnova12 drew 2 cards and played them to the Bench.
+   • Cynthia's Gible, Cynthia's Gible
+- Nnova12 shuffled their deck.
+Nnova12 played Poké Pad.
+- Nnova12 drew Cynthia's Gabite.
+- Nnova12 shuffled their deck.
+Nnova12 evolved Cynthia's Gible to Cynthia's Gabite in the Active Spot.
+Nnova12 played Boss's Orders.
+- ruukipookie's Drakloak was switched with ruukipookie's Dragapult ex to become the Active Pokémon.
+ruukipookie's Drakloak is now in the Active Spot.
+Nnova12's Cynthia's Gabite used Champion's Call.
+- Nnova12 drew Cynthia's Gabite.
+- Nnova12 shuffled their deck.
+Nnova12 attached Basic Fighting Energy to Cynthia's Gabite in the Active Spot.
+Nnova12 ended their turn.
+
+ruukipookie's Turn
+ruukipookie drew a card.
+ruukipookie's Drakloak used Recon Directive.
+- ruukipookie drew a card.
+ruukipookie's Drakloak used Recon Directive.
+- ruukipookie drew a card.
+ruukipookie played Crispin.
+- ruukipookie drew Basic Psychic Energy.
+- ruukipookie attached Basic Fire Energy to Drakloak in the Active Spot.
+- ruukipookie shuffled their deck.
+ruukipookie attached Basic Psychic Energy to Dragapult ex on the Bench.
+ruukipookie retreated Drakloak to the Bench.
+- Basic Fire Energy was discarded from ruukipookie's Drakloak.
+ruukipookie's Dragapult ex is now in the Active Spot.
+ruukipookie's Dragapult ex used Phantom Dive on Nnova12’s Cynthia's Gabite for 200 damage.
+Battle Cage was activated.
+- Damage to Cynthia's Roselia was prevented.
+Battle Cage was activated.
+- Damage to Cynthia's Gible was prevented.
+Battle Cage was activated.
+- Damage to Cynthia's Gible was prevented.
+Nnova12's Cynthia's Gabite was Knocked Out!
+- 2 cards were discarded from Nnova12's Cynthia's Gabite.
+   • Basic Fighting Energy, Cynthia's Gible
+ruukipookie took a Prize card.
+A card was added to ruukipookie's hand.
+Nnova12's Cynthia's Gible is now in the Active Spot.
+
+Nnova12's Turn
+Nnova12 drew Cynthia's Roserade.
+Nnova12 evolved Cynthia's Roselia to Cynthia's Roserade on the Bench.
+Nnova12 evolved Cynthia's Gible to Cynthia's Gabite on the Bench.
+Nnova12 played Premium Power Pro.
+Nnova12 played Judge.
+- Nnova12 shuffled 2 cards into their deck.
+   • Night Stretcher, Basic Fighting Energy
+- Nnova12 shuffled 6 cards into their deck.
+- Nnova12 drew 4 cards.
+   • Basic Fighting Energy, Night Stretcher, Hilda, Cynthia's Power Weight
+- Nnova12 drew 4 cards.
+Nnova12 played Night Stretcher.
+- Nnova12 moved Nnova12's Cynthia's Gible to their hand.
+Nnova12 played Cynthia's Gible to the Bench.
+Nnova12's Cynthia's Gabite used Champion's Call.
+- Nnova12 drew Cynthia's Gabite.
+- Nnova12 shuffled their deck.
+Nnova12 evolved Cynthia's Gible to Cynthia's Gabite in the Active Spot.
+Nnova12 attached Basic Fighting Energy to Cynthia's Gabite in the Active Spot.
+Nnova12 attached Cynthia's Power Weight to Cynthia's Gabite on the Bench.
+Nnova12's Cynthia's Gabite used Champion's Call.
+- Nnova12 drew Cynthia's Spiritomb.
+- Nnova12 shuffled their deck.
+Nnova12's Cynthia's Gabite used Dragonslice on ruukipookie’s Dragapult ex for 100 damage.
+- Damage breakdown:
+   • Base damage: 40 damage
+   • (Ability) Cheer On to Glory: 30 damage
+   • (Item) Premium Power Pro: 30 damage
+   • Total damage: 100 damage
+
+
+ruukipookie's Turn
+ruukipookie drew a card.
+ruukipookie played Poké Pad.
+- ruukipookie drew Dudunsparce.
+- ruukipookie shuffled their deck.
+ruukipookie evolved Dunsparce to Dudunsparce on the Bench.
+ruukipookie's Drakloak used Recon Directive.
+- ruukipookie drew a card.
+ruukipookie's Drakloak used Recon Directive.
+- ruukipookie drew a card.
+ruukipookie played Dudunsparce.
+- ruukipookie drew 3 cards.
+- ruukipookie shuffled 2 cards into their deck.
+   • Dudunsparce, Dunsparce
+ruukipookie played Buddy-Buddy Poffin.
+- ruukipookie drew Dunsparce and played it to the Bench.
+- ruukipookie shuffled their deck.
+ruukipookie's Munkidori used Adrena-Brain.
+- ruukipookie moved 3 damage counters from ruukipookie's Dragapult ex to ruukipookie's Cynthia's Gabite.
+Battle Cage was activated.
+- Damage to Cynthia's Roserade was prevented.
+Battle Cage was activated.
+- Damage to Cynthia's Gabite was prevented.
+Battle Cage was activated.
+- Damage to Cynthia's Gible was prevented.
+ruukipookie played Boss's Orders.
+- Nnova12's Cynthia's Gabite was switched with Nnova12's Cynthia's Gabite to become the Active Pokémon.
+Nnova12's Cynthia's Gabite is now in the Active Spot.
+ruukipookie played Crushing Hammer.
+- ruukipookie flipped a coin and it landed on tails.
+ruukipookie's Dragapult ex used Phantom Dive on Nnova12’s Cynthia's Gabite for 200 damage.
+Battle Cage was activated.
+- Damage to Cynthia's Roserade was prevented.
+Battle Cage was activated.
+- Damage to Cynthia's Gible was prevented.
+Battle Cage was activated.
+- Damage to Cynthia's Gabite was prevented.
+Nnova12's Cynthia's Gabite was Knocked Out!
+- 2 cards were discarded from Nnova12's Cynthia's Gabite.
+   • Cynthia's Gible, Cynthia's Power Weight
+ruukipookie took a Prize card.
+A card was added to ruukipookie's hand.
+Nnova12's Cynthia's Gabite is now in the Active Spot.
+
+Nnova12's Turn
+Nnova12 drew Cynthia's Garchomp ex.
+Nnova12 played Hilda.
+- Nnova12 drew 2 cards.
+   • Cynthia's Garchomp ex, Rocky Fighting Energy
+- Nnova12 shuffled their deck.
+Nnova12's Cynthia's Gabite used Champion's Call.
+- Nnova12 drew Cynthia's Garchomp ex.
+- Nnova12 shuffled their deck.
+Nnova12 attached Rocky Fighting Energy to Cynthia's Gabite in the Active Spot.
+Nnova12 evolved Cynthia's Gabite to Cynthia's Garchomp ex in the Active Spot.
+Nnova12's Cynthia's Garchomp ex used Draconic Buster on ruukipookie’s Dragapult ex for 290 damage.
+- Damage breakdown:
+   • Base damage: 260 damage
+   • (Ability) Cheer On to Glory: 30 damage
+   • Total damage: 290 damage
+
+- 2 cards were discarded from Nnova12's Cynthia's Garchomp ex.
+   • Basic Fighting Energy, Rocky Fighting Energy
+ruukipookie's Dragapult ex was Knocked Out!
+- 4 cards were discarded from ruukipookie's Dragapult ex.
+   • Basic Fire Energy, Basic Psychic Energy, Drakloak, Dreepy
+Nnova12 took 2 Prize cards.
+Budew was added to Nnova12's hand.
+Night Stretcher was added to Nnova12's hand.
+ruukipookie's Dunsparce is now in the Active Spot.
+
+ruukipookie's Turn
+ruukipookie drew a card.
+ruukipookie's Drakloak used Recon Directive.
+- ruukipookie drew a card.
+ruukipookie's Drakloak used Recon Directive.
+- ruukipookie drew a card.
+ruukipookie played Ultra Ball.
+- ruukipookie discarded 2 cards.
+   • Lillie's Determination, Drakloak
+- ruukipookie drew Dudunsparce.
+- ruukipookie shuffled their deck.
+ruukipookie evolved Dunsparce to Dudunsparce in the Active Spot.
+ruukipookie played Dudunsparce.
+- ruukipookie drew 3 cards.
+- ruukipookie shuffled 2 cards into their deck.
+   • Dudunsparce, Dunsparce
+ruukipookie's Budew is now in the Active Spot.
+ruukipookie played Meowth ex to the Bench.
+ruukipookie's Meowth ex used Last-Ditch Catch.
+- ruukipookie drew Boss's Orders.
+- ruukipookie shuffled their deck.
+ruukipookie attached Basic Psychic Energy to Munkidori on the Bench.
+ruukipookie's Munkidori used Adrena-Brain.
+- ruukipookie moved a damage counter from ruukipookie's Munkidori to ruukipookie's Cynthia's Garchomp ex.
+Battle Cage was activated.
+- Damage to Cynthia's Roserade was prevented.
+Battle Cage was activated.
+- Damage to Cynthia's Gible was prevented.
+ruukipookie played Lillie's Determination.
+- ruukipookie shuffled 8 cards into their deck.
+- ruukipookie drew 6 cards.
+ruukipookie played Dunsparce to the Bench.
+ruukipookie played Unfair Stamp.
+- ruukipookie shuffled 4 cards into their deck.
+- ruukipookie shuffled 5 cards into their deck.
+   • Cynthia's Spiritomb, Cynthia's Garchomp ex, Cynthia's Garchomp ex, Budew, Night Stretcher
+- ruukipookie drew 5 cards.
+- ruukipookie drew 2 cards.
+   • Lillie's Determination, Buddy-Buddy Poffin
+ruukipookie retreated Budew to the Bench.
+ruukipookie's Munkidori is now in the Active Spot.
+ruukipookie's Munkidori used Mind Bend on Nnova12’s Cynthia's Garchomp ex for 60 damage.
+- Nnova12's Cynthia's Garchomp ex is now Confused.
+
+Nnova12's Turn
+Nnova12 drew Team Rocket's Petrel.
+Nnova12 played Buddy-Buddy Poffin.
+- Nnova12 drew Cynthia's Spiritomb and played it to the Bench.
+- Nnova12 shuffled their deck.
+Nnova12 played Lillie's Determination.
+- Nnova12 shuffled Team Rocket's Petrel into their deck.
+- Nnova12 drew 6 cards.
+   • Premium Power Pro, Basic Fighting Energy, Night Stretcher, Team Rocket's Petrel, Basic Fighting Energy, Neo Upper Energy
+Nnova12 attached Basic Fighting Energy to Cynthia's Spiritomb on the Bench.
+Nnova12 played Night Stretcher.
+- Nnova12 moved Nnova12's Cynthia's Gabite to their hand.
+Nnova12 evolved Cynthia's Gible to Cynthia's Gabite on the Bench.
+Nnova12's Cynthia's Gabite used Champion's Call.
+- Nnova12 drew Cynthia's Garchomp ex.
+- Nnova12 shuffled their deck.
+Nnova12 retreated Cynthia's Garchomp ex to the Bench.
+Nnova12's Cynthia's Spiritomb is now in the Active Spot.
+Nnova12's Cynthia's Spiritomb used Raging Curse on ruukipookie’s Munkidori for 130 damage.
+- Damage breakdown:
+   • (Ability) Cheer On to Glory: 30 damage
+   • 10 damage counters: 100 damage
+
+ruukipookie's Munkidori was Knocked Out!
+- 2 cards were discarded from ruukipookie's Munkidori.
+   • Basic Darkness Energy, Basic Psychic Energy
+Nnova12 took a Prize card.
+Cynthia's Roselia was added to Nnova12's hand.
+ruukipookie's Budew is now in the Active Spot.
+
+ruukipookie's Turn
+ruukipookie drew a card.
+ruukipookie played Crispin.
+- ruukipookie drew Basic Darkness Energy.
+- ruukipookie attached Basic Fire Energy to Drakloak on the Bench.
+- ruukipookie shuffled their deck.
+ruukipookie attached Basic Psychic Energy to Drakloak on the Bench.
+ruukipookie played Crushing Hammer.
+- ruukipookie flipped a coin and it landed on heads.
+- Basic Fighting Energy was discarded from ruukipookie's Cynthia's Spiritomb.
+ruukipookie played Fezandipiti ex to the Bench.
+ruukipookie's Fezandipiti ex used Flip the Script.
+- ruukipookie drew 3 cards.
+ruukipookie played Special Red Card.
+- Nnova12 shuffled their hand.
+- ruukipookie put 6 cards on the bottom of their deck.
+   • Cynthia's Roselia, Cynthia's Garchomp ex, Team Rocket's Petrel, Basic Fighting Energy, Premium Power Pro, Neo Upper Energy
+- ruukipookie drew 3 cards.
+   • Hilda, Fighting Gong, Judge
+ruukipookie's Drakloak used Recon Directive.
+- ruukipookie drew a card.
+ruukipookie's Drakloak used Recon Directive.
+- ruukipookie drew a card.
+ruukipookie's Budew used Itchy Pollen on Nnova12’s Cynthia's Spiritomb for 20 damage. Nnova12's Cynthia's Spiritomb took 10 more damage because of Grass Weakness.
+- Damage breakdown:
+   • Base damage: 10 damage
+   • Weakness to Grass: 10 damage
+   • Total damage: 20 damage
+
+
+Nnova12's Turn
+Nnova12 drew Boss's Orders.
+Nnova12's Cynthia's Gabite used Champion's Call.
+- Nnova12 drew Cynthia's Roselia.
+- Nnova12 shuffled their deck.
+Nnova12 played Cynthia's Roselia to the Bench.
+Nnova12 played Hilda.
+- Nnova12 drew 2 cards.
+   • Cynthia's Garchomp ex, Neo Upper Energy
+- Nnova12 shuffled their deck.
+Nnova12 attached Neo Upper Energy to Cynthia's Spiritomb in the Active Spot.
+Nnova12's Cynthia's Spiritomb used Raging Curse on ruukipookie’s Budew for 130 damage.
+- Damage breakdown:
+   • (Ability) Cheer On to Glory: 30 damage
+   • 10 damage counters: 100 damage
+
+ruukipookie's Budew was Knocked Out!
+Nnova12 took a Prize card.
+Cynthia's Roserade was added to Nnova12's hand.
+ruukipookie's Drakloak is now in the Active Spot.
+
+ruukipookie's Turn
+ruukipookie drew a card.
+ruukipookie evolved Dunsparce to Dudunsparce on the Bench.
+ruukipookie's Drakloak used Recon Directive.
+- ruukipookie drew a card.
+ruukipookie played Risky Ruins to the Stadium spot.
+- ruukipookie discarded Battle Cage.
+ruukipookie played Munkidori to the Bench.
+Risky Ruins was activated.
+- ruukipookie put 2 damage counters on ruukipookie's Munkidori.
+ruukipookie's Drakloak used Recon Directive.
+- ruukipookie drew a card.
+ruukipookie played Dudunsparce.
+- ruukipookie drew 3 cards.
+- ruukipookie shuffled 2 cards into their deck.
+   • Dudunsparce, Dunsparce
+ruukipookie evolved Drakloak to Dragapult ex in the Active Spot.
+ruukipookie attached Basic Darkness Energy to Munkidori on the Bench.
+ruukipookie played Moltres to the Bench.
+Risky Ruins was activated.
+- ruukipookie put 2 damage counters on ruukipookie's Moltres.
+ruukipookie played Rosa's Encouragement.
+- ruukipookie attached Basic Fire Energy to Dragapult ex in the Active Spot.
+- ruukipookie attached Basic Psychic Energy to Dragapult ex in the Active Spot.
+ruukipookie's Munkidori used Adrena-Brain.
+- ruukipookie moved 2 damage counters from ruukipookie's Munkidori to ruukipookie's Cynthia's Garchomp ex.
+ruukipookie's Dragapult ex used Phantom Dive on Nnova12’s Cynthia's Spiritomb for 200 damage.
+- ruukipookie put 6 damage counters on ruukipookie's Cynthia's Garchomp ex.
+Nnova12's Cynthia's Spiritomb was Knocked Out!
+Neo Upper Energy was discarded from Nnova12's Cynthia's Spiritomb.
+ruukipookie took a Prize card.
+A card was added to ruukipookie's hand.
+Nnova12's Cynthia's Garchomp ex is now in the Active Spot.
+
+Nnova12's Turn
+Nnova12 drew Cynthia's Power Weight.
+Nnova12 played Fighting Gong.
+- Nnova12 drew Basic Fighting Energy.
+- Nnova12 shuffled their deck.
+Nnova12 attached Basic Fighting Energy to Cynthia's Garchomp ex in the Active Spot.
+Nnova12 attached Cynthia's Power Weight to Cynthia's Garchomp ex in the Active Spot.
+Nnova12 evolved Cynthia's Roselia to Cynthia's Roserade on the Bench.
+Nnova12 played Boss's Orders.
+- ruukipookie's Fezandipiti ex was switched with ruukipookie's Dragapult ex to become the Active Pokémon.
+ruukipookie's Fezandipiti ex is now in the Active Spot.
+Nnova12's Cynthia's Garchomp ex used Corkscrew Dive on ruukipookie’s Fezandipiti ex for 320 damage. ruukipookie's Fezandipiti ex took 160 more damage because of Fighting Weakness.
+- Damage breakdown:
+   • Base damage: 100 damage
+   • (Ability) Cheer On to Glory: 30 damage
+   • (Ability) Cheer On to Glory: 30 damage
+   • Weakness to Fighting: 160 damage
+   • Total damage: 320 damage
+
+Opponent conceded. Nnova12 wins.

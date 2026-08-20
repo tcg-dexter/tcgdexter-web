@@ -74,19 +74,41 @@ function makePokemon(card: CardInstance, turn: number, evolvedFromStack: CardIns
 
 /** Find an in-play Pokémon by display name on a given side. Active is
  *  searched first, then bench. */
+/**
+ * Find a Pokémon by name, active checked before bench unless `preferLocation`
+ * says otherwise. Several action types the parser produces — attach_energy,
+ * evolve — carry the log's own "in the Active Spot" / "on the Bench"
+ * qualifier as a `location` field precisely so a same-named Pokémon in the
+ * OTHER zone can't be mistaken for the target; before this parameter existed
+ * that field was parsed and then silently dropped, so "attached X to Y on
+ * the Bench" would still resolve to an active Y with the same name whenever
+ * one happened to be there, attaching to (and, via evolve, permanently
+ * carrying forward into) the wrong Pokémon instead of leaving it correctly
+ * on the bench. Falls back to the other zone if the preferred one has no
+ * name match, rather than failing outright — the caller's own name-only
+ * fallback would have found it there anyway, and callers with no hint at
+ * all (KO, conditions, damage counters — the parser gives them no zone to
+ * prefer) keep exactly their previous active-first behavior.
+ */
 function findPokemon(
   side: PlayerSide,
   name: string,
+  preferLocation?: "active" | "bench",
 ): { mon: PokemonInPlay; where: "active" | "bench"; benchIndex: number } | null {
-  if (side.active && side.active.card.name === name) {
-    return { mon: side.active, where: "active", benchIndex: -1 };
-  }
-  for (let i = 0; i < side.bench.length; i++) {
-    if (side.bench[i].card.name === name) {
-      return { mon: side.bench[i], where: "bench", benchIndex: i };
+  const active =
+    side.active && side.active.card.name === name
+      ? { mon: side.active, where: "active" as const, benchIndex: -1 }
+      : null;
+  const bench = () => {
+    for (let i = 0; i < side.bench.length; i++) {
+      if (side.bench[i].card.name === name) {
+        return { mon: side.bench[i], where: "bench" as const, benchIndex: i };
+      }
     }
-  }
-  return null;
+    return null;
+  };
+  if (preferLocation === "bench") return bench() ?? active;
+  return active ?? bench();
 }
 
 function indexOfCardInZone(zone: CardInstance[], name: string): number {
@@ -99,6 +121,19 @@ function popCardByName(zone: CardInstance[], name: string): CardInstance | null 
   if (idx < 0) return null;
   const [card] = zone.splice(idx, 1);
   return card;
+}
+
+/**
+ * True for a Pokémon Tool, per the catalog.
+ *
+ * TCG Live logs a Tool's attachment with the same "attached X to Y" wording
+ * it uses for energy — "attached Air Balloon to Solrock in the Active Spot",
+ * "attached Cynthia's Power Weight to Cynthia's Gabite on the Bench" — so the
+ * parser files both under `attach_energy` and the card itself is the only
+ * thing that tells them apart.
+ */
+function isPokemonTool(name: string): boolean {
+  return (lookupCard(name)?.subtypes ?? []).includes("Pokémon Tool");
 }
 
 /* ─── Reducer ───────────────────────────────────────────────────── */
@@ -390,14 +425,28 @@ export function applyAction(
       const energyName = String(payload.energy ?? "");
       const targetName = String(payload.target ?? "");
       const viaEffect = Boolean(payload.via_effect);
-      const found = findPokemon(side, targetName);
+      const location = payload.location as "active" | "bench" | undefined;
+      const found = findPokemon(side, targetName, location);
       if (!found) {
         diag("warn", "attach_target_missing", `Attached ${energyName} to ${targetName} but target not in play`, { targetName });
         break;
       }
       const card = popCardByName(side.hand, energyName) ?? makeCard(energyName);
-      found.mon.attachedEnergy.push(card);
-      if (!viaEffect) {
+      // Tools ride in on this same action type (see isPokemonTool), so they
+      // have to be split off here — otherwise they pile up in attachedEnergy,
+      // where the board renders them as Colorless energy icons and never as
+      // the Tool card behind the Pokémon, and the inspector can't tell the
+      // two kinds apart.
+      const isTool = isPokemonTool(energyName);
+      if (isTool) {
+        found.mon.attachedTools.push(card);
+      } else {
+        found.mon.attachedEnergy.push(card);
+      }
+      // Attaching a Tool is not the turn's one energy attachment. Counting it
+      // as one raised a bogus "extra_energy_attach" warning whenever a player
+      // attached a Tool and an energy on the same turn — twice in example-3.
+      if (!viaEffect && !isTool) {
         side.energyAttachedThisTurn += 1;
         if (side.energyAttachedThisTurn > 1) {
           diag("warn", "extra_energy_attach", `${actor} attached more than one energy this turn from hand`, {
@@ -405,7 +454,7 @@ export function applyAction(
           });
         }
       }
-      event.detail = { energy: energyName, target: targetName, viaEffect };
+      event.detail = { energy: energyName, target: targetName, viaEffect, tool: isTool };
       break;
     }
 
@@ -416,7 +465,8 @@ export function applyAction(
       if (!side) break;
       const fromName = String(payload.from ?? "");
       const toName = String(payload.to ?? "");
-      const found = findPokemon(side, fromName);
+      const location = payload.location as "active" | "bench" | undefined;
+      const found = findPokemon(side, fromName, location);
       if (!found) {
         diag("warn", "evolve_source_missing", `Evolved ${fromName} → ${toName} but base not in play`, { fromName, toName });
         break;
@@ -478,7 +528,20 @@ export function applyAction(
           event.detail = { promoted: targetName, noop: true };
           break;
         }
-        diag("warn", "switch_target_missing", `Promote ${targetName} but not on bench`, { targetName });
+        // Not tracked on the bench — but the log is authoritative that
+        // this Pokémon is now Active, so materialize it rather than
+        // leaving the slot empty. Same conjuring play_to_active does for
+        // a card that was never tracked into hand, and it matters more
+        // here: bench arrivals go untracked whenever the parser doesn't
+        // split a bulk line into per-card actions (Buddy-Buddy Poffin's
+        // "drew 2 cards and played them to the Bench" is the known case),
+        // and dropping the promotion strands the board with no Active for
+        // every frame after a knockout.
+        diag("info", "switch_target_missing", `Promote ${targetName} but not on bench; conjured it`, { targetName });
+        const conjured = makePokemon(makeCard(targetName), state.turn.number);
+        if (side.active) side.bench.push(side.active);
+        side.active = conjured;
+        event.detail = { promoted: targetName, conjured: true };
         break;
       }
       const incoming = side.bench.splice(benchIdx, 1)[0];
@@ -514,14 +577,22 @@ export function applyAction(
         }
         side.supporterPlayedThisTurn = true;
       }
-      // Tools attach to a Pokémon rather than going to discard. The log
-      // doesn't always say which target — for v0 we defer; if catalog says
-      // tool, leave the card in discard but record the intent.
+      // Tools normally reach the engine as `attach_energy` instead, because
+      // TCG Live writes their attachment as its own "attached X to Y" line
+      // (see isPokemonTool) — that path attaches them properly. A Tool
+      // arriving HERE came through a bare "played X." with no target in the
+      // log, so there is nothing to attach it to and discard is the only
+      // honest destination. The diagnostic keeps that visible rather than
+      // silently dropping an attachment.
+      //
+      // This replaces a v0 stub whose two branches were byte-identical, so
+      // the `isTool` test read as meaningful when it changed nothing.
       if (isTool) {
-        side.discard.push(card);
-      } else {
-        side.discard.push(card);
+        diag("info", "tool_played_without_target", `${actor} played Tool ${cardName} with no attach target in the log`, {
+          cardName,
+        });
       }
+      side.discard.push(card);
       event.detail = { card: cardName, supporter: isSupporter, tool: isTool };
       break;
     }

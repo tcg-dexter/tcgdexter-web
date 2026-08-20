@@ -1,6 +1,7 @@
 import cardData from "@/data/cards-standard.json";
 import { cardImageSmall } from "@/lib/cardImages";
 import { basicEnergyAliasKeys } from "@/lib/basicEnergyAlias";
+import { isStandardMark } from "@/lib/cardPrinting";
 import { allowedAddVariants } from "@/lib/inventory";
 
 interface AnalysisCard {
@@ -31,21 +32,30 @@ const CARD_DB_LOWER = new Map(
   Object.entries(CARD_DB).map(([k, v]) => [k.toLowerCase(), v as CardEntry[]])
 );
 
-const SUBTYPE_RANK: Record<string, number> = {
-  "Stage 2": 6,
-  VMAX: 5,
-  VSTAR: 5,
-  ex: 4,
-  EX: 4,
-  GX: 4,
-  "TAG TEAM": 4,
-  V: 3,
+// Rule-box status (ex/GX/V-family) beats evolution stage outright, rather
+// than competing on the same scale — a Stage 2 ex like Dragapult ex is
+// "Stage 2" AND "ex" at once, so ranking Stage 2 above ex meant the ex
+// added nothing once a card was already Stage 2: it tied dead even with a
+// plain non-ex Stage 2 partner (Dusknoir) or another Stage 2 ex (Blaziken
+// ex), leaving a 1-copy qty difference to decide the deck's "hero" instead
+// of which card is actually the rarer, more recognizable face of the
+// archetype. Two separate scales — ruleBoxRank as the primary sort key,
+// stageRank only a tiebreak among cards that are equally rule-box (or
+// equally not) — fixes that without changing how ties are broken within
+// either tier.
+const RULE_BOX_SUBTYPES = new Set(["VMAX", "VSTAR", "ex", "EX", "GX", "TAG TEAM", "V"]);
+const STAGE_RANK: Record<string, number> = {
+  "Stage 2": 3,
   "Stage 1": 2,
   Basic: 1,
 };
 
+function isRuleBox(subtypes: string[]): boolean {
+  return subtypes.some((s) => RULE_BOX_SUBTYPES.has(s));
+}
+
 function stageRank(subtypes: string[]): number {
-  return subtypes.reduce((max, s) => Math.max(max, SUBTYPE_RANK[s] ?? 0), 0);
+  return subtypes.reduce((max, s) => Math.max(max, STAGE_RANK[s] ?? 0), 0);
 }
 
 function resolveEntry(card: Pick<AnalysisCard, "name" | "number" | "setCode">):
@@ -181,6 +191,127 @@ export function highestEvolutionForName(name: string): string {
   return current;
 }
 
+/** Trailing name tokens that mark a rule-box VARIANT of a species rather
+ *  than a different Pokémon: "Dragapult ex" and "Dragapult" are the same
+ *  species, as are "Charizard V" / "Charizard VMAX" / "Charizard".
+ *  Deliberately excludes legacy mechanic suffixes (LV.X, BREAK, LEGEND, ★,
+ *  δ, GL, …) — those are genuinely their own cards, and being older than
+ *  regulation marks entirely they could never win the rank comparison in
+ *  `headlineVariantForName` anyway, so grouping them would add risk for no
+ *  benefit. */
+const RULE_BOX_NAME_SUFFIXES = new Set(["ex", "EX", "V", "VMAX", "VSTAR", "GX"]);
+
+function nameHasRuleBox(name: string): boolean {
+  const entries = CARD_DB[name] ?? CARD_DB_LOWER.get(name.toLowerCase()) ?? [];
+  return entries.some((e) => isRuleBox(e.subtypes ?? []));
+}
+
+/** True when any printing of `name` carries the "MEGA" subtype — the
+ *  current Mega Evolution mechanic (the Pitch Black-era "Mega Darkrai ex",
+ *  "Mega Greninja ex", …). Gated on the subtype rather than the string
+ *  "Mega " alone, since a handful of unrelated cards also start with that
+ *  word without carrying it: two "Mega X & Y-GX" TAG TEAMs and the Trainer
+ *  Items "Mega Catcher" / "Mega Turbo". This also isn't the same as the
+ *  2010s "M X-EX" mechanic (hyphenated, abbreviated "M ") — a different
+ *  name pattern this function never sees. */
+function isMegaMechanic(name: string): boolean {
+  const entries = CARD_DB[name] ?? CARD_DB_LOWER.get(name.toLowerCase()) ?? [];
+  return entries.some((e) => (e.subtypes ?? []).includes("MEGA"));
+}
+
+/**
+ * Grouping key for `headlineVariantForName`: the card name with any
+ * rule-box marking removed, front and back.
+ *
+ * The trailing suffix ("ex", "VMAX", …) is stripped unconditionally — that's
+ * what makes "Dragapult" and "Dragapult ex" the same species. A LEADING
+ * "Mega" is stripped only when the card actually carries the MEGA subtype
+ * (see isMegaMechanic), because "Mega Darkrai ex" is that same relationship
+ * again — a rule-box sibling of plain "Darkrai" — while a leading qualifier
+ * in general is NOT: "N's Zoroark ex" is a genuinely different card from
+ * "Zoroark ex", not a variant of the same species, so nothing here strips it.
+ *
+ * Order matters: stripping the suffix first is what turns "Mega Darkrai ex"
+ * into "Mega Darkrai" before the Mega check runs, so both strips land on the
+ * same base name regardless of which one a given card needed.
+ */
+function baseSpeciesKey(name: string): string {
+  let parts = name.trim().split(/\s+/);
+  if (parts.length >= 2 && RULE_BOX_NAME_SUFFIXES.has(parts[parts.length - 1])) {
+    parts = parts.slice(0, -1);
+  }
+  if (parts.length >= 2 && parts[0] === "Mega" && isMegaMechanic(name)) {
+    parts = parts.slice(1);
+  }
+  return parts.join(" ").toLowerCase();
+}
+
+/** True when any printing of `name` is currently Standard-legal. Routed
+ *  through lib/cardPrinting's `isStandardMark` — the app's single source of
+ *  truth for rotation — so the next rotation updates this automatically
+ *  instead of drifting the way a local copy of the mark list would. */
+function nameHasStandardPrint(name: string): boolean {
+  const entries = CARD_DB[name] ?? CARD_DB_LOWER.get(name.toLowerCase()) ?? [];
+  return entries.some((e) => isStandardMark(e.regulation_mark));
+}
+
+/** Every Pokémon card name grouped by base species, so the plain form and
+ *  its rule-box variants can be compared against each other. */
+const SPECIES_VARIANT_INDEX: Map<string, string[]> = (() => {
+  const out = new Map<string, string[]>();
+  for (const [name, entries] of Object.entries(CARD_DB)) {
+    if (!entries.some((e) => e.supertype === "Pokémon")) continue;
+    const key = baseSpeciesKey(name);
+    const arr = out.get(key);
+    if (arr) arr.push(name);
+    else out.set(key, [name]);
+  }
+  return out;
+})();
+
+/**
+ * The card that currently headlines a species — "Dragapult" resolves to
+ * "Dragapult ex", the reverse never happens.
+ *
+ * `highestEvolutionForName` above only walks evolves_from links, which
+ * leaves a real gap: a plain final-stage Pokémon and its ex are SIBLINGS
+ * (both "Dragapult" and "Dragapult ex" evolve from Drakloak), not parent
+ * and child. So starting from Drakloak correctly escalated to Dragapult ex,
+ * but starting from "Dragapult" itself had no forward step left to take and
+ * stopped there — landing on swsh12/89, a rotated-out Sword & Shield print,
+ * for a deck built around the Standard-legal ex.
+ *
+ * Selection is Standard-legality first, rule-box second, recency third.
+ * Legality has to lead so a species whose only ex is ancient (a 2004
+ * "Foo ex" against a currently-legal plain "Foo") isn't dragged back to a
+ * card no one can play. Rule-box has to beat raw recency, because among
+ * cards that are *all* legal the ex is the archetype's face while a plain
+ * reprint usually isn't: Blaziken's newest plain print (mark I) and Pikachu's
+ * (mark J) are both more recent than their ex (both H), yet "Blaziken" and
+ * "Pikachu" decks are unmistakably built around Blaziken ex and Pikachu ex.
+ *
+ * Every member of a species group resolves to the same answer, so this is
+ * idempotent and callers can apply it without checking what they have.
+ */
+export function headlineVariantForName(name: string): string {
+  const variants = SPECIES_VARIANT_INDEX.get(baseSpeciesKey(name));
+  if (!variants || variants.length < 2) return name;
+  return [...variants]
+    .map((n) => ({
+      name: n,
+      legal: nameHasStandardPrint(n),
+      ruleBox: nameHasRuleBox(n),
+      rank: maxRegRankForName(n),
+    }))
+    .sort(
+      (a, b) =>
+        Number(b.legal) - Number(a.legal) ||
+        Number(b.ruleBox) - Number(a.ruleBox) ||
+        b.rank - a.rank ||
+        a.name.localeCompare(b.name),
+    )[0].name;
+}
+
 /** Derive a card image URL from a Pokémon name alone (no set/number).
  *  Used when only the attacker name is known from a battle log. Escalates
  *  to the line's highest evolution via `highestEvolutionForName`, then
@@ -273,15 +404,22 @@ export function primaryPokemonCard(cards: AnalysisCard[]): PrimaryPokemonCard | 
 
   const annotated = pokemon.map((card) => {
     const match = resolveEntry(card);
+    const subtypes = match?.subtypes ?? [];
     return {
       card,
       set_id: match?.set_id ?? null,
       types: match?.types ?? [],
-      rank: match ? stageRank(match.subtypes) : 0,
+      ruleBox: match ? isRuleBox(subtypes) : false,
+      stage: match ? stageRank(subtypes) : 0,
     };
   });
 
-  annotated.sort((a, b) => b.rank - a.rank || b.card.qty - a.card.qty);
+  annotated.sort(
+    (a, b) =>
+      Number(b.ruleBox) - Number(a.ruleBox) ||
+      b.stage - a.stage ||
+      b.card.qty - a.card.qty,
+  );
   const best = annotated[0];
   if (!best) return null;
   return { card: best.card, set_id: best.set_id, types: best.types };

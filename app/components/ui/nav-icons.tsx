@@ -190,7 +190,7 @@ export function BellIcon({ className }: IconProps) {
   );
 }
 
-/** Two overlapping circles — "Matches". */
+/** Two overlapping circles — "Battles". */
 export function VersusIcon({ className }: IconProps) {
   return (
     <svg {...outlineProps} className={className}>

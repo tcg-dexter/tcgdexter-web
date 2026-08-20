@@ -21,6 +21,7 @@ import { tokenize, type Block, type Section } from "./tokenize";
 import {
   CARD_NAME_ARRAY_FIELDS,
   CARD_NAME_FIELDS,
+  CARD_NAME_GROUPED_FIELDS,
   splitCardId,
   stripCardIds,
 } from "./cardId";
@@ -54,6 +55,29 @@ function stripActionCardIds(a: ParsedAction, ids: Record<string, string>): void 
       });
     }
   }
+  for (const f of CARD_NAME_GROUPED_FIELDS) {
+    const v = a.payload[f];
+    if (Array.isArray(v)) {
+      a.payload[f] = v.map((group) => {
+        if (
+          typeof group !== "object" ||
+          group === null ||
+          !Array.isArray((group as { cards?: unknown }).cards)
+        ) {
+          return group;
+        }
+        const g = group as { cards: string[] };
+        return {
+          ...g,
+          cards: g.cards.map((item) => {
+            const { name, id } = splitCardId(item);
+            if (id && !(name in ids)) ids[name] = id;
+            return name;
+          }),
+        };
+      });
+    }
+  }
   a.raw_text = stripCardIds(a.raw_text);
 }
 
@@ -76,6 +100,118 @@ function collectRevealedCards(block: Block): string[] {
     if (child.kind === "bullet") {
       out.push(...splitCardList(child.text));
     }
+  }
+  return out;
+}
+
+interface DiscardDraw {
+  /** Names of the cards sent to the discard as this action's cost. */
+  discarded: string[];
+  /** Names of the cards drawn. Can be shorter than `drawnCount` — see below. */
+  drawn: string[];
+  /** How many cards were drawn in total. The log sometimes reports a bare
+   *  count with no card list (the verbose export does this), so this is the
+   *  count to trust; `drawn` is what we could actually name. */
+  drawnCount: number;
+  /** Each "drew N cards" line's N, in order. Only kept to feed the legacy
+   *  `draws` / `draws_caused` payload fields. */
+  drawCounts: number[];
+}
+
+/**
+ * Pull the discard-then-draw cost/benefit out of a block's child lines —
+ * the shape behind Ultra Ball ("discarded 2 cards" → "drew Mega Greninja
+ * ex") and abilities like N's Zoroark ex's Trade.
+ *
+ * Card names arrive two ways and both have to be handled: a single card is
+ * named inline on the dash ("discarded N's Zekrom."), while multiples are
+ * summarised on the dash ("discarded 2 cards.") with the names on bullet
+ * children *underneath* it. Bullets carry no marker saying which dash they
+ * belong to, so the only thing tying them together is document order —
+ * hence the `pending` cursor tracking the nearest dash above.
+ */
+function extractDiscardDraw(block: Block): DiscardDraw {
+  const discarded: string[] = [];
+  const drawn: string[] = [];
+  const drawCounts: number[] = [];
+  let drawnCount = 0;
+  let pending: "discard" | "draw" | null = null;
+
+  for (const child of block.children) {
+    if (child.kind === "bullet") {
+      if (pending === "discard") discarded.push(...splitCardList(child.text));
+      else if (pending === "draw") drawn.push(...splitCardList(child.text));
+      continue;
+    }
+
+    const t = normalizeQuotes(child.text);
+    // Any other dash line (a shuffle, a switch) ends the previous one's
+    // bullet run, so a later unrelated list can't be misattributed.
+    pending = null;
+
+    // Counted forms first: "discarded 2 cards." would otherwise be swallowed
+    // by the single-card pattern with "2 cards" as the card's name.
+    if (/^(.+?) discarded (\d+) cards\.$/.test(t)) {
+      pending = "discard";
+      continue;
+    }
+    const disc = t.match(/^(.+?) discarded (.+?)\.$/);
+    if (disc) {
+      discarded.push(disc[2]);
+      continue;
+    }
+
+    const drewN = t.match(/^(.+?) drew (\d+) cards\.$/);
+    if (drewN) {
+      drawCounts.push(Number(drewN[2]));
+      drawnCount += Number(drewN[2]);
+      pending = "draw";
+      continue;
+    }
+    // "drew a card." names no card — count it without inventing "a card"
+    // as a name, which the general pattern below would otherwise do.
+    if (/^(.+?) drew a card\.$/.test(t)) {
+      drawnCount += 1;
+      continue;
+    }
+    const drew = t.match(/^(.+?) drew (.+?)\.$/);
+    if (drew) {
+      drawn.push(drew[2]);
+      drawnCount += 1;
+    }
+  }
+
+  return { discarded, drawn, drawnCount, drawCounts };
+}
+
+export interface MulliganReveal {
+  /** The mulligan's 1-indexed number for this player — "Mulligan 1",
+   *  "Mulligan 2", etc. — as printed in the log, not a position in this
+   *  action's own array (mulligan_total's array can start at 2). */
+  index: number;
+  cards: string[];
+}
+
+/**
+ * Pulls each "Cards revealed from Mulligan N" dash's own bullet list into
+ * its own group, rather than flattening every bullet in the block together
+ * — the same document-order trap extractDiscardDraw guards against. It
+ * matters here because a single "took 3 mulligans." block carries TWO
+ * dash+bullet pairs (mulligan 2's hand, then mulligan 3's), and collapsing
+ * them would present a mulliganing player's two separate 7-card hands as
+ * one 14-card hand.
+ */
+function extractMulliganReveals(block: Block): MulliganReveal[] {
+  const out: MulliganReveal[] = [];
+  let current: MulliganReveal | null = null;
+  for (const child of block.children) {
+    if (child.kind === "bullet") {
+      current?.cards.push(...splitCardList(child.text));
+      continue;
+    }
+    const m = normalizeQuotes(child.text).match(/^Cards revealed from Mulligan (\d+)$/);
+    current = m ? { index: Number(m[1]), cards: [] } : null;
+    if (current) out.push(current);
   }
   return out;
 }
@@ -133,6 +269,7 @@ const PATTERNS: Pattern[] = [
     handle: (m, b) =>
       action("mulligan", m[1], b.text, {
         revealed_cards: collectRevealedCards(b),
+        mulligan_reveals: extractMulliganReveals(b),
       }),
   },
   {
@@ -141,6 +278,7 @@ const PATTERNS: Pattern[] = [
       action("mulligan_total", m[1], b.text, {
         total: Number(m[2]),
         revealed_cards: collectRevealedCards(b),
+        mulligan_reveals: extractMulliganReveals(b),
       }),
   },
   {
@@ -312,20 +450,20 @@ const PATTERNS: Pattern[] = [
     re: /^(.+?)'s (.+?) used (.+?)\.$/,
     handle: (m, b) => {
       const revealed = collectRevealedCards(b);
-      const discards: string[] = [];
-      const draws: number[] = [];
-      for (const c of b.children) {
-        const d = c.text.match(/^(.+?) discarded (.+?)\.$/);
-        if (d) discards.push(d[2]);
-        const dr = c.text.match(/^(.+?) drew (\d+) cards\.$/);
-        if (dr) draws.push(Number(dr[2]));
-      }
+      const dd = extractDiscardDraw(b);
       return action("ability_used", m[1], b.text, {
         source: m[2],
         ability_name: m[3],
         revealed_cards: revealed,
-        discards,
-        draws,
+        // `discards` / `draws` predate extractDiscardDraw and nothing in
+        // this repo reads them, but they ship in persisted match_actions
+        // payloads, so they stay. Deriving them from the same result keeps
+        // them from drifting out of step with the canonical fields below.
+        discards: dd.discarded,
+        draws: dd.drawCounts,
+        discarded_cards: dd.discarded,
+        drawn_cards: dd.drawn,
+        drawn_count: dd.drawnCount,
       });
     },
   },
@@ -455,18 +593,20 @@ const PATTERNS: Pattern[] = [
     re: /^(.+?) played (.+?)\.$/,
     handle: (m, b) => {
       const revealed = collectRevealedCards(b);
-      const draws: number[] = [];
+      const dd = extractDiscardDraw(b);
       const switches: Array<{ from: string; to: string; handle: string }> = [];
       for (const c of b.children) {
-        const dr = c.text.match(/^(.+?) drew (\d+) cards\.$/);
-        if (dr) draws.push(Number(dr[2]));
         const sw = c.text.match(/^(.+?)'s (.+?) was switched with (.+?)'s (.+?) to become the Active Pok[eé]mon\.$/);
         if (sw) switches.push({ handle: sw[1], from: sw[2], to: sw[4] });
       }
       return action("play_item", m[1], b.text, {
         card: m[2],
         revealed_cards: revealed,
-        draws_caused: draws,
+        // Legacy field, kept for persisted payloads — see ability_used.
+        draws_caused: dd.drawCounts,
+        discarded_cards: dd.discarded,
+        drawn_cards: dd.drawn,
+        drawn_count: dd.drawnCount,
         forced_switches: switches,
       });
     },

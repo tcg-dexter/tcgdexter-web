@@ -15,6 +15,7 @@ import {
   VariantFilteredView,
 } from "@/app/cards/FilterControls";
 import AddSelectionToListDialog from "@/app/cards/AddSelectionToListDialog";
+import ShareQRModal from "@/app/components/ShareQRModal";
 import ListDetails from "./ListDetails";
 import { variantDisplayLabel } from "@/lib/inventory";
 import type { CardIndexEntry } from "@/lib/cardsIndex";
@@ -105,9 +106,10 @@ function ListDetailBody({
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
   const [visibilityBusy, setVisibilityBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [confirmingMakePublic, setConfirmingMakePublic] = useState(false);
 
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -302,13 +304,31 @@ function ListDetailBody({
     }
   }
 
-  async function handleCopy() {
+  function handleShareClick() {
+    setMenuOpen(false);
+    if (isPublic) {
+      setShareOpen(true);
+      return;
+    }
+    setConfirmingMakePublic(true);
+  }
+
+  async function makePublicAndShare() {
+    if (visibilityBusy) return;
+    setVisibilityBusy(true);
     try {
-      await navigator.clipboard.writeText(canonicalShareUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* silent — clipboard may be blocked */
+      const res = await fetch(`/api/lists/${listId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_public: true }),
+      });
+      if (res.ok) {
+        setIsPublic(true);
+        setConfirmingMakePublic(false);
+        setShareOpen(true);
+      }
+    } finally {
+      setVisibilityBusy(false);
     }
   }
 
@@ -398,6 +418,14 @@ function ListDetailBody({
               <button
                 type="button"
                 role="menuitem"
+                onClick={handleShareClick}
+                className="w-full text-left rounded-lg px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface-2 transition-colors"
+              >
+                Share
+              </button>
+              <button
+                type="button"
+                role="menuitem"
                 onClick={() => {
                   setNameDraft(name);
                   setRenaming(true);
@@ -420,18 +448,6 @@ function ListDetailBody({
               >
                 {isPublic ? "Make private" : "Make public"}
               </button>
-              {isPublic && (
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    handleCopy();
-                  }}
-                  className="w-full text-left rounded-lg px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface-2 transition-colors"
-                >
-                  {copied ? "Copied!" : "Copy list link"}
-                </button>
-              )}
               <button
                 type="button"
                 role="menuitem"
@@ -444,6 +460,55 @@ function ListDetailBody({
               >
                 Delete list
               </button>
+            </div>,
+            document.body,
+          )}
+
+        <ShareQRModal
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          url={canonicalShareUrl}
+          title="Share List"
+        />
+
+        {confirmingMakePublic &&
+          typeof window !== "undefined" &&
+          createPortal(
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="make-list-public-title"
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+              onClick={() => setConfirmingMakePublic(false)}
+            >
+              <div
+                className="w-full max-w-sm rounded-2xl bg-white/95 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h2 id="make-list-public-title" className="text-base font-semibold text-text-primary">
+                  Make this list public?
+                </h2>
+                <p className="mt-2 text-sm text-text-secondary">
+                  This list is private, so only you can see it. Make it public so anyone with the link can view it?
+                </p>
+                <div className="mt-5 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingMakePublic(false)}
+                    className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white dark:bg-surface-2 px-4 py-1.5 text-xs font-semibold text-text-secondary hover:bg-black/5 transition touch-manipulation"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={makePublicAndShare}
+                    disabled={visibilityBusy}
+                    className="inline-flex items-center justify-center rounded-full bg-black dark:bg-white px-4 py-1.5 text-xs font-semibold text-white dark:text-black disabled:opacity-50 hover:opacity-80 transition-opacity touch-manipulation"
+                  >
+                    {visibilityBusy ? "Making public…" : "Make public & share"}
+                  </button>
+                </div>
+              </div>
             </div>,
             document.body,
           )}

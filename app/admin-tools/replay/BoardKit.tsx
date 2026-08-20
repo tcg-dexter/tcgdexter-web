@@ -24,6 +24,13 @@ const BOARD_GRADIENT = MAT_STYLES.find((s) => s.key === "fire-lightning")!.gradi
 const BOARD_TEXTURE = TEXTURES.find((t) => t.key === "lines")!;
 
 export interface PokemonFrame {
+  /** Engine instance id — stable across turns, unique per Pokémon in play.
+   *  Required: React keys and framer-motion layoutIds derive from it, and
+   *  names are NOT unique (three Noctowl on one bench is ordinary). When
+   *  this fell back to the name, colliding layoutIds let framer-motion
+   *  animate unrelated cards into each other's slots, stranding ghost
+   *  cards outside the bench row after a scrub. */
+  id: string;
   name: string;
   damage: number;
   hp: number | null;
@@ -32,13 +39,17 @@ export interface PokemonFrame {
   conditions: string[];
   evolutionStack: string[];
   imageUrl: string | null;
-  /** Stable key for motion layout ids. Play mode sets this (duplicate
-   *  names are common on a bench); replay frames omit it and fall back to
-   *  the name, preserving existing behavior. */
-  id?: string;
   /** Attached Pokémon Tools, rendered behind the card with the title
-   *  peeking above. Omitted by replay frames. */
+   *  peeking above. Both surfaces populate this (empty array when the
+   *  Pokémon holds none). */
   tools?: { name: string; imageUrl: string | null }[];
+  /** Every card attached to this Pokémon — energy then Tools, each
+   *  resolved to art — for the replay viewer's card inspector. Optional
+   *  like `tools` above: only the replay pipeline (lib/replay/frames.ts)
+   *  populates it today: the AI-player practice mode's own PokemonFrame
+   *  producer has no inspector row to feed. Treat a missing array the
+   *  same as an empty one. */
+  attachedCards?: { name: string; imageUrl: string | null }[];
 }
 
 // pokemontcg.io serves the standard Pokémon card-back PNG as the body of
@@ -213,6 +224,30 @@ export function CardSleeve({ radius, shadow }: { radius: number; shadow?: boolea
   );
 }
 
+/** How a face-up card renders. "art" (the default, and what both game
+ *  surfaces use) shows the card image. "label" replaces the art with the
+ *  card's name set as plain text — the Learn to Play board renders the real
+ *  mat this way, because a beginner learning where the Active sits is served
+ *  by the word "Active", not by a particular Charizard. */
+export type CardFace = "art" | "label";
+
+/** The "label" face: a card-shaped slot naming what the card is. Sized off
+ *  the card-image width so it scales with the mat like the art it replaces.
+ *  Fills its positioned parent, same as CardSleeve. */
+export function CardLabelFace({ text, width }: { text: string; width: number }) {
+  return (
+    <div
+      // Deliberately a fixed dark ink, not a theme token: the slot behind it
+      // is hard-coded white (that's what card art sits on), so a token that
+      // lightens in dark mode would leave white-on-white.
+      className="absolute inset-0 flex items-center justify-center px-1 text-center font-bold uppercase leading-tight tracking-wide text-neutral-700"
+      style={{ fontSize: Math.max(7, Math.round(width * 0.13)) }}
+    >
+      {text}
+    </div>
+  );
+}
+
 // Draw / discard pile, in the same black holder as the Pokémon cards, but
 // turned on its side so the card's printed top faces the mat's outer edge.
 // The card art fills a landscape slot; the footer (label + count) stays
@@ -226,6 +261,8 @@ export function Pile({
   topImageUrl,
   hint,
   useCardBack,
+  onClick,
+  face = "art",
   className = "",
 }: {
   label: string;
@@ -240,6 +277,12 @@ export function Pile({
   hint?: string;
   /** Render the standard card-back image as the face. */
   useCardBack?: boolean;
+  /** Overrides the default single-card InspectContext tap (top card only)
+   *  with a caller-supplied handler — the Replay viewer's discard pile uses
+   *  this to open its full-pile inspector instead. */
+  onClick?: () => void;
+  /** See CardFace — "label" names the top card instead of showing its art. */
+  face?: CardFace;
   className?: string;
 }) {
   const inspect = useContext(InspectContext);
@@ -255,8 +298,10 @@ export function Pile({
   // actual top card. An empty pile stays a translucent slot.
   const hasFace = useCardBack || Boolean(topName);
   // Only the face-up top discard is worth inspecting (the draw pile is a
-  // card back, an empty pile has nothing to show).
-  const clickable = inspect != null && !useCardBack && Boolean(topName);
+  // card back, an empty pile has nothing to show) — same "is there
+  // anything to inspect" gate applies whether the click opens the default
+  // single-card inspector or a caller's own handler.
+  const clickable = onClick != null ? count > 0 : inspect != null && !useCardBack && Boolean(topName);
 
   return (
     <div
@@ -274,19 +319,22 @@ export function Pile({
         }}
         role={clickable ? "button" : undefined}
         onClick={
-          clickable
-            ? () =>
+          !clickable
+            ? undefined
+            : onClick ??
+              (() =>
                 inspect!({
                   kind: "card",
                   name: topName as string,
                   imageUrl: topImageUrl ?? null,
-                })
-            : undefined
+                }))
         }
       >
         {useCardBack ? (
           <CardSleeve radius={m.cardRadius} />
-        ) : hasFace ? (
+        ) : !hasFace ? null : face === "label" ? (
+          <CardLabelFace text={topName ?? ""} width={width} />
+        ) : (
           <>
             <RotatedCardFace
               src={topImageUrl ?? CARD_BACK_URL}
@@ -302,7 +350,7 @@ export function Pile({
               </div>
             )}
           </>
-        ) : null}
+        )}
       </div>
 
       {/* Label row — mirrors the HP header: label left, count right. */}
@@ -345,6 +393,94 @@ export function ConditionPill({ condition }: { condition: string }) {
   );
 }
 
+// Above this many attachments the row collapses to one icon and a count.
+// Four is what the card footer fits at board scale; past that the icons
+// start running the width of the card and stop being countable at a glance,
+// which is the only thing the row is there to convey.
+const ENERGY_ICONS_MAX = 4;
+
+/**
+ * The single type that stands in for a collapsed stack: whichever is
+ * attached most, ties going to whichever was attached first. A mixed stack
+ * has no honest single answer, but the plurality is the least misleading of
+ * the options — and the count beside it is exact either way.
+ */
+function dominantEnergyType(types: string[]): string {
+  const counts = new Map<string, number>();
+  for (const t of types) counts.set(t, (counts.get(t) ?? 0) + 1);
+  let best = types[0];
+  let bestCount = 0;
+  // Iterating the original order (not the map) is what makes ties resolve
+  // to the earliest attachment: a later type has to strictly beat the
+  // incumbent to replace it.
+  for (const t of types) {
+    const n = counts.get(t) ?? 0;
+    if (n > bestCount) {
+      best = t;
+      bestCount = n;
+    }
+  }
+  return best;
+}
+
+/** Attached-energy icons for a card footer, in attach order — or, once past
+ *  ENERGY_ICONS_MAX, one icon and an "×N" total. */
+function EnergyRow({
+  types,
+  iconSize,
+}: {
+  types: string[];
+  /** Explicit px size (inspector). Omitted on the board, which uses the
+   *  responsive classes instead. */
+  iconSize?: number;
+}) {
+  // On the board: 25% smaller on mobile, full size on sm+. In the
+  // inspector: scaled proportionally to the enlarged card.
+  const iconClass =
+    iconSize == null ? "h-[7.5px] w-[7.5px] sm:h-[10px] sm:w-[10px]" : undefined;
+  const iconStyle =
+    iconSize == null ? undefined : { height: iconSize, width: iconSize };
+
+  if (types.length > ENERGY_ICONS_MAX) {
+    const type = dominantEnergyType(types);
+    return (
+      <>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`/types/${type.toLowerCase()}.png`}
+          alt={type}
+          className={iconClass}
+          style={iconStyle}
+        />
+        <span
+          // Tracks the icon so the pair scales together at either size.
+          className={`font-bold leading-none text-white tabular-nums ${
+            iconSize == null ? "text-[7px] sm:text-[9px]" : ""
+          }`}
+          style={iconSize == null ? undefined : { fontSize: Math.round(iconSize * 0.95) }}
+        >
+          ×{types.length}
+        </span>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {types.map((t, i) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={i}
+          src={`/types/${t.toLowerCase()}.png`}
+          alt={t}
+          className={iconClass}
+          style={iconStyle}
+        />
+      ))}
+    </>
+  );
+}
+
 export function PokemonCardImage({
   mon,
   width,
@@ -353,6 +489,7 @@ export function PokemonCardImage({
   onClick,
   footer,
   dimmed,
+  face = "art",
 }: {
   mon: PokemonFrame;
   width: number;
@@ -378,6 +515,8 @@ export function PokemonCardImage({
    *  dimming leaves the eligible cards looking exactly like themselves and
    *  simply pushes the rest back. */
   dimmed?: boolean;
+  /** See CardFace — "label" names the Pokémon instead of showing its art. */
+  face?: CardFace;
 }) {
   const inspect = useContext(InspectContext);
   const clickable = onClick != null || (inspectable && inspect != null);
@@ -389,7 +528,9 @@ export function PokemonCardImage({
   // A tool sits behind the Pokémon card, shifted up so its title peeks
   // above (a stack read). The peek height reserves space at the top of the
   // black holder so it stays contained.
-  const tools = mon.tools ?? [];
+  // Tools render as art behind the Pokémon card; a label face has no art for
+  // them to peek out from, so the label mode drops them.
+  const tools = face === "label" ? [] : (mon.tools ?? []);
   const toolPeek = tools.length > 0 ? Math.round(m.cardH * 0.13) : 0;
 
   // HP as a percentage of the card's printed maximum.
@@ -451,21 +592,27 @@ export function PokemonCardImage({
         className="relative w-full overflow-hidden bg-white"
         style={{ height: m.cardH, borderRadius: m.cardRadius, marginTop: toolPeek, zIndex: 1 }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={mon.imageUrl ?? CARD_BACK_URL}
-          alt={mon.name}
-          className="h-full w-full object-cover"
-          onError={(e) => {
-            if (e.currentTarget.src !== CARD_BACK_URL) {
-              e.currentTarget.src = CARD_BACK_URL;
-            }
-          }}
-        />
-        {hadFallback && (
-          <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[7px] font-semibold leading-tight text-white line-clamp-2">
-            {mon.name}
-          </div>
+        {face === "label" ? (
+          <CardLabelFace text={mon.name} width={width} />
+        ) : (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={mon.imageUrl ?? CARD_BACK_URL}
+              alt={mon.name}
+              className="h-full w-full object-cover"
+              onError={(e) => {
+                if (e.currentTarget.src !== CARD_BACK_URL) {
+                  e.currentTarget.src = CARD_BACK_URL;
+                }
+              }}
+            />
+            {hadFallback && (
+              <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[7px] font-semibold leading-tight text-white line-clamp-2">
+                {mon.name}
+              </div>
+            )}
+          </>
         )}
         {mon.conditions.length > 0 && (
           // Status pills stay on the card, stacked up from the bottom-right.
@@ -478,28 +625,15 @@ export function PokemonCardImage({
         {mon.energyTypes.length > 0 && (
           // Gradient footer matches the Card Catalog's CardFooterOverlay so
           // the energy icons sit on the same darkened band shape across the
-          // app. Energies render left-to-right in attach order.
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-start gap-[2px] px-0 pb-1 pt-3 bg-gradient-to-b from-transparent to-black to-80%">
-            {mon.energyTypes.map((t, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={i}
-                src={`/types/${t.toLowerCase()}.png`}
-                alt={t}
-                // On the board: 25% smaller on mobile, full size on sm+. In
-                // the inspector: scaled proportionally to the enlarged card.
-                className={
-                  energyIconSize == null
-                    ? "h-[7.5px] w-[7.5px] sm:h-[10px] sm:w-[10px]"
-                    : undefined
-                }
-                style={
-                  energyIconSize == null
-                    ? undefined
-                    : { height: energyIconSize, width: energyIconSize }
-                }
-              />
-            ))}
+          // app. Energies render left-to-right in attach order. The band is
+          // there to lift the icons off busy card art; a label face has no
+          // art, and the gradient just reads as a smudge, so it drops out.
+          <div
+            className={`pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-start gap-[2px] px-0 pb-1 ${
+              face === "label" ? "" : "pt-3 bg-gradient-to-b from-transparent to-black to-80%"
+            }`}
+          >
+            <EnergyRow types={mon.energyTypes} iconSize={energyIconSize} />
           </div>
         )}
       </div>
@@ -643,6 +777,9 @@ export function PlayerMat({
   cardWidth,
   matWidth,
   interact,
+  instant,
+  onDiscardClick,
+  face = "art",
 }: {
   side: "player" | "opponent";
   bench: PokemonFrame[];
@@ -658,8 +795,25 @@ export function PlayerMat({
   cardWidth: number;
   matWidth: number;
   interact?: MatInteraction;
+  /** Overrides the discard pile's default tap (open the top card alone) —
+   *  the Replay viewer wires this to its full-pile inspector. Omitted
+   *  elsewhere (AI-player practice mode), where the pile keeps its default
+   *  single-card behavior. */
+  onDiscardClick?: () => void;
+  /** Render the destination state immediately instead of animating cards
+   *  into it. Replay sets this when the playhead jumps (scrub / turn skip),
+   *  where a slot-to-slot animation would trace a path the game never took
+   *  and can strand cards mid-flight. Play mode never jumps, so it animates. */
+  instant?: boolean;
+  /** See CardFace. "label" renders every face-up card as its name in text
+   *  rather than its art — the Learn to Play board draws this mat that way
+   *  so the regions read as regions instead of as a particular matchup. */
+  face?: CardFace;
 }) {
   const isPlayer = side === "player";
+  // 0s still runs through the same framer-motion code path, so layout
+  // bookkeeping stays consistent — the move just lands on the same tick.
+  const moveTransition = { duration: instant ? 0 : 0.3, ease: "easeInOut" } as const;
   const texScale = matWidth > 0 ? matWidth / 600 : 1;
   const inspect = useContext(InspectContext);
 
@@ -727,8 +881,8 @@ export function PlayerMat({
       <AnimatePresence mode="wait">
         {active && (
           <motion.div
-            key={active.id ?? active.name}
-            layoutId={`${side}-${active.id ?? active.name}`}
+            key={active.id}
+            layoutId={`${side}-${active.id}`}
             // The expanded holder grows down into the bench overlay's band,
             // and that overlay is positioned (z-0) while this column is not —
             // so without an explicit layer the bench would paint over the
@@ -739,7 +893,7 @@ export function PlayerMat({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, layout: { duration: 0.3, ease: "easeInOut" } }}
+            transition={{ duration: instant ? 0 : 0.2, layout: moveTransition }}
           >
             <PokemonCardImage
               mon={active}
@@ -747,6 +901,7 @@ export function PlayerMat({
               onClick={interact?.onActiveClick}
               footer={interact?.activeFooter}
               dimmed={interact?.dimActive}
+              face={face}
             />
           </motion.div>
         )}
@@ -763,7 +918,6 @@ export function PlayerMat({
           height: matWidth > 0 ? matWidth * MAT_ASPECT : undefined,
           backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(BOARD_TEXTURE.svg)}"), ${BOARD_GRADIENT}`,
           backgroundSize: `${BOARD_TEXTURE.w * texScale}px ${BOARD_TEXTURE.h * texScale}px, auto`,
-          boxShadow: "0 4px 4px rgba(0,0,0,0.66)",
         }}
       >
         {/* ── 3-column grid: left-rail | center | right-rail. Rails are sized
@@ -777,7 +931,7 @@ export function PlayerMat({
           <div className={`flex h-full flex-col gap-1.5 sm:gap-3 ${isPlayer ? "justify-end" : ""}`}>
             {isPlayer ? (
               <>
-                <Pile label="Discard" count={discardCount} width={cardWidth} rotate="ccw" topName={discardTop} topImageUrl={discardTopImageUrl} />
+                <Pile label="Discard" count={discardCount} width={cardWidth} rotate="ccw" topName={discardTop} topImageUrl={discardTopImageUrl} onClick={onDiscardClick} face={face} />
                 <Pile label="Draw" count={deckCount} width={cardWidth} rotate="ccw" hint={`${handCount} in hand`} useCardBack />
               </>
             ) : (
@@ -796,7 +950,7 @@ export function PlayerMat({
             ) : (
               <>
                 <Pile label="Draw" count={deckCount} width={cardWidth} rotate="cw" hint={`${handCount} in hand`} useCardBack />
-                <Pile label="Discard" count={discardCount} width={cardWidth} rotate="cw" topName={discardTop} topImageUrl={discardTopImageUrl} />
+                <Pile label="Discard" count={discardCount} width={cardWidth} rotate="cw" topName={discardTop} topImageUrl={discardTopImageUrl} onClick={onDiscardClick} face={face} />
               </>
             )}
           </div>
@@ -814,11 +968,11 @@ export function PlayerMat({
           >
             {bench.map((mon, i) => (
               <motion.div
-                key={mon.id ?? mon.name}
-                layoutId={`${side}-${mon.id ?? mon.name}`}
+                key={mon.id}
+                layoutId={`${side}-${mon.id}`}
                 className="shrink-0"
                 style={{ width: benchTray.containerW }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
+                transition={moveTransition}
               >
                 <PokemonCardImage
                   mon={mon}
@@ -827,6 +981,7 @@ export function PlayerMat({
                     interact?.onBenchClick ? () => interact.onBenchClick!(i) : undefined
                   }
                   dimmed={interact?.dimBench?.[i]}
+                  face={face}
                 />
               </motion.div>
             ))}
@@ -846,7 +1001,12 @@ export function PlayerMat({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.25 }}
             >
-              <FloatingCard name={stadium.name} imageUrl={stadium.imageUrl} />
+              <FloatingCard
+                name={stadium.name}
+                imageUrl={stadium.imageUrl}
+                width={cardWidth}
+                face={face}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -865,6 +1025,8 @@ export function PlayerMat({
               <FloatingCard
                 name={lastPlayedTrainer.name}
                 imageUrl={lastPlayedTrainer.imageUrl}
+                width={cardWidth}
+                face={face}
               />
             </motion.div>
           )}
@@ -875,7 +1037,18 @@ export function PlayerMat({
 }
 
 /** Bare floating card (stadium / last-played trainer) with inspector tap. */
-function FloatingCard({ name, imageUrl }: { name: string; imageUrl: string | null }) {
+function FloatingCard({
+  name,
+  imageUrl,
+  width,
+  face = "art",
+}: {
+  name: string;
+  imageUrl: string | null;
+  /** Card-image width — only the label face needs it, to size its text. */
+  width: number;
+  face?: CardFace;
+}) {
   const inspect = useContext(InspectContext);
   return (
     <div
@@ -884,19 +1057,25 @@ function FloatingCard({ name, imageUrl }: { name: string; imageUrl: string | nul
       role={inspect ? "button" : undefined}
       onClick={inspect ? () => inspect({ kind: "card", name, imageUrl }) : undefined}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={imageUrl ?? CARD_BACK_URL}
-        alt={name}
-        className="h-full w-full object-cover"
-        onError={(e) => {
-          if (e.currentTarget.src !== CARD_BACK_URL) e.currentTarget.src = CARD_BACK_URL;
-        }}
-      />
-      {!imageUrl && (
-        <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[7px] font-semibold leading-tight text-white line-clamp-2">
-          {name}
-        </div>
+      {face === "label" ? (
+        <CardLabelFace text={name} width={width} />
+      ) : (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageUrl ?? CARD_BACK_URL}
+            alt={name}
+            className="h-full w-full object-cover"
+            onError={(e) => {
+              if (e.currentTarget.src !== CARD_BACK_URL) e.currentTarget.src = CARD_BACK_URL;
+            }}
+          />
+          {!imageUrl && (
+            <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[7px] font-semibold leading-tight text-white line-clamp-2">
+              {name}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -996,9 +1175,15 @@ export function ReplayCardInspector({
       aria-modal="true"
       aria-label={`${targetName} preview`}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      // Scrim is built from --bg rather than a literal, so it follows the
+      // theme instead of washing the dark board in light-mode grey. The
+      // solid backgroundColor is the fallback layer: if color-mix isn't
+      // supported the gradient is dropped and the scrim stays a correct,
+      // if unfaded, themed surface.
       style={{
-        background:
-          "linear-gradient(180deg, rgba(242, 242, 242, 1) 0%, rgba(242, 242, 242, 0.85) 100%)",
+        backgroundColor: "var(--bg)",
+        backgroundImage:
+          "linear-gradient(180deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 85%, transparent) 100%)",
       }}
       onClick={onClose}
     >

@@ -16,6 +16,8 @@ import metaDecksRaw from "@/data/meta-decks.json";
 import { MetaDeckCard } from "@/app/components/DeckPostCard";
 import { metaPrimaryCard, typeColor } from "@/lib/metaPrimaryCard";
 import { MatchCard, type RecentMatch } from "@/app/components/MatchCard";
+import FeaturedMatchShowcase from "@/app/components/FeaturedMatchShowcase";
+import type { MatchSideStats } from "@/lib/match-side-stats";
 import SpotlightBanner from "@/app/spotlight/components/SpotlightBanner";
 import type {
   SpotlightBannerLayout,
@@ -30,6 +32,13 @@ import GridTile from "@/app/cards/GridTile";
 import CardDetailPanel from "@/app/cards/CardDetailPanel";
 import InventoryProvider, { useInventory } from "@/app/cards/InventoryContext";
 import BadgeShowcase from "@/app/components/BadgeShowcase";
+
+/** Recent Battles cards shown on phones. The full set (whatever the home
+ *  page passes, currently 6) returns at sm: — the trim exists because a
+ *  single-column stack of 6 runs very long under the Featured Battle
+ *  showcase above it, and sm: is exactly where the grid stops being one
+ *  column, so 6 is only 2-3 tidy rows from there up. */
+const HOME_RECENT_MATCHES_MOBILE = 3;
 
 export type CurrentSpotlight = {
   id: string;
@@ -147,6 +156,8 @@ const top3Cards = (() => {
 export default function HomeClient({
   stats,
   recentMatches = [],
+  featuredMatch = null,
+  featuredMatchStats = null,
   currentSpotlight = null,
   showcaseTiles = [],
   cardCatalogTopCards = [],
@@ -154,6 +165,10 @@ export default function HomeClient({
 }: {
   stats: Array<{ label: string; value: string }>;
   recentMatches?: RecentMatch[];
+  /** Current Featured Battle, showcased with its replay above Recent
+   *  Battles. Null when nothing qualifies (see pickFeaturedMatch). */
+  featuredMatch?: RecentMatch | null;
+  featuredMatchStats?: MatchSideStats | null;
   currentSpotlight?: CurrentSpotlight | null;
   showcaseTiles?: ResolvedDeckTile[];
   cardCatalogTopCards?: CardIndexEntry[];
@@ -415,17 +430,39 @@ export default function HomeClient({
             <BadgeShowcase />
           </section>
 
+          {/* Featured Battle showcase — the /battles hero plus that match's
+              replay, sitting directly above Recent Battles. */}
+          {featuredMatch && (
+            <FeaturedMatchShowcase match={featuredMatch} stats={featuredMatchStats} />
+          )}
+
           {/* Recent Matches */}
           {recentMatches.length > 0 && (
             <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
               <h2 className="text-3xl font-semibold tracking-tight mb-4">Recent Battles</h2>
+              {/* Trimmed to HOME_RECENT_MATCHES_MOBILE on phones. The cut is
+                  pure CSS rather than a viewport check so it survives SSR
+                  with no hydration mismatch and no layout shift.
+                  `hidden sm:contents` is what makes that work: display:none
+                  drops the overflow entirely on mobile, and display:contents
+                  dissolves the wrapper above it so those cards become direct
+                  grid items again — wrapping them in a normal div would make
+                  the wrapper a single grid cell and collapse all three into
+                  one column. */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {recentMatches.map((m) => (
+                {recentMatches.slice(0, HOME_RECENT_MATCHES_MOBILE).map((m) => (
                   <MatchCard key={m.id} match={m} />
                 ))}
+                {recentMatches.length > HOME_RECENT_MATCHES_MOBILE && (
+                  <div className="hidden sm:contents">
+                    {recentMatches.slice(HOME_RECENT_MATCHES_MOBILE).map((m) => (
+                      <MatchCard key={m.id} match={m} />
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="mt-6 flex justify-center">
-                <Link href="/matches" className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition dark:bg-white dark:text-black dark:hover:bg-white/85">
+                <Link href="/battles" className="rounded-full bg-black text-white font-semibold px-6 py-3 hover:bg-black/85 transition dark:bg-white dark:text-black dark:hover:bg-white/85">
                   View all
                 </Link>
               </div>
@@ -461,7 +498,7 @@ export default function HomeClient({
                   className="relative w-full overflow-hidden aspect-[3/1]"
                 />
               </Link>
-              <div className="mt-10 max-w-4xl mx-auto text-center text-3xl md:text-4xl font-semibold tracking-tight leading-tight text-text-primary">
+              <div className="mt-10 max-w-4xl mx-auto text-center text-2xl md:text-3xl font-medium tracking-tight leading-tight text-text-primary">
                 &ldquo;I&rsquo;m very proud to say that I&rsquo;ve reached Arceus rank on the TCGLive ladder every reset since BB/WF with only Garchomp!&rdquo;
               </div>
               <div className="mt-4 text-center text-lg md:text-xl font-semibold tracking-tight">

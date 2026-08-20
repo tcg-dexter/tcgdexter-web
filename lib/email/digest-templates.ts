@@ -2,7 +2,7 @@
  * Weekly digest email. Reuses the brand shell (hero logo, footer) from the
  * re-engagement templates, then stacks up to four modules:
  *   1. Your week — per-user recap stats
- *   2. Battle of the Week — the /matches Featured Match, rebuilt as static
+ *   2. Battle of the Week — the /battles Featured Battle, rebuilt as static
  *      email HTML (email can't run the React hero)
  *   3. Playmat — a server-composited mat PNG of a new public deck
  *   4. New set — logo + release date (conditional)
@@ -84,7 +84,7 @@ function battleModule(m: RecentMatch, siteUrl: string): string {
       <span style="font-size:22px;font-weight:800;color:${ACCENT};font-family:${FONT};">${dmg.toLocaleString()}</span>
       <span style="font-size:12px;color:${MUTED};"> total damage dealt</span>
     </td></tr></table>
-    <div style="margin-top:16px;">${cta("See the match", `${siteUrl}/matches`)}</div>`);
+    <div style="margin-top:16px;">${cta("See the match", `${siteUrl}/battles`)}</div>`);
 }
 
 function playmatModule(deck: NewPublicDeck, imageUrl: string, siteUrl: string): string {
