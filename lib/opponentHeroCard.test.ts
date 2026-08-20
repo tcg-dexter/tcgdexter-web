@@ -61,6 +61,19 @@ describe("resolveOpponentHero: archetype beats gameplay inference", () => {
     }
   });
 
+  // The follow-up report: "Darkrai ex" (an old svp promo, mark H) showed up
+  // instead of "Mega Darkrai ex" (the Pitch Black print, mark J) — a leading
+  // "Mega" qualifier, not a trailing one, so the earlier fix's baseSpeciesKey
+  // (which only stripped trailing tokens) never grouped them together.
+  it("resolves a plain or promo species name to its Mega variant", () => {
+    for (const archetype of ["Darkrai", "Darkrai ex"]) {
+      const hero = resolveOpponentHero({ opponentArchetype: archetype, gameplayName: null });
+      expect(hero?.name).toBe("Mega Darkrai ex");
+      expect(hero?.imageUrl).not.toContain("svp");
+      expect(hero?.color).toBe("#0d9488"); // Darkness
+    }
+  });
+
   it("agrees on the same card whichever signal supplies it", () => {
     // Archetype text, the bare species, and a mid-line gameplay attacker
     // must all land on one card — otherwise the /matches preview and the

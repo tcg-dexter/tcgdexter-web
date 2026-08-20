@@ -201,22 +201,49 @@ export function highestEvolutionForName(name: string): string {
  *  benefit. */
 const RULE_BOX_NAME_SUFFIXES = new Set(["ex", "EX", "V", "VMAX", "VSTAR", "GX"]);
 
-/** Grouping key for `headlineVariantForName`: the card name with any
- *  rule-box suffix removed. Only the FINAL token is stripped, which is what
- *  keeps "Mega Greninja ex" distinct from "Greninja ex" and "N's Zoroark
- *  ex" from "Zoroark ex" — the qualifier that makes them different cards
- *  sits at the front, not the back. */
-function baseSpeciesKey(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2 && RULE_BOX_NAME_SUFFIXES.has(parts[parts.length - 1])) {
-    return parts.slice(0, -1).join(" ").toLowerCase();
-  }
-  return name.trim().toLowerCase();
-}
-
 function nameHasRuleBox(name: string): boolean {
   const entries = CARD_DB[name] ?? CARD_DB_LOWER.get(name.toLowerCase()) ?? [];
   return entries.some((e) => isRuleBox(e.subtypes ?? []));
+}
+
+/** True when any printing of `name` carries the "MEGA" subtype — the
+ *  current Mega Evolution mechanic (the Pitch Black-era "Mega Darkrai ex",
+ *  "Mega Greninja ex", …). Gated on the subtype rather than the string
+ *  "Mega " alone, since a handful of unrelated cards also start with that
+ *  word without carrying it: two "Mega X & Y-GX" TAG TEAMs and the Trainer
+ *  Items "Mega Catcher" / "Mega Turbo". This also isn't the same as the
+ *  2010s "M X-EX" mechanic (hyphenated, abbreviated "M ") — a different
+ *  name pattern this function never sees. */
+function isMegaMechanic(name: string): boolean {
+  const entries = CARD_DB[name] ?? CARD_DB_LOWER.get(name.toLowerCase()) ?? [];
+  return entries.some((e) => (e.subtypes ?? []).includes("MEGA"));
+}
+
+/**
+ * Grouping key for `headlineVariantForName`: the card name with any
+ * rule-box marking removed, front and back.
+ *
+ * The trailing suffix ("ex", "VMAX", …) is stripped unconditionally — that's
+ * what makes "Dragapult" and "Dragapult ex" the same species. A LEADING
+ * "Mega" is stripped only when the card actually carries the MEGA subtype
+ * (see isMegaMechanic), because "Mega Darkrai ex" is that same relationship
+ * again — a rule-box sibling of plain "Darkrai" — while a leading qualifier
+ * in general is NOT: "N's Zoroark ex" is a genuinely different card from
+ * "Zoroark ex", not a variant of the same species, so nothing here strips it.
+ *
+ * Order matters: stripping the suffix first is what turns "Mega Darkrai ex"
+ * into "Mega Darkrai" before the Mega check runs, so both strips land on the
+ * same base name regardless of which one a given card needed.
+ */
+function baseSpeciesKey(name: string): string {
+  let parts = name.trim().split(/\s+/);
+  if (parts.length >= 2 && RULE_BOX_NAME_SUFFIXES.has(parts[parts.length - 1])) {
+    parts = parts.slice(0, -1);
+  }
+  if (parts.length >= 2 && parts[0] === "Mega" && isMegaMechanic(name)) {
+    parts = parts.slice(1);
+  }
+  return parts.join(" ").toLowerCase();
 }
 
 /** True when any printing of `name` is currently Standard-legal. Routed

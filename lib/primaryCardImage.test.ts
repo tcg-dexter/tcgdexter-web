@@ -115,12 +115,33 @@ describe("headlineVariantForName: plain species resolve to their headline card",
     }
   });
 
-  it("keeps a leading qualifier as a different species, not a variant", () => {
-    // Only the trailing rule-box token is stripped, so the qualifier that
-    // makes these distinct cards ("Mega", "N's") can't be collapsed away.
-    expect(headlineVariantForName("Mega Greninja ex")).toBe("Mega Greninja ex");
+  // The reported bug: "Darkrai" and "Darkrai ex" grouped with each other
+  // (trailing suffix stripped) but not with "Mega Darkrai ex" — a leading
+  // qualifier, and only the trailing one was stripped — so the group's own
+  // headline card was invisible to the group. Mega Darkrai ex is a rule-box
+  // SIBLING of Darkrai (Basic, evolves_from null — no evolution stage that
+  // would surface it through highestEvolutionForName instead), the exact
+  // same relationship "Darkrai ex" already has to "Darkrai".
+  it("strips a leading 'Mega' when the card carries the MEGA subtype", () => {
+    expect(headlineVariantForName("Darkrai")).toBe("Mega Darkrai ex");
+    expect(headlineVariantForName("Darkrai ex")).toBe("Mega Darkrai ex");
+    expect(headlineVariantForName("Mega Darkrai ex")).toBe("Mega Darkrai ex");
+  });
+
+  it("also finds a Mega variant for a species reachable through evolution too", () => {
+    // Mega Greninja ex (unlike Mega Darkrai ex) DOES evolve from something
+    // (Frogadier) and so is also reachable via highestEvolutionForName
+    // before this function ever runs — this only exercises the direct,
+    // start-at-the-final-stage path.
+    expect(headlineVariantForName("Greninja")).toBe("Mega Greninja ex");
+    expect(headlineVariantForName("Greninja ex")).toBe("Mega Greninja ex");
+  });
+
+  it("does not strip a leading qualifier that isn't the Mega mechanic", () => {
+    // "N's Zoroark ex" is a genuinely different card from "Zoroark ex", not
+    // a variant of the same species — nothing marks it the way MEGA does,
+    // so it has to stay untouched.
     expect(headlineVariantForName("N's Zoroark ex")).toBe("N's Zoroark ex");
-    expect(headlineVariantForName("Greninja")).toBe("Greninja ex");
   });
 
   it("leaves a species alone when it has no rule-box variant", () => {
