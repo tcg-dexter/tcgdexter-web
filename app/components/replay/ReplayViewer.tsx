@@ -579,15 +579,28 @@ const HAND_STRIP_VISIBLE_PCT = 70;
 // that there's no label to carry it — the strip needs to read as attached
 // to the mat, not as a floating, unrelated row.
 const HAND_STRIP_TOP_GAP_PX = 6;
+const HAND_STRIP_GAP_PX = 8;
+// A chevron button's own width (h-5 w-5 = 20px) plus the gap-1 (4px)
+// beside it — same allowance ATTACHED_ROW_CHEVRON_PX spends, kept as its
+// own constant since the two rows size against different things (this one
+// against matWidth, that one against a card width it's still solving for).
+const HAND_STRIP_CHEVRON_PX = 24;
 
 /**
  * The submitting user's hand, anchored directly below their mat — always
  * the bottom mat now that Board pins the player there (see Board's comment
  * on why side/edge stay fixed to visual slot). Every card renders cropped
  * to its top 70% with a gradient fading the cut edge into the page
- * background, rather than showing full cards or hiding the row entirely:
- * a hand can run to seven-plus cards, and this is what lets the strip stay
- * compact without either overflowing or needing its own scroll.
+ * background, rather than showing full cards, so the strip stays short even
+ * before the row-count question below comes into it at all.
+ *
+ * Single row, capped to however many cardWidth-sized cards actually fit
+ * under the mat (matWidth), with chevrons — plus native swipe/trackpad
+ * scroll, the same two-ways-at-once pattern AttachedCardsRow uses — for a
+ * hand that runs past that. Previously this wrapped to as many rows as it
+ * needed, which on a seven-plus-card hand pushed the transport controls
+ * further down the page every time the hand grew; a fixed one-row height
+ * keeps the board's footprint stable regardless of hand size.
  *
  * Recomputed every frame like the rest of the board, so it always shows
  * the hand as of wherever the playhead currently sits — cards drawn appear,
@@ -598,24 +611,81 @@ const HAND_STRIP_TOP_GAP_PX = 6;
 function HandStrip({
   cards,
   cardWidth,
+  matWidth,
   instant,
   onCardClick,
 }: {
   cards: HandCard[];
   cardWidth: number;
+  /** The mat this strip sits under — what its one-row viewport is sized
+   *  against, since cardWidth itself is fixed (inherited from the board)
+   *  rather than solved to hit a target column count the way the
+   *  inspector's own thumbnail rows are. */
+  matWidth: number;
   instant: boolean;
   /** Opens the mat-overlay inspector for a tapped card. Omitted (or a
    *  card that isn't `revealed`) means the card isn't clickable — there's
    *  nothing to inspect about a card the log never named. */
   onCardClick?: (target: InspectTarget) => void;
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [overflow, setOverflow] = useState({ left: false, right: false });
+
+  const updateOverflow = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setOverflow({
+      left: el.scrollLeft > 1,
+      right: el.scrollLeft < el.scrollWidth - el.clientWidth - 1,
+    });
+  };
+
+  useIsomorphicLayoutEffect(() => {
+    updateOverflow();
+    // The hand's contents change every step/scrub, not just its count —
+    // scrollWidth can shift even between two frames with the same number
+    // of cards reflowed differently, so re-measure on every card identity
+    // change rather than gating on length alone.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cards.map((c) => c.id).join(","), cardWidth, matWidth]);
+
   if (cards.length === 0) return null;
   const cardHeight = Math.round((cardWidth * 342) / 245);
   const visibleHeight = Math.round((cardHeight * HAND_STRIP_VISIBLE_PCT) / 100);
 
+  // How many cards actually fit in one row under the mat: n*cardWidth +
+  // (n-1)*gap <= available, solved for n and floored — at least 1, so a
+  // single oversized card never disappears entirely on a narrow mat.
+  const availableWidth = matWidth - 2 * HAND_STRIP_CHEVRON_PX;
+  const maxVisible = Math.max(
+    1,
+    Math.floor((availableWidth + HAND_STRIP_GAP_PX) / (cardWidth + HAND_STRIP_GAP_PX)),
+  );
+  const shown = Math.min(cards.length, maxVisible);
+  const viewportWidth = shown * cardWidth + (shown - 1) * HAND_STRIP_GAP_PX;
+
+  const step = cardWidth + HAND_STRIP_GAP_PX;
+  function scrollByCard(dir: 1 | -1) {
+    scrollRef.current?.scrollBy({ left: dir * step, behavior: "smooth" });
+  }
+
   return (
-    <div style={{ marginTop: HAND_STRIP_TOP_GAP_PX }}>
-      <div className="flex flex-wrap items-start justify-center gap-x-2 gap-y-3">
+    <div
+      className="flex items-center justify-center gap-1"
+      style={{ marginTop: HAND_STRIP_TOP_GAP_PX }}
+    >
+      <AttachedRowChevron
+        direction="left"
+        visible={overflow.left}
+        onClick={() => scrollByCard(-1)}
+        label="hand"
+      />
+      <div
+        ref={scrollRef}
+        onScroll={updateOverflow}
+        className="flex items-start overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        style={{ width: viewportWidth, gap: HAND_STRIP_GAP_PX, scrollSnapType: "x proximity" }}
+      >
         <AnimatePresence initial={false}>
           {cards.map((card) => {
             const clickable = card.revealed && onCardClick != null;
@@ -627,8 +697,8 @@ function HandStrip({
               // right where the gradient is trying to fade the card into
               // the background — a shadow there reads as a hard edge under
               // the fade, contradicting it.
-              className={`relative overflow-hidden rounded ${clickable ? "cursor-pointer" : ""}`}
-              style={{ width: cardWidth, height: visibleHeight }}
+              className={`relative shrink-0 overflow-hidden rounded ${clickable ? "cursor-pointer" : ""}`}
+              style={{ width: cardWidth, height: visibleHeight, scrollSnapAlign: "start" }}
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
@@ -668,6 +738,12 @@ function HandStrip({
           })}
         </AnimatePresence>
       </div>
+      <AttachedRowChevron
+        direction="right"
+        visible={overflow.right}
+        onClick={() => scrollByCard(1)}
+        label="hand"
+      />
     </div>
   );
 }
@@ -741,7 +817,7 @@ function AttachedCardsRow({
 
   return (
     <div className="flex items-center gap-1">
-      <AttachedRowChevron direction="left" visible={overflow.left} onClick={() => scrollByCard(-1)} />
+      <AttachedRowChevron direction="left" visible={overflow.left} onClick={() => scrollByCard(-1)} label="attached cards" />
       <div
         ref={scrollRef}
         onScroll={updateOverflow}
@@ -754,15 +830,19 @@ function AttachedCardsRow({
           </div>
         ))}
       </div>
-      <AttachedRowChevron direction="right" visible={overflow.right} onClick={() => scrollByCard(1)} />
+      <AttachedRowChevron direction="right" visible={overflow.right} onClick={() => scrollByCard(1)} label="attached cards" />
     </div>
   );
 }
 
+/** Shared by every single-row scrollable card strip (attached cards, the
+ *  hand strip) — `label` is the row's own name ("attached cards", "hand"),
+ *  finished off into "Scroll {label} left/right" for the accessible name. */
 function AttachedRowChevron({
   direction,
   visible,
   onClick,
+  label,
 }: {
   direction: "left" | "right";
   /** There's nothing that way to scroll to. Kept mounted rather than
@@ -770,13 +850,14 @@ function AttachedRowChevron({
    *  between having and not having room left in a given direction. */
   visible: boolean;
   onClick: () => void;
+  label: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={!visible}
-      aria-label={direction === "left" ? "Scroll attached cards left" : "Scroll attached cards right"}
+      aria-label={`Scroll ${label} ${direction}`}
       className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md transition disabled:opacity-0"
     >
       <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -1358,6 +1439,7 @@ function Board({
         <HandStrip
           cards={frame.player.hand}
           cardWidth={cardWidth}
+          matWidth={matWidth}
           instant={instant}
           onCardClick={(target) => onOpenMatInspect("player", target)}
         />
