@@ -26,6 +26,55 @@ interface ProfileRef {
   username: string;
 }
 
+/** The match_actions columns these aggregates read. Each of the three
+ *  queries selects only the subset it needs, so a field another query
+ *  selected is simply absent here rather than null. */
+interface ActionRow {
+  match_id: string;
+  actor?: string | null;
+  action_type?: string | null;
+  payload?: Record<string, unknown> | null;
+}
+
+/** Rows requested per page. PostgREST caps a single response server-side
+ *  (1000 on this project); asking for exactly that much per page means the
+ *  common small-result case still costs one round trip. */
+const ACTION_PAGE_SIZE = 1000;
+/** Runaway guard. A page that keeps coming back exactly full would loop
+ *  forever otherwise; 25 pages is ~25k action rows, far past any real pool. */
+const MAX_ACTION_PAGES = 25;
+
+/**
+ * Read every row a query matches, not just the first response.
+ *
+ * `fetchPage` receives an inclusive `[from, to]` row range and MUST apply a
+ * deterministic order — without one PostgREST is free to return overlapping
+ * or skipped rows between pages, which would double-count damage and prizes
+ * rather than merely losing some. Stops on the first short page.
+ *
+ * Exported for its own test: the paging arithmetic is the part worth
+ * pinning, and it's pure once the page fetcher is injected.
+ */
+export async function fetchAllPages<T>(
+  // PromiseLike, not Promise: a supabase-js query builder is thenable but
+  // isn't a real Promise until awaited, so callers can hand the builder
+  // chain straight in without wrapping it.
+  fetchPage: (from: number, to: number) => PromiseLike<T[]>,
+  pageSize: number = ACTION_PAGE_SIZE,
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let page = 0; page < MAX_ACTION_PAGES; page++) {
+    const from = page * pageSize;
+    const rows = await fetchPage(from, from + pageSize - 1);
+    out.push(...rows);
+    if (rows.length < pageSize) return out;
+  }
+  console.warn(
+    `[recent-matches] hit MAX_ACTION_PAGES (${MAX_ACTION_PAGES}) — results truncated`,
+  );
+  return out;
+}
+
 const MATCH_ROW_SELECT =
   "id, short_id, result, opponent_archetype, opponent_handle, created_at, saved_deck_id, source, prizes_taken_player, prizes_taken_opponent, game_prizes, game_results";
 
@@ -50,33 +99,57 @@ async function assembleRecentMatches(
   const matchDeckIds = Array.from(new Set(matchRows.map((m) => m.saved_deck_id as string)));
   const matchIds = matchRows.map((m) => m.id as string);
 
-  const [
-    { data: deckDetailRows },
-    { data: attackRows },
-    { data: playRows },
-    { data: prizeRows },
-  ] = await Promise.all([
+  // Every match_actions read below is paged (see fetchAllPages). These span
+  // the whole match pool — the `attack` query alone returns ~1200 rows
+  // against ~217 public matches — so a single request runs past PostgREST's
+  // per-response cap and silently truncates in scan order. That starved the
+  // NEWEST matches of their rows, which is exactly the wrong end: every
+  // match inside the Featured Battle's 7-day window came back with
+  // totalDamage null, pickFeaturedMatch filtered out all of them, and both
+  // /battles and the home page rendered no hero at all. prize_taken was
+  // over the same cliff, so prize digits were quietly wrong too.
+  const [{ data: deckDetailRows }, attackRows, playRows, prizeRows] = await Promise.all([
+    // Not paged: bounded by the number of distinct public decks (~64), well
+    // inside one response.
     sb.from("saved_decks").select("id, cover_image_url, analysis").in("id", matchDeckIds),
-    sb
-      .from("match_actions")
-      .select("match_id, actor, payload")
-      .in("match_id", matchIds)
-      .eq("action_type", "attack"),
+    fetchAllPages((from, to) =>
+      sb
+        .from("match_actions")
+        .select("match_id, actor, payload")
+        .in("match_id", matchIds)
+        .eq("action_type", "attack")
+        .order("match_id")
+        .order("sequence")
+        .range(from, to)
+        .then(({ data }) => (data ?? []) as ActionRow[]),
+    ),
     // Fallback inputs: opponent's played/evolved Pokémon. Used when the
     // opponent never attacked (concede, KO'd before swinging), mirroring
     // the /battles/[id] page's opponent-card resolution.
-    sb
-      .from("match_actions")
-      .select("match_id, action_type, payload")
-      .in("match_id", matchIds)
-      .eq("actor", "opponent")
-      .in("action_type", ["play_to_active", "play_to_bench", "evolve"]),
+    fetchAllPages((from, to) =>
+      sb
+        .from("match_actions")
+        .select("match_id, action_type, payload")
+        .in("match_id", matchIds)
+        .eq("actor", "opponent")
+        .in("action_type", ["play_to_active", "play_to_bench", "evolve"])
+        .order("match_id")
+        .order("sequence")
+        .range(from, to)
+        .then(({ data }) => (data ?? []) as ActionRow[]),
+    ),
     // Prize counts per side per match, summed from prize_taken actions.
-    sb
-      .from("match_actions")
-      .select("match_id, actor, payload")
-      .in("match_id", matchIds)
-      .eq("action_type", "prize_taken"),
+    fetchAllPages((from, to) =>
+      sb
+        .from("match_actions")
+        .select("match_id, actor, payload")
+        .in("match_id", matchIds)
+        .eq("action_type", "prize_taken")
+        .order("match_id")
+        .order("sequence")
+        .range(from, to)
+        .then(({ data }) => (data ?? []) as ActionRow[]),
+    ),
   ]);
 
   const deckDetailById = new Map((deckDetailRows ?? []).map((d) => [d.id as string, d]));
@@ -86,7 +159,7 @@ async function assembleRecentMatches(
   // Match ranking).
   const opponentDmg = new Map<string, Map<string, number>>();
   const totalDamageByMatch = new Map<string, number>();
-  for (const row of attackRows ?? []) {
+  for (const row of attackRows) {
     const payload = row.payload as Record<string, unknown> | null;
     const damage = typeof payload?.damage === "number" ? payload.damage : 0;
     if (!damage) continue;
@@ -114,7 +187,7 @@ async function assembleRecentMatches(
 
   // Fallback per match: highest-rank Pokémon the opponent put into play.
   const opponentPlaysByMatch = new Map<string, Map<string, number>>();
-  for (const row of playRows ?? []) {
+  for (const row of playRows) {
     const payload = row.payload as Record<string, unknown> | null;
     const rawName =
       row.action_type === "evolve"
@@ -139,7 +212,7 @@ async function assembleRecentMatches(
   // Prizes taken per side per match.
   const playerPrizesByMatch = new Map<string, number>();
   const opponentPrizesByMatch = new Map<string, number>();
-  for (const row of prizeRows ?? []) {
+  for (const row of prizeRows) {
     const payload = row.payload as Record<string, unknown> | null;
     const count =
       typeof payload?.count === "number" && payload.count > 0 ? payload.count : 1;
@@ -180,7 +253,14 @@ async function assembleRecentMatches(
       opponentImageUrl = hero.imageUrl;
       opponentColor = hero.color;
     } else {
-      if (dropIfNoOpponentArt) return [];
+      // `dropIfNoOpponentArt` drops a match we can't even NAME an opponent
+      // for — not merely one whose name the card catalog has no art for.
+      // The cascade this replaced kept any match with a top attacker even
+      // when its art didn't resolve, rendering the card with no opponent
+      // image; folding art-resolution into the drop test (as an earlier
+      // pass here did) quietly shrank the public feed, and with it the pool
+      // pickFeaturedMatch draws from.
+      if (dropIfNoOpponentArt && !gameplayName) return [];
       opponentImageUrl = null;
       opponentColor = typeColor(undefined);
     }
