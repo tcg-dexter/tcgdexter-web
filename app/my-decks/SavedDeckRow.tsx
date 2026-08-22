@@ -11,7 +11,7 @@ import { clientTz, celebrateStreak } from "@/lib/streak-client";
 /** Compact three-segment composition bar — the List-view counterpart to
  *  CompositionRing, sharing the same color scheme (black Pokémon, brand
  *  gradient Trainer, white+black-border Energy). */
-function CompositionBar({ counts }: { counts: NonNullable<UserDeckCardProps["counts"]> }) {
+export function CompositionBar({ counts }: { counts: NonNullable<UserDeckCardProps["counts"]> }) {
   const total = counts.pokemon + counts.trainer + counts.energy;
   if (total <= 0) return null;
   const pct = (n: number) => `${((n / total) * 100).toFixed(1)}%`;
@@ -32,7 +32,7 @@ function CompositionBar({ counts }: { counts: NonNullable<UserDeckCardProps["cou
   );
 }
 
-function RecordPill({ wl }: { wl?: UserDeckCardProps["wl"] }) {
+export function RecordPill({ wl }: { wl?: UserDeckCardProps["wl"] }) {
   const hasRecord = !!wl && wl.w + wl.l + wl.d > 0;
   return hasRecord ? (
     <span className="rounded-full bg-black dark:bg-white px-[11px] py-1 text-[12.5px] font-extrabold text-white dark:text-black tabular-nums">
@@ -43,7 +43,7 @@ function RecordPill({ wl }: { wl?: UserDeckCardProps["wl"] }) {
   );
 }
 
-function FormPips({ recentForm }: { recentForm?: ("W" | "L" | "D")[] }) {
+export function FormPips({ recentForm }: { recentForm?: ("W" | "L" | "D")[] }) {
   if (!recentForm || recentForm.length === 0) {
     return <span className="text-[11px] font-semibold text-text-muted">No matches</span>;
   }
