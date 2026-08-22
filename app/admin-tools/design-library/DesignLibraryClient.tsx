@@ -40,6 +40,8 @@ import {
   MAT_PADDING,
 } from "@/app/admin-tools/deck-mat/DeckMatClient";
 import type { ResolvedDeckTile } from "@/lib/deckTiles";
+import BadgeShowcase from "@/app/components/BadgeShowcase";
+import SetLogo from "@/app/cards/SetLogo";
 
 /* ── Shared reference-page chrome ─────────────────────────────────────── */
 
@@ -58,6 +60,7 @@ const NAV = [
       { id: "forms", label: "Form inputs" },
       { id: "toasts", label: "Toasts" },
       { id: "avatars", label: "Avatars" },
+      { id: "images", label: "Images & badges" },
     ],
   },
   {
@@ -267,6 +270,18 @@ const SAVED_DECK_ROWS: (UserDeckCardProps & { isLast?: boolean })[] = [
     updatedAt: null,
     isLast: true,
   },
+];
+
+const TYPE_ICONS = [
+  "fire", "water", "grass", "lightning", "psychic", "fighting",
+  "darkness", "metal", "fairy", "dragon", "colorless",
+];
+
+const SET_LOGO_EXAMPLES: { src: string | null; ptcgoCode: string | null; setName: string }[] = [
+  { src: "/sets/me3.webp", ptcgoCode: "POR", setName: "Perfect Order" },
+  { src: "/sets/me4.webp", ptcgoCode: "CRI", setName: "Chaos Rising" },
+  { src: "/sets/me5.webp", ptcgoCode: "PBL", setName: "Pitch Black" },
+  { src: null, ptcgoCode: null, setName: "Unresolved set — PTCGO fallback" },
 ];
 
 // smallImageUrl is deliberately empty — CardPile's CardImage already falls
@@ -682,6 +697,63 @@ export default function DesignLibraryClient() {
               <div className="w-8 h-8 rounded-full bg-black/[0.06] flex items-center justify-center text-sm font-semibold text-text-muted">
                 T
               </div>
+            </div>
+          </Demo>
+        </Section>
+
+        <Section
+          id="images"
+          eyebrow="Global"
+          title="Images & badges"
+          description="Static brand assets in public/ — logos, favicon, achievement medallions, energy-type icons, and set logos. Shown against their own backdrop below since each is theme-specific and the page only renders one theme at a time."
+        >
+          <Demo label="Wordmark, light/dark pair (logo-wordmark-light.png / logo-wordmark-dark.png)">
+            <div className="flex flex-wrap gap-3">
+              <div className="rounded-xl bg-white p-4 flex items-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo-wordmark-light.png" alt="TCG Dexter" className="h-8 w-auto" />
+              </div>
+              <div className="rounded-xl bg-[#242424] p-4 flex items-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo-wordmark-dark.png" alt="TCG Dexter" className="h-8 w-auto" />
+              </div>
+            </div>
+          </Demo>
+          <Demo label="Icon mark (logo-light.png) — sign-in page, shared deck-profile header">
+            <div className="rounded-xl bg-white p-4 inline-flex items-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo-light.png" alt="TCG Dexter" style={{ width: 120, height: "auto" }} />
+            </div>
+          </Demo>
+          <Demo label="Favicon (favicon-source.png) — app/icon.tsx crops this to a 512×512 circle at request time via next/og">
+            <div className="flex items-center gap-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/favicon-source.png" alt="" className="w-16 h-16 rounded-lg" />
+              <div className="w-16 h-16 rounded-full overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/favicon-source.png" alt="" className="w-full h-full object-cover" />
+              </div>
+            </div>
+          </Demo>
+          <Demo label="Achievement badges (BadgeShowcase.tsx) — live, unmodified, zero props">
+            <BadgeShowcase />
+          </Demo>
+          <Demo label="Energy type icons (public/types/*.png)">
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-11 gap-4">
+              {TYPE_ICONS.map((t) => (
+                <div key={t} className="flex flex-col items-center gap-1.5">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/types/${t}.png`} alt={t} className="w-8 h-8" />
+                  <span className="text-[10px] text-text-muted capitalize">{t}</span>
+                </div>
+              ))}
+            </div>
+          </Demo>
+          <Demo label="Set logos (SetLogo.tsx) — last one shows the graceful PTCGO-code fallback">
+            <div className="flex flex-wrap items-center gap-4">
+              {SET_LOGO_EXAMPLES.map((s) => (
+                <SetLogo key={s.setName} src={s.src} ptcgoCode={s.ptcgoCode} setName={s.setName} className="shrink-0 w-16 h-12" />
+              ))}
             </div>
           </Demo>
         </Section>
