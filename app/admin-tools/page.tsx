@@ -15,6 +15,11 @@ interface Tool {
 
 const TOOLS: Tool[] = [
   {
+    href: "/admin-tools/design-library",
+    title: "Design Library",
+    description: "Reference for shared UI — colors, buttons, badges, cards.",
+  },
+  {
     href: "/admin/spotlight",
     title: "Spotlight Admin",
     description: "Curate Trainer Spotlight features.",
