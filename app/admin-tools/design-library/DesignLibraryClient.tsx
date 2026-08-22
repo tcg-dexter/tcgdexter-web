@@ -29,7 +29,7 @@ import StandardFormatInfo from "@/app/components/StandardFormatInfo";
 import ShopListingsPanel from "@/app/cards/ShopListingsPanel";
 import type { ShopListing } from "@/lib/shopListings";
 import FeaturedMatchHero from "@/app/battles/FeaturedMatchHero";
-import type { RecentMatch } from "@/app/components/MatchCard";
+import { MatchCard, type RecentMatch } from "@/app/components/MatchCard";
 import MetaVariantCard from "@/app/meta-archetypes/[slug]/MetaVariantCard";
 import {
   MAT_STYLES,
@@ -232,6 +232,32 @@ const FEATURED_MATCH: RecentMatch = {
   hasBattleLog: true,
   totalDamage: 480,
 };
+
+const BATTLE_PREVIEW_CARDS: RecentMatch[] = [
+  FEATURED_MATCH,
+  {
+    ...FEATURED_MATCH,
+    id: "design-library-demo-match-loss",
+    shortId: "demo124",
+    result: "loss",
+    playerPrizes: 2,
+    opponentPrizes: 6,
+    isBestOf3: false,
+    totalDamage: null,
+  },
+  {
+    ...FEATURED_MATCH,
+    id: "design-library-demo-match-draw",
+    shortId: "demo125",
+    result: "draw",
+    opponentArchetype: "Gardevoir ex",
+    opponentAttackerName: "Gardevoir ex",
+    playerPrizes: 4,
+    opponentPrizes: 4,
+    isBestOf3: false,
+    totalDamage: null,
+  },
+];
 
 // Non-UUID ids on purpose — these rows are display-only reference material,
 // never meant to round-trip to a real saved_decks row. Any accidental write
@@ -826,7 +852,14 @@ export default function DesignLibraryClient() {
               </span>
             </div>
           </Demo>
-          <Demo label="Featured Battle hero (FeaturedMatchHero.tsx)">
+          <Demo label="Battle preview cards (MatchCard.tsx) — win / loss / draw. Same grid wrapper as /battles, the home page, and a profile's Recent Battles.">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {BATTLE_PREVIEW_CARDS.map((m) => (
+                <MatchCard key={m.id} match={m} />
+              ))}
+            </div>
+          </Demo>
+          <Demo label="Featured Battle hero (FeaturedMatchHero.tsx) — the image-rich ghost-card/prize-digit/VS-glyph layout above appears on the preview cards too once both sides have resolved battle-log art">
             <FeaturedMatchHero match={FEATURED_MATCH} />
           </Demo>
         </Section>
