@@ -31,6 +31,15 @@ import type { ShopListing } from "@/lib/shopListings";
 import FeaturedMatchHero from "@/app/battles/FeaturedMatchHero";
 import type { RecentMatch } from "@/app/components/MatchCard";
 import MetaVariantCard from "@/app/meta-archetypes/[slug]/MetaVariantCard";
+import {
+  MAT_STYLES,
+  TEXTURES,
+  CardPile,
+  computeRows,
+  ROW_GAP_X,
+  MAT_PADDING,
+} from "@/app/admin-tools/deck-mat/DeckMatClient";
+import type { ResolvedDeckTile } from "@/lib/deckTiles";
 
 /* ── Shared reference-page chrome ─────────────────────────────────────── */
 
@@ -59,6 +68,7 @@ const NAV = [
       { id: "meta", label: "Meta archetypes" },
       { id: "deck-profile", label: "Deck profile" },
       { id: "library", label: "Saved deck library" },
+      { id: "playmat", label: "Playmat Studio" },
     ],
   },
 ];
@@ -259,9 +269,23 @@ const SAVED_DECK_ROWS: (UserDeckCardProps & { isLast?: boolean })[] = [
   },
 ];
 
+// smallImageUrl is deliberately empty — CardPile's CardImage already falls
+// back to a clean "No image" placeholder card (name/set/number) when a src
+// is empty, so this needs no external image URLs.
+const PLAYMAT_TILES: ResolvedDeckTile[] = [
+  { key: "t1", name: "Dreepy", copyCount: 4, section: "pokemon", entryId: null, setName: "Twilight Masquerade", number: "96", smallImageUrl: "", largeImageUrl: "" },
+  { key: "t2", name: "Dragapult ex", copyCount: 3, section: "pokemon", entryId: null, setName: "Twilight Masquerade", number: "130", smallImageUrl: "", largeImageUrl: "" },
+  { key: "t3", name: "Iono", copyCount: 2, section: "trainer", entryId: null, setName: "Paldea Evolved", number: "185", smallImageUrl: "", largeImageUrl: "" },
+];
+const PLAYMAT_ROWS = computeRows(PLAYMAT_TILES);
+const PLAYMAT_GRADIENT = MAT_STYLES.find((s) => s.key === "brand")!.gradient;
+const PLAYMAT_TEXTURE = TEXTURES.find((t) => t.key === "dots")!;
+
 export default function DesignLibraryClient() {
   const [pillValue, setPillValue] = useState("standard");
   const [gridListValue, setGridListValue] = useState<"grid" | "list">("grid");
+  const [matStyle, setMatStyle] = useState(MAT_STYLES[0].key);
+  const [textureKey, setTextureKey] = useState<string | null>(TEXTURES[0].key);
 
   function fireStreakToast() {
     window.dispatchEvent(
@@ -810,6 +834,89 @@ export default function DesignLibraryClient() {
             Log Match flow does hit the real /api/matches endpoint on submit, and
             these ids fail validation cleanly rather than writing to real data.
           </CodeNote>
+        </Section>
+
+        <Section
+          id="playmat"
+          eyebrow="Product"
+          title="Playmat Studio"
+          description="app/admin-tools/deck-mat/ — a saved deck laid out as fanned card piles on a mat background the user picks (gradient, texture, or an uploaded photo), exported as a PNG. The full editor composes these pieces with live deck selection and canvas export; shown here are its presentational, reusable pieces."
+        >
+          <Demo label="Mat surface (DeckMatClient.tsx) — CardPile with mock tiles, MAT_STYLES gradient + TEXTURES pattern">
+            <div
+              className="relative rounded-xl overflow-hidden max-w-md"
+              style={{
+                padding: MAT_PADDING,
+                backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(PLAYMAT_TEXTURE.svg)}"), ${PLAYMAT_GRADIENT}`,
+                backgroundSize: `${PLAYMAT_TEXTURE.w}px ${PLAYMAT_TEXTURE.h}px, auto`,
+                boxShadow: "0 4px 4px rgba(0,0,0,0.66)",
+              }}
+            >
+              <div className="flex" style={{ gap: ROW_GAP_X }}>
+                {PLAYMAT_ROWS[0]?.map((t, i) => (
+                  <CardPile key={t.key} tile={t} cardWidth={60} index={i} />
+                ))}
+              </div>
+            </div>
+          </Demo>
+          <Demo label="Mat style picker (MAT_STYLES) — click a swatch">
+            <div className="grid gap-1.5 [grid-template-columns:repeat(11,1.75rem)]">
+              {MAT_STYLES.map(({ key, gradient }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setMatStyle(key)}
+                  aria-label={key}
+                  className={`w-7 h-7 rounded-full transition-all ${
+                    matStyle === key
+                      ? "ring-2 ring-black dark:ring-white ring-offset-1 ring-offset-[#f2f2f2] dark:ring-offset-[#242424] scale-110"
+                      : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                  }`}
+                  style={{ background: gradient }}
+                />
+              ))}
+            </div>
+          </Demo>
+          <Demo label="Texture picker (TEXTURES) — click a swatch">
+            <div className="grid gap-1.5 [grid-template-columns:repeat(11,1.75rem)]">
+              {TEXTURES.map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setTextureKey((prev) => (prev === t.key ? null : t.key))}
+                  aria-label={t.key}
+                  className={`w-7 h-7 rounded-full transition-all ${
+                    textureKey === t.key
+                      ? "ring-2 ring-black dark:ring-white ring-offset-1 ring-offset-[#f2f2f2] dark:ring-offset-[#242424] scale-110"
+                      : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                  }`}
+                  style={{
+                    backgroundColor: "#3a3a3a",
+                    backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(t.svg)}")`,
+                    backgroundSize: `${t.w}px ${t.h}px`,
+                  }}
+                />
+              ))}
+            </div>
+          </Demo>
+          <Demo label="Add Image / Export buttons — static reference; the real ones open a file picker and run a canvas rasterizer">
+            <div className="flex flex-col items-start gap-2 max-w-[368px]">
+              <button className="w-full py-2.5 rounded-full border border-black/15 bg-white text-sm font-semibold text-text-primary dark:text-black hover:bg-black/[0.03] transition-colors inline-flex items-center justify-center gap-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m21 15-5-5L5 21" />
+                </svg>
+                Add Image
+              </button>
+              <button
+                className="w-full py-2.5 rounded-full text-sm font-semibold text-white transition-opacity"
+                style={{ background: "var(--gradient-brand)" }}
+              >
+                Export
+              </button>
+            </div>
+          </Demo>
         </Section>
       </div>
     </main>
