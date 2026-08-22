@@ -17,7 +17,8 @@ Pokémon TCG deck management web app. Core features: deck profiling (legality, p
 - `learn-hold` carries the **Learn to Play** rework (the lesson board rendered with the real `PlayerMat`), deliberately kept out of production until it's ready. It is the *only* place that work lives.
   - Files it owns: `app/learn/(content)/*.mdx`, `app/learn/(content)/README.md`, `app/learn/components/Board.tsx`, `lib/learn/curriculum.test.ts`.
   - **Do Learn to Play work on `learn-hold`, not on `preview`.** Putting it on `preview` is what makes it leak to prod on the next merge.
-  - Keep it current with `git merge preview` into `learn-hold` (not the reverse) — it should trail preview, never lead it.
+  - **Structure matters:** `learn-hold` is `preview` **plus** a commit that ADDS those files' new versions — never `preview` minus a revert. That's what makes `git merge preview` into `learn-hold` safe: learn-hold changed those files relative to the merge base and preview didn't, so the merge keeps learn-hold's side. Built the other way round, the first sync from preview would silently re-revert the work.
+  - Keep it current by merging **preview → learn-hold**, never the reverse, until it's ready to ship. If preview ever does touch those five files the merge will conflict — that's intended; resolve toward learn-hold.
   - When it's ready to ship: merge `learn-hold` → `preview`, then `preview` → `main` as usual.
 - Why the branch exists rather than excluding files at merge time: two earlier `preview` → `main` merges had to reset those five files back to `main`'s versions by hand. That only auto-resolves while `preview` leaves them alone, so the moment anyone edited them on `preview` again it would have shipped silently. `BoardKit.tsx` is *shared* with the replay viewer and is NOT held back — only the five files above are.
 
