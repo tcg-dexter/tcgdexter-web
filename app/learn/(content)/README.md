@@ -55,7 +55,7 @@ need no import inside a lesson. Source in `app/learn/components/`.
 |---|---|
 | `<Card id="me1-114" size? caption? />` | A real card, resolved through the card index. **Never inline an image URL** — per-set CDN routing lives in `lib/cardImages.ts`. |
 | `<CardAnatomy id parts={[{label,text,x,y}]} />` | Annotated card; `x`/`y` are percentages of the card face. |
-| `<Board stage?="midgame\|setup" />` | The play area, rendered with the real `PlayerMat` from the replay viewer (`app/admin-tools/replay/BoardKit.tsx`) — face-up cards show their *name as text* instead of art (`face="label"`). `stage` picks the moment: `midgame` (default) or `setup`. |
+| `<Board />` | Labelled play-area diagram. |
 | `<Check question options={[]} answer={n} explain />` | Inline ungraded retrieval question. Local state only — nothing to do with certification. |
 | `<Callout kind="rule\|gotcha\|tryit">` | Rule statements, common mistakes, do-it-now prompts. |
 

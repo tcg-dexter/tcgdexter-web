@@ -200,39 +200,6 @@ describe("MDX compiles with the props the lessons rely on", () => {
   });
 });
 
-describe("lesson board", () => {
-  const BOARD_PATH = path.join(process.cwd(), "app/learn/components/Board.tsx");
-  const boardSrc = fs.readFileSync(BOARD_PATH, "utf8");
-
-  it("renders the shared replay mat rather than a diagram of its own", () => {
-    // The whole point of the board is that it IS the mat the replay viewer
-    // draws — a lookalike diagram would have to be re-synced by hand every
-    // time the real board moves, which is how the last one went stale.
-    expect(boardSrc).toMatch(/from "@\/app\/admin-tools\/replay\/BoardKit"/);
-    expect(boardSrc).toMatch(/<PlayerMat\b/);
-  });
-
-  it("every <Board stage> a lesson asks for is a scene the board defines", () => {
-    // Board falls back to the midgame scene for an unknown stage, so a typo
-    // here renders the wrong board silently rather than failing.
-    const known = Array.from(
-      (boardSrc.match(/const SCENES: Record<([^>]+),/)?.[1] ?? "").matchAll(/"([^"]+)"/g),
-      (m) => m[1],
-    );
-    expect(known.length, "should find the scene names in Board.tsx").toBeGreaterThan(0);
-
-    for (const lesson of lessons) {
-      const asked = Array.from(
-        readLesson(lesson.slug).matchAll(/<Board\s[^>]*?stage="([^"]*)"/g),
-        (m) => m[1],
-      );
-      for (const stage of asked) {
-        expect(known, `${lesson.slug} asks for stage="${stage}"`).toContain(stage);
-      }
-    }
-  });
-});
-
 describe("card references", () => {
   it("every card id used in a lesson resolves in the card index", () => {
     const bad: string[] = [];

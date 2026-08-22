@@ -12,6 +12,15 @@ Pokémon TCG deck management web app. Core features: deck profiling (legality, p
 - **Main branch = production** on Vercel. Every push to `main` triggers a deploy.
 - Always run `npx tsc --noEmit` before pushing — Vercel runs a full type-check build and will fail on any TS error.
 
+### Branches: `main` / `preview` / `learn-hold`
+- `preview` is the working branch and is **always safe to merge into `main`** — nothing is held back on it. Keep it that way.
+- `learn-hold` carries the **Learn to Play** rework (the lesson board rendered with the real `PlayerMat`), deliberately kept out of production until it's ready. It is the *only* place that work lives.
+  - Files it owns: `app/learn/(content)/*.mdx`, `app/learn/(content)/README.md`, `app/learn/components/Board.tsx`, `lib/learn/curriculum.test.ts`.
+  - **Do Learn to Play work on `learn-hold`, not on `preview`.** Putting it on `preview` is what makes it leak to prod on the next merge.
+  - Keep it current with `git merge preview` into `learn-hold` (not the reverse) — it should trail preview, never lead it.
+  - When it's ready to ship: merge `learn-hold` → `preview`, then `preview` → `main` as usual.
+- Why the branch exists rather than excluding files at merge time: two earlier `preview` → `main` merges had to reset those five files back to `main`'s versions by hand. That only auto-resolves while `preview` leaves them alone, so the moment anyone edited them on `preview` again it would have shipped silently. `BoardKit.tsx` is *shared* with the replay viewer and is NOT held back — only the five files above are.
+
 ## Migrations & the `ON CONFLICT` / partial-index trap
 - Migrations live in `supabase/migrations/` and are applied **manually via Supabase MCP `apply_migration`** — there is no CI migration runner. Each file's header says so.
 - **Hard-won gotcha:** a bare `.upsert({ onConflict: "col_a,col_b" })` (supabase-js) or `ON CONFLICT (col_a, col_b)` **cannot** target a **PARTIAL** unique index (one with a `WHERE`). Postgres can't infer it and raises **42P10**. Because the notify helpers swallow write errors, this fails *silently* — it's exactly how `deck_liked` notifications broke (fixed in `20260727_notifications_dedup_fix.sql` by making the index full/non-partial).
