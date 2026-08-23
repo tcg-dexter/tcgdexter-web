@@ -64,7 +64,12 @@ Pokémon TCG deck management web app. Core features: deck profiling (legality, p
   - `subtitle` is conditionally rendered — pass `false` to suppress the default "Created on…" date fallback without leaving dead space.
   - `titleAction` renders inline after the `<h1>` (use for pencil/rename icon).
 - **`SavedDeckRow`** (`app/my-decks/SavedDeckRow.tsx`) — list item in `/my-decks`. Row tap navigates to the deck profile. Log Battle button expands an inline form.
-- **`MyDeckClient`** (`app/my-decks/[id]/MyDeckClient.tsx`) — client wrapper for saved deck detail. Owns rename + delete state; passes action buttons, BattleHistory, DeckNotes, and DeckList into `topSlot`.
+- **`MyDeckClient`** (`app/my-decks/[id]/MyDeckClient.tsx`) — **unreferenced**: `/my-decks/[id]` redirects to `/u/[username]/[deckId]`, so `DeckDetailClient` is the live saved-deck wrapper. Kept compiling alongside it, but edit `DeckDetailClient` for real changes.
+- **`BattleCard`** (`app/components/BattleCard.tsx`) — the battle preview card, shared by `/battles`, the home page, a profile's Recent Battles, and the deck profile's Battle History rail.
+  - Pass `actions` to pin owner controls (currently `BattleCardMenu` — edit/delete) to the top-right. Doing so swaps the card's root from a `<Link>` to a `<div>` and stretches the link across it as an overlay, because a menu button nested in an `<a>` is invalid markup and clicks resolve as navigation. The overlay sits at `z-1` — under the prize digits and Best-of-3 badge (`z-10`, both `pointer-events-none`) and beneath the actions (`z-20`).
+- **`BattleHistory`** (`app/my-decks/[id]/BattleHistory.tsx`) — the deck profile's Battle History: a horizontal rail of `BattleCard`s, with chevrons via the shared `useCarousel`/`CarouselChevron` (`app/cards/[id]/`).
+  - Takes both `initialBattles` (raw rows — the log/edit form's prefill) and `battleCards` (the same battles server-assembled into cards). One query in `app/u/[username]/[deckId]/page.tsx` feeds both; `loadDeckBattleCards` does the assembly without re-reading `matches`.
+  - Only **delete** updates optimistically. New and edited battles need `router.refresh()`, since opponent hero art and prize counts are resolved server-side and can't be rebuilt in the browser.
 
 ### Design Tokens (globals.css)
 ```

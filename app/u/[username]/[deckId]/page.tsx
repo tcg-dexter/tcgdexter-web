@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { type AnalysisResult, type DeckCreator } from "@/app/components/DeckProfileView";
 import { repriceDeck } from "@/lib/reprice-deck";
+import { loadDeckBattleCards } from "@/lib/recent-battles";
+import type { RecentBattle } from "@/app/components/BattleCard";
 import type { GamePrize } from "@/lib/bo3";
 import DeckDetailClient from "./DeckDetailClient";
 
@@ -36,8 +38,11 @@ interface BattleRecord {
   opponent_name: string | null;
   opponent_archetype: string | null;
   opponent_deck_list: string | null;
+  opponent_handle: string | null;
   notes: string | null;
   played_at: string;
+  created_at: string;
+  saved_deck_id: string;
   source: "manual" | "tcg_live_log";
   game_results: string | null;
   prizes_taken_player: number | null;
@@ -155,15 +160,26 @@ export default async function DeckPage({
     rotation: live.rotation,
   };
 
-  // Owner-only: fetch manual battles for this deck
+  // Owner-only: fetch this deck's battles. One read serves both surfaces —
+  // the rows prefill the log/edit form, and loadDeckBattleCards assembles
+  // the same rows into the preview cards on the history rail (which is why
+  // the select carries opponent_handle/created_at/saved_deck_id too, even
+  // though the form itself doesn't use them).
   let initialBattles: BattleRecord[] = [];
+  let battleCards: RecentBattle[] = [];
   if (isOwner) {
     const { data: battles } = await supabase
       .from("matches")
-      .select("id, short_id, result, opponent_name, opponent_archetype, opponent_deck_list, notes, played_at, source, game_results, prizes_taken_player, prizes_taken_opponent, game_prizes")
+      .select("id, short_id, result, opponent_name, opponent_archetype, opponent_deck_list, opponent_handle, notes, played_at, created_at, saved_deck_id, source, game_results, prizes_taken_player, prizes_taken_opponent, game_prizes")
       .eq("saved_deck_id", deck.id)
       .order("played_at", { ascending: false });
     initialBattles = (battles ?? []) as BattleRecord[];
+    battleCards = await loadDeckBattleCards(
+      supabase,
+      (battles ?? []) as Record<string, unknown>[],
+      { id: deck.id, name: deck.name, user_id: profile.id },
+      profile.username,
+    );
   }
 
   // Visitor-only: check if current user has liked this deck
@@ -194,6 +210,7 @@ export default async function DeckPage({
       initialIsPublic={deck.is_public}
       canonicalShareUrl={canonicalShareUrl}
       initialBattles={initialBattles}
+      battleCards={battleCards}
       initialNotes={deck.notes ?? ""}
       initialLiked={initialLiked}
       initialLikeCount={deck.like_count ?? 0}

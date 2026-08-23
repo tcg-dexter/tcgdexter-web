@@ -30,6 +30,7 @@ import ShopListingsPanel from "@/app/cards/ShopListingsPanel";
 import type { ShopListing } from "@/lib/shopListings";
 import FeaturedBattleHero from "@/app/battles/FeaturedBattleHero";
 import { BattleCard, type RecentBattle } from "@/app/components/BattleCard";
+import BattleCardMenu from "@/app/components/BattleCardMenu";
 import MetaVariantCard from "@/app/meta-archetypes/[slug]/MetaVariantCard";
 import {
   MAT_STYLES,
@@ -511,7 +512,7 @@ export default function DesignLibraryClient() {
               <FormPips recentForm={["W", "W", "L", "D", "W"]} />
             </div>
           </Demo>
-          <Demo label="Battle result badges (BattleHistory.tsx RESULT_STYLE)">
+          <Demo label="Battle result badges (BattleForm.tsx RESULT_STYLE)">
             <div className="flex items-center gap-3">
               <span className="inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold bg-gradient-brand text-white">W</span>
               <span className="inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold bg-black dark:bg-white text-white dark:text-black">L</span>
@@ -836,27 +837,19 @@ export default function DesignLibraryClient() {
           <Demo label="Composition bar (SavedDeckRow.tsx)">
             <CompositionBar counts={{ pokemon: 14, trainer: 32, energy: 14 }} />
           </Demo>
-          <Demo label="Battle row (BattleHistory.tsx) — result badge, subtitle, view/edit/delete actions">
-            <div className="flex items-start gap-3">
-              <span className="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold bg-gradient-brand text-white">
-                W
-              </span>
-              <div className="flex-1 min-w-0">
-                <span className="font-semibold text-text-primary truncate text-sm">
-                  Charizard ex
-                </span>
-                <p className="text-xs text-text-muted mt-0.5">6–3 v ashk_champ</p>
-              </div>
-              <span className="flex-shrink-0 inline-flex items-center gap-1 rounded-full border border-black/10 bg-white dark:bg-surface-2 px-3 py-1 text-[11px] font-semibold text-text-primary">
-                View Battle
-              </span>
-            </div>
-          </Demo>
           <Demo label="Battle preview cards (BattleCard.tsx) — win / loss / draw. Same grid wrapper as /battles, the home page, and a profile's Recent Battles.">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {BATTLE_PREVIEW_CARDS.map((m) => (
                 <BattleCard key={m.id} battle={m} />
               ))}
+            </div>
+          </Demo>
+          <Demo label="Owner variant (BattleCardMenu.tsx) — the same card with an ellipsis menu, as it appears on a deck profile's Battle History rail. Passing `actions` turns the card's link into a stretched overlay so the menu stays clickable.">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <BattleCard
+                battle={BATTLE_PREVIEW_CARDS[0]}
+                actions={<BattleCardMenu onEdit={() => {}} onDelete={() => {}} />}
+              />
             </div>
           </Demo>
           <Demo label="Featured Battle hero (FeaturedBattleHero.tsx) — the image-rich ghost-card/prize-digit/VS-glyph layout above appears on the preview cards too once both sides have resolved battle-log art">

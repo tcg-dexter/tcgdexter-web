@@ -11,6 +11,7 @@ import QRCodeButton from "@/app/components/QRCodeButton";
 import { useTheme } from "@/app/components/ThemeProvider";
 import { WLCircles } from "@/app/components/DeckPostCard";
 import BattleHistory from "./BattleHistory";
+import type { RecentBattle } from "@/app/components/BattleCard";
 import DeckNotes from "./DeckNotes";
 
 interface Battle {
@@ -29,6 +30,7 @@ interface Props {
   deckList: string;
   analysis: AnalysisResult;
   initialBattles: Battle[];
+  battleCards: RecentBattle[];
   initialNotes: string;
   pageTitle: string;
   profiledAt: string;
@@ -45,6 +47,7 @@ export default function MyDeckClient({
   deckList,
   analysis,
   initialBattles,
+  battleCards,
   initialNotes,
   pageTitle,
   profiledAt,
@@ -391,6 +394,7 @@ export default function MyDeckClient({
               <BattleHistory
                 savedDeckId={savedDeckId}
                 initialBattles={initialBattles}
+                battleCards={battleCards}
                 open={logOpen}
                 onOpenChange={setLogOpen}
               />

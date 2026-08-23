@@ -11,10 +11,11 @@ interface Options {
 }
 
 /**
- * Scroll mechanics shared by the card detail page's horizontal carousels
- * ("Appears in", "Lists"): tracks whether the scroller is pinned at either
- * end (so chevrons can disable) and steps by whole tiles, snapping back
- * onto a tile boundary even if the user left it mid-scroll.
+ * Scroll mechanics shared by the app's horizontal carousels — the card
+ * detail page's "Appears in" and "Lists", and the deck profile's Battle
+ * History rail: tracks whether the scroller is pinned at either end (so
+ * chevrons can disable) and steps by whole tiles, snapping back onto a tile
+ * boundary even if the user left it mid-scroll.
  *
  * Attach `scrollerRef` to the overflow container, `listRef` to the flex
  * list, and `itemRef` to the first tile — the pitch (tile width + gap) is

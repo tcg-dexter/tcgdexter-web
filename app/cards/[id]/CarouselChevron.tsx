@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * Prev/next control for the card detail page's horizontal carousels.
- * `noun` names what's being scrolled so the aria-label reads naturally
- * ("Previous decks", "Next lists").
+ * Prev/next control for the app's horizontal carousels (card detail page,
+ * deck profile's Battle History rail). `noun` names what's being scrolled
+ * so the aria-label reads naturally ("Previous decks", "Next battles").
  */
 export default function CarouselChevron({
   direction,

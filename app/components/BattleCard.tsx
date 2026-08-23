@@ -43,7 +43,66 @@ export function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export function BattleCard({ battle }: { battle: RecentBattle }) {
+const CARD_CLS =
+  "rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow";
+
+/**
+ * Wraps a card's contents in whatever makes the whole thing tappable.
+ *
+ * With no `actions` the card simply *is* the link. With actions it can't
+ * be — an ellipsis menu nested inside an <a> is invalid markup and the
+ * browser resolves a click on it as a navigation — so the link becomes a
+ * transparent overlay stretched across the card, and the actions sit above
+ * it. Everything painted underneath stays visually identical; only the hit
+ * testing changes.
+ */
+function BattleCardShell({
+  href,
+  ariaLabel,
+  actions,
+  children,
+}: {
+  href: string;
+  ariaLabel: string;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  if (!actions) {
+    return (
+      <Link href={href} className={`block ${CARD_CLS}`}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <div className={`relative ${CARD_CLS}`}>
+      {children}
+      {/* Last in DOM order at z-1, so it covers the card's own positioned
+          children (the gradient zone, the footer) without needing a z-index
+          on each of them. It stays *below* the prize digits and Best-of-3
+          badge, which sit at z-10 and would otherwise be painted over —
+          both are pointer-events-none, so they don't swallow the tap.
+          The actions clear all of it at z-20. */}
+      <Link
+        href={href}
+        aria-label={ariaLabel}
+        className="absolute inset-0 z-[1] rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-0"
+      />
+      <div className="absolute top-1.5 right-1.5 z-20">{actions}</div>
+    </div>
+  );
+}
+
+export function BattleCard({
+  battle,
+  actions,
+}: {
+  battle: RecentBattle;
+  /** Owner controls (e.g. an ellipsis menu) pinned to the card's top-right.
+   *  Supplying this converts the card from a link into a link overlay — see
+   *  BattleCardShell. */
+  actions?: React.ReactNode;
+}) {
   const opponentDeckLabel =
     battle.opponentArchetype ?? battle.opponentAttackerName ?? "Unknown deck";
   const opponentHandleLabel = battle.opponentHandle ?? "Opponent";
@@ -121,13 +180,16 @@ export function BattleCard({ battle }: { battle: RecentBattle }) {
     </div>
   );
 
+  const shellProps = {
+    href: `/battles/${battle.shortId}`,
+    ariaLabel: `${leftSide.deckLabel} vs ${rightSide.deckLabel} — view battle`,
+    actions,
+  };
+
   // Versus layout — an imported battle log with both card images
   if (leftSide.imageUrl && rightSide.imageUrl) {
     return (
-      <Link
-        href={`/battles/${battle.shortId}`}
-        className="block rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
-      >
+      <BattleCardShell {...shellProps}>
         <div className="relative overflow-hidden">
           <div className={gradientClass} style={gradientStyle} />
           {/* Ghost card — the winner's deck hero card, blown up into a
@@ -156,6 +218,7 @@ export function BattleCard({ battle }: { battle: RecentBattle }) {
               <img
                 src={leftSide.imageUrl}
                 alt=""
+                loading="lazy"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -180,13 +243,13 @@ export function BattleCard({ battle }: { battle: RecentBattle }) {
             <div style={{ transform: "rotate(-6deg)", transformOrigin: "bottom center" }}>
               <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 96, height: 134 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={leftSide.imageUrl} alt={leftSide.imageAlt} className="w-full h-full object-contain" />
+                <img src={leftSide.imageUrl} alt={leftSide.imageAlt} loading="lazy" className="w-full h-full object-contain" />
               </div>
             </div>
             <div style={{ transform: "rotate(6deg)", transformOrigin: "bottom center" }}>
               <div className="rounded-[6px] overflow-hidden border border-black/[0.07] shadow-sm bg-[var(--surface)]" style={{ width: 96, height: 134 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={rightSide.imageUrl} alt={rightSide.imageAlt} className="w-full h-full object-contain" />
+                <img src={rightSide.imageUrl} alt={rightSide.imageAlt} loading="lazy" className="w-full h-full object-contain" />
               </div>
             </div>
           </div>
@@ -208,7 +271,7 @@ export function BattleCard({ battle }: { battle: RecentBattle }) {
           </span>
         </div>
         {footer}
-      </Link>
+      </BattleCardShell>
     );
   }
 
@@ -219,10 +282,7 @@ export function BattleCard({ battle }: { battle: RecentBattle }) {
     ? { url: rightSide.imageUrl, alt: rightSide.imageAlt }
     : null;
   return (
-    <Link
-      href={`/battles/${battle.shortId}`}
-      className="block rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
-    >
+    <BattleCardShell {...shellProps}>
       <div className="relative flex gap-3.5 p-3.5">
         <div className={gradientClass} style={gradientStyle} />
         {leadImage && (
@@ -231,7 +291,7 @@ export function BattleCard({ battle }: { battle: RecentBattle }) {
             style={{ width: 72, height: 101 }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={leadImage.url} alt={leadImage.alt} className="w-full h-full object-contain" />
+            <img src={leadImage.url} alt={leadImage.alt} loading="lazy" className="w-full h-full object-contain" />
           </div>
         )}
         <div className="relative flex-1 min-w-0 flex items-center justify-end gap-2">
@@ -239,6 +299,6 @@ export function BattleCard({ battle }: { battle: RecentBattle }) {
         </div>
       </div>
       {footer}
-    </Link>
+    </BattleCardShell>
   );
 }

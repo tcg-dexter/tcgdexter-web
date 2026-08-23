@@ -15,6 +15,7 @@ import LikeButton from "@/app/components/LikeButton";
 import { WLCircles } from "@/app/components/DeckPostCard";
 import EditDeckDialog from "@/app/components/EditDeckDialog";
 import BattleHistory from "@/app/my-decks/[id]/BattleHistory";
+import type { RecentBattle } from "@/app/components/BattleCard";
 import DeckNotes from "@/app/my-decks/[id]/DeckNotes";
 import type { GamePrize } from "@/lib/bo3";
 import { primaryCardImageUrl, deckAvatarInfo, pokemonSlug } from "@/lib/primaryCardImage";
@@ -53,6 +54,7 @@ interface Props {
   initialIsPublic: boolean;
   canonicalShareUrl: string;
   initialBattles: Battle[];
+  battleCards: RecentBattle[];
   initialNotes: string;
   initialLiked: boolean;
   initialLikeCount: number;
@@ -72,6 +74,7 @@ export default function DeckDetailClient({
   initialIsPublic,
   canonicalShareUrl,
   initialBattles,
+  battleCards,
   initialNotes,
   initialLiked,
   initialLikeCount,
@@ -529,6 +532,7 @@ export default function DeckDetailClient({
               <BattleHistory
                 savedDeckId={savedDeckId}
                 initialBattles={initialBattles}
+                battleCards={battleCards}
                 open={logOpen}
                 onOpenChange={setLogOpen}
               />

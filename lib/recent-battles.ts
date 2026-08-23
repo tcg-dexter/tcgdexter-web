@@ -76,7 +76,19 @@ export async function fetchAllPages<T>(
 }
 
 const BATTLE_ROW_SELECT =
-  "id, short_id, result, opponent_archetype, opponent_handle, created_at, saved_deck_id, source, prizes_taken_player, prizes_taken_opponent, game_prizes, game_results";
+  "id, short_id, result, opponent_archetype, opponent_handle, created_at, played_at, saved_deck_id, source, prizes_taken_player, prizes_taken_opponent, game_prizes, game_results";
+
+/**
+ * Which timestamp a card's `createdAt` reports.
+ *
+ * The public feeds order by when a battle was *logged* (`created_at`) —
+ * that's what makes them a feed. A single deck's own history instead reads
+ * as a diary of when the games were *played*, which for a battle logged
+ * days after the fact is a different date entirely, so that surface passes
+ * `played_at`. Falls back to `created_at` either way, since `played_at` is
+ * nullable.
+ */
+type DateSource = "created_at" | "played_at";
 
 /**
  * Builds RecentBattle cards from a set of battle rows + the decks/profiles
@@ -92,7 +104,10 @@ async function assembleRecentBattles(
   battleRows: Record<string, unknown>[],
   deckById: Map<string, DeckRef>,
   profileById: Map<string, ProfileRef>,
-  { dropIfNoOpponentArt }: { dropIfNoOpponentArt: boolean },
+  {
+    dropIfNoOpponentArt,
+    dateSource = "created_at",
+  }: { dropIfNoOpponentArt: boolean; dateSource?: DateSource },
 ): Promise<RecentBattle[]> {
   if (!battleRows.length) return [];
 
@@ -277,7 +292,9 @@ async function assembleRecentBattles(
       result: m.result as "win" | "loss" | "draw",
       opponentArchetype: m.opponent_archetype as string | null,
       opponentHandle: (m.opponent_handle as string | null) ?? null,
-      createdAt: m.created_at as string,
+      createdAt:
+        (dateSource === "played_at" ? (m.played_at as string | null) : null) ??
+        (m.created_at as string),
       deckId: deck.id,
       deckName: deck.name,
       username: profile.username,
@@ -394,6 +411,45 @@ export async function loadOwnerRecentBattles(
     return results.slice(0, limit);
   } catch (err) {
     console.error("[recent-battles] owner load failed:", err);
+    return [];
+  }
+}
+
+/**
+ * Battle cards for one saved deck's own history rail, on the deck profile.
+ *
+ * Unlike the two loaders above this one doesn't query — the deck page
+ * already selects these rows to drive the log/edit form, so it hands them
+ * straight in rather than reading `matches` a second time. The rows must
+ * therefore carry every column in BATTLE_ROW_SELECT.
+ *
+ * Owner-only surface, so nothing is filtered: a battle with no resolvable
+ * opponent art still belongs in its own deck's history, and BattleCard
+ * degrades to the simple layout for it.
+ */
+export async function loadDeckBattleCards(
+  sb: SupabaseClient,
+  battleRows: Record<string, unknown>[],
+  deck: DeckRef,
+  username: string,
+): Promise<RecentBattle[]> {
+  if (!battleRows.length) return [];
+  try {
+    const cards = await assembleRecentBattles(
+      sb,
+      battleRows,
+      new Map([[deck.id, deck]]),
+      new Map([[deck.user_id, { id: deck.user_id, username }]]),
+      { dropIfNoOpponentArt: false, dateSource: "played_at" },
+    );
+    // Re-sort here rather than trusting the caller's ORDER BY: the rows
+    // arrive ordered by played_at, but a null played_at falls back to
+    // created_at above, which can land a row out of order.
+    return cards.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  } catch (err) {
+    console.error("[recent-battles] deck load failed:", err);
     return [];
   }
 }
