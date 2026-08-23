@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import SectionHeader from "@/app/components/ui/SectionHeader";
 import { primaryCardImageUrl } from "@/lib/primaryCardImage";
 import DeckMatClient, { type DeckSummary } from "./DeckMatClient";
 
@@ -29,9 +30,24 @@ interface MatchRow {
   result: string;
 }
 
+/**
+ * Page frame. The heading lives here rather than in DeckMatClient so it's
+ * present in all three states — signed out, no decks yet, and the studio
+ * itself — instead of appearing only once the tool has something to render.
+ *
+ * Top padding matches the other top-level pages (Deck Collection, Meta
+ * Archetypes, Card Catalog) rather than this page's old `pt-4`, which
+ * predates having a heading and would have sat the h2 under the notch on
+ * mobile.
+ */
 const shell = (children: React.ReactNode) => (
   <main className="min-h-dvh bg-bg pb-24">
-    <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-4 xl:pt-12">{children}</div>
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)]">
+      <div className="mb-6">
+        <SectionHeader title="Playmat Studio" />
+      </div>
+      {children}
+    </div>
   </main>
 );
 
