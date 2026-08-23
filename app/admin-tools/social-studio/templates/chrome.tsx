@@ -1,5 +1,5 @@
 /** Shared on-canvas building blocks so every template speaks the same
- *  design language as the Featured Match reference: tracked-out section
+ *  design language as the Featured Battle reference: tracked-out section
  *  labels, the eyebrow, giant stat digits, and the CTA pill + URL block. */
 
 /** Wide-tracked uppercase label — the "TCG LIVE" / "PRIZES TAKEN" voice. */

@@ -9,8 +9,8 @@
  * All queries run against the service-role admin client.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { loadRecentMatches } from "@/lib/recent-matches";
-import type { RecentMatch } from "@/app/components/MatchCard";
+import { loadRecentBattles } from "@/lib/recent-battles";
+import type { RecentBattle } from "@/app/components/BattleCard";
 import { SET_RELEASE_DATES } from "@/lib/setReleaseDates";
 import { setLogo } from "@/lib/setImages";
 import { getAllCards } from "@/lib/cardsIndex";
@@ -59,17 +59,17 @@ export interface NewSet {
 }
 
 export interface SiteModules {
-  battle: RecentMatch | null;
+  battle: RecentBattle | null;
   deck: NewPublicDeck | null;
   set: NewSet | null;
 }
 
-/** The Battle of the Week: highest total-damage match in the window,
+/** The Battle of the Week: highest total-damage battle in the window,
  *  mirroring the /battles Featured Battle ranking. */
-export async function pickBattleOfWeek(sinceMs: number): Promise<RecentMatch | null> {
-  const matches = await loadRecentMatches(200);
+export async function pickBattleOfWeek(sinceMs: number): Promise<RecentBattle | null> {
+  const battles = await loadRecentBattles(200);
   return (
-    matches
+    battles
       .filter((m) => m.totalDamage != null && new Date(m.createdAt).getTime() >= sinceMs)
       .sort((a, b) => {
         const dt = (b.totalDamage ?? 0) - (a.totalDamage ?? 0);

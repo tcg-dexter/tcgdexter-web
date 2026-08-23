@@ -18,12 +18,12 @@ const SEVERITY_STYLES: Record<string, string> = {
 
 const MAX_INSIGHTS = 4;
 
-export default function BattleAnalysis({ matchId }: { matchId: string }) {
+export default function BattleAnalysis({ battleId }: { battleId: string }) {
   const [data, setData] = useState<BattleAnalysisResponse | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/battles/${matchId}/analysis`)
+    fetch(`/api/battles/${battleId}/analysis`)
       .then((res) => (res.ok ? res.json() : null))
       .then((body) => {
         if (!cancelled && body) setData(body as BattleAnalysisResponse);
@@ -34,7 +34,7 @@ export default function BattleAnalysis({ matchId }: { matchId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [matchId]);
+  }, [battleId]);
 
   if (!data) return null;
   const curve = data.win_prob;
@@ -81,7 +81,7 @@ export default function BattleAnalysis({ matchId }: { matchId: string }) {
                       SEVERITY_STYLES[insight.severity] ?? SEVERITY_STYLES.info
                     }`}
                   >
-                    {insight.turn_number !== null ? `Turn ${insight.turn_number}` : "Match"}
+                    {insight.turn_number !== null ? `Turn ${insight.turn_number}` : "Battle"}
                   </span>
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-text-primary">{insight.title}</div>

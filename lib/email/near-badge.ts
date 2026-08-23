@@ -3,12 +3,12 @@ import { CATALOG, CATALOG_BY_KEY, type AchievementKey } from "@/lib/learn/achiev
 /**
  * "Near next badge" computation for the re-engagement cron. Milestone
  * thresholds are derived from the achievements catalog (the numeric
- * `decks_N` / `matches_N` keys); the `first_*` onboarding badges and the
+ * `decks_N` / `battles_N` keys); the `first_*` onboarding badges and the
  * quiz badge are intentionally excluded — we only nudge users who already
  * have traction and are close to the next tier.
  */
 
-export type MetricKind = "decks" | "matches";
+export type MetricKind = "decks" | "battles";
 
 export interface NearBadge {
   key: AchievementKey;
@@ -29,7 +29,7 @@ function tiers(prefix: MetricKind): { key: AchievementKey; threshold: number }[]
 }
 
 const DECK_TIERS = tiers("decks");
-const MATCH_TIERS = tiers("matches");
+const BATTLE_TIERS = tiers("battles");
 
 function nextTier(
   arr: { key: AchievementKey; threshold: number }[],
@@ -42,12 +42,12 @@ function nextTier(
 /**
  * The single best near-badge nudge for a user, or null. Eligible only when
  * the user is within `window` of (and at least 1 away from) the next
- * milestone. When both a deck and a match badge qualify, the closer one
+ * milestone. When both a deck and a battle badge qualify, the closer one
  * wins (ties break to decks).
  */
 export function nearBadgeFor(
   deckCount: number,
-  matchCount: number,
+  battleCount: number,
   window = 1,
 ): NearBadge | null {
   const candidates: NearBadge[] = [];
@@ -61,14 +61,14 @@ export function nearBadgeFor(
       remaining: dt.threshold - deckCount,
     });
   }
-  const mt = nextTier(MATCH_TIERS, matchCount);
+  const mt = nextTier(BATTLE_TIERS, battleCount);
   if (mt) {
     candidates.push({
       key: mt.key,
       badgeName: CATALOG_BY_KEY[mt.key].name,
-      metric: "matches",
+      metric: "battles",
       threshold: mt.threshold,
-      remaining: mt.threshold - matchCount,
+      remaining: mt.threshold - battleCount,
     });
   }
   const eligible = candidates

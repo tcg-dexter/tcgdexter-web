@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { type MatchFormData } from "@/app/components/MatchForm";
-import MatchEntry from "@/app/components/MatchEntry";
+import { type BattleFormData } from "@/app/components/BattleForm";
+import BattleEntry from "@/app/components/BattleEntry";
 import type { UserDeckCardProps } from "@/app/components/DeckPostCard";
 import { clientTz, celebrateStreak } from "@/lib/streak-client";
 
@@ -45,7 +45,7 @@ export function RecordPill({ wl }: { wl?: UserDeckCardProps["wl"] }) {
 
 export function FormPips({ recentForm }: { recentForm?: ("W" | "L" | "D")[] }) {
   if (!recentForm || recentForm.length === 0) {
-    return <span className="text-[11px] font-semibold text-text-muted">No matches</span>;
+    return <span className="text-[11px] font-semibold text-text-muted">No battles</span>;
   }
   return (
     <div className="flex gap-[3px]">
@@ -72,8 +72,8 @@ export function FormPips({ recentForm }: { recentForm?: ("W" | "L" | "D")[] }) {
  * Grid card (UserDeckCard) in a denser, table-like layout: recent form,
  * composition, price, and quick actions (record is shown inline under the
  * deck name on mobile, where the recent-form/composition columns are hidden).
- * Tapping the row navigates to the deck profile; Log match expands the
- * same inline MatchEntry flow (Single/Best of 3/TCG Live import) used by
+ * Tapping the row navigates to the deck profile; Log battle expands the
+ * same inline BattleEntry flow (Single/Best of 3/TCG Live import) used by
  * the grid cards and the pinned-deck hero, without leaving the page.
  */
 export default function SavedDeckRow({
@@ -90,7 +90,7 @@ export default function SavedDeckRow({
   const router = useRouter();
   const [logOpen, setLogOpen] = useState(false);
 
-  async function handleQuickLog(data: MatchFormData) {
+  async function handleQuickLog(data: BattleFormData) {
     const res = await fetch("/api/matches", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -98,7 +98,7 @@ export default function SavedDeckRow({
     });
     const json = await res.json();
     if (!res.ok) {
-      throw new Error(json.error ?? "Failed to log match.");
+      throw new Error(json.error ?? "Failed to log battle.");
     }
     celebrateStreak(json.streak);
     setLogOpen(false);
@@ -162,14 +162,14 @@ export default function SavedDeckRow({
               backgroundClip: "padding-box, border-box",
             }}
           >
-            Log match
+            Log battle
           </button>
         </div>
       </div>
 
       {logOpen && (
         <div className="px-4 pb-4">
-          <MatchEntry
+          <BattleEntry
             savedDeckId={id}
             onSubmitManual={handleQuickLog}
             onImported={() => {

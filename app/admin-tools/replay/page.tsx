@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import ReplayClient, { type ReplayMatchOption } from "./ReplayClient";
+import ReplayClient, { type ReplayBattleOption } from "./ReplayClient";
 
 export const metadata: Metadata = {
   title: "Replay · Admin Tools",
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-interface MatchRow {
+interface BattleRow {
   id: string;
   created_at: string;
   player_handle: string | null;
@@ -38,11 +38,11 @@ export default async function ReplayPage() {
     .maybeSingle<{ is_admin: boolean }>();
   if (!me?.is_admin) redirect("/");
 
-  // Five most-recent log-imported matches that actually carry a battle
+  // Five most-recent log-imported battles that actually carry a battle
   // log. The summarize step on import stamps source = 'tcg_live_log', but
   // we still null-check battle_log_raw so a half-imported row never makes
   // it into the picker.
-  const { data: matchRows } = await supabase
+  const { data: battleRows } = await supabase
     .from("matches")
     .select(
       "id, created_at, player_handle, opponent_handle, opponent_archetype, result, saved_deck_id, battle_log_raw",
@@ -51,16 +51,16 @@ export default async function ReplayPage() {
     .not("battle_log_raw", "is", null)
     .order("created_at", { ascending: false })
     .limit(5);
-  const matches = (matchRows ?? []) as (MatchRow & { battle_log_raw: string })[];
+  const battles = (battleRows ?? []) as (BattleRow & { battle_log_raw: string })[];
 
-  const deckIds = Array.from(new Set(matches.map((m) => m.saved_deck_id)));
+  const deckIds = Array.from(new Set(battles.map((m) => m.saved_deck_id)));
   const { data: deckRows } = await supabase
     .from("saved_decks")
     .select("id, name")
     .in("id", deckIds.length ? deckIds : ["00000000-0000-0000-0000-000000000000"]);
   const deckById = new Map(((deckRows ?? []) as DeckRow[]).map((d) => [d.id, d]));
 
-  const options: ReplayMatchOption[] = matches.map((m) => ({
+  const options: ReplayBattleOption[] = battles.map((m) => ({
     id: m.id,
     createdAt: m.created_at,
     playerHandle: m.player_handle,

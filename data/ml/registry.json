@@ -64,18 +64,18 @@
   "gates": {
     "winprob": {
       "enabled": true,
-      "threshold_matches": 100,
-      "n_matches": 203
+      "threshold_battles": 100,
+      "n_battles": 203
     },
     "turn_quality_learned": {
       "enabled": false,
-      "threshold_matches": 1000,
-      "n_matches": 203
+      "threshold_battles": 1000,
+      "n_battles": 203
     },
     "sequence_models": {
       "enabled": false,
-      "threshold_matches": 10000,
-      "n_matches": 203
+      "threshold_battles": 10000,
+      "n_battles": 203
     }
   }
 }

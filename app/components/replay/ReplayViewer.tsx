@@ -3,7 +3,7 @@
 // The replay playback viewer: the 16:9 thread + board window and the
 // transport module beneath it. Extracted from the admin Replay tool so the
 // public battles page renders the same surface — the tool keeps only its
-// own chrome (match picker, wordmark header) around this.
+// own chrome (battle picker, wordmark header) around this.
 //
 // Board rendering itself (mats, card holders, piles, inspector) lives in
 // BoardKit, shared with the AI-player practice mode.
@@ -50,7 +50,7 @@ function PlayPauseIcon({ playing }: { playing: boolean }) {
 }
 
 /** Circular arrow, shown in place of the play glyph once the playhead is
- *  parked on the final frame — the press restarts the match rather than
+ *  parked on the final frame — the press restarts the battle rather than
  *  resuming it, so the button says so. */
 function ReplayIcon() {
   return (
@@ -1265,7 +1265,7 @@ function Board({
         </div>
       ) : !frame ? (
         <div className="rounded-2xl border border-black/8 bg-white p-10 text-center text-sm text-text-secondary">
-          {loading ? "Loading replay…" : "Pick a match below to begin."}
+          {loading ? "Loading replay…" : "Pick a battle below to begin."}
         </div>
       ) : (
         <>
@@ -1817,9 +1817,9 @@ function Scrubber({
 /* ──────────────────────────────────────────────────────────────── */
 
 interface ReplayViewerProps {
-  /** Identifies the match to BattleLogDetail (its fetch/reset key). */
-  matchId: string;
-  /** GET endpoint returning a ReplayPayload for this match. */
+  /** Identifies the battle to BattleLogDetail (its fetch/reset key). */
+  battleId: string;
+  /** GET endpoint returning a ReplayPayload for this battle. */
   replayUrl: string;
   /** GET endpoint backing the action thread (BattleLogDetail's apiUrl). */
   logUrl: string;
@@ -1841,7 +1841,7 @@ interface ReplayViewerProps {
   /** Start playing as soon as the replay loads, instead of parked on frame
    *  0 waiting for Play. For a viewer embedded in a scrolling page (the home
    *  page showcase) rather than one the visitor deliberately navigated to,
-   *  arriving mid-action reads as "a match is already underway" instead of
+   *  arriving mid-action reads as "a battle is already underway" instead of
    *  a static board that needs a click to prove it's interactive. */
   autoPlay?: boolean;
   /** Playback speed autoPlay starts at. Independent of autoPlay so a caller
@@ -1852,7 +1852,7 @@ interface ReplayViewerProps {
 }
 
 export default function ReplayViewer({
-  matchId,
+  battleId,
   replayUrl,
   logUrl,
   renderHeader,
@@ -1874,7 +1874,7 @@ export default function ReplayViewer({
   // consults once the fetch it's already doing resolves.
   const autoPlayRef = useRef(autoPlay);
   autoPlayRef.current = autoPlay;
-  // True when the pending frame change is a *jump* (scrub, turn skip, match
+  // True when the pending frame change is a *jump* (scrub, turn skip, battle
   // load) rather than a single step. Board/bench layout animations model a
   // card physically moving between slots, which is only meaningful one
   // action at a time — across a jump they animate cards along routes the
@@ -1995,7 +1995,7 @@ export default function ReplayViewer({
 
   const frameCount = data?.frames.length ?? 0;
   // Turn numbers are monotonic (0 = setup, then 1, 2, 3… per lib/engine/sim's
-  // state.turn.number), so the last frame's is the match's turn total.
+  // state.turn.number), so the last frame's is the battle's turn total.
   const totalTurns =
     data && data.frames.length > 0 ? data.frames[data.frames.length - 1].turn : 0;
 
@@ -2023,7 +2023,7 @@ export default function ReplayViewer({
   // rewinds to the start and runs again. Both state updates batch into one
   // render, so the auto-pause effect above sees frameIndex 0 alongside
   // playing=true and doesn't immediately stop it. The rewind is a jump, so
-  // it cuts rather than animating cards across the whole match.
+  // it cuts rather than animating cards across the whole battle.
   function togglePlay() {
     if (playing) {
       setPlaying(false);
@@ -2139,7 +2139,7 @@ export default function ReplayViewer({
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [frame?.actionIndex, matchId]);
+  }, [frame?.actionIndex, battleId]);
 
   return (
     <>
@@ -2155,7 +2155,7 @@ export default function ReplayViewer({
       <div ref={rowRef} className="lg:flex lg:items-start lg:gap-6">
         {isDesktop === true && (
           <aside
-            key={matchId}
+            key={battleId}
             className="relative hidden min-w-0 lg:flex lg:flex-1 lg:flex-col lg:overflow-hidden"
             style={
               boardHeight != null
@@ -2170,7 +2170,7 @@ export default function ReplayViewer({
               style={boardHeight != null ? { paddingBottom: boardHeight / 2 } : undefined}
             >
               <BattleLogDetail
-                matchId={matchId}
+                battleId={battleId}
                 apiUrl={logUrl}
                 maxSequence={frame?.actionIndex ?? -1}
                 result={result}
@@ -2241,7 +2241,7 @@ export default function ReplayViewer({
       {isDesktop === false && !hideThreadOnMobile && (
         <div className="mt-6">
           <BattleLogDetail
-            matchId={matchId}
+            battleId={battleId}
             apiUrl={logUrl}
             result={result}
             playerColor={playerColor}

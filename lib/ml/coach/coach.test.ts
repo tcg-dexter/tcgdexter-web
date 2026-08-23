@@ -6,8 +6,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { normalizePerspective, parseBattleLog } from "@/lib/battle-log";
 import { replay } from "@/lib/engine";
-import { extractMatchFeatures, turnQualityFlags } from "@/lib/ml/features";
-import type { MatchLogFeatures } from "@/lib/ml/features";
+import { extractBattleFeatures, turnQualityFlags } from "@/lib/ml/features";
+import type { BattleLogFeatures } from "@/lib/ml/features";
 import { buildCoachReport } from "./heuristics";
 import type { FlaggedTurn } from "./heuristics";
 
@@ -49,7 +49,7 @@ function turn(overrides: Partial<FlaggedTurn> = {}): FlaggedTurn {
   };
 }
 
-function match(overrides: Partial<MatchLogFeatures> = {}): MatchLogFeatures {
+function battle(overrides: Partial<BattleLogFeatures> = {}): BattleLogFeatures {
   return {
     went_first: 1,
     player_mulligans: 0,
@@ -91,7 +91,7 @@ function match(overrides: Partial<MatchLogFeatures> = {}): MatchLogFeatures {
   };
 }
 
-const codes = (m: MatchLogFeatures, ts: FlaggedTurn[]) =>
+const codes = (m: BattleLogFeatures, ts: FlaggedTurn[]) =>
   buildCoachReport(m, ts).insights.map((i) => i.code);
 
 /* ─── Rule triggers ─────────────────────────────────────────────── */
@@ -103,7 +103,7 @@ describe("buildCoachReport rules", () => {
       turn({ turn_number: 3, flag_missed_energy_attach: 1, energy_attached: 0 }),
       turn({ turn_number: 5 }),
     ];
-    const report = buildCoachReport(match(), ts);
+    const report = buildCoachReport(battle(), ts);
     const insight = report.insights.find((i) => i.code === "missed_energy");
     expect(insight?.severity).toBe("warning");
     expect(insight?.detail).toContain("1, 3");
@@ -114,22 +114,22 @@ describe("buildCoachReport rules", () => {
     const ts = [
       turn({ actor: "opponent", flag_missed_energy_attach: 1, flag_passive_turn: 1 }),
     ];
-    expect(codes(match(), ts)).not.toContain("missed_energy");
-    expect(codes(match(), ts)).not.toContain("passive_turns");
+    expect(codes(battle(), ts)).not.toContain("missed_energy");
+    expect(codes(battle(), ts)).not.toContain("passive_turns");
   });
 
   it("flags a supporter drought only with enough turns", () => {
     const drought = [1, 2, 3, 4].map((n) =>
       turn({ turn_number: n, flag_no_supporter: n <= 2 ? 1 : 0 }),
     );
-    expect(codes(match(), drought)).toContain("supporter_drought");
+    expect(codes(battle(), drought)).toContain("supporter_drought");
     // 1 of 2 turns is not enough signal
     const short = [turn({ flag_no_supporter: 1 }), turn({ turn_number: 2 })];
-    expect(codes(match(), short)).not.toContain("supporter_drought");
+    expect(codes(battle(), short)).not.toContain("supporter_drought");
   });
 
   it("calls out bad prize trades and multi-prize giveaways", () => {
-    const m = match({ kos_by_opponent: 3, prizes_opponent: 6, kos_by_player: 3, prizes_player: 3 });
+    const m = battle({ kos_by_opponent: 3, prizes_opponent: 6, kos_by_player: 3, prizes_player: 3 });
     const ts = [turn({ actor: "opponent", turn_number: 6, prizes_taken: 2 })];
     const report = buildCoachReport(m, ts);
     expect(report.insights.map((i) => i.code)).toContain("prize_trade");
@@ -138,12 +138,12 @@ describe("buildCoachReport rules", () => {
   });
 
   it("does not flag prize trades when the player trades evenly", () => {
-    const m = match({ kos_by_opponent: 6, prizes_opponent: 6, kos_by_player: 5, prizes_player: 5 });
+    const m = battle({ kos_by_opponent: 6, prizes_opponent: 6, kos_by_player: 5, prizes_player: 5 });
     expect(codes(m, [])).not.toContain("prize_trade");
   });
 
   it("flags slow starts, stranded energy, mulligans and comebacks", () => {
-    const m = match({
+    const m = battle({
       first_attack_turn_player: 7,
       first_attack_turn_opponent: 2,
       stranded_energy_final_player: 4,
@@ -157,7 +157,7 @@ describe("buildCoachReport rules", () => {
   });
 
   it("sorts warnings before suggestions before info", () => {
-    const m = match({ player_mulligans: 2, stranded_energy_final_player: 3 });
+    const m = battle({ player_mulligans: 2, stranded_energy_final_player: 3 });
     const ts = [
       turn({ turn_number: 2, flag_passive_turn: 1 }),
       turn({ turn_number: 4, flag_over_retreat: 1, retreat_energy_discarded: 2 }),
@@ -178,7 +178,7 @@ describe("buildCoachReport (example-1)", () => {
     "utf8",
   );
   const parsed = normalizePerspective(parseBattleLog(raw), "MoonSheikah");
-  const { match: m, turns } = extractMatchFeatures(parsed, replay(parsed));
+  const { battle: m, turns } = extractBattleFeatures(parsed, replay(parsed));
   const flagged = turns.map((t) => ({ ...t.features, ...turnQualityFlags(t.features, t.endState) }));
   const report = buildCoachReport(m, flagged);
 

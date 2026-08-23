@@ -1,5 +1,5 @@
 /**
- * Match Activity heat map — 20-week GitHub-style grid.
+ * Battle Activity heat map — 20-week GitHub-style grid.
  *
  * Layout: 20 columns × 7 rows (Sun → Sat). Each column is one calendar
  * week. The rightmost column is the current week; days after today are
@@ -11,7 +11,7 @@
 import { ENERGY_HEX } from "@/app/components/DeckProfileView";
 import { shade } from "@/lib/color";
 
-type MatchRow = {
+type BattleRow = {
   played_at: string | null;
   created_at: string;
 };
@@ -30,10 +30,10 @@ type Cell = {
  *  base hex so each cell still reads as the same hue family as the
  *  banner. */
 type HeatPalette = {
-  tier1Alpha: string; // 1 match: low-density, fades into the surface
-  tier2: string;      // 2 matches
-  tier3: string;      // 3 matches
-  tier4: string;      // 4+ matches
+  tier1Alpha: string; // 1 battle: low-density, fades into the surface
+  tier2: string;      // 2 battles
+  tier3: string;      // 3 battles
+  tier4: string;      // 4+ battles
 };
 
 const BRAND_HEAT: HeatPalette = {
@@ -85,7 +85,7 @@ const DAYS_PER_WEEK = 7;
  * Returned order is row-major so children pack naturally into the CSS grid.
  * Row 0 = Sunday, row 6 = Saturday. Rightmost column is the current week.
  */
-function buildCells(matches: MatchRow[]): Cell[] {
+function buildCells(battles: BattleRow[]): Cell[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayDow = today.getDay(); // 0 = Sun
@@ -102,9 +102,9 @@ function buildCells(matches: MatchRow[]): Cell[] {
   const toDisplay = (d: Date) =>
     d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
-  // Count matches per local-date key
+  // Count battles per local-date key
   const counts: Record<string, number> = {};
-  for (const m of matches) {
+  for (const m of battles) {
     const ts = m.played_at ?? m.created_at;
     if (!ts) continue;
     const key = new Date(ts).toLocaleDateString("en-CA");
@@ -130,23 +130,23 @@ function buildCells(matches: MatchRow[]): Cell[] {
   return cells;
 }
 
-export default function MatchHeatMap({
-  matches,
+export default function BattleHeatMap({
+  battles,
   accent = null,
 }: {
-  matches: MatchRow[];
+  battles: BattleRow[];
   /** profiles.banner_accent — drives the heat palette so the module
    *  reads as the same theme as the page banner. */
   accent?: string | null;
 }) {
-  const cells = buildCells(matches);
+  const cells = buildCells(battles);
   const total = cells.reduce((sum, c) => sum + (c.isFuture ? 0 : c.count), 0);
   const palette = heatPalette(accent);
 
   return (
     <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-5">
       <div className="flex items-baseline justify-between mb-3">
-        <h2 className="text-lg font-semibold text-text-primary">Match Activity</h2>
+        <h2 className="text-lg font-semibold text-text-primary">Battle Activity</h2>
         <span className="text-xs text-text-muted">Last 20 weeks</span>
       </div>
 
@@ -162,7 +162,7 @@ export default function MatchHeatMap({
             title={
               c.isFuture
                 ? c.display
-                : `${c.count} match${c.count === 1 ? "" : "es"} on ${c.display}`
+                : `${c.count} battle${c.count === 1 ? "" : "s"} on ${c.display}`
             }
           />
         ))}

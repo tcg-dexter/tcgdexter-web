@@ -3,11 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { cardTypesForName, cardTypesForSetIdNumber } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
 import {
-  FEATURED_MATCH_POOL,
-  loadRecentMatches,
-  pickFeaturedMatch,
-} from "@/lib/recent-matches";
-import { loadMatchSideStats } from "@/lib/match-side-stats";
+  FEATURED_BATTLE_POOL,
+  loadRecentBattles,
+  pickFeaturedBattle,
+} from "@/lib/recent-battles";
+import { loadBattleSideStats } from "@/lib/battle-side-stats";
 import HomeClient, { type CurrentSpotlight } from "./HomeClient";
 import type { TrainerSpotlightRow } from "./spotlight/types";
 import { parseDeckListCards } from "@/lib/cardPrinting";
@@ -89,7 +89,7 @@ async function loadStats(): Promise<Array<{ label: string; value: string }>> {
 
   try {
     const admin = createAdminClient();
-    const [decksRes, matchesRes] = await Promise.all([
+    const [decksRes, battlesRes] = await Promise.all([
       admin
         .from("analysis_submissions")
         .select("id", { count: "exact", head: true }),
@@ -99,19 +99,19 @@ async function loadStats(): Promise<Array<{ label: string; value: string }>> {
     if (decksRes.error) {
       console.error("[home/stats] analysis_submissions count failed:", decksRes.error);
     }
-    if (matchesRes.error) {
-      console.error("[home/stats] matches count failed:", matchesRes.error);
+    if (battlesRes.error) {
+      console.error("[home/stats] matches count failed:", battlesRes.error);
     }
 
     return [
       { label: "Decks profiled", value: format(decksRes.error ? null : decksRes.count) },
-      { label: "Matches logged", value: format(matchesRes.error ? null : matchesRes.count) },
+      { label: "Battles logged", value: format(battlesRes.error ? null : battlesRes.count) },
     ];
   } catch (err) {
     console.error("[home/stats] admin client unavailable:", err);
     return [
       { label: "Decks profiled", value: "—" },
-      { label: "Matches logged", value: "—" },
+      { label: "Battles logged", value: "—" },
     ];
   }
 }
@@ -181,32 +181,32 @@ async function loadCurrentSpotlight(): Promise<CurrentSpotlight | null> {
 }
 
 /** Cards in the home page's Recent Battles grid. */
-const HOME_RECENT_MATCHES = 6;
+const HOME_RECENT_BATTLES = 6;
 
 export default async function DeckProfilerPage() {
   // One pool serves both surfaces: the Featured Battle showcase ranks over
-  // all of it (FEATURED_MATCH_POOL must match what /battles loads, or the
-  // two pages would feature different matches), while the Recent Battles
+  // all of it (FEATURED_BATTLE_POOL must match what /battles loads, or the
+  // two pages would feature different battles), while the Recent Battles
   // grid below shows only the newest few.
-  const [stats, matchPool, currentSpotlight] = await Promise.all([
+  const [stats, battlePool, currentSpotlight] = await Promise.all([
     loadStats(),
-    loadRecentMatches(FEATURED_MATCH_POOL),
+    loadRecentBattles(FEATURED_BATTLE_POOL),
     loadCurrentSpotlight(),
   ]);
-  const recentMatches = matchPool.slice(0, HOME_RECENT_MATCHES);
-  const featuredMatch = pickFeaturedMatch(matchPool);
+  const recentBattles = battlePool.slice(0, HOME_RECENT_BATTLES);
+  const featuredBattle = pickFeaturedBattle(battlePool);
   // Backs the hero's Details drawer, same as on /battles.
-  const featuredMatchStats = featuredMatch
-    ? await loadMatchSideStats(featuredMatch.id)
+  const featuredBattleStats = featuredBattle
+    ? await loadBattleSideStats(featuredBattle.id)
     : null;
   const showcaseTiles = loadShowcaseTiles();
   const cardCatalogPreview = loadCardCatalogPreview();
   return (
     <HomeClient
       stats={stats}
-      recentMatches={recentMatches}
-      featuredMatch={featuredMatch}
-      featuredMatchStats={featuredMatchStats}
+      recentBattles={recentBattles}
+      featuredBattle={featuredBattle}
+      featuredBattleStats={featuredBattleStats}
       currentSpotlight={currentSpotlight}
       showcaseTiles={showcaseTiles}
       cardCatalogTopCards={cardCatalogPreview.topCards}

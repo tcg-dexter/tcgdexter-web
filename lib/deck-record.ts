@@ -16,17 +16,17 @@ const RESULT_LETTER: Record<string, "W" | "L" | "D"> = {
 };
 
 /**
- * Aggregates raw match rows into a per-deck win/loss/draw record, win rate,
+ * Aggregates raw battle rows into a per-deck win/loss/draw record, win rate,
  * and recent-form sequence. Mirrors the win-rate convention used by
  * lib/player-leaderboard.ts (null when there are no decisive games) applied
  * at the deck level instead of the account level.
  */
 export function computeDeckRecords(
-  matches: { saved_deck_id: string | null; result: string; played_at: string }[],
+  battles: { saved_deck_id: string | null; result: string; played_at: string }[],
   recentFormSize = 5,
 ): Map<string, DeckRecord> {
   const byDeck = new Map<string, { saved_deck_id: string; result: string; played_at: string }[]>();
-  for (const m of matches) {
+  for (const m of battles) {
     if (!m.saved_deck_id) continue;
     const list = byDeck.get(m.saved_deck_id) ?? [];
     list.push({ saved_deck_id: m.saved_deck_id, result: m.result, played_at: m.played_at });

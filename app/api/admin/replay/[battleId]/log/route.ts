@@ -4,21 +4,21 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { supporterNames } from "@/lib/supporterNames";
 
 /**
- * GET /api/admin/replay/[matchId]/log
+ * GET /api/admin/replay/[battleId]/log
  *
  * Admin-only mirror of /api/battles/[id]/log. Returns the same response
  * shape (so BattleLogDetail can consume either) but skips the public-deck
- * gate — the Replay tool needs to walk any imported match regardless of
+ * gate — the Replay tool needs to walk any imported battle regardless of
  * publish state.
  */
 export async function GET(
   _req: Request,
-  ctx: { params: Promise<{ matchId: string }> },
+  ctx: { params: Promise<{ battleId: string }> },
 ) {
-  const { matchId } = await ctx.params;
+  const { battleId } = await ctx.params;
 
   // Admin gate via the user-session client; data fetches go through the
-  // admin client so RLS doesn't block reads for matches owned by other
+  // admin client so RLS doesn't block reads for battles owned by other
   // accounts.
   const supabase = await createClient();
   const {
@@ -35,16 +35,16 @@ export async function GET(
 
   const admin = createAdminClient();
 
-  const { data: match } = await admin
+  const { data: battle } = await admin
     .from("matches")
     .select("id, player_handle, opponent_handle, parser_version, source")
-    .eq("id", matchId)
+    .eq("id", battleId)
     .maybeSingle();
 
-  if (!match) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  if (!battle) return NextResponse.json({ error: "Not found." }, { status: 404 });
 
-  if ((match.source as string) !== "tcg_live_log") {
-    return NextResponse.json({ error: "This match has no battle log." }, { status: 400 });
+  if ((battle.source as string) !== "tcg_live_log") {
+    return NextResponse.json({ error: "This battle has no battle log." }, { status: 400 });
   }
 
   const [{ data: turns, error: turnsErr }, { data: actions, error: actionsErr }] =
@@ -52,12 +52,12 @@ export async function GET(
       admin
         .from("match_turns")
         .select("id, turn_number, player_turn_number, actor, actor_handle, phase")
-        .eq("match_id", matchId)
+        .eq("match_id", battleId)
         .order("turn_number", { ascending: true }),
       admin
         .from("match_actions")
         .select("id, turn_id, sequence, actor, action_type, payload, raw_text")
-        .eq("match_id", matchId)
+        .eq("match_id", battleId)
         .order("sequence", { ascending: true }),
     ]);
 
@@ -78,11 +78,11 @@ export async function GET(
   });
 
   return NextResponse.json({
-    match: {
-      id: match.id,
-      player_handle: match.player_handle,
-      opponent_handle: match.opponent_handle,
-      parser_version: match.parser_version,
+    battle: {
+      id: battle.id,
+      player_handle: battle.player_handle,
+      opponent_handle: battle.opponent_handle,
+      parser_version: battle.parser_version,
     },
     turns: turns ?? [],
     actions: taggedActions,

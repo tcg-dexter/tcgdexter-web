@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import MatchForm, { type MatchFormData } from "@/app/components/MatchForm";
-import MatchEntry from "@/app/components/MatchEntry";
+import BattleForm, { type BattleFormData } from "@/app/components/BattleForm";
+import BattleEntry from "@/app/components/BattleEntry";
 import type { GamePrize } from "@/lib/bo3";
 import { clientTz, celebrateStreak } from "@/lib/streak-client";
 
 /* ─── Types ──────────────────────────────────────────────────── */
 
-interface Match {
+interface Battle {
   id: string;
   /** Short, shareable id used in the /battles URL (never the UUID). */
   short_id: string;
@@ -30,7 +30,7 @@ interface Match {
 
 interface Props {
   savedDeckId: string;
-  initialMatches: Match[];
+  initialBattles: Battle[];
   /** When true, hides log/edit/delete affordances (visitor view). */
   readOnly?: boolean;
   /** Controlled form-open state. When provided the parent drives open/close. */
@@ -51,7 +51,7 @@ interface Props {
 // Win and loss therefore ship no border; tie keeps its 1 px black outline
 // via `shadow-[inset_0_0_0_1px_black]` (inset box-shadow doesn't grow the
 // box the way a real `border` does, so the three chips still render at
-// identical pixel dimensions). Mirrored in app/components/MatchForm.tsx
+// identical pixel dimensions). Mirrored in app/components/BattleForm.tsx
 // and app/meta-archetypes/[slug]/page.tsx — keep them in sync.
 const RESULT_STYLE = {
   win: { label: "W", bg: "bg-gradient-brand", text: "text-white" },
@@ -65,15 +65,15 @@ const RESULT_STYLE = {
 
 /* ─── Component ──────────────────────────────────────────────── */
 
-export default function MatchLog({
+export default function BattleHistory({
   savedDeckId,
-  initialMatches,
+  initialBattles,
   readOnly = false,
   open,
   onOpenChange,
 }: Props) {
   const router = useRouter();
-  const [matches, setMatches] = useState<Match[]>(initialMatches);
+  const [battles, setBattles] = useState<Battle[]>(initialBattles);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -88,19 +88,19 @@ export default function MatchLog({
     else setInternalOpen(false);
   }
 
-  // ── Rows (manual matches), sorted by date desc ─────────────
+  // ── Rows (manual battles), sorted by date desc ─────────────
   const rows = useMemo(() => {
-    return [...matches].sort((a, b) => {
+    return [...battles].sort((a, b) => {
       const at = a.played_at ? Date.parse(a.played_at) : 0;
       const bt = b.played_at ? Date.parse(b.played_at) : 0;
       return bt - at;
     });
-  }, [matches]);
+  }, [battles]);
 
   // ── Stats ───────────────────────────────────────────────────
   const total = rows.length;
 
-  async function handleNewMatch(data: MatchFormData) {
+  async function handleNewBattle(data: BattleFormData) {
     const res = await fetch("/api/matches", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -108,10 +108,10 @@ export default function MatchLog({
     });
     const json = await res.json();
     if (!res.ok) {
-      throw new Error(json.error ?? "Failed to log match.");
+      throw new Error(json.error ?? "Failed to log battle.");
     }
     celebrateStreak(json.streak);
-    const newMatch: Match = {
+    const newBattle: Battle = {
       id: json.id,
       short_id: json.short_id,
       result: data.result,
@@ -125,24 +125,24 @@ export default function MatchLog({
       prizes_taken_opponent: data.prizes_taken_opponent ?? null,
       game_prizes: data.game_prizes ?? null,
     };
-    setMatches((prev) => [newMatch, ...prev]);
+    setBattles((prev) => [newBattle, ...prev]);
     closeForm();
     router.refresh();
   }
 
-  async function handleEditMatch(matchId: string, data: MatchFormData) {
-    const res = await fetch(`/api/matches/${matchId}`, {
+  async function handleEditBattle(battleId: string, data: BattleFormData) {
+    const res = await fetch(`/api/matches/${battleId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
     if (!res.ok) {
       const err = await res.json();
-      throw new Error(err.error ?? "Failed to update match.");
+      throw new Error(err.error ?? "Failed to update battle.");
     }
-    setMatches((prev) =>
+    setBattles((prev) =>
       prev.map((m) =>
-        m.id === matchId
+        m.id === battleId
           ? {
               ...m,
               result: data.result,
@@ -163,12 +163,12 @@ export default function MatchLog({
     router.refresh();
   }
 
-  async function handleDelete(matchId: string) {
-    if (!confirm("Delete this match?")) return;
+  async function handleDelete(battleId: string) {
+    if (!confirm("Delete this battle?")) return;
     try {
-      const res = await fetch(`/api/matches/${matchId}`, { method: "DELETE" });
+      const res = await fetch(`/api/matches/${battleId}`, { method: "DELETE" });
       if (res.ok) {
-        setMatches((prev) => prev.filter((m) => m.id !== matchId));
+        setBattles((prev) => prev.filter((m) => m.id !== battleId));
         router.refresh();
       }
     } catch {
@@ -181,13 +181,13 @@ export default function MatchLog({
       {/* ── Header + Stats ────────────────────────────────── */}
       {!formOpen && (
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-text-primary">Match History</h2>
+          <h2 className="text-lg font-semibold text-text-primary">Battle History</h2>
 
           <div className="flex items-center gap-3">
             {total > 3 && (
               <button
                 onClick={() => setHistoryExpanded((v) => !v)}
-                aria-label={historyExpanded ? "Collapse match history" : "Expand match history"}
+                aria-label={historyExpanded ? "Collapse battle history" : "Expand battle history"}
                 aria-expanded={historyExpanded}
                 className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-text-muted hover:text-text-primary hover:bg-black/5 transition-colors"
               >
@@ -207,12 +207,12 @@ export default function MatchLog({
         </div>
       )}
 
-      {/* ── New match form (shown when formOpen) ─────────── */}
+      {/* ── New battle form (shown when formOpen) ─────────── */}
       {!readOnly && formOpen && (
         <div className="mb-4">
-          <MatchEntry
+          <BattleEntry
             savedDeckId={savedDeckId}
-            onSubmitManual={handleNewMatch}
+            onSubmitManual={handleNewBattle}
             onImported={() => {
               closeForm();
               router.refresh();
@@ -226,58 +226,58 @@ export default function MatchLog({
       {rows.length === 0 && !formOpen && (
         <p className="text-sm text-text-muted mt-3 text-center">
           {readOnly
-            ? "No matches yet."
-            : "No matches logged yet. Tap Log Match after your next game."}
+            ? "No battles yet."
+            : "No battles logged yet. Tap Log Battle after your next game."}
         </p>
       )}
 
-      {/* ── Match List ────────────────────────────────────── */}
+      {/* ── Battle List ────────────────────────────────────── */}
       {rows.length > 0 && (
         <div className="mt-4 flex flex-col">
-          {(historyExpanded ? rows : rows.slice(0, 3)).map((match, i, arr) => {
-            const s = RESULT_STYLE[match.result];
+          {(historyExpanded ? rows : rows.slice(0, 3)).map((battle, i, arr) => {
+            const s = RESULT_STYLE[battle.result];
             const score =
-              match.prizes_taken_player != null || match.prizes_taken_opponent != null
-                ? `${match.prizes_taken_player ?? 0}–${match.prizes_taken_opponent ?? 0}`
+              battle.prizes_taken_player != null || battle.prizes_taken_opponent != null
+                ? `${battle.prizes_taken_player ?? 0}–${battle.prizes_taken_opponent ?? 0}`
                 : null;
             const subtitle =
-              score && match.opponent_name
-                ? `${score} v ${match.opponent_name}`
-                : score ?? match.opponent_name;
+              score && battle.opponent_name
+                ? `${score} v ${battle.opponent_name}`
+                : score ?? battle.opponent_name;
 
-            const isEditing = editingId === match.id;
+            const isEditing = editingId === battle.id;
             if (isEditing && !readOnly) {
               return (
                 <div
-                  key={match.id}
+                  key={battle.id}
                   className={`py-3 ${i < arr.length - 1 ? "border-b border-border/50" : ""}`}
                 >
-                  <MatchForm
+                  <BattleForm
                     initial={{
-                      result: match.result,
-                      opponent_name: match.opponent_name,
-                      opponent_archetype: match.opponent_archetype,
-                      opponent_deck_list: match.opponent_deck_list,
-                      notes: match.notes,
-                      played_at: match.played_at,
-                      game_results: match.game_results,
-                      prizes_taken_player: match.prizes_taken_player,
-                      prizes_taken_opponent: match.prizes_taken_opponent,
-                      game_prizes: match.game_prizes,
+                      result: battle.result,
+                      opponent_name: battle.opponent_name,
+                      opponent_archetype: battle.opponent_archetype,
+                      opponent_deck_list: battle.opponent_deck_list,
+                      notes: battle.notes,
+                      played_at: battle.played_at,
+                      game_results: battle.game_results,
+                      prizes_taken_player: battle.prizes_taken_player,
+                      prizes_taken_opponent: battle.prizes_taken_opponent,
+                      game_prizes: battle.game_prizes,
                     }}
-                    onSubmit={(data) => handleEditMatch(match.id, data)}
+                    onSubmit={(data) => handleEditBattle(battle.id, data)}
                     onCancel={() => setEditingId(null)}
-                    submitLabel="Update Match"
+                    submitLabel="Update Battle"
                   />
                 </div>
               );
             }
-            const hasLog = match.source === "tcg_live_log";
-            const isExpanded = expandedId === match.id;
-            const canExpand = Boolean(match.notes) || !readOnly;
+            const hasLog = battle.source === "tcg_live_log";
+            const isExpanded = expandedId === battle.id;
+            const canExpand = Boolean(battle.notes) || !readOnly;
             return (
               <div
-                key={match.id}
+                key={battle.id}
                 className={`pr-1 py-3 ${
                   i < arr.length - 1 ? "border-b border-border/50" : ""
                 }`}
@@ -290,22 +290,22 @@ export default function MatchLog({
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 text-sm">
-                      {match.opponent_archetype ? (
+                      {battle.opponent_archetype ? (
                         <span className="font-semibold text-text-primary truncate">
-                          {match.opponent_archetype}
+                          {battle.opponent_archetype}
                         </span>
                       ) : (
-                        <span className="text-text-muted text-sm">Match logged</span>
+                        <span className="text-text-muted text-sm">Battle logged</span>
                       )}
-                      {match.game_results && match.game_results.length >= 2 && (
+                      {battle.game_results && battle.game_results.length >= 2 && (
                         <span
                           className="flex flex-shrink-0 items-center"
-                          title={`Best of 3 — ${match.game_results}`}
-                          aria-label={`Best of 3 result: ${match.game_results}`}
+                          title={`Best of 3 — ${battle.game_results}`}
+                          aria-label={`Best of 3 result: ${battle.game_results}`}
                         >
                           {/* Overlapping W/L pills — mirrors the avatar stack
                               on deck preview cards (ring-2 ring-white + -ml). */}
-                          {match.game_results.split("").map((g, i) => {
+                          {battle.game_results.split("").map((g, i) => {
                             const s =
                               g === "W"
                                 ? RESULT_STYLE.win
@@ -332,7 +332,7 @@ export default function MatchLog({
                   <div className="flex-shrink-0 flex items-center gap-2">
                     {hasLog && (
                       <Link
-                        href={`/battles/${match.short_id}`}
+                        href={`/battles/${battle.short_id}`}
                         className="inline-flex items-center gap-1 rounded-full border border-black/10 bg-white dark:bg-surface-2 px-3 py-1 text-[11px] font-semibold text-text-primary hover:bg-black/5 transition-colors"
                       >
                         View Battle
@@ -341,9 +341,9 @@ export default function MatchLog({
                     {canExpand && (
                       <button
                         onClick={() =>
-                          setExpandedId((prev) => (prev === match.id ? null : match.id))
+                          setExpandedId((prev) => (prev === battle.id ? null : battle.id))
                         }
-                        aria-label={isExpanded ? "Hide match details" : "Show match details"}
+                        aria-label={isExpanded ? "Hide battle details" : "Show battle details"}
                         aria-expanded={isExpanded}
                         className="text-text-muted/60 hover:text-text-primary transition-colors"
                       >
@@ -362,21 +362,21 @@ export default function MatchLog({
                 </div>
                 {isExpanded && (
                   <div className="mt-2 ml-11 flex flex-col gap-3">
-                    {match.notes && (
+                    {battle.notes && (
                       <p className="text-xs text-text-secondary leading-relaxed whitespace-pre-wrap">
-                        {match.notes}
+                        {battle.notes}
                       </p>
                     )}
                     {!readOnly && (
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => { setEditingId(match.id); closeForm(); }}
+                          onClick={() => { setEditingId(battle.id); closeForm(); }}
                           className="inline-flex items-center gap-1 rounded-full border border-black/10 dark:border-white/10 px-3 py-1.5 text-xs font-semibold text-text-primary hover:bg-black/5 transition-colors"
                         >
                           Edit
                         </button>
                         <button
-                          onClick={() => handleDelete(match.id)}
+                          onClick={() => handleDelete(battle.id)}
                           className="inline-flex items-center gap-1 rounded-full border border-accent/30 px-3 py-1.5 text-xs font-semibold text-accent hover:bg-accent/5 transition-colors"
                         >
                           Delete

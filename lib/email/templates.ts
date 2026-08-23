@@ -105,10 +105,10 @@ export function streakAtRiskEmail(opts: {
     subject,
     html: layout({
       siteUrl,
-      preheader: `Log a match today to keep your ${streak}-day streak alive.`,
+      preheader: `Log a battle today to keep your ${streak}-day streak alive.`,
       headingHtml: escapeHtml(`Keep your ${streak}-day streak alive`),
-      bodyHtml: `${flameHtml}<p style="margin:0 0 10px;">You haven't logged a match today — log one before the day ends to keep your <strong>${streak}-day streak</strong> going.</p>`,
-      ctaLabel: "Log a match",
+      bodyHtml: `${flameHtml}<p style="margin:0 0 10px;">You haven't logged a battle today — log one before the day ends to keep your <strong>${streak}-day streak</strong> going.</p>`,
+      ctaLabel: "Log a battle",
       ctaUrl,
       unsubUrl,
     }),
@@ -120,7 +120,7 @@ export function nearBadgeEmail(opts: {
   badgeName: string;
   badgeImageUrl: string; // absolute URL, e.g. https://tcgdexter.com/badges/decks_5.png
   remaining: number;
-  action: string; // e.g. "save 1 more deck", "log 1 more match"
+  action: string; // e.g. "save 1 more deck", "log 1 more battle"
   ctaUrl: string;
   ctaLabel: string;
   unsubUrl: string;

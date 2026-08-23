@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { shade } from "@/lib/color";
-import { type RecentMatch } from "@/app/components/MatchCard";
+import { type RecentBattle } from "@/app/components/BattleCard";
 import {
   BattleStatChart,
   buildBattleStatRows,
 } from "@/app/components/BattleStatChart";
-import type { MatchSideStats } from "@/lib/match-side-stats";
+import type { BattleSideStatsPair } from "@/lib/battle-side-stats";
 
 /** Short month/day for the "Played" stat value — no year, since the
  *  Featured Battle is by definition within the last 7 days. */
@@ -25,63 +25,63 @@ function playedDateLabel(iso: string): string {
  *  1. The /my-decks pinned-deck hero shell (glow, rounded card, two-column
  *     desktop split, gradient-brand shadow) from MyDecksClient's
  *     PinnedDeckHero.
- *  2. The MatchCard versus banner (accent-color gradient, ghost card of
+ *  2. The BattleCard versus banner (accent-color gradient, ghost card of
  *     the winner's deck, fanned + rotated hero cards, huge prize digits,
- *     VS glyph) from app/components/MatchCard.tsx.
+ *     VS glyph) from app/components/BattleCard.tsx.
  *
  * The banner column takes the versus imagery; the info column takes the
- * pinned-deck's stat treatment, but populated with match numbers instead
+ * pinned-deck's stat treatment, but populated with battle numbers instead
  * of deck record — total damage dealt (the axis this pick is ranked on),
  * prize score, and time since — then a "View battle" CTA that jumps to
  * /battles/[id].
  */
-export default function FeaturedMatchHero({
-  match,
+export default function FeaturedBattleHero({
+  battle,
   stats,
 }: {
-  match: RecentMatch;
-  stats?: MatchSideStats | null;
+  battle: RecentBattle;
+  stats?: BattleSideStatsPair | null;
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const opponentDeckLabel =
-    match.opponentArchetype ?? match.opponentAttackerName ?? "Unknown deck";
-  const opponentHandleLabel = match.opponentHandle ?? "Opponent";
+    battle.opponentArchetype ?? battle.opponentAttackerName ?? "Unknown deck";
+  const opponentHandleLabel = battle.opponentHandle ?? "Opponent";
 
-  const isDraw = match.result === "draw";
-  const playerWon = match.result === "win";
+  const isDraw = battle.result === "draw";
+  const playerWon = battle.result === "win";
   const leftSide = playerWon
     ? {
-        imageUrl: match.deckImageUrl,
-        imageAlt: match.deckName,
-        handleLabel: match.username,
-        deckLabel: match.deckName,
-        color: match.playerColor,
-        prizes: match.playerPrizes,
+        imageUrl: battle.deckImageUrl,
+        imageAlt: battle.deckName,
+        handleLabel: battle.username,
+        deckLabel: battle.deckName,
+        color: battle.playerColor,
+        prizes: battle.playerPrizes,
       }
     : {
-        imageUrl: match.opponentImageUrl,
-        imageAlt: match.opponentAttackerName ?? "Opponent",
+        imageUrl: battle.opponentImageUrl,
+        imageAlt: battle.opponentAttackerName ?? "Opponent",
         handleLabel: opponentHandleLabel,
         deckLabel: opponentDeckLabel,
-        color: match.opponentColor,
-        prizes: match.opponentPrizes,
+        color: battle.opponentColor,
+        prizes: battle.opponentPrizes,
       };
   const rightSide = playerWon
     ? {
-        imageUrl: match.opponentImageUrl,
-        imageAlt: match.opponentAttackerName ?? "Opponent",
+        imageUrl: battle.opponentImageUrl,
+        imageAlt: battle.opponentAttackerName ?? "Opponent",
         handleLabel: opponentHandleLabel,
         deckLabel: opponentDeckLabel,
-        color: match.opponentColor,
-        prizes: match.opponentPrizes,
+        color: battle.opponentColor,
+        prizes: battle.opponentPrizes,
       }
     : {
-        imageUrl: match.deckImageUrl,
-        imageAlt: match.deckName,
-        handleLabel: match.username,
-        deckLabel: match.deckName,
-        color: match.playerColor,
-        prizes: match.playerPrizes,
+        imageUrl: battle.deckImageUrl,
+        imageAlt: battle.deckName,
+        handleLabel: battle.username,
+        deckLabel: battle.deckName,
+        color: battle.playerColor,
+        prizes: battle.playerPrizes,
       };
 
   const gradientStyle: React.CSSProperties | undefined = isDraw
@@ -101,7 +101,7 @@ export default function FeaturedMatchHero({
       {/* Gradient glow — matches PinnedDeckHero's treatment exactly. */}
       <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 blur-md" />
       <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-[0_20px_30px_-15px_rgba(217,30,13,0.3)] overflow-hidden flex flex-col md:flex-row dark:bg-surface-elevated dark:border-white/10">
-        {/* Banner column — the MatchCard versus imagery, sized for hero. */}
+        {/* Banner column — the BattleCard versus imagery, sized for hero. */}
         <div className="md:w-[360px] shrink-0">
           <div className="relative h-[220px] md:h-full overflow-hidden">
             <div className={gradientClass} style={gradientStyle} />
@@ -134,7 +134,7 @@ export default function FeaturedMatchHero({
               </div>
             )}
             {/* Prize digits flanking the fanned pair — same 2.4rem hero
-                treatment as MatchCard. */}
+                treatment as BattleCard. */}
             <span
               aria-label={`${leftSide.handleLabel} prizes taken`}
               className="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-white text-[2.64rem] font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
@@ -198,7 +198,7 @@ export default function FeaturedMatchHero({
             <span className="absolute right-3 bottom-2 z-10 max-w-[45%] truncate text-white text-[13px] font-bold leading-none drop-shadow-sm pointer-events-none">
               {rightSide.handleLabel}
             </span>
-            {match.isBestOf3 && (
+            {battle.isBestOf3 && (
               <div className="absolute inset-x-0 bottom-2 z-10 flex justify-center pointer-events-none">
                 <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold text-black">
                   Best of 3
@@ -217,7 +217,7 @@ export default function FeaturedMatchHero({
           </div>
         </div>
 
-        {/* Info column — pinned-deck stat treatment, populated with match
+        {/* Info column — pinned-deck stat treatment, populated with battle
             numbers instead of deck record. */}
         <div className="flex-1 p-5 md:p-6 flex flex-col">
           <div className="text-[11px] font-bold uppercase tracking-[0.15em] bg-gradient-brand bg-clip-text text-transparent">
@@ -241,10 +241,10 @@ export default function FeaturedMatchHero({
           </h2>
 
           <div className="flex flex-wrap justify-between gap-y-3 mt-4">
-            {match.totalDamage != null && (
+            {battle.totalDamage != null && (
               <div className="text-center">
                 <div className="text-[24px] font-extrabold tabular-nums bg-[linear-gradient(135deg,#F2A20C_0%,#D91E0D_50%,#A60D0D_100%)] bg-clip-text text-transparent">
-                  {match.totalDamage.toLocaleString()}
+                  {battle.totalDamage.toLocaleString()}
                 </div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">
                   Damage
@@ -261,7 +261,7 @@ export default function FeaturedMatchHero({
             </div>
             <div className="text-center">
               <div className="text-[24px] font-extrabold text-text-primary">
-                {playedDateLabel(match.createdAt)}
+                {playedDateLabel(battle.createdAt)}
               </div>
               <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">
                 Played
@@ -270,7 +270,7 @@ export default function FeaturedMatchHero({
           </div>
 
           {/* Button row + Details drawer. Mirrors PinnedDeckHero's Log
-              match pattern: gradient-bordered toggle button that swaps to
+              battle pattern: gradient-bordered toggle button that swaps to
               solid black when open, and a grid-rows-[0fr]/[1fr] transition
               on the collapsible below. */}
           <div className="flex items-center gap-3 mt-5">
@@ -278,7 +278,7 @@ export default function FeaturedMatchHero({
               type="button"
               onClick={() => setDetailsOpen((v) => !v)}
               aria-expanded={detailsOpen}
-              aria-controls={`featured-match-details-${match.id}`}
+              aria-controls={`featured-battle-details-${battle.id}`}
               className={`h-[38px] flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-[1px] text-sm font-semibold transition-all ${
                 detailsOpen ? "text-white dark:text-black" : "text-text-secondary"
               }`}
@@ -293,7 +293,7 @@ export default function FeaturedMatchHero({
               Details
             </button>
             <Link
-              href={`/battles/${match.shortId}`}
+              href={`/battles/${battle.shortId}`}
               className="h-[38px] flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent bg-black px-[1px] text-sm font-semibold text-white transition-opacity hover:opacity-80 touch-manipulation dark:bg-white dark:text-black"
             >
               View battle
@@ -302,7 +302,7 @@ export default function FeaturedMatchHero({
 
           {stats && (
             <div
-              id={`featured-match-details-${match.id}`}
+              id={`featured-battle-details-${battle.id}`}
               className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
                 detailsOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
               }`}

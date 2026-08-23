@@ -5,7 +5,7 @@ import { typeColor } from "@/lib/metaPrimaryCard";
 import { resolveOpponentHero } from "@/lib/opponentHeroCard";
 import { manualPrizeTotals } from "@/lib/bo3";
 import { stripCardIds } from "@/lib/battle-log";
-import type { RecentMatch } from "@/app/components/MatchCard";
+import type { RecentBattle } from "@/app/components/BattleCard";
 
 type AnalysisCard = {
   qty: number;
@@ -70,53 +70,53 @@ export async function fetchAllPages<T>(
     if (rows.length < pageSize) return out;
   }
   console.warn(
-    `[recent-matches] hit MAX_ACTION_PAGES (${MAX_ACTION_PAGES}) — results truncated`,
+    `[recent-battles] hit MAX_ACTION_PAGES (${MAX_ACTION_PAGES}) — results truncated`,
   );
   return out;
 }
 
-const MATCH_ROW_SELECT =
+const BATTLE_ROW_SELECT =
   "id, short_id, result, opponent_archetype, opponent_handle, created_at, saved_deck_id, source, prizes_taken_player, prizes_taken_opponent, game_prizes, game_results";
 
 /**
- * Builds RecentMatch cards from a set of match rows + the decks/profiles
- * they belong to. Shared by the public matches feed (`loadRecentMatches`,
+ * Builds RecentBattle cards from a set of battle rows + the decks/profiles
+ * they belong to. Shared by the public battles feed (`loadRecentBattles`,
  * cross-user, admin client, curated) and the profile page's private
- * Recent Battles preview (`loadOwnerRecentMatches`, single user, RLS'd
+ * Recent Battles preview (`loadOwnerRecentBattles`, single user, RLS'd
  * client, uncurated) — the image-resolution and prize-aggregation logic
  * is identical either way, only the input scope and `dropIfNoOpponentArt`
  * differ.
  */
-async function assembleRecentMatches(
+async function assembleRecentBattles(
   sb: SupabaseClient,
-  matchRows: Record<string, unknown>[],
+  battleRows: Record<string, unknown>[],
   deckById: Map<string, DeckRef>,
   profileById: Map<string, ProfileRef>,
   { dropIfNoOpponentArt }: { dropIfNoOpponentArt: boolean },
-): Promise<RecentMatch[]> {
-  if (!matchRows.length) return [];
+): Promise<RecentBattle[]> {
+  if (!battleRows.length) return [];
 
-  const matchDeckIds = Array.from(new Set(matchRows.map((m) => m.saved_deck_id as string)));
-  const matchIds = matchRows.map((m) => m.id as string);
+  const battleDeckIds = Array.from(new Set(battleRows.map((m) => m.saved_deck_id as string)));
+  const battleIds = battleRows.map((m) => m.id as string);
 
   // Every match_actions read below is paged (see fetchAllPages). These span
-  // the whole match pool — the `attack` query alone returns ~1200 rows
-  // against ~217 public matches — so a single request runs past PostgREST's
+  // the whole battle pool — the `attack` query alone returns ~1200 rows
+  // against ~217 public battles — so a single request runs past PostgREST's
   // per-response cap and silently truncates in scan order. That starved the
-  // NEWEST matches of their rows, which is exactly the wrong end: every
-  // match inside the Featured Battle's 7-day window came back with
-  // totalDamage null, pickFeaturedMatch filtered out all of them, and both
+  // NEWEST battles of their rows, which is exactly the wrong end: every
+  // battle inside the Featured Battle's 7-day window came back with
+  // totalDamage null, pickFeaturedBattle filtered out all of them, and both
   // /battles and the home page rendered no hero at all. prize_taken was
   // over the same cliff, so prize digits were quietly wrong too.
   const [{ data: deckDetailRows }, attackRows, playRows, prizeRows] = await Promise.all([
     // Not paged: bounded by the number of distinct public decks (~64), well
     // inside one response.
-    sb.from("saved_decks").select("id, cover_image_url, analysis").in("id", matchDeckIds),
+    sb.from("saved_decks").select("id, cover_image_url, analysis").in("id", battleDeckIds),
     fetchAllPages((from, to) =>
       sb
         .from("match_actions")
         .select("match_id, actor, payload")
-        .in("match_id", matchIds)
+        .in("match_id", battleIds)
         .eq("action_type", "attack")
         .order("match_id")
         .order("sequence")
@@ -130,7 +130,7 @@ async function assembleRecentMatches(
       sb
         .from("match_actions")
         .select("match_id, action_type, payload")
-        .in("match_id", matchIds)
+        .in("match_id", battleIds)
         .eq("actor", "opponent")
         .in("action_type", ["play_to_active", "play_to_bench", "evolve"])
         .order("match_id")
@@ -138,12 +138,12 @@ async function assembleRecentMatches(
         .range(from, to)
         .then(({ data }) => (data ?? []) as ActionRow[]),
     ),
-    // Prize counts per side per match, summed from prize_taken actions.
+    // Prize counts per side per battle, summed from prize_taken actions.
     fetchAllPages((from, to) =>
       sb
         .from("match_actions")
         .select("match_id, actor, payload")
-        .in("match_id", matchIds)
+        .in("match_id", battleIds)
         .eq("action_type", "prize_taken")
         .order("match_id")
         .order("sequence")
@@ -154,39 +154,39 @@ async function assembleRecentMatches(
 
   const deckDetailById = new Map((deckDetailRows ?? []).map((d) => [d.id as string, d]));
 
-  // Aggregate opponent damage per match → top attacker name, and total
-  // damage across both sides per match (drives the /battles Featured
-  // Match ranking).
+  // Aggregate opponent damage per battle → top attacker name, and total
+  // damage across both sides per battle (drives the /battles Featured
+  // Battle ranking).
   const opponentDmg = new Map<string, Map<string, number>>();
-  const totalDamageByMatch = new Map<string, number>();
+  const totalDamageByBattle = new Map<string, number>();
   for (const row of attackRows) {
     const payload = row.payload as Record<string, unknown> | null;
     const damage = typeof payload?.damage === "number" ? payload.damage : 0;
     if (!damage) continue;
-    const matchId = row.match_id as string;
-    totalDamageByMatch.set(matchId, (totalDamageByMatch.get(matchId) ?? 0) + damage);
+    const battleId = row.match_id as string;
+    totalDamageByBattle.set(battleId, (totalDamageByBattle.get(battleId) ?? 0) + damage);
 
     if (row.actor !== "opponent") continue;
     const attacker =
       typeof payload?.attacker === "string" ? stripCardIds(payload.attacker).trim() : null;
     if (!attacker) continue;
-    if (!opponentDmg.has(matchId)) opponentDmg.set(matchId, new Map());
-    const m = opponentDmg.get(matchId)!;
+    if (!opponentDmg.has(battleId)) opponentDmg.set(battleId, new Map());
+    const m = opponentDmg.get(battleId)!;
     m.set(attacker, (m.get(attacker) ?? 0) + damage);
   }
 
-  const topAttackerByMatch = new Map<string, string>();
-  opponentDmg.forEach((attackerMap, matchId) => {
+  const topAttackerByBattle = new Map<string, string>();
+  opponentDmg.forEach((attackerMap, battleId) => {
     let topName = "";
     let topDmg = 0;
     attackerMap.forEach((dmg, name) => {
       if (dmg > topDmg) { topDmg = dmg; topName = name; }
     });
-    if (topName) topAttackerByMatch.set(matchId, topName);
+    if (topName) topAttackerByBattle.set(battleId, topName);
   });
 
-  // Fallback per match: highest-rank Pokémon the opponent put into play.
-  const opponentPlaysByMatch = new Map<string, Map<string, number>>();
+  // Fallback per battle: highest-rank Pokémon the opponent put into play.
+  const opponentPlaysByBattle = new Map<string, Map<string, number>>();
   for (const row of playRows) {
     const payload = row.payload as Record<string, unknown> | null;
     const rawName =
@@ -195,33 +195,33 @@ async function assembleRecentMatches(
         : (typeof payload?.card === "string" ? payload.card : null);
     const name = rawName ? stripCardIds(rawName).trim() : null;
     if (!name) continue;
-    const matchId = row.match_id as string;
-    if (!opponentPlaysByMatch.has(matchId)) opponentPlaysByMatch.set(matchId, new Map());
-    const m = opponentPlaysByMatch.get(matchId)!;
+    const battleId = row.match_id as string;
+    if (!opponentPlaysByBattle.has(battleId)) opponentPlaysByBattle.set(battleId, new Map());
+    const m = opponentPlaysByBattle.get(battleId)!;
     m.set(name, (m.get(name) ?? 0) + 1);
   }
-  opponentPlaysByMatch.forEach((countByName, matchId) => {
-    if (topAttackerByMatch.has(matchId)) return;
+  opponentPlaysByBattle.forEach((countByName, battleId) => {
+    if (topAttackerByBattle.has(battleId)) return;
     const synthetic: AnalysisCard[] = Array.from(countByName.entries()).map(
       ([name, qty]) => ({ name, qty, number: "", setCode: "", section: "pokemon" }),
     );
     const primary = primaryPokemonCard(synthetic);
-    if (primary) topAttackerByMatch.set(matchId, primary.card.name);
+    if (primary) topAttackerByBattle.set(battleId, primary.card.name);
   });
 
-  // Prizes taken per side per match.
-  const playerPrizesByMatch = new Map<string, number>();
-  const opponentPrizesByMatch = new Map<string, number>();
+  // Prizes taken per side per battle.
+  const playerPrizesByBattle = new Map<string, number>();
+  const opponentPrizesByBattle = new Map<string, number>();
   for (const row of prizeRows) {
     const payload = row.payload as Record<string, unknown> | null;
     const count =
       typeof payload?.count === "number" && payload.count > 0 ? payload.count : 1;
-    const matchId = row.match_id as string;
-    const map = row.actor === "player" ? playerPrizesByMatch : opponentPrizesByMatch;
-    map.set(matchId, (map.get(matchId) ?? 0) + count);
+    const battleId = row.match_id as string;
+    const map = row.actor === "player" ? playerPrizesByBattle : opponentPrizesByBattle;
+    map.set(battleId, (map.get(battleId) ?? 0) + count);
   }
 
-  return matchRows.flatMap((m) => {
+  return battleRows.flatMap((m) => {
     const deck = deckById.get(m.saved_deck_id as string);
     const profile = deck ? profileById.get(deck.user_id) : null;
     if (!deck || !profile?.username) return [];
@@ -241,7 +241,7 @@ async function assembleRecentMatches(
     // gameplay-inference signal this cascade already has: the opponent's
     // top-damage attacker, or (folded into the same map above, when nobody
     // attacked) their most-played/evolved-into Pokémon.
-    const gameplayName = topAttackerByMatch.get(m.id as string) ?? null;
+    const gameplayName = topAttackerByBattle.get(m.id as string) ?? null;
     const hero = resolveOpponentHero({
       opponentArchetype: (m.opponent_archetype as string | null) ?? null,
       gameplayName,
@@ -253,13 +253,13 @@ async function assembleRecentMatches(
       opponentImageUrl = hero.imageUrl;
       opponentColor = hero.color;
     } else {
-      // `dropIfNoOpponentArt` drops a match we can't even NAME an opponent
+      // `dropIfNoOpponentArt` drops a battle we can't even NAME an opponent
       // for — not merely one whose name the card catalog has no art for.
-      // The cascade this replaced kept any match with a top attacker even
+      // The cascade this replaced kept any battle with a top attacker even
       // when its art didn't resolve, rendering the card with no opponent
       // image; folding art-resolution into the drop test (as an earlier
       // pass here did) quietly shrank the public feed, and with it the pool
-      // pickFeaturedMatch draws from.
+      // pickFeaturedBattle draws from.
       if (dropIfNoOpponentArt && !gameplayName) return [];
       opponentImageUrl = null;
       opponentColor = typeColor(undefined);
@@ -290,22 +290,22 @@ async function assembleRecentMatches(
       opponentAttackerName: hero?.name ?? gameplayName,
       playerColor,
       opponentColor,
-      playerPrizes: playerPrizesByMatch.get(m.id as string) ?? manualPrizes?.player ?? 0,
-      opponentPrizes: opponentPrizesByMatch.get(m.id as string) ?? manualPrizes?.opponent ?? 0,
+      playerPrizes: playerPrizesByBattle.get(m.id as string) ?? manualPrizes?.player ?? 0,
+      opponentPrizes: opponentPrizesByBattle.get(m.id as string) ?? manualPrizes?.opponent ?? 0,
       isBestOf3: typeof m.game_results === "string" && m.game_results.length >= 2,
       hasBattleLog: m.source === "tcg_live_log",
-      totalDamage: totalDamageByMatch.get(m.id as string) ?? null,
+      totalDamage: totalDamageByBattle.get(m.id as string) ?? null,
     }];
   });
 }
 
 /**
- * Cross-user public matches feed — powers the /battles page. Only matches
- * on public decks owned by public profiles, and only matches with either
+ * Cross-user public battles feed — powers the /battles page. Only battles
+ * on public decks owned by public profiles, and only battles with either
  * a parsed battle log or a recognized opponent archetype/prize data (kept
- * visually rich for anonymous browsing; see assembleRecentMatches).
+ * visually rich for anonymous browsing; see assembleRecentBattles).
  */
-export async function loadRecentMatches(limit = 6): Promise<RecentMatch[]> {
+export async function loadRecentBattles(limit = 6): Promise<RecentBattle[]> {
   try {
     const admin = createAdminClient();
 
@@ -328,47 +328,47 @@ export async function loadRecentMatches(limit = 6): Promise<RecentMatch[]> {
     const pubDecks = deckRows.filter((d) => pubProfileIds.has(d.user_id as string)) as DeckRef[];
     if (!pubDecks.length) return [];
 
-    const { data: matchRows, error: matchErr } = await admin
+    const { data: battleRows, error: battleErr } = await admin
       .from("matches")
-      .select(MATCH_ROW_SELECT)
+      .select(BATTLE_ROW_SELECT)
       .or(
         "source.eq.tcg_live_log,and(prizes_taken_player.not.is.null,prizes_taken_opponent.not.is.null),game_prizes.not.is.null"
       )
       .in("saved_deck_id", pubDecks.map((d) => d.id))
       .order("created_at", { ascending: false })
       .limit(Math.min(limit * 4, 400));
-    if (matchErr || !matchRows?.length) return [];
+    if (battleErr || !battleRows?.length) return [];
 
     const deckById = new Map(pubDecks.map((d) => [d.id, d]));
     const profileById = new Map(
       (profileRows as ProfileRef[]).map((p) => [p.id, p]),
     );
 
-    const results = await assembleRecentMatches(admin, matchRows, deckById, profileById, {
+    const results = await assembleRecentBattles(admin, battleRows, deckById, profileById, {
       dropIfNoOpponentArt: true,
     });
     return results.slice(0, limit);
   } catch (err) {
-    console.error("[recent-matches] failed:", err);
+    console.error("[recent-battles] failed:", err);
     return [];
   }
 }
 
 /**
- * A single owner's own recent matches (private — not scoped to public
+ * A single owner's own recent battles (private — not scoped to public
  * decks/profiles). Powers the profile page's Recent Battles preview.
- * Every logged match is included regardless of whether a nice opponent
- * image can be resolved (MatchCard degrades to a simple layout when an
+ * Every logged battle is included regardless of whether a nice opponent
+ * image can be resolved (BattleCard degrades to a simple layout when an
  * image is missing) — unlike the public feed, this list shouldn't hide
- * a user's own real matches just because the opponent's archetype isn't
+ * a user's own real battles just because the opponent's archetype isn't
  * a recognized meta deck.
  */
-export async function loadOwnerRecentMatches(
+export async function loadOwnerRecentBattles(
   sb: SupabaseClient,
   userId: string,
   username: string,
   limit = 3,
-): Promise<RecentMatch[]> {
+): Promise<RecentBattle[]> {
   try {
     const { data: deckRows, error: deckErr } = await sb
       .from("saved_decks")
@@ -377,51 +377,51 @@ export async function loadOwnerRecentMatches(
     if (deckErr || !deckRows?.length) return [];
 
     const decks = deckRows as DeckRef[];
-    const { data: matchRows, error: matchErr } = await sb
+    const { data: battleRows, error: battleErr } = await sb
       .from("matches")
-      .select(MATCH_ROW_SELECT)
+      .select(BATTLE_ROW_SELECT)
       .in("saved_deck_id", decks.map((d) => d.id))
       .order("created_at", { ascending: false })
       .limit(limit);
-    if (matchErr || !matchRows?.length) return [];
+    if (battleErr || !battleRows?.length) return [];
 
     const deckById = new Map(decks.map((d) => [d.id, d]));
     const profileById = new Map([[userId, { id: userId, username }]]);
 
-    const results = await assembleRecentMatches(sb, matchRows, deckById, profileById, {
+    const results = await assembleRecentBattles(sb, battleRows, deckById, profileById, {
       dropIfNoOpponentArt: false,
     });
     return results.slice(0, limit);
   } catch (err) {
-    console.error("[recent-matches] owner load failed:", err);
+    console.error("[recent-battles] owner load failed:", err);
     return [];
   }
 }
 
 /**
- * Candidate pool size for `pickFeaturedMatch`. Both surfaces that show the
+ * Candidate pool size for `pickFeaturedBattle`. Both surfaces that show the
  * Featured Battle must load the SAME pool — the picker only ranks what it's
- * handed, so a smaller pool silently yields a different "featured" match.
+ * handed, so a smaller pool silently yields a different "featured" battle.
  */
-export const FEATURED_MATCH_POOL = 200;
+export const FEATURED_BATTLE_POOL = 200;
 
 /** Days back the Featured Battle is drawn from. */
-const FEATURED_MATCH_WINDOW_DAYS = 7;
+const FEATURED_BATTLE_WINDOW_DAYS = 7;
 
 /**
- * The current Featured Battle: within the last week, the match with the most
+ * The current Featured Battle: within the last week, the battle with the most
  * total damage dealt across both sides, ties going to the more recent one —
  * so the fresher of two similar bloodbaths surfaces.
  *
  * Shared by /battles (which renders the hero) and the home page (which
- * showcases that same match plus its replay), so the two can't drift about
- * what is currently featured. Pass `FEATURED_MATCH_POOL` to
- * `loadRecentMatches` on both.
+ * showcases that same battle plus its replay), so the two can't drift about
+ * what is currently featured. Pass `FEATURED_BATTLE_POOL` to
+ * `loadRecentBattles` on both.
  */
-export function pickFeaturedMatch(matches: RecentMatch[]): RecentMatch | null {
-  const cutoff = Date.now() - FEATURED_MATCH_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+export function pickFeaturedBattle(battles: RecentBattle[]): RecentBattle | null {
+  const cutoff = Date.now() - FEATURED_BATTLE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
   return (
-    matches
+    battles
       .filter(
         (m) => m.totalDamage != null && new Date(m.createdAt).getTime() >= cutoff,
       )

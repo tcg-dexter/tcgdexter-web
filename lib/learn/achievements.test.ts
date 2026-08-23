@@ -9,8 +9,8 @@ import {
 
 const M = (partial: Partial<Metrics>): Metrics => ({
   savedDecks: 0,
-  totalMatches: 0,
-  importMatches: 0,
+  totalBattles: 0,
+  importBattles: 0,
   ...partial,
 });
 
@@ -23,25 +23,25 @@ describe("qualifiedKeys — count-based predicates", () => {
     expect(qualifiedKeys(M({ savedDecks: 1 }))).toEqual(["first_save"]);
   });
 
-  it("first manual match unlocks First Match only (no battle log)", () => {
-    expect(qualifiedKeys(M({ totalMatches: 1, importMatches: 0 }))).toEqual([
-      "first_match",
+  it("first manual battle unlocks First Battle only (no battle log)", () => {
+    expect(qualifiedKeys(M({ totalBattles: 1, importBattles: 0 }))).toEqual([
+      "first_battle",
     ]);
   });
 
-  it("a first-ever import earns BOTH First Match and First Battle Log", () => {
-    const keys = qualifiedKeys(M({ totalMatches: 1, importMatches: 1 }));
-    expect(keys).toContain("first_match");
+  it("a first-ever import earns BOTH First Battle and First Battle Log", () => {
+    const keys = qualifiedKeys(M({ totalBattles: 1, importBattles: 1 }));
+    expect(keys).toContain("first_battle");
     expect(keys).toContain("first_battle_log");
   });
 
-  it("match-grind milestones stack at their thresholds", () => {
-    expect(qualifiedKeys(M({ totalMatches: 10 }))).toEqual(
-      expect.arrayContaining(["first_match", "matches_10"]),
+  it("battle-grind milestones stack at their thresholds", () => {
+    expect(qualifiedKeys(M({ totalBattles: 10 }))).toEqual(
+      expect.arrayContaining(["first_battle", "battles_10"]),
     );
-    expect(qualifiedKeys(M({ totalMatches: 49 }))).not.toContain("matches_50");
-    expect(qualifiedKeys(M({ totalMatches: 100 }))).toEqual(
-      expect.arrayContaining(["matches_10", "matches_50", "matches_100"]),
+    expect(qualifiedKeys(M({ totalBattles: 49 }))).not.toContain("battles_50");
+    expect(qualifiedKeys(M({ totalBattles: 100 }))).toEqual(
+      expect.arrayContaining(["battles_10", "battles_50", "battles_100"]),
     );
   });
 
@@ -64,7 +64,7 @@ describe("qualifiedKeys — count-based predicates", () => {
 
   it("never awards certified_trainer, even at huge metrics", () => {
     const keys = qualifiedKeys(
-      M({ savedDecks: 999, totalMatches: 999, importMatches: 999 }),
+      M({ savedDecks: 999, totalBattles: 999, importBattles: 999 }),
     );
     expect(keys).not.toContain("certified_trainer");
     // Every other catalog key should be present at that point.
@@ -124,8 +124,8 @@ function fakeSupabase(store: {
           return {
             count:
               this.filters.source === "tcg_live_log"
-                ? store.counts.importMatches
-                : store.counts.totalMatches,
+                ? store.counts.importBattles
+                : store.counts.totalBattles,
             error: null,
           };
       }
@@ -159,7 +159,7 @@ function fakeSupabase(store: {
 describe("reconcileAchievements — idempotent awarding", () => {
   it("inserts exactly the newly-qualified, non-held keys", async () => {
     const store = {
-      counts: M({ savedDecks: 5, totalMatches: 12, importMatches: 1 }),
+      counts: M({ savedDecks: 5, totalBattles: 12, importBattles: 1 }),
       held: new Set<string>(),
       insertedLog: [] as string[],
     };
@@ -167,9 +167,9 @@ describe("reconcileAchievements — idempotent awarding", () => {
     expect(new Set(inserted)).toEqual(
       new Set<AchievementKey>([
         "first_save",
-        "first_match",
+        "first_battle",
         "first_battle_log",
-        "matches_10",
+        "battles_10",
         "decks_5",
       ]),
     );
@@ -178,7 +178,7 @@ describe("reconcileAchievements — idempotent awarding", () => {
 
   it("is a no-op on a second call (nothing re-inserted)", async () => {
     const store = {
-      counts: M({ savedDecks: 5, totalMatches: 12, importMatches: 1 }),
+      counts: M({ savedDecks: 5, totalBattles: 12, importBattles: 1 }),
       held: new Set<string>(),
       insertedLog: [] as string[],
     };
@@ -191,7 +191,7 @@ describe("reconcileAchievements — idempotent awarding", () => {
 
   it("leaves a pre-held certified_trainer untouched and doesn't re-award earned badges", async () => {
     const store = {
-      counts: M({ savedDecks: 1, totalMatches: 0, importMatches: 0 }),
+      counts: M({ savedDecks: 1, totalBattles: 0, importBattles: 0 }),
       held: new Set<string>(["certified_trainer", "first_save"]),
       insertedLog: [] as string[],
     };

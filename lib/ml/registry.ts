@@ -27,8 +27,8 @@ export interface MlRegistryModel {
  *  supports (spec thresholds). Written by every training run. */
 export interface MlRegistryGate {
   enabled: boolean;
-  threshold_matches: number;
-  n_matches: number;
+  threshold_battles: number;
+  n_battles: number;
 }
 
 export interface MlRegistry {

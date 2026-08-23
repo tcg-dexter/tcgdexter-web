@@ -1,13 +1,13 @@
 // Coach v1 — deterministic, explainable insight detection over Phase-1
 // feature rows. No learned components: every insight is a rule a human
 // coach could state, with the evidence (turn numbers, counts) inline.
-// Works from match #1; learned turn-quality grading replaces individual
+// Works from battle #1; learned turn-quality grading replaces individual
 // rules only when the corpus crosses its data threshold (spec Phase 2+).
 //
-// Pure over plain data (MatchLogFeatures + flagged TurnFeatures) so the
+// Pure over plain data (BattleLogFeatures + flagged TurnFeatures) so the
 // rules are unit-testable without engine state.
 
-import type { MatchLogFeatures, TurnFeatures, TurnQualityFlags } from "@/lib/ml/features";
+import type { BattleLogFeatures, TurnFeatures, TurnQualityFlags } from "@/lib/ml/features";
 
 export type FlaggedTurn = TurnFeatures & TurnQualityFlags;
 
@@ -16,7 +16,7 @@ export interface CoachInsight {
    *  contract — the UI keys icons/ordering off them. */
   code: string;
   severity: "warning" | "suggestion" | "info";
-  /** Turn the insight anchors to, or null for match-level insights. */
+  /** Turn the insight anchors to, or null for battle-level insights. */
   turn_number: number | null;
   title: string;
   detail: string;
@@ -48,7 +48,7 @@ function listTurns(turns: number[]): string {
 }
 
 export function buildCoachReport(
-  match: MatchLogFeatures,
+  battle: BattleLogFeatures,
   turns: FlaggedTurn[],
 ): CoachReport {
   const insights: CoachInsight[] = [];
@@ -129,10 +129,10 @@ export function buildCoachReport(
   }
 
   /* ── Prize-trade economics ──────────────────────────────────── */
-  const kosBy = match.kos_by_player ?? 0;
-  const kosAgainst = match.kos_by_opponent ?? 0;
-  const prizesP = match.prizes_player ?? 0;
-  const prizesO = match.prizes_opponent ?? 0;
+  const kosBy = battle.kos_by_player ?? 0;
+  const kosAgainst = battle.kos_by_opponent ?? 0;
+  const prizesP = battle.prizes_player ?? 0;
+  const prizesO = battle.prizes_opponent ?? 0;
   if (kosAgainst > 0 && prizesO / kosAgainst >= 2 && (kosBy === 0 || prizesP / kosBy < prizesO / kosAgainst)) {
     insights.push({
       code: "prize_trade",
@@ -158,29 +158,29 @@ export function buildCoachReport(
 
   /* ── Tempo ──────────────────────────────────────────────────── */
   if (
-    match.first_attack_turn_player !== null &&
-    match.first_attack_turn_opponent !== null &&
-    match.first_attack_turn_player - match.first_attack_turn_opponent >= 3
+    battle.first_attack_turn_player !== null &&
+    battle.first_attack_turn_opponent !== null &&
+    battle.first_attack_turn_player - battle.first_attack_turn_opponent >= 3
   ) {
     insights.push({
       code: "slow_start",
       severity: "suggestion",
-      turn_number: match.first_attack_turn_player,
+      turn_number: battle.first_attack_turn_player,
       title: "Slow start: opponent attacked first by a wide margin",
       detail:
-        `Your first attack landed on turn ${match.first_attack_turn_player}, the opponent's on ` +
-        `turn ${match.first_attack_turn_opponent}. If this repeats across games, look at the ` +
+        `Your first attack landed on turn ${battle.first_attack_turn_player}, the opponent's on ` +
+        `turn ${battle.first_attack_turn_opponent}. If this repeats across games, look at the ` +
         `energy count and early-search lines.`,
     });
   }
 
   /* ── Stranded resources ─────────────────────────────────────── */
-  if ((match.stranded_energy_final_player ?? 0) >= 3) {
+  if ((battle.stranded_energy_final_player ?? 0) >= 3) {
     insights.push({
       code: "stranded_energy",
       severity: "suggestion",
       turn_number: null,
-      title: `${match.stranded_energy_final_player} energy stranded on the bench at game end`,
+      title: `${battle.stranded_energy_final_player} energy stranded on the bench at game end`,
       detail:
         `Energy left on benched Pokémon when the game ended did no work. Concentrating ` +
         `attachments on the active line (or planning the next attacker earlier) converts them into damage.`,
@@ -188,22 +188,22 @@ export function buildCoachReport(
   }
 
   /* ── Consistency info ───────────────────────────────────────── */
-  if ((match.player_mulligans ?? 0) >= 2) {
+  if ((battle.player_mulligans ?? 0) >= 2) {
     insights.push({
       code: "mulligans",
       severity: "info",
       turn_number: null,
-      title: `${match.player_mulligans} mulligans this game`,
+      title: `${battle.player_mulligans} mulligans this game`,
       detail: `Repeated mulligans hint at a low Basic count for this list.`,
     });
   }
-  if ((match.max_prize_deficit ?? 0) <= -4 && prizesP > prizesO) {
+  if ((battle.max_prize_deficit ?? 0) <= -4 && prizesP > prizesO) {
     insights.push({
       code: "comeback",
       severity: "info",
       turn_number: null,
       title: "Comeback win from a 4-prize deficit",
-      detail: `You were down ${Math.abs(match.max_prize_deficit!)} prizes and still closed it out.`,
+      detail: `You were down ${Math.abs(battle.max_prize_deficit!)} prizes and still closed it out.`,
     });
   }
 
@@ -220,8 +220,8 @@ export function buildCoachReport(
       turns_missed_energy: missedEnergy.length,
       turns_no_supporter: noSupporter.length,
       passive_turns: passive.length,
-      prizes_player: match.prizes_player,
-      prizes_opponent: match.prizes_opponent,
+      prizes_player: battle.prizes_player,
+      prizes_opponent: battle.prizes_opponent,
     },
   };
 }

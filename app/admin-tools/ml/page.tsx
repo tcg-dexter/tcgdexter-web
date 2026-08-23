@@ -177,7 +177,7 @@ export default async function MlPipelinePage() {
                   />
                   <span className="text-xs font-semibold text-text-primary">{name}</span>
                   <span className="text-[10px] text-text-muted">
-                    {gate.n_matches}/{gate.threshold_matches} matches
+                    {gate.n_battles}/{gate.threshold_battles} battles
                   </span>
                 </div>
               ))}

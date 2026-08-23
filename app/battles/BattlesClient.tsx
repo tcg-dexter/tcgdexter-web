@@ -2,37 +2,37 @@
 
 import { useMemo, useState } from "react";
 import PillSelect from "@/app/components/ui/PillSelect";
-import { MatchCard, type RecentMatch } from "@/app/components/MatchCard";
+import { BattleCard, type RecentBattle } from "@/app/components/BattleCard";
 import { normalizeForSearch } from "@/lib/searchNormalize";
 import PlayerLeaderboard from "./PlayerLeaderboard";
-import FeaturedMatchHero from "./FeaturedMatchHero";
+import FeaturedBattleHero from "./FeaturedBattleHero";
 import type { LeaderboardPlayer } from "@/lib/player-leaderboard";
-import type { MatchSideStats } from "@/lib/match-side-stats";
+import type { BattleSideStatsPair } from "@/lib/battle-side-stats";
 
 interface Props {
-  matches: RecentMatch[];
-  /** Highest-total-damage match from the last 7 days, picked server-side.
+  battles: RecentBattle[];
+  /** Highest-total-damage battle from the last 7 days, picked server-side.
    *  Null when nothing in the window has a parsed battle log with damage. */
-  featuredMatch?: RecentMatch | null;
-  /** Per-side aggregate stats for the featured match, aggregated server-side
-   *  and passed straight into the Details drawer. Null when the match has no
+  featuredBattle?: RecentBattle | null;
+  /** Per-side aggregate stats for the featured battle, aggregated server-side
+   *  and passed straight into the Details drawer. Null when the battle has no
    *  parsed action rows to aggregate from. */
-  featuredMatchStats?: MatchSideStats | null;
+  featuredBattleStats?: BattleSideStatsPair | null;
   leaderboard: LeaderboardPlayer[];
   currentUsername?: string | null;
-  /** Pre-select the "My Matches" filter on load — used by the "View All"
+  /** Pre-select the "My Battles" filter on load — used by the "View All"
    *  link from the profile page's Recent Battles section
    *  (/battles?filter=mine). No-op when the viewer isn't signed in. */
-  initialMyMatches?: boolean;
+  initialMyBattles?: boolean;
 }
 
 type SortDir = "desc" | "asc";
-type FilterKey = "myMatches" | "hasBattleLog" | "hasMeta" | "singleMatch" | "bestOf3";
+type FilterKey = "myBattles" | "hasBattleLog" | "hasMeta" | "singleBattle" | "bestOf3";
 type ViewMode = "sections" | "browse";
 
 const PAGE_SIZE = 20;
 
-function matchSearchText(m: RecentMatch): string {
+function battleSearchText(m: RecentBattle): string {
   return [
     m.deckName,
     m.username,
@@ -45,26 +45,26 @@ function matchSearchText(m: RecentMatch): string {
     .join(" ");
 }
 
-function applyFilter(m: RecentMatch, key: FilterKey, currentUsername: string | null): boolean {
+function applyFilter(m: RecentBattle, key: FilterKey, currentUsername: string | null): boolean {
   switch (key) {
-    case "myMatches":   return m.username === currentUsername;
+    case "myBattles":   return m.username === currentUsername;
     case "hasBattleLog": return m.hasBattleLog;
     case "hasMeta":     return m.opponentArchetype !== null;
-    case "singleMatch": return !m.isBestOf3;
+    case "singleBattle": return !m.isBestOf3;
     case "bestOf3":     return m.isBestOf3;
   }
 }
 
-function bucketMatches(matches: RecentMatch[]) {
+function bucketBattles(battles: RecentBattle[]) {
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const sevenDaysAgoStart = todayStart - 7 * 24 * 60 * 60 * 1000;
   const monthStartMs = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
-  const today: RecentMatch[] = [];
-  const thisWeek: RecentMatch[] = [];
-  const thisMonth: RecentMatch[] = [];
-  for (const m of matches) {
+  const today: RecentBattle[] = [];
+  const thisWeek: RecentBattle[] = [];
+  const thisMonth: RecentBattle[] = [];
+  for (const m of battles) {
     const t = new Date(m.createdAt).getTime();
     if (t >= todayStart) today.push(m);
     else if (t >= sevenDaysAgoStart) thisWeek.push(m);
@@ -73,28 +73,28 @@ function bucketMatches(matches: RecentMatch[]) {
   return { today, thisWeek, thisMonth };
 }
 
-export default function MatchesClient({
-  matches,
-  featuredMatch = null,
-  featuredMatchStats = null,
+export default function BattlesClient({
+  battles,
+  featuredBattle = null,
+  featuredBattleStats = null,
   leaderboard,
   currentUsername = null,
-  initialMyMatches = false,
+  initialMyBattles = false,
 }: Props) {
   // The leaderboard view/toggle are hidden, not removed — the top-user list
   // isn't robust enough yet to surface. Everything below (mode state,
   // PlayerLeaderboard render branch, the leaderboard prop/data plumbing)
   // stays intact; flipping this back to true is the whole reversal.
   const LEADERBOARD_ENABLED = false;
-  const preselectMyMatches = initialMyMatches && Boolean(currentUsername);
-  const [mode, setMode] = useState<"matches" | "leaderboard">("matches");
+  const preselectMyBattles = initialMyBattles && Boolean(currentUsername);
+  const [mode, setMode] = useState<"battles" | "leaderboard">("battles");
   const [viewMode, setViewMode] = useState<ViewMode>("sections");
   const [query, setQuery] = useState("");
   const [dir, setDir] = useState<SortDir>("desc");
   const [page, setPage] = useState(1);
-  const [showFilters, setShowFilters] = useState(preselectMyMatches);
+  const [showFilters, setShowFilters] = useState(preselectMyBattles);
   const [activeFilters, setActiveFilters] = useState<Set<FilterKey>>(
-    () => new Set(preselectMyMatches ? (["myMatches"] as FilterKey[]) : []),
+    () => new Set(preselectMyBattles ? (["myBattles"] as FilterKey[]) : []),
   );
 
   const toggleFilter = (key: FilterKey) => {
@@ -120,8 +120,8 @@ export default function MatchesClient({
   const filtered = useMemo(() => {
     const q = normalizeForSearch(query.trim());
     let base = q
-      ? matches.filter((m) => normalizeForSearch(matchSearchText(m)).includes(q))
-      : matches;
+      ? battles.filter((m) => normalizeForSearch(battleSearchText(m)).includes(q))
+      : battles;
 
     activeFilters.forEach((key) => {
       base = base.filter((m) => applyFilter(m, key, currentUsername));
@@ -133,20 +133,20 @@ export default function MatchesClient({
       return dir === "asc" ? av - bv : bv - av;
     });
     return sorted;
-  }, [matches, query, dir, activeFilters, currentUsername]);
+  }, [battles, query, dir, activeFilters, currentUsername]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const filterDefs: Array<{ key: FilterKey; label: string }> = [
-    ...(currentUsername ? [{ key: "myMatches" as FilterKey, label: "My Matches" }] : []),
+    ...(currentUsername ? [{ key: "myBattles" as FilterKey, label: "My Battles" }] : []),
     { key: "hasBattleLog",  label: "Includes Battle Log" },
     { key: "hasMeta",       label: "Includes Meta Archetype" },
-    { key: "singleMatch",   label: "Single Match" },
+    { key: "singleBattle",  label: "Single Battle" },
     { key: "bestOf3",       label: "Best of 3" },
   ];
 
-  const buckets = useMemo(() => bucketMatches(matches), [matches]);
+  const buckets = useMemo(() => bucketBattles(battles), [battles]);
 
   return (
     <>
@@ -158,10 +158,10 @@ export default function MatchesClient({
         {LEADERBOARD_ENABLED && (
         <button
           type="button"
-          onClick={() => setMode((m) => (m === "leaderboard" ? "matches" : "leaderboard"))}
+          onClick={() => setMode((m) => (m === "leaderboard" ? "battles" : "leaderboard"))}
           aria-pressed={mode === "leaderboard"}
-          aria-label={mode === "leaderboard" ? "Switch to matches view" : "Switch to leaderboard"}
-          title={mode === "leaderboard" ? "Switch to matches view" : "Switch to leaderboard"}
+          aria-label={mode === "leaderboard" ? "Switch to battles view" : "Switch to leaderboard"}
+          title={mode === "leaderboard" ? "Switch to battles view" : "Switch to leaderboard"}
           className={`inline-flex items-center justify-center h-[38px] w-[38px] rounded-full border transition-colors shrink-0 ${
             mode === "leaderboard"
               ? "border-transparent bg-black text-white dark:bg-white dark:text-black"
@@ -196,8 +196,8 @@ export default function MatchesClient({
       {/* Featured Battle hero — shown in the default "sections" view; a
           search or filter takes over the surface, so the hero yields when
           the user is drilling into something specific. */}
-      {featuredMatch && !isSearching && effectiveViewMode === "sections" && (
-        <FeaturedMatchHero match={featuredMatch} stats={featuredMatchStats} />
+      {featuredBattle && !isSearching && effectiveViewMode === "sections" && (
+        <FeaturedBattleHero battle={featuredBattle} stats={featuredBattleStats} />
       )}
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
@@ -222,7 +222,7 @@ export default function MatchesClient({
               setQuery(e.target.value);
               setPage(1);
             }}
-            placeholder="Search matches"
+            placeholder="Search battles"
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
@@ -294,18 +294,18 @@ export default function MatchesClient({
           {buckets.today.length + buckets.thisWeek.length + buckets.thisMonth.length > 0 ? (
             <div className="flex flex-col gap-8">
               {buckets.today.length > 0 && (
-                <MatchSection title="Today" matches={buckets.today} />
+                <BattleSection title="Today" battles={buckets.today} />
               )}
               {buckets.thisWeek.length > 0 && (
-                <MatchSection title="This Week" matches={buckets.thisWeek} />
+                <BattleSection title="This Week" battles={buckets.thisWeek} />
               )}
               {buckets.thisMonth.length > 0 && (
-                <MatchSection title="This Month" matches={buckets.thisMonth} />
+                <BattleSection title="This Month" battles={buckets.thisMonth} />
               )}
             </div>
           ) : (
             <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center dark:bg-surface-elevated dark:border-white/10">
-              <p className="text-sm text-text-secondary">No recent matches yet.</p>
+              <p className="text-sm text-text-secondary">No recent battles yet.</p>
             </div>
           )}
           <div className="mt-8 flex justify-center">
@@ -319,7 +319,7 @@ export default function MatchesClient({
         </>
       )}
 
-      {/* ── Browse view: paginated all-matches list ───────────────── */}
+      {/* ── Browse view: paginated all-battles list ───────────────── */}
       {effectiveViewMode === "browse" && (
         <>
           {!isSearching && (
@@ -342,13 +342,13 @@ export default function MatchesClient({
           {pageItems.length === 0 ? (
             <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center dark:bg-surface-elevated dark:border-white/10">
               <p className="text-sm text-text-secondary">
-                No matches found{query ? ` for "${query}"` : ""}.
+                No battles found{query ? ` for "${query}"` : ""}.
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {pageItems.map((m) => (
-                <MatchCard key={m.id} match={m} />
+                <BattleCard key={m.id} battle={m} />
               ))}
             </div>
           )}
@@ -363,7 +363,7 @@ export default function MatchesClient({
   );
 }
 
-function MatchSection({ title, matches }: { title: string; matches: RecentMatch[] }) {
+function BattleSection({ title, battles }: { title: string; battles: RecentBattle[] }) {
   return (
     <section>
       <div className="flex items-baseline gap-3 lg:gap-[18px] mb-3 lg:mb-[18px]">
@@ -372,12 +372,12 @@ function MatchSection({ title, matches }: { title: string; matches: RecentMatch[
         </h2>
         <span className="h-px flex-1 bg-text-primary/15" />
         <span className="shrink-0 rounded-full bg-black text-white text-[11px] lg:text-[17px] font-bold px-2.5 lg:px-[15px] py-0.5 lg:py-[3px] tabular-nums dark:bg-white dark:text-black">
-          {matches.length}
+          {battles.length}
         </span>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {matches.map((m) => (
-          <MatchCard key={m.id} match={m} />
+        {battles.map((m) => (
+          <BattleCard key={m.id} battle={m} />
         ))}
       </div>
     </section>

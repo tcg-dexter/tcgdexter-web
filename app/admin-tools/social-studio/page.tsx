@@ -21,8 +21,8 @@ import SocialStudioClient from "./SocialStudioClient";
 import type {
   CardSpotlightSubject,
   FeaturedDeckSubject,
-  FeaturedMatchSubject,
-  FeaturedManualMatchSubject,
+  FeaturedBattleSubject,
+  FeaturedManualBattleSubject,
   MetaArchetypeSubject,
   SpotlightSubject,
   SpotlightThumbSubject,
@@ -439,7 +439,7 @@ export default async function SocialStudioPage() {
     if (primary) topAttackerByMatch.set(matchId, primary.card.name);
   });
 
-  const featuredMatches: FeaturedMatchSubject[] = matchRowsRaw
+  const featuredBattles: FeaturedBattleSubject[] = matchRowsRaw
     .filter((m) => matchDeckById.has(m.saved_deck_id))
     .slice(0, 10)
     .map((m) => {
@@ -464,7 +464,7 @@ export default async function SocialStudioPage() {
         opponentAttacker ? cardTypesForName(opponentAttacker) : undefined,
       );
       return {
-        kind: "featured_match",
+        kind: "featured_battle",
         id: m.id,
         displayName: prof?.display_name ?? "Trainer",
         username: prof?.username ?? "trainer",
@@ -522,7 +522,7 @@ export default async function SocialStudioPage() {
     ]),
   );
 
-  const featuredManualMatches: FeaturedManualMatchSubject[] = manualMatchRowsRaw
+  const featuredManualBattles: FeaturedManualBattleSubject[] = manualMatchRowsRaw
     .filter((m) => manualDeckById.has(m.saved_deck_id))
     .flatMap((m) => {
       const deck = manualDeckById.get(m.saved_deck_id)!;
@@ -555,7 +555,7 @@ export default async function SocialStudioPage() {
       const prizes = manualPrizeTotals(m) ?? { player: 0, opponent: 0 };
 
       return [{
-        kind: "featured_match_manual" as const,
+        kind: "featured_battle_manual" as const,
         id: m.id,
         displayName: prof.display_name,
         username: prof.username,
@@ -574,7 +574,7 @@ export default async function SocialStudioPage() {
         result: m.result,
         playerPrizes: prizes.player,
         opponentPrizes: prizes.opponent,
-        platformLabel: "Match Log",
+        platformLabel: "Battle Log",
       }];
     })
     .slice(0, 10);
@@ -586,8 +586,8 @@ export default async function SocialStudioPage() {
       metaArchetypes={metaArchetypes}
       cardSpotlights={cardSpotlights}
       featuredDecks={featuredDecks}
-      featuredMatches={featuredMatches}
-      featuredManualMatches={featuredManualMatches}
+      featuredBattles={featuredBattles}
+      featuredManualBattles={featuredManualBattles}
     />
   );
 }

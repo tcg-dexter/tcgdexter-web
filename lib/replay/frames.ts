@@ -5,7 +5,7 @@ import { cardImageUrlForAnyName, cardImageUrlForName } from "@/lib/primaryCardIm
 import { cardImageSmall } from "@/lib/cardImages";
 
 /**
- * Builds the Replay viewer's frame stream from a match's stored
+ * Builds the Replay viewer's frame stream from a battle's stored
  * battle_log_raw: parses the log, runs the engine end-to-end, and trims
  * each resulting state down to what the board needs (active / bench /
  * pile counts / current turn). The deeper engine state — deck instances,
@@ -204,7 +204,7 @@ export interface ReplayFrame {
 }
 
 export interface ReplayPayload {
-  matchId: string;
+  battleId: string;
   playerHandle: string | null;
   opponentHandle: string | null;
   /** Highest-damage attacker on each side across the full game. Used by
@@ -529,7 +529,7 @@ function topAttacker(bucket: Map<string, number>): string | null {
  * downstream ("player" vs "opponent") is relative to it.
  */
 export function buildReplayPayload(
-  matchId: string,
+  battleId: string,
   battleLogRaw: string,
   playerHandle: string,
 ): ReplayPayload {
@@ -631,7 +631,7 @@ export function buildReplayPayload(
   });
 
   // Primary attacker per side = highest-damage Pokémon over the whole
-  // match. Mirrors the existing /battles/[id] header logic but reads from
+  // battle. Mirrors the existing /battles/[id] header logic but reads from
   // the in-memory parse rather than the DB, since we already have it
   // tokenised here.
   const dmgByActor: Record<"player" | "opponent", Map<string, number>> = {
@@ -650,7 +650,7 @@ export function buildReplayPayload(
   }
 
   return {
-    matchId,
+    battleId,
     playerHandle: normalized.player_handle,
     opponentHandle: normalized.opponent_handle,
     playerPrimaryName: topAttacker(dmgByActor.player),

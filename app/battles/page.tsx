@@ -1,16 +1,16 @@
 import {
-  FEATURED_MATCH_POOL,
-  loadRecentMatches,
-  pickFeaturedMatch,
-} from "@/lib/recent-matches";
+  FEATURED_BATTLE_POOL,
+  loadRecentBattles,
+  pickFeaturedBattle,
+} from "@/lib/recent-battles";
 import { loadPlayerLeaderboard } from "@/lib/player-leaderboard";
-import { loadMatchSideStats } from "@/lib/match-side-stats";
+import { loadBattleSideStats } from "@/lib/battle-side-stats";
 import { createClient } from "@/lib/supabase/server";
-import MatchesClient from "./MatchesClient";
+import BattlesClient from "./BattlesClient";
 
 export const revalidate = 60;
 
-export default async function MatchesPage({
+export default async function BattlesPage({
   searchParams,
 }: {
   searchParams: Record<string, string | string[] | undefined>;
@@ -30,31 +30,31 @@ export default async function MatchesPage({
     currentUsername = profile?.username ?? null;
   }
 
-  const [matches, leaderboard] = await Promise.all([
-    loadRecentMatches(FEATURED_MATCH_POOL),
+  const [battles, leaderboard] = await Promise.all([
+    loadRecentBattles(FEATURED_BATTLE_POOL),
     loadPlayerLeaderboard(),
   ]);
 
-  // Shared with the home page's showcase so both name the same match — see
-  // pickFeaturedMatch.
-  const featuredMatch = pickFeaturedMatch(matches);
+  // Shared with the home page's showcase so both name the same battle — see
+  // pickFeaturedBattle.
+  const featuredBattle = pickFeaturedBattle(battles);
 
-  // Per-side stat table for the featured match's Details drawer. Aggregated
+  // Per-side stat table for the featured battle's Details drawer. Aggregated
   // server-side up front so the drawer opens without a client fetch (and
   // stays SSR-render-consistent). The cost is one small match_actions query.
-  const featuredMatchStats = featuredMatch
-    ? await loadMatchSideStats(featuredMatch.id)
+  const featuredBattleStats = featuredBattle
+    ? await loadBattleSideStats(featuredBattle.id)
     : null;
 
   return (
     <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
-      <MatchesClient
-        matches={matches}
-        featuredMatch={featuredMatch}
-        featuredMatchStats={featuredMatchStats}
+      <BattlesClient
+        battles={battles}
+        featuredBattle={featuredBattle}
+        featuredBattleStats={featuredBattleStats}
         leaderboard={leaderboard}
         currentUsername={currentUsername}
-        initialMyMatches={searchParams.filter === "mine"}
+        initialMyBattles={searchParams.filter === "mine"}
       />
     </main>
   );

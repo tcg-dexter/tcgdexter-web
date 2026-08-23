@@ -30,7 +30,7 @@ interface DeckRow {
   cover_image_url: string | null;
 }
 
-interface MatchRow {
+interface BattleRow {
   saved_deck_id: string | null;
   result: string;
   played_at: string;
@@ -71,12 +71,12 @@ export default async function MyDecksPage() {
     .order("created_at", { ascending: false });
   const decks = (decksRaw ?? []) as DeckRow[];
 
-  const { data: matchesRaw } = await supabase
+  const { data: battlesRaw } = await supabase
     .from("matches")
     .select("saved_deck_id, result, played_at");
-  const manualMatches = (matchesRaw ?? []) as MatchRow[];
+  const manualBattles = (battlesRaw ?? []) as BattleRow[];
 
-  const deckRecords = computeDeckRecords(manualMatches);
+  const deckRecords = computeDeckRecords(manualBattles);
 
   // Daily-logging streak nudge: when the streak is alive (logged yesterday)
   // but today isn't logged yet, prompt the user to keep it before it lapses.
@@ -127,11 +127,11 @@ export default async function MyDecksPage() {
   });
 
   // Get Started checklist signals (new-user activation). hasDeck is derived
-  // client-side from the deck list; the quiz badge and match presence are
+  // client-side from the deck list; the quiz badge and battle presence are
   // resolved here.
   const hasQuiz = await hasAchievement(supabase, user.id, CERTIFIED_TRAINER);
   const onboarding = {
-    hasMatch: manualMatches.length > 0,
+    hasBattle: manualBattles.length > 0,
     hasQuiz,
     dismissed: (profile as { onboarding_dismissed?: boolean }).onboarding_dismissed ?? false,
   };

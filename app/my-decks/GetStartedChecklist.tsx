@@ -9,12 +9,12 @@ import {
 
 /**
  * "Get Started" onboarding module on /my-decks. Leads with a prominent
- * hero for the user's current step — at the save→match cliff that's "Log
- * your first match", the highest-leverage activation action — with the
+ * hero for the user's current step — at the save→battle cliff that's "Log
+ * your first battle", the highest-leverage activation action — with the
  * full step list beneath. Auto-hides once every step is done; a Dismiss
  * control persists an early hide via profiles.onboarding_dismissed.
  *
- * The "Log a match" hero calls `onLogMatch` when provided (on /my-decks it
+ * The "Log a battle" hero calls `onLogBattle` when provided (on /my-decks it
  * opens the pinned deck's log drawer); without it the CTA is a link to
  * /my-decks (used on the profile page, where logging doesn't live).
  *
@@ -24,24 +24,24 @@ import {
  */
 export default function GetStartedChecklist({
   hasDeck,
-  hasMatch,
+  hasBattle,
   hasPublicDeck,
   hasQuiz,
   initialDismissed,
-  onLogMatch,
+  onLogBattle,
   hideWhenNoDeck = false,
 }: {
   hasDeck: boolean;
-  hasMatch: boolean;
+  hasBattle: boolean;
   hasPublicDeck: boolean;
   hasQuiz: boolean;
   initialDismissed: boolean;
-  onLogMatch?: () => void;
+  onLogBattle?: () => void;
   hideWhenNoDeck?: boolean;
 }) {
   const [hidden, setHidden] = useState(initialDismissed);
 
-  const state = computeOnboardingSteps({ hasDeck, hasMatch, hasPublicDeck, hasQuiz });
+  const state = computeOnboardingSteps({ hasDeck, hasBattle, hasPublicDeck, hasQuiz });
 
   if (hidden || state.allComplete || (hideWhenNoDeck && !hasDeck)) return null;
 
@@ -89,7 +89,7 @@ export default function GetStartedChecklist({
             {hero.description}
           </p>
           <div className="mt-3">
-            <HeroCta stepKey={hero.key} label={hero.cta} onLogMatch={onLogMatch} />
+            <HeroCta stepKey={hero.key} label={hero.cta} onLogBattle={onLogBattle} />
           </div>
         </div>
       )}
@@ -120,19 +120,19 @@ export default function GetStartedChecklist({
 function HeroCta({
   stepKey,
   label,
-  onLogMatch,
+  onLogBattle,
 }: {
   stepKey: OnboardingStep["key"];
   label: string;
-  onLogMatch?: () => void;
+  onLogBattle?: () => void;
 }) {
   const cls =
     "inline-flex items-center justify-center rounded-full bg-gradient-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90";
-  if (stepKey === "log_match") {
+  if (stepKey === "log_battle") {
     // On /my-decks the callback opens the log drawer in place; elsewhere
     // (the profile) fall back to a link to where logging lives.
-    return onLogMatch ? (
-      <button type="button" onClick={onLogMatch} className={cls}>
+    return onLogBattle ? (
+      <button type="button" onClick={onLogBattle} className={cls}>
         {label}
       </button>
     ) : (

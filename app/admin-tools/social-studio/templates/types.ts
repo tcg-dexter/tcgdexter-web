@@ -104,7 +104,7 @@ export interface FeaturedDeckSubject {
   price: number | null;
 }
 
-interface FeaturedMatchFields {
+interface FeaturedBattleFields {
   id: string;
   /** TCG Dexter handles retained for the subject dropdown label; the
    *  template itself renders the platform handles below. */
@@ -131,23 +131,23 @@ interface FeaturedMatchFields {
   playerPrizes: number;
   opponentPrizes: number;
   /** Small label above the handle row — "TCG Live" for imported logs,
-   *  "Match Log" for manual entries. */
+   *  "Battle Log" for manual entries. */
   platformLabel: string;
 }
 
-export interface FeaturedMatchSubject extends FeaturedMatchFields {
-  kind: "featured_match";
+export interface FeaturedBattleSubject extends FeaturedBattleFields {
+  kind: "featured_battle";
 }
 
-/** Manually-logged matches (source != 'tcg_live_log') with a recognized
+/** Manually-logged battles (source != 'tcg_live_log') with a recognized
  *  meta-archetype opponent. Renders through the same banner as
- *  FeaturedMatchSubject, but piped from matches.prizes_taken_* /
+ *  FeaturedBattleSubject, but piped from matches.prizes_taken_* /
  *  opponent_name / opponent_archetype instead of a parsed battle log. */
-export interface FeaturedManualMatchSubject extends FeaturedMatchFields {
-  kind: "featured_match_manual";
+export interface FeaturedManualBattleSubject extends FeaturedBattleFields {
+  kind: "featured_battle_manual";
 }
 
-export type FeaturedMatchLikeSubject = FeaturedMatchSubject | FeaturedManualMatchSubject;
+export type FeaturedBattleLikeSubject = FeaturedBattleSubject | FeaturedManualBattleSubject;
 
 export type TemplateSubject =
   | SpotlightSubject
@@ -155,8 +155,8 @@ export type TemplateSubject =
   | MetaArchetypeSubject
   | CardSpotlightSubject
   | FeaturedDeckSubject
-  | FeaturedMatchSubject
-  | FeaturedManualMatchSubject;
+  | FeaturedBattleSubject
+  | FeaturedManualBattleSubject;
 
 export type TemplateKind = TemplateSubject["kind"];
 
@@ -168,8 +168,8 @@ export const CANVAS_SIZE_BY_KIND: Record<TemplateKind, CanvasSize> = {
   meta_archetype: { w: CANVAS_W, h: CANVAS_H },
   card_spotlight: { w: CANVAS_W, h: CANVAS_H },
   featured_deck: { w: CANVAS_W, h: CANVAS_H },
-  featured_match: { w: CANVAS_W, h: CANVAS_H },
-  featured_match_manual: { w: CANVAS_W, h: CANVAS_H },
+  featured_battle: { w: CANVAS_W, h: CANVAS_H },
+  featured_battle_manual: { w: CANVAS_W, h: CANVAS_H },
 };
 
 export interface TemplateCopy {
@@ -185,8 +185,8 @@ export const TEMPLATE_LABELS: Record<TemplateKind, string> = {
   meta_archetype: "Meta Archetype Spotlight",
   card_spotlight: "Card Spotlight",
   featured_deck: "Featured Deck",
-  featured_match: "Featured Match",
-  featured_match_manual: "Featured Match (Manual)",
+  featured_battle: "Featured Battle",
+  featured_battle_manual: "Featured Battle (Manual)",
 };
 
 export const TEMPLATE_DESCRIPTIONS: Record<TemplateKind, string> = {
@@ -195,6 +195,6 @@ export const TEMPLATE_DESCRIPTIONS: Record<TemplateKind, string> = {
   meta_archetype: "Top archetypes from the live meta, with their share as the hero stat.",
   card_spotlight: "Chase cards from the Standard catalog, ranked by market price.",
   featured_deck: "Most-liked public decks from the community library.",
-  featured_match: "Verified TCG Live battles with the head-to-head card stack.",
-  featured_match_manual: "Manually logged matches with the head-to-head card stack.",
+  featured_battle: "Verified TCG Live battles with the head-to-head card stack.",
+  featured_battle_manual: "Manually logged battles with the head-to-head card stack.",
 };

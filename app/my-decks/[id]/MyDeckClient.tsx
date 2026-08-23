@@ -10,10 +10,10 @@ import DeckProfileView, {
 import QRCodeButton from "@/app/components/QRCodeButton";
 import { useTheme } from "@/app/components/ThemeProvider";
 import { WLCircles } from "@/app/components/DeckPostCard";
-import MatchLog from "./MatchLog";
+import BattleHistory from "./BattleHistory";
 import DeckNotes from "./DeckNotes";
 
-interface Match {
+interface Battle {
   id: string;
   short_id: string;
   result: "win" | "loss" | "draw";
@@ -28,7 +28,7 @@ interface Props {
   savedDeckId: string;
   deckList: string;
   analysis: AnalysisResult;
-  initialMatches: Match[];
+  initialBattles: Battle[];
   initialNotes: string;
   pageTitle: string;
   profiledAt: string;
@@ -44,7 +44,7 @@ export default function MyDeckClient({
   savedDeckId,
   deckList,
   analysis,
-  initialMatches,
+  initialBattles,
   initialNotes,
   pageTitle,
   profiledAt,
@@ -63,7 +63,7 @@ export default function MyDeckClient({
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
   const actionRowRef = useRef<HTMLDivElement>(null);
 
-  // Bring the action row to the top of the viewport when the match log
+  // Bring the action row to the top of the viewport when the battle history
   // form opens. Closing (e.g. after a save) intentionally doesn't scroll.
   useEffect(() => {
     if (logOpen) {
@@ -201,10 +201,10 @@ export default function MyDeckClient({
   }
 
   // W-L record, displayed inline next to the deck name (where the rename
-  // icon used to sit) — moved here from the Match History header.
-  const wins = initialMatches.filter((m) => m.result === "win").length;
-  const losses = initialMatches.filter((m) => m.result === "loss").length;
-  const draws = initialMatches.filter((m) => m.result === "draw").length;
+  // icon used to sit) — moved here from the Battle History header.
+  const wins = initialBattles.filter((m) => m.result === "win").length;
+  const losses = initialBattles.filter((m) => m.result === "loss").length;
+  const draws = initialBattles.filter((m) => m.result === "draw").length;
 
   // Title row action — right-anchored W-L record. Rename now lives in the
   // settings menu (gear button in the action row).
@@ -287,7 +287,7 @@ export default function MyDeckClient({
                 backgroundClip: "padding-box, border-box",
               }}
             >
-              Log Match
+              Log Battle
             </button>
             <div
               className={`flex items-center gap-3 overflow-hidden transition-all duration-300 ${
@@ -386,11 +386,11 @@ export default function MyDeckClient({
               document.body
             )}
 
-          {(initialMatches.length > 0 || logOpen) && (
+          {(initialBattles.length > 0 || logOpen) && (
             <div className="mt-2">
-              <MatchLog
+              <BattleHistory
                 savedDeckId={savedDeckId}
-                initialMatches={initialMatches}
+                initialBattles={initialBattles}
                 open={logOpen}
                 onOpenChange={setLogOpen}
               />

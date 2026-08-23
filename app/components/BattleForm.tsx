@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import type { GamePrize } from "@/lib/bo3";
 import { META_ARCHETYPE_NAMES } from "@/lib/metaArchetypes";
 
-// Mirrors the logged-match result pills in app/my-decks/[id]/MatchLog.tsx
+// Mirrors the logged-battle result pills in app/my-decks/[id]/BattleHistory.tsx
 // so the form's selected state previews exactly how the row will eventually
 // render. Pattern follows ShareButton in DeckProfileView's footer:
 // `rounded-full` + `bg-gradient-brand`, no real `border` — that's the only
@@ -32,7 +32,7 @@ const RESULT_STYLE = {
 // `appearance`), so the visible "capsule" is a plain div showing this
 // formatted string. The native input stays mounted but invisible, purely to
 // drive the OS date picker via `showPicker()`.
-function formatMatchDate(value: string) {
+function formatBattleDate(value: string) {
   const [y, m, d] = value.split("-").map(Number);
   if (!y || !m || !d) return value;
   return new Date(y, m - 1, d).toLocaleDateString("en-US", {
@@ -42,7 +42,7 @@ function formatMatchDate(value: string) {
   });
 }
 
-export interface MatchFormData {
+export interface BattleFormData {
   result: "win" | "loss" | "draw";
   opponent_name: string | null;
   opponent_archetype: string | null;
@@ -51,11 +51,11 @@ export interface MatchFormData {
   played_at: string | null;
   /** Ordered per-game outcomes for a Best-of-3 round (e.g. "WW", "WLW"). Null for single games. */
   game_results: string | null;
-  /** Prizes taken by the player (0–6), or null if not recorded. Single matches only. */
+  /** Prizes taken by the player (0–6), or null if not recorded. Single battles only. */
   prizes_taken_player: number | null;
-  /** Prizes taken by the opponent (0–6), or null if not recorded. Single matches only. */
+  /** Prizes taken by the opponent (0–6), or null if not recorded. Single battles only. */
   prizes_taken_opponent: number | null;
-  /** Per-game prizes for a Best-of-3 round, aligned to game_results. Null for single matches. */
+  /** Per-game prizes for a Best-of-3 round, aligned to game_results. Null for single battles. */
   game_prizes: GamePrize[] | null;
 }
 
@@ -85,7 +85,7 @@ function deriveRound(games: (GameLetter | null)[]): {
   return { result, sequence: played.join("") };
 }
 
-/** Map a single game's W/L/D letter to a match result (single-game mode). */
+/** Map a single game's W/L/D letter to a battle result (single-game mode). */
 function gameToResult(g: GameLetter | null): "win" | "loss" | "draw" | null {
   return g === "W" ? "win" : g === "L" ? "loss" : g === "D" ? "draw" : null;
 }
@@ -133,17 +133,17 @@ function parseGamePrizes(gp: GamePrize[] | null | undefined): PrizeSlot[] {
 
 interface Props {
   /** Called with form data when the user submits. Caller handles the API call. */
-  onSubmit: (data: MatchFormData) => Promise<void>;
+  onSubmit: (data: BattleFormData) => Promise<void>;
   onCancel: () => void;
-  /** Pre-populated values for edit mode. If omitted, form starts empty (new match). */
-  initial?: Partial<MatchFormData>;
-  /** Button label. Defaults to "Save Match". */
+  /** Pre-populated values for edit mode. If omitted, form starts empty (new battle). */
+  initial?: Partial<BattleFormData>;
+  /** Button label. Defaults to "Save Battle". */
   submitLabel?: string;
   /** If true, show a compact form (no opponent deck list toggle). */
   compact?: boolean;
   /**
    * Controlled Best-of-3 mode. When provided, the parent owns the toggle
-   * (e.g. the capsule in MatchEntry's tab row) and the form hides its own
+   * (e.g. the capsule in BattleEntry's tab row) and the form hides its own
    * inline toggle. Omit for the standalone edit / quick-log forms, which keep
    * their internal toggle.
    */
@@ -154,7 +154,7 @@ interface Props {
    *  the form sits inline in the page flow. */
   scrollToTopOnCancel?: boolean;
   /**
-   * Whether this form is currently visible/open. Gates the new-match
+   * Whether this form is currently visible/open. Gates the new-battle
    * opponent-name autofocus. Defaults to true for callers that only mount
    * the form when it's open. The deck-collection grid card and pinned
    * hero keep the form permanently mounted inside a collapsed
@@ -166,15 +166,15 @@ interface Props {
 }
 
 /**
- * Shared match logging / editing form. Used by:
- *   - MatchLog (new match + edit match on deck detail page)
+ * Shared battle logging / editing form. Used by:
+ *   - BattleHistory (new battle + edit battle on deck detail page)
  *   - SavedDeckRow (quick-log from My Decks list)
  */
-export default function MatchForm({
+export default function BattleForm({
   onSubmit,
   onCancel,
   initial,
-  submitLabel = "Save Match",
+  submitLabel = "Save Battle",
   compact = false,
   bestOf3: bestOf3Prop,
   onBestOf3Change,
@@ -191,20 +191,20 @@ export default function MatchForm({
   const [showDeckListField, setShowDeckListField] = useState(
     !!initial?.opponent_deck_list
   );
-  const [matchNotes, setMatchNotes] = useState(initial?.notes ?? "");
+  const [battleNotes, setBattleNotes] = useState(initial?.notes ?? "");
   const [showNotesField, setShowNotesField] = useState(!!initial?.notes);
-  // New matches default the date to today; edits respect the stored value.
+  // New battles default the date to today; edits respect the stored value.
   const [showDateField, setShowDateField] = useState(
     initial ? initial.played_at != null : true
   );
-  const [matchDate, setMatchDate] = useState(() => {
+  const [battleDate, setBattleDate] = useState(() => {
     if (initial?.played_at) {
       return new Date(initial.played_at).toISOString().slice(0, 10);
     }
     return new Date().toISOString().slice(0, 10);
   });
-  // Best-of-3 game tracking — starts on when editing a match that has games.
-  // Controlled by the parent when bestOf3Prop is set (MatchEntry's capsule
+  // Best-of-3 game tracking — starts on when editing a battle that has games.
+  // Controlled by the parent when bestOf3Prop is set (BattleEntry's capsule
   // toggle); otherwise self-managed for the standalone edit / quick-log forms.
   const [internalBestOf3, setInternalBestOf3] = useState(!!initial?.game_results);
   const bestOf3Controlled = bestOf3Prop !== undefined;
@@ -214,7 +214,7 @@ export default function MatchForm({
     else setInternalBestOf3(value);
   };
   // Game 1 doubles as the single-game result when bestOf3 is off, so it's
-  // seeded from `result` / match-level prizes when no per-game data exists.
+  // seeded from `result` / battle-level prizes when no per-game data exists.
   const [games, setGames] = useState<(GameLetter | null)[]>(() => {
     const slots = parseGames(initial?.game_results);
     if (!initial?.game_results && initial?.result) {
@@ -238,7 +238,7 @@ export default function MatchForm({
   const [error, setError] = useState<string | null>(null);
 
   // Drop game 2/3 + their prizes when the round flips back to a single
-  // match, so stale data can't linger (covers both toggles). Game 1 is kept.
+  // battle, so stale data can't linger (covers both toggles). Game 1 is kept.
   useEffect(() => {
     if (!bestOf3) {
       setGames((prev) => [prev[0], null, null]);
@@ -254,7 +254,7 @@ export default function MatchForm({
   const dateInputRef = useRef<HTMLInputElement>(null);
   const opponentNameRef = useRef<HTMLInputElement>(null);
 
-  // Focus the opponent name field when logging a new match (not when
+  // Focus the opponent name field when logging a new battle (not when
   // editing an existing one). The input carries [font-size:16px] so iOS
   // Safari doesn't zoom the viewport on focus.
   //
@@ -303,7 +303,7 @@ export default function MatchForm({
   function setGame(i: number, letter: GameLetter) {
     const next: (GameLetter | null)[] = [...games];
     next[i] = games[i] === letter ? null : letter; // tap again to clear
-    // Match 3 is in play only once the first two are both set and neither
+    // Game 3 is in play only once the first two are both set and neither
     // side already has 2 wins (draws don't decide). Otherwise drop it.
     const firstTwoSet = next[0] != null && next[1] != null;
     const w = [next[0], next[1]].filter((g) => g === "W").length;
@@ -354,12 +354,12 @@ export default function MatchForm({
         opponent_archetype: opponentArchetype.trim() || null,
         opponent_deck_list:
           showDeckListField ? opponentDeckList.trim() || null : null,
-        notes: showNotesField ? matchNotes.trim() || null : null,
+        notes: showNotesField ? battleNotes.trim() || null : null,
         played_at: showDateField
-          ? new Date(matchDate + "T12:00:00").toISOString()
+          ? new Date(battleDate + "T12:00:00").toISOString()
           : null,
         game_results: bestOf3 ? sequence : null,
-        // Single match → match-level prizes; Best of 3 → per-game prizes.
+        // Single battle → battle-level prizes; Best of 3 → per-game prizes.
         prizes_taken_player: bestOf3 ? null : parsePrize(gamePrizes[0].p),
         prizes_taken_opponent: bestOf3 ? null : parsePrize(gamePrizes[0].o),
         game_prizes: bestOf3 && anyGamePrize ? gamePrizesOut : null,
@@ -401,7 +401,7 @@ export default function MatchForm({
               type="button"
               disabled={disabled}
               onClick={() => setGame(i, letter)}
-              aria-label={`Match ${i + 1} ${label.toLowerCase()}`}
+              aria-label={`Battle ${i + 1} ${label.toLowerCase()}`}
               style={{ flexGrow: games[i] == null || selected ? 2 : 1 }}
               className={`flex-1 rounded-full py-2.5 text-sm font-bold transition-all duration-300 disabled:cursor-not-allowed ${
                 selected
@@ -413,7 +413,7 @@ export default function MatchForm({
             </button>
           );
         })}
-        {/* Per-match prizes */}
+        {/* Per-battle prizes */}
         <div className="flex flex-shrink-0 items-center gap-1">
           <input
             type="number"
@@ -424,7 +424,7 @@ export default function MatchForm({
             value={gamePrizes[i].p}
             onChange={(e) => setGamePrize(i, "p", e.target.value)}
             placeholder="You"
-            aria-label={`Match ${i + 1} your prizes`}
+            aria-label={`Battle ${i + 1} your prizes`}
             className="no-spinner w-12 rounded-full bg-bg py-2.5 text-center text-sm font-bold text-text-primary placeholder:font-normal placeholder:text-xs placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-sm"
           />
           <input
@@ -436,7 +436,7 @@ export default function MatchForm({
             value={gamePrizes[i].o}
             onChange={(e) => setGamePrize(i, "o", e.target.value)}
             placeholder="Opp"
-            aria-label={`Match ${i + 1} opponent prizes`}
+            aria-label={`Battle ${i + 1} opponent prizes`}
             className="no-spinner w-12 rounded-full bg-bg py-2.5 text-center text-sm font-bold text-text-primary placeholder:font-normal placeholder:text-xs placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:ring-1 focus:ring-accent/30 disabled:opacity-50 [font-size:16px] sm:text-sm"
           />
         </div>
@@ -623,7 +623,7 @@ export default function MatchForm({
           <>
             <div className="relative">
               <div className="pointer-events-none flex items-center gap-2 rounded-full bg-bg px-4 py-2.5 text-sm font-bold text-text-primary shadow-[inset_0_0_0_1px_var(--border)]">
-                <span>{formatMatchDate(matchDate)}</span>
+                <span>{formatBattleDate(battleDate)}</span>
                 <svg className="w-4 h-4 flex-shrink-0 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3.75 18.75h16.5a1.5 1.5 0 001.5-1.5V6.75a1.5 1.5 0 00-1.5-1.5H3.75a1.5 1.5 0 00-1.5 1.5v10.5a1.5 1.5 0 001.5 1.5z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 9h18" />
@@ -632,17 +632,17 @@ export default function MatchForm({
               <input
                 ref={dateInputRef}
                 type="date"
-                value={matchDate}
-                onChange={(e) => setMatchDate(e.target.value)}
+                value={battleDate}
+                onChange={(e) => setBattleDate(e.target.value)}
                 onClick={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
-                aria-label="Match date"
+                aria-label="Battle date"
                 className="absolute inset-0 h-full w-full cursor-pointer opacity-0 [font-size:16px]"
               />
             </div>
             <button
               type="button"
               onClick={() => setShowDateField(false)}
-              aria-label="Remove match date"
+              aria-label="Remove battle date"
               className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full bg-bg text-text-muted shadow-[inset_0_0_0_1px_var(--border)] hover:text-text-secondary hover:bg-surface-2 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -671,8 +671,8 @@ export default function MatchForm({
           <div className="pt-1 pb-4">
             <input
               type="text"
-              value={matchNotes}
-              onChange={(e) => setMatchNotes(e.target.value)}
+              value={battleNotes}
+              onChange={(e) => setBattleNotes(e.target.value)}
               placeholder="Notes"
               className="w-full rounded-full bg-bg px-4 py-2 text-sm text-text-primary placeholder:text-text-muted shadow-[inset_0_0_0_1px_var(--border)] focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 [font-size:16px] sm:text-sm"
             />
@@ -682,7 +682,7 @@ export default function MatchForm({
 
       {error && <p className="text-xs text-accent mb-2">{error}</p>}
 
-      <div data-match-actions className="flex gap-2">
+      <div data-battle-actions className="flex gap-2">
         <button
           onClick={handleSubmit}
           disabled={submitting || !canSubmit}

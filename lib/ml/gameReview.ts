@@ -1,7 +1,7 @@
 // Post-game review for AI-player games — the chess.com closing move.
 // Rebuilds a finished transcript (deterministic), aggregates its per-turn
-// feature log into MatchLogFeatures, and feeds the SAME coach heuristics
-// and win-prob curve that analyze real imported matches.
+// feature log into BattleLogFeatures, and feeds the SAME coach heuristics
+// and win-prob curve that analyze real imported battles.
 
 import { analyzeDeckList, detectDeckArchetype } from "@/lib/analyzeDeck";
 import {
@@ -13,12 +13,12 @@ import {
 } from "@/lib/engine/sim";
 import { buildCoachReport, type CoachReport } from "./coach";
 import { mean, num } from "./features/guards";
-import type { MatchLogFeatures } from "./features";
+import type { BattleLogFeatures } from "./features";
 import { readWinProbArtifact, winProbCurve, type WinProbPoint } from "./winprob";
 
 export interface GameReview {
   report: CoachReport;
-  features: MatchLogFeatures;
+  features: BattleLogFeatures;
   win_prob: { model_version: string; curve: WinProbPoint[] } | null;
   outcome: GameOutcome;
 }
@@ -31,14 +31,14 @@ function detectArchetype(deckList: string): string | null {
   }
 }
 
-/** Aggregate the session's turn log the way extractMatchFeatures folds a
+/** Aggregate the session's turn log the way extractBattleFeatures folds a
  *  replayed battle log (sim games have no parser/engine diagnostics). */
 function aggregateFeatures(
   transcript: GameTranscript,
   turns: LoggedTurn[],
   stranded: { player: number; opponent: number },
   mulligans: { player: number; opponent: number },
-): MatchLogFeatures {
+): BattleLogFeatures {
   const player = turns.filter((t) => t.actor === "player");
   const opponent = turns.filter((t) => t.actor === "opponent");
   const sum = (rows: LoggedTurn[], key: keyof LoggedTurn) =>

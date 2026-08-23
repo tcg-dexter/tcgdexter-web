@@ -8,7 +8,7 @@ import {
   sanitizeGamePrizes,
 } from "@/lib/bo3";
 import { track } from "@/lib/analytics/track";
-import { bumpMatchStreak, localDateInTz } from "@/lib/streak";
+import { bumpBattleStreak, localDateInTz } from "@/lib/streak";
 import { reconcileAchievements } from "@/lib/learn/achievements";
 import { notifyBadgesUnlocked } from "@/lib/notifications/notify";
 
@@ -147,7 +147,7 @@ export async function POST(req: Request) {
   // date), so it can't be spoofed. Non-fatal — a null streak never blocks
   // the logged match from being returned.
   const tz = typeof body.tz === "string" ? body.tz : "UTC";
-  const streak = await bumpMatchStreak(supabase, localDateInTz(new Date(), tz), tz);
+  const streak = await bumpBattleStreak(supabase, localDateInTz(new Date(), tz), tz);
 
   // Award any count-based badges this log just unlocked (First Match,
   // match-grind milestones). Internally error-safe; awaited so it runs to

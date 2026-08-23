@@ -13,9 +13,9 @@ interface Props {
 const PAGE_SIZE = 30;
 
 /**
- * Leaderboard table of every public player with recorded matches — wins,
+ * Leaderboard table of every public player with recorded battles — wins,
  * losses, and win percentage, ranked by wins. Mirrors the card catalog's
- * alternate "data view" pattern as the matches page's toggled presentation.
+ * alternate "data view" pattern as the battles page's toggled presentation.
  */
 export default function PlayerLeaderboard({ players, currentUsername = null }: Props) {
   const [query, setQuery] = useState("");
@@ -38,7 +38,7 @@ export default function PlayerLeaderboard({ players, currentUsername = null }: P
     return (
       <div className="rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm p-8 text-center dark:bg-surface-elevated dark:border-white/10">
         <p className="text-sm text-text-secondary">
-          No public players with recorded matches yet.
+          No public players with recorded battles yet.
         </p>
       </div>
     );
@@ -83,7 +83,7 @@ export default function PlayerLeaderboard({ players, currentUsername = null }: P
         <div className="flex items-center gap-4 px-1 pb-2 border-b border-black/[0.08] text-[11px] font-semibold uppercase tracking-widest text-text-primary dark:border-white/10">
           <span className="w-6 shrink-0" aria-hidden="true" />
           <span className="flex-1 min-w-0">Player</span>
-          <span className="w-20 shrink-0 text-right tabular-nums">Matches</span>
+          <span className="w-20 shrink-0 text-right tabular-nums">Battles</span>
           <span className="w-14 shrink-0 text-right tabular-nums">Win %</span>
         </div>
 

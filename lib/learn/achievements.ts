@@ -12,12 +12,12 @@ export const CERTIFIED_TRAINER = "certified_trainer" as const;
 
 export type AchievementKey =
   | "first_save"
-  | "first_match"
+  | "first_battle"
   | "first_battle_log"
   | typeof CERTIFIED_TRAINER
-  | "matches_10"
-  | "matches_50"
-  | "matches_100"
+  | "battles_10"
+  | "battles_50"
+  | "battles_100"
   | "decks_5"
   | "decks_10"
   | "decks_20"
@@ -27,13 +27,13 @@ export type AchievementKey =
 
 export type AchievementCategory =
   | "Getting Started"
-  | "Match Grind"
+  | "Battle Grind"
   | "Deck Builder";
 
 /** Display order for category groups in the profile drawer. */
 export const CATEGORY_ORDER: AchievementCategory[] = [
   "Getting Started",
-  "Match Grind",
+  "Battle Grind",
   "Deck Builder",
 ];
 
@@ -45,8 +45,8 @@ export const CATEGORY_ORDER: AchievementCategory[] = [
  */
 export type Metrics = {
   savedDecks: number;
-  totalMatches: number;
-  importMatches: number;
+  totalBattles: number;
+  importBattles: number;
 };
 
 export type AchievementDef = {
@@ -65,7 +65,7 @@ export type AchievementDef = {
 
 /**
  * The full badge catalog. Flat (no tiers); grouped into three categories
- * spanning the core loop (save a deck → log matches → grow a library).
+ * spanning the core loop (save a deck → log battles → grow a library).
  */
 export const CATALOG: AchievementDef[] = [
   // Getting Started
@@ -77,18 +77,18 @@ export const CATALOG: AchievementDef[] = [
     predicate: (m) => m.savedDecks >= 1,
   },
   {
-    key: "first_match",
+    key: "first_battle",
     category: "Getting Started",
-    name: "First Match",
-    description: "Log your first match.",
-    predicate: (m) => m.totalMatches >= 1,
+    name: "First Battle",
+    description: "Log your first battle.",
+    predicate: (m) => m.totalBattles >= 1,
   },
   {
     key: "first_battle_log",
     category: "Getting Started",
     name: "First Battle Log",
-    description: "Import your first match from a TCG Live battle log.",
-    predicate: (m) => m.importMatches >= 1,
+    description: "Import your first battle from a TCG Live battle log.",
+    predicate: (m) => m.importBattles >= 1,
   },
   {
     key: CERTIFIED_TRAINER,
@@ -99,27 +99,27 @@ export const CATALOG: AchievementDef[] = [
     predicate: () => false,
   },
 
-  // Match Grind — total matches logged (any source).
+  // Battle Grind — total battles logged (any source).
   {
-    key: "matches_10",
-    category: "Match Grind",
+    key: "battles_10",
+    category: "Battle Grind",
     name: "Hobbyist",
-    description: "Log 10 matches.",
-    predicate: (m) => m.totalMatches >= 10,
+    description: "Log 10 battles.",
+    predicate: (m) => m.totalBattles >= 10,
   },
   {
-    key: "matches_50",
-    category: "Match Grind",
+    key: "battles_50",
+    category: "Battle Grind",
     name: "Battle Hardened",
-    description: "Log 50 matches.",
-    predicate: (m) => m.totalMatches >= 50,
+    description: "Log 50 battles.",
+    predicate: (m) => m.totalBattles >= 50,
   },
   {
-    key: "matches_100",
-    category: "Match Grind",
+    key: "battles_100",
+    category: "Battle Grind",
     name: "Tabletop Titan",
-    description: "Log 100 matches.",
-    predicate: (m) => m.totalMatches >= 100,
+    description: "Log 100 battles.",
+    predicate: (m) => m.totalBattles >= 100,
   },
 
   // Deck Builder — saved-deck count.
@@ -227,7 +227,7 @@ export async function gatherMetrics(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<Metrics> {
-  const [savedDecks, totalMatches, importMatches] = await Promise.all([
+  const [savedDecks, totalBattles, importBattles] = await Promise.all([
     supabase
       .from("saved_decks")
       .select("*", { count: "exact", head: true })
@@ -244,15 +244,15 @@ export async function gatherMetrics(
   ]);
   return {
     savedDecks: savedDecks.count ?? 0,
-    totalMatches: totalMatches.count ?? 0,
-    importMatches: importMatches.count ?? 0,
+    totalBattles: totalBattles.count ?? 0,
+    importBattles: importBattles.count ?? 0,
   };
 }
 
 /**
  * Award any count-based badges the user now qualifies for that they don't
  * already hold. Idempotent (PK + `on conflict do nothing`), so it is safe
- * to call from multiple sites — after a match/deck write, or on the
+ * to call from multiple sites — after a battle/deck write, or on the
  * owner's own profile load as a self-healing backfill. Never touches
  * `certified_trainer` (awarded by the quiz route).
  *

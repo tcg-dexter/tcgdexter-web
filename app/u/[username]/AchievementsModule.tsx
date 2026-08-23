@@ -12,7 +12,7 @@ import AchievementBadge from "@/app/components/AchievementBadge";
  * Profile badges module. Collapsed, it shows only the earned badges. The
  * chevron animates a drawer open to reveal the locked ones (grouped by
  * category) as goals to chase. Reuses the repo's grid-rows-[0fr]→[1fr]
- * height-animation idiom (see MatchForm / DeckProfileView).
+ * height-animation idiom (see BattleForm / DeckProfileView).
  */
 export default function AchievementsModule({
   earnedKeys,

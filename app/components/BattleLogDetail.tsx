@@ -28,7 +28,7 @@ interface ApiAction {
 }
 
 interface ApiResponse {
-  match: {
+  battle: {
     id: string;
     player_handle: string | null;
     opponent_handle: string | null;
@@ -500,7 +500,7 @@ function statsFor(actions: ApiAction[]): PostStats {
 /* ─── Component ───────────────────────────────────────────────── */
 
 interface Props {
-  matchId: string;
+  battleId: string;
   apiUrl: string;
   result?: "win" | "loss" | "draw" | null;
   playerColor?: string;
@@ -526,7 +526,7 @@ interface Props {
   scrollContainerRef?: MutableRefObject<HTMLDivElement | null>;
 }
 
-export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, opponentColor, maxSequence, hideScoreCards, compactAvatars, scrollContainerRef }: Props) {
+export default function BattleLogDetail({ battleId, apiUrl, result, playerColor, opponentColor, maxSequence, hideScoreCards, compactAvatars, scrollContainerRef }: Props) {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -543,7 +543,7 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
       .then((json: ApiResponse) => {
         if (cancelled) return;
         // Strip TCG Live card-id prefixes ("(me2-5_155) N's Zekrom") from
-        // card-name payload fields and raw_text. Matches imported before the
+        // card-name payload fields and raw_text. Battles imported before the
         // verbose-export support landed have these baked into their stored
         // actions; cleaning at ingestion keeps the thread readable without a
         // data migration.
@@ -566,7 +566,7 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
     return () => {
       cancelled = true;
     };
-  }, [matchId]);
+  }, [battleId]);
 
   // Playhead mode (maxSequence set — the Replay tool): the post the
   // playhead currently sits inside is kept smoothly recentered as it
@@ -649,25 +649,25 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
   // post attributed either to the actor's handle or to a synthetic
   // "Setup" / "Checkup" / "Game" user so readers see the same avatar +
   // handle + body shape on every entry in the thread.
-  const playerHandle = data.match.player_handle ?? "You";
-  const opponentHandle = data.match.opponent_handle ?? "Opponent";
+  const playerHandle = data.battle.player_handle ?? "You";
+  const opponentHandle = data.battle.opponent_handle ?? "Opponent";
 
   // Find the winning side so we can color the player/opponent
   // avatars with the site's win gradient vs solid black for the
-  // loser. The match record carries `result` ("win" | "loss" |
+  // loser. The battle record carries `result` ("win" | "loss" |
   // "draw") from the player's perspective — preferred over the
-  // game_end action, which isn't stored for every match.
+  // game_end action, which isn't stored for every battle.
   // Prefer the result prop passed in by the page (always present);
-  // fall back to data.match.result from the API for callers that
+  // fall back to data.battle.result from the API for callers that
   // don't pass it.
-  const matchResult = result ?? data.match.result;
+  const battleResult = result ?? data.battle.result;
   const winnerActor: "player" | "opponent" | null =
-    matchResult === "win"
+    battleResult === "win"
       ? "player"
-      : matchResult === "loss"
+      : battleResult === "loss"
       ? "opponent"
       : null;
-  const matchHasEnded = winnerActor != null;
+  const battleHasEnded = winnerActor != null;
 
   interface Post {
     key: string;
@@ -681,7 +681,7 @@ export default function BattleLogDetail({ matchId, apiUrl, result, playerColor, 
   }
 
   function outcomeFor(actor: "player" | "opponent"): "win" | "loss" | undefined {
-    if (!matchHasEnded || !winnerActor) return undefined;
+    if (!battleHasEnded || !winnerActor) return undefined;
     return actor === winnerActor ? "win" : "loss";
   }
 
@@ -1293,7 +1293,7 @@ interface SetupGroup {
 /**
  * Split the Setup cell's actions into one group per actor, preserving
  * encounter order (whichever side acts first appears on top). Handle
- * labels come from the match-level player_handle / opponent_handle —
+ * labels come from the battle-level player_handle / opponent_handle —
  * action rows themselves don't carry the raw handle.
  */
 function groupSetupActions(

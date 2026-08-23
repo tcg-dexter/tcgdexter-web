@@ -4,13 +4,13 @@ import { motion } from "framer-motion";
 import type { ReactNode } from "react";
 
 /**
- * Wraps the deck-profile modules that sit below the match log. Uses Framer
- * Motion's `layout` so the whole block magic-moves to its new position when
- * the match-logging form opens/closes above it (instead of jumping). While
- * `dimBelow` is set, a site-gray overlay covers the block and makes it
- * inaccessible.
+ * Wraps the deck-profile modules that sit below the battle history. Uses
+ * Framer Motion's `layout` so the whole block magic-moves to its new
+ * position when the battle-logging form opens/closes above it (instead of
+ * jumping). While `dimBelow` is set, a site-gray overlay covers the block
+ * and makes it inaccessible.
  */
-export default function MatchLogModules({
+export default function BattleHistoryModules({
   dimBelow,
   children,
 }: {

@@ -181,12 +181,12 @@ export default function PrivacyPolicyPage() {
 
       <LegalSection heading="Content You Share May Include Other Players' Information">
         <p>
-          Match logging and battle-log import let you record details about
+          Battle logging and battle-log import let you record details about
           your opponents — a name, handle, or deck archetype you type in,
           or text pasted from a Pokémon TCG Live battle log. That
           information is provided by you, not verified by us, and is
           visible according to the same public/private settings as the
-          rest of your match history. Please be considerate about what you
+          rest of your battle history. Please be considerate about what you
           share regarding other players.
         </p>
       </LegalSection>

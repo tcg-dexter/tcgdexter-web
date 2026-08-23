@@ -8,7 +8,7 @@ import { buildSpotlightThumbLayers } from "./templates/SpotlightThumbTemplate";
 import { buildMetaArchetypeLayers } from "./templates/MetaArchetypeTemplate";
 import { buildCardSpotlightLayers } from "./templates/CardSpotlightTemplate";
 import { buildFeaturedDeckLayers } from "./templates/FeaturedDeckTemplate";
-import { buildFeaturedMatchLayers } from "./templates/FeaturedMatchTemplate";
+import { buildFeaturedBattleLayers } from "./templates/FeaturedBattleTemplate";
 import { downloadDataUrl, rasterizeLayers, slugify } from "./exportLayers";
 import {
   CANVAS_SIZE_BY_KIND,
@@ -16,8 +16,8 @@ import {
   TEMPLATE_LABELS,
   type CardSpotlightSubject,
   type FeaturedDeckSubject,
-  type FeaturedMatchSubject,
-  type FeaturedManualMatchSubject,
+  type FeaturedBattleSubject,
+  type FeaturedManualBattleSubject,
   type MetaArchetypeSubject,
   type SpotlightSubject,
   type SpotlightThumbSubject,
@@ -33,8 +33,8 @@ interface Props {
   metaArchetypes: MetaArchetypeSubject[];
   cardSpotlights: CardSpotlightSubject[];
   featuredDecks: FeaturedDeckSubject[];
-  featuredMatches: FeaturedMatchSubject[];
-  featuredManualMatches: FeaturedManualMatchSubject[];
+  featuredBattles: FeaturedBattleSubject[];
+  featuredManualBattles: FeaturedManualBattleSubject[];
 }
 
 /** Derive a default copy block from the subject. The editor seeds these
@@ -72,8 +72,8 @@ function defaultCopy(subject: TemplateSubject): TemplateCopy {
         subhead: `Built by @${subject.username}`,
         cta: "View the Deck",
       };
-    case "featured_match":
-    case "featured_match_manual":
+    case "featured_battle":
+    case "featured_battle_manual":
       return {
         eyebrow: "",
         headline: "",
@@ -85,7 +85,7 @@ function defaultCopy(subject: TemplateSubject): TemplateCopy {
 
 /** Which copy fields the inspector should expose for a given template.
  *  Templates that don't render a field on-canvas hide it rather than
- *  letting the user edit dead values (Featured Match renders no editable
+ *  letting the user edit dead values (Featured Battle renders no editable
  *  copy; Meta Archetype renders its stat block instead of a subhead). */
 const COPY_FIELDS_BY_KIND: Record<TemplateKind, (keyof TemplateCopy)[]> = {
   spotlight: ["eyebrow", "headline", "subhead", "cta"],
@@ -93,8 +93,8 @@ const COPY_FIELDS_BY_KIND: Record<TemplateKind, (keyof TemplateCopy)[]> = {
   meta_archetype: ["eyebrow", "headline", "cta"],
   card_spotlight: ["eyebrow", "headline", "subhead", "cta"],
   featured_deck: ["eyebrow", "headline", "subhead", "cta"],
-  featured_match: [],
-  featured_match_manual: [],
+  featured_battle: [],
+  featured_battle_manual: [],
 };
 
 /** Single dispatch point: every template is a layer factory. */
@@ -110,9 +110,9 @@ function buildLayers(subject: TemplateSubject, copy: TemplateCopy): StudioLayer[
       return buildCardSpotlightLayers(subject, copy);
     case "featured_deck":
       return buildFeaturedDeckLayers(subject, copy);
-    case "featured_match":
-    case "featured_match_manual":
-      return buildFeaturedMatchLayers(subject, copy);
+    case "featured_battle":
+    case "featured_battle_manual":
+      return buildFeaturedBattleLayers(subject, copy);
   }
 }
 
@@ -128,8 +128,8 @@ function subjectLabel(s: TemplateSubject): string {
       return `${s.name} · ${s.setName}`;
     case "featured_deck":
       return `${s.name} — @${s.username}`;
-    case "featured_match":
-    case "featured_match_manual": {
+    case "featured_battle":
+    case "featured_battle_manual": {
       const left = s.playerHandle ?? `@${s.username}`;
       const right = s.opponentHandle ?? s.opponentArchetype ?? "Opponent";
       return `${left} vs ${right}`;
@@ -176,8 +176,8 @@ export default function SocialStudioClient({
   metaArchetypes,
   cardSpotlights,
   featuredDecks,
-  featuredMatches,
-  featuredManualMatches,
+  featuredBattles,
+  featuredManualBattles,
 }: Props) {
   const subjectsByKind = useMemo(
     () => ({
@@ -186,10 +186,10 @@ export default function SocialStudioClient({
       meta_archetype: metaArchetypes,
       card_spotlight: cardSpotlights,
       featured_deck: featuredDecks,
-      featured_match: featuredMatches,
-      featured_match_manual: featuredManualMatches,
+      featured_battle: featuredBattles,
+      featured_battle_manual: featuredManualBattles,
     }),
-    [spotlights, spotlightThumbs, metaArchetypes, cardSpotlights, featuredDecks, featuredMatches, featuredManualMatches],
+    [spotlights, spotlightThumbs, metaArchetypes, cardSpotlights, featuredDecks, featuredBattles, featuredManualBattles],
   );
 
   const [active, setActive] = useState<TemplateSubject | null>(null);

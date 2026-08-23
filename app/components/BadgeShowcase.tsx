@@ -17,10 +17,10 @@ import { CATALOG, type AchievementDef, type AchievementKey } from "@/lib/learn/a
 
 /** The three headline badges, one per earning path rather than simply the
  *  three hardest: the top of the deck-building track (50 decks), the top
- *  of the match-logging grind (100 matches), and the knowledge badge
+ *  of the battle-logging grind (100 battles), and the knowledge badge
  *  (Trainer Quiz), which is the only one earned outside those two counts.
  *  Anything listed here is pulled out of the secondary grid below. */
-const HERO_KEYS: AchievementKey[] = ["decks_50", "matches_100", "certified_trainer"];
+const HERO_KEYS: AchievementKey[] = ["decks_50", "battles_100", "certified_trainer"];
 
 const FLIP_BACK_MS = 3000;
 
@@ -36,12 +36,12 @@ const HEX_CLIP = "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)"
  */
 const REQUIREMENT: Record<AchievementKey, string> = {
   first_save: "Save a deck",
-  first_match: "Log a match",
+  first_battle: "Log a battle",
   first_battle_log: "Import a log",
   certified_trainer: "Ace the quiz",
-  matches_10: "Log 10 matches",
-  matches_50: "Log 50 matches",
-  matches_100: "Log 100 matches",
+  battles_10: "Log 10 battles",
+  battles_50: "Log 50 battles",
+  battles_100: "Log 100 battles",
   decks_5: "Save 5 decks",
   decks_10: "Save 10 decks",
   decks_20: "Save 20 decks",

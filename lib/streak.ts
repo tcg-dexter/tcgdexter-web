@@ -1,10 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Daily match-logging streak — shared types + day-math.
+ * Daily battle-logging streak — shared types + day-math.
  *
  * The streak counts consecutive calendar days on which the user logged a
- * match, bucketed by `matches.created_at` in the user's timezone. The DB
+ * battle, bucketed by `matches.created_at` in the user's timezone. The DB
  * function `bump_match_streak` (security definer, keyed off auth.uid())
  * owns the write; this module owns the read-side "is it still alive?"
  * logic so the profile and the at-risk nudge agree with the celebration.
@@ -14,7 +14,7 @@ export interface StreakState {
   current: number;
   longest: number;
   /** True when this log actually advanced/started the streak (vs. a second
-   *  match the same day, which maintains it) — drives celebration copy. */
+   *  battle the same day, which maintains it) — drives celebration copy. */
   changed: boolean;
 }
 
@@ -87,9 +87,9 @@ export function isStreakAtRisk(
 /**
  * Record today's activity for the authenticated caller and return the
  * resulting streak. Streaks are non-critical: any failure resolves to
- * `null` so it can never break match logging.
+ * `null` so it can never break battle logging.
  */
-export async function bumpMatchStreak(
+export async function bumpBattleStreak(
   supabase: SupabaseClient,
   localDate: string,
   tz: string,

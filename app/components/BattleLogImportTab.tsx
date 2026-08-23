@@ -9,7 +9,7 @@ import {
 } from "@/lib/battle-log";
 import { clientTz, celebrateStreak } from "@/lib/streak-client";
 
-/* ─── Meta archetypes (mirrored from MatchForm) ────────────────── */
+/* ─── Meta archetypes (mirrored from BattleForm) ────────────────── */
 
 const META_ARCHETYPES = [
   "Alakazam Dudunsparce", "Ceruledge", "Clefairy Ogerpon", "Crustle",
@@ -22,7 +22,7 @@ const META_ARCHETYPES = [
   "Steven's Metagross", "Tera Box",
 ];
 
-// Same chip palette as MatchForm. Keep these in lockstep.
+// Same chip palette as BattleForm. Keep these in lockstep.
 const RESULT_STYLE = {
   win:  { bg: "bg-gradient-brand",                                            text: "text-white"        },
   loss: { bg: "bg-black dark:bg-white",                                       text: "text-white dark:text-black" },
@@ -452,7 +452,7 @@ export default function BattleLogImportTab({
           disabled={submitting || !result || !playerHandle}
           className="flex-1 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-light disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
-          {submitting ? "Saving..." : "Save Match"}
+          {submitting ? "Saving..." : "Save Battle"}
         </button>
         <button
           onClick={() => setPhase("paste")}

@@ -8,8 +8,8 @@ import PillSelect from "@/app/components/ui/PillSelect";
 import GridListToggle from "@/app/components/ui/GridListToggle";
 import { UserDeckCard, DeckBanner, type UserDeckCardProps } from "@/app/components/DeckPostCard";
 import QRCodeButton from "@/app/components/QRCodeButton";
-import { type MatchFormData } from "@/app/components/MatchForm";
-import MatchEntry from "@/app/components/MatchEntry";
+import { type BattleFormData } from "@/app/components/BattleForm";
+import BattleEntry from "@/app/components/BattleEntry";
 import DeckCardMenu from "@/app/components/DeckCardMenu";
 import { useTheme } from "@/app/components/ThemeProvider";
 import SavedDeckRow from "./SavedDeckRow";
@@ -26,7 +26,7 @@ interface Props {
    *  renders the "keep your streak" nudge. */
   atRiskStreak?: number;
   /** New-user activation signals for the "Get Started" checklist. */
-  onboarding?: { hasMatch: boolean; hasQuiz: boolean; dismissed: boolean };
+  onboarding?: { hasBattle: boolean; hasQuiz: boolean; dismissed: boolean };
 }
 
 type SortKey =
@@ -41,7 +41,7 @@ type SortDir = "asc" | "desc";
 type ViewMode = "grid" | "list";
 
 const VIEW_MODE_KEY = "myDecksViewMode";
-const MIN_MATCHES_FOR_HERO = 3;
+const MIN_BATTLES_FOR_HERO = 3;
 const TOOLBAR_ITEM_HEIGHT = "h-[38px]";
 
 function sortValue(deck: UserDeckCardProps, key: SortKey): number | string {
@@ -81,7 +81,7 @@ function PinnedDeckHero({
   openSignal = 0,
 }: {
   deck: UserDeckCardProps;
-  /** Bumped by the Get Started checklist's "Log a match" CTA to open the
+  /** Bumped by the Get Started checklist's "Log a battle" CTA to open the
    *  log drawer (the scroll-into-view effect below then reveals it). */
   openSignal?: number;
 }) {
@@ -92,10 +92,10 @@ function PinnedDeckHero({
   useEffect(() => {
     if (openSignal > 0) setLogOpen(true);
   }, [openSignal]);
-  // Bumped on every successful save/import so <MatchEntry> remounts fresh —
+  // Bumped on every successful save/import so <BattleEntry> remounts fresh —
   // it's a persistently-mounted subtree (collapsed via grid-rows, not
-  // conditionally rendered), so its internal MatchForm state would
-  // otherwise survive close/reopen and leak the previous match's inputs
+  // conditionally rendered), so its internal BattleForm state would
+  // otherwise survive close/reopen and leak the previous battle's inputs
   // into the next one.
   const [logKey, setLogKey] = useState(0);
   const [isFavorite, setIsFavorite] = useState(!!deck.isFavorite);
@@ -109,7 +109,7 @@ function PinnedDeckHero({
   );
 
   // On desktop the banner column stretches to match the row (md:h-full),
-  // so opening the inline Log match drawer in the body column — which
+  // so opening the inline Log battle drawer in the body column — which
   // grows the row taller — would otherwise stretch the banner too and
   // shift the percentage-anchored ghost/hero card with it. Pin the
   // artwork to the row's natural collapsed height instead, so growth
@@ -139,7 +139,7 @@ function PinnedDeckHero({
 
   // Opening the drawer anchors the hero card to the top of the screen (with
   // a little headroom, scrolling past the "Deck Collection" title on
-  // purpose) so the match form is immediately visible instead of getting
+  // purpose) so the battle form is immediately visible instead of getting
   // pushed off-screen by the card's own growth. Offsets by the mobile sticky
   // toolbar's live height (0 on desktop, where nav lives in a side rail).
   const heroRef = useRef<HTMLDivElement>(null);
@@ -167,7 +167,7 @@ function PinnedDeckHero({
     if (!res.ok) setIsFavorite(!next);
   }
 
-  async function handleQuickLog(data: MatchFormData) {
+  async function handleQuickLog(data: BattleFormData) {
     const res = await fetch("/api/matches", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -175,7 +175,7 @@ function PinnedDeckHero({
     });
     const json = await res.json();
     if (!res.ok) {
-      throw new Error(json.error ?? "Failed to log match.");
+      throw new Error(json.error ?? "Failed to log battle.");
     }
     celebrateStreak(json.streak);
     setLogOpen(false);
@@ -245,7 +245,7 @@ function PinnedDeckHero({
               )}
             </div>
           ) : (
-            <p className="text-[13px] font-semibold text-text-muted mt-4">No matches logged yet</p>
+            <p className="text-[13px] font-semibold text-text-muted mt-4">No battles logged yet</p>
           )}
 
           <div
@@ -269,7 +269,7 @@ function PinnedDeckHero({
                 backgroundClip: "padding-box, border-box",
               }}
             >
-              Log match
+              Log battle
             </button>
             <div
               className={`flex items-center gap-3 overflow-hidden transition-all duration-300 ${
@@ -296,7 +296,7 @@ function PinnedDeckHero({
           >
             <div className="overflow-hidden">
               <div className="mt-4">
-                <MatchEntry
+                <BattleEntry
                   key={logKey}
                   savedDeckId={deck.id}
                   active={logOpen}
@@ -349,13 +349,13 @@ export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: P
   }
 
   // The hero always shows exactly one deck once the collection is non-empty:
-  // the user's explicit pin, else the winningest deck (min match threshold
+  // the user's explicit pin, else the winningest deck (min battle threshold
   // so a 1-0 fluke can't dominate), else simply the first deck.
   const pinnedDeck = useMemo(() => {
     if (decks.length === 0) return null;
     const pinned = decks.find((d) => d.isPinned);
     if (pinned) return pinned;
-    const qualifying = decks.filter((d) => d.wl && d.wl.w + d.wl.l >= MIN_MATCHES_FOR_HERO);
+    const qualifying = decks.filter((d) => d.wl && d.wl.w + d.wl.l >= MIN_BATTLES_FOR_HERO);
     if (qualifying.length > 0) {
       return qualifying.reduce((best, d) => {
         const bestPct = best.wl?.winRatePct ?? -1;
@@ -394,7 +394,7 @@ export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: P
           <StreakFlame count={atRiskStreak} size="md" showCount={false} />
           <p className="text-sm text-text-primary">
             <span className="block font-semibold">Keep your {atRiskStreak}-day streak</span>
-            <span className="block text-text-muted">Log a match today before it resets.</span>
+            <span className="block text-text-muted">Log a battle today before it resets.</span>
           </p>
         </div>
       )}
@@ -402,11 +402,11 @@ export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: P
       {onboarding && (
         <GetStartedChecklist
           hasDeck={decks.length > 0}
-          hasMatch={onboarding.hasMatch}
+          hasBattle={onboarding.hasBattle}
           hasPublicDeck={decks.some((d) => d.isPublic)}
           hasQuiz={onboarding.hasQuiz}
           initialDismissed={onboarding.dismissed}
-          onLogMatch={() => setLogSignal((s) => s + 1)}
+          onLogBattle={() => setLogSignal((s) => s + 1)}
           hideWhenNoDeck
         />
       )}

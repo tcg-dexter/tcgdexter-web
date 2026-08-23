@@ -9,7 +9,7 @@ import SaveDeckButton from "@/app/components/SaveDeckButton";
 import ShareButton from "@/app/components/ShareButton";
 import StandardFormatInfo from "@/app/components/StandardFormatInfo";
 import StatsStrip from "@/app/components/ui/StatsStrip";
-import MatchLogModules from "@/app/components/MatchLogModules";
+import BattleHistoryModules from "@/app/components/BattleHistoryModules";
 import {
   basicPokemonCards,
   cardPrintingsForName,
@@ -103,13 +103,13 @@ interface Props {
   creator?: DeckCreator;
   /**
    * Content injected above the price module.
-   * Used by /my-decks/[id] to slot in the match log + notes,
+   * Used by /my-decks/[id] to slot in the battle history + notes,
    * and by /meta-archetypes/[slug] for stat cards + scouting note.
    */
   topSlot?: React.ReactNode;
   /**
    * Content injected immediately before the Overview matrix on all variants.
-   * - saved: action buttons + match log
+   * - saved: action buttons + battle history
    * - meta: "#N in Standard" rank eyebrow
    * - fresh/shared: unused
    */
@@ -124,13 +124,13 @@ interface Props {
   /**
    * Content injected directly below the Pokémon/Trainer/Energy card-type
    * breakdown strip and above the Save/Share button row. Used by the saved
-   * variant for the action button row (log match, public/private, QR,
-   * settings) plus the inline match log.
+   * variant for the action button row (log battle, public/private, QR,
+   * settings) plus the inline battle history.
    */
   postStatsSlot?: React.ReactNode;
   /**
    * When true, the modules below postStatsSlot are covered by a site-gray
-   * overlay (0.8) and made inaccessible — used while the match-logging form
+   * overlay (0.8) and made inaccessible — used while the battle-logging form
    * is open so the user focuses on logging.
    */
   dimBelow?: boolean;
@@ -312,12 +312,12 @@ export default function DeckProfileView({
             />
           </div>
 
-          {/* Post-stats slot: saved variant places action buttons + match log here */}
+          {/* Post-stats slot: saved variant places action buttons + battle history here */}
           {postStatsSlot}
 
-          {/* Everything below the match log magic-moves to its new position
-              and is dimmed/inaccessible while the match-logging form is open. */}
-          <MatchLogModules dimBelow={dimBelow}>
+          {/* Everything below the battle history magic-moves to its new position
+              and is dimmed/inaccessible while the battle-logging form is open. */}
+          <BattleHistoryModules dimBelow={dimBelow}>
 
           {/* Save + Share buttons — sit right under the overview so the
               primary action is always within thumb reach. The saved variant
@@ -547,7 +547,7 @@ export default function DeckProfileView({
           {footerCta !== null && (
             <div className="text-center mt-4">{footerCta ?? defaultFooterCta}</div>
           )}
-          </MatchLogModules>
+          </BattleHistoryModules>
         </div>
       </main>
 

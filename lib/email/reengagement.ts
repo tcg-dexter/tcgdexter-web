@@ -240,7 +240,7 @@ export async function runReengagement(
       const n = e.near.remaining;
       const action = isDecks
         ? `save ${n} more deck${n === 1 ? "" : "s"}`
-        : `log ${n} more match${n === 1 ? "" : "es"}`;
+        : `log ${n} more battle${n === 1 ? "" : "s"}`;
       const { subject, html } = nearBadgeEmail({
         siteUrl: baseUrl(),
         badgeName: e.near.badgeName,
@@ -248,7 +248,7 @@ export async function runReengagement(
         remaining: n,
         action,
         ctaUrl: isDecks ? `${baseUrl()}/` : `${baseUrl()}/my-decks`,
-        ctaLabel: isDecks ? "Build a deck" : "Log a match",
+        ctaLabel: isDecks ? "Build a deck" : "Log a battle",
         unsubUrl: unsubUrlFor(e.userId),
       });
       const res = await sendEmail({ to, subject, html, headers: unsubHeaders(e.userId) });

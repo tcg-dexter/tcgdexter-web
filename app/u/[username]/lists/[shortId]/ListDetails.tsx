@@ -127,7 +127,7 @@ export default function ListDetails({ cards }: { cards: CardIndexEntry[] }) {
       </button>
 
       {/* grid-rows-[0fr] → [1fr] height animation, the repo's standard
-          collapse idiom (see MatchForm / DeckProfileView). */}
+          collapse idiom (see BattleForm / DeckProfileView). */}
       <div
         className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
           open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"

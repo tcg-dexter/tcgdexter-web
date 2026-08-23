@@ -1,13 +1,13 @@
-// Training labels: match outcome + deterministic turn-quality heuristics.
+// Training labels: battle outcome + deterministic turn-quality heuristics.
 // The flags are weak labels for the coach — explainable, conservative, and
 // derived only from what the log can actually support (e.g. hand-aware
 // checks apply to the player side only; the opponent's hand is hidden).
 
 import type { GameState, PokemonInPlay } from "@/lib/engine/types";
 import { bool01 } from "./guards";
-import type { MatchLabels, TurnFeatures, TurnQualityFlags } from "./types";
+import type { BattleLabels, TurnFeatures, TurnQualityFlags } from "./types";
 
-/* ─── Match outcome ─────────────────────────────────────────────── */
+/* ─── Battle outcome ────────────────────────────────────────────── */
 
 function outcomeValue(result: string | null | undefined): number | null {
   switch ((result ?? "").toLowerCase()) {
@@ -27,11 +27,11 @@ function outcomeValue(result: string | null | undefined): number | null {
  * Prefer the stored matches.result (the user-confirmed outcome, and the only
  * signal for BO3 sets and manual edits); fall back to the log-derived result.
  */
-export function deriveMatchLabels(
+export function deriveBattleLabels(
   storedResult: string | null,
   logResult: string | null,
   prizeDiff: number | null,
-): MatchLabels {
+): BattleLabels {
   const stored = outcomeValue(storedResult);
   if (stored !== null) {
     return { outcome: stored, outcome_source: "stored", label_prize_diff: prizeDiff };
@@ -70,7 +70,7 @@ function missedEvolution(endState: GameState, turnNumber: number): boolean {
 
 /**
  * Deterministic quality flags for one turn. `turn` and `endState` must come
- * from the same TurnExtraction (see match.ts).
+ * from the same TurnExtraction (see battle.ts).
  */
 export function turnQualityFlags(turn: TurnFeatures, endState: GameState): TurnQualityFlags {
   const isPlayerTurn = turn.actor === "player";

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { shade } from "@/lib/color";
 
-export type RecentMatch = {
+export type RecentBattle = {
   id: string;
   /** Short, shareable id used in the /battles URL (never the UUID). */
   shortId: string;
@@ -19,15 +19,15 @@ export type RecentMatch = {
   opponentAttackerName: string | null;
   playerColor: string;
   opponentColor: string;
-  /** Prize cards taken in this match. Sourced from match_actions
+  /** Prize cards taken in this battle. Sourced from match_actions
    *  prize_taken rows; 0 when the battle log has no prize events. */
   playerPrizes: number;
   opponentPrizes: number;
   isBestOf3: boolean;
   hasBattleLog: boolean;
-  /** Total damage dealt across BOTH sides for this match, summed from
+  /** Total damage dealt across BOTH sides for this battle, summed from
    *  match_actions.attack rows. Populated only for imported battle logs
-   *  (source = 'tcg_live_log'); null for manual and prize-only matches.
+   *  (source = 'tcg_live_log'); null for manual and prize-only battles.
    *  Drives the /battles Featured Battle ranking. */
   totalDamage: number | null;
 };
@@ -43,49 +43,49 @@ export function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export function MatchCard({ match }: { match: RecentMatch }) {
+export function BattleCard({ battle }: { battle: RecentBattle }) {
   const opponentDeckLabel =
-    match.opponentArchetype ?? match.opponentAttackerName ?? "Unknown deck";
-  const opponentHandleLabel = match.opponentHandle ?? "Opponent";
+    battle.opponentArchetype ?? battle.opponentAttackerName ?? "Unknown deck";
+  const opponentHandleLabel = battle.opponentHandle ?? "Opponent";
 
   // This section is identity-agnostic: winner card always renders on the
   // left, loser on the right. On a draw, fall back to the site-standard
   // gradient and keep the natural player/opponent order.
-  const isDraw = match.result === "draw";
-  const playerWon = match.result === "win";
+  const isDraw = battle.result === "draw";
+  const playerWon = battle.result === "win";
   const leftSide = playerWon
     ? {
-        imageUrl: match.deckImageUrl,
-        imageAlt: match.deckName,
-        handleLabel: match.username,
-        deckLabel: match.deckName,
-        color: match.playerColor,
-        prizes: match.playerPrizes,
+        imageUrl: battle.deckImageUrl,
+        imageAlt: battle.deckName,
+        handleLabel: battle.username,
+        deckLabel: battle.deckName,
+        color: battle.playerColor,
+        prizes: battle.playerPrizes,
       }
     : {
-        imageUrl: match.opponentImageUrl,
-        imageAlt: match.opponentAttackerName ?? "Opponent",
+        imageUrl: battle.opponentImageUrl,
+        imageAlt: battle.opponentAttackerName ?? "Opponent",
         handleLabel: opponentHandleLabel,
         deckLabel: opponentDeckLabel,
-        color: match.opponentColor,
-        prizes: match.opponentPrizes,
+        color: battle.opponentColor,
+        prizes: battle.opponentPrizes,
       };
   const rightSide = playerWon
     ? {
-        imageUrl: match.opponentImageUrl,
-        imageAlt: match.opponentAttackerName ?? "Opponent",
+        imageUrl: battle.opponentImageUrl,
+        imageAlt: battle.opponentAttackerName ?? "Opponent",
         handleLabel: opponentHandleLabel,
         deckLabel: opponentDeckLabel,
-        color: match.opponentColor,
-        prizes: match.opponentPrizes,
+        color: battle.opponentColor,
+        prizes: battle.opponentPrizes,
       }
     : {
-        imageUrl: match.deckImageUrl,
-        imageAlt: match.deckName,
-        handleLabel: match.username,
-        deckLabel: match.deckName,
-        color: match.playerColor,
-        prizes: match.playerPrizes,
+        imageUrl: battle.deckImageUrl,
+        imageAlt: battle.deckName,
+        handleLabel: battle.username,
+        deckLabel: battle.deckName,
+        color: battle.playerColor,
+        prizes: battle.playerPrizes,
       };
 
   const gradientStyle: React.CSSProperties | undefined = isDraw
@@ -121,11 +121,11 @@ export function MatchCard({ match }: { match: RecentMatch }) {
     </div>
   );
 
-  // Versus layout — battle log match with both card images
+  // Versus layout — an imported battle log with both card images
   if (leftSide.imageUrl && rightSide.imageUrl) {
     return (
       <Link
-        href={`/battles/${match.shortId}`}
+        href={`/battles/${battle.shortId}`}
         className="block rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       >
         <div className="relative overflow-hidden">
@@ -190,7 +190,7 @@ export function MatchCard({ match }: { match: RecentMatch }) {
               </div>
             </div>
           </div>
-          {match.isBestOf3 && (
+          {battle.isBestOf3 && (
             <div className="absolute inset-x-0 bottom-2 z-10 flex justify-center pointer-events-none">
               <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold text-black">
                 Best of 3
@@ -198,7 +198,7 @@ export function MatchCard({ match }: { match: RecentMatch }) {
             </div>
           )}
           <div className="relative px-3.5 pb-2 flex items-center justify-end gap-2">
-            <p className="text-[11px] text-white/80">{relativeTime(match.createdAt)}</p>
+            <p className="text-[11px] text-white/80">{relativeTime(battle.createdAt)}</p>
           </div>
           <span
             className="pointer-events-none absolute inset-0 flex items-center justify-center text-xl font-black text-white tracking-[0.2em]"
@@ -220,7 +220,7 @@ export function MatchCard({ match }: { match: RecentMatch }) {
     : null;
   return (
     <Link
-      href={`/battles/${match.shortId}`}
+      href={`/battles/${battle.shortId}`}
       className="block rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
     >
       <div className="relative flex gap-3.5 p-3.5">
@@ -235,7 +235,7 @@ export function MatchCard({ match }: { match: RecentMatch }) {
           </div>
         )}
         <div className="relative flex-1 min-w-0 flex items-center justify-end gap-2">
-          <p className="text-[11px] text-white/80">{relativeTime(match.createdAt)}</p>
+          <p className="text-[11px] text-white/80">{relativeTime(battle.createdAt)}</p>
         </div>
       </div>
       {footer}

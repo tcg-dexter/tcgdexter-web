@@ -25,16 +25,16 @@ export default async function BattleRoute({
   const admin = createAdminClient();
 
   // The signed-in viewer, if any. The owner can view their own battle even
-  // when the deck or profile is still private (e.g. a match they just logged
+  // when the deck or profile is still private (e.g. a battle they just logged
   // on a deck they haven't shared yet) — everyone else needs both public.
   const supabase = await createClient();
   const {
     data: { user: viewer },
   } = await supabase.auth.getUser();
 
-  // The route param is the match's short_id; UUID-shaped values still
+  // The route param is the battle's short_id; UUID-shaped values still
   // resolve so links shared before short_ids existed keep working.
-  const { data: match } = await admin
+  const { data: battle } = await admin
     .from("matches")
     .select(
       "id, short_id, result, opponent_archetype, created_at, played_at, saved_deck_id, source, player_handle, opponent_handle",
@@ -42,15 +42,15 @@ export default async function BattleRoute({
     .eq(idColumn(id), id)
     .maybeSingle();
 
-  if (!match) notFound();
+  if (!battle) notFound();
 
   // Child-table lookups below key off the real row id, not the URL param.
-  const matchId = match.id as string;
+  const battleId = battle.id as string;
 
   const { data: deck } = await admin
     .from("saved_decks")
     .select("id, name, user_id, is_public, cover_image_url, analysis")
-    .eq("id", match.saved_deck_id as string)
+    .eq("id", battle.saved_deck_id as string)
     .maybeSingle();
 
   if (!deck) notFound();
@@ -77,7 +77,7 @@ export default async function BattleRoute({
   const playerPokemonName: string | null = playerPrimary?.card.name ?? null;
   const playerColor: string = typeColor(playerPrimary?.types);
 
-  const hasBattleLog = (match.source as string) === "tcg_live_log";
+  const hasBattleLog = (battle.source as string) === "tcg_live_log";
 
   let opponentAttackerName: string | null = null;
   let opponentImageUrl: string | null = null;
@@ -90,7 +90,7 @@ export default async function BattleRoute({
     const { data: statRows } = await admin
       .from("match_actions")
       .select("actor, action_type, payload")
-      .eq("match_id", matchId)
+      .eq("match_id", battleId)
       .in("action_type", [
         "attack",
         "play_to_active",
@@ -154,7 +154,7 @@ export default async function BattleRoute({
       const { data: playRows } = await admin
         .from("match_actions")
         .select("action_type, payload")
-        .eq("match_id", matchId)
+        .eq("match_id", battleId)
         .eq("actor", "opponent")
         .in("action_type", ["play_to_active", "play_to_bench", "evolve"]);
 
@@ -180,13 +180,13 @@ export default async function BattleRoute({
 
   // A recognized archetype beats gameplay inference — see
   // resolveOpponentHero's own comment for why — and this is the same
-  // resolver lib/recent-matches.ts uses for the /battles preview cards, so
+  // resolver lib/recent-battles.ts uses for the /battles preview cards, so
   // a battle's banner can never show different art than its own card in
   // that list. opponentAttackerName above is exactly the one gameplay
   // signal this cascade needs: the top-damage attacker, or (when nobody
   // attacked) the opponent's most-played/evolved-into Pokémon.
   const hero = resolveOpponentHero({
-    opponentArchetype: match.opponent_archetype as string | null,
+    opponentArchetype: battle.opponent_archetype as string | null,
     gameplayName: opponentAttackerName,
   });
   if (hero) {
@@ -195,16 +195,16 @@ export default async function BattleRoute({
   }
   const opponentColor: string = hero ? hero.color : typeColor(undefined);
 
-  const playerHandle = (match.player_handle as string | null) ?? null;
-  const opponentHandle = (match.opponent_handle as string | null) ?? null;
+  const playerHandle = (battle.player_handle as string | null) ?? null;
+  const opponentHandle = (battle.opponent_handle as string | null) ?? null;
   const playedAt =
-    (match.played_at as string | null) ?? (match.created_at as string);
+    (battle.played_at as string | null) ?? (battle.created_at as string);
 
   return (
     <BattleLogPage
-      matchId={match.short_id as string}
-      result={match.result as "win" | "loss" | "draw"}
-      opponentArchetype={match.opponent_archetype as string | null}
+      battleId={battle.short_id as string}
+      result={battle.result as "win" | "loss" | "draw"}
+      opponentArchetype={battle.opponent_archetype as string | null}
       playedAt={playedAt}
       deckName={deck.name as string}
       username={profile.username as string}

@@ -15,7 +15,7 @@ const artifact: WinProbArtifact = {
   trained_at: "2026-07-11T00:00:00Z",
   feature_schema_version: 1,
   n_samples: 10,
-  n_matches: 5,
+  n_battles: 5,
   data_hash: "test",
   features: ["prize_diff", "went_first"],
   means: [0, 0.5],

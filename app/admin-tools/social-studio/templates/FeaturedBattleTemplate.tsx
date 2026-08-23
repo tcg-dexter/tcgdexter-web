@@ -5,13 +5,13 @@ import {
   CANVAS_H,
   CANVAS_W,
   proxied,
-  type FeaturedMatchLikeSubject,
+  type FeaturedBattleLikeSubject,
   type StudioLayer,
   type TemplateCopy,
 } from "./types";
 
 interface Props {
-  subject: FeaturedMatchLikeSubject;
+  subject: FeaturedBattleLikeSubject;
   copy: TemplateCopy;
 }
 
@@ -90,8 +90,8 @@ const HANDLE_STYLE: React.CSSProperties = {
   wordBreak: "break-word",
 };
 
-export function buildFeaturedMatchLayers(
-  subject: FeaturedMatchLikeSubject,
+export function buildFeaturedBattleLayers(
+  subject: FeaturedBattleLikeSubject,
   copy: TemplateCopy,
 ): StudioLayer[] {
   // Split gradient: player-side type color on the left, opponent's on
@@ -120,7 +120,7 @@ export function buildFeaturedMatchLayers(
     {
       // Platform subtitle — top-most label, sits in the space the
       // eyebrow used to occupy, with extra room below before the
-      // handle row. "TCG Live" for imported logs, "Match Log" for
+      // handle row. "TCG Live" for imported logs, "Battle Log" for
       // manual entries.
       id: "platform-label",
       name: "Platform Label",
@@ -272,6 +272,6 @@ export function buildFeaturedMatchLayers(
   ];
 }
 
-export default function FeaturedMatchTemplate({ subject, copy }: Props) {
-  return <LayerCanvas layers={buildFeaturedMatchLayers(subject, copy)} />;
+export default function FeaturedBattleTemplate({ subject, copy }: Props) {
+  return <LayerCanvas layers={buildFeaturedBattleLayers(subject, copy)} />;
 }

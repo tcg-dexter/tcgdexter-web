@@ -29,7 +29,7 @@ interface ProfileRecord {
   is_public: boolean;
 }
 
-interface MatchRecord {
+interface BattleRecord {
   id: string;
   short_id: string;
   result: "win" | "loss" | "draw";
@@ -155,15 +155,15 @@ export default async function DeckPage({
     rotation: live.rotation,
   };
 
-  // Owner-only: fetch manual matches for this deck
-  let initialMatches: MatchRecord[] = [];
+  // Owner-only: fetch manual battles for this deck
+  let initialBattles: BattleRecord[] = [];
   if (isOwner) {
-    const { data: matches } = await supabase
+    const { data: battles } = await supabase
       .from("matches")
       .select("id, short_id, result, opponent_name, opponent_archetype, opponent_deck_list, notes, played_at, source, game_results, prizes_taken_player, prizes_taken_opponent, game_prizes")
       .eq("saved_deck_id", deck.id)
       .order("played_at", { ascending: false });
-    initialMatches = (matches ?? []) as MatchRecord[];
+    initialBattles = (battles ?? []) as BattleRecord[];
   }
 
   // Visitor-only: check if current user has liked this deck
@@ -193,7 +193,7 @@ export default async function DeckPage({
       pageTitle={deck.name}
       initialIsPublic={deck.is_public}
       canonicalShareUrl={canonicalShareUrl}
-      initialMatches={initialMatches}
+      initialBattles={initialBattles}
       initialNotes={deck.notes ?? ""}
       initialLiked={initialLiked}
       initialLikeCount={deck.like_count ?? 0}

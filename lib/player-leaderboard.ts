@@ -13,14 +13,14 @@ export interface LeaderboardPlayer {
 }
 
 const PAGE = 1000;
-const MAX_MATCH_PAGES = 60; // safety cap: 60k match rows
+const MAX_BATTLE_PAGES = 60; // safety cap: 60k battle rows
 
 /**
  * Aggregate a public-player leaderboard: every public profile that has
- * recorded matches on their public decks, with total wins/losses and win
- * percentage. "Public" mirrors the recent-matches definition — a public
+ * recorded battles on their public decks, with total wins/losses and win
+ * percentage. "Public" mirrors the recent-battles definition — a public
  * profile owning public saved_decks. Uses the admin client to aggregate
- * across users (match rows are otherwise RLS-scoped to their owner).
+ * across users (battle rows are otherwise RLS-scoped to their owner).
  */
 export async function loadPlayerLeaderboard(): Promise<LeaderboardPlayer[]> {
   try {
@@ -56,10 +56,10 @@ export async function loadPlayerLeaderboard(): Promise<LeaderboardPlayer[]> {
     }
     if (deckOwner.size === 0) return [];
 
-    // 3. Tally match results per owner, counting only matches on a public
+    // 3. Tally battle results per owner, counting only battles on a public
     //    deck of a public profile. Page through the matches table.
     const tally = new Map<string, { w: number; l: number; d: number }>();
-    for (let p = 0; p < MAX_MATCH_PAGES; p++) {
+    for (let p = 0; p < MAX_BATTLE_PAGES; p++) {
       const from = p * PAGE;
       const { data, error } = await admin
         .from("matches")
@@ -99,7 +99,7 @@ export async function loadPlayerLeaderboard(): Promise<LeaderboardPlayer[]> {
       });
     });
 
-    // Leaderboard order: most matches logged first, then win %, then wins.
+    // Leaderboard order: most battles logged first, then win %, then wins.
     rows.sort(
       (a, b) =>
         b.games - a.games ||

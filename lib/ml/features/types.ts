@@ -59,11 +59,11 @@ export interface DeckFeatures {
   deck_price: number;
 }
 
-/* ─── Match features ────────────────────────────────────────────── */
+/* ─── Battle features ───────────────────────────────────────────── */
 
 /** Aggregates derived by folding replay() over a normalized battle log.
- *  All fields are null when the match has no parseable log. */
-export interface MatchLogFeatures {
+ *  All fields are null when the battle has no parseable log. */
+export interface BattleLogFeatures {
   went_first: 0 | 1 | null;
   player_mulligans: number | null;
   opponent_mulligans: number | null;
@@ -152,8 +152,8 @@ export interface TurnFeatures {
 
 /* ─── Labels ────────────────────────────────────────────────────── */
 
-/** Match-level training labels. */
-export interface MatchLabels {
+/** Battle-level training labels. */
+export interface BattleLabels {
   /** 1 = win, 0 = loss, 0.5 = draw/tie, null = unknown. */
   outcome: number | null;
   /** Where the outcome came from: the stored matches.result ("stored")

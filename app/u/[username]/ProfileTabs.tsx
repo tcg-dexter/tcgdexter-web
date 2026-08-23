@@ -21,7 +21,7 @@ interface Props {
 
 /**
  * "My Decks" / "Recent Battles" segmented tabs on the owner's profile.
- * Mirrors MatchEntry's Single/Best of 3/TCG Live tab strip — a sliding
+ * Mirrors BattleEntry's Single/Best of 3/TCG Live tab strip — a sliding
  * underline indicator (position measured off the active button's
  * offsetLeft/offsetWidth, animated via CSS transition) plus a fade on
  * the content swap — except the indicator takes the user's accent color

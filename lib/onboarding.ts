@@ -2,17 +2,17 @@
  * "Get Started" onboarding — the activation checklist shown on /my-decks.
  *
  * Steps are derived purely from existing signals (has a saved deck, has
- * logged a match, has a public deck, has the Certified Trainer quiz badge),
+ * logged a battle, has a public deck, has the Certified Trainer quiz badge),
  * so there's no per-step state to store. The hero (the first incomplete
- * step) is what the UI emphasizes — at the save→match cliff that's "Log
- * your first match", the single action that feeds the whole retention loop.
+ * step) is what the UI emphasizes — at the save→battle cliff that's "Log
+ * your first battle", the single action that feeds the whole retention loop.
  * "Share your first public deck" sits after it (sharing needs a deck to
  * share) so it never steals the hero from that cliff.
  */
 
 export type OnboardingStepKey =
   | "save_deck"
-  | "log_match"
+  | "log_battle"
   | "share_deck"
   | "quiz";
 
@@ -37,7 +37,7 @@ export interface OnboardingState {
 
 export interface OnboardingSignals {
   hasDeck: boolean;
-  hasMatch: boolean;
+  hasBattle: boolean;
   hasPublicDeck: boolean;
   hasQuiz: boolean;
 }
@@ -52,12 +52,12 @@ export function computeOnboardingSteps(s: OnboardingSignals): OnboardingState {
       done: s.hasDeck,
     },
     {
-      key: "log_match",
-      title: "Log your first match",
+      key: "log_battle",
+      title: "Log your first battle",
       description:
         "Record a game to start tracking your win rate and build a daily streak.",
-      cta: "Log a match",
-      done: s.hasMatch,
+      cta: "Log a battle",
+      done: s.hasBattle,
     },
     {
       key: "share_deck",

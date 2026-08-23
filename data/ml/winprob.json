@@ -4,7 +4,7 @@
   "trained_at": "2026-07-12T14:11:58.211313+00:00",
   "feature_schema_version": 1,
   "n_samples": 1341,
-  "n_matches": 119,
+  "n_battles": 119,
   "data_hash": "1dfff2726f04017a0254962ca25237b5e055529623dbdcfc4217150d731d0ddd",
   "features": [
     "prize_diff",

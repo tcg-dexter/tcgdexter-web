@@ -15,9 +15,9 @@ import archetypesRaw from "@/data/meta-archetypes.json";
 import metaDecksRaw from "@/data/meta-decks.json";
 import { MetaDeckCard } from "@/app/components/DeckPostCard";
 import { metaPrimaryCard, typeColor } from "@/lib/metaPrimaryCard";
-import { MatchCard, type RecentMatch } from "@/app/components/MatchCard";
-import FeaturedMatchShowcase from "@/app/components/FeaturedMatchShowcase";
-import type { MatchSideStats } from "@/lib/match-side-stats";
+import { BattleCard, type RecentBattle } from "@/app/components/BattleCard";
+import FeaturedBattleShowcase from "@/app/components/FeaturedBattleShowcase";
+import type { BattleSideStatsPair } from "@/lib/battle-side-stats";
 import SpotlightBanner from "@/app/spotlight/components/SpotlightBanner";
 import type {
   SpotlightBannerLayout,
@@ -38,7 +38,7 @@ import BadgeShowcase from "@/app/components/BadgeShowcase";
  *  single-column stack of 6 runs very long under the Featured Battle
  *  showcase above it, and sm: is exactly where the grid stops being one
  *  column, so 6 is only 2-3 tidy rows from there up. */
-const HOME_RECENT_MATCHES_MOBILE = 3;
+const HOME_RECENT_BATTLES_MOBILE = 3;
 
 export type CurrentSpotlight = {
   id: string;
@@ -155,20 +155,20 @@ const top3Cards = (() => {
 
 export default function HomeClient({
   stats,
-  recentMatches = [],
-  featuredMatch = null,
-  featuredMatchStats = null,
+  recentBattles = [],
+  featuredBattle = null,
+  featuredBattleStats = null,
   currentSpotlight = null,
   showcaseTiles = [],
   cardCatalogTopCards = [],
   cardCatalogFeatured = null,
 }: {
   stats: Array<{ label: string; value: string }>;
-  recentMatches?: RecentMatch[];
+  recentBattles?: RecentBattle[];
   /** Current Featured Battle, showcased with its replay above Recent
-   *  Battles. Null when nothing qualifies (see pickFeaturedMatch). */
-  featuredMatch?: RecentMatch | null;
-  featuredMatchStats?: MatchSideStats | null;
+   *  Battles. Null when nothing qualifies (see pickFeaturedBattle). */
+  featuredBattle?: RecentBattle | null;
+  featuredBattleStats?: BattleSideStatsPair | null;
   currentSpotlight?: CurrentSpotlight | null;
   showcaseTiles?: ResolvedDeckTile[];
   cardCatalogTopCards?: CardIndexEntry[];
@@ -430,17 +430,17 @@ export default function HomeClient({
             <BadgeShowcase />
           </section>
 
-          {/* Featured Battle showcase — the /battles hero plus that match's
+          {/* Featured Battle showcase — the /battles hero plus that battle's
               replay, sitting directly above Recent Battles. */}
-          {featuredMatch && (
-            <FeaturedMatchShowcase match={featuredMatch} stats={featuredMatchStats} />
+          {featuredBattle && (
+            <FeaturedBattleShowcase battle={featuredBattle} stats={featuredBattleStats} />
           )}
 
-          {/* Recent Matches */}
-          {recentMatches.length > 0 && (
+          {/* Recent Battles */}
+          {recentBattles.length > 0 && (
             <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
               <h2 className="text-3xl font-semibold tracking-tight mb-4">Recent Battles</h2>
-              {/* Trimmed to HOME_RECENT_MATCHES_MOBILE on phones. The cut is
+              {/* Trimmed to HOME_RECENT_BATTLES_MOBILE on phones. The cut is
                   pure CSS rather than a viewport check so it survives SSR
                   with no hydration mismatch and no layout shift.
                   `hidden sm:contents` is what makes that work: display:none
@@ -450,13 +450,13 @@ export default function HomeClient({
                   the wrapper a single grid cell and collapse all three into
                   one column. */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {recentMatches.slice(0, HOME_RECENT_MATCHES_MOBILE).map((m) => (
-                  <MatchCard key={m.id} match={m} />
+                {recentBattles.slice(0, HOME_RECENT_BATTLES_MOBILE).map((m) => (
+                  <BattleCard key={m.id} battle={m} />
                 ))}
-                {recentMatches.length > HOME_RECENT_MATCHES_MOBILE && (
+                {recentBattles.length > HOME_RECENT_BATTLES_MOBILE && (
                   <div className="hidden sm:contents">
-                    {recentMatches.slice(HOME_RECENT_MATCHES_MOBILE).map((m) => (
-                      <MatchCard key={m.id} match={m} />
+                    {recentBattles.slice(HOME_RECENT_BATTLES_MOBILE).map((m) => (
+                      <BattleCard key={m.id} battle={m} />
                     ))}
                   </div>
                 )}

@@ -9,7 +9,7 @@ import {
   pokemonSlug,
 } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
-import MatchHeatMap from "@/app/profile/MatchHeatMap";
+import BattleHeatMap from "@/app/profile/BattleHeatMap";
 import UserProfileHeader, {
   StatCard,
   bannerGradientFor,
@@ -22,8 +22,8 @@ import StreakFlame from "@/app/components/StreakFlame";
 import { displayCurrentStreak, type StreakRow } from "@/lib/streak";
 import AccentPicker from "./AccentPicker";
 import TeamCards, { type TeamCardRef } from "./TeamCards";
-import { MatchCard } from "@/app/components/MatchCard";
-import { loadOwnerRecentMatches } from "@/lib/recent-matches";
+import { BattleCard } from "@/app/components/BattleCard";
+import { loadOwnerRecentBattles } from "@/lib/recent-battles";
 import ProfileTabs from "./ProfileTabs";
 import AchievementsModule from "./AchievementsModule";
 import {
@@ -75,7 +75,7 @@ interface DeckRow {
   cover_image_url: string | null;
 }
 
-interface MatchRow {
+interface BattleRow {
   saved_deck_id: string | null;
   result: string;
   played_at: string | null;
@@ -192,17 +192,17 @@ export default async function ProfilePage({
     (listsRaw ?? []) as ListRow[],
   );
 
-  let manualMatches: MatchRow[] = [];
+  let manualBattles: BattleRow[] = [];
   if (isOwner) {
-    const { data: matches } = await supabase
+    const { data: battles } = await supabase
       .from("matches")
       .select("saved_deck_id, result, played_at, created_at");
-    manualMatches = (matches ?? []) as MatchRow[];
+    manualBattles = (battles ?? []) as BattleRow[];
   }
 
-  // Per-deck W-L: manual matches only (owner sees their own; visitors see none).
+  // Per-deck W-L: manual battles only (owner sees their own; visitors see none).
   const deckWL = new Map<string, { w: number; l: number; d: number }>();
-  for (const m of manualMatches) {
+  for (const m of manualBattles) {
     if (!m.saved_deck_id) continue;
     const prev = deckWL.get(m.saved_deck_id) ?? { w: 0, l: 0, d: 0 };
     if (m.result === "win") prev.w++;
@@ -211,15 +211,15 @@ export default async function ProfilePage({
     deckWL.set(m.saved_deck_id, prev);
   }
 
-  // Global W-L: manual matches only (owner-only; visitors see no record).
-  const globalWins = isOwner ? manualMatches.filter((m) => m.result === "win").length : 0;
-  const globalLosses = isOwner ? manualMatches.filter((m) => m.result === "loss").length : 0;
+  // Global W-L: manual battles only (owner-only; visitors see no record).
+  const globalWins = isOwner ? manualBattles.filter((m) => m.result === "win").length : 0;
+  const globalLosses = isOwner ? manualBattles.filter((m) => m.result === "loss").length : 0;
   const winRate =
     globalWins + globalLosses > 0
       ? Math.round((globalWins / (globalWins + globalLosses)) * 100)
       : null;
 
-  // Daily match-logging streak — public (shown to visitors too), reads as
+  // Daily battle-logging streak — public (shown to visitors too), reads as
   // 0 once it lapses (see displayCurrentStreak). Backed by user_streaks.
   const { data: streakRow } = await supabase
     .from("user_streaks")
@@ -243,22 +243,22 @@ export default async function ProfilePage({
   const earnedAchievements = await listAchievements(supabase, profile.id);
 
   // Get Started onboarding checklist — owner-only. Guides new users through
-  // the core loop (save a deck → log a match → ace the quiz). Shown even at
-  // zero decks here (leads with "save your first deck"); its "Log a match"
+  // the core loop (save a deck → log a battle → ace the quiz). Shown even at
+  // zero decks here (leads with "save your first deck"); its "Log a battle"
   // CTA links to /my-decks (no in-place log drawer on the profile). Auto-hides
   // once complete or dismissed.
   const getStarted = isOwner ? (
     <GetStartedChecklist
       hasDeck={decks.length > 0}
-      hasMatch={manualMatches.length > 0}
+      hasBattle={manualBattles.length > 0}
       hasPublicDeck={decks.some((d) => d.is_public)}
       hasQuiz={earnedAchievements.some((a) => a.key === CERTIFIED_TRAINER)}
       initialDismissed={profile.onboarding_dismissed}
     />
   ) : null;
 
-  // Heatmap dates: manual played_at (owner only — manual match data is private).
-  const heatmapMatches: MatchRow[] = isOwner ? manualMatches : [];
+  // Heatmap dates: manual played_at (owner only — manual battle data is private).
+  const heatmapBattles: BattleRow[] = isOwner ? manualBattles : [];
 
   // Public deck stats (visible to both owner and visitor).
   const publicDeckCount = decks.filter((d) => d.is_public).length;
@@ -272,17 +272,17 @@ export default async function ProfilePage({
     ? [...decks].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 3)
     : decks;
 
-  // Recent Battles — owner-only (manual match data is private). Reuses
-  // the same MatchCard/RecentMatch pipeline as the public /battles feed,
+  // Recent Battles — owner-only (manual battle data is private). Reuses
+  // the same BattleCard/RecentBattle pipeline as the public /battles feed,
   // scoped to just this owner's own decks.
   const recentBattles = isOwner
-    ? await loadOwnerRecentMatches(supabase, profile.id, profile.username, 3)
+    ? await loadOwnerRecentBattles(supabase, profile.id, profile.username, 3)
     : [];
 
   // Visitor placeholder for owner-private cells.
   const ownerOnly = (value: string) => (isOwner ? value : "—");
 
-  // Resolve once so the Wins tile and the match-activity heatmap pick
+  // Resolve once so the Wins tile and the battle-activity heatmap pick
   // up the same banner accent as the header.
   const bannerGradient = bannerGradientFor(profile.banner_accent);
 
@@ -295,11 +295,11 @@ export default async function ProfilePage({
   const hasAnyTeamPick = teamArray.some((slot) => !!slot);
   const showTeam = isOwner || hasAnyTeamPick;
 
-  // Left column, under the stat grid — Match Activity (owner-only; manual
-  // match data is private).
+  // Left column, under the stat grid — Battle Activity (owner-only; manual
+  // battle data is private).
   const belowStats =
-    isOwner && heatmapMatches.length > 0 ? (
-      <MatchHeatMap matches={heatmapMatches} accent={profile.banner_accent} />
+    isOwner && heatmapBattles.length > 0 ? (
+      <BattleHeatMap battles={heatmapBattles} accent={profile.banner_accent} />
     ) : undefined;
 
   // Right column — Achievements. Earned badges are public (visitors see
@@ -335,7 +335,7 @@ export default async function ProfilePage({
             : "text-text-secondary"
         }
       />
-      {/* Daily match-logging streak (public) — current + all-time best. */}
+      {/* Daily battle-logging streak (public) — current + all-time best. */}
       <StreakStatTile label="Current" count={dayStreak} />
       <StatCard label="Decks" value={decks.length.toLocaleString()} />
       <StatCard label="Public" value={publicDeckCount.toLocaleString()} />
@@ -441,7 +441,7 @@ export default async function ProfilePage({
         username={profile.username}
         displayName={profile.display_name}
       >
-        {/* Top modules (stat grid, match activity, achievements) — lifted
+        {/* Top modules (stat grid, battle activity, achievements) — lifted
             out of the header so this whole region can be swapped for the
             followers/following list. On lg+ stats+activity and badges split
             3:2; below lg they stack. */}
@@ -527,20 +527,20 @@ export default async function ProfilePage({
                 </div>
               )
             }
-            battlesCount={manualMatches.length}
+            battlesCount={manualBattles.length}
             battlesViewAllHref="/battles?filter=mine"
             showBattlesViewAll={recentBattles.length > 0}
             battlesContent={
               recentBattles.length === 0 ? (
                 <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-8 text-center">
                   <p className="text-sm text-text-secondary">
-                    No battles logged yet. Log a match from any of your decks to see it here.
+                    No battles logged yet. Log a battle from any of your decks to see it here.
                   </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {recentBattles.map((battle) => (
-                    <MatchCard key={battle.id} match={battle} />
+                    <BattleCard key={battle.id} battle={battle} />
                   ))}
                 </div>
               )

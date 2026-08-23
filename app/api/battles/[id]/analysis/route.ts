@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { normalizePerspective, parseBattleLog } from "@/lib/battle-log";
 import { replay } from "@/lib/engine";
-import { extractMatchFeatures, turnQualityFlags } from "@/lib/ml/features";
+import { extractBattleFeatures, turnQualityFlags } from "@/lib/ml/features";
 import { replayTurnViews } from "@/lib/ml/features/replayView";
 import { buildCoachReport } from "@/lib/ml/coach";
 import type { CoachInsight, CoachReport } from "@/lib/ml/coach";
@@ -34,7 +34,7 @@ import { loadBattleWithAccess } from "@/lib/battles/access";
 const CARD_COVERAGE_FLOOR = 0.7;
 
 export interface BattleAnalysisResponse {
-  match_id: string;
+  battle_id: string;
   report: CoachReport;
   win_prob: {
     model_version: string;
@@ -56,21 +56,21 @@ export async function GET(
   } = await supabase.auth.getUser();
 
   const access = await loadBattleWithAccess(admin, id, viewer?.id ?? null);
-  if (!access.allowed || !access.match) {
+  if (!access.allowed || !access.battle) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
-  const { match } = access;
-  if (!match.battle_log_raw || !match.player_handle) {
-    return NextResponse.json({ error: "This match has no battle log." }, { status: 400 });
+  const { battle } = access;
+  if (!battle.battle_log_raw || !battle.player_handle) {
+    return NextResponse.json({ error: "This battle has no battle log." }, { status: 400 });
   }
 
   let normalized;
   let replayResult;
   let extraction;
   try {
-    normalized = normalizePerspective(parseBattleLog(match.battle_log_raw), match.player_handle);
+    normalized = normalizePerspective(parseBattleLog(battle.battle_log_raw), battle.player_handle);
     replayResult = replay(normalized);
-    extraction = extractMatchFeatures(normalized, replayResult);
+    extraction = extractBattleFeatures(normalized, replayResult);
   } catch (e) {
     return NextResponse.json(
       { error: `Battle log could not be analyzed: ${e instanceof Error ? e.message : e}` },
@@ -82,7 +82,7 @@ export async function GET(
     ...t.features,
     ...turnQualityFlags(t.features, t.endState),
   }));
-  const report = buildCoachReport(extraction.match, flagged);
+  const report = buildCoachReport(extraction.battle, flagged);
 
   let winProb: BattleAnalysisResponse["win_prob"] = null;
   const artifact = cachedValueArtifact();
@@ -106,7 +106,7 @@ export async function GET(
   }
 
   const response: BattleAnalysisResponse = {
-    match_id: match.id,
+    battle_id: battle.id,
     report,
     win_prob: winProb,
   };

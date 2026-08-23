@@ -10,22 +10,22 @@ import { normalizePerspective, parseBattleLog, summarize } from "@/lib/battle-lo
 import { replay } from "@/lib/engine";
 import {
   extractDeckFeatures,
-  extractMatchFeatures,
-  deriveMatchLabels,
+  extractBattleFeatures,
+  deriveBattleLabels,
   turnQualityFlags,
   findInvalidValues,
 } from "./index";
-import type { MatchExtraction } from "./index";
+import type { BattleExtraction } from "./index";
 
 const FIXTURES = join(__dirname, "..", "..", "battle-log", "fixtures");
 
-function extractFixture(file: string, playerHandle: string): MatchExtraction {
+function extractFixture(file: string, playerHandle: string): BattleExtraction {
   const raw = readFileSync(join(FIXTURES, file), "utf8");
   const parsed = normalizePerspective(parseBattleLog(raw), playerHandle);
-  return extractMatchFeatures(parsed, replay(parsed));
+  return extractBattleFeatures(parsed, replay(parsed));
 }
 
-const MATCH_FEATURE_KEYS = [
+const BATTLE_FEATURE_KEYS = [
   "avg_bench_opponent",
   "avg_bench_player",
   "avg_prize_diff",
@@ -103,22 +103,22 @@ const FLAG_KEYS = [
 describe.each([
   { file: "example-1.txt", player: "MoonSheikah" },
   { file: "example-2-verbose.txt", player: null as string | null },
-])("extractMatchFeatures ($file)", ({ file, player }) => {
+])("extractBattleFeatures ($file)", ({ file, player }) => {
   const raw = readFileSync(join(FIXTURES, file), "utf8");
   const handle = player ?? parseBattleLog(raw).handles[0];
   const parsed = normalizePerspective(parseBattleLog(raw), handle);
   const summary = summarize(parsed);
-  const { match, turns } = extractMatchFeatures(parsed, replay(parsed));
+  const { battle, turns } = extractBattleFeatures(parsed, replay(parsed));
 
   it("has the stable v1 schema", () => {
-    expect(Object.keys(match).sort()).toEqual(MATCH_FEATURE_KEYS);
+    expect(Object.keys(battle).sort()).toEqual(BATTLE_FEATURE_KEYS);
     for (const t of turns) {
       expect(Object.keys(t.features).sort()).toEqual(TURN_FEATURE_KEYS);
     }
   });
 
   it("contains no NaN / Infinity / undefined values", () => {
-    expect(findInvalidValues({ ...match })).toEqual([]);
+    expect(findInvalidValues({ ...battle })).toEqual([]);
     for (const t of turns) {
       expect(findInvalidValues({ ...t.features })).toEqual([]);
       expect(findInvalidValues({ ...turnQualityFlags(t.features, t.endState) })).toEqual([]);
@@ -126,20 +126,20 @@ describe.each([
   });
 
   it("agrees with summarize() on the shared aggregates", () => {
-    expect(match.total_turns).toBe(summary.total_turns);
-    expect(match.prizes_player).toBe(summary.prizes_taken_player);
-    expect(match.prizes_opponent).toBe(summary.prizes_taken_opponent);
-    expect(match.player_mulligans).toBe(summary.player_mulligans);
-    expect(match.opponent_mulligans).toBe(summary.opponent_mulligans);
-    expect(match.end_reason).toBe(summary.end_reason);
+    expect(battle.total_turns).toBe(summary.total_turns);
+    expect(battle.prizes_player).toBe(summary.prizes_taken_player);
+    expect(battle.prizes_opponent).toBe(summary.prizes_taken_opponent);
+    expect(battle.player_mulligans).toBe(summary.player_mulligans);
+    expect(battle.opponent_mulligans).toBe(summary.opponent_mulligans);
+    expect(battle.end_reason).toBe(summary.end_reason);
     if (summary.went_first !== null) {
-      expect(match.went_first).toBe(summary.went_first ? 1 : 0);
+      expect(battle.went_first).toBe(summary.went_first ? 1 : 0);
     }
   });
 
   it("emits one row per playable turn with consistent prize accounting", () => {
     expect(turns.length).toBe(summary.total_turns);
-    expect(match.player_turns! + match.opponent_turns!).toBe(summary.total_turns);
+    expect(battle.player_turns! + battle.opponent_turns!).toBe(summary.total_turns);
     let lastPlayer = 0;
     let lastOpponent = 0;
     for (const { features: t } of turns) {
@@ -156,40 +156,40 @@ describe.each([
 
   it("is deterministic", () => {
     const again = extractFixture(file, handle);
-    expect(again.match).toEqual(match);
+    expect(again.battle).toEqual(battle);
     expect(again.turns.map((t) => t.features)).toEqual(turns.map((t) => t.features));
   });
 });
 
-describe("extractMatchFeatures (example-1 specifics)", () => {
+describe("extractBattleFeatures (example-1 specifics)", () => {
   // Known fixture facts (see lib/engine/replay.test.ts): the opponent
   // a11father prizes out 6-2.
-  const { match, turns } = extractFixture("example-1.txt", "MoonSheikah");
+  const { battle, turns } = extractFixture("example-1.txt", "MoonSheikah");
 
   it("captures the 6-2 prize-out against the player", () => {
-    expect(match.prizes_opponent).toBe(6);
-    expect(match.prizes_player).toBe(2);
-    expect(match.prize_diff).toBe(-4);
-    expect(match.end_reason).toBe("prizes");
+    expect(battle.prizes_opponent).toBe(6);
+    expect(battle.prizes_player).toBe(2);
+    expect(battle.prize_diff).toBe(-4);
+    expect(battle.end_reason).toBe("prizes");
   });
 
   it("re-tags supporters out of the parser's generic play_item bucket", () => {
     // parse.ts can't tell supporters from items without a catalog and
     // marks everything play_item; extraction must resolve them. Both
     // sides play supporters in every real game.
-    expect(match.supporters_player!).toBeGreaterThan(0);
-    expect(match.supporters_opponent!).toBeGreaterThan(0);
+    expect(battle.supporters_player!).toBeGreaterThan(0);
+    expect(battle.supporters_opponent!).toBeGreaterThan(0);
     // ...and not by double-counting: some plain items must remain.
     const itemTurns = turns.reduce((s, t) => s + t.features.items_played, 0);
     expect(itemTurns).toBeGreaterThan(0);
   });
 
   it("orders first-blood correctly", () => {
-    expect(match.first_prize_turn_player).not.toBeNull();
-    expect(match.first_prize_turn_opponent).not.toBeNull();
-    expect(match.first_attack_turn_player).not.toBeNull();
+    expect(battle.first_prize_turn_player).not.toBeNull();
+    expect(battle.first_prize_turn_opponent).not.toBeNull();
+    expect(battle.first_attack_turn_player).not.toBeNull();
     // Nobody attacks before their turn exists.
-    expect(match.first_attack_turn_player!).toBeGreaterThanOrEqual(1);
+    expect(battle.first_attack_turn_player!).toBeGreaterThanOrEqual(1);
   });
 
   it("produces quality flags with the stable key set", () => {
@@ -206,13 +206,13 @@ describe("extractMatchFeatures (example-1 specifics)", () => {
     const raw = readFileSync(join(FIXTURES, "example-1.txt"), "utf8");
     const parsed = normalizePerspective(parseBattleLog(raw), "MoonSheikah");
     const noSnapshots = replay(parsed, { keepSnapshots: false });
-    expect(() => extractMatchFeatures(parsed, noSnapshots)).toThrow(/keepSnapshots/);
+    expect(() => extractBattleFeatures(parsed, noSnapshots)).toThrow(/keepSnapshots/);
   });
 });
 
-describe("deriveMatchLabels", () => {
+describe("deriveBattleLabels", () => {
   it("prefers the stored result over the log", () => {
-    expect(deriveMatchLabels("win", "loss", -2)).toEqual({
+    expect(deriveBattleLabels("win", "loss", -2)).toEqual({
       outcome: 1,
       outcome_source: "stored",
       label_prize_diff: -2,
@@ -220,7 +220,7 @@ describe("deriveMatchLabels", () => {
   });
 
   it("falls back to the log result", () => {
-    expect(deriveMatchLabels(null, "loss", -4)).toEqual({
+    expect(deriveBattleLabels(null, "loss", -4)).toEqual({
       outcome: 0,
       outcome_source: "log",
       label_prize_diff: -4,
@@ -228,8 +228,8 @@ describe("deriveMatchLabels", () => {
   });
 
   it("encodes draws as 0.5 and unknowns as null", () => {
-    expect(deriveMatchLabels("draw", null, 0).outcome).toBe(0.5);
-    expect(deriveMatchLabels(null, null, null)).toEqual({
+    expect(deriveBattleLabels("draw", null, 0).outcome).toBe(0.5);
+    expect(deriveBattleLabels(null, null, null)).toEqual({
       outcome: null,
       outcome_source: null,
       label_prize_diff: null,

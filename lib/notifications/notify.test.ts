@@ -228,7 +228,7 @@ describe("notifyBadgeUnlocked", () => {
   it("swallows a write error instead of throwing", async () => {
     h.insertError = { message: "boom" };
     await expect(
-      notifyBadgeUnlocked({ recipientId: "u1", badgeKey: "first_match" }),
+      notifyBadgeUnlocked({ recipientId: "u1", badgeKey: "first_battle" }),
     ).resolves.toBeUndefined();
   });
 });

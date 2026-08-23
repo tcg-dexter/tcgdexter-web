@@ -7,12 +7,12 @@ import { buildSpotlightThumbLayers } from "./SpotlightThumbTemplate";
 import { buildMetaArchetypeLayers } from "./MetaArchetypeTemplate";
 import { buildCardSpotlightLayers } from "./CardSpotlightTemplate";
 import { buildFeaturedDeckLayers } from "./FeaturedDeckTemplate";
-import { buildFeaturedMatchLayers } from "./FeaturedMatchTemplate";
+import { buildFeaturedBattleLayers } from "./FeaturedBattleTemplate";
 import type {
   CardSpotlightSubject,
   FeaturedDeckSubject,
-  FeaturedMatchSubject,
-  FeaturedManualMatchSubject,
+  FeaturedBattleSubject,
+  FeaturedManualBattleSubject,
   MetaArchetypeSubject,
   SpotlightSubject,
   StudioLayer,
@@ -81,8 +81,8 @@ const featuredDeck: FeaturedDeckSubject = {
   price: 150,
 };
 
-const featuredMatch: FeaturedMatchSubject = {
-  kind: "featured_match",
+const featuredBattle: FeaturedBattleSubject = {
+  kind: "featured_battle",
   id: "fm1",
   username: "brock",
   displayName: "Brock",
@@ -100,8 +100,8 @@ const featuredMatch: FeaturedMatchSubject = {
   platformLabel: "TCG Live",
 };
 
-const featuredManualMatch: FeaturedManualMatchSubject = {
-  kind: "featured_match_manual",
+const featuredManualBattle: FeaturedManualBattleSubject = {
+  kind: "featured_battle_manual",
   id: "fm2",
   username: "misty",
   displayName: "Misty",
@@ -116,7 +116,7 @@ const featuredManualMatch: FeaturedManualMatchSubject = {
   result: "loss",
   playerPrizes: 3,
   opponentPrizes: 6,
-  platformLabel: "Match Log",
+  platformLabel: "Battle Log",
 };
 
 function renderLayers(layers: StudioLayer[]): string {
@@ -157,14 +157,14 @@ const cases: Array<{
     mustContain: ["♥ 42", "@misty", "tcgdexter.com/u/misty/abc12345"],
   },
   {
-    label: "featured match",
-    layers: buildFeaturedMatchLayers(featuredMatch, copy),
+    label: "featured battle",
+    layers: buildFeaturedBattleLayers(featuredBattle, copy),
     mustContain: ["BrockTCG", "RivalKid", "TCG Live", "Prizes Taken", "VS", "tcgdexter.com"],
   },
   {
-    label: "featured match (manual)",
-    layers: buildFeaturedMatchLayers(featuredManualMatch, copy),
-    mustContain: ["@misty", "Gary", "Match Log", "Prizes Taken", "VS", "tcgdexter.com"],
+    label: "featured battle (manual)",
+    layers: buildFeaturedBattleLayers(featuredManualBattle, copy),
+    mustContain: ["@misty", "Gary", "Battle Log", "Prizes Taken", "VS", "tcgdexter.com"],
   },
 ];
 

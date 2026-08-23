@@ -14,13 +14,13 @@ import CopyDeckListButton from "@/app/components/CopyDeckListButton";
 import LikeButton from "@/app/components/LikeButton";
 import { WLCircles } from "@/app/components/DeckPostCard";
 import EditDeckDialog from "@/app/components/EditDeckDialog";
-import MatchLog from "@/app/my-decks/[id]/MatchLog";
+import BattleHistory from "@/app/my-decks/[id]/BattleHistory";
 import DeckNotes from "@/app/my-decks/[id]/DeckNotes";
 import type { GamePrize } from "@/lib/bo3";
 import { primaryCardImageUrl, deckAvatarInfo, pokemonSlug } from "@/lib/primaryCardImage";
 import { typeColor } from "@/lib/metaPrimaryCard";
 
-interface Match {
+interface Battle {
   id: string;
   short_id: string;
   result: "win" | "loss" | "draw";
@@ -52,7 +52,7 @@ interface Props {
   pageTitle: string;
   initialIsPublic: boolean;
   canonicalShareUrl: string;
-  initialMatches: Match[];
+  initialBattles: Battle[];
   initialNotes: string;
   initialLiked: boolean;
   initialLikeCount: number;
@@ -71,7 +71,7 @@ export default function DeckDetailClient({
   pageTitle,
   initialIsPublic,
   canonicalShareUrl,
-  initialMatches,
+  initialBattles,
   initialNotes,
   initialLiked,
   initialLikeCount,
@@ -101,7 +101,7 @@ export default function DeckDetailClient({
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
   const actionRowRef = useRef<HTMLDivElement>(null);
 
-  // Bring the action row to the top of the viewport when the match log
+  // Bring the action row to the top of the viewport when the battle history
   // form opens. Closing (e.g. after a save) intentionally doesn't scroll.
   useEffect(() => {
     if (logOpen) {
@@ -376,9 +376,9 @@ export default function DeckDetailClient({
   // Owner rendering — title row only carries the right-anchored W-L record.
   // The settings gear lives in the action row below (opens a dropdown with
   // Edit deck and Delete deck).
-  const wins = initialMatches.filter((m) => m.result === "win").length;
-  const losses = initialMatches.filter((m) => m.result === "loss").length;
-  const draws = initialMatches.filter((m) => m.result === "draw").length;
+  const wins = initialBattles.filter((m) => m.result === "win").length;
+  const losses = initialBattles.filter((m) => m.result === "loss").length;
+  const draws = initialBattles.filter((m) => m.result === "draw").length;
 
   const titleAction = (
     <div className="ml-auto mr-2">
@@ -428,7 +428,7 @@ export default function DeckDetailClient({
                 backgroundClip: "padding-box, border-box",
               }}
             >
-              Log Match
+              Log Battle
             </button>
             <div
               className={`flex items-center gap-3 overflow-hidden transition-all duration-300 ${
@@ -524,11 +524,11 @@ export default function DeckDetailClient({
               document.body
             )}
 
-          {(initialMatches.length > 0 || logOpen) && (
+          {(initialBattles.length > 0 || logOpen) && (
             <div className="mt-2">
-              <MatchLog
+              <BattleHistory
                 savedDeckId={savedDeckId}
-                initialMatches={initialMatches}
+                initialBattles={initialBattles}
                 open={logOpen}
                 onOpenChange={setLogOpen}
               />

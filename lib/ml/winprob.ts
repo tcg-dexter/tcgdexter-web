@@ -11,7 +11,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { readRegistry } from "./registry";
-import type { MatchLogFeatures, TurnFeatures } from "./features";
+import type { BattleLogFeatures, TurnFeatures } from "./features";
 
 export interface WinProbValidationExample {
   features: Record<string, number>;
@@ -24,7 +24,7 @@ export interface WinProbArtifact {
   trained_at: string;
   feature_schema_version: number;
   n_samples: number;
-  n_matches: number;
+  n_battles: number;
   data_hash: string;
   /** Ordered feature names; coefficients/means/stds align by index. */
   features: string[];
@@ -68,7 +68,7 @@ export function readWinProbArtifact(): WinProbArtifact | null {
 /* ─── Feature vector (must mirror ml_train_winprob.py) ──────────── */
 
 export interface WinProbContext {
-  went_first: MatchLogFeatures["went_first"];
+  went_first: BattleLogFeatures["went_first"];
   /** Player's deck archetype for the prior lookup; null → global prior. */
   archetype_name: string | null;
 }

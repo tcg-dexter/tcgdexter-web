@@ -3,14 +3,14 @@ import { createClient } from "@/lib/supabase/server";
 import { buildReplayPayload } from "@/lib/replay/frames";
 
 /**
- * GET /api/admin/replay/[matchId]
+ * GET /api/admin/replay/[battleId]
  *
- * Admin-only. Any match, no visibility rules — the tool exists to inspect
+ * Admin-only. Any battle, no visibility rules — the tool exists to inspect
  * arbitrary logs. Frame building itself lives in lib/replay/frames so the
  * public battles endpoint renders exactly the same board.
  */
 
-interface MatchRow {
+interface BattleRow {
   id: string;
   battle_log_raw: string | null;
   player_handle: string | null;
@@ -19,9 +19,9 @@ interface MatchRow {
 
 export async function GET(
   _req: Request,
-  ctx: { params: Promise<{ matchId: string }> },
+  ctx: { params: Promise<{ battleId: string }> },
 ) {
-  const { matchId } = await ctx.params;
+  const { battleId } = await ctx.params;
   const supabase = await createClient();
   const {
     data: { user },
@@ -35,17 +35,17 @@ export async function GET(
     .maybeSingle<{ is_admin: boolean }>();
   if (!me?.is_admin) return NextResponse.json({ error: "Admin only" }, { status: 403 });
 
-  const { data: match } = await supabase
+  const { data: battle } = await supabase
     .from("matches")
     .select("id, battle_log_raw, player_handle, opponent_handle")
-    .eq("id", matchId)
-    .maybeSingle<MatchRow>();
-  if (!match) return NextResponse.json({ error: "Match not found" }, { status: 404 });
-  if (!match.battle_log_raw) {
-    return NextResponse.json({ error: "Match has no battle log" }, { status: 400 });
+    .eq("id", battleId)
+    .maybeSingle<BattleRow>();
+  if (!battle) return NextResponse.json({ error: "Battle not found" }, { status: 404 });
+  if (!battle.battle_log_raw) {
+    return NextResponse.json({ error: "Battle has no battle log" }, { status: 400 });
   }
 
   return NextResponse.json(
-    buildReplayPayload(match.id, match.battle_log_raw, match.player_handle ?? ""),
+    buildReplayPayload(battle.id, battle.battle_log_raw, battle.player_handle ?? ""),
   );
 }

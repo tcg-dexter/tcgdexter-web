@@ -1,7 +1,7 @@
 # TCG Dexter — Claude Code Guide
 
 ## Project Overview
-Pokémon TCG deck management web app. Core features: deck profiling (legality, price, meta match), saved deck library, match logging, deck sharing via QR/link.
+Pokémon TCG deck management web app. Core features: deck profiling (legality, price, meta match), saved deck library, battle logging, deck sharing via QR/link.
 
 ## Stack
 - **Next.js 14** (App Router, server components + client islands)
@@ -55,7 +55,7 @@ Pokémon TCG deck management web app. Core features: deck profiling (legality, p
 | `POST /api/analyze` | Analyze a deck list |
 | `GET/POST /api/saved-decks` | List / create saved decks |
 | `PATCH/DELETE /api/saved-decks/[id]` | Rename / delete a saved deck |
-| `POST /api/matches` | Log a match result |
+| `POST /api/matches` | Log a battle result |
 | `POST /api/deck-share` | Generate a shareable short URL |
 
 ### Component Conventions
@@ -63,8 +63,8 @@ Pokémon TCG deck management web app. Core features: deck profiling (legality, p
   - `topSlot` renders inside the main `flex flex-col gap-4` container, above the analysis modules.
   - `subtitle` is conditionally rendered — pass `false` to suppress the default "Created on…" date fallback without leaving dead space.
   - `titleAction` renders inline after the `<h1>` (use for pencil/rename icon).
-- **`SavedDeckRow`** (`app/my-decks/SavedDeckRow.tsx`) — list item in `/my-decks`. Row tap navigates to the deck profile. Log Match button expands an inline form.
-- **`MyDeckClient`** (`app/my-decks/[id]/MyDeckClient.tsx`) — client wrapper for saved deck detail. Owns rename + delete state; passes action buttons, MatchLog, DeckNotes, and DeckList into `topSlot`.
+- **`SavedDeckRow`** (`app/my-decks/SavedDeckRow.tsx`) — list item in `/my-decks`. Row tap navigates to the deck profile. Log Battle button expands an inline form.
+- **`MyDeckClient`** (`app/my-decks/[id]/MyDeckClient.tsx`) — client wrapper for saved deck detail. Owns rename + delete state; passes action buttons, BattleHistory, DeckNotes, and DeckList into `topSlot`.
 
 ### Design Tokens (globals.css)
 ```
@@ -76,10 +76,10 @@ Pokémon TCG deck management web app. Core features: deck profiling (legality, p
 --text-muted: #888888
 --accent: #d95555
 ```
-White (`bg-white`) is used for elevated cards (match log, deck list, saved deck rows) to stand out from `--surface`.
+White (`bg-white`) is used for elevated cards (battle log, deck list, saved deck rows) to stand out from `--surface`.
 
 ### Button Sizing Convention
-Action button rows use `text-xs font-semibold` with `px-3 py-1.5` for text buttons and `px-3 py-[7px]` for icon-only buttons (the 1px extra vertical padding compensates for the missing text line-height, keeping all buttons the same height). Black background buttons use `border border-transparent` to match the height of bordered buttons like Log Match.
+Action button rows use `text-xs font-semibold` with `px-3 py-1.5` for text buttons and `px-3 py-[7px]` for icon-only buttons (the 1px extra vertical padding compensates for the missing text line-height, keeping all buttons the same height). Black background buttons use `border border-transparent` to match the height of bordered buttons like Log Battle.
 
 ## Tailwind Notes
 - Content paths: `./app/**/*.{ts,tsx}` and `./components/**/*.{ts,tsx}`

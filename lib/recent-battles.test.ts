@@ -1,79 +1,79 @@
 import { describe, expect, it } from "vitest";
-import { fetchAllPages, pickFeaturedMatch } from "./recent-matches";
-import type { RecentMatch } from "@/app/components/MatchCard";
+import { fetchAllPages, pickFeaturedBattle } from "./recent-battles";
+import type { RecentBattle } from "@/app/components/BattleCard";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Only `totalDamage` and `createdAt` participate in the ranking, so the
- *  rest of RecentMatch is filled in as whatever type-checks — a full
+ *  rest of RecentBattle is filled in as whatever type-checks — a full
  *  fixture would obscure which two fields actually drive the outcome. */
-function match(id: string, totalDamage: number | null, daysAgo: number): RecentMatch {
+function battle(id: string, totalDamage: number | null, daysAgo: number): RecentBattle {
   return {
     id,
     totalDamage,
     createdAt: new Date(Date.now() - daysAgo * DAY_MS).toISOString(),
-  } as unknown as RecentMatch;
+  } as unknown as RecentBattle;
 }
 
 // Both /battles and the home-page showcase call this, so it decides what
-// "the current featured match" means for the whole app. If it ever returned
+// "the current featured battle" means for the whole app. If it ever returned
 // different answers for the same pool, the two surfaces would disagree.
-describe("pickFeaturedMatch", () => {
+describe("pickFeaturedBattle", () => {
   it("picks the highest total damage inside the window", () => {
-    const picked = pickFeaturedMatch([
-      match("low", 500, 1),
-      match("high", 2000, 3),
-      match("mid", 1200, 2),
+    const picked = pickFeaturedBattle([
+      battle("low", 500, 1),
+      battle("high", 2000, 3),
+      battle("mid", 1200, 2),
     ]);
     expect(picked?.id).toBe("high");
   });
 
-  it("ignores matches older than the seven-day window", () => {
+  it("ignores battles older than the seven-day window", () => {
     // The biggest bloodbath ever, but stale — the point of the window is
     // that the home page keeps showing something current.
-    const picked = pickFeaturedMatch([
-      match("ancient", 99999, 30),
-      match("recent", 100, 1),
+    const picked = pickFeaturedBattle([
+      battle("ancient", 99999, 30),
+      battle("recent", 100, 1),
     ]);
     expect(picked?.id).toBe("recent");
   });
 
-  it("ignores matches with no damage recorded", () => {
-    // totalDamage is null for manual match logs — no parsed battle log, so
+  it("ignores battles with no damage recorded", () => {
+    // totalDamage is null for manual battle logs — no parsed battle log, so
     // nothing for the showcase's replay viewer to play.
-    const picked = pickFeaturedMatch([match("manual", null, 1), match("logged", 10, 2)]);
+    const picked = pickFeaturedBattle([battle("manual", null, 1), battle("logged", 10, 2)]);
     expect(picked?.id).toBe("logged");
   });
 
-  it("breaks damage ties toward the more recent match", () => {
-    const picked = pickFeaturedMatch([
-      match("older", 1000, 5),
-      match("newer", 1000, 1),
+  it("breaks damage ties toward the more recent battle", () => {
+    const picked = pickFeaturedBattle([
+      battle("older", 1000, 5),
+      battle("newer", 1000, 1),
     ]);
     expect(picked?.id).toBe("newer");
   });
 
   it("returns null when nothing qualifies", () => {
-    expect(pickFeaturedMatch([])).toBeNull();
-    expect(pickFeaturedMatch([match("stale", 500, 30)])).toBeNull();
-    expect(pickFeaturedMatch([match("manual", null, 1)])).toBeNull();
+    expect(pickFeaturedBattle([])).toBeNull();
+    expect(pickFeaturedBattle([battle("stale", 500, 30)])).toBeNull();
+    expect(pickFeaturedBattle([battle("manual", null, 1)])).toBeNull();
   });
 
   it("does not reorder the caller's array", () => {
     // The home page slices the same pool for its Recent Battles grid, which
     // must stay in newest-first feed order — a sort in place here would
     // silently reorder that grid by damage.
-    const pool = [match("a", 100, 1), match("b", 5000, 2), match("c", 200, 3)];
+    const pool = [battle("a", 100, 1), battle("b", 5000, 2), battle("c", 200, 3)];
     const before = pool.map((m) => m.id);
-    pickFeaturedMatch(pool);
+    pickFeaturedBattle(pool);
     expect(pool.map((m) => m.id)).toEqual(before);
   });
 });
 
 // The Featured Battle vanished from both /battles and the home page because
-// these reads weren't paged: ~1200 `attack` rows across the public match
+// these reads weren't paged: ~1200 `attack` rows across the public battle
 // pool ran past PostgREST's 1000-row response cap, and the truncation fell
-// on the NEWEST matches — so every candidate inside the 7-day window came
+// on the NEWEST battles — so every candidate inside the 7-day window came
 // back with totalDamage null and the picker filtered all of them out.
 describe("fetchAllPages", () => {
   /** Serves `total` rows out of a page-sized window, recording each range. */

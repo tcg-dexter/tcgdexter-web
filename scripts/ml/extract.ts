@@ -28,13 +28,13 @@ import { ENGINE_VERSION } from "@/lib/engine/types";
 import {
   FEATURE_SCHEMA_VERSION,
   extractDeckFeatures,
-  extractMatchFeatures,
-  deriveMatchLabels,
+  extractBattleFeatures,
+  deriveBattleLabels,
   turnQualityFlags,
   findInvalidValues,
   numOrNull,
 } from "@/lib/ml/features";
-import type { MatchLogFeatures } from "@/lib/ml/features";
+import type { BattleLogFeatures } from "@/lib/ml/features";
 
 /* ─── CLI args ──────────────────────────────────────────────────── */
 
@@ -76,10 +76,10 @@ function toJsonl(rows: Row[]): string {
 
 const str = (v: unknown): string | null => (typeof v === "string" && v !== "" ? String(v) : null);
 
-/** All-null MatchLogFeatures, then overlaid with whatever the import flow
+/** All-null BattleLogFeatures, then overlaid with whatever the import flow
  *  stored on the matches row itself (present for log imports, sparse for
  *  manually logged results). */
-function storedColumnFeatures(m: Row): MatchLogFeatures {
+function storedColumnFeatures(m: Row): BattleLogFeatures {
   const wentFirst = numOrNull(m.went_first);
   const prizesPlayer = numOrNull(m.prizes_taken_player);
   const prizesOpponent = numOrNull(m.prizes_taken_opponent);
@@ -268,8 +268,8 @@ function main(): void {
       try {
         const normalized = normalizePerspective(parseBattleLog(battleLog), playerHandle);
         const replayResult = replay(normalized);
-        const extraction = extractMatchFeatures(normalized, replayResult);
-        logFeatures = extraction.match;
+        const extraction = extractBattleFeatures(normalized, replayResult);
+        logFeatures = extraction.battle;
         logFeaturesSource = "replay";
         logResult = summarize(normalized).result;
         matchesReplayed += 1;
@@ -295,7 +295,7 @@ function main(): void {
       }
     }
 
-    const labels = deriveMatchLabels(str(m.result), logResult, logFeatures.prize_diff);
+    const labels = deriveBattleLabels(str(m.result), logResult, logFeatures.prize_diff);
     matchRows.push(
       sanitize(
         {

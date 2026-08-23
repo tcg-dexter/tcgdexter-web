@@ -1,20 +1,20 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import MatchForm, { type MatchFormData } from "./MatchForm";
+import BattleForm, { type BattleFormData } from "./BattleForm";
 import BattleLogImportTab from "./BattleLogImportTab";
 
 interface Props {
   savedDeckId: string;
-  /** Manual-entry submit handler — same shape MatchForm has always used. */
-  onSubmitManual: (data: MatchFormData) => Promise<void>;
+  /** Manual-entry submit handler — same shape BattleForm has always used. */
+  onSubmitManual: (data: BattleFormData) => Promise<void>;
   /** Called when an import completes successfully. Parent should refresh. */
   onImported: () => void;
   onCancel: () => void;
   /** Whether Cancel scrolls the page to top before closing. Defaults to true. */
   scrollToTopOnCancel?: boolean;
   /** Whether the entry surface is currently open/visible. Forwarded to
-   *  MatchForm to gate its new-match autofocus — callers that keep this
+   *  BattleForm to gate its new-battle autofocus — callers that keep this
    *  mounted-but-collapsed (grid card / pinned hero drawers) must pass
    *  `active={logOpen}` so the hidden form doesn't steal focus on page
    *  load. Defaults to true for callers that only mount it when open. */
@@ -30,16 +30,16 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 /**
- * New-match entry surface with three tabs:
- *   • Single — MatchForm in single-game mode.
- *   • Best of 3 — MatchForm with the per-game pickers (bestOf3 controlled).
+ * New-battle entry surface with three tabs:
+ *   • Single — BattleForm in single-game mode.
+ *   • Best of 3 — BattleForm with the per-game pickers (bestOf3 controlled).
  *   • TCG Live — battle-log import.
  *
- * Single and Best of 3 share the same MatchForm instance (only the bestOf3
+ * Single and Best of 3 share the same BattleForm instance (only the bestOf3
  * prop changes), so opponent details typed under one carry over to the other.
- * Editing existing matches still uses MatchForm directly with its own toggle.
+ * Editing existing battles still uses BattleForm directly with its own toggle.
  */
-export default function MatchEntry({
+export default function BattleEntry({
   savedDeckId,
   onSubmitManual,
   onImported,
@@ -57,14 +57,14 @@ export default function MatchEntry({
   const containerRef = useRef<HTMLDivElement>(null);
   const flipFromTop = useRef<number | null>(null);
 
-  // "single"/"bo3" share one MatchForm instance and already animate their
+  // "single"/"bo3" share one BattleForm instance and already animate their
   // shared actions row via the bo3-row grid collapse. Crossing into/out of
   // "import" remounts the whole content block, so capture the actions row's
   // position before the switch and FLIP it into its new spot after.
   function selectTab(next: Tab) {
     const crossesBoundary = (tab === "import") !== (next === "import");
     if (crossesBoundary) {
-      const el = containerRef.current?.querySelector<HTMLElement>("[data-match-actions]");
+      const el = containerRef.current?.querySelector<HTMLElement>("[data-battle-actions]");
       flipFromTop.current = el ? el.getBoundingClientRect().top : null;
     }
     setTab(next);
@@ -77,7 +77,7 @@ export default function MatchEntry({
     if (flipFromTop.current !== null) {
       const fromTop = flipFromTop.current;
       flipFromTop.current = null;
-      const actions = containerRef.current?.querySelector<HTMLElement>("[data-match-actions]");
+      const actions = containerRef.current?.querySelector<HTMLElement>("[data-battle-actions]");
       if (actions) {
         const delta = fromTop - actions.getBoundingClientRect().top;
         if (delta !== 0) {
@@ -139,7 +139,7 @@ export default function MatchEntry({
             scrollToTopOnCancel={scrollToTopOnCancel}
           />
         ) : (
-          <MatchForm
+          <BattleForm
             onSubmit={onSubmitManual}
             onCancel={onCancel}
             bestOf3={tab === "bo3"}

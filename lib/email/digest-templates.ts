@@ -7,7 +7,7 @@
  *   3. Playmat — a server-composited mat PNG of a new public deck
  *   4. New set — logo + release date (conditional)
  */
-import type { RecentMatch } from "@/app/components/MatchCard";
+import type { RecentBattle } from "@/app/components/BattleCard";
 import type { UserRecap, NewPublicDeck, NewSet } from "@/lib/email/digest-data";
 
 const ACCENT = "#D91E0D";
@@ -71,7 +71,7 @@ function battleSide(imageUrl: string | null, color: string, deckLabel: string, h
   </td>`;
 }
 
-function battleModule(m: RecentMatch, siteUrl: string): string {
+function battleModule(m: RecentBattle, siteUrl: string): string {
   const oppDeck = m.opponentArchetype ?? m.opponentAttackerName ?? "Unknown deck";
   const dmg = m.totalDamage ?? 0;
   return moduleCard(`${sectionTitle("⚔ Battle of the Week")}
@@ -84,7 +84,7 @@ function battleModule(m: RecentMatch, siteUrl: string): string {
       <span style="font-size:22px;font-weight:800;color:${ACCENT};font-family:${FONT};">${dmg.toLocaleString()}</span>
       <span style="font-size:12px;color:${MUTED};"> total damage dealt</span>
     </td></tr></table>
-    <div style="margin-top:16px;">${cta("See the match", `${siteUrl}/battles`)}</div>`);
+    <div style="margin-top:16px;">${cta("See the battle", `${siteUrl}/battles`)}</div>`);
 }
 
 function playmatModule(deck: NewPublicDeck, imageUrl: string, siteUrl: string): string {
@@ -114,7 +114,7 @@ export interface WeeklyDigestInput {
   siteUrl: string;
   recipientName: string;
   recap: UserRecap;
-  battle: RecentMatch | null;
+  battle: RecentBattle | null;
   deck: (NewPublicDeck & { playmatImageUrl: string }) | null;
   set: NewSet | null;
   unsubUrl: string;

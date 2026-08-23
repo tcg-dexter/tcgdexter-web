@@ -14,7 +14,7 @@
 //     at all — so it barely discriminates between plans, which is why the
 //     board-aware model exists.
 //
-// winprob.json itself is NOT retired: it still serves human-match review
+// winprob.json itself is NOT retired: it still serves human-battle review
 // (winProbCurve), a different job on a different feature set.
 
 import type { PlanSnapshot, StateEvaluator } from "@/lib/engine/sim";
@@ -54,7 +54,7 @@ export interface GbdtValueArtifact {
   feature_schema_version: number;
   policy_schema_version?: number;
   n_samples: number;
-  n_matches: number;
+  n_battles: number;
   data_hash: string;
   /** Ordered feature names; tree `feature` indices are columns of THIS array. */
   features: string[];

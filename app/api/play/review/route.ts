@@ -8,7 +8,7 @@ import { reviewFromTranscript } from "@/lib/ml/gameReview";
  * POST /api/play/review — post-game coach review for a finished AI-player
  * game (admin-gated). Body: { transcript }. The transcript is rebuilt
  * deterministically and analyzed with the same coach heuristics +
- * win-prob curve used for imported real matches.
+ * win-prob curve used for imported real battles.
  */
 
 const TRANSCRIPT_MOVES_MAX = 800;

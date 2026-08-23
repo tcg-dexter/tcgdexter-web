@@ -3,13 +3,13 @@
 // Admin Replay tool. The playback surface itself — the 16:9 thread + board
 // window and the transport module — lives in the shared ReplayViewer, which
 // the public battles page renders too. What stays here is the tool's own
-// chrome: picking which match to load, and the "{X} vs {Y}" wordmark bar.
+// chrome: picking which battle to load, and the "{X} vs {Y}" wordmark bar.
 
 import { useState } from "react";
 import Link from "next/link";
 import ReplayViewer from "@/app/components/replay/ReplayViewer";
 
-export interface ReplayMatchOption {
+export interface ReplayBattleOption {
   id: string;
   createdAt: string;
   playerHandle: string | null;
@@ -20,7 +20,7 @@ export interface ReplayMatchOption {
 }
 
 interface ReplayClientProps {
-  options: ReplayMatchOption[];
+  options: ReplayBattleOption[];
 }
 
 export default function ReplayClient({ options }: ReplayClientProps) {
@@ -49,7 +49,7 @@ export default function ReplayClient({ options }: ReplayClientProps) {
         {selectedId && (
           <ReplayViewer
             key={selectedId}
-            matchId={selectedId}
+            battleId={selectedId}
             replayUrl={`/api/admin/replay/${selectedId}`}
             logUrl={`/api/admin/replay/${selectedId}/log`}
             renderHeader={(payload) => (
@@ -61,7 +61,7 @@ export default function ReplayClient({ options }: ReplayClientProps) {
           />
         )}
 
-        <MatchSelector
+        <BattleSelector
           options={options}
           selectedId={selectedId}
           onSelect={setSelectedId}
@@ -111,26 +111,26 @@ function ReplayHeader({
 }
 
 /* ──────────────────────────────────────────────────────────────── */
-/* Match selector                                                   */
+/* Battle selector                                                  */
 /* ──────────────────────────────────────────────────────────────── */
 
-function MatchSelector({
+function BattleSelector({
   options,
   selectedId,
   onSelect,
 }: {
-  options: ReplayMatchOption[];
+  options: ReplayBattleOption[];
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
   return (
     <div className="mt-4 rounded-2xl border border-black/8 bg-white p-4">
       <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
-        Recent imported matches
+        Recent imported battles
       </div>
       {options.length === 0 ? (
         <p className="py-3 text-xs text-text-secondary">
-          No matches with battle logs yet.
+          No battles with battle logs yet.
         </p>
       ) : (
         <ul className="divide-y divide-black/5">

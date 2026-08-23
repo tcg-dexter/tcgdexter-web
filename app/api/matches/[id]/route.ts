@@ -11,7 +11,7 @@ import {
 /**
  * PATCH /api/matches/[id]
  *
- * Edits a match record. RLS enforces owner-only access.
+ * Edits a battle record. RLS enforces owner-only access.
  * Accepts any combination of: result, opponent_name, opponent_archetype,
  * opponent_deck_list, notes, played_at, game_results.
  */
@@ -94,7 +94,7 @@ export async function PATCH(
 
   if (error) {
     console.error("[matches] update failed:", error);
-    return NextResponse.json({ error: "Failed to update match." }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update battle." }, { status: 500 });
   }
 
   return NextResponse.json({ success: true });
@@ -103,7 +103,7 @@ export async function PATCH(
 /**
  * DELETE /api/matches/[id]
  *
- * Deletes a match record. RLS enforces owner-only access.
+ * Deletes a battle record. RLS enforces owner-only access.
  */
 export async function DELETE(
   _req: Request,
@@ -124,7 +124,7 @@ export async function DELETE(
 
   if (error) {
     console.error("[matches] delete failed:", error);
-    return NextResponse.json({ error: "Failed to delete match." }, { status: 500 });
+    return NextResponse.json({ error: "Failed to delete battle." }, { status: 500 });
   }
 
   return NextResponse.json({ success: true });

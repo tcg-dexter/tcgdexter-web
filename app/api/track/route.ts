@@ -14,7 +14,7 @@ import { track } from "@/lib/analytics/track";
  */
 
 // Event-name prefixes a browser client is permitted to emit. Server-only
-// events (auth, deck, match, analyze, meta) are never accepted here.
+// events (auth, deck, battle, analyze, meta) are never accepted here.
 const ALLOWED_PREFIXES = new Set(["playmat", "spotlight", "learn"]);
 const EVENT_RE = /^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/;
 

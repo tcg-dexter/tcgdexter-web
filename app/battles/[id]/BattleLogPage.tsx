@@ -12,7 +12,7 @@ import { shade } from "@/lib/color";
 export type { BattleSideStats };
 
 interface Props {
-  matchId: string;
+  battleId: string;
   result: "win" | "loss" | "draw";
   opponentArchetype: string | null;
   playedAt: string;
@@ -59,7 +59,7 @@ const HERO_ROTATION_DEG = 5;
 const HERO_HEIGHT_PCT = 80;
 
 export default function BattleLogPage({
-  matchId,
+  battleId,
   result,
   opponentArchetype,
   playedAt,
@@ -130,12 +130,12 @@ export default function BattleLogPage({
         <BackButton href="/" ariaLabel="Back" />
       </div>
 
-      {/* Match hero — built to read as a sibling of the deck collection's
+      {/* Battle hero — built to read as a sibling of the deck collection's
           pinned deck: a rounded card sitting on the page background, lit by
           a gradient glow bleeding out from under it, with the artwork panel
           on the left and the details on the right. The one substitution is
           color — the pinned deck glows in the brand gradient, this glows in
-          the match's own winner→loser gradient.
+          the battle's own winner→loser gradient.
           mt-6 stands in for the removed "Battle Log" header's own mb-6 —
           on mobile the back-button block above is hidden entirely, so this
           is the only thing keeping the hero off the safe-area padding. */}
@@ -212,16 +212,16 @@ export default function BattleLogPage({
       <div className="mt-6">
         {hasBattleLog ? (
           <ReplayViewer
-            matchId={matchId}
-            replayUrl={`/api/battles/${matchId}/replay`}
-            logUrl={`/api/battles/${matchId}/log`}
+            battleId={battleId}
+            replayUrl={`/api/battles/${battleId}/replay`}
+            logUrl={`/api/battles/${battleId}/log`}
             result={result}
             playerColor={playerColor}
             opponentColor={opponentColor}
           />
         ) : (
           <div className="rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5 text-sm text-text-muted text-center dark:bg-surface-elevated dark:border-white/10">
-            No battle log available for this match.
+            No battle log available for this battle.
           </div>
         )}
       </div>
@@ -236,7 +236,7 @@ export default function BattleLogPage({
  * there are two heroes rather than one and they sit centred rather than
  * tucked behind the panel's floor, the ghost is the winner's card, and the
  * pinned banner's favourite toggle, W/L ribbon and avatar stack are all
- * dropped — nothing on a finished match is actionable.
+ * dropped — nothing on a finished battle is actionable.
  *
  * The mobile height is taller than the pinned banner's 150px because of
  * that centring: a tucked card can be any size and just show less of

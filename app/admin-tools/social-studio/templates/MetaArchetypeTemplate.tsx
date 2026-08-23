@@ -112,7 +112,7 @@ export function buildMetaArchetypeLayers(
       ),
     },
     {
-      // The hero stat — meta share in the Featured Match's giant-digit
+      // The hero stat — meta share in the Featured Battle's giant-digit
       // voice, with the entry count as supporting context.
       id: "meta-share",
       name: "Meta Share",

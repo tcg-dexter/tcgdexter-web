@@ -28,8 +28,8 @@ import DeckOwnershipModule, {
 import StandardFormatInfo from "@/app/components/StandardFormatInfo";
 import ShopListingsPanel from "@/app/cards/ShopListingsPanel";
 import type { ShopListing } from "@/lib/shopListings";
-import FeaturedMatchHero from "@/app/battles/FeaturedMatchHero";
-import { MatchCard, type RecentMatch } from "@/app/components/MatchCard";
+import FeaturedBattleHero from "@/app/battles/FeaturedBattleHero";
+import { BattleCard, type RecentBattle } from "@/app/components/BattleCard";
 import MetaVariantCard from "@/app/meta-archetypes/[slug]/MetaVariantCard";
 import {
   MAT_STYLES,
@@ -210,7 +210,7 @@ const SHOP_LISTINGS: ShopListing[] = [
   },
 ];
 
-const FEATURED_MATCH: RecentMatch = {
+const FEATURED_MATCH: RecentBattle = {
   id: "design-library-demo-match",
   shortId: "demo123",
   result: "win",
@@ -233,7 +233,7 @@ const FEATURED_MATCH: RecentMatch = {
   totalDamage: 480,
 };
 
-const BATTLE_PREVIEW_CARDS: RecentMatch[] = [
+const BATTLE_PREVIEW_CARDS: RecentBattle[] = [
   FEATURED_MATCH,
   {
     ...FEATURED_MATCH,
@@ -261,7 +261,7 @@ const BATTLE_PREVIEW_CARDS: RecentMatch[] = [
 
 // Non-UUID ids on purpose — these rows are display-only reference material,
 // never meant to round-trip to a real saved_decks row. Any accidental write
-// attempt (e.g. fully submitting the inline Log Match form) fails validation
+// attempt (e.g. fully submitting the inline Log Battle form) fails validation
 // instead of touching real data.
 const SAVED_DECK_ROWS: (UserDeckCardProps & { isLast?: boolean })[] = [
   {
@@ -288,7 +288,7 @@ const SAVED_DECK_ROWS: (UserDeckCardProps & { isLast?: boolean })[] = [
   },
   {
     id: "design-library-demo-row-3",
-    name: "New deck, no matches yet",
+    name: "New deck, no battles yet",
     href: "#",
     imageUrl: null,
     username: "you",
@@ -472,7 +472,7 @@ export default function DesignLibraryClient() {
               </button>
             </div>
           </Demo>
-          <Demo label="Gradient-ring toggle — inactive / active (SavedDeckRow's Log match button)">
+          <Demo label="Gradient-ring toggle — inactive / active (SavedDeckRow's Log battle button)">
             <div className="flex flex-wrap gap-3">
               <button
                 className="rounded-full border border-transparent px-3 py-1.5 text-xs font-semibold text-text-secondary transition-all"
@@ -482,7 +482,7 @@ export default function DesignLibraryClient() {
                   backgroundClip: "padding-box, border-box",
                 }}
               >
-                Log match
+                Log battle
               </button>
               <button
                 className="rounded-full border border-transparent px-3 py-1.5 text-xs font-semibold text-white transition-all"
@@ -492,7 +492,7 @@ export default function DesignLibraryClient() {
                   backgroundClip: "padding-box, border-box",
                 }}
               >
-                Log match
+                Log battle
               </button>
             </div>
           </Demo>
@@ -502,7 +502,7 @@ export default function DesignLibraryClient() {
           id="badges"
           eyebrow="Global"
           title="Badges & pills"
-          description="Small status/metadata chips used across match history, pricing, and notifications."
+          description="Small status/metadata chips used across battle history, pricing, and notifications."
         >
           <Demo label="W-L record pill + recent form pips (SavedDeckRow.tsx)">
             <div className="flex flex-wrap items-center gap-4">
@@ -511,7 +511,7 @@ export default function DesignLibraryClient() {
               <FormPips recentForm={["W", "W", "L", "D", "W"]} />
             </div>
           </Demo>
-          <Demo label="Match result badges (MatchLog.tsx RESULT_STYLE)">
+          <Demo label="Battle result badges (BattleHistory.tsx RESULT_STYLE)">
             <div className="flex items-center gap-3">
               <span className="inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold bg-gradient-brand text-white">W</span>
               <span className="inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold bg-black dark:bg-white text-white dark:text-black">L</span>
@@ -590,11 +590,11 @@ export default function DesignLibraryClient() {
           id="empty"
           eyebrow="Global"
           title="Empty states"
-          description="Plain centered muted text for small in-place empties (e.g. a match list); a dedicated onboarding module for a page-level empty state."
+          description="Plain centered muted text for small in-place empties (e.g. a battle list); a dedicated onboarding module for a page-level empty state."
         >
-          <Demo label="Inline empty text (MatchLog.tsx)">
+          <Demo label="Inline empty text (BattleHistory.tsx)">
             <p className="text-sm text-text-muted text-center">
-              No matches logged yet. Tap Log Match after your next game.
+              No battles logged yet. Tap Log Battle after your next game.
             </p>
           </Demo>
           <Demo label="Get Started module shape (GetStartedChecklist.tsx) — static reproduction, not the live component, since its Dismiss action writes to the viewer's own account">
@@ -606,13 +606,13 @@ export default function DesignLibraryClient() {
                 </div>
               </div>
               <div className="mt-3 rounded-xl border border-accent/25 bg-accent/[0.04] p-4">
-                <p className="text-[15px] font-semibold text-text-primary">Log your first match</p>
+                <p className="text-[15px] font-semibold text-text-primary">Log your first battle</p>
                 <p className="text-sm text-text-secondary mt-1 leading-relaxed">
                   Track wins and losses to see your matchup spread over time.
                 </p>
                 <div className="mt-3">
                   <span className="inline-flex items-center justify-center rounded-full bg-gradient-brand px-4 py-2 text-sm font-semibold text-white shadow-sm">
-                    Log a match
+                    Log a battle
                   </span>
                 </div>
               </div>
@@ -831,12 +831,12 @@ export default function DesignLibraryClient() {
           id="battles"
           eyebrow="Product"
           title="Battles"
-          description="app/battles/ and match logging — composition mix, win/loss record, and the Featured Battle hero."
+          description="app/battles/ and battle logging — composition mix, win/loss record, and the Featured Battle hero."
         >
           <Demo label="Composition bar (SavedDeckRow.tsx)">
             <CompositionBar counts={{ pokemon: 14, trainer: 32, energy: 14 }} />
           </Demo>
-          <Demo label="Match row (MatchLog.tsx) — result badge, subtitle, view/edit/delete actions">
+          <Demo label="Battle row (BattleHistory.tsx) — result badge, subtitle, view/edit/delete actions">
             <div className="flex items-start gap-3">
               <span className="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold bg-gradient-brand text-white">
                 W
@@ -852,15 +852,15 @@ export default function DesignLibraryClient() {
               </span>
             </div>
           </Demo>
-          <Demo label="Battle preview cards (MatchCard.tsx) — win / loss / draw. Same grid wrapper as /battles, the home page, and a profile's Recent Battles.">
+          <Demo label="Battle preview cards (BattleCard.tsx) — win / loss / draw. Same grid wrapper as /battles, the home page, and a profile's Recent Battles.">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {BATTLE_PREVIEW_CARDS.map((m) => (
-                <MatchCard key={m.id} match={m} />
+                <BattleCard key={m.id} battle={m} />
               ))}
             </div>
           </Demo>
-          <Demo label="Featured Battle hero (FeaturedMatchHero.tsx) — the image-rich ghost-card/prize-digit/VS-glyph layout above appears on the preview cards too once both sides have resolved battle-log art">
-            <FeaturedMatchHero match={FEATURED_MATCH} />
+          <Demo label="Featured Battle hero (FeaturedBattleHero.tsx) — the image-rich ghost-card/prize-digit/VS-glyph layout above appears on the preview cards too once both sides have resolved battle-log art">
+            <FeaturedBattleHero battle={FEATURED_MATCH} />
           </Demo>
         </Section>
 
@@ -925,7 +925,7 @@ export default function DesignLibraryClient() {
           id="library"
           eyebrow="Product"
           title="Saved deck library"
-          description="app/my-decks/ — SavedDeckRow is the list-view row; tapping it navigates to the deck profile, Log Match expands an inline form."
+          description="app/my-decks/ — SavedDeckRow is the list-view row; tapping it navigates to the deck profile, Log Battle expands an inline form."
         >
           <Demo label="Saved deck rows (SavedDeckRow.tsx)">
             <div className="rounded-2xl border border-black/8 dark:border-white/10 overflow-hidden">
@@ -936,7 +936,7 @@ export default function DesignLibraryClient() {
           </Demo>
           <CodeNote>
             Row ids above are deliberately non-UUID placeholders — SavedDeckRow&apos;s
-            Log Match flow does hit the real /api/matches endpoint on submit, and
+            Log Battle flow does hit the real /api/matches endpoint on submit, and
             these ids fail validation cleanly rather than writing to real data.
           </CodeNote>
         </Section>

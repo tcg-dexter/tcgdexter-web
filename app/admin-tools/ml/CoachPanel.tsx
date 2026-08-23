@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { CoachResponse } from "@/app/api/coach/[matchId]/route";
+import type { CoachResponse } from "@/app/api/coach/[battleId]/route";
 import WinProbSparkline from "@/app/components/WinProbSparkline";
 
 interface MatchOption {

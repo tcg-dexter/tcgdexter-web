@@ -1,4 +1,4 @@
-// Battle log → match-level + per-turn feature rows, by folding the
+// Battle log → battle-level + per-turn feature rows, by folding the
 // engine's replay() snapshots over the parsed turn structure.
 //
 // Perspective: parsed must already be normalized (player/opponent resolved
@@ -12,7 +12,7 @@ import type { BattleLogParseResult, ParsedAction, ParsedTurn } from "@/lib/battl
 import { isTrainerSubtype } from "@/lib/engine";
 import type { GameState, PlayerSide, ReplayResult } from "@/lib/engine/types";
 import { bool01, mean, num, numOrNull } from "./guards";
-import type { MatchLogFeatures, TurnFeatures } from "./types";
+import type { BattleLogFeatures, TurnFeatures } from "./types";
 
 export interface TurnExtraction {
   features: TurnFeatures;
@@ -20,8 +20,8 @@ export interface TurnExtraction {
   endState: GameState;
 }
 
-export interface MatchExtraction {
-  match: MatchLogFeatures;
+export interface BattleExtraction {
+  battle: BattleLogFeatures;
   turns: TurnExtraction[];
 }
 
@@ -34,10 +34,10 @@ function retreatEnergyCount(a: ParsedAction): number {
   return Array.isArray(discarded) ? discarded.length : 0;
 }
 
-export function extractMatchFeatures(
+export function extractBattleFeatures(
   parsed: BattleLogParseResult,
   replayResult: ReplayResult,
-): MatchExtraction {
+): BattleExtraction {
   const { states, finalState, diagnostics } = replayResult;
   if (states.length !== parsed.actions.length) {
     // Snapshots are the backbone of every per-turn feature; a mismatch
@@ -55,7 +55,7 @@ export function extractMatchFeatures(
 
   const turns: TurnExtraction[] = [];
 
-  // Match-level accumulators folded across turns.
+  // Battle-level accumulators folded across turns.
   let firstAttackPlayer: number | null = null;
   let firstAttackOpponent: number | null = null;
   let firstPrizePlayer: number | null = null;
@@ -149,7 +149,7 @@ export function extractMatchFeatures(
       if (a.action_type === "knock_out" && a.actor === other) kosScored += 1;
     }
 
-    // Match-level fold.
+    // Battle-level fold.
     if (attacked) {
       if (actor === "player" && firstAttackPlayer === null) firstAttackPlayer = turn.turn_number;
       if (actor === "opponent" && firstAttackOpponent === null) firstAttackOpponent = turn.turn_number;
@@ -217,7 +217,7 @@ export function extractMatchFeatures(
   const playerTurnCount = playableTurns.filter((t) => t.actor === "player").length;
   const opponentTurnCount = playableTurns.filter((t) => t.actor === "opponent").length;
 
-  const match: MatchLogFeatures = {
+  const battle: BattleLogFeatures = {
     went_first:
       finalState.firstPlayer === "player" ? 1 : finalState.firstPlayer === "opponent" ? 0 : null,
     player_mulligans: num(finalState.sides.player.mulligans),
@@ -257,5 +257,5 @@ export function extractMatchFeatures(
     unmatched_line_count: parsed.unmatched.length,
   };
 
-  return { match, turns };
+  return { battle, turns };
 }

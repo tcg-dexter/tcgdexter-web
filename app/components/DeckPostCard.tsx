@@ -7,8 +7,8 @@ import DeckCardFooter from "./DeckCardFooter";
 import DeckCardMenu from "./DeckCardMenu";
 import AvatarStack, { type AvatarStackItem } from "./AvatarStack";
 import CompositionRing, { CompositionLegend } from "./CompositionRing";
-import { type MatchFormData } from "./MatchForm";
-import MatchEntry from "./MatchEntry";
+import { type BattleFormData } from "./BattleForm";
+import BattleEntry from "./BattleEntry";
 import QRCodeButton from "./QRCodeButton";
 import { buildAvatarItems } from "@/lib/deckAvatarItems";
 import { clientTz, celebrateStreak } from "@/lib/streak-client";
@@ -414,7 +414,7 @@ export function UserDeckCard({
 
   // Save-to-library state — only relevant when !canManage (a visitor
   // browsing someone else's deck, e.g. on their profile, the leaderboard,
-  // or a spotlight). Logging a match is owner-only (that's the whole bug
+  // or a spotlight). Logging a battle is owner-only (that's the whole bug
   // this replaces); visitors get a Save toggle instead, backed by the same
   // clone endpoint DeckCardFooter uses for the public deck feed.
   const [saved, setSaved] = useState(false);
@@ -480,17 +480,17 @@ export function UserDeckCard({
     }
   }
 
-  // Bumped on every successful save/import so <MatchEntry> remounts fresh —
+  // Bumped on every successful save/import so <BattleEntry> remounts fresh —
   // it's a persistently-mounted subtree (collapsed via grid-rows, not
-  // conditionally rendered), so its internal MatchForm state would
-  // otherwise survive close/reopen and leak the previous match's inputs
+  // conditionally rendered), so its internal BattleForm state would
+  // otherwise survive close/reopen and leak the previous battle's inputs
   // into the next one.
   const [logKey, setLogKey] = useState(0);
 
   // Opening the drawer anchors this card to the top of the screen (with a
   // little headroom), same as the pinned deck hero — offset by the mobile
   // sticky toolbar's live height (0 on desktop, where nav lives in a side
-  // rail) so the match form is immediately visible instead of growing the
+  // rail) so the battle form is immediately visible instead of growing the
   // card off-screen below the fold.
   const cardRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -522,7 +522,7 @@ export function UserDeckCard({
     if (!res.ok) setIsFavorite(!next);
   }
 
-  async function handleQuickLog(data: MatchFormData) {
+  async function handleQuickLog(data: BattleFormData) {
     const res = await fetch("/api/matches", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -530,7 +530,7 @@ export function UserDeckCard({
     });
     const json = await res.json();
     if (!res.ok) {
-      throw new Error(json.error ?? "Failed to log match.");
+      throw new Error(json.error ?? "Failed to log battle.");
     }
     celebrateStreak(json.streak);
     setLogOpen(false);
@@ -598,7 +598,7 @@ export function UserDeckCard({
             }}
             className="flex-1 py-2.5 text-[13px] font-semibold text-text-primary hover:bg-black/[0.03] transition-colors"
           >
-            Log match
+            Log battle
           </button>
         ) : (
           <button
@@ -624,7 +624,7 @@ export function UserDeckCard({
         >
           <div className="overflow-hidden">
             <div className="border-t border-black/5 dark:border-white/10 p-3.5">
-              <MatchEntry
+              <BattleEntry
                 key={logKey}
                 savedDeckId={id}
                 active={logOpen}
