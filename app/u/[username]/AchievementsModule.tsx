@@ -13,6 +13,10 @@ import AchievementBadge from "@/app/components/AchievementBadge";
  * chevron animates a drawer open to reveal the locked ones (grouped by
  * category) as goals to chase. Reuses the repo's grid-rows-[0fr]→[1fr]
  * height-animation idiom (see BattleForm / DeckProfileView).
+ *
+ * Every medallion here flips on tap to show how it's earned (see
+ * FlipBadge, via AchievementBadge) — locked ones included, since that's
+ * the question a locked badge asks.
  */
 export default function AchievementsModule({
   earnedKeys,
@@ -84,7 +88,10 @@ export default function AchievementsModule({
             open ? "grid-rows-[1fr] opacity-100 mt-5" : "grid-rows-[0fr] opacity-0"
           }`}
         >
-          <div className="overflow-hidden">
+          {/* Collapsed, the drawer is zero-height but its badge buttons
+              would still take focus — hide it from AT and drop its tab
+              stops until it's actually open. */}
+          <div className="overflow-hidden" aria-hidden={!open}>
             <div className="space-y-4 pt-1">
               {CATEGORY_ORDER.map((cat) => {
                 const locked = lockedDefs.filter((d) => d.category === cat);
@@ -101,6 +108,7 @@ export default function AchievementsModule({
                           def={def}
                           earned={false}
                           size="md"
+                          tabIndex={open ? 0 : -1}
                         />
                       ))}
                     </div>
