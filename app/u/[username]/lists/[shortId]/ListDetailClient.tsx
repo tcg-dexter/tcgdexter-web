@@ -1,11 +1,12 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import BackButton from "@/app/components/ui/BackButton";
 import PillSelect from "@/app/components/ui/PillSelect";
 import GridListToggle from "@/app/components/ui/GridListToggle";
+import GridDensityMenu, { type GridColumns } from "@/app/components/ui/GridDensityMenu";
 import InventoryProvider, { useInventory } from "@/app/cards/InventoryContext";
 import {
   OwnershipRadios,
@@ -93,6 +94,11 @@ function ListDetailBody({
   const [sort, setSort] = useState<SortKey>("released");
   const [dir, setDir] = useState<SortDir>("desc");
   const [view, setView] = useState<"grid" | "list">("grid");
+  // Cards-per-row for the grid. `undefined` = GridView's responsive default,
+  // which is also the server-rendered state: the stored preference is read in
+  // an effect after mount so the first client render matches the HTML and
+  // hydration stays clean.
+  const [columns, setColumns] = useState<GridColumns | undefined>(undefined);
 
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [searchInput, setSearchInput] = useState("");
@@ -134,17 +140,64 @@ function ListDetailBody({
     };
   }, [menuOpen]);
 
+  // Grid density is remembered per list (not per user, not in the DB) — a
+  // 60-card binder list and a 400-card wishlist want different densities.
+  // Storage can throw in private-browsing modes, so both sides are guarded.
+  const columnsStorageKey = `dx_list_cols_${listId}`;
+
+  useEffect(() => {
+    try {
+      const stored = Number(window.localStorage.getItem(columnsStorageKey));
+      if (Number.isInteger(stored) && stored >= 2 && stored <= 6) {
+        setColumns(stored as GridColumns);
+      }
+    } catch {
+      /* storage unavailable — fall back to the responsive default */
+    }
+  }, [columnsStorageKey]);
+
+  function chooseColumns(next: GridColumns) {
+    setColumns(next);
+    try {
+      window.localStorage.setItem(columnsStorageKey, String(next));
+    } catch {
+      /* preference just won't survive a reload */
+    }
+  }
+
   // Variant facet options come from the collection itself (same convention
   // as CardsClient.tsx's CatalogBody) — the printing grammar is open-ended,
   // so there's no fixed list to enumerate.
-  const { ownedVariants } = useInventory();
+  const { ownedVariants, collection } = useInventory();
   const ownedVariantLabels = useMemo(
     () => Array.from(new Set(ownedVariants.map(variantDisplayLabel))),
     [ownedVariants],
   );
 
+  // The ownership radios need the actual inventory: cardSearch resolves
+  // "owned" as `ownedKeys.has(card.id)`, so without this set "Owned" matches
+  // nothing and "Unowned" matches everything. `collection` is keyed
+  // `${setId}::${number}` (see cardKey in InventoryContext) while card ids are
+  // `${setId}-${number}`, hence the rekey. Memoizing on `collection` — rather
+  // than caching outside React — is what makes the view re-filter when the
+  // async inventory fetch lands instead of freezing on the empty first pass.
+  const ownedKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const [key, variants] of Object.entries(collection)) {
+      const total = Object.values(variants).reduce<number>((n, q) => n + (q ?? 0), 0);
+      if (total <= 0) continue;
+      const sep = key.indexOf("::");
+      if (sep === -1) continue;
+      keys.add(`${key.slice(0, sep)}-${key.slice(sep + 2)}`);
+    }
+    return keys;
+  }, [collection]);
+
   const facets = useMemo(() => computeFacetsFromCards(cards), [cards]);
-  const filteredCards = useMemo(() => filterCardEntries(cards, filters), [cards, filters]);
+  const filteredCards = useMemo(
+    () => filterCardEntries(cards, { ...filters, ownedKeys }),
+    [cards, filters, ownedKeys],
+  );
   const sortedCards = useMemo(
     () => sortCardEntries(filteredCards, sort, dir),
     [filteredCards, sort, dir],
@@ -637,14 +690,14 @@ function ListDetailBody({
                     setDir(d);
                   }}
                 >
-                  <option value="released:desc">Set (New to Old)</option>
-                  <option value="released:asc">Set (Old to New)</option>
-                  <option value="name:asc">Card Name (A–Z)</option>
-                  <option value="name:desc">Card Name (Z–A)</option>
-                  <option value="hp:desc">Hit Points (High to Low)</option>
-                  <option value="hp:asc">Hit Points (Low to High)</option>
-                  <option value="price:desc">Market Price (High to Low)</option>
-                  <option value="price:asc">Market Price (Low to High)</option>
+                  <option value="released:desc">Set ↓</option>
+                  <option value="released:asc">Set ↑</option>
+                  <option value="name:asc">Card Name ↑</option>
+                  <option value="name:desc">Card Name ↓</option>
+                  <option value="hp:desc">Hit Points ↓</option>
+                  <option value="hp:asc">Hit Points ↑</option>
+                  <option value="price:desc">Market Price ↓</option>
+                  <option value="price:asc">Market Price ↑</option>
                   <option value="rarity:desc">Rarity ↓</option>
                   <option value="rarity:asc">Rarity ↑</option>
                 </PillSelect>
@@ -659,6 +712,9 @@ function ListDetailBody({
                   {activeFilterCount > 0 ? "Filtered" : "Filters"}
                 </button>
                 <GridListToggle value={view} onChange={setView} />
+                {view === "grid" && (
+                  <GridDensityMenu value={columns} onChange={chooseColumns} />
+                )}
               </div>
             </div>
 
@@ -796,6 +852,7 @@ function ListDetailBody({
               cards={sortedCards}
               variantFilter={filters.ownership === "owned" ? filters.variant : []}
               view={view}
+              columns={columns}
               selectMode={selectMode}
               selectedOrder={selectedOrder}
               onToggleSelect={toggleSelect}
