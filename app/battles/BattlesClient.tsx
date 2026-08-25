@@ -238,8 +238,8 @@ export default function BattlesClient({
               setPage(1);
             }}
           >
-            <option value="desc">Newest first</option>
-            <option value="asc">Oldest first</option>
+            <option value="desc">Date Logged ↓</option>
+            <option value="asc">Date Logged ↑</option>
           </PillSelect>
           <button
             onClick={() => setShowFilters((s) => !s)}

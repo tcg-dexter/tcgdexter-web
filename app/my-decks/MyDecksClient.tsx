@@ -454,8 +454,8 @@ export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: P
           >
             <option value="date:desc">Date Added ↓</option>
             <option value="date:asc">Date Added ↑</option>
-            <option value="name:asc">Deck Name (A–Z)</option>
-            <option value="name:desc">Deck Name (Z–A)</option>
+            <option value="name:asc">Deck Name ↑</option>
+            <option value="name:desc">Deck Name ↓</option>
             <option value="wins:desc">Wins ↓</option>
             <option value="wins:asc">Wins ↑</option>
             <option value="likes:desc">Likes ↓</option>
