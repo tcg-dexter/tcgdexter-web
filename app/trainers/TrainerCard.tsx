@@ -43,6 +43,13 @@ export interface TrainerPreview {
  *  both derived from it, so this is the only number to move. */
 const AVATAR_PX = 48;
 
+/** The activity grid's height, and the gap between its cells. 64px is what
+ *  the grid occupied back when it was a 7x7 square sitting beside the
+ *  avatar; widening it to 20 weeks changed how much of the card it spans,
+ *  not how much of the card's height it costs. */
+const HEAT_HEIGHT_PX = 64;
+const HEAT_GAP_PX = 2;
+
 /**
  * Avatar circle. Mirrors the non-owner branch of `UserProfileHeader`: the
  * circle is painted with the trainer's own banner gradient and the chosen
@@ -196,18 +203,22 @@ export function TrainerCard({
           </div>
         </div>
 
-        {/* Activity gets its own full-width row. At 20 columns against 7
-            weekday rows the grid is wide and short — roughly 3:1 — so it
-            can't share the identity line the way a 7-week square could
-            without squeezing the name into nothing. Full width also lands
-            the cells near the size they are on the profile module, since
-            both size their columns as 1fr of whatever they're given. */}
+        {/* Activity, on its own row and pinned to the height the square
+            7-week grid used to occupy.
+
+            Height, not width, is what's held: the cells are square and
+            there are always 7 rows, so the two can't both be chosen. Twenty
+            columns at this height come out around 186px wide — comfortably
+            inside the card, but far too wide to sit beside the name the way
+            the 64px square did, which is why this is its own row rather
+            than part of the identity line. */}
         <div className="mt-3">
           <BattleHeatGrid
             counts={trainer.heat}
             accent={trainer.bannerAccent}
-            gapClass="gap-[2px]"
-            cellRadiusClass="rounded-[3px]"
+            gapPx={HEAT_GAP_PX}
+            heightPx={HEAT_HEIGHT_PX}
+            cellRadiusClass="rounded-[2px]"
             // This card's face is --bg, not the elevated white surface the
             // grid's default empty tone was picked against — on --bg that
             // tone is within a few percent of the card itself and a quiet

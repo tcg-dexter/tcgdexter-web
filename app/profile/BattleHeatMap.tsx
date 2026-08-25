@@ -161,30 +161,59 @@ export function buildHeatCounts(battles: BattleRow[], weeks: number): number[] {
 export function BattleHeatGrid({
   counts,
   accent = null,
-  gapClass = "gap-1",
+  gapPx = 4,
   cellRadiusClass = "rounded-[4px]",
   emptyColor = "var(--surface)",
+  heightPx,
   label,
 }: {
   /** Row-major, from buildHeatCounts. Length must be a multiple of 7. */
   counts: number[];
   accent?: string | null;
-  gapClass?: string;
+  /** Gap between cells, in px — a number rather than a Tailwind class
+   *  because `heightPx` has to do arithmetic with it. */
+  gapPx?: number;
   cellRadiusClass?: string;
   /** Tone for a day with no battles. The default reads against an elevated
    *  white/surface card; a caller painting on a different surface has to
    *  say so, or its empty cells vanish into the background. */
   emptyColor?: string;
+  /**
+   * Size the grid to a target HEIGHT instead of letting it fill its
+   * container's width.
+   *
+   * Cells are square and there are always 7 rows, so height and width
+   * aren't independent: fixing one fixes the other at
+   * `weeks/7` times it, near enough. A caller that needs a particular
+   * height therefore can't also choose the width — pass this and the grid
+   * takes exactly the width its square cells imply, rather than stretching
+   * to the container and getting taller than asked.
+   */
+  heightPx?: number;
   /** Describes the grid as a whole; the cells are decorative on their own. */
   label?: string;
 }) {
   if (counts.length === 0) return null;
   const weeks = Math.max(1, Math.round(counts.length / DAYS_PER_WEEK));
   const palette = heatPalette(accent);
+
+  // 7 rows of `cell` plus 6 gaps make up the height; the width follows from
+  // the same cell across `weeks` columns. Left undefined, the grid fills
+  // its container's width instead and the height falls out of that.
+  const width =
+    heightPx == null
+      ? undefined
+      : ((heightPx - (DAYS_PER_WEEK - 1) * gapPx) / DAYS_PER_WEEK) * weeks +
+        (weeks - 1) * gapPx;
+
   return (
     <div
-      className={`grid ${gapClass}`}
-      style={{ gridTemplateColumns: `repeat(${weeks}, minmax(0, 1fr))` }}
+      className="grid"
+      style={{
+        gridTemplateColumns: `repeat(${weeks}, minmax(0, 1fr))`,
+        gap: gapPx,
+        width,
+      }}
       role="img"
       aria-label={label}
       title={label}
