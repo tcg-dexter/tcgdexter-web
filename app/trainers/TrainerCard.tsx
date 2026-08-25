@@ -137,8 +137,8 @@ function Stat({
 }
 
 /**
- * Grid preview card. An identity row — avatar, name and handle — over the
- * battle-activity grid and the bio, closing on the three public stats.
+ * Grid preview card. An identity row — avatar, name/handle, activity grid —
+ * over the bio, closing on the three public stats.
  *
  * Unlike the deck cards it sits beside, this one doesn't use the elevated
  * white/surface panel: its face is the page background and its outline is
@@ -178,10 +178,18 @@ export function TrainerCard({
       }}
     >
       <div className="px-4 pt-4 pb-3">
-        {/* Identity row: avatar, then who they are. The name column carries
-            min-w-0 as well as flex-1 — a flex item won't shrink below its
-            content's intrinsic width without it, so a long display name
-            would overflow the card rather than truncating. */}
+        {/* Identity row: avatar, then who they are, then their activity in
+            the top-right corner — back where the original 7-week square
+            sat. The grid is fixed-width and shrink-0 rather than a flex
+            item: at 20 columns it can't shrink to fit without giving up
+            its square cells, so it has to be the name column that yields.
+
+            The name column carries min-w-0 as well as flex-1. Without it a
+            flex item won't shrink below its content's intrinsic width, so
+            a long display name would push the grid out of the corner
+            instead of truncating — and at 186px the grid now claims most
+            of a mobile card's width, so the name is working with roughly
+            half the room it had as a 7-week square. */}
         <div className="flex items-center gap-3">
           <TrainerAvatar trainer={trainer} size={AVATAR_PX} />
 
@@ -191,41 +199,36 @@ export function TrainerCard({
             </p>
             <p className="text-xs text-text-muted truncate">@{trainer.username}</p>
             {/* Under the two identity lines rather than beside the name,
-                where it competed with the name for the row's only flexible
-                column and made a followed trainer's name truncate sooner.
-                leading-none keeps it from claiming more height than the
-                chip itself needs. */}
+                where it would compete with the name for the row's only
+                flexible column and make a followed trainer's name truncate
+                sooner still. leading-none keeps it from claiming more
+                height than the chip itself needs. */}
             {trainer.viewerFollows && (
               <span className="mt-1 inline-block text-[10px] font-bold uppercase tracking-[0.08em] leading-none text-text-muted border border-black/10 dark:border-white/15 rounded-full px-1.5 py-0.5">
                 Following
               </span>
             )}
           </div>
-        </div>
 
-        {/* Activity, on its own row and pinned to the height the square
-            7-week grid used to occupy.
-
-            Height, not width, is what's held: the cells are square and
-            there are always 7 rows, so the two can't both be chosen. Twenty
-            columns at this height come out around 186px wide — comfortably
-            inside the card, but far too wide to sit beside the name the way
-            the 64px square did, which is why this is its own row rather
-            than part of the identity line. */}
-        <div className="mt-3">
-          <BattleHeatGrid
-            counts={trainer.heat}
-            accent={trainer.bannerAccent}
-            gapPx={HEAT_GAP_PX}
-            heightPx={HEAT_HEIGHT_PX}
-            cellRadiusClass="rounded-[2px]"
-            // This card's face is --bg, not the elevated white surface the
-            // grid's default empty tone was picked against — on --bg that
-            // tone is within a few percent of the card itself and a quiet
-            // stretch reads as no grid at all.
-            emptyColor="var(--surface-2)"
-            label={`${trainer.displayName}'s battle activity`}
-          />
+          {/* Pinned to the height the original square occupied — the width
+              (~186px at 20 weeks) falls out of that, since the cells are
+              square and there are always 7 rows, so the two can't be
+              chosen independently. */}
+          <div className="shrink-0">
+            <BattleHeatGrid
+              counts={trainer.heat}
+              accent={trainer.bannerAccent}
+              gapPx={HEAT_GAP_PX}
+              heightPx={HEAT_HEIGHT_PX}
+              cellRadiusClass="rounded-[2px]"
+              // This card's face is --bg, not the elevated white surface
+              // the grid's default empty tone was picked against — on --bg
+              // that tone is within a few percent of the card itself and
+              // a quiet stretch reads as no grid at all.
+              emptyColor="var(--surface-2)"
+              label={`${trainer.displayName}'s battle activity`}
+            />
+          </div>
         </div>
 
         {/* Fixed two-line well whether or not there's a bio, so the stat
