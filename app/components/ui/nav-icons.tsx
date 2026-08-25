@@ -106,6 +106,26 @@ export function UserIcon({ className }: IconProps) {
   );
 }
 
+/**
+ * Two people — "Trainers" (the public trainer directory).
+ *
+ * Deliberately distinct from UserIcon above: that one fronts the auth row
+ * ("Sign in" / the signed-in user's own profile), so reusing it for a
+ * directory of *other* trainers would read as two links to the same place.
+ * The leading figure is UserIcon's silhouette scaled down and nudged left;
+ * the trailing one is a partial shoulder so the pair still resolves at 20px.
+ */
+export function UsersIcon({ className }: IconProps) {
+  return (
+    <svg {...outlineProps} className={className}>
+      <circle cx="9.5" cy="8.5" r="3.5" />
+      <path d="M3 20c0-3.3 2.9-5.5 6.5-5.5S16 16.7 16 20" />
+      <path d="M16.5 4.6a3.5 3.5 0 010 6.8" />
+      <path d="M18 14.9c2 .8 3 2.5 3 5.1" />
+    </svg>
+  );
+}
+
 /** Shopping bag — "Card Shop". */
 export function ShoppingBagIcon({ className }: IconProps) {
   return (

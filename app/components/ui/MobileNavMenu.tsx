@@ -14,6 +14,7 @@ import {
   BookmarkIcon,
   CardsIcon,
   UserIcon,
+  UsersIcon,
   DiscordIcon,
   GaugeIcon,
   TikTokIcon,
@@ -238,6 +239,7 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
     { href: "/cards", label: "Card Catalog", Icon: CardsIcon },
     { href: "/my-decks", label: "Deck Collection", Icon: BookmarkIcon },
     { href: "/meta-archetypes", label: "Meta Archetypes", Icon: ChartBarIcon },
+    { href: "/trainers", label: "Trainers", Icon: UsersIcon },
     ...(isAuthed
       ? [{ href: "/notifications", label: "Notifications", Icon: BellIcon, badge: unreadCount }]
       : []),

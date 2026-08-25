@@ -8,6 +8,7 @@ import {
   BookmarkIcon,
   CardsIcon,
   UserIcon,
+  UsersIcon,
   VersusIcon,
   PlaymatIcon,
   BellIcon,
@@ -72,6 +73,7 @@ export default function SiteSidebar({
     { href: "/cards", label: "Card Catalog", Icon: CardsIcon },
     { href: "/my-decks", label: "Deck Collection", Icon: BookmarkIcon },
     { href: "/meta-archetypes", label: "Meta Archetypes", Icon: ChartBarIcon },
+    { href: "/trainers", label: "Trainers", Icon: UsersIcon },
     // Notifications — authed only; badge shows unread count.
     ...(isAuthed
       ? [{ href: "/notifications", label: "Notifications", Icon: BellIcon, badge: unreadCount }]
