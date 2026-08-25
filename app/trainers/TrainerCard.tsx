@@ -2,14 +2,6 @@
 
 import Link from "next/link";
 import { bannerGradientFor } from "@/app/u/[username]/UserProfileHeader";
-import {
-  TEAM_CARD_WIDTH_PCT,
-  TEAM_FAN_HEIGHT_RATIO,
-  TEAM_SLOT_GEOMETRY,
-  normalizeTeam,
-  type TeamCardRef,
-} from "@/app/u/[username]/TeamCards";
-import { cardImageLarge } from "@/lib/cardImages";
 import { useFadeIn } from "@/lib/useFadeIn";
 
 /**
@@ -25,13 +17,10 @@ export interface TrainerPreview {
   bio: string | null;
   avatarUrl: string | null;
   /** `profiles.banner_accent` — an energy key, or null for the signature
-   *  brand gradient. Painted via `bannerGradientFor`, never stored as CSS. */
+   *  brand gradient. Resolved through `bannerGradientFor` (never stored as
+   *  CSS) and painted as the preview card's border, which is the whole of
+   *  the trainer's colour on this surface. The avatar circle uses it too. */
   bannerAccent: string | null;
-  /** `profiles.team_cards` — the seven cards the trainer fanned across
-   *  their own profile banner, nulls included for empty slots. Rendered at
-   *  the same geometry here so a directory tile is a true miniature of the
-   *  profile it links to. */
-  teamCards: (TeamCardRef | null)[];
   /** Public decks only — the count a visitor can actually browse. */
   deckCount: number;
   /** Summed `like_count` across those public decks (same tally as /leaderboard). */
@@ -92,79 +81,6 @@ function TrainerAvatar({
   );
 }
 
-/** Height of the plain accent band shown for a trainer with no cards
- *  picked — the banner's original height, before the fan needed room. */
-const EMPTY_BANNER_PX = 72;
-
-/**
- * The trainer's banner: their chosen accent gradient with their chosen
- * seven cards fanned across it, at the same slot geometry the profile
- * banner uses (TEAM_SLOT_GEOMETRY) — the tile really is a miniature of the
- * page it links to, not a separate design that resembles it.
- *
- * Sized at the profile's own scale rather than a shrunken one, so the
- * outermost cards bleed past the tile's edges and get clipped by its
- * rounded corners exactly as they do on a profile banner. That bleed is
- * part of the look — the fan is meant to read as wider than its frame.
- *
- * Deliberately static: no `dx-fan-card`, so none of the cards animate in.
- * On a profile the fan opening is the page arriving; in a grid of tiles
- * it would be a dozen banners all shuffling at once, and the entrance
- * would fight the tiles' own staggered fade.
- *
- * Empty slots render as nothing at all rather than as the profile's
- * outlines: those exist to tell an owner there's room to fill, which is a
- * message with no audience on someone else's directory card.
- */
-function BannerFan({ trainer }: { trainer: TrainerPreview }) {
-  const team = normalizeTeam(trainer.teamCards);
-  const hasCards = team.some((c) => c !== null);
-
-  return (
-    <div
-      aria-hidden
-      className="relative w-full overflow-hidden"
-      style={{
-        background: bannerGradientFor(trainer.bannerAccent),
-        // An aspect ratio, not a pixel height: the tile's width changes with
-        // the grid's column count, and the fan is sized in percentages of
-        // it, so only a ratio keeps the tallest card exactly meeting the
-        // banner's top edge at every breakpoint. A trainer with no cards
-        // picked keeps the plain band the banner used to be.
-        aspectRatio: hasCards ? `1 / ${TEAM_FAN_HEIGHT_RATIO}` : undefined,
-        height: hasCards ? undefined : EMPTY_BANNER_PX,
-      }}
-    >
-      {team.map((card, i) => {
-        if (!card) return null;
-        const g = TEAM_SLOT_GEOMETRY[i];
-        return (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={i}
-            src={cardImageLarge(card.set_id, card.number)}
-            alt=""
-            loading="lazy"
-            className="absolute select-none rounded drop-shadow-md"
-            style={{
-              bottom: 0,
-              // Plain inline placement, unlike the profile's fan, which
-              // has to route these through a class so a media query can
-              // override them. There's one spread here and no entrance to
-              // sequence, so there's nothing for a class to win against.
-              left: `${g.left}%`,
-              width: `${TEAM_CARD_WIDTH_PCT}%`,
-              transform: `translateY(${g.clipPct}%) rotate(${g.rotationDeg}deg)`,
-              transformOrigin: "50% 100%",
-              zIndex: g.zIndex,
-            }}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
 /** One stat in a trainer's footer row — value over a tiny uppercase label,
  *  same treatment as the pinned-deck hero's Record / Win rate / Streak.
  *  `compact` is the grid card's size: its banner now carries a card fan,
@@ -199,11 +115,14 @@ function Stat({
 }
 
 /**
- * Grid preview card. Banner strip + overlapping avatar + name/handle/bio,
- * closing on the three public stats. Card chrome (radius, border, blurred
- * elevated surface, hover shadow) is lifted verbatim from `UserDeckCard`
- * so a trainer card and a deck card can sit in the same grid without
- * looking like they came from different apps.
+ * Grid preview card. Avatar, name/handle, bio, closing on the three public
+ * stats.
+ *
+ * Unlike the deck cards it sits beside, this one doesn't use the elevated
+ * white/surface panel: its face is the page background and its outline is
+ * the trainer's own accent, so a directory of them reads as a set of
+ * coloured windows rather than a wall of identical panels. Radius, shadow
+ * and hover still match `UserDeckCard` so the two can share a grid.
  */
 export function TrainerCard({
   trainer,
@@ -217,22 +136,27 @@ export function TrainerCard({
   return (
     <Link
       href={`/u/${trainer.username}`}
-      className="block rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
-      style={useFadeIn(index, skipEntranceAnimation)}
+      className="block rounded-2xl border-2 border-transparent shadow-sm hover:shadow-md transition-shadow"
+      style={{
+        ...useFadeIn(index, skipEntranceAnimation),
+        // The trainer's accent is the card's outline, and the face is the
+        // page's own background — so the tile reads as a window cut out of
+        // the page in their colour rather than as a panel sitting on it.
+        //
+        // Two layers on one background, the repo's standing trick for a
+        // gradient border (see .gradient-brand / .focus-gradient-border in
+        // globals.css): the fill is painted to the padding box, the accent
+        // to the border box, and the border itself is transparent so the
+        // second layer is all that shows through it. A plain
+        // `border-color` couldn't do this — the accent is a gradient, and
+        // for a trainer who hasn't picked one it's the brand gradient.
+        background: `linear-gradient(var(--bg), var(--bg)) padding-box, ${bannerGradientFor(
+          trainer.bannerAccent,
+        )} border-box`,
+      }}
     >
-      <BannerFan trainer={trainer} />
-
-      <div className="px-4 pb-3">
-        {/* Negative margin overlaps the banner's bottom edge, echoing the
-            profile header's avatar. The ring matches the card surface, not
-            the page background, since the circle sits on the card here. */}
-        <div className="-mt-8">
-          <TrainerAvatar
-            trainer={trainer}
-            size={64}
-            ringClass="ring-4 ring-white dark:ring-surface-elevated"
-          />
-        </div>
+      <div className="px-4 pt-4 pb-3">
+        <TrainerAvatar trainer={trainer} size={64} />
 
         <div className="mt-2 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">

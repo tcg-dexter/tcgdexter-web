@@ -12,10 +12,7 @@ interface Props {
   isOwner: boolean;
 }
 
-/** Slots in a team. Also the cap enforced by the profiles_team_cards_check
- *  constraint on the column this renders. */
-export const TEAM_SLOTS = 7;
-const SLOTS = TEAM_SLOTS;
+const SLOTS = 7;
 
 // Fan geometry — identical to MetaProfileHeader's card fan (see that file
 // for the full derivation). Slot count is fixed at SLOTS here (unlike the
@@ -24,35 +21,12 @@ const SLOTS = TEAM_SLOTS;
 // per-render from a variable card count.
 const CARDS_SPAN_PCT = 110.4;
 const DESKTOP_CARDS_SPAN_PCT = CARDS_SPAN_PCT * 1.1;
-export const TEAM_CARD_WIDTH_PCT = 32;
-const CARD_WIDTH_PCT = TEAM_CARD_WIDTH_PCT;
+const CARD_WIDTH_PCT = 32;
 const BOTTOM_CLIP_PCT = 35;
 const CENTER_RAISE_CARD_PCT = 11;
 const CARD_MAX_ROTATION_DEG = 12;
 
-/** Printed card aspect, used to turn the width-derived geometry above into
- *  a height. Same ratio the card images are served at. */
-const CARD_ASPECT = 342 / 245;
-
-/**
- * How tall the fan stands above the banner's floor, as a share of the
- * banner's WIDTH. The centre card is the binding constraint: it's the one
- * CENTER_RAISE_CARD_PCT lifts, and it isn't rotated, so no other slot
- * reaches higher. A banner sized to this ratio shows the whole fan with
- * nothing clipped off the top.
- *
- * Exported because the trainer directory sizes its own (much smaller)
- * banner from it — deriving the number there would mean copying four
- * constants and a formula that only live here.
- */
-export const TEAM_FAN_HEIGHT_RATIO =
-  (CARD_WIDTH_PCT / 100) *
-  CARD_ASPECT *
-  (1 - (BOTTOM_CLIP_PCT - CENTER_RAISE_CARD_PCT) / 100);
-
-/** One slot's resting place in the fan. Percentages throughout, so the
- *  same table drives a full-width profile banner and a preview tile. */
-export interface SlotGeometry {
+interface SlotGeometry {
   left: number;
   leftDesktop: number;
   clipPct: number;
@@ -67,7 +41,7 @@ export interface SlotGeometry {
   fanDxDesktop: number;
 }
 
-export const TEAM_SLOT_GEOMETRY: SlotGeometry[] = (() => {
+const SLOT_GEOMETRY: SlotGeometry[] = (() => {
   const cardsLeftStart = (100 - CARDS_SPAN_PCT) / 2;
   const cardsStep = (CARDS_SPAN_PCT - CARD_WIDTH_PCT) / (SLOTS - 1);
   const desktopCardsLeftStart = (100 - DESKTOP_CARDS_SPAN_PCT) / 2;
@@ -96,9 +70,7 @@ export const TEAM_SLOT_GEOMETRY: SlotGeometry[] = (() => {
 })();
 
 /** Pad / trim the persisted array to exactly SLOTS length. */
-export function normalizeTeam(
-  team: (TeamCardRef | null)[],
-): (TeamCardRef | null)[] {
+function normalize(team: (TeamCardRef | null)[]): (TeamCardRef | null)[] {
   const out: (TeamCardRef | null)[] = [];
   for (let i = 0; i < SLOTS; i++) out.push(team[i] ?? null);
   return out;
@@ -106,7 +78,7 @@ export function normalizeTeam(
 
 /** Slot 0 — the stack every card fans out of. Its clip and rotation are
  *  what the others hold while they wait their turn. */
-const STACK = TEAM_SLOT_GEOMETRY[0];
+const STACK = SLOT_GEOMETRY[0];
 
 /** Milliseconds between one card leaving the stack and the next. Small
  *  enough that the whole fan is open in well under a second. */
@@ -149,14 +121,14 @@ function slotStyle(g: SlotGeometry, index: number): CSSProperties {
  * component sends is already the settled layout.
  */
 export default function TeamCards({ initial, isOwner }: Props) {
-  const team = normalizeTeam(initial);
+  const team = normalize(initial);
   return (
     <div className="relative h-full mx-6 sm:scale-[0.576] sm:origin-bottom sm:translate-y-[10px]">
       {team.map((card, i) => (
         <CardSlot
           key={i}
           card={card}
-          geometry={TEAM_SLOT_GEOMETRY[i]}
+          geometry={SLOT_GEOMETRY[i]}
           index={i}
           isOwner={isOwner}
         />
