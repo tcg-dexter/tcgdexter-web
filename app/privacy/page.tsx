@@ -6,7 +6,7 @@ export const metadata = {
   description: "How TCG Dexter collects, uses, and protects your information.",
 };
 
-const LAST_UPDATED = "July 27, 2026";
+const LAST_UPDATED = "August 25, 2026";
 
 export default function PrivacyPolicyPage() {
   return (
@@ -104,7 +104,19 @@ export default function PrivacyPolicyPage() {
             account and reminder emails described below). They process data
             only to provide their service to us, not for their own purposes.
           </li>
-          <li>What you make public. Content and profile fields you mark as public (e.g. a public deck, a public profile) are visible to anyone who visits that page.</li>
+          <li>
+            What you make public. Content and profile fields you mark as
+            public (e.g. a public deck, a public profile) are visible to
+            anyone — and not only to someone who already has the link.
+            Public profiles are listed in our{" "}
+            <Link href="/trainers">Trainers</Link> directory, where they can
+            be browsed, searched by name or handle, and sorted by public
+            counts such as decks, likes and followers; public decks appear
+            in the same way across the site. Search engines may also index
+            these pages. Setting your profile to private in{" "}
+            <Link href="/settings">Settings</Link> removes it from those
+            listings.
+          </li>
           <li>If required by law, or to protect the rights, safety, or property of TCG Dexter or our users.</li>
         </ul>
       </LegalSection>
