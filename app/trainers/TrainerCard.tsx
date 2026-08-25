@@ -122,8 +122,8 @@ function Stat({
 }
 
 /**
- * Grid preview card. Avatar, name/handle, bio, closing on the three public
- * stats.
+ * Grid preview card. An identity row — avatar, name/handle, activity grid —
+ * over the bio, closing on the three public stats.
  *
  * Unlike the deck cards it sits beside, this one doesn't use the elevated
  * white/surface panel: its face is the page background and its outline is
@@ -163,10 +163,33 @@ export function TrainerCard({
       }}
     >
       <div className="px-4 pt-4 pb-3">
-        {/* Avatar left, activity right, both 64px so the square grid sits
-            on the avatar's own top and bottom edges. */}
-        <div className="flex items-start justify-between gap-3">
+        {/* One identity row: avatar, then who they are, then their activity.
+            Avatar and grid are both 64px, so the square sits on the avatar's
+            own top and bottom edges; the name block is shorter than both and
+            centres between them.
+
+            The name column carries min-w-0 as well as flex-1. Without it a
+            flex item won't shrink below its content's intrinsic width, so a
+            long display name would push the grid off the card instead of
+            truncating — and the two fixed 64px columns leave it under half
+            the card to work with. */}
+        <div className="flex items-center gap-3">
           <TrainerAvatar trainer={trainer} size={64} />
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-[17px] font-semibold text-text-primary truncate">
+                {trainer.displayName}
+              </span>
+              {trainer.viewerFollows && (
+                <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted border border-black/10 dark:border-white/15 rounded-full px-1.5 py-0.5">
+                  Following
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-text-muted truncate">@{trainer.username}</p>
+          </div>
+
           <div className="w-16 shrink-0">
             <BattleHeatGrid
               counts={trainer.heat}
@@ -183,23 +206,9 @@ export function TrainerCard({
           </div>
         </div>
 
-        <div className="mt-2 min-w-0">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-[17px] font-semibold text-text-primary truncate">
-              {trainer.displayName}
-            </span>
-            {trainer.viewerFollows && (
-              <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted border border-black/10 dark:border-white/15 rounded-full px-1.5 py-0.5">
-                Following
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-text-muted truncate">@{trainer.username}</p>
-        </div>
-
         {/* Fixed two-line well whether or not there's a bio, so the stat
             rows stay on one baseline across the grid. */}
-        <p className="mt-2 text-[13px] leading-snug text-text-secondary line-clamp-2 min-h-[2.4em]">
+        <p className="mt-3 text-[13px] leading-snug text-text-secondary line-clamp-2 min-h-[2.4em]">
           {trainer.bio?.trim() || ""}
         </p>
 
