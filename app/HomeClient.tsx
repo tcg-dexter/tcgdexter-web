@@ -333,13 +333,15 @@ export default function HomeClient({
                 <textarea
                   value={deckList}
                   onChange={(e) => setDeckList(e.target.value)}
-                  // Twelve lines of a real Standard list (drawn from
+                  // Seven lines of a real Standard list (drawn from
                   // EXAMPLE_DECK above) plus a trailing ellipsis, so the
                   // placeholder demonstrates the section headers and the
                   // "<qty> <name> <set> <number>" shape the analyzer parses
-                  // instead of just hinting at it. Section counts match the
-                  // lines shown; the ellipsis stands in for the rest of
-                  // Trainer + Energy.
+                  // instead of just hinting at it. The cut falls at the end
+                  // of the Pokémon section rather than mid-list, and the
+                  // quantities shown add up to the 12 its header claims, so
+                  // the sample stays internally honest; the ellipsis stands
+                  // in for Trainer + Energy.
                   placeholder={
                     "Pokémon: 12\n" +
                     "3 N's Zoroark ex JTG 175\n" +
@@ -348,19 +350,17 @@ export default function HomeClient({
                     "2 N's Zekrom ASC 155\n" +
                     "1 Fezandipiti ex ASC 142\n" +
                     "1 Budew ASC 16\n" +
-                    "\n" +
-                    "Trainer: 32\n" +
-                    "4 Ultra Ball MEG 131\n" +
-                    "4 N's PP Up ASC 195\n" +
-                    "4 Buddy-Buddy Poffin MEG 167\n" +
                     "..."
                   }
-                  // h-72 fits all 13 placeholder lines without scrolling:
-                  // font-mono text-sm is a 20px line box (12 sample lines +
-                  // the ellipsis = 260px) plus py-2's 16px = 276px, under
-                  // 288px. The hero's own pb-24 is unchanged, so the mobile
-                  // StatsStrip's -mt-16 counterweight below still lands.
-                  className="w-full h-72 md:h-80 bg-transparent resize-none px-3 py-2 font-mono text-sm text-text-primary placeholder:text-text-muted/60 outline-none"
+                  // h-48 fits all 8 placeholder lines without scrolling:
+                  // font-mono text-sm is a 20px line box (7 sample lines +
+                  // the ellipsis = 160px) plus py-2's 16px = 176px, under
+                  // 192px. One height at both breakpoints now — the old
+                  // mobile h-36 was 144px, which is shorter than the sample
+                  // it has to show. The hero's own pb-24 is unchanged, so
+                  // the mobile StatsStrip's -mt-16 counterweight below
+                  // still lands.
+                  className="w-full h-48 bg-transparent resize-none px-3 py-2 font-mono text-sm text-text-primary placeholder:text-text-muted/60 outline-none"
                   spellCheck={false}
                 />
                 <div className="flex items-center justify-end gap-3 px-2 pb-2">
