@@ -28,9 +28,11 @@ interface ProfileRow {
 }
 
 /**
- * Weeks in a directory card's activity grid. Seven columns against the
- * grid's seven weekday rows is what makes it a square — the shape that
- * fits beside a 64px avatar. The profile module shows 20 in a wide strip.
+ * Weeks in a directory card's activity grid — the same 20 the profile
+ * module shows, so a trainer's card and their page cover the same span.
+ * At 20 columns the grid is wide and short rather than square, which is
+ * why it gets its own full-width row on the card instead of sitting in
+ * the identity line (see TrainerCard).
  *
  * Lives here, on the server side of the boundary, and not in TrainerCard
  * where it's used. TrainerCard is a "use client" module, and a plain
@@ -42,7 +44,7 @@ interface ProfileRow {
  * column count from the counts it's given, so this number only has to be
  * right in one place.
  */
-const HEAT_WEEKS = 7;
+const HEAT_WEEKS = 20;
 
 interface DeckRow {
   id: string;
@@ -98,11 +100,13 @@ async function loadPublicBattleHeat(
 
   const userByDeck = new Map(decks.map((d) => [d.id, d.user_id]));
 
-  // Eight weeks, not seven: the grid starts at the Sunday of the week seven
-  // weeks back, which is up to six days earlier than "49 days ago". Cheap
-  // slack beats an off-by-a-few-days hole in the leftmost column.
+  // Derived from HEAT_WEEKS, never a literal: a window that doesn't grow
+  // with the grid leaves its leftmost columns permanently empty, which
+  // looks like "this trainer wasn't playing then" rather than like a bug.
+  // One week of slack because the grid starts at the SUNDAY of the oldest
+  // week, up to six days earlier than "HEAT_WEEKS * 7 days ago".
   const since = new Date();
-  since.setDate(since.getDate() - 8 * 7);
+  since.setDate(since.getDate() - (HEAT_WEEKS + 1) * 7);
   const sinceIso = since.toISOString();
 
   let rows: Array<BattleRow & { saved_deck_id: string | null }>;
