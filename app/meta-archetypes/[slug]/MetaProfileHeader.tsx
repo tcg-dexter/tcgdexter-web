@@ -103,6 +103,11 @@ const BOTTOM_CLIP_PCT = 35;           // % of card height — outer card clip
 const CENTER_RAISE_CARD_PCT = 11;     // % of card height — centre raise
 const CARD_MAX_ROTATION_DEG = 12;     // degrees at the leftmost/rightmost
 
+/** Milliseconds between one card leaving the stack and the next, on the
+ *  banner's load animation. Matches TeamCards' fan on the user profile so
+ *  the two banners open at the same rate. */
+const FAN_STAGGER_MS = 45;
+
 interface Props {
   /** Archetype display name, e.g. "Dragapult". */
   name: string;
@@ -195,6 +200,22 @@ export default function MetaProfileHeader({
       ? (DESKTOP_CARDS_SPAN_PCT - CARD_WIDTH_PCT) / (cardCount - 1)
       : 0;
 
+  // Entrance: the fan opens out of a stack sitting exactly where the
+  // leftmost card ends up. Rather than restate that position as literals
+  // (-CARD_MAX_ROTATION_DEG and so on, which are only correct once the
+  // banner has three or more cards — at two, i = 0 is half a step from
+  // centre, not a full one), run the loop's own formulas at i = 0. A
+  // single-card banner has nothing to fan out of: its stack is its final
+  // position and the animation resolves to a no-op.
+  const fanCenter = (cardCount - 1) / 2;
+  const fanMaxDist = Math.max(fanCenter, 1);
+  const stackNormDist = fanCenter / fanMaxDist;
+  const stackClipPct =
+    BOTTOM_CLIP_PCT - CENTER_RAISE_CARD_PCT * (1 - stackNormDist * stackNormDist);
+  const stackRotationDeg =
+    cardCount > 1 ? (-fanCenter / fanMaxDist) * CARD_MAX_ROTATION_DEG : 0;
+  const stackLeft = cardCount === 1 ? singleCardLeft : cardsLeftStart;
+
   return (
     <header className="flex-shrink-0">
       {/* Banner — solid avatar-bg color with the top-7 cards fanned
@@ -256,15 +277,31 @@ export default function MetaProfileHeader({
                   src={url}
                   alt=""
                   aria-hidden="true"
-                  className="absolute pointer-events-none select-none drop-shadow-md sm:[left:var(--left-sm)]"
+                  className="dx-fan-card absolute pointer-events-none select-none drop-shadow-md sm:[left:var(--left-sm)]"
                   style={{
                     bottom: 0,
                     left: `${left}%`,
                     "--left-sm": `${leftDesktop}%`,
                     width: `${CARD_WIDTH_PCT}%`,
                     height: "auto",
-                    transform: `translateY(${clipPct}%) rotate(${rotationDeg}deg)`,
-                    transformOrigin: "50% 100%",
+                    // The settled transform and origin come from
+                    // .dx-fan-card (globals.css), composed out of these
+                    // properties, so the resting style and the animation's
+                    // end frame are one definition. --fan-dx is the
+                    // distance back to the stack in percent of the CARD's
+                    // own width — percent-of-self, so the entrance holds
+                    // at any banner size. It's measured against `left`
+                    // rather than `leftDesktop` because `left` is set
+                    // inline here: a style attribute outranks every
+                    // non-important author rule, so the sibling
+                    // `sm:[left:var(--left-sm)]` utility never wins and
+                    // the desktop spread is not the settled position.
+                    "--fan-clip": `${clipPct}%`,
+                    "--fan-rot": `${rotationDeg}deg`,
+                    "--fan-clip-start": `${stackClipPct}%`,
+                    "--fan-rot-start": `${stackRotationDeg}deg`,
+                    "--fan-dx": `${((stackLeft - left) / CARD_WIDTH_PCT) * 100}%`,
+                    "--fan-delay": `${i * FAN_STAGGER_MS}ms`,
                     zIndex: i,
                   } as CSSProperties}
                 />
