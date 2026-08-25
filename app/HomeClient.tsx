@@ -333,8 +333,34 @@ export default function HomeClient({
                 <textarea
                   value={deckList}
                   onChange={(e) => setDeckList(e.target.value)}
-                  placeholder={"Pokémon: 13\n3 N's Zoroark ex JTG 175\n2 N's Reshiram ASC 154\n..."}
-                  className="w-full h-36 md:h-48 bg-transparent resize-none px-3 py-2 font-mono text-sm text-text-primary placeholder:text-text-muted/60 outline-none"
+                  // Twelve lines of a real Standard list (drawn from
+                  // EXAMPLE_DECK above) plus a trailing ellipsis, so the
+                  // placeholder demonstrates the section headers and the
+                  // "<qty> <name> <set> <number>" shape the analyzer parses
+                  // instead of just hinting at it. Section counts match the
+                  // lines shown; the ellipsis stands in for the rest of
+                  // Trainer + Energy.
+                  placeholder={
+                    "Pokémon: 12\n" +
+                    "3 N's Zoroark ex JTG 175\n" +
+                    "3 N's Zorua ASC 136\n" +
+                    "2 N's Reshiram ASC 154\n" +
+                    "2 N's Zekrom ASC 155\n" +
+                    "1 Fezandipiti ex ASC 142\n" +
+                    "1 Budew ASC 16\n" +
+                    "\n" +
+                    "Trainer: 32\n" +
+                    "4 Ultra Ball MEG 131\n" +
+                    "4 N's PP Up ASC 195\n" +
+                    "4 Buddy-Buddy Poffin MEG 167\n" +
+                    "..."
+                  }
+                  // h-72 fits all 13 placeholder lines without scrolling:
+                  // font-mono text-sm is a 20px line box (12 sample lines +
+                  // the ellipsis = 260px) plus py-2's 16px = 276px, under
+                  // 288px. The hero's own pb-24 is unchanged, so the mobile
+                  // StatsStrip's -mt-16 counterweight below still lands.
+                  className="w-full h-72 md:h-80 bg-transparent resize-none px-3 py-2 font-mono text-sm text-text-primary placeholder:text-text-muted/60 outline-none"
                   spellCheck={false}
                 />
                 <div className="flex items-center justify-end gap-3 px-2 pb-2">
