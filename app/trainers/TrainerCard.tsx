@@ -39,6 +39,10 @@ export interface TrainerPreview {
   viewerFollows: boolean;
 }
 
+/** Preview-card avatar diameter. The sprite and the fallback initial are
+ *  both derived from it, so this is the only number to move. */
+const AVATAR_PX = 48;
+
 /**
  * Avatar circle. Mirrors the non-owner branch of `UserProfileHeader`: the
  * circle is painted with the trainer's own banner gradient and the chosen
@@ -47,20 +51,24 @@ export interface TrainerPreview {
  * initial-letter treatment (see the design library's "Avatars" section)
  * when the trainer hasn't picked a sprite yet — in white, since it sits on
  * the gradient rather than on a grey chip.
+ *
+ * The ink-coloured outline is part of the avatar rather than something a
+ * caller opts into, so the grid card and the list row can't drift apart.
+ * A ring, not a border: it's drawn outside the box, so the circle's
+ * diameter stays exactly `size` and the sprite keeps its own margin
+ * instead of losing a pixel to the outline.
  */
 function TrainerAvatar({
   trainer,
   size,
-  ringClass = "",
 }: {
   trainer: TrainerPreview;
   size: number;
-  ringClass?: string;
 }) {
   const sprite = Math.round(size * 0.78);
   return (
     <div
-      className={`relative rounded-full flex items-center justify-center overflow-hidden shrink-0 ${ringClass}`}
+      className="relative rounded-full flex items-center justify-center overflow-hidden shrink-0 ring-1 ring-black dark:ring-white"
       style={{
         width: size,
         height: size,
@@ -164,30 +172,36 @@ export function TrainerCard({
     >
       <div className="px-4 pt-4 pb-3">
         {/* One identity row: avatar, then who they are, then their activity.
-            Avatar and grid are both 64px, so the square sits on the avatar's
-            own top and bottom edges; the name block is shorter than both and
-            centres between them.
+            The 64px grid is the tallest thing in it and sets the row's
+            height; the avatar and the name block both centre against it.
 
             The name column carries min-w-0 as well as flex-1. Without it a
             flex item won't shrink below its content's intrinsic width, so a
             long display name would push the grid off the card instead of
-            truncating — and the two fixed 64px columns leave it under half
-            the card to work with. */}
+            truncating — though the smaller avatar hands it back 16px. */}
         <div className="flex items-center gap-3">
-          <TrainerAvatar trainer={trainer} size={64} />
+          <TrainerAvatar trainer={trainer} size={AVATAR_PX} />
 
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-[17px] font-semibold text-text-primary truncate">
-                {trainer.displayName}
-              </span>
-              {trainer.viewerFollows && (
-                <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted border border-black/10 dark:border-white/15 rounded-full px-1.5 py-0.5">
-                  Following
-                </span>
-              )}
-            </div>
+            <p className="text-[17px] font-semibold text-text-primary truncate">
+              {trainer.displayName}
+            </p>
             <p className="text-xs text-text-muted truncate">@{trainer.username}</p>
+            {/* Under the two identity lines rather than beside the name:
+                inline, it competed with the name for a column that's already
+                the only flexible one in the row, so following someone made
+                their name truncate earlier.
+
+                leading-none keeps the three stacked lines inside the 64px
+                the activity grid sets for the row. Without it the chip's
+                own line-height tips the column past that, and a followed
+                trainer's card ends up a couple of pixels taller than the
+                ones beside it. */}
+            {trainer.viewerFollows && (
+              <span className="mt-1 inline-block text-[10px] font-bold uppercase tracking-[0.08em] leading-none text-text-muted border border-black/10 dark:border-white/15 rounded-full px-1.5 py-0.5">
+                Following
+              </span>
+            )}
           </div>
 
           <div className="w-16 shrink-0">
