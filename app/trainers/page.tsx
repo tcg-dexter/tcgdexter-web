@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import SectionHeader from "@/app/components/ui/SectionHeader";
 import TrainersClient from "./TrainersClient";
 import type { TrainerPreview } from "./TrainerCard";
+import type { TeamCardRef } from "@/app/u/[username]/TeamCards";
 
 export const metadata: Metadata = {
   title: "Trainers — TCG Dexter",
@@ -21,6 +22,7 @@ interface ProfileRow {
   bio: string | null;
   avatar_url: string | null;
   banner_accent: string | null;
+  team_cards: (TeamCardRef | null)[] | null;
   follower_count: number | null;
   created_at: string;
 }
@@ -75,7 +77,7 @@ export default async function TrainersPage() {
       supabase
         .from("profiles")
         .select(
-          "id, username, display_name, bio, avatar_url, banner_accent, follower_count, created_at",
+          "id, username, display_name, bio, avatar_url, banner_accent, team_cards, follower_count, created_at",
         )
         .eq("is_public", true)
         .not("username", "is", null)
@@ -130,6 +132,10 @@ export default async function TrainersPage() {
       bio: p.bio,
       avatarUrl: p.avatar_url,
       bannerAccent: p.banner_accent,
+      // jsonb, so the column can hold anything the constraint allows —
+      // guard the shape here rather than trusting it downstream, the same
+      // way the profile page does before fanning it.
+      teamCards: Array.isArray(p.team_cards) ? p.team_cards : [],
       deckCount: tally.deckCount,
       totalLikes: tally.totalLikes,
       followerCount: p.follower_count ?? 0,
