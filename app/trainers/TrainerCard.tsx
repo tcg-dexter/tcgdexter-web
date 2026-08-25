@@ -88,18 +88,6 @@ function TrainerAvatar({
   );
 }
 
-/**
- * Columns in a card's battle-activity grid. Seven of them against the
- * grid's seven weekday rows is what makes it a square — the shape that
- * sits beside a 64px avatar. The profile module shows 20 weeks in a wide
- * strip; this is the same grid, cropped to fit.
- *
- * Exported because ./page.tsx builds the counts and has to agree on the
- * column count, and a mismatch would be silent: the grid would still
- * render, just at the wrong shape.
- */
-export const HEAT_WEEKS = 7;
-
 /** One stat in a trainer's footer row — value over a tiny uppercase label,
  *  same treatment as the pinned-deck hero's Record / Win rate / Streak.
  *  `compact` is the grid card's size: its banner now carries a card fan,
@@ -182,11 +170,15 @@ export function TrainerCard({
           <div className="w-16 shrink-0">
             <BattleHeatGrid
               counts={trainer.heat}
-              weeks={HEAT_WEEKS}
               accent={trainer.bannerAccent}
               gapClass="gap-[2px]"
               cellRadiusClass="rounded-[2px]"
-              label={`${trainer.displayName}'s battle activity, last ${HEAT_WEEKS} weeks`}
+              // This card's face is --bg, not the elevated white surface
+              // the grid's default empty tone was picked against — on --bg
+              // that tone is within a few percent of the card itself and
+              // a quiet week reads as no grid at all.
+              emptyColor="var(--surface-2)"
+              label={`${trainer.displayName}'s battle activity`}
             />
           </div>
         </div>

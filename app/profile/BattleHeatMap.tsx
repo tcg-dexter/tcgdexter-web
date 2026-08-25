@@ -151,23 +151,35 @@ export function buildHeatCounts(battles: BattleRow[], weeks: number): number[] {
  * counts rather than battles so it stays safe to render from a client
  * component (see buildHeatCounts). Sizing is the caller's: the cells are
  * square and fill whatever box they're given.
+ *
+ * The column count is derived from `counts` rather than passed in. It used
+ * to be a prop, with the caller and whoever built the counts each holding
+ * their own copy of the number — and when those two disagreed the grid
+ * still rendered, just wrong, which is exactly the failure that shipped:
+ * a 7-column template with nothing in it. One source, no way to disagree.
  */
 export function BattleHeatGrid({
   counts,
-  weeks,
   accent = null,
   gapClass = "gap-1",
   cellRadiusClass = "rounded-[4px]",
+  emptyColor = "var(--surface)",
   label,
 }: {
+  /** Row-major, from buildHeatCounts. Length must be a multiple of 7. */
   counts: number[];
-  weeks: number;
   accent?: string | null;
   gapClass?: string;
   cellRadiusClass?: string;
+  /** Tone for a day with no battles. The default reads against an elevated
+   *  white/surface card; a caller painting on a different surface has to
+   *  say so, or its empty cells vanish into the background. */
+  emptyColor?: string;
   /** Describes the grid as a whole; the cells are decorative on their own. */
   label?: string;
 }) {
+  if (counts.length === 0) return null;
+  const weeks = Math.max(1, Math.round(counts.length / DAYS_PER_WEEK));
   const palette = heatPalette(accent);
   return (
     <div
@@ -183,6 +195,7 @@ export function BattleHeatGrid({
           className={`aspect-square ${cellRadiusClass}`}
           style={{
             ...heatStyle(count, palette),
+            ...(count === 0 ? { backgroundColor: emptyColor } : null),
             // -1 is a day that hasn't happened yet. It holds its place in
             // the grid rather than being dropped, so the shape stays square.
             ...(count < 0 ? { opacity: 0 } : null),

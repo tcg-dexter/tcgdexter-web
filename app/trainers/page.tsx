@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { buildHeatCounts, type BattleRow } from "@/app/profile/BattleHeatMap";
 import SectionHeader from "@/app/components/ui/SectionHeader";
 import TrainersClient from "./TrainersClient";
-import { HEAT_WEEKS, type TrainerPreview } from "./TrainerCard";
+import type { TrainerPreview } from "./TrainerCard";
 
 export const metadata: Metadata = {
   title: "Trainers — TCG Dexter",
@@ -26,6 +26,23 @@ interface ProfileRow {
   follower_count: number | null;
   created_at: string;
 }
+
+/**
+ * Weeks in a directory card's activity grid. Seven columns against the
+ * grid's seven weekday rows is what makes it a square — the shape that
+ * fits beside a 64px avatar. The profile module shows 20 in a wide strip.
+ *
+ * Lives here, on the server side of the boundary, and not in TrainerCard
+ * where it's used. TrainerCard is a "use client" module, and a plain
+ * constant imported from one of those into a server component is NOT the
+ * value — it's a client reference. That mistake shipped once: the card
+ * (rendered inside the client graph, where the constant is real) drew a
+ * 7-column template, while this file (across the boundary, where it
+ * isn't) built zero cells to put in it. BattleHeatGrid now derives its
+ * column count from the counts it's given, so this number only has to be
+ * right in one place.
+ */
+const HEAT_WEEKS = 7;
 
 interface DeckRow {
   id: string;
