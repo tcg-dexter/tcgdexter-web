@@ -106,6 +106,34 @@ const TAB_GAP_PX = 8;
 // this constant sizes, so measuring them would feed back into their width.
 const BOARD_VERTICAL_CHROME_PX = 16 + 2 * TAB_CONTENT_PX + TAB_GAP_PX;
 
+/**
+ * DOM id on the top (opponent) mat — the board's first painted row, so
+ * scrolling it to the top of the window puts the whole board in view. Any
+ * surface with a "jump to the replay" affordance targets this rather than
+ * the viewer's outer wrapper, which starts above the mats at the header.
+ * Exported so the caller can't drift from what's actually rendered (see
+ * BattleLogPage's VIEW BATTLE pill). Assumes one mounted viewer per page,
+ * which is true everywhere it's used today.
+ */
+export const REPLAY_TOP_MAT_ID = "replay-top-mat";
+
+/**
+ * Scroll offset for that anchor, expressed as scroll-margin rather than as
+ * arithmetic at the call site: it belongs with the element being scrolled
+ * to, and scrollIntoView({ block: "start" }) honors it for free.
+ *
+ * Below xl the site chrome is a sticky 56px (h-14) toolbar that would
+ * otherwise cover the top of the mat, and viewport-fit=cover means the
+ * page's top edge can run under a notch, so the toolbar's own ceiling is
+ * the safe-area inset — hence 3.5rem + env(safe-area-inset-top), plus
+ * 0.75rem so the mat clears the toolbar's underside instead of butting
+ * against it. From xl up the chrome is the two fixed side rails and there
+ * is nothing overhead, so only the inset and a little breathing room
+ * remain.
+ */
+const REPLAY_TOP_MAT_SCROLL_MT =
+  "scroll-mt-[calc(3.5rem_+_env(safe-area-inset-top)_+_0.75rem)] xl:scroll-mt-[calc(env(safe-area-inset-top)_+_1.5rem)]";
+
 const TOTAL_PRIZES = 6;
 
 /**
@@ -600,7 +628,8 @@ const HAND_STRIP_CHEVRON_PX = 24;
  * hand that runs past that. Previously this wrapped to as many rows as it
  * needed, which on a seven-plus-card hand pushed the transport controls
  * further down the page every time the hand grew; a fixed one-row height
- * keeps the board's footprint stable regardless of hand size.
+ * keeps the board's footprint stable regardless of hand size — an empty
+ * hand included, which reserves the row rather than collapsing it.
  *
  * Recomputed every frame like the rest of the board, so it always shows
  * the hand as of wherever the playhead currently sits — cards drawn appear,
@@ -649,9 +678,27 @@ function HandStrip({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cards.map((c) => c.id).join(","), cardWidth, matWidth]);
 
-  if (cards.length === 0) return null;
   const cardHeight = Math.round((cardWidth * 342) / 245);
   const visibleHeight = Math.round((cardHeight * HAND_STRIP_VISIBLE_PCT) / 100);
+
+  // An empty hand still holds its place. The strip's height is a pure
+  // function of cardWidth — the gap above it plus one cropped card — so it
+  // can be reserved before there's a card to put in it, and it has to be:
+  // returning null here made the board a strip shorter than it would be one
+  // draw later, so the first card drawn grew the whole column and shoved
+  // the transport controls down the page mid-playback. Only the space is
+  // reserved, never anything visible: no chevrons, no scroll container, no
+  // border, and aria-hidden so a purely geometric box stays out of the
+  // accessibility tree.
+  if (cards.length === 0) {
+    return (
+      <div
+        aria-hidden
+        className="pointer-events-none"
+        style={{ marginTop: HAND_STRIP_TOP_GAP_PX, height: visibleHeight }}
+      />
+    );
+  }
 
   // How many cards actually fit in one row under the mat: n*cardWidth +
   // (n-1)*gap <= available, solved for n and floored — at least 1, so a
@@ -1289,7 +1336,10 @@ function Board({
           <InspectContext.Provider
             value={(target) => onOpenMatInspect("opponent", target)}
           >
-          <div className="relative z-10">
+          <div
+            id={REPLAY_TOP_MAT_ID}
+            className={`relative z-10 ${REPLAY_TOP_MAT_SCROLL_MT}`}
+          >
             <PlayerMat
               side="player"
               bench={frame.opponent.bench}
