@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { bannerGradientFor } from "@/app/u/[username]/UserProfileHeader";
+import { BattleHeatGrid } from "@/app/profile/BattleHeatMap";
 import { useFadeIn } from "@/lib/useFadeIn";
 
 /**
@@ -27,6 +28,12 @@ export interface TrainerPreview {
   totalLikes: number;
   followerCount: number;
   createdAt: string;
+  /** Row-major counts for a 7x7 battle-activity grid (-1 = a day still to
+   *  come). Built server-side — the grid's date maths is timezone-dependent
+   *  and this component renders on the client, so computing it here would
+   *  mismatch on hydration. Scoped to public decks only; see the loader in
+   *  ./page.tsx for exactly what that covers. */
+  heat: number[];
   /** True when the signed-in viewer already follows this trainer. Always
    *  false for anon visitors (user_follows is readable to authenticated only). */
   viewerFollows: boolean;
@@ -80,6 +87,18 @@ function TrainerAvatar({
     </div>
   );
 }
+
+/**
+ * Columns in a card's battle-activity grid. Seven of them against the
+ * grid's seven weekday rows is what makes it a square — the shape that
+ * sits beside a 64px avatar. The profile module shows 20 weeks in a wide
+ * strip; this is the same grid, cropped to fit.
+ *
+ * Exported because ./page.tsx builds the counts and has to agree on the
+ * column count, and a mismatch would be silent: the grid would still
+ * render, just at the wrong shape.
+ */
+export const HEAT_WEEKS = 7;
 
 /** One stat in a trainer's footer row — value over a tiny uppercase label,
  *  same treatment as the pinned-deck hero's Record / Win rate / Streak.
@@ -156,7 +175,21 @@ export function TrainerCard({
       }}
     >
       <div className="px-4 pt-4 pb-3">
-        <TrainerAvatar trainer={trainer} size={64} />
+        {/* Avatar left, activity right, both 64px so the square grid sits
+            on the avatar's own top and bottom edges. */}
+        <div className="flex items-start justify-between gap-3">
+          <TrainerAvatar trainer={trainer} size={64} />
+          <div className="w-16 shrink-0">
+            <BattleHeatGrid
+              counts={trainer.heat}
+              weeks={HEAT_WEEKS}
+              accent={trainer.bannerAccent}
+              gapClass="gap-[2px]"
+              cellRadiusClass="rounded-[2px]"
+              label={`${trainer.displayName}'s battle activity, last ${HEAT_WEEKS} weeks`}
+            />
+          </div>
+        </div>
 
         <div className="mt-2 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">

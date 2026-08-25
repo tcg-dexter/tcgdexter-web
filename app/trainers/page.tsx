@@ -1,8 +1,10 @@
 import { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { buildHeatCounts, type BattleRow } from "@/app/profile/BattleHeatMap";
 import SectionHeader from "@/app/components/ui/SectionHeader";
 import TrainersClient from "./TrainersClient";
-import type { TrainerPreview } from "./TrainerCard";
+import { HEAT_WEEKS, type TrainerPreview } from "./TrainerCard";
 
 export const metadata: Metadata = {
   title: "Trainers — TCG Dexter",
@@ -26,6 +28,7 @@ interface ProfileRow {
 }
 
 interface DeckRow {
+  id: string;
   user_id: string;
   like_count: number | null;
 }
@@ -50,6 +53,79 @@ async function fetchAllPages<T>(
 }
 
 /**
+ * Per-user battle activity for the directory's mini heat grids.
+ *
+ * ── What this deliberately does and doesn't show ──
+ * Only battles attached to a PUBLIC deck of a public profile. That's the
+ * same boundary `loadRecentBattles` draws for the /battles feed, where
+ * these battles already appear by handle with their own public pages — so
+ * nothing here is visible that wasn't already.
+ *
+ * It is NOT the same set the profile page's heat map draws, which is the
+ * owner's full history including private decks and is shown to the owner
+ * alone (see the `isOwner &&` guard there). A trainer's card in this
+ * directory will therefore look quieter than their own profile does to
+ * them, which is the correct direction for the difference to run.
+ *
+ * Needs the service-role client because `matches` is owner-only under RLS
+ * — the RLS client would return an empty set for every trainer but the
+ * viewer. If that client can't be built (the key is server-only and absent
+ * in some environments) the grids render empty rather than the page
+ * failing: activity is decoration here, not the point of the surface.
+ */
+async function loadPublicBattleHeat(
+  decks: DeckRow[],
+): Promise<Map<string, number[]>> {
+  const out = new Map<string, number[]>();
+  if (!decks.length) return out;
+
+  const userByDeck = new Map(decks.map((d) => [d.id, d.user_id]));
+
+  // Eight weeks, not seven: the grid starts at the Sunday of the week seven
+  // weeks back, which is up to six days earlier than "49 days ago". Cheap
+  // slack beats an off-by-a-few-days hole in the leftmost column.
+  const since = new Date();
+  since.setDate(since.getDate() - 8 * 7);
+  const sinceIso = since.toISOString();
+
+  let rows: Array<BattleRow & { saved_deck_id: string | null }>;
+  try {
+    const admin = createAdminClient();
+    rows = await fetchAllPages((from, to) =>
+      admin
+        .from("matches")
+        .select("saved_deck_id, played_at, created_at")
+        .not("saved_deck_id", "is", null)
+        // A battle logged late carries an old played_at and a recent
+        // created_at, and one logged normally the reverse — the grid buckets
+        // by played_at ?? created_at, so either being in range can matter.
+        .or(`played_at.gte.${sinceIso},created_at.gte.${sinceIso}`)
+        .order("created_at", { ascending: false })
+        .range(from, to),
+    );
+  } catch (err) {
+    console.error("[trainers] battle heat unavailable:", err);
+    return out;
+  }
+
+  const byUser = new Map<string, BattleRow[]>();
+  for (const r of rows) {
+    const userId = r.saved_deck_id ? userByDeck.get(r.saved_deck_id) : undefined;
+    if (!userId) continue; // private deck, or a deck whose owner isn't public
+    const list = byUser.get(userId);
+    if (list) list.push(r);
+    else byUser.set(userId, [r]);
+  }
+
+  // forEach rather than for..of: the tsconfig target predates iterating a
+  // Map directly, and this file has no reason to be the one that changes it.
+  byUser.forEach((battles, userId) => {
+    out.set(userId, buildHeatCounts(battles, HEAT_WEEKS));
+  });
+  return out;
+}
+
+/**
  * Trainer directory — every public profile as a preview card.
  *
  * "Public" means exactly what /leaderboard means by it: `is_public = true`
@@ -57,11 +133,13 @@ async function fetchAllPages<T>(
  * reachable /u/<username> URL to link to.
  *
  * The three highlighted stats (public decks, total likes, followers) are all
- * cheap and all genuinely public. Battles logged is deliberately NOT among
- * them: `matches` is owner-only under RLS (the public battles feed goes
- * through the service-role client), and the profile page already chooses to
- * hide W/L from visitors — surfacing a battle count here would leak a number
- * that page withholds, and would need an admin client to read at all.
+ * cheap and all genuinely public. A battles-logged total is deliberately NOT
+ * among them: the profile page hides W/L from visitors, so a lifetime count
+ * here would state a number that page withholds.
+ *
+ * The activity grid is a narrower thing and is fine: it covers only battles
+ * on a trainer's PUBLIC decks, which already appear by handle in the
+ * /battles feed with their own public pages. See loadPublicBattleHeat.
  */
 export default async function TrainersPage() {
   const supabase = await createClient();
@@ -88,7 +166,7 @@ export default async function TrainersPage() {
     fetchAllPages<DeckRow>((from, to) =>
       supabase
         .from("saved_decks")
-        .select("user_id, like_count")
+        .select("id, user_id, like_count")
         .eq("is_public", true)
         .order("user_id", { ascending: true })
         .range(from, to),
@@ -103,6 +181,14 @@ export default async function TrainersPage() {
       totalLikes: prev.totalLikes + (d.like_count ?? 0),
     });
   }
+
+  const heatByUser = await loadPublicBattleHeat(decks);
+  // A grid of nothing, for trainers with no public battles — so every card
+  // is the same height whether or not there's activity to show. Built per
+  // request, not once at module load: it encodes which days are still in
+  // the future, and a long-lived server would carry a stale mask across
+  // the next midnight.
+  const emptyHeat = buildHeatCounts([], HEAT_WEEKS);
 
   // Who the viewer follows. `user_follows` is readable `to authenticated`
   // only, so this stays a no-op (and the Following facet stays hidden) for
@@ -133,6 +219,7 @@ export default async function TrainersPage() {
       deckCount: tally.deckCount,
       totalLikes: tally.totalLikes,
       followerCount: p.follower_count ?? 0,
+      heat: heatByUser.get(p.id) ?? emptyHeat,
       createdAt: p.created_at,
       viewerFollows: following.has(p.id),
     };
