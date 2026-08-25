@@ -202,15 +202,28 @@ body.card-viewer-open [data-back-button] {
    first and swap after mount, which means shipping a wrong-looking layout
    in the HTML and a hydration-order dependency to undo it.
 
+   The class also owns the card's horizontal placement, and that is not an
+   incidental detail. These banners fan wider on desktop than on mobile,
+   and the two positions used to be applied as an inline `left` plus a
+   `sm:[left:var(--left-sm)]` utility — which never took effect, because a
+   style attribute outranks every non-important author rule, so the
+   desktop spread silently never rendered. Resolving both breakpoints here
+   as class rules, with the caller supplying only raw values, is what
+   makes the media query able to win. Anything a caller sets inline on
+   these cards must not be a property this block also sets.
+
    The custom properties a caller must set:
      --fan-clip        translateY of the settled card (its bottom clip)
      --fan-rot         rotation of the settled card
      --fan-clip-start  translateY of the leftmost card — the stack's clip
      --fan-rot-start   rotation of the leftmost card
+     --left            card's left edge, percent of the banner (mobile)
+     --left-sm         the same, for the wider sm:+ fan
      --fan-dx          translateX from settled position back to the stack,
-                       in percent of the CARD's own width, so it stays
-                       correct at any banner size without a per-breakpoint
-                       value
+                       in percent of the CARD's own width, so it holds at
+                       any banner size. One per breakpoint, because the
+                       settled position it is measured against differs.
+     --fan-dx-sm       the same, for the wider sm:+ fan
      --fan-delay       per-card stagger, so the fan opens rather than
                        moving as one block
 
@@ -228,6 +241,8 @@ body.card-viewer-open [data-back-button] {
 }
 
 .dx-fan-card {
+  left: var(--left);
+  --fan-dx: var(--fan-dx-base);
   transform: translateY(var(--fan-clip)) rotate(var(--fan-rot));
   transform-origin: 50% 100%;
   /* `both` holds the from-state through the delay, so a staggered card
@@ -235,6 +250,15 @@ body.card-viewer-open [data-back-button] {
      jumping back to start its run. */
   animation: dx-fan-in 620ms cubic-bezier(0.34, 1.56, 0.64, 1)
     var(--fan-delay, 0ms) both;
+}
+
+/* sm: — the wider desktop fan. Same specificity as the block above and
+   later in the sheet, so it wins from 640px up. */
+@media (min-width: 640px) {
+  .dx-fan-card {
+    left: var(--left-sm);
+    --fan-dx: var(--fan-dx-sm);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

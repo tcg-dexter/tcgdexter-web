@@ -35,14 +35,10 @@ interface SlotGeometry {
   /** Distance back to the stack (slot 0's position), in percent of the
    *  card's own width. Percent-of-self rather than percent-of-banner so
    *  the entrance stays correct at every banner size — see the
-   *  `dx-fan-in` keyframes in globals.css.
-   *
-   *  One value, not one per breakpoint, because `left` below is an inline
-   *  style: the style attribute outranks every non-important author rule,
-   *  so the `sm:[left:var(--left-sm)]` utility beside it never actually
-   *  wins and `leftDesktop` is not the settled position at any width. The
-   *  delta has to be measured against the position that really applies. */
+   *  `dx-fan-in` keyframes in globals.css. One per breakpoint, because
+   *  the settled position it is measured against differs between them. */
   fanDx: number;
+  fanDxDesktop: number;
 }
 
 const SLOT_GEOMETRY: SlotGeometry[] = (() => {
@@ -64,9 +60,11 @@ const SLOT_GEOMETRY: SlotGeometry[] = (() => {
       clipPct: BOTTOM_CLIP_PCT - CENTER_RAISE_CARD_PCT * (1 - normDist * normDist),
       rotationDeg: (signedDist / maxDist) * CARD_MAX_ROTATION_DEG,
       zIndex: i,
-      // (leftmost - mine), converted from percent-of-container into
-      // percent-of-card by dividing through the card's own width share.
+      // Both are (leftmost - mine), converted from percent-of-container
+      // into percent-of-card by dividing through the card's own width
+      // share.
       fanDx: ((cardsLeftStart - left) / CARD_WIDTH_PCT) * 100,
+      fanDxDesktop: ((desktopCardsLeftStart - leftDesktop) / CARD_WIDTH_PCT) * 100,
     };
   });
 })();
@@ -89,17 +87,21 @@ const FAN_STAGGER_MS = 45;
 function slotStyle(g: SlotGeometry, index: number): CSSProperties {
   return {
     bottom: 0,
-    left: `${g.left}%`,
-    "--left-sm": `${g.leftDesktop}%`,
     width: `${CARD_WIDTH_PCT}%`,
-    // The settled transform and transform-origin live in the .dx-fan-card
-    // class, composed from these properties, so the base style and the
-    // animation's end frame can't drift apart.
+    // Everything the fan needs is handed over as raw values; .dx-fan-card
+    // (globals.css) composes them into `left`, the settled transform and
+    // the entrance, and picks the breakpoint. Nothing set here may be a
+    // property that class also sets — an inline declaration would outrank
+    // its media query and pin the card to one breakpoint's layout, which
+    // is exactly how the desktop spread used to go missing.
+    "--left": `${g.left}%`,
+    "--left-sm": `${g.leftDesktop}%`,
     "--fan-clip": `${g.clipPct}%`,
     "--fan-rot": `${g.rotationDeg}deg`,
     "--fan-clip-start": `${STACK.clipPct}%`,
     "--fan-rot-start": `${STACK.rotationDeg}deg`,
-    "--fan-dx": `${g.fanDx}%`,
+    "--fan-dx-base": `${g.fanDx}%`,
+    "--fan-dx-sm": `${g.fanDxDesktop}%`,
     "--fan-delay": `${index * FAN_STAGGER_MS}ms`,
     zIndex: g.zIndex,
   } as CSSProperties;
@@ -156,7 +158,7 @@ function CardSlot({
         src={cardImageLarge(card.set_id, card.number)}
         alt=""
         aria-hidden="true"
-        className="dx-fan-card absolute drop-shadow-md select-none rounded-lg sm:[left:var(--left-sm)]"
+        className="dx-fan-card absolute drop-shadow-md select-none rounded-lg"
         style={slotStyle(geometry, index)}
       />
     );
@@ -167,7 +169,7 @@ function CardSlot({
   return (
     <div
       aria-hidden="true"
-      className={`dx-fan-card absolute aspect-[245/342] rounded-lg border-2 border-dashed sm:[left:var(--left-sm)] ${
+      className={`dx-fan-card absolute aspect-[245/342] rounded-lg border-2 border-dashed ${
         isOwner ? "border-white/70 bg-white/10" : "border-white/40"
       }`}
       style={slotStyle(geometry, index)}

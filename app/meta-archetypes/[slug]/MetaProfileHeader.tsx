@@ -36,12 +36,14 @@ import { StatCard, ResponsiveLabel } from "@/app/components/StatCard";
  * Per-card left offset is derived from `(SPAN - CARD_WIDTH) / (count-1)`
  * so the row always spans the full container regardless of how many
  * cards we actually have (1..7). Desktop gets an extra 10% of spread on
- * top of that (`DESKTOP_CARDS_SPAN_PCT`), applied via a per-card CSS
- * custom property (`--left-sm`) consumed by a static
- * `sm:[left:var(--left-sm)]` utility class — the actual percentages are
- * runtime-computed per card and can't be baked into literal Tailwind
- * class names, so the class stays static and only the variable's value
- * changes.
+ * top of that (`DESKTOP_CARDS_SPAN_PCT`). Both positions are handed over
+ * as per-card CSS custom properties (`--left` / `--left-sm`) — the
+ * percentages are runtime-computed per card and can't be baked into
+ * literal Tailwind class names — and `.dx-fan-card` in globals.css picks
+ * between them in its own sm: media query. That class, rather than a
+ * `sm:[left:var(--left-sm)]` utility next to an inline `left`: a style
+ * attribute outranks every non-important author rule, so the utility
+ * never won and the desktop spread went unrendered at every width.
  *
  * Banner sizing is responsive, and the two size-reduction passes below are
  * desktop-only — mobile keeps the original derivation untouched:
@@ -190,10 +192,13 @@ export default function MetaProfileHeader({
   const singleCardLeft = (100 - CARD_WIDTH_PCT) / 2;
 
   // Desktop-only wider spread — same math, run again against
-  // DESKTOP_CARDS_SPAN_PCT. Applied per-card via a CSS custom property
-  // (--left-sm) consumed by a static `sm:[left:var(--left-sm)]` utility
-  // class, since the actual percentages are computed at runtime and can't
-  // be baked into literal Tailwind class names.
+  // DESKTOP_CARDS_SPAN_PCT. Handed over as a --left-sm custom property
+  // (the percentages are computed at runtime, so they can't be baked into
+  // literal Tailwind class names) and applied by .dx-fan-card's own sm:
+  // media query in globals.css. It has to be that class rather than a
+  // `sm:[left:var(--left-sm)]` utility sitting beside an inline `left`:
+  // the style attribute outranks any non-important author rule, so that
+  // arrangement silently rendered the mobile spread at every width.
   const desktopCardsLeftStart = (100 - DESKTOP_CARDS_SPAN_PCT) / 2;
   const desktopCardsStep =
     cardCount > 1
@@ -215,6 +220,8 @@ export default function MetaProfileHeader({
   const stackRotationDeg =
     cardCount > 1 ? (-fanCenter / fanMaxDist) * CARD_MAX_ROTATION_DEG : 0;
   const stackLeft = cardCount === 1 ? singleCardLeft : cardsLeftStart;
+  const stackLeftDesktop =
+    cardCount === 1 ? singleCardLeft : desktopCardsLeftStart;
 
   return (
     <header className="flex-shrink-0">
@@ -277,30 +284,30 @@ export default function MetaProfileHeader({
                   src={url}
                   alt=""
                   aria-hidden="true"
-                  className="dx-fan-card absolute pointer-events-none select-none drop-shadow-md sm:[left:var(--left-sm)]"
+                  className="dx-fan-card absolute pointer-events-none select-none drop-shadow-md"
                   style={{
                     bottom: 0,
-                    left: `${left}%`,
-                    "--left-sm": `${leftDesktop}%`,
                     width: `${CARD_WIDTH_PCT}%`,
                     height: "auto",
-                    // The settled transform and origin come from
-                    // .dx-fan-card (globals.css), composed out of these
-                    // properties, so the resting style and the animation's
-                    // end frame are one definition. --fan-dx is the
-                    // distance back to the stack in percent of the CARD's
-                    // own width — percent-of-self, so the entrance holds
-                    // at any banner size. It's measured against `left`
-                    // rather than `leftDesktop` because `left` is set
-                    // inline here: a style attribute outranks every
-                    // non-important author rule, so the sibling
-                    // `sm:[left:var(--left-sm)]` utility never wins and
-                    // the desktop spread is not the settled position.
+                    // Raw values only — .dx-fan-card (globals.css)
+                    // composes them into `left`, the settled transform and
+                    // the entrance, and picks the breakpoint. Nothing set
+                    // here may be a property that class also sets: an
+                    // inline declaration outranks its media query and
+                    // would pin every card to one breakpoint's layout.
+                    // The two --fan-dx values are the distance back to
+                    // the stack in percent of the CARD's own width —
+                    // percent-of-self, so the entrance holds at any banner
+                    // size — one per breakpoint, since the settled
+                    // position they're measured against differs.
+                    "--left": `${left}%`,
+                    "--left-sm": `${leftDesktop}%`,
                     "--fan-clip": `${clipPct}%`,
                     "--fan-rot": `${rotationDeg}deg`,
                     "--fan-clip-start": `${stackClipPct}%`,
                     "--fan-rot-start": `${stackRotationDeg}deg`,
-                    "--fan-dx": `${((stackLeft - left) / CARD_WIDTH_PCT) * 100}%`,
+                    "--fan-dx-base": `${((stackLeft - left) / CARD_WIDTH_PCT) * 100}%`,
+                    "--fan-dx-sm": `${((stackLeftDesktop - leftDesktop) / CARD_WIDTH_PCT) * 100}%`,
                     "--fan-delay": `${i * FAN_STAGGER_MS}ms`,
                     zIndex: i,
                   } as CSSProperties}
