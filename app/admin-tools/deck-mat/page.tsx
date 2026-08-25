@@ -31,21 +31,31 @@ interface MatchRow {
 }
 
 /**
- * Page frame. The heading lives here rather than in DeckMatClient so it's
- * present in all three states — signed out, no decks yet, and the studio
- * itself — instead of appearing only once the tool has something to render.
+ * Page frame. The heading is present in all three states — signed out, no
+ * decks yet, and the studio itself — instead of appearing only once the
+ * tool has something to render.
+ *
+ * `withHeading: false` is the studio's escape hatch: there the header row
+ * also carries the prev/next deck chevrons, and those need the client
+ * component's deck-selection state. Rather than lift that state up into
+ * this server component, DeckMatClient renders its own copy of the header
+ * row (same `mb-6` + <SectionHeader title="Playmat Studio">) with the
+ * chevrons anchored right. The two empty states keep using the heading
+ * below, so the page is never headless.
  *
  * Top padding matches the other top-level pages (Deck Collection, Meta
  * Archetypes, Card Catalog) rather than this page's old `pt-4`, which
  * predates having a heading and would have sat the h2 under the notch on
  * mobile.
  */
-const shell = (children: React.ReactNode) => (
+const shell = (children: React.ReactNode, { withHeading = true } = {}) => (
   <main className="min-h-dvh bg-bg pb-24">
     <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)]">
-      <div className="mb-6">
-        <SectionHeader title="Playmat Studio" />
-      </div>
+      {withHeading && (
+        <div className="mb-6">
+          <SectionHeader title="Playmat Studio" />
+        </div>
+      )}
       {children}
     </div>
   </main>
@@ -124,5 +134,7 @@ export default async function DeckMatPage() {
     };
   });
 
-  return shell(<DeckMatClient decks={deckSummaries} />);
+  // withHeading: false — DeckMatClient owns the header row in this state so
+  // the deck chevrons can sit beside the h2 (see `shell` above).
+  return shell(<DeckMatClient decks={deckSummaries} />, { withHeading: false });
 }
