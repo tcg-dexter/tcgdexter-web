@@ -58,7 +58,7 @@ export default function PlaymatShowcase({ tiles }: { tiles: ResolvedDeckTile[] }
   const ctaBtnClass =
     "inline-flex items-center justify-center rounded-full bg-gradient-brand px-6 py-3 text-sm font-semibold text-white shadow-brand hover:shadow-brand-lg transition";
 
-  const swatchBase = "w-7 h-7 md:w-[35px] md:h-[35px] rounded-full transition-all";
+  const swatchBase = "w-5 h-5 md:w-6 md:h-6 rounded-full transition-all";
   const swatchSelected = "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110";
   const swatchHover = "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]";
 
@@ -105,8 +105,9 @@ export default function PlaymatShowcase({ tiles }: { tiles: ResolvedDeckTile[] }
         </div>
       </div>
 
-      {/* Color picker */}
-      <div className="grid gap-1.5 pt-1 mx-auto [grid-template-columns:repeat(11,1.75rem)] md:[grid-template-columns:repeat(11,2.1875rem)]">
+      {/* Color picker — 30 styles across 15 columns = 2 rows, matching
+          Playmat Studio's picker layout (DeckMatClient.tsx). */}
+      <div className="grid gap-1 md:gap-1.5 pt-1 mx-auto [grid-template-columns:repeat(15,1.25rem)] md:[grid-template-columns:repeat(15,1.5rem)]">
         {MAT_STYLES.map(({ key, gradient }) => (
           <button
             key={key}
@@ -119,8 +120,8 @@ export default function PlaymatShowcase({ tiles }: { tiles: ResolvedDeckTile[] }
         ))}
       </div>
 
-      {/* Texture picker */}
-      <div className="grid gap-1.5 mx-auto [grid-template-columns:repeat(11,1.75rem)] md:[grid-template-columns:repeat(11,2.1875rem)]">
+      {/* Texture picker — 15 patterns, same 15 columns = 1 row. */}
+      <div className="grid gap-1 md:gap-1.5 mx-auto [grid-template-columns:repeat(15,1.25rem)] md:[grid-template-columns:repeat(15,1.5rem)]">
         {TEXTURES.map((t) => (
           <button
             key={t.key}
