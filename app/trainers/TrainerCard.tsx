@@ -43,10 +43,10 @@ export interface TrainerPreview {
  *  both derived from it, so this is the only number to move. */
 const AVATAR_PX = 48;
 
-/** The activity grid's height, and the gap between its cells. 64px is what
- *  the grid occupied back when it was a 7x7 square sitting beside the
- *  avatar; widening it to 20 weeks changed how much of the card it spans,
- *  not how much of the card's height it costs. */
+/** The activity grid's height, and the gap between its cells. Both stay
+ *  fixed as the week count changes — a wider grid never gets taller, only
+ *  wider — so this is the number to touch to grow or shrink the grid's
+ *  footprint on the card without touching its width directly. */
 const HEAT_HEIGHT_PX = 64;
 const HEAT_GAP_PX = 2;
 
@@ -179,17 +179,14 @@ export function TrainerCard({
     >
       <div className="px-4 pt-4 pb-3">
         {/* Identity row: avatar, then who they are, then their activity in
-            the top-right corner — back where the original 7-week square
-            sat. The grid is fixed-width and shrink-0 rather than a flex
-            item: at 20 columns it can't shrink to fit without giving up
-            its square cells, so it has to be the name column that yields.
+            the top-right corner. The grid is fixed-width and shrink-0
+            rather than a flex item — it can't shrink to fit without giving
+            up its square cells, so it's the name column that yields.
 
             The name column carries min-w-0 as well as flex-1. Without it a
             flex item won't shrink below its content's intrinsic width, so
             a long display name would push the grid out of the corner
-            instead of truncating — and at 186px the grid now claims most
-            of a mobile card's width, so the name is working with roughly
-            half the room it had as a 7-week square. */}
+            instead of truncating. */}
         <div className="flex items-center gap-3">
           <TrainerAvatar trainer={trainer} size={AVATAR_PX} />
 
@@ -210,10 +207,10 @@ export function TrainerCard({
             )}
           </div>
 
-          {/* Pinned to the height the original square occupied — the width
-              (~186px at 20 weeks) falls out of that, since the cells are
-              square and there are always 7 rows, so the two can't be
-              chosen independently. */}
+          {/* Height is fixed (HEAT_HEIGHT_PX); the width falls out of it, since
+              the cells are square and there are always 7 rows, so the two
+              can't be chosen independently — fewer weeks (see HEAT_WEEKS
+              in ./page.tsx) means a narrower grid, never a shorter one. */}
           <div className="shrink-0">
             <BattleHeatGrid
               counts={trainer.heat}

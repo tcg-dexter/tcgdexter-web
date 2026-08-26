@@ -28,11 +28,12 @@ interface ProfileRow {
 }
 
 /**
- * Weeks in a directory card's activity grid — the same 20 the profile
- * module shows, so a trainer's card and their page cover the same span.
- * At 20 columns the grid is wide and short rather than square, which is
- * why it gets its own full-width row on the card instead of sitting in
- * the identity line (see TrainerCard).
+ * Weeks in a directory card's activity grid. Shorter than the profile
+ * module's 20 — the grid sits in the card's identity row now, pinned to a
+ * fixed height (see HEAT_HEIGHT_PX in TrainerCard), so more weeks only
+ * ever means a wider grid squeezing the name column, never a taller one.
+ * 12 is chosen to leave the name enough room at the card's narrowest
+ * (single-column mobile) width.
  *
  * Lives here, on the server side of the boundary, and not in TrainerCard
  * where it's used. TrainerCard is a "use client" module, and a plain
@@ -44,7 +45,7 @@ interface ProfileRow {
  * column count from the counts it's given, so this number only has to be
  * right in one place.
  */
-const HEAT_WEEKS = 20;
+const HEAT_WEEKS = 12;
 
 interface DeckRow {
   id: string;
