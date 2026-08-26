@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { track } from "@/lib/analytics/track";
+import { BANNER_ACCENT_KEYS } from "@/app/u/[username]/UserProfileHeader";
 
 /**
  * Auth callback — handles the redirect from OAuth providers and magic-link emails.
@@ -95,9 +96,18 @@ export async function GET(request: NextRequest) {
     // for returning users.
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
+      // Random default banner color for a brand-new row — with
+      // ignoreDuplicates this is an ON CONFLICT DO NOTHING, so
+      // banner_accent only ever takes effect on the actual first insert
+      // and never touches a returning user's existing choice.
+      const randomAccent =
+        BANNER_ACCENT_KEYS[Math.floor(Math.random() * BANNER_ACCENT_KEYS.length)];
       await supabase
         .from("profiles")
-        .upsert({ id: user.id }, { onConflict: "id", ignoreDuplicates: true });
+        .upsert(
+          { id: user.id, banner_accent: randomAccent },
+          { onConflict: "id", ignoreDuplicates: true },
+        );
 
       // Was this a brand-new signup or a returning sign-in? Read the row
       // age — a created_at within 5 seconds of now is a brand-new user.
