@@ -125,21 +125,25 @@ export const REPLAY_TOP_MAT_ID = "replay-top-mat";
  * The goal is flush: WATCH REPLAY puts the top mat at the top of the
  * browser's visible content, not a comfortable distance below it. So this
  * carries ONLY the clearance that's mechanically required to keep the mat
- * out from under fixed chrome, plus MOBILE_SCROLL_TRIM_PX trimmed back off
- * that minimum so the destination reads as reaching a touch further down
- * the page still. Desktop stays at exactly its mechanical minimum — see
- * below — since that's already confirmed right; nothing is piled on top
- * of it, and nothing should be.
+ * out from under fixed chrome, plus a trim taken back off that minimum on
+ * mobile so the destination reads as reaching a touch further down the
+ * page still — bumped twice now (10px, then another 10px), each time by
+ * request after checking the previous amount on a real device. Desktop
+ * stays at exactly its mechanical minimum — see below — since that's
+ * already confirmed right; nothing is piled on top of it, and nothing
+ * should be.
  *
  * Below xl the site chrome is a sticky 56px (h-14) toolbar that would
  * otherwise cover the top of the mat, and viewport-fit=cover means the
  * page's top edge can run under a notch, so the toolbar's own ceiling is
  * the safe-area inset — 3.5rem + env(safe-area-inset-top) is that
- * mechanical minimum, and MOBILE_SCROLL_TRIM_PX comes off it. The toolbar
- * is translucent and blurred (`backdrop-blur-xl bg-bg/70`, SiteNav.tsx),
- * not opaque, so the sliver of the mat this tucks under it stays faintly
- * visible rather than being hard-clipped. From xl up the chrome is the
- * two fixed side rails and there is nothing overhead, so it's exactly the
+ * mechanical minimum, and the 20px trim comes off it. The toolbar is
+ * translucent and blurred (`backdrop-blur-xl bg-bg/70`, SiteNav.tsx), not
+ * opaque, so the sliver of the mat this tucks under it stays faintly
+ * visible rather than being hard-clipped — worth keeping an eye on if the
+ * trim grows again, since a wide enough sliver would start looking like a
+ * mistake rather than a deliberate crop. From xl up the chrome is the two
+ * fixed side rails and there is nothing overhead, so it's exactly the
  * inset (usually 0 outside a notched device) and nothing else —
  * scrollIntoView lands the mat's top edge at the literal top of the
  * viewport there.
@@ -155,16 +159,16 @@ export const REPLAY_TOP_MAT_ID = "replay-top-mat";
  * SMALLER value here (or, as above, a small trim off the minimum), never
  * a larger one.
  *
- * The 10px trim below is a literal, not a variable pulled in from a named
+ * The 20px trim below is a literal, not a variable pulled in from a named
  * constant: Tailwind's class scanner reads this file as plain text to
  * decide which arbitrary-value utilities to generate, and a template
  * literal with an interpolated number produces a class name the scanner
  * can never see as a whole token — the utility silently fails to generate
  * and the trim does nothing at runtime with no error anywhere. Learned by
- * almost shipping exactly that. Change the "10px" by hand if it moves.
+ * almost shipping exactly that. Change the "20px" by hand if it moves.
  */
 const REPLAY_TOP_MAT_SCROLL_MT =
-  "scroll-mt-[calc(3.5rem_+_env(safe-area-inset-top)_-_10px)] xl:scroll-mt-[env(safe-area-inset-top)]";
+  "scroll-mt-[calc(3.5rem_+_env(safe-area-inset-top)_-_20px)] xl:scroll-mt-[env(safe-area-inset-top)]";
 
 const TOTAL_PRIZES = 6;
 
