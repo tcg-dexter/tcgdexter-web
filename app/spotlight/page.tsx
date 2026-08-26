@@ -1,13 +1,14 @@
 import { Metadata } from "next";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { shade } from "@/lib/color";
+import { buildHeatCounts } from "@/app/profile/BattleHeatMap";
+import SectionHeader from "@/app/components/ui/SectionHeader";
+import { TrainerCard, type TrainerPreview } from "@/app/trainers/TrainerCard";
 import {
-  cardTypesForName,
-  cardTypesForSetIdNumber,
-  pokemonSlug,
-} from "@/lib/primaryCardImage";
-import { typeColor } from "@/lib/metaPrimaryCard";
+  HEAT_WEEKS,
+  fetchAllPages,
+  loadPublicBattleActivity,
+  type DeckRow,
+} from "@/lib/trainerActivity";
 import type { TrainerSpotlightRow } from "./types";
 
 export const metadata: Metadata = {
@@ -16,164 +17,131 @@ export const metadata: Metadata = {
     "Every Trainer Spotlight TCG Dexter has published — browse the archive.",
 };
 
-interface Row extends TrainerSpotlightRow {
+interface SpotlightRow extends Pick<TrainerSpotlightRow, "id" | "slug" | "published_at"> {
   profiles: {
-    display_name: string;
+    id: string;
     username: string;
+    display_name: string | null;
+    bio: string | null;
     avatar_url: string | null;
+    banner_accent: string | null;
+    follower_count: number | null;
+    created_at: string;
   } | null;
 }
 
-const COLORLESS = "#B0A89E";
-const SPRITE_BASE = "https://r2.limitlesstcg.net/pokemon/gen9";
-
-/** Two-letter monogram (shared shape with SpotlightHeader). */
-function monogramFor(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return "?";
-  if (words.length === 1) return words[0].charAt(0).toUpperCase();
-  return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
-}
-
-/** Same 3-stop horizontal banner gradient the spotlight detail page
- *  computes — derived from the favorite-Pokémon, first-collection,
- *  and first-play card energy accents. */
-function bannerGradientFor(row: TrainerSpotlightRow): {
-  cardGradient: string;
-  firstAccent: string;
-} {
-  const firstCollection = row.favorite_collection_cards?.[0] ?? null;
-  const firstPlay = row.favorite_format_cards?.[0] ?? null;
-  const stops = [
-    row.favorite_pokemon
-      ? typeColor(cardTypesForName(row.favorite_pokemon.name))
-      : null,
-    firstCollection
-      ? typeColor(
-          cardTypesForSetIdNumber(
-            firstCollection.set_id,
-            firstCollection.number,
-            firstCollection.name,
-          ),
-        )
-      : null,
-    firstPlay
-      ? typeColor(
-          cardTypesForSetIdNumber(
-            firstPlay.set_id,
-            firstPlay.number,
-            firstPlay.name,
-          ),
-        )
-      : null,
-  ].filter((c): c is string => !!c);
-  const usable = stops.length > 0 ? stops : [COLORLESS, COLORLESS, COLORLESS];
-  const cardGradient = `linear-gradient(90deg, ${usable
-    .map(
-      (c, i) =>
-        `${c} ${Math.round((i / Math.max(usable.length - 1, 1)) * 100)}%`,
-    )
-    .join(", ")})`;
-  return { cardGradient, firstAccent: usable[0] };
-}
-
+/**
+ * Spotlight archive — every published Trainer Spotlight, rendered with the
+ * same TrainerCard grid the /trainers directory uses (shared component,
+ * shared page shell) rather than a bespoke banner-row list. That means the
+ * same real Follow button and public Decks/Likes/Followers/Matches/Wins
+ * stats a directory card shows, built the same privacy-scoped way — see
+ * loadPublicBattleActivity in lib/trainerActivity.ts.
+ *
+ * Order matches the spotlight publish order (newest first), not the
+ * directory's Likes sort — this is a chronological archive, not a ranked
+ * leaderboard cut.
+ */
 export default async function SpotlightIndex() {
   const supabase = await createClient();
+
+  const {
+    data: { user: viewer },
+  } = await supabase.auth.getUser();
+
   const { data } = await supabase
     .from("trainer_spotlights")
     .select(
-      "*, profiles!trainer_spotlights_profile_id_fkey(display_name, username, avatar_url)",
+      "id, slug, published_at, profiles!trainer_spotlights_profile_id_fkey(id, username, display_name, bio, avatar_url, banner_accent, follower_count, created_at)",
     )
     .eq("is_published", true)
     .order("published_at", { ascending: false });
 
-  const spotlights = (data ?? []) as Row[];
+  const spotlights = ((data ?? []) as unknown as SpotlightRow[]).filter(
+    (s): s is SpotlightRow & { profiles: NonNullable<SpotlightRow["profiles"]> } =>
+      !!s.profiles && !!s.profiles.username,
+  );
+
+  const profileIds = spotlights.map((s) => s.profiles.id);
+
+  const [decks, followingRows] = await Promise.all([
+    profileIds.length === 0
+      ? Promise.resolve([] as DeckRow[])
+      : fetchAllPages<DeckRow>((from, to) =>
+          supabase
+            .from("saved_decks")
+            .select("id, user_id, like_count")
+            .eq("is_public", true)
+            .in("user_id", profileIds)
+            .order("user_id", { ascending: true })
+            .range(from, to),
+        ),
+    viewer
+      ? fetchAllPages<{ following_user_id: string }>((from, to) =>
+          supabase
+            .from("user_follows")
+            .select("following_user_id")
+            .eq("follower_user_id", viewer.id)
+            .range(from, to),
+        )
+      : Promise.resolve([] as { following_user_id: string }[]),
+  ]);
+
+  const totals = new Map<string, { deckCount: number; totalLikes: number }>();
+  for (const d of decks) {
+    const prev = totals.get(d.user_id) ?? { deckCount: 0, totalLikes: 0 };
+    totals.set(d.user_id, {
+      deckCount: prev.deckCount + 1,
+      totalLikes: prev.totalLikes + (d.like_count ?? 0),
+    });
+  }
+
+  const { heatByUser, statsByUser } = await loadPublicBattleActivity(decks);
+  // A grid of nothing, for spotlighted trainers with no public battles —
+  // same as the directory (see /trainers's own emptyHeat).
+  const emptyHeat = buildHeatCounts([], HEAT_WEEKS);
+  const following = new Set(followingRows.map((r) => r.following_user_id));
+
+  const trainers: TrainerPreview[] = spotlights.map((s) => {
+    const p = s.profiles;
+    const tally = totals.get(p.id) ?? { deckCount: 0, totalLikes: 0 };
+    const matchTally = statsByUser.get(p.id) ?? { matchCount: 0, winCount: 0 };
+    return {
+      id: p.id,
+      username: p.username,
+      displayName: p.display_name?.trim() || p.username,
+      bio: p.bio,
+      avatarUrl: p.avatar_url,
+      bannerAccent: p.banner_accent,
+      deckCount: tally.deckCount,
+      totalLikes: tally.totalLikes,
+      followerCount: p.follower_count ?? 0,
+      matchCount: matchTally.matchCount,
+      winCount: matchTally.winCount,
+      heat: heatByUser.get(p.id) ?? emptyHeat,
+      createdAt: p.created_at,
+      viewerFollows: following.has(p.id),
+      isViewer: !!viewer && viewer.id === p.id,
+    };
+  });
 
   return (
     <main className="min-h-dvh bg-bg pb-24">
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 pt-8">
-        <header className="mb-6">
-          <h1 className="text-2xl font-bold text-text-primary">
-            Spotlight History
-          </h1>
-        </header>
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)]">
+        <div className="mb-6">
+          <SectionHeader title="Spotlight History" />
+        </div>
 
-        {spotlights.length === 0 ? (
+        {trainers.length === 0 ? (
           <div className="rounded-2xl border border-black/8 bg-white p-8 text-center text-sm text-text-secondary dark:bg-surface-elevated dark:border-white/10">
             No spotlights yet — check back soon.
           </div>
         ) : (
-          <ul className="flex flex-col gap-3">
-            {spotlights.map((s) => {
-              const profile = s.profiles;
-              if (!profile) return null;
-              const { cardGradient, firstAccent } = bannerGradientFor(s);
-              const avatarGradient = `linear-gradient(180deg, ${firstAccent} 0%, ${shade(firstAccent, -22)} 100%)`;
-              const monogram = monogramFor(profile.display_name);
-              return (
-                <li key={s.id}>
-                  <Link
-                    href={`/spotlight/${s.slug}`}
-                    className="relative block h-28 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-                    style={{ background: cardGradient }}
-                  >
-                    {/* Foreground content — vertically centered in the row. */}
-                    <div className="relative z-10 h-full px-4 flex items-center gap-3">
-                      {/* Trainer avatar — mirrors SpotlightHeader. */}
-                      <div
-                        className="rounded-full ring-2 ring-white/80 flex items-center justify-center overflow-hidden shrink-0 w-14 h-14"
-                        style={
-                          profile.avatar_url
-                            ? undefined
-                            : { background: avatarGradient }
-                        }
-                      >
-                        {profile.avatar_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={profile.avatar_url}
-                            alt={profile.display_name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-xl font-black text-white drop-shadow-sm">
-                            {monogram}
-                          </span>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1 pr-28">
-                        <div className="text-sm font-bold text-white leading-tight truncate drop-shadow-sm">
-                          {profile.display_name}
-                        </div>
-                        <div className="text-xs text-white/80 truncate drop-shadow-sm">
-                          @{profile.username}
-                        </div>
-                        {s.headline && (
-                          <p className="text-xs italic font-semibold text-white/90 mt-1 line-clamp-2 drop-shadow-sm">
-                            {s.headline}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Favorite Pokémon sprite, pinned right and sized to the
-                        row height — mirrors the corner placement in
-                        SpotlightHeader. */}
-                    {s.favorite_pokemon && (
-                      <div className="absolute right-4 inset-y-2 flex items-center pointer-events-none">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={`${SPRITE_BASE}/${pokemonSlug(s.favorite_pokemon.name)}.png`}
-                          alt={s.favorite_pokemon.name}
-                          className="h-full w-auto drop-shadow"
-                        />
-                      </div>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
+            {trainers.map((t, i) => (
+              <TrainerCard key={t.id} trainer={t} isAuthed={!!viewer} index={i} />
+            ))}
+          </div>
         )}
       </div>
     </main>
