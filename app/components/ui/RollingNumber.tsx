@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { FAN_DURATION_MS, FAN_STAGGER_MS, FAN_TOTAL_MS } from "@/lib/entranceTiming";
 
 /**
  * Split-flap / departure-board entrance for a stat value. Each digit column
@@ -43,6 +44,23 @@ import { useEffect, useState } from "react";
  * SSR renders the final value, and so does the first client render — the
  * roll only starts in an effect, so there is no hydration mismatch and no
  * intermediate glyph is ever sent down the wire.
+ *
+ * ── Timing is pinned to the banner fan, not just similar to it ──
+ * The whole roll — however many digits the value has — always finishes
+ * exactly FAN_TOTAL_MS (lib/entranceTiming.ts) after it starts, the same
+ * elapsed span the page's card fan takes from its own start delay through
+ * its last card settling. That's a deliberate invariant, not a matching
+ * pair of hardcoded numbers: change FAN_STAGGER_MS or FAN_START_DELAY_MS
+ * and both animations move together.
+ *
+ * The LAST digit column is pinned to land at exactly FAN_TOTAL_MS; earlier
+ * columns count backward from it in FAN_STAGGER_MS steps (clamped at 0),
+ * so a five-digit value spreads its columns out while a single-digit value
+ * — which has no earlier columns to space out — simply holds before
+ * rolling and finishes at the same instant everything else would. Pinning
+ * to the LAST column rather than starting the first one at 0 and letting
+ * the total fall out of `digitCount * stagger` is what makes the total
+ * hold regardless of how many digits a given stat happens to have.
  */
 
 /** Cells in a column, including the landing glyph. Varied slightly per
@@ -61,11 +79,28 @@ function buildStrip(target: number, length: number): number[] {
   return out;
 }
 
-const ROLL_MS = 620;
-const COLUMN_STAGGER_MS = 55;
+// A single digit's own roll takes as long as one banner card's fan-out
+// motion — reusing FAN_DURATION_MS rather than restating 620ms is what
+// keeps the two in the same family, not just coincidentally equal today.
+const ROLL_MS = FAN_DURATION_MS;
 /** Easing with a long tail — the column decelerates into its glyph rather
  *  than stopping dead, which is what sells the mechanical settle. */
 const ROLL_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
+
+/**
+ * Delay for the digit column at `index` of `digitCount` total, counting
+ * BACKWARD from the fixed end of the roll rather than forward from a
+ * start at 0. That direction is what pins the last column to
+ * `FAN_TOTAL_MS - ROLL_MS` (and therefore its finish to FAN_TOTAL_MS)
+ * unconditionally — including digitCount === 1, where "first" and "last"
+ * are the same column and there's nothing to space it out from. Clamped
+ * at 0 so an unusually long value never asks for a negative delay; its
+ * earliest columns just bunch up at the very start instead.
+ */
+function digitDelayMs(index: number, digitCount: number): number {
+  const available = FAN_TOTAL_MS - ROLL_MS;
+  return Math.max(0, available - (digitCount - 1 - index) * FAN_STAGGER_MS);
+}
 
 type Phase = "idle" | "start" | "running";
 
@@ -81,7 +116,8 @@ export default function RollingNumber({
   const [phase, setPhase] = useState<Phase>("idle");
 
   const chars = Array.from(value);
-  const hasDigits = chars.some((c) => c >= "0" && c <= "9");
+  const digitCount = chars.filter((c) => c >= "0" && c <= "9").length;
+  const hasDigits = digitCount > 0;
 
   useEffect(() => {
     if (!hasDigits) return;
@@ -96,11 +132,11 @@ export default function RollingNumber({
     setPhase("start");
     const raf = requestAnimationFrame(() => setPhase("running"));
 
-    // Longest column finishes last; swap back to plain text once it has,
-    // so the settled tile is ordinary selectable text rather than a stack
-    // of clipped boxes.
-    const total = ROLL_MS + COLUMN_STAGGER_MS * chars.length + 60;
-    const done = setTimeout(() => setPhase("idle"), total);
+    // The last column always lands at FAN_TOTAL_MS (see digitDelayMs); swap
+    // back to plain text once it has, so the settled tile is ordinary
+    // selectable text rather than a stack of clipped boxes. +60 is slack
+    // for the transitionend commit, not a second timing source.
+    const done = setTimeout(() => setPhase("idle"), FAN_TOTAL_MS + 60);
     return () => {
       cancelAnimationFrame(raf);
       clearTimeout(done);
@@ -132,6 +168,7 @@ export default function RollingNumber({
           const length = stripLength(digitIndex);
           const strip = buildStrip(Number(ch), length);
           const offsetPct = phase === "running" ? -(length - 1) * 100 : 0;
+          const delayMs = digitDelayMs(digitIndex, digitCount);
           return (
             <span key={i} className="relative inline-block align-baseline">
               {/* Sizer — an invisible copy of the landing glyph. Gives the
@@ -145,7 +182,7 @@ export default function RollingNumber({
                     transform: `translateY(${offsetPct}%)`,
                     transition:
                       phase === "running"
-                        ? `transform ${ROLL_MS}ms ${ROLL_EASING} ${digitIndex * COLUMN_STAGGER_MS}ms`
+                        ? `transform ${ROLL_MS}ms ${ROLL_EASING} ${delayMs}ms`
                         : undefined,
                   }}
                 >

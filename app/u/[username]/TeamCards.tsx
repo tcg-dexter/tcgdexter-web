@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { cardImageLarge } from "@/lib/cardImages";
+import { FAN_START_DELAY_MS, FAN_STAGGER_MS } from "@/lib/entranceTiming";
 
 export interface TeamCardRef {
   name: string;
@@ -80,12 +81,14 @@ function normalize(team: (TeamCardRef | null)[]): (TeamCardRef | null)[] {
  *  what the others hold while they wait their turn. */
 const STACK = SLOT_GEOMETRY[0];
 
-/** Milliseconds between one card leaving the stack and the next. Small
- *  enough that the whole fan is open in well under a second. Rightmost
- *  card leads — its delay is 0 and delay grows moving left toward the
- *  stack — so the fan reads as opening away from where the cards started
- *  rather than as a ripple moving in the same direction as the stack. */
-const FAN_STAGGER_MS = 75;
+// FAN_STAGGER_MS and FAN_START_DELAY_MS come from lib/entranceTiming.ts —
+// shared with MetaProfileHeader's fan and with RollingNumber, which pins
+// its own settle time to the same total (see FAN_TOTAL_MS there).
+//
+// Rightmost card leads — its delay is 0 and delay grows moving left
+// toward the stack — so the fan reads as opening away from where the
+// cards started rather than as a ripple moving in the same direction as
+// the stack.
 
 function slotStyle(g: SlotGeometry, index: number): CSSProperties {
   return {
@@ -126,7 +129,10 @@ function slotStyle(g: SlotGeometry, index: number): CSSProperties {
 export default function TeamCards({ initial, isOwner }: Props) {
   const team = normalize(initial);
   return (
-    <div className="relative h-full mx-6 sm:scale-[0.576] sm:origin-bottom sm:translate-y-[10px]">
+    <div
+      className="relative h-full mx-6 sm:scale-[0.576] sm:origin-bottom sm:translate-y-[10px]"
+      style={{ "--fan-start-delay": `${FAN_START_DELAY_MS}ms` } as CSSProperties}
+    >
       {team.map((card, i) => (
         <CardSlot
           key={i}

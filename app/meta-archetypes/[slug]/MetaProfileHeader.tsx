@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { shade } from "@/lib/color";
 import { StatCard, ResponsiveLabel } from "@/app/components/StatCard";
+import { FAN_START_DELAY_MS, FAN_STAGGER_MS } from "@/lib/entranceTiming";
 
 /**
  * Twitter-profile-style header for a meta deck page.
@@ -105,12 +106,13 @@ const BOTTOM_CLIP_PCT = 35;           // % of card height — outer card clip
 const CENTER_RAISE_CARD_PCT = 11;     // % of card height — centre raise
 const CARD_MAX_ROTATION_DEG = 12;     // degrees at the leftmost/rightmost
 
-/** Milliseconds between one card leaving the stack and the next, on the
- *  banner's load animation. Matches TeamCards' fan on the user profile so
- *  the two banners open at the same rate. Rightmost card leads — its delay
- *  is 0 and delay grows moving left toward the stack — the same direction
- *  TeamCards uses. */
-const FAN_STAGGER_MS = 75;
+// FAN_STAGGER_MS and FAN_START_DELAY_MS come from lib/entranceTiming.ts —
+// the same values TeamCards' fan on the user profile uses, so the two
+// banners open at the same rate, and RollingNumber pins its own settle
+// time to the same total (see FAN_TOTAL_MS there).
+//
+// Rightmost card leads — its delay is 0 and delay grows moving left
+// toward the stack — the same direction TeamCards uses.
 
 interface Props {
   /** Archetype display name, e.g. "Dragapult". */
@@ -243,7 +245,10 @@ export default function MetaProfileHeader({
               keeping each card's bottom edge pinned to the banner's bottom
               via `origin-bottom`. Banner height is unaffected because the
               scale is purely a transform on the cards layer. */}
-          <div className="relative h-full mx-6 sm:scale-[0.576] sm:origin-bottom sm:translate-y-[10px]">
+          <div
+            className="relative h-full mx-6 sm:scale-[0.576] sm:origin-bottom sm:translate-y-[10px]"
+            style={{ "--fan-start-delay": `${FAN_START_DELAY_MS}ms` } as CSSProperties}
+          >
             {bannerCards.map((url, i) => {
               const left =
                 cardCount === 1
