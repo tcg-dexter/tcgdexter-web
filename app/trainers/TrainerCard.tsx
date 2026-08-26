@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import { bannerGradientFor } from "@/app/u/[username]/UserProfileHeader";
 import { BattleHeatGrid } from "@/app/profile/BattleHeatMap";
 import { useFadeIn } from "@/lib/useFadeIn";
@@ -27,6 +29,12 @@ export interface TrainerPreview {
   /** Summed `like_count` across those public decks (same tally as /leaderboard). */
   totalLikes: number;
   followerCount: number;
+  /** Battles logged on this trainer's PUBLIC decks — the same boundary the
+   *  activity grid draws (see loadPublicBattleActivity in ./page.tsx), not
+   *  their full private history. */
+  matchCount: number;
+  /** Wins within matchCount's same public-deck scope. */
+  winCount: number;
   createdAt: string;
   /** Row-major counts for a 7x7 battle-activity grid (-1 = a day still to
    *  come). Built server-side — the grid's date maths is timezone-dependent
@@ -37,6 +45,10 @@ export interface TrainerPreview {
   /** True when the signed-in viewer already follows this trainer. Always
    *  false for anon visitors (user_follows is readable to authenticated only). */
   viewerFollows: boolean;
+  /** True when this card IS the signed-in viewer's own profile — the follow
+   *  button is omitted rather than offered (the API rejects a self-follow
+   *  anyway; this just skips the round trip). */
+  isViewer: boolean;
 }
 
 /** Preview-card avatar diameter. The sprite and the fallback initial are
@@ -137,6 +149,75 @@ function Stat({
 }
 
 /**
+ * Compact Follow / Following toggle for a trainer card — the directory's
+ * scaled-down counterpart to the profile page's FollowButton, sized to sit
+ * inline in the identity block instead of a full profile header. Same
+ * optimistic-toggle / rollback-on-error / redirect-when-signed-out
+ * behavior, against the same /api/follows/[userId] endpoint.
+ */
+function TrainerFollowButton({
+  trainer,
+  isAuthed,
+  compact = false,
+}: {
+  trainer: TrainerPreview;
+  isAuthed: boolean;
+  /** List row's smaller, borderless treatment vs. the grid card's pill. */
+  compact?: boolean;
+}) {
+  const router = useRouter();
+  const [following, setFollowing] = useState(trainer.viewerFollows);
+  const [isPending, startTransition] = useTransition();
+
+  function handleClick(e: React.MouseEvent) {
+    // Cards are Links — stop the follow tap from also navigating.
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isAuthed) {
+      router.push(`/sign-in?next=${encodeURIComponent(`/u/${trainer.username}`)}`);
+      return;
+    }
+    if (isPending) return;
+
+    const next = !following;
+    setFollowing(next);
+    startTransition(async () => {
+      try {
+        const res = await fetch(`/api/follows/${trainer.id}`, {
+          method: next ? "POST" : "DELETE",
+        });
+        if (!res.ok) throw new Error();
+        router.refresh();
+      } catch {
+        setFollowing(!next);
+      }
+    });
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={isPending}
+      aria-pressed={following}
+      aria-label={following ? `Unfollow ${trainer.displayName}` : `Follow ${trainer.displayName}`}
+      className={`shrink-0 font-bold uppercase tracking-[0.08em] rounded-full transition-colors disabled:opacity-60 ${
+        compact
+          ? "text-[10px] px-2 py-0.5"
+          : "mt-1 text-[10px] leading-none px-1.5 py-0.5"
+      } ${
+        following
+          ? "border border-black/10 dark:border-white/15 text-text-muted hover:border-black/25 dark:hover:border-white/30"
+          : "border border-transparent bg-black dark:bg-white text-white dark:text-black hover:bg-black/85 dark:hover:bg-white/85"
+      }`}
+    >
+      {following ? "Following" : "Follow"}
+    </button>
+  );
+}
+
+/**
  * Grid preview card. An identity row — avatar, name/handle, activity grid —
  * over the bio, closing on the three public stats.
  *
@@ -148,10 +229,12 @@ function Stat({
  */
 export function TrainerCard({
   trainer,
+  isAuthed,
   index,
   skipEntranceAnimation = false,
 }: {
   trainer: TrainerPreview;
+  isAuthed: boolean;
   index?: number;
   skipEntranceAnimation?: boolean;
 }) {
@@ -198,12 +281,9 @@ export function TrainerCard({
             {/* Under the two identity lines rather than beside the name,
                 where it would compete with the name for the row's only
                 flexible column and make a followed trainer's name truncate
-                sooner still. leading-none keeps it from claiming more
-                height than the chip itself needs. */}
-            {trainer.viewerFollows && (
-              <span className="mt-1 inline-block text-[10px] font-bold uppercase tracking-[0.08em] leading-none text-text-muted border border-black/10 dark:border-white/15 rounded-full px-1.5 py-0.5">
-                Following
-              </span>
+                sooner still. */}
+            {!trainer.isViewer && (
+              <TrainerFollowButton trainer={trainer} isAuthed={isAuthed} />
             )}
           </div>
 
@@ -238,6 +318,8 @@ export function TrainerCard({
           <Stat value={trainer.deckCount} label="Decks" compact />
           <Stat value={trainer.totalLikes} label="Likes" compact />
           <Stat value={trainer.followerCount} label="Followers" compact />
+          <Stat value={trainer.matchCount} label="Matches" compact />
+          <Stat value={trainer.winCount} label="Wins" compact />
         </div>
       </div>
     </Link>
@@ -252,9 +334,11 @@ export function TrainerCard({
  */
 export function TrainerRow({
   trainer,
+  isAuthed,
   isLast,
 }: {
   trainer: TrainerPreview;
+  isAuthed: boolean;
   isLast: boolean;
 }) {
   return (
@@ -271,10 +355,8 @@ export function TrainerRow({
           <span className="text-sm font-semibold text-text-primary truncate">
             {trainer.displayName}
           </span>
-          {trainer.viewerFollows && (
-            <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.08em] text-text-muted">
-              Following
-            </span>
+          {!trainer.isViewer && (
+            <TrainerFollowButton trainer={trainer} isAuthed={isAuthed} compact />
           )}
         </div>
         <div className="text-xs text-text-muted truncate">
@@ -287,10 +369,12 @@ export function TrainerRow({
         </div>
       </div>
 
-      <div className="hidden sm:flex items-start gap-6 shrink-0">
+      <div className="hidden sm:flex items-start gap-5 shrink-0">
         <Stat value={trainer.deckCount} label="Decks" />
         <Stat value={trainer.totalLikes} label="Likes" />
         <Stat value={trainer.followerCount} label="Followers" />
+        <Stat value={trainer.matchCount} label="Matches" />
+        <Stat value={trainer.winCount} label="Wins" />
       </div>
     </Link>
   );
