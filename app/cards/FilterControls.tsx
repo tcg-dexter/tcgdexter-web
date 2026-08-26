@@ -67,6 +67,19 @@ export function OwnershipRadios({
   );
 }
 
+/** A few rarity values arrive as raw SCREAMING_SNAKE_CASE from the card
+ *  index (e.g. "MEGA_ATTACK_RARE") instead of the Title Case every other
+ *  rarity already uses. Only reformats that shape — a single ALL-CAPS word
+ *  with no underscore (e.g. "LEGEND") is a real rarity name and stays as
+ *  the game prints it. */
+function humanizeFacetLabel(opt: string): string {
+  if (!/^[A-Z0-9]+(?:_[A-Z0-9]+)+$/.test(opt)) return opt;
+  return opt
+    .split("_")
+    .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 export function FacetGroup({
   label,
   options,
@@ -95,7 +108,7 @@ export function FacetGroup({
                   : "bg-white dark:bg-surface-2 text-text-secondary border-black/10 hover:bg-surface"
               }`}
             >
-              {opt}
+              {humanizeFacetLabel(opt)}
             </button>
           );
         })}
