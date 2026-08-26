@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import SectionHeader from "@/app/components/ui/SectionHeader";
 import PillSelect from "@/app/components/ui/PillSelect";
 import GridListToggle from "@/app/components/ui/GridListToggle";
+import Pagination from "@/app/components/ui/Pagination";
 import { UserDeckCard, DeckBanner, type UserDeckCardProps } from "@/app/components/DeckPostCard";
 import QRCodeButton from "@/app/components/QRCodeButton";
 import { type BattleFormData } from "@/app/components/BattleForm";
@@ -43,6 +44,8 @@ type ViewMode = "grid" | "list";
 const VIEW_MODE_KEY = "myDecksViewMode";
 const MIN_BATTLES_FOR_HERO = 3;
 const TOOLBAR_ITEM_HEIGHT = "h-[38px]";
+const DEFAULT_PAGE_SIZE = 15;
+const PAGE_SIZE_OPTIONS = [15, 30, 60];
 
 function sortValue(deck: UserDeckCardProps, key: SortKey): number | string {
   switch (key) {
@@ -325,6 +328,8 @@ export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: P
   const [dir, setDir] = useState<SortDir>("desc");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [view, setView] = useState<ViewMode>("grid");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [newDeckOpen, setNewDeckOpen] = useState(false);
   // Bumped by the Get Started checklist to open the pinned deck's log drawer.
   const [logSignal, setLogSignal] = useState(0);
@@ -383,6 +388,21 @@ export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: P
     return sorted;
   }, [decks, query, sort, dir, favoritesOnly]);
 
+  // A search, sort, or filter change can strand `page` past the new result
+  // count (e.g. narrowing from 4 pages down to 1) — reset to the first page
+  // whenever the filtered set's identity changes rather than clamping only
+  // at render time, so the toolbar's own state changes never leave the grid
+  // showing "Page 3 of 1" with nothing in it.
+  useEffect(() => {
+    setPage(1);
+  }, [query, sort, dir, favoritesOnly, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageItems = useMemo(
+    () => filtered.slice((page - 1) * pageSize, page * pageSize),
+    [filtered, page, pageSize],
+  );
+
   return (
     <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
       <div className="mb-6">
@@ -409,10 +429,6 @@ export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: P
           onLogBattle={() => setLogSignal((s) => s + 1)}
           hideWhenNoDeck
         />
-      )}
-
-      {pinnedDeck && (
-        <PinnedDeckHero key={pinnedDeck.id} deck={pinnedDeck} openSignal={logSignal} />
       )}
 
       {/* Toolbar */}
@@ -500,6 +516,28 @@ export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: P
         </div>
       </div>
 
+      {pinnedDeck && (
+        <div className="mb-2">
+          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-text-muted">
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-3 h-3"
+            >
+              <path d="M12 17v5" />
+              <path d="M9 10.5V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v6.5l2 3V15a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-1.5z" />
+            </svg>
+            Pinned
+          </div>
+          <PinnedDeckHero key={pinnedDeck.id} deck={pinnedDeck} openSignal={logSignal} />
+        </div>
+      )}
+
       {decks.length === 0 ? (
         <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-8 text-center">
           <p className="text-sm text-text-secondary">
@@ -517,18 +555,36 @@ export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: P
         <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-8 text-center">
           <p className="text-sm text-text-secondary">No decks match “{query}”.</p>
         </div>
-      ) : view === "grid" ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
-          {filtered.map((deck, i) => (
-            <UserDeckCard key={deck.id} {...deck} index={i} skipEntranceAnimation={hasAnimatedOnceRef.current} />
-          ))}
-        </div>
       ) : (
-        <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden">
-          {filtered.map((deck, i) => (
-            <SavedDeckRow key={deck.id} {...deck} isLast={i === filtered.length - 1} />
-          ))}
-        </div>
+        <>
+          {view === "grid" ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
+              {pageItems.map((deck, i) => (
+                <UserDeckCard key={deck.id} {...deck} index={i} skipEntranceAnimation={hasAnimatedOnceRef.current} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden">
+              {pageItems.map((deck, i) => (
+                <SavedDeckRow key={deck.id} {...deck} isLast={i === pageItems.length - 1} />
+              ))}
+            </div>
+          )}
+
+          {filtered.length > pageSize && (
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              pageSizeOptions={PAGE_SIZE_OPTIONS}
+              onPage={(p) => {
+                window.scrollTo(0, 0);
+                setPage(p);
+              }}
+              onPageSize={setPageSize}
+            />
+          )}
+        </>
       )}
 
       <NewDeckDialog
