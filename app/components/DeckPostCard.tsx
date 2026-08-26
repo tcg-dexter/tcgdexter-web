@@ -582,8 +582,8 @@ export function UserDeckCard({
       <Link href={href} className="block">
         {counts && (
           <div className="flex items-center gap-3.5 px-3.5 py-1">
-            <CompositionRing counts={counts} />
-            <CompositionLegend counts={counts} />
+            <CompositionRing counts={counts} heroColor={iconBg} />
+            <CompositionLegend counts={counts} heroColor={iconBg} />
           </div>
         )}
       </Link>

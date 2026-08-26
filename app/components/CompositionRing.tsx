@@ -1,3 +1,5 @@
+import { shade } from "@/lib/color";
+
 export interface CompositionCounts {
   pokemon: number;
   trainer: number;
@@ -10,6 +12,10 @@ interface Props {
    *  deck-card use case. */
   size?: number;
   className?: string;
+  /** Deck's hero-Pokémon accent color (UserDeckCardProps.iconBg) — the
+   *  Pokémon arc's gradient. Falls back to the same neutral DeckBanner
+   *  uses when no primary Pokémon resolved a type. */
+  heroColor?: string | null;
 }
 
 const R = 24;
@@ -19,10 +25,11 @@ const GAP = 10;
 
 /**
  * Three-arc rounded-cap donut showing a deck's Pokémon/Trainer/Energy
- * composition. Pokémon renders solid ink, Trainer uses the site's brand
- * gradient (via BrandGradientDefs, mounted once by the caller's page),
- * Energy renders as a bordered, unfilled arc — matching the swatch
- * CompositionLegend draws for it (border in --text-primary, no fill).
+ * composition. Pokémon renders a gradient keyed to the deck's hero
+ * Pokémon energy type (heroColor — the same accent the card's avatar
+ * circle uses), Trainer renders solid ink, Energy renders as a bordered,
+ * unfilled arc — matching the swatch CompositionLegend draws for it
+ * (border in --text-primary, no fill).
  *
  * The Energy arc's hollow interior is a real hole punched with an SVG
  * <mask>, not a fill painted in the card's background color. The earlier
@@ -33,9 +40,11 @@ const GAP = 10;
  * mask is theme- and background-independent — the arc is genuinely
  * see-through wherever the ring is placed.
  */
-export default function CompositionRing({ counts, size = 58, className }: Props) {
+export default function CompositionRing({ counts, size = 58, className, heroColor }: Props) {
   const { pokemon, trainer, energy } = counts;
   const total = pokemon + trainer + energy;
+  const accentBg = heroColor ?? "#B0A89E";
+  const accentDeep = shade(accentBg, -35);
   if (total <= 0) {
     return (
       <svg width={size} height={size} viewBox="0 0 58 58" className={className}>
@@ -73,6 +82,10 @@ export default function CompositionRing({ counts, size = 58, className }: Props)
     /[^a-zA-Z0-9_-]/g,
     "_",
   );
+  // Same reasoning as energyMaskId above: id derived from the gradient's own
+  // content (not useId()) so multiple rings on one page can safely share an
+  // id when their hero color happens to match.
+  const heroGradientId = `dx-hero-gradient-${accentBg}`.replace(/[^a-zA-Z0-9_-]/g, "_");
 
   return (
     <svg
@@ -83,6 +96,10 @@ export default function CompositionRing({ counts, size = 58, className }: Props)
       style={{ transform: "rotate(-90deg)", transformOrigin: "50% 50%" }}
     >
       <defs>
+        <linearGradient id={heroGradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={accentDeep} />
+          <stop offset="100%" stopColor={accentBg} />
+        </linearGradient>
         {/* White keeps, black cuts: the wide band minus the narrower inner
             stroke leaves a 1.4-unit rim, closed around the round caps
             because both strokes share the caps and dash array. Explicit
@@ -117,7 +134,7 @@ export default function CompositionRing({ counts, size = 58, className }: Props)
         cx="29"
         cy="29"
         r={R}
-        stroke="var(--text-primary)"
+        stroke={`url(#${heroGradientId})`}
         strokeWidth={STROKE}
         fill="none"
         strokeLinecap="round"
@@ -127,7 +144,7 @@ export default function CompositionRing({ counts, size = 58, className }: Props)
         cx="29"
         cy="29"
         r={R}
-        stroke="url(#brandGradient)"
+        stroke="var(--text-primary)"
         strokeWidth={STROKE}
         fill="none"
         strokeLinecap="round"
@@ -148,10 +165,19 @@ export default function CompositionRing({ counts, size = 58, className }: Props)
   );
 }
 
-export function CompositionLegend({ counts }: { counts: CompositionCounts }) {
+export function CompositionLegend({
+  counts,
+  heroColor,
+}: {
+  counts: CompositionCounts;
+  /** Same hero-Pokémon accent as CompositionRing's Pokémon arc. */
+  heroColor?: string | null;
+}) {
+  const accentBg = heroColor ?? "#B0A89E";
+  const accentDeep = shade(accentBg, -35);
   const rows: { label: string; n: number; swatch: React.CSSProperties }[] = [
-    { label: "Pokémon", n: counts.pokemon, swatch: { background: "var(--text-primary)" } },
-    { label: "Trainer", n: counts.trainer, swatch: { background: "var(--gradient-brand)" } },
+    { label: "Pokémon", n: counts.pokemon, swatch: { background: `linear-gradient(135deg, ${accentDeep} 0%, ${accentBg} 100%)` } },
+    { label: "Trainer", n: counts.trainer, swatch: { background: "var(--text-primary)" } },
     {
       label: "Energy",
       n: counts.energy,
