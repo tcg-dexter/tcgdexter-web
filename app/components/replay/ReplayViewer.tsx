@@ -112,7 +112,7 @@ const BOARD_VERTICAL_CHROME_PX = 16 + 2 * TAB_CONTENT_PX + TAB_GAP_PX;
  * surface with a "jump to the replay" affordance targets this rather than
  * the viewer's outer wrapper, which starts above the mats at the header.
  * Exported so the caller can't drift from what's actually rendered (see
- * BattleLogPage's VIEW BATTLE pill). Assumes one mounted viewer per page,
+ * BattleLogPage's WATCH REPLAY pill). Assumes one mounted viewer per page,
  * which is true everywhere it's used today.
  */
 export const REPLAY_TOP_MAT_ID = "replay-top-mat";
@@ -126,13 +126,17 @@ export const REPLAY_TOP_MAT_ID = "replay-top-mat";
  * otherwise cover the top of the mat, and viewport-fit=cover means the
  * page's top edge can run under a notch, so the toolbar's own ceiling is
  * the safe-area inset — hence 3.5rem + env(safe-area-inset-top), plus
- * 0.75rem so the mat clears the toolbar's underside instead of butting
- * against it. From xl up the chrome is the two fixed side rails and there
- * is nothing overhead, so only the inset and a little breathing room
- * remain.
+ * 0.75rem of clearance so the mat clears the toolbar's underside instead
+ * of butting against it, plus a further 20px so WATCH REPLAY lands the
+ * mat a bit lower still, not flush under the toolbar. From xl up the
+ * chrome is the two fixed side rails and there is nothing overhead, so
+ * it's just the inset, the same 1.5rem of breathing room, and a smaller
+ * 10px on top of that — desktop already had more headroom than mobile
+ * needed, so it takes a smaller nudge to read as "lower" by a comparable
+ * amount rather than overshooting.
  */
 const REPLAY_TOP_MAT_SCROLL_MT =
-  "scroll-mt-[calc(3.5rem_+_env(safe-area-inset-top)_+_0.75rem)] xl:scroll-mt-[calc(env(safe-area-inset-top)_+_1.5rem)]";
+  "scroll-mt-[calc(3.5rem_+_env(safe-area-inset-top)_+_0.75rem_+_20px)] xl:scroll-mt-[calc(env(safe-area-inset-top)_+_1.5rem_+_10px)]";
 
 const TOTAL_PRIZES = 6;
 
@@ -1576,8 +1580,16 @@ function PlaybackModule({
           options — and while they shared a column with the play button,
           that width fed the row and shoved the capsules in and out. On
           their own lines their width is nobody else's business, so the
-          steppers hold a fixed spread. */}
-      <div className="mt-4 text-center text-[10px] tabular-nums text-text-muted">
+          steppers hold a fixed spread.
+
+          sm:hidden rather than a desktop-only condition: mobile is the
+          narrow viewport where the turn stepper's own label is easy to
+          lose track of one-handed, and this line is the cheap reminder;
+          from sm: up there's more room to actually watch the scrubber and
+          the readout stops earning its keep. Matches this component's own
+          sm: breakpoint (the control row below switches its spacing at
+          the same point) rather than the site chrome's xl:. */}
+      <div className="mt-4 sm:hidden text-center text-[10px] tabular-nums text-text-muted">
         {turnLabel}
       </div>
 
@@ -1587,8 +1599,16 @@ function PlaybackModule({
           capsules at their full spread ran past a phone's content width
           (~343px at 375px viewport) and forced the row to overflow rather
           than wrap, since nothing here is allowed to shrink onto a second
-          line. */}
-      <div className="mt-1.5 flex items-center justify-center gap-1.5 sm:gap-3">
+          line.
+
+          mt-1.5 sm:mt-8: the turn-label line above is display:none from
+          sm: up, which takes its own mt-4 and its line's height of
+          spacing with it — measured at ~33px total (mt-4 + a 10px line +
+          mt-1.5), so sm:mt-8 (32px, the closest step on the scale) stands
+          in for that gap directly on this row, and the scrubber and the
+          control row don't end up crowded together once the label
+          between them disappears. */}
+      <div className="mt-1.5 sm:mt-8 flex items-center justify-center gap-1.5 sm:gap-3">
         <StepCapsule
           label="Action"
           canBack={canStepBack}

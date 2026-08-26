@@ -189,7 +189,7 @@ export default function BattleLogPage({
             leftAlt={playerLabel}
             rightImageUrl={opponentImageUrl}
             rightAlt={opponentLabel}
-            onViewBattle={hasBattleLog ? scrollToReplay : undefined}
+            onWatchReplay={hasBattleLog ? scrollToReplay : undefined}
           />
 
           <div className="flex-1 p-5 md:p-6">
@@ -277,7 +277,7 @@ function BattleBanner({
   leftAlt,
   rightImageUrl,
   rightAlt,
-  onViewBattle,
+  onWatchReplay,
 }: {
   gradient: string;
   ghostImageUrl: string | null;
@@ -289,7 +289,7 @@ function BattleBanner({
    *  log — there's nothing to view, and the page shows the "No battle log
    *  available" card in the viewer's place — and the pill drops with it
    *  rather than rendering a button that scrolls to nothing. */
-  onViewBattle?: () => void;
+  onWatchReplay?: () => void;
 }) {
   return (
     <div
@@ -335,7 +335,7 @@ function BattleBanner({
         />
       )}
 
-      {onViewBattle && (
+      {onWatchReplay && (
         // Bottom-centre, on the panel's one axis of symmetry: the hero pair
         // is centred, so this is the only anchor that meets both cards the
         // same way at every panel size — a corner would tuck under one card
@@ -347,10 +347,10 @@ function BattleBanner({
         // it against the artwork.
         <button
           type="button"
-          onClick={onViewBattle}
-          className="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 md:bottom-4 inline-flex items-center justify-center rounded-full bg-gradient-brand px-5 py-2 text-[11px] font-semibold tracking-[0.15em] text-white shadow-brand hover:shadow-brand-lg transition"
+          onClick={onWatchReplay}
+          className="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 md:bottom-4 inline-flex items-center justify-center rounded-full bg-white px-5 py-2 text-[11px] font-semibold tracking-[0.15em] text-black shadow-md hover:shadow-lg transition"
         >
-          VIEW BATTLE
+          WATCH REPLAY
         </button>
       )}
     </div>
