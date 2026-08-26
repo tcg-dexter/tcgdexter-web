@@ -12,6 +12,11 @@ interface Props {
   id: string;
   /** Parent archetype slug — used for the Save button's clone endpoint. */
   archetypeId: string;
+  /** This variant's 0-based position in the archetype's variant list —
+   *  scopes the Save button's state/clone to THIS variant rather than
+   *  the archetype as a whole (multiple variant cards share an
+   *  archetypeId, so saving one must not mark the others as saved). */
+  variantIndex: number;
   /** Parent archetype display name — used as the header title when this
    *  variant has no specific sub-archetype tag from Limitless. */
   archetypeName: string;
@@ -63,6 +68,7 @@ interface Props {
  */
 export default function MetaVariantCard({
   archetypeId,
+  variantIndex,
   archetypeName,
   annotation,
   variantName,
@@ -229,6 +235,7 @@ export default function MetaVariantCard({
       <div className="relative">
         <DeckCardFooter
           metaArchetypeId={archetypeId}
+          metaVariantIndex={variantIndex}
           initialLikes={0}
           saveHref={href ?? `/meta-archetypes/${archetypeId}`}
           deckName={headerName}

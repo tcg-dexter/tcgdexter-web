@@ -6,19 +6,36 @@ import { buildMetaAnalysis } from "@/lib/buildMetaAnalysis";
 import { primaryPokemonCard } from "@/lib/primaryCardImage";
 
 /**
- * GET    /api/saved-decks/meta/[archetypeId]/clone — has the caller already
- *                                                    saved this meta deck?
- * POST   /api/saved-decks/meta/[archetypeId]/clone — materialise the
- *                                                    archetype's top variant
- *                                                    into the caller's
- *                                                    library (idempotent).
- * DELETE /api/saved-decks/meta/[archetypeId]/clone — remove the saved row(s).
+ * GET    /api/saved-decks/meta/[archetypeId]/clone?variant=N — has the
+ *                                                    caller already saved
+ *                                                    this variant?
+ * POST   /api/saved-decks/meta/[archetypeId]/clone?variant=N — materialise
+ *                                                    variant N (0-based,
+ *                                                    default 0 = top
+ *                                                    variant) into the
+ *                                                    caller's library
+ *                                                    (idempotent).
+ * DELETE /api/saved-decks/meta/[archetypeId]/clone?variant=N — remove the
+ *                                                    saved row for that
+ *                                                    variant.
  *
  * Mirrors the user-deck clone endpoint, except the source isn't a saved_decks
  * row — it's an entry in the static meta-decks.json bundle. We tag the new
- * row with meta_archetype_id so future "is this saved?" lookups don't have
- * to fuzzy-match on analysis JSON.
+ * row with meta_archetype_id + meta_variant_index so future "is this saved?"
+ * lookups don't have to fuzzy-match on analysis JSON, and so distinct
+ * variant cards on the same archetype page get independent save state
+ * instead of one variant's save marking every variant "saved".
+ *
+ * Rows written before meta_variant_index existed are all implicitly variant
+ * 0 (this endpoint only ever cloned the top variant back then), so variant 0
+ * lookups match a NULL column alongside an explicit 0.
  */
+
+function parseVariantIndex(url: string): number {
+  const raw = new URL(url).searchParams.get("variant");
+  const n = raw !== null ? Number.parseInt(raw, 10) : 0;
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
 
 interface DeckCard {
   qty: number;
@@ -68,7 +85,7 @@ function serializeDeckList(cards: DeckCard[]): string {
   return lines.join("\n");
 }
 
-function findArchetype(archetypeId: string) {
+function findArchetype(archetypeId: string, variantIndex: number) {
   const archetypes = archetypesRaw as Archetype[];
   const sorted = [...archetypes].sort(
     (a, b) => b.total_entries - a.total_entries,
@@ -77,15 +94,17 @@ function findArchetype(archetypeId: string) {
   if (idx === -1) return null;
   const arch = sorted[idx];
   const deckData = (metaDecksRaw as MetaDeck[]).find((d) => d.id === arch.id);
-  const cards = deckData?.variants?.[0]?.cards ?? deckData?.cards ?? [];
+  const variant = deckData?.variants?.[variantIndex] ?? deckData?.variants?.[0];
+  const cards = variant?.cards ?? deckData?.cards ?? [];
   return { arch, rank: idx + 1, cards };
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ archetypeId: string }> },
 ) {
   const { archetypeId } = await params;
+  const variantIndex = parseVariantIndex(req.url);
   const supabase = await createClient();
   const {
     data: { user },
@@ -95,22 +114,26 @@ export async function GET(
     return NextResponse.json({ saved: false, savedId: null });
   }
 
-  const { data } = await supabase
+  let query = supabase
     .from("saved_decks")
     .select("id")
     .eq("meta_archetype_id", archetypeId)
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
+    .eq("user_id", user.id);
+  query =
+    variantIndex === 0
+      ? query.or("meta_variant_index.is.null,meta_variant_index.eq.0")
+      : query.eq("meta_variant_index", variantIndex);
+  const { data } = await query.limit(1).maybeSingle();
 
   return NextResponse.json({ saved: !!data, savedId: data?.id ?? null });
 }
 
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ archetypeId: string }> },
 ) {
   const { archetypeId } = await params;
+  const variantIndex = parseVariantIndex(req.url);
   const supabase = await createClient();
   const {
     data: { user },
@@ -124,18 +147,21 @@ export async function POST(
   }
 
   // Idempotent — return existing save when there is one.
-  const { data: existing } = await supabase
+  let existingQuery = supabase
     .from("saved_decks")
     .select("id")
     .eq("meta_archetype_id", archetypeId)
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
+    .eq("user_id", user.id);
+  existingQuery =
+    variantIndex === 0
+      ? existingQuery.or("meta_variant_index.is.null,meta_variant_index.eq.0")
+      : existingQuery.eq("meta_variant_index", variantIndex);
+  const { data: existing } = await existingQuery.limit(1).maybeSingle();
   if (existing) {
     return NextResponse.json({ saved: true, savedId: existing.id });
   }
 
-  const found = findArchetype(archetypeId);
+  const found = findArchetype(archetypeId, variantIndex);
   if (!found || found.cards.length === 0) {
     return NextResponse.json(
       { error: "Meta archetype not found." },
@@ -162,6 +188,7 @@ export async function POST(
       deck_list: deckList,
       analysis,
       meta_archetype_id: archetypeId,
+      meta_variant_index: variantIndex,
       is_public: false,
       archetype_id: archetypeId,
       archetype_name: arch.name,
@@ -183,10 +210,11 @@ export async function POST(
 }
 
 export async function DELETE(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ archetypeId: string }> },
 ) {
   const { archetypeId } = await params;
+  const variantIndex = parseVariantIndex(req.url);
   const supabase = await createClient();
   const {
     data: { user },
@@ -199,11 +227,16 @@ export async function DELETE(
     );
   }
 
-  const { error } = await supabase
+  let query = supabase
     .from("saved_decks")
     .delete()
     .eq("meta_archetype_id", archetypeId)
     .eq("user_id", user.id);
+  query =
+    variantIndex === 0
+      ? query.or("meta_variant_index.is.null,meta_variant_index.eq.0")
+      : query.eq("meta_variant_index", variantIndex);
+  const { error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });

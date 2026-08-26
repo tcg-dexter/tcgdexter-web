@@ -22,6 +22,11 @@ interface Props {
   ownerUserId?: string;
   /** Meta-archetype slug (e.g. "dragapult-ex") — present on meta-deck cards. */
   metaArchetypeId?: string;
+  /** 0-based position in the archetype's variant list, when metaArchetypeId
+   *  is set. Multiple variant cards share one metaArchetypeId, so this is
+   *  what scopes the save-state lookup and clone to THIS variant instead of
+   *  marking every variant of the archetype as saved. Defaults to 0. */
+  metaVariantIndex?: number;
   initialLikes: number;
   /** Canonical URL for the deck — used by Share (QR) and the sign-in
    *  prompt's redirect target. */
@@ -43,6 +48,7 @@ export default function DeckCardFooter({
   deckId,
   ownerUserId,
   metaArchetypeId,
+  metaVariantIndex = 0,
   initialLikes,
   saveHref,
   deckName,
@@ -115,11 +121,19 @@ export default function DeckCardFooter({
             });
         }
       } else if (metaArchetypeId) {
-        supabase
+        let query = supabase
           .from("saved_decks")
           .select("id")
           .eq("meta_archetype_id", metaArchetypeId)
-          .eq("user_id", user.id)
+          .eq("user_id", user.id);
+        // Pre-existing rows predate the variant-index column and are all
+        // implicitly variant 0 (the clone endpoint always cloned the top
+        // variant) — match those alongside explicit 0s.
+        query =
+          metaVariantIndex === 0
+            ? query.or("meta_variant_index.is.null,meta_variant_index.eq.0")
+            : query.eq("meta_variant_index", metaVariantIndex);
+        query
           .limit(1)
           .maybeSingle()
           .then(({ data }) => {
@@ -131,7 +145,7 @@ export default function DeckCardFooter({
     return () => {
       cancelled = true;
     };
-  }, [deckId, ownerUserId, metaArchetypeId]);
+  }, [deckId, ownerUserId, metaArchetypeId, metaVariantIndex]);
 
   // Lock body scroll while the share modal is open.
   useEffect(() => {
@@ -202,7 +216,7 @@ export default function DeckCardFooter({
     const endpoint =
       saveMode === "user"
         ? `/api/saved-decks/${deckId}/clone`
-        : `/api/saved-decks/meta/${metaArchetypeId}/clone`;
+        : `/api/saved-decks/meta/${metaArchetypeId}/clone?variant=${metaVariantIndex}`;
 
     const res = await fetch(endpoint, {
       method: newSaved ? "POST" : "DELETE",
