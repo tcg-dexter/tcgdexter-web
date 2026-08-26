@@ -81,7 +81,10 @@ function normalize(team: (TeamCardRef | null)[]): (TeamCardRef | null)[] {
 const STACK = SLOT_GEOMETRY[0];
 
 /** Milliseconds between one card leaving the stack and the next. Small
- *  enough that the whole fan is open in well under a second. */
+ *  enough that the whole fan is open in well under a second. Rightmost
+ *  card leads — its delay is 0 and delay grows moving left toward the
+ *  stack — so the fan reads as opening away from where the cards started
+ *  rather than as a ripple moving in the same direction as the stack. */
 const FAN_STAGGER_MS = 45;
 
 function slotStyle(g: SlotGeometry, index: number): CSSProperties {
@@ -102,7 +105,7 @@ function slotStyle(g: SlotGeometry, index: number): CSSProperties {
     "--fan-rot-start": `${STACK.rotationDeg}deg`,
     "--fan-dx-base": `${g.fanDx}%`,
     "--fan-dx-sm": `${g.fanDxDesktop}%`,
-    "--fan-delay": `${index * FAN_STAGGER_MS}ms`,
+    "--fan-delay": `${(SLOTS - 1 - index) * FAN_STAGGER_MS}ms`,
     zIndex: g.zIndex,
   } as CSSProperties;
 }

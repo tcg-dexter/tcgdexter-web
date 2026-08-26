@@ -107,7 +107,9 @@ const CARD_MAX_ROTATION_DEG = 12;     // degrees at the leftmost/rightmost
 
 /** Milliseconds between one card leaving the stack and the next, on the
  *  banner's load animation. Matches TeamCards' fan on the user profile so
- *  the two banners open at the same rate. */
+ *  the two banners open at the same rate. Rightmost card leads — its delay
+ *  is 0 and delay grows moving left toward the stack — the same direction
+ *  TeamCards uses. */
 const FAN_STAGGER_MS = 45;
 
 interface Props {
@@ -308,7 +310,7 @@ export default function MetaProfileHeader({
                     "--fan-rot-start": `${stackRotationDeg}deg`,
                     "--fan-dx-base": `${((stackLeft - left) / CARD_WIDTH_PCT) * 100}%`,
                     "--fan-dx-sm": `${((stackLeftDesktop - leftDesktop) / CARD_WIDTH_PCT) * 100}%`,
-                    "--fan-delay": `${i * FAN_STAGGER_MS}ms`,
+                    "--fan-delay": `${(cardCount - 1 - i) * FAN_STAGGER_MS}ms`,
                     zIndex: i,
                   } as CSSProperties}
                 />
