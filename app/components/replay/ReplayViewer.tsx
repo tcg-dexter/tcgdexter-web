@@ -127,16 +127,24 @@ export const REPLAY_TOP_MAT_ID = "replay-top-mat";
  * page's top edge can run under a notch, so the toolbar's own ceiling is
  * the safe-area inset — hence 3.5rem + env(safe-area-inset-top), plus
  * 0.75rem of clearance so the mat clears the toolbar's underside instead
- * of butting against it, plus a further 20px so WATCH REPLAY lands the
- * mat a bit lower still, not flush under the toolbar. From xl up the
- * chrome is the two fixed side rails and there is nothing overhead, so
- * it's just the inset, the same 1.5rem of breathing room, and a smaller
- * 10px on top of that — desktop already had more headroom than mobile
- * needed, so it takes a smaller nudge to read as "lower" by a comparable
- * amount rather than overshooting.
+ * of butting against it, plus a further 6px so WATCH REPLAY still lands
+ * the mat a touch lower than flush, without holding back as much scroll
+ * as before. From xl up the chrome is the two fixed side rails and there
+ * is nothing overhead, so it's just the inset, the same 1.5rem of
+ * breathing room, and a smaller 10px on top of that.
+ *
+ * A LARGER value here means LESS scrolling, not more — scroll-margin-top
+ * reserves that much space above the target, so growing it makes the
+ * browser stop earlier and leaves more of the page above the mat still
+ * visible. Confirmed directly (same element, same position, only the
+ * margin changed): 20px of margin landed at scrollY 1980, 200px of margin
+ * on the exact same target landed at scrollY 1800 — less scroll, not
+ * more. That's the opposite of what "WATCH REPLAY doesn't scroll down far
+ * enough" needs, which is why the mobile value shrank here (was 20px) —
+ * a smaller reservation lets the browser travel further down the page.
  */
 const REPLAY_TOP_MAT_SCROLL_MT =
-  "scroll-mt-[calc(3.5rem_+_env(safe-area-inset-top)_+_0.75rem_+_20px)] xl:scroll-mt-[calc(env(safe-area-inset-top)_+_1.5rem_+_10px)]";
+  "scroll-mt-[calc(3.5rem_+_env(safe-area-inset-top)_+_0.75rem_+_6px)] xl:scroll-mt-[calc(env(safe-area-inset-top)_+_1.5rem_+_10px)]";
 
 const TOTAL_PRIZES = 6;
 
