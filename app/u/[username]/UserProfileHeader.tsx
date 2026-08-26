@@ -162,8 +162,14 @@ export default function UserProfileHeader({
         </div>
       )}
 
-      {/* Bio section. Avatar overlaps the banner via negative margin. */}
-      <div className="mx-auto max-w-2xl px-6">
+      {/* Bio section. Avatar overlaps the banner via negative margin.
+          `relative z-10` is load-bearing, not decorative: this block is
+          otherwise a plain non-positioned box, and CSS paints non-positioned
+          in-flow content *before* any positioned z-0 sibling regardless of
+          DOM order — so without an explicit stacking level here, the hero
+          glow (position:absolute, z-0, above) would paint on top of
+          whatever part of the bio overlaps it instead of behind it. */}
+      <div className="relative z-10 mx-auto max-w-2xl px-6">
         <div className="flex items-end justify-between gap-3 -mt-16 sm:-mt-20">
           {isOwner ? (
             <AvatarPicker avatarUrl={avatarUrl} gradient={gradient} />
