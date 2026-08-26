@@ -27,6 +27,19 @@ import { useEffect, useState } from "react";
  * cell reproduces the half-leading a normal inline glyph gets, so nothing
  * shifts by a pixel when the roll finishes and the plain text comes back.
  *
+ * The animated markup is a run of separate inline spans — one per
+ * character — rather than one text node, which reintroduces a wrap risk
+ * the plain text never had. Browsers give adjacent inline-block boxes a
+ * soft line-break opportunity at their edges even with no whitespace
+ * between them, which plain text (an unbroken run of characters) doesn't
+ * get. A value like "42.7%" can sit well inside its tile as one line of
+ * text yet still fold its "%" onto a second line the moment it's rendered
+ * as separate spans — confirmed in a browser: the split markup wraps at a
+ * width the same text renders on one line at. `whitespace-nowrap` on the
+ * animated wrapper closes that off, so the two representations agree on
+ * whether the value fits instead of only the plain one ever getting to
+ * decide.
+ *
  * SSR renders the final value, and so does the first client render — the
  * roll only starts in an effect, so there is no hydration mismatch and no
  * intermediate glyph is ever sent down the wire.
@@ -110,7 +123,7 @@ export default function RollingNumber({
       {/* The roll is decoration. Assistive tech gets the settled value the
           whole way through rather than a counter it would announce. */}
       <span className="sr-only">{value}</span>
-      <span aria-hidden="true">
+      <span aria-hidden="true" className="whitespace-nowrap">
         {chars.map((ch, i) => {
           if (ch < "0" || ch > "9") {
             return <span key={i}>{ch}</span>;
