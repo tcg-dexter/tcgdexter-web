@@ -20,8 +20,9 @@ import {
 } from "@/app/admin-tools/deck-mat/DeckMatClient";
 import { shade } from "@/lib/color";
 
-// Hardcoded default mat style for the replay/play boards.
-const BOARD_GRADIENT = MAT_STYLES.find((s) => s.key === "fire-lightning")!.gradient;
+// Default mat gradient when a caller doesn't resolve one of its own — the
+// AI-player practice mode boards (PlayClient.tsx) still use this as-is.
+export const BOARD_GRADIENT = MAT_STYLES.find((s) => s.key === "fire-lightning")!.gradient;
 const BOARD_TEXTURE = TEXTURES.find((t) => t.key === "lines")!;
 
 export interface PokemonFrame {
@@ -795,6 +796,7 @@ export function PlayerMat({
   interact,
   instant,
   onDiscardClick,
+  matGradient = BOARD_GRADIENT,
   face = "art",
 }: {
   side: "player" | "opponent";
@@ -816,6 +818,11 @@ export function PlayerMat({
    *  elsewhere (AI-player practice mode), where the pile keeps its default
    *  single-card behavior. */
   onDiscardClick?: () => void;
+  /** CSS gradient for this mat's background. Defaults to BOARD_GRADIENT
+   *  (the fixed fire-lightning look every board used to share) — the
+   *  Replay viewer overrides it per side with a gradient keyed to that
+   *  deck's hero Pokémon energy type. */
+  matGradient?: string;
   /** Render the destination state immediately instead of animating cards
    *  into it. Replay sets this when the playhead jumps (scrub / turn skip),
    *  where a slot-to-slot animation would trace a path the game never took
@@ -932,7 +939,7 @@ export function PlayerMat({
         style={{
           padding: MAT_PADDING,
           height: matWidth > 0 ? matWidth * MAT_ASPECT : undefined,
-          backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(BOARD_TEXTURE.svg)}"), ${BOARD_GRADIENT}`,
+          backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(BOARD_TEXTURE.svg)}"), ${matGradient}`,
           backgroundSize: `${BOARD_TEXTURE.w * texScale}px ${BOARD_TEXTURE.h * texScale}px, auto`,
         }}
       >

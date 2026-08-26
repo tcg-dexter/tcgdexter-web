@@ -133,6 +133,7 @@ export default function AppearsInCarousel({
                   id={v.id}
                   href={v.href}
                   archetypeId={v.archetypeId}
+                  variantIndex={v.variantIndex}
                   archetypeName={v.archetypeName}
                   annotation={v.annotation}
                   variantName={v.variantName}

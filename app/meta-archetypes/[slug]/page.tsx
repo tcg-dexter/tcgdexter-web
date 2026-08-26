@@ -292,6 +292,7 @@ export default async function MetaDeckDetailPage({
                   id={v.id}
                   href={v.href}
                   archetypeId={arch.id}
+                  variantIndex={i}
                   archetypeName={arch.name}
                   annotation={arch.annotation}
                   variantName={v.variantName}

@@ -256,6 +256,7 @@ export default function TrainersClient({ trainers, isAuthed }: Props) {
             <TrainerCard
               key={t.id}
               trainer={t}
+              isAuthed={isAuthed}
               index={i}
               skipEntranceAnimation={hasAnimatedOnceRef.current}
             />
@@ -264,7 +265,12 @@ export default function TrainersClient({ trainers, isAuthed }: Props) {
       ) : (
         <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden">
           {filtered.map((t, i) => (
-            <TrainerRow key={t.id} trainer={t} isLast={i === filtered.length - 1} />
+            <TrainerRow
+              key={t.id}
+              trainer={t}
+              isAuthed={isAuthed}
+              isLast={i === filtered.length - 1}
+            />
           ))}
         </div>
       )}

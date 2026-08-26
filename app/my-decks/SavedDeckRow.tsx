@@ -7,19 +7,36 @@ import { type BattleFormData } from "@/app/components/BattleForm";
 import BattleEntry from "@/app/components/BattleEntry";
 import type { UserDeckCardProps } from "@/app/components/DeckPostCard";
 import { clientTz, celebrateStreak } from "@/lib/streak-client";
+import { shade } from "@/lib/color";
 
 /** Compact three-segment composition bar — the List-view counterpart to
- *  CompositionRing, sharing the same color scheme (black Pokémon, brand
- *  gradient Trainer, white+black-border Energy). */
-export function CompositionBar({ counts }: { counts: NonNullable<UserDeckCardProps["counts"]> }) {
+ *  CompositionRing, sharing the same color scheme: Pokémon takes a
+ *  gradient keyed to the deck's hero Pokémon energy type (the same accent
+ *  color the card's avatar circle uses), Trainer is solid ink, Energy is
+ *  white with a black-ink border. */
+export function CompositionBar({
+  counts,
+  heroColor,
+}: {
+  counts: NonNullable<UserDeckCardProps["counts"]>;
+  /** Deck's hero-Pokémon accent color (UserDeckCardProps.iconBg). Falls
+   *  back to the same neutral DeckBanner uses when no primary Pokémon
+   *  resolved a type. */
+  heroColor?: string | null;
+}) {
   const total = counts.pokemon + counts.trainer + counts.energy;
   if (total <= 0) return null;
   const pct = (n: number) => `${((n / total) * 100).toFixed(1)}%`;
+  const accentBg = heroColor ?? "#B0A89E";
+  const accentDeep = shade(accentBg, -35);
   return (
     <div className="flex flex-col gap-1 w-full max-w-[140px]">
       <div className="flex h-[7px] gap-[2px] rounded-full overflow-hidden">
-        <div className="h-full rounded-full" style={{ width: pct(counts.pokemon), background: "var(--text-primary)" }} />
-        <div className="h-full rounded-full" style={{ width: pct(counts.trainer), background: "var(--gradient-brand)" }} />
+        <div
+          className="h-full rounded-full"
+          style={{ width: pct(counts.pokemon), background: `linear-gradient(120deg, ${accentDeep} 0%, ${accentBg} 100%)` }}
+        />
+        <div className="h-full rounded-full" style={{ width: pct(counts.trainer), background: "var(--text-primary)" }} />
         <div
           className="h-full rounded-full"
           style={{ width: pct(counts.energy), background: "#ffffff", border: "1px solid var(--text-primary)", boxSizing: "border-box" }}
@@ -85,6 +102,7 @@ export default function SavedDeckRow({
   counts,
   wl,
   updatedAt,
+  iconBg,
   isLast,
 }: UserDeckCardProps & { isLast?: boolean }) {
   const router = useRouter();
@@ -141,7 +159,7 @@ export default function SavedDeckRow({
         </div>
 
         <div className="w-[150px] shrink-0 hidden md:block">
-          {counts ? <CompositionBar counts={counts} /> : null}
+          {counts ? <CompositionBar counts={counts} heroColor={iconBg} /> : null}
         </div>
 
         <div className="w-[70px] shrink-0 hidden lg:block text-[13px] font-bold text-text-secondary tabular-nums">

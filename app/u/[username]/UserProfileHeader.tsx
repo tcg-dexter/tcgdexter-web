@@ -1,9 +1,10 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { shade } from "@/lib/color";
 import { ENERGY_HEX } from "@/app/components/DeckProfileView";
 import { StatCard } from "@/app/components/StatCard";
 import AvatarPicker from "./AvatarPicker";
 import AnimatedGradient from "@/app/components/AnimatedGradient";
+import { FAN_TOTAL_MS } from "@/lib/entranceTiming";
 
 /**
  * Energy-accent keys the picker (and DB check constraint) accept.
@@ -127,6 +128,26 @@ export default function UserProfileHeader({
         </div>
       )}
 
+      {/* Hero glow — dissolves in behind the card fan once it's done
+          settling (see .dx-hero-glow in globals.css), sitting between the
+          gradient and the fan in DOM order so it paints on top of the one
+          and behind the other without needing an explicit z-index dance. */}
+      {bannerFan && (
+        <div
+          aria-hidden="true"
+          className={`absolute inset-x-0 top-0 ${bannerBox} overflow-hidden z-0 pointer-events-none flex items-center justify-center`}
+        >
+          <div
+            className="dx-hero-glow w-[60%] aspect-square rounded-full"
+            style={{
+              background:
+                "radial-gradient(circle, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 65%)",
+              "--glow-start-delay": `${FAN_TOTAL_MS}ms`,
+            } as CSSProperties}
+          />
+        </div>
+      )}
+
       {/* Team-card fan. Sized and clipped to the exact same box as the
           banner (unlike bannerOverlay, this wrapper keeps
           overflow-hidden) so each card's bottom edge crops flush with
@@ -141,8 +162,14 @@ export default function UserProfileHeader({
         </div>
       )}
 
-      {/* Bio section. Avatar overlaps the banner via negative margin. */}
-      <div className="mx-auto max-w-2xl px-6">
+      {/* Bio section. Avatar overlaps the banner via negative margin.
+          `relative z-10` is load-bearing, not decorative: this block is
+          otherwise a plain non-positioned box, and CSS paints non-positioned
+          in-flow content *before* any positioned z-0 sibling regardless of
+          DOM order — so without an explicit stacking level here, the hero
+          glow (position:absolute, z-0, above) would paint on top of
+          whatever part of the bio overlaps it instead of behind it. */}
+      <div className="relative z-10 mx-auto max-w-2xl px-6">
         <div className="flex items-end justify-between gap-3 -mt-16 sm:-mt-20">
           {isOwner ? (
             <AvatarPicker avatarUrl={avatarUrl} gradient={gradient} />

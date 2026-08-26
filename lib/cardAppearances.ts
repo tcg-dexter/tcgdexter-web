@@ -56,6 +56,9 @@ export interface CardAppearance {
   href: string;
   /** Parent archetype slug — used for the Save button's clone endpoint. */
   archetypeId: string;
+  /** 0-based position in the archetype's variant list — scopes the Save
+   *  button's state/clone to this variant. */
+  variantIndex: number;
   archetypeName: string;
   annotation?: string;
   variantName: string | null;
@@ -167,6 +170,7 @@ function buildAppearance(m: Match): CardAppearance {
   return {
     id: `${archetype.id}-v${variantIndex}`,
     href: `/meta-archetypes/${archetype.id}/${variantIndex + 1}`,
+    variantIndex,
     archetypeId: archetype.id,
     archetypeName: archetype.name,
     annotation: archetype.annotation,

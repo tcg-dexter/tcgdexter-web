@@ -279,3 +279,37 @@ body.card-viewer-open [data-back-button] {
     animation: none;
   }
 }
+
+/* Hero glow — the soft white radial disc behind a banner's card fan, same
+   treatment as the trainer spotlight template's "Partner Pokémon" glow
+   (SpotlightTemplate.tsx). Dissolves in rather than appearing with the
+   cards: it starts at opacity 0 and only fades up once the whole fan has
+   settled, so it reads as the fan's own presence lighting the banner
+   rather than one more thing entering at once. animation-delay is set
+   inline per caller from FAN_TOTAL_MS (lib/entranceTiming.ts) — the same
+   fixed total the fan and RollingNumber already key off — the 1320ms
+   fallback here only covers a caller that forgets to set it. */
+@keyframes dx-glow-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.dx-hero-glow {
+  opacity: 0;
+  animation-name: dx-glow-in;
+  animation-duration: 700ms;
+  animation-timing-function: ease-out;
+  animation-delay: var(--glow-start-delay, 1320ms);
+  animation-fill-mode: forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dx-hero-glow {
+    opacity: 1;
+    animation: none;
+  }
+}

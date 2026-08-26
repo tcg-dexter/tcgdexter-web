@@ -10,6 +10,7 @@ import ListsView from "./ListsView";
 import InventoryProvider, { useInventory } from "./InventoryContext";
 import PillSelect from "@/app/components/ui/PillSelect";
 import GridListToggle from "@/app/components/ui/GridListToggle";
+import Pagination from "@/app/components/ui/Pagination";
 import {
   OwnershipRadios,
   FacetGroup,
@@ -539,57 +540,6 @@ function CatalogBody({
         onAdded={exitSelectMode}
       />
     </>
-  );
-}
-
-function Pagination({
-  page,
-  totalPages,
-  pageSize,
-  onPage,
-  onPageSize,
-}: {
-  page: number;
-  totalPages: number;
-  pageSize: number;
-  onPage: (p: number) => void;
-  onPageSize: (ps: number) => void;
-}) {
-  const canPrev = page > 1;
-  const canNext = page < totalPages;
-  return (
-    <div className="mt-6 flex items-center justify-between gap-2 flex-wrap">
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => onPage(page - 1)}
-          disabled={!canPrev}
-          className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white dark:bg-surface-2 disabled:opacity-40 hover:bg-surface transition-colors"
-        >
-          ← Prev
-        </button>
-        <span className="text-xs text-text-secondary">
-          Page {page} of {totalPages}
-        </span>
-        <button
-          onClick={() => onPage(page + 1)}
-          disabled={!canNext}
-          className="text-xs font-semibold px-3 py-1.5 rounded-full border border-black/10 bg-white dark:bg-surface-2 disabled:opacity-40 hover:bg-surface transition-colors"
-        >
-          Next →
-        </button>
-      </div>
-      <div className="flex items-center gap-2 text-xs text-text-secondary">
-        <span>Per page:</span>
-        <PillSelect
-          value={pageSize}
-          onChange={(e) => onPageSize(Number(e.target.value))}
-        >
-          <option value={60}>60</option>
-          <option value={120}>120</option>
-          <option value={240}>240</option>
-        </PillSelect>
-      </div>
-    </div>
   );
 }
 

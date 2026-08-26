@@ -867,6 +867,7 @@ export default function DesignLibraryClient() {
             <MetaVariantCard
               id="design-library-demo-variant"
               archetypeId="design-library-demo-archetype"
+              variantIndex={0}
               archetypeName="Dragapult ex"
               variantName="Dragapult Noivern"
               iconUrl={null}

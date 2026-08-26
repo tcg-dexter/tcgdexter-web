@@ -21,6 +21,7 @@ import type {
   ReplayPayload,
 } from "@/lib/replay/frames";
 import {
+  BOARD_GRADIENT,
   CARD_BACK_URL,
   InspectContext,
   PlayerMat,
@@ -29,6 +30,22 @@ import {
   type InspectTarget,
 } from "@/app/admin-tools/replay/BoardKit";
 import { MAT_ASPECT } from "@/lib/playmat-layout";
+import { MAT_STYLES } from "@/app/admin-tools/deck-mat/DeckMatClient";
+import { lookupCard } from "@/lib/engine";
+
+/**
+ * Mat gradient for a side, keyed off that deck's hero Pokémon (the
+ * highest-damage attacker across the game — ReplayPayload's
+ * playerPrimaryName/opponentPrimaryName) rather than the fixed
+ * fire-lightning look every board used to share. MAT_STYLES already has
+ * one gradient per energy type (same key set as the card catalog's
+ * `types`), so this is a straight name → type → gradient lookup with the
+ * old default as the fallback for a catalog miss or a colorless hero.
+ */
+function matGradientForPrimary(name: string | null): string {
+  const type = name ? lookupCard(name)?.types?.[0] : null;
+  return (type && MAT_STYLES.find((s) => s.key === type)?.gradient) || BOARD_GRADIENT;
+}
 
 // Fires synchronously before first paint on the client (prevents card-width
 // overflow flash) and falls back to useEffect during SSR to avoid the
@@ -1275,6 +1292,8 @@ function Board({
   error,
   heightBudget,
   instant,
+  playerMatGradient,
+  opponentMatGradient,
   matInspect,
   discardInspect,
   inspect,
@@ -1296,6 +1315,11 @@ function Board({
    *  ambient container width — see BOARD_VERTICAL_CHROME_PX. Null falls
    *  back to the original measure-the-container behavior (mobile). */
   heightBudget: number | null;
+  /** CSS gradient for each side's mat, keyed to that deck's hero Pokémon
+   *  energy type — resolved once in ReplayViewer from the loaded payload's
+   *  playerPrimaryName/opponentPrimaryName rather than per-frame. */
+  playerMatGradient: string;
+  opponentMatGradient: string;
   /** Stage 1 (per mat): what the mat-overlay card inspector is showing over
    *  each mat, if anything. Both mats can hold one at once — see
    *  ReplayViewer, which owns this (and everything else inspector-related)
@@ -1400,6 +1424,7 @@ function Board({
               cardWidth={cardWidth}
               matWidth={matWidth}
               instant={instant}
+              matGradient={opponentMatGradient}
               onDiscardClick={() => onOpenDiscardInspect("opponent")}
             />
             <AnimatePresence>
@@ -1477,6 +1502,7 @@ function Board({
               cardWidth={cardWidth}
               matWidth={matWidth}
               instant={instant}
+              matGradient={playerMatGradient}
               onDiscardClick={() => onOpenDiscardInspect("player")}
             />
             <AnimatePresence>
@@ -2100,6 +2126,17 @@ export default function ReplayViewer({
     return data.frames[Math.min(frameIndex, data.frames.length - 1)] ?? null;
   }, [data, frameIndex]);
 
+  // One gradient per side, resolved once per battle (not per frame — the
+  // hero Pokémon is fixed for the whole game).
+  const playerMatGradient = useMemo(
+    () => matGradientForPrimary(data?.playerPrimaryName ?? null),
+    [data?.playerPrimaryName],
+  );
+  const opponentMatGradient = useMemo(
+    () => matGradientForPrimary(data?.opponentPrimaryName ?? null),
+    [data?.opponentPrimaryName],
+  );
+
   const frameCount = data?.frames.length ?? 0;
   // Turn numbers are monotonic (0 = setup, then 1, 2, 3… per lib/engine/sim's
   // state.turn.number), so the last frame's is the battle's turn total.
@@ -2298,6 +2335,8 @@ export default function ReplayViewer({
             error={error}
             heightBudget={heightBudget}
             instant={instant}
+            playerMatGradient={playerMatGradient}
+            opponentMatGradient={opponentMatGradient}
             matInspect={matInspect}
             discardInspect={discardInspect}
             inspect={inspect}
