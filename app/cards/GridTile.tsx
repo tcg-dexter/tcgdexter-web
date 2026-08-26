@@ -106,18 +106,26 @@ export default function GridTile({
               type="button"
               onClick={handleFooterClick}
               aria-label="Add to list"
-              className="pointer-events-auto ml-auto shrink-0 aspect-square rounded-full border border-white/70 bg-black px-0.5 py-0.5 flex items-center justify-center hover:bg-neutral-800 transition-colors"
+              className="pointer-events-auto ml-auto shrink-0 flex items-center justify-center text-white/90 hover:text-white transition-colors"
             >
+              {/* Same glyph as the header's Lists toggle (CardsClient.tsx),
+                  without its circular button chrome. */}
               <svg
                 aria-hidden="true"
                 viewBox="0 0 20 20"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="2.5"
+                strokeWidth="1.75"
                 strokeLinecap="round"
-                className="w-3 h-3"
+                strokeLinejoin="round"
+                className="w-4 h-4"
               >
-                <path d="M10 4v12M4 10h12" />
+                <path d="M7 5.5h9" />
+                <path d="M7 10h9" />
+                <path d="M7 14.5h9" />
+                <path d="M4 5.5h.01" />
+                <path d="M4 10h.01" />
+                <path d="M4 14.5h.01" />
               </svg>
             </button>
           </div>
