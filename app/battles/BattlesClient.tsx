@@ -193,12 +193,6 @@ export default function BattlesClient({
         <PlayerLeaderboard players={leaderboard} currentUsername={currentUsername} />
       ) : (
       <>
-      {/* Featured Battle hero — shown in the default "sections" view; a
-          search or filter takes over the surface, so the hero yields when
-          the user is drilling into something specific. */}
-      {featuredBattle && !isSearching && effectiveViewMode === "sections" && (
-        <FeaturedBattleHero battle={featuredBattle} stats={featuredBattleStats} />
-      )}
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
         <div className="flex-1 relative">
@@ -286,6 +280,13 @@ export default function BattlesClient({
             })}
           </div>
         </div>
+      )}
+
+      {/* Featured Battle hero — shown in the default "sections" view; a
+          search or filter takes over the surface, so the hero yields when
+          the user is drilling into something specific. */}
+      {featuredBattle && !isSearching && effectiveViewMode === "sections" && (
+        <FeaturedBattleHero battle={featuredBattle} stats={featuredBattleStats} />
       )}
 
       {/* ── Sections view: Today / This Week / This Month ────────── */}
