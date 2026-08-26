@@ -106,6 +106,75 @@ const TAB_GAP_PX = 8;
 // this constant sizes, so measuring them would feed back into their width.
 const BOARD_VERTICAL_CHROME_PX = 16 + 2 * TAB_CONTENT_PX + TAB_GAP_PX;
 
+/**
+ * DOM id on the top (opponent) mat — the board's first painted row, so
+ * scrolling it to the top of the window puts the whole board in view. Any
+ * surface with a "jump to the replay" affordance targets this rather than
+ * the viewer's outer wrapper, which starts above the mats at the header.
+ * Exported so the caller can't drift from what's actually rendered (see
+ * BattleLogPage's WATCH REPLAY pill). Assumes one mounted viewer per page,
+ * which is true everywhere it's used today.
+ */
+export const REPLAY_TOP_MAT_ID = "replay-top-mat";
+
+/**
+ * Scroll offset for that anchor, expressed as scroll-margin rather than as
+ * arithmetic at the call site: it belongs with the element being scrolled
+ * to, and scrollIntoView({ block: "start" }) honors it for free.
+ *
+ * The goal is flush: WATCH REPLAY puts the top mat at the top of the
+ * browser's visible content, not a comfortable distance below it. So this
+ * carries ONLY the clearance that's mechanically required to keep the mat
+ * out from under fixed chrome, plus a trim taken back off that minimum on
+ * mobile so the destination reads as reaching a touch further down the
+ * page still — bumped four times now (10px, 10px, 10px, then a landed-
+ * position target of 20px from the viewport top, which is a 36px trim),
+ * each time by request after checking the previous amount on a real
+ * device. Desktop stays at exactly its mechanical minimum — see below —
+ * since that's already confirmed right; nothing is piled on top of it,
+ * and nothing should be.
+ *
+ * Below xl the site chrome is a sticky 56px (h-14) toolbar that would
+ * otherwise cover the top of the mat, and viewport-fit=cover means the
+ * page's top edge can run under a notch, so the toolbar's own ceiling is
+ * the safe-area inset — 3.5rem + env(safe-area-inset-top) is that
+ * mechanical minimum, and the 36px trim comes off it, landing the mat's
+ * top edge 20px below the viewport top (56 - 36). Comfortably past half
+ * the toolbar's own 56px height now: more of the mat sits behind it than
+ * in front of it. The toolbar is translucent and blurred (`backdrop-blur-
+ * xl bg-bg/70`, SiteNav.tsx), not opaque, so that sliver stays faintly
+ * visible rather than being hard-clipped, but this is well past the point
+ * where a bigger trim reads as "reaches a touch further" rather than "the
+ * mat looks cut off" — if this needs to grow again, worth checking on a
+ * real device rather than nudging blind. From xl up the chrome is the two
+ * fixed side rails and there is nothing overhead, so it's exactly the
+ * inset (usually 0 outside a notched device) and nothing else —
+ * scrollIntoView lands the mat's top edge at the literal top of the
+ * viewport there.
+ *
+ * Recorded because it's non-obvious and bit this exact constant twice: a
+ * LARGER value here means LESS scrolling, not more. scroll-margin-top
+ * reserves that much space above the target, so growing it makes the
+ * browser stop earlier and leaves more of the page above the mat still
+ * visible — confirmed directly (same element, same position, only the
+ * margin changed): 20px of margin landed at scrollY 1980, 200px of margin
+ * on the exact same target landed at scrollY 1800, less travel as the
+ * margin grows. "The destination should sit lower on the page" means a
+ * SMALLER value here (or, as above, a small trim off the minimum), never
+ * a larger one.
+ *
+ * The 36px trim below is a literal, not a variable pulled in from a named
+ * constant: Tailwind's class scanner reads this file as plain text to
+ * decide which arbitrary-value utilities to generate, and a template
+ * literal with an interpolated number produces a class name the scanner
+ * can never see as a whole token — the utility silently fails to generate
+ * and the trim does nothing at runtime with no error anywhere. Learned by
+ * almost shipping exactly that. Change the "36px" by hand if it moves —
+ * or, more directly, solve for it as (56 - target landed position).
+ */
+const REPLAY_TOP_MAT_SCROLL_MT =
+  "scroll-mt-[calc(3.5rem_+_env(safe-area-inset-top)_-_36px)] xl:scroll-mt-[env(safe-area-inset-top)]";
+
 const TOTAL_PRIZES = 6;
 
 /**
@@ -600,7 +669,8 @@ const HAND_STRIP_CHEVRON_PX = 24;
  * hand that runs past that. Previously this wrapped to as many rows as it
  * needed, which on a seven-plus-card hand pushed the transport controls
  * further down the page every time the hand grew; a fixed one-row height
- * keeps the board's footprint stable regardless of hand size.
+ * keeps the board's footprint stable regardless of hand size — an empty
+ * hand included, which reserves the row rather than collapsing it.
  *
  * Recomputed every frame like the rest of the board, so it always shows
  * the hand as of wherever the playhead currently sits — cards drawn appear,
@@ -649,9 +719,27 @@ function HandStrip({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cards.map((c) => c.id).join(","), cardWidth, matWidth]);
 
-  if (cards.length === 0) return null;
   const cardHeight = Math.round((cardWidth * 342) / 245);
   const visibleHeight = Math.round((cardHeight * HAND_STRIP_VISIBLE_PCT) / 100);
+
+  // An empty hand still holds its place. The strip's height is a pure
+  // function of cardWidth — the gap above it plus one cropped card — so it
+  // can be reserved before there's a card to put in it, and it has to be:
+  // returning null here made the board a strip shorter than it would be one
+  // draw later, so the first card drawn grew the whole column and shoved
+  // the transport controls down the page mid-playback. Only the space is
+  // reserved, never anything visible: no chevrons, no scroll container, no
+  // border, and aria-hidden so a purely geometric box stays out of the
+  // accessibility tree.
+  if (cards.length === 0) {
+    return (
+      <div
+        aria-hidden
+        className="pointer-events-none"
+        style={{ marginTop: HAND_STRIP_TOP_GAP_PX, height: visibleHeight }}
+      />
+    );
+  }
 
   // How many cards actually fit in one row under the mat: n*cardWidth +
   // (n-1)*gap <= available, solved for n and floored — at least 1, so a
@@ -1289,7 +1377,10 @@ function Board({
           <InspectContext.Provider
             value={(target) => onOpenMatInspect("opponent", target)}
           >
-          <div className="relative z-10">
+          <div
+            id={REPLAY_TOP_MAT_ID}
+            className={`relative z-10 ${REPLAY_TOP_MAT_SCROLL_MT}`}
+          >
             <PlayerMat
               side="player"
               bench={frame.opponent.bench}
@@ -1526,8 +1617,16 @@ function PlaybackModule({
           options — and while they shared a column with the play button,
           that width fed the row and shoved the capsules in and out. On
           their own lines their width is nobody else's business, so the
-          steppers hold a fixed spread. */}
-      <div className="mt-4 text-center text-[10px] tabular-nums text-text-muted">
+          steppers hold a fixed spread.
+
+          sm:hidden rather than a desktop-only condition: mobile is the
+          narrow viewport where the turn stepper's own label is easy to
+          lose track of one-handed, and this line is the cheap reminder;
+          from sm: up there's more room to actually watch the scrubber and
+          the readout stops earning its keep. Matches this component's own
+          sm: breakpoint (the control row below switches its spacing at
+          the same point) rather than the site chrome's xl:. */}
+      <div className="mt-4 sm:hidden text-center text-[10px] tabular-nums text-text-muted">
         {turnLabel}
       </div>
 
@@ -1537,8 +1636,16 @@ function PlaybackModule({
           capsules at their full spread ran past a phone's content width
           (~343px at 375px viewport) and forced the row to overflow rather
           than wrap, since nothing here is allowed to shrink onto a second
-          line. */}
-      <div className="mt-1.5 flex items-center justify-center gap-1.5 sm:gap-3">
+          line.
+
+          mt-1.5 sm:mt-8: the turn-label line above is display:none from
+          sm: up, which takes its own mt-4 and its line's height of
+          spacing with it — measured at ~33px total (mt-4 + a 10px line +
+          mt-1.5), so sm:mt-8 (32px, the closest step on the scale) stands
+          in for that gap directly on this row, and the scrubber and the
+          control row don't end up crowded together once the label
+          between them disappears. */}
+      <div className="mt-1.5 sm:mt-8 flex items-center justify-center gap-1.5 sm:gap-3">
         <StepCapsule
           label="Action"
           canBack={canStepBack}

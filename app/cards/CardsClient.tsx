@@ -363,14 +363,14 @@ function CatalogBody({
               updateParams({ sort: s, dir: d });
             }}
           >
-            <option value="released:desc">Set (New to Old)</option>
-            <option value="released:asc">Set (Old to New)</option>
-            <option value="name:asc">Card Name (A–Z)</option>
-            <option value="name:desc">Card Name (Z–A)</option>
-            <option value="hp:desc">Hit Points (High to Low)</option>
-            <option value="hp:asc">Hit Points (Low to High)</option>
-            <option value="price:desc">Market Price (High to Low)</option>
-            <option value="price:asc">Market Price (Low to High)</option>
+            <option value="released:desc">Set ↓</option>
+            <option value="released:asc">Set ↑</option>
+            <option value="name:asc">Card Name ↑</option>
+            <option value="name:desc">Card Name ↓</option>
+            <option value="hp:desc">Hit Points ↓</option>
+            <option value="hp:asc">Hit Points ↑</option>
+            <option value="price:desc">Market Price ↓</option>
+            <option value="price:asc">Market Price ↑</option>
             <option value="rarity:desc">Rarity ↓</option>
             <option value="rarity:asc">Rarity ↑</option>
           </PillSelect>

@@ -21,10 +21,17 @@ const GAP = 10;
  * Three-arc rounded-cap donut showing a deck's Pokémon/Trainer/Energy
  * composition. Pokémon renders solid ink, Trainer uses the site's brand
  * gradient (via BrandGradientDefs, mounted once by the caller's page),
- * Energy renders as a bordered, unfilled arc — a thin border in light
- * mode (--ring-energy-fill matches the light card background so the
- * interior reads as empty) and a plain white border with no fill in
- * dark mode (--ring-energy-fill is transparent there).
+ * Energy renders as a bordered, unfilled arc — matching the swatch
+ * CompositionLegend draws for it (border in --text-primary, no fill).
+ *
+ * The Energy arc's hollow interior is a real hole punched with an SVG
+ * <mask>, not a fill painted in the card's background color. The earlier
+ * approach stacked a --ring-energy-fill stroke over the band, which only
+ * worked in light mode: that token is `transparent` in dark mode, and a
+ * transparent stroke paints nothing rather than erasing what's under it,
+ * so the whole band survived and the arc read as a solid white bar. A
+ * mask is theme- and background-independent — the arc is genuinely
+ * see-through wherever the ring is placed.
  */
 export default function CompositionRing({ counts, size = 58, className }: Props) {
   const { pokemon, trainer, energy } = counts;
@@ -51,6 +58,22 @@ export default function CompositionRing({ counts, size = 58, className }: Props)
     strokeDashoffset: arc.offset.toFixed(1),
   });
 
+  /**
+   * The mask has to carry the Energy arc's own dash geometry (a full-circle
+   * hole would cut straight through the arc's rounded end caps and leave the
+   * outline open at both ends), so it can't be one document-wide definition —
+   * several deck cards render rings on the same page. The id is derived from
+   * that geometry instead of from useId(): a decks grid renders this from a
+   * client component today but the component itself is server-safe, and
+   * useId's output contains colons, which have to be escaped before they can
+   * go in a url(#…) reference. Same geometry ⇒ same id ⇒ byte-identical mask
+   * content, so a shared id is always safe here.
+   */
+  const energyMaskId = `dx-energy-cutout-${arcs[2].length.toFixed(1)}-${arcs[2].offset.toFixed(1)}`.replace(
+    /[^a-zA-Z0-9_-]/g,
+    "_",
+  );
+
   return (
     <svg
       width={size}
@@ -59,6 +82,37 @@ export default function CompositionRing({ counts, size = 58, className }: Props)
       className={className}
       style={{ transform: "rotate(-90deg)", transformOrigin: "50% 50%" }}
     >
+      <defs>
+        {/* White keeps, black cuts: the wide band minus the narrower inner
+            stroke leaves a 1.4-unit rim, closed around the round caps
+            because both strokes share the caps and dash array. Explicit
+            userSpaceOnUse bounds — the default mask region is a percentage
+            of the object bounding box, which for a stroked circle excludes
+            the stroke and would clip the band's outer edge. */}
+        <mask id={energyMaskId} maskUnits="userSpaceOnUse" x="0" y="0" width="58" height="58">
+          <circle
+            cx="29"
+            cy="29"
+            r={R}
+            stroke="#fff"
+            strokeWidth={STROKE + 2}
+            fill="none"
+            strokeLinecap="round"
+            {...dashProps(arcs[2])}
+          />
+          <circle
+            cx="29"
+            cy="29"
+            r={R}
+            stroke="#000"
+            strokeWidth={STROKE - 0.8}
+            fill="none"
+            strokeLinecap="round"
+            {...dashProps(arcs[2])}
+          />
+        </mask>
+      </defs>
+
       <circle
         cx="29"
         cy="29"
@@ -87,16 +141,7 @@ export default function CompositionRing({ counts, size = 58, className }: Props)
         strokeWidth={STROKE + 2}
         fill="none"
         strokeLinecap="round"
-        {...dashProps(arcs[2])}
-      />
-      <circle
-        cx="29"
-        cy="29"
-        r={R}
-        stroke="var(--ring-energy-fill)"
-        strokeWidth={STROKE - 0.8}
-        fill="none"
-        strokeLinecap="round"
+        mask={`url(#${energyMaskId})`}
         {...dashProps(arcs[2])}
       />
     </svg>
@@ -110,6 +155,10 @@ export function CompositionLegend({ counts }: { counts: CompositionCounts }) {
     {
       label: "Energy",
       n: counts.energy,
+      // The swatch is small enough that a real cut-out buys nothing: an
+      // opaque light-mode fill and a transparent dark-mode one both read as
+      // "empty" against the cards these sit on. --ring-energy-fill stays for
+      // this one use.
       swatch: { background: "var(--ring-energy-fill)", border: "1px solid var(--text-primary)", boxSizing: "border-box" },
     },
   ];

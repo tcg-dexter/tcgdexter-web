@@ -14,6 +14,7 @@ import {
   BookmarkIcon,
   CardsIcon,
   UserIcon,
+  UsersIcon,
   DiscordIcon,
   GaugeIcon,
   TikTokIcon,
@@ -244,6 +245,7 @@ export default function MobileNavMenu({ isAuthed, displayName, username, isAdmin
     ...(isAdmin ? [{ href: "/admin-tools/deck-mat", label: "Playmat Studio", Icon: PlaymatIcon }] : []),
     // { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
     { href: spotlightHref, label: "Spotlight", Icon: TrophyIcon },
+    { href: "/trainers", label: "Trainers", Icon: UsersIcon },
   ];
 
   // Grouped with the external links on mobile so the Learn / Shop / Social

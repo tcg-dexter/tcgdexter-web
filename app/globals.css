@@ -186,3 +186,96 @@ body.card-viewer-open [data-back-button] {
   0%   { opacity: 0; transform: translateY(4px); }
   100% { opacity: 1; transform: translateY(0); }
 }
+
+/* ─── Banner card fan ──────────────────────────────────────────
+   Entrance for the fanned card rows in the user-profile and meta-archetype
+   banners (see TeamCards.tsx / MetaProfileHeader.tsx). Every card paints
+   first as a stack sitting exactly where the leftmost card ends up, then
+   slides and rotates out to its own place in the fan with a slight
+   overshoot.
+
+   Deliberately a CSS animation driven by custom properties rather than a
+   React state flip. The settled position is the element's ordinary style,
+   so the server render — and any client that never runs the animation —
+   is already the correct final layout; the animation only describes where
+   the card came FROM. A state flip would have to render the stacked state
+   first and swap after mount, which means shipping a wrong-looking layout
+   in the HTML and a hydration-order dependency to undo it.
+
+   The class also owns the card's horizontal placement, and that is not an
+   incidental detail. These banners fan wider on desktop than on mobile,
+   and the two positions used to be applied as an inline `left` plus a
+   `sm:[left:var(--left-sm)]` utility — which never took effect, because a
+   style attribute outranks every non-important author rule, so the
+   desktop spread silently never rendered. Resolving both breakpoints here
+   as class rules, with the caller supplying only raw values, is what
+   makes the media query able to win. Anything a caller sets inline on
+   these cards must not be a property this block also sets.
+
+   The custom properties a caller must set:
+     --fan-clip        translateY of the settled card (its bottom clip)
+     --fan-rot         rotation of the settled card
+     --fan-clip-start  translateY of the leftmost card — the stack's clip
+     --fan-rot-start   rotation of the leftmost card
+     --left            card's left edge, percent of the banner (mobile)
+     --left-sm         the same, for the wider sm:+ fan
+     --fan-dx          translateX from settled position back to the stack,
+                       in percent of the CARD's own width, so it holds at
+                       any banner size. One per breakpoint, because the
+                       settled position it is measured against differs.
+     --fan-dx-sm       the same, for the wider sm:+ fan
+     --fan-delay       per-card stagger, so the fan opens rather than
+                       moving as one block
+
+   translateX comes first in the `from` transform because it has to be
+   applied in the card's unrotated frame — putting it after rotate() would
+   send the outer cards off along their own tilt. */
+@keyframes dx-fan-in {
+  from {
+    transform: translateX(var(--fan-dx)) translateY(var(--fan-clip-start))
+      rotate(var(--fan-rot-start));
+  }
+  to {
+    transform: translateY(var(--fan-clip)) rotate(var(--fan-rot));
+  }
+}
+
+.dx-fan-card {
+  left: var(--left);
+  --fan-dx: var(--fan-dx-base);
+  transform: translateY(var(--fan-clip)) rotate(var(--fan-rot));
+  transform-origin: 50% 100%;
+  /* `both` holds the from-state through the delay, so a staggered card
+     waits in the stack instead of appearing at its final spot and then
+     jumping back to start its run.
+     --fan-start-delay is a head start for the rest of the page — banner,
+     avatar, everything else — to settle before the fan draws the eye, on
+     top of which the per-card --fan-delay stagger still applies. Its
+     value comes from FAN_START_DELAY_MS in lib/entranceTiming.ts (set as
+     an inline custom property by TeamCards.tsx / MetaProfileHeader.tsx on
+     the fan's container) — that TS constant is the source of truth, not
+     the 250ms fallback here, which only covers a caller that forgets to
+     set it. Split into longhand rather than folded into the `animation`
+     shorthand because calc() as a shorthand component is more prone to
+     browser parsing quirks than it is as a standalone longhand value. */
+  animation-name: dx-fan-in;
+  animation-duration: 620ms;
+  animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation-delay: calc(var(--fan-start-delay, 250ms) + var(--fan-delay, 0ms));
+  animation-fill-mode: both;
+}
+
+/* sm: — the wider desktop fan. Same specificity as the block above and
+   later in the sheet, so it wins from 640px up. */
+@media (min-width: 640px) {
+  .dx-fan-card {
+    left: var(--left-sm);
+    --fan-dx: var(--fan-dx-sm);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dx-fan-card {
+    animation: none;
+  }
+}

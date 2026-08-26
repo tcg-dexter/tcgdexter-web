@@ -18,6 +18,7 @@ import UserProfileHeader, {
 } from "./UserProfileHeader";
 import ThemeColor from "@/app/components/ThemeColor";
 import { ResponsiveLabel } from "@/app/components/StatCard";
+import RollingNumber from "@/app/components/ui/RollingNumber";
 import StreakFlame from "@/app/components/StreakFlame";
 import { displayCurrentStreak, type StreakRow } from "@/lib/streak";
 import AccentPicker from "./AccentPicker";
@@ -107,14 +108,16 @@ export async function generateMetadata({
 }
 
 /** Stat-grid tile for a daily streak (flame + count). Matches the default
- *  StatCard chrome; used for both Current and Longest streak. */
+ *  StatCard chrome — including its rolling entrance — for both Current and
+ *  Longest streak, so the whole Wins-through-Longest-Streak grid settles as
+ *  one board rather than leaving two tiles static. */
 function StreakStatTile({ label, count }: { label: string; count: number }) {
   return (
     <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm px-4 py-3 text-center">
       <div className="flex items-center justify-center gap-1">
         <StreakFlame count={count} size="md" showCount={false} />
         <span className="text-lg font-bold tabular-nums text-text-primary">
-          {count.toLocaleString()}
+          <RollingNumber value={count.toLocaleString()} />
         </span>
       </div>
       <p className="text-xs text-text-muted mt-0.5">{label}</p>

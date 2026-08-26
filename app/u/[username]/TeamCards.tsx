@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { cardImageLarge } from "@/lib/cardImages";
+import { FAN_START_DELAY_MS, FAN_STAGGER_MS } from "@/lib/entranceTiming";
 
 export interface TeamCardRef {
   name: string;
@@ -32,6 +33,13 @@ interface SlotGeometry {
   clipPct: number;
   rotationDeg: number;
   zIndex: number;
+  /** Distance back to the stack (slot 0's position), in percent of the
+   *  card's own width. Percent-of-self rather than percent-of-banner so
+   *  the entrance stays correct at every banner size — see the
+   *  `dx-fan-in` keyframes in globals.css. One per breakpoint, because
+   *  the settled position it is measured against differs between them. */
+  fanDx: number;
+  fanDxDesktop: number;
 }
 
 const SLOT_GEOMETRY: SlotGeometry[] = (() => {
@@ -45,12 +53,19 @@ const SLOT_GEOMETRY: SlotGeometry[] = (() => {
   return Array.from({ length: SLOTS }, (_, i) => {
     const signedDist = i - center;
     const normDist = Math.abs(signedDist) / maxDist;
+    const left = cardsLeftStart + i * cardsStep;
+    const leftDesktop = desktopCardsLeftStart + i * desktopCardsStep;
     return {
-      left: cardsLeftStart + i * cardsStep,
-      leftDesktop: desktopCardsLeftStart + i * desktopCardsStep,
+      left,
+      leftDesktop,
       clipPct: BOTTOM_CLIP_PCT - CENTER_RAISE_CARD_PCT * (1 - normDist * normDist),
       rotationDeg: (signedDist / maxDist) * CARD_MAX_ROTATION_DEG,
       zIndex: i,
+      // Both are (leftmost - mine), converted from percent-of-container
+      // into percent-of-card by dividing through the card's own width
+      // share.
+      fanDx: ((cardsLeftStart - left) / CARD_WIDTH_PCT) * 100,
+      fanDxDesktop: ((desktopCardsLeftStart - leftDesktop) / CARD_WIDTH_PCT) * 100,
     };
   });
 })();
@@ -62,14 +77,38 @@ function normalize(team: (TeamCardRef | null)[]): (TeamCardRef | null)[] {
   return out;
 }
 
-function slotStyle(g: SlotGeometry): CSSProperties {
+/** Slot 0 — the stack every card fans out of. Its clip and rotation are
+ *  what the others hold while they wait their turn. */
+const STACK = SLOT_GEOMETRY[0];
+
+// FAN_STAGGER_MS and FAN_START_DELAY_MS come from lib/entranceTiming.ts —
+// shared with MetaProfileHeader's fan and with RollingNumber, which pins
+// its own settle time to the same total (see FAN_TOTAL_MS there).
+//
+// Rightmost card leads — its delay is 0 and delay grows moving left
+// toward the stack — so the fan reads as opening away from where the
+// cards started rather than as a ripple moving in the same direction as
+// the stack.
+
+function slotStyle(g: SlotGeometry, index: number): CSSProperties {
   return {
     bottom: 0,
-    left: `${g.left}%`,
-    "--left-sm": `${g.leftDesktop}%`,
     width: `${CARD_WIDTH_PCT}%`,
-    transform: `translateY(${g.clipPct}%) rotate(${g.rotationDeg}deg)`,
-    transformOrigin: "50% 100%",
+    // Everything the fan needs is handed over as raw values; .dx-fan-card
+    // (globals.css) composes them into `left`, the settled transform and
+    // the entrance, and picks the breakpoint. Nothing set here may be a
+    // property that class also sets — an inline declaration would outrank
+    // its media query and pin the card to one breakpoint's layout, which
+    // is exactly how the desktop spread used to go missing.
+    "--left": `${g.left}%`,
+    "--left-sm": `${g.leftDesktop}%`,
+    "--fan-clip": `${g.clipPct}%`,
+    "--fan-rot": `${g.rotationDeg}deg`,
+    "--fan-clip-start": `${STACK.clipPct}%`,
+    "--fan-rot-start": `${STACK.rotationDeg}deg`,
+    "--fan-dx-base": `${g.fanDx}%`,
+    "--fan-dx-sm": `${g.fanDxDesktop}%`,
+    "--fan-delay": `${(SLOTS - 1 - index) * FAN_STAGGER_MS}ms`,
     zIndex: g.zIndex,
   } as CSSProperties;
 }
@@ -81,13 +120,27 @@ function slotStyle(g: SlotGeometry): CSSProperties {
  * AccentPicker / TeamCardsModal), not by interacting with the fan itself.
  * Owner-only empty slots render as a dashed outline so the owner sees
  * there's room to fill; visitor empty slots render as a dim outline.
+ *
+ * On load the whole row starts stacked on the leftmost slot and fans out
+ * with a slight overshoot — a pure CSS animation (`.dx-fan-card` in
+ * globals.css) rather than a mounted state flip, so the markup this server
+ * component sends is already the settled layout.
  */
 export default function TeamCards({ initial, isOwner }: Props) {
   const team = normalize(initial);
   return (
-    <div className="relative h-full mx-6 sm:scale-[0.576] sm:origin-bottom sm:translate-y-[10px]">
+    <div
+      className="relative h-full mx-6 sm:scale-[0.576] sm:origin-bottom sm:translate-y-[10px]"
+      style={{ "--fan-start-delay": `${FAN_START_DELAY_MS}ms` } as CSSProperties}
+    >
       {team.map((card, i) => (
-        <CardSlot key={i} card={card} geometry={SLOT_GEOMETRY[i]} isOwner={isOwner} />
+        <CardSlot
+          key={i}
+          card={card}
+          geometry={SLOT_GEOMETRY[i]}
+          index={i}
+          isOwner={isOwner}
+        />
       ))}
     </div>
   );
@@ -98,10 +151,13 @@ export default function TeamCards({ initial, isOwner }: Props) {
 function CardSlot({
   card,
   geometry,
+  index,
   isOwner,
 }: {
   card: TeamCardRef | null;
   geometry: SlotGeometry;
+  /** Position in the fan — drives the entrance stagger only. */
+  index: number;
   isOwner: boolean;
 }) {
   if (card) {
@@ -111,8 +167,8 @@ function CardSlot({
         src={cardImageLarge(card.set_id, card.number)}
         alt=""
         aria-hidden="true"
-        className="absolute drop-shadow-md select-none rounded-lg sm:[left:var(--left-sm)]"
-        style={slotStyle(geometry)}
+        className="dx-fan-card absolute drop-shadow-md select-none rounded-lg"
+        style={slotStyle(geometry, index)}
       />
     );
   }
@@ -122,10 +178,10 @@ function CardSlot({
   return (
     <div
       aria-hidden="true"
-      className={`absolute aspect-[245/342] rounded-lg border-2 border-dashed sm:[left:var(--left-sm)] ${
+      className={`dx-fan-card absolute aspect-[245/342] rounded-lg border-2 border-dashed ${
         isOwner ? "border-white/70 bg-white/10" : "border-white/40"
       }`}
-      style={slotStyle(geometry)}
+      style={slotStyle(geometry, index)}
     />
   );
 }

@@ -8,6 +8,7 @@ import {
   BookmarkIcon,
   CardsIcon,
   UserIcon,
+  UsersIcon,
   VersusIcon,
   PlaymatIcon,
   BellIcon,
@@ -79,6 +80,7 @@ export default function SiteSidebar({
     ...(isAdmin ? [{ href: "/admin-tools/deck-mat", label: "Playmat Studio", Icon: PlaymatIcon }] : []),
     // { href: "/leaderboard", label: "Leaderboard", Icon: TrophyIcon },
     { href: spotlightHref, label: "Spotlight", Icon: TrophyIcon },
+    { href: "/trainers", label: "Trainers", Icon: UsersIcon },
   ];
 
   // "/" gets exact match so it doesn't light up on every page; others match

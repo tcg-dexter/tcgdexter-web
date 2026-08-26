@@ -167,6 +167,35 @@ export const CATALOG: AchievementDef[] = [
   },
 ];
 
+/**
+ * Terse "how you earn it" line for each badge, shown on the back of a
+ * flipped badge tile (see FlipBadge). Deliberately shorter than the
+ * catalog's `description` (which is a full sentence) — these sit inside
+ * tight hexagons and under hero titles, where a sentence wraps badly.
+ * Exhaustive by type, so adding a catalog badge fails the typecheck here
+ * until its copy is written.
+ *
+ * Lives beside CATALOG rather than in the component that renders it so
+ * both the home-page showcase and the profile module read one source.
+ * Plain data — no client-only imports — so the server modules below can
+ * keep importing this file freely.
+ */
+export const REQUIREMENT: Record<AchievementKey, string> = {
+  first_save: "Save a deck",
+  first_battle: "Log a battle",
+  first_battle_log: "Import a log",
+  certified_trainer: "Ace the quiz",
+  battles_10: "Log 10 battles",
+  battles_50: "Log 50 battles",
+  battles_100: "Log 100 battles",
+  decks_5: "Save 5 decks",
+  decks_10: "Save 10 decks",
+  decks_20: "Save 20 decks",
+  decks_30: "Save 30 decks",
+  decks_40: "Save 40 decks",
+  decks_50: "Save 50 decks",
+};
+
 /** Catalog lookup by key. */
 export const CATALOG_BY_KEY: Record<AchievementKey, AchievementDef> =
   Object.fromEntries(CATALOG.map((d) => [d.key, d])) as Record<

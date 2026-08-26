@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import AnimatedGradient from "@/app/components/AnimatedGradient";
+import RollingNumber from "@/app/components/ui/RollingNumber";
 
 /**
  * Tile in a profile / archetype bio stat grid.
@@ -11,7 +12,15 @@ import AnimatedGradient from "@/app/components/AnimatedGradient";
  *  - "default"  → standard card chrome; `valueClass` colors the value
  *
  * `tabular-nums` keeps numeric tiles the same visual width across the
- * grid so proportional digits don't cause label drift.
+ * grid so proportional digits don't cause label drift — and it's what lets
+ * RollingNumber's per-digit columns line up, since every column sizes
+ * itself from its own glyph.
+ *
+ * Values arrive as display strings and roll in on mount (see
+ * RollingNumber). This component stays a server component: the client
+ * boundary sits at that leaf, so both stat grids that use these tiles —
+ * the user profile's and the meta archetype header's — get the animation
+ * without either page giving up server rendering.
  */
 export function StatCard({
   label,
@@ -41,14 +50,18 @@ export function StatCard({
           gradient={gradientCss}
           className="relative rounded-2xl overflow-hidden shadow-sm px-4 py-3 text-center text-white"
         >
-          <p className="text-lg font-bold tabular-nums">{value}</p>
+          <p className="text-lg font-bold tabular-nums">
+            <RollingNumber value={value} />
+          </p>
           <p className="text-xs mt-0.5 opacity-90">{label}</p>
         </AnimatedGradient>
       );
     }
     return (
       <div className="rounded-2xl shadow-sm px-4 py-3 text-center text-white bg-gradient-brand">
-        <p className="text-lg font-bold tabular-nums">{value}</p>
+        <p className="text-lg font-bold tabular-nums">
+          <RollingNumber value={value} />
+        </p>
         <p className="text-xs mt-0.5 opacity-90">{label}</p>
       </div>
     );
@@ -56,7 +69,9 @@ export function StatCard({
   if (tone === "dark") {
     return (
       <div className="rounded-2xl bg-black dark:bg-white shadow-sm px-4 py-3 text-center text-white dark:text-black">
-        <p className="text-lg font-bold tabular-nums">{value}</p>
+        <p className="text-lg font-bold tabular-nums">
+          <RollingNumber value={value} />
+        </p>
         <p className="text-xs mt-0.5 opacity-90">{label}</p>
       </div>
     );
@@ -64,14 +79,18 @@ export function StatCard({
   if (tone === "ringed") {
     return (
       <div className="rounded-2xl bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-[inset_0_0_0_1px_black] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35)] px-4 py-3 text-center">
-        <p className="text-lg font-bold text-text-primary tabular-nums">{value}</p>
+        <p className="text-lg font-bold text-text-primary tabular-nums">
+          <RollingNumber value={value} />
+        </p>
         <p className="text-xs text-text-primary mt-0.5">{label}</p>
       </div>
     );
   }
   return (
     <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm px-4 py-3 text-center">
-      <p className={`text-lg font-bold tabular-nums ${valueClass}`}>{value}</p>
+      <p className={`text-lg font-bold tabular-nums ${valueClass}`}>
+        <RollingNumber value={value} />
+      </p>
       <p className="text-xs text-text-muted mt-0.5">{label}</p>
     </div>
   );

@@ -2,8 +2,10 @@
 
 /**
  * Prev/next control for the app's horizontal carousels (card detail page,
- * deck profile's Battle History rail). `noun` names what's being scrolled
- * so the aria-label reads naturally ("Previous decks", "Next battles").
+ * deck profile's Battle History rail) and for Playmat Studio's header row,
+ * which steps through decks rather than scrolling a rail. `noun` names
+ * what's being stepped so the aria-label reads naturally ("Previous deck",
+ * "Next battles").
  */
 export default function CarouselChevron({
   direction,

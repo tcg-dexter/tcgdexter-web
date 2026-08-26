@@ -14,6 +14,8 @@ import { useFadeIn } from "@/lib/useFadeIn";
 import { computeImagePlacement, readImageFile, type MatImage } from "@/lib/matImage";
 import PlaymatImageDialog from "./PlaymatImageDialog";
 import { trackClient } from "@/lib/analytics/trackClient";
+import SectionHeader from "@/app/components/ui/SectionHeader";
+import CarouselChevron from "@/app/cards/[id]/CarouselChevron";
 
 export interface DeckSummary {
   id: string;
@@ -65,6 +67,9 @@ const DUO_STYLE_KEYS = [
   "fighting-darkness",
   "metal-dragon",
   "water-psychic",
+  "fire-darkness",
+  "grass-fairy",
+  "lightning-metal",
 ] as const;
 
 const DUO_GRADIENTS: Record<(typeof DUO_STYLE_KEYS)[number], string> = {
@@ -77,17 +82,60 @@ const DUO_GRADIENTS: Record<(typeof DUO_STYLE_KEYS)[number], string> = {
   "fighting-darkness": `linear-gradient(135deg, ${ed("Fighting")} 0%, ${ed("Darkness")} 100%)`,
   "metal-dragon":      `linear-gradient(135deg, ${ed("Metal")} 0%, ${ed("Dragon")} 100%)`,
   "water-psychic":     `linear-gradient(135deg, ${ed("Water")} 0%, ${ed("Psychic")} 100%)`,
+  "fire-darkness":     `linear-gradient(135deg, ${ed("Fire")} 0%, ${ed("Darkness")} 100%)`,
+  "grass-fairy":       `linear-gradient(135deg, ${ed("Grass")} 0%, ${ed("Fairy")} 100%)`,
+  "lightning-metal":   `linear-gradient(135deg, ${ed("Lightning")} 0%, ${ed("Metal")} 100%)`,
 };
 
-export type MatStyle = "black" | "brand" | (typeof BANNER_ACCENT_KEYS)[number] | (typeof DUO_STYLE_KEYS)[number];
+// "Scene" mats: named atmospheres rather than energy pairings. Where a stop
+// can plausibly be pulled from the energy palette it is (via shade()), so the
+// scenes stay in the same colour family as everything else on the picker
+// instead of reading as a bolted-on second palette.
+//
+// Angles are restricted to 135deg / 180deg on purpose — those are the only
+// two cssGradToCanvas() maps to canvas endpoints, so any other angle would
+// look right on the live mat and wrong in the exported PNG.
+const SCENE_STYLE_KEYS = ["midnight", "nebula", "sunset", "ember", "aurora"] as const;
+
+const SCENE_GRADIENTS: Record<(typeof SCENE_STYLE_KEYS)[number], string> = {
+  // Deep navy fading to near-black — the "playing under the tournament
+  // lights at 11pm" mat.
+  midnight: `linear-gradient(180deg, #39508c 0%, #1b2440 55%, #0a0d18 100%)`,
+  // Violet → deep blue with a Psychic-derived middle.
+  nebula:   `linear-gradient(135deg, #2b1055 0%, ${shade(ENERGY_HEX.Psychic, -10)} 50%, ${shade(ENERGY_HEX.Dragon, -6)} 100%)`,
+  // Warm sky dropping into dusk purple, with Fire as the middle band.
+  sunset:   `linear-gradient(180deg, #f7a531 0%, ${ed("Fire")} 52%, #3f2450 100%)`,
+  // Coal-fire: amber → Fire → a very dark maroon.
+  ember:    `linear-gradient(135deg, #f5a623 0%, ${ed("Fire")} 55%, ${shade(ENERGY_HEX.Fire, -46)} 100%)`,
+  // Northern-lights teal over a Darkness base, lifting to a soft Psychic.
+  aurora:   `linear-gradient(135deg, ${shade(ENERGY_HEX.Darkness, -14)} 0%, #2fa88c 50%, ${shade(ENERGY_HEX.Psychic, 4)} 100%)`,
+};
+
+export type MatStyle =
+  | "black"
+  | "brand"
+  | (typeof BANNER_ACCENT_KEYS)[number]
+  | (typeof DUO_STYLE_KEYS)[number]
+  | (typeof SCENE_STYLE_KEYS)[number];
 
 const BLACK_GRADIENT = "linear-gradient(180deg, #3a3a3a 0%, #141414 100%)";
 
+// 30 entries laid out on a 15-column grid = exactly two rows, and the order
+// is chosen so the row break lands on a real seam:
+//   row 1 — brand, the three dark neutrals, then the 11 energy singles
+//   row 2 — the 12 energy duos, then the three warm/cool scenes
+// midnight and nebula sit up with brand/black rather than with the other
+// scenes because they read as dark solids, which is what row 1 is.
 export const MAT_STYLES: { key: MatStyle; gradient: string }[] = [
   { key: "brand", gradient: BRAND_BANNER_GRADIENT },
   { key: "black", gradient: BLACK_GRADIENT },
+  { key: "midnight", gradient: SCENE_GRADIENTS.midnight },
+  { key: "nebula", gradient: SCENE_GRADIENTS.nebula },
   ...BANNER_ACCENT_KEYS.map((k) => ({ key: k as MatStyle, gradient: bannerGradientFor(k) })),
   ...DUO_STYLE_KEYS.map((k) => ({ key: k as MatStyle, gradient: DUO_GRADIENTS[k] })),
+  { key: "sunset", gradient: SCENE_GRADIENTS.sunset },
+  { key: "ember", gradient: SCENE_GRADIENTS.ember },
+  { key: "aurora", gradient: SCENE_GRADIENTS.aurora },
 ];
 
 // Each texture is a small SVG tile that repeats seamlessly. Opacity is baked
@@ -148,6 +196,42 @@ export const TEXTURES: ReadonlyArray<{ key: string; w: number; h: number; svg: s
     key: "zigzag",
     w: 12, h: 24,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="24"><polyline points="0,0 12,12 0,24" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.32"/></svg>`,
+  },
+  {
+    // Honeycomb. A true equilateral hex grid needs a tile whose width and
+    // height are in a √3 ratio — never both integers — so this uses a
+    // slightly-squashed hex (12 wide × 21 vertical period) that tiles on
+    // exact integers instead. The polyline deliberately does NOT close: the
+    // hex's left vertical side is supplied by the neighbouring tile's right
+    // vertical side, and drawing both would double the stroke alpha along
+    // every column seam.
+    key: "hex",
+    w: 12, h: 21,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="21"><path d="M0,7 L6,3.5 L12,7 L12,14 L6,17.5 L0,14 M6,0 L6,3.5 M6,17.5 L6,21" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.3"/></svg>`,
+  },
+  {
+    // Solid up-triangles sitting on a shared baseline — the filled
+    // counterpart to the outlined `chevron` tile.
+    key: "triangles",
+    w: 20, h: 10,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="10"><polygon points="0,10 10,0 20,10" fill="white" fill-opacity="0.28"/></svg>`,
+  },
+  {
+    // Dragon scales: a full semicircle on the top row, plus the two halves
+    // of the row below it, offset by half a scale. Rows are 8 apart and the
+    // tile is 16 tall, so the pattern's own vertical period lines up with
+    // the tile edge.
+    key: "scales",
+    w: 16, h: 16,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M0,8 A8,8 0 0,1 16,8 M0,8 A8,8 0 0,1 8,16 M8,16 A8,8 0 0,1 16,8" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.3"/></svg>`,
+  },
+  {
+    // PCB traces. Both runs enter and exit the tile at the same coordinate
+    // (the horizontal at y=6, the vertical at x=20) so traces read as
+    // continuous across tiles rather than breaking on a visible grid.
+    key: "circuit",
+    w: 24, h: 24,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="M0,6 H7 V15 H17 V6 H24 M20,0 V10 H12 V21 H20 V24" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.3"/><circle cx="7" cy="15" r="1.4" fill="white" fill-opacity="0.35"/><circle cx="20" cy="10" r="1.4" fill="white" fill-opacity="0.35"/></svg>`,
   },
 ] as const;
 
@@ -324,6 +408,75 @@ function drawTextureTile(key: string): HTMLCanvasElement | null {
       c.lineTo(0, 24);
       c.stroke();
       break;
+    case "hex":
+      c.globalAlpha = 0.3;
+      c.lineWidth = 0.75;
+      c.beginPath();
+      // Open hex outline — no closePath(), matching the SVG (see the tile's
+      // comment: the left vertical comes from the tile to the left).
+      c.moveTo(0, 7);
+      c.lineTo(6, 3.5);
+      c.lineTo(12, 7);
+      c.lineTo(12, 14);
+      c.lineTo(6, 17.5);
+      c.lineTo(0, 14);
+      // The two stubs that join this hex to the offset hexes above/below.
+      c.moveTo(6, 0);
+      c.lineTo(6, 3.5);
+      c.moveTo(6, 17.5);
+      c.lineTo(6, 21);
+      c.stroke();
+      break;
+    case "triangles":
+      c.globalAlpha = 0.28;
+      c.beginPath();
+      c.moveTo(0, 10);
+      c.lineTo(10, 0);
+      c.lineTo(20, 10);
+      c.closePath();
+      c.fill();
+      break;
+    case "scales":
+      // Each arc gets an explicit moveTo to its own start point so the
+      // sub-paths aren't joined by stray connecting lines — arc() would
+      // otherwise draw a segment from the previous end point.
+      c.globalAlpha = 0.3;
+      c.lineWidth = 0.75;
+      c.beginPath();
+      c.moveTo(0, 8);
+      c.arc(8, 8, 8, Math.PI, 0);            // full scale, top row
+      c.moveTo(0, 8);
+      c.arc(0, 16, 8, Math.PI * 1.5, 0);     // right half of the scale below-left
+      c.moveTo(8, 16);
+      c.arc(16, 16, 8, Math.PI, Math.PI * 1.5); // left half of the scale below-right
+      c.stroke();
+      break;
+    case "circuit":
+      c.globalAlpha = 0.3;
+      c.lineWidth = 0.75;
+      c.beginPath();
+      c.moveTo(0, 6);
+      c.lineTo(7, 6);
+      c.lineTo(7, 15);
+      c.lineTo(17, 15);
+      c.lineTo(17, 6);
+      c.lineTo(24, 6);
+      c.moveTo(20, 0);
+      c.lineTo(20, 10);
+      c.lineTo(12, 10);
+      c.lineTo(12, 21);
+      c.lineTo(20, 21);
+      c.lineTo(20, 24);
+      c.stroke();
+      // Solder pads sit a touch brighter than the traces.
+      c.globalAlpha = 0.35;
+      c.beginPath();
+      c.arc(7, 15, 1.4, 0, Math.PI * 2);
+      c.fill();
+      c.beginPath();
+      c.arc(20, 10, 1.4, 0, Math.PI * 2);
+      c.fill();
+      break;
     default:
       return null;
   }
@@ -332,7 +485,15 @@ function drawTextureTile(key: string): HTMLCanvasElement | null {
 
 // Parses a CSS linear-gradient(Ndeg, #hex stop%, ...) string into a
 // CanvasGradient. Handles 180deg (top→bottom) and 135deg (top-left→
-// bottom-right) — the two angles used by the mat style picker.
+// bottom-right) — the two angles used by the mat style picker. Any other
+// angle silently falls through to the 180deg endpoints, which is why
+// MAT_STYLES is restricted to those two.
+//
+// Stop count is unbounded: the loop collects every `#rrggbb NN%` pair, so
+// the tri-stop entries (brand, sunset, ember, aurora, midnight, nebula)
+// export the same as they render. Stops must be 6-digit hex — shorthand
+// (#fff) or rgb() would be skipped by the stop regex and, with fewer than
+// two stops left, drop the gradient entirely.
 function cssGradToCanvas(
   ctx: CanvasRenderingContext2D,
   css: string,
@@ -662,6 +823,10 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   // accidental swatch tap from wiping the image.
   const [pickersUnlocked, setPickersUnlocked] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  // Monotonic token for deck-resolve requests. The header chevrons make it
+  // easy to step through decks faster than /resolve answers, and responses
+  // can land out of order — only the newest request is allowed to write.
+  const resolveSeq = useRef(0);
   const [isExporting, setIsExporting] = useState(false);
   const matColumnRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
@@ -683,6 +848,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   }, []);
 
   async function handleSelectDeck(deck: DeckSummary) {
+    const seq = ++resolveSeq.current;
     setSelectedDeckId(deck.id);
     setLoading(true);
     setError(null);
@@ -697,13 +863,24 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
         throw new Error(body?.error ?? `Request failed (${res.status})`);
       }
       const body = await res.json();
+      if (seq !== resolveSeq.current) return; // superseded by a later selection
       setTiles(body.tiles ?? []);
       setRenderKey((k) => k + 1);
     } catch (e) {
+      if (seq !== resolveSeq.current) return;
       setError(e instanceof Error ? e.message : "Failed to render deck.");
     } finally {
-      setLoading(false);
+      if (seq === resolveSeq.current) setLoading(false);
     }
+  }
+
+  // Header chevrons step through `decks` in list order. With nothing selected
+  // yet the index is -1, which makes "previous" unavailable and "next" land on
+  // the first deck — the same place a first tap in the sidebar would go.
+  const selectedIndex = decks.findIndex((d) => d.id === selectedDeckId);
+  function rotateDeck(delta: -1 | 1) {
+    const next = decks[selectedIndex + delta];
+    if (next) handleSelectDeck(next);
   }
 
   async function handleExport() {
@@ -786,6 +963,30 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
 
   return (
     <>
+      {/* Page header row. This mirrors the `<div className="mb-6">` +
+          SectionHeader that page.tsx's `shell` renders for the signed-out
+          and no-decks states — the studio state opts out of that (shell's
+          `withHeading: false`) and renders it here instead, because the deck
+          chevrons need `selectedDeckId`, which is client state. Keeping the
+          markup identical means all three states line up pixel-for-pixel. */}
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <SectionHeader title="Playmat Studio" />
+        <div className="flex-shrink-0 flex items-center gap-2">
+          <CarouselChevron
+            direction="left"
+            noun="deck"
+            disabled={selectedIndex <= 0}
+            onClick={() => rotateDeck(-1)}
+          />
+          <CarouselChevron
+            direction="right"
+            noun="deck"
+            disabled={selectedIndex >= decks.length - 1}
+            onClick={() => rotateDeck(1)}
+          />
+        </div>
+      </div>
+
       <div className="flex flex-col gap-6 md:grid md:grid-cols-[272px_1fr]">
         {/* Right on desktop: Mat + controls */}
         <div ref={matColumnRef} className="flex flex-col gap-3 md:order-last">
@@ -868,15 +1069,23 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           {/* Color + pattern pickers — covered by a safeguard overlay while
               an image is placed (until the user taps "Use Color"). */}
           <div className="relative flex flex-col gap-3">
-          {/* Color picker */}
-          <div className="grid gap-1.5 pt-1 mx-auto [grid-template-columns:repeat(11,1.75rem)] md:[grid-template-columns:repeat(11,2.1875rem)]">
+          {/* Color picker — 30 styles across 15 columns = 2 rows.
+              Row width arithmetic (keep this in step with the Add Image /
+              Export max-widths below, which are deliberately the same):
+                mobile   15 × 20px swatch + 14 × 4px gap = 356px
+                desktop  15 × 24px swatch + 14 × 6px gap = 444px
+              Going from 11 to 15 columns meant shrinking the swatches
+              (28→20 / 35→24) rather than adding a third row — the totals
+              land at or just under the old 368/445, so the control block
+              is no wider on a phone than it was at 11 columns. */}
+          <div className="grid gap-1 md:gap-1.5 pt-1 mx-auto [grid-template-columns:repeat(15,1.25rem)] md:[grid-template-columns:repeat(15,1.5rem)]">
             {MAT_STYLES.map(({ key, gradient }) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => chooseStyle(key)}
                 aria-label={key}
-                className={`w-7 h-7 md:w-[35px] md:h-[35px] rounded-full transition-all ${
+                className={`w-5 h-5 md:w-6 md:h-6 rounded-full transition-all ${
                   matStyle === key && !matImage
                     ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
                     : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
@@ -886,15 +1095,15 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             ))}
           </div>
 
-          {/* Texture picker */}
-          <div className="grid gap-1.5 mx-auto [grid-template-columns:repeat(11,1.75rem)] md:[grid-template-columns:repeat(11,2.1875rem)]">
+          {/* Texture picker — 15 patterns, same 15 columns = 1 row. */}
+          <div className="grid gap-1 md:gap-1.5 mx-auto [grid-template-columns:repeat(15,1.25rem)] md:[grid-template-columns:repeat(15,1.5rem)]">
             {TEXTURES.map((t) => (
               <button
                 key={t.key}
                 type="button"
                 onClick={() => chooseTexture(t.key)}
                 aria-label={t.key}
-                className={`w-7 h-7 md:w-[35px] md:h-[35px] rounded-full transition-all ${
+                className={`w-5 h-5 md:w-6 md:h-6 rounded-full transition-all ${
                   textureKey === t.key && !matImage
                     ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
                     : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
@@ -921,7 +1130,8 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           )}
           </div>
 
-          {/* Add Image + Export — max-width matches the 11-swatch picker row */}
+          {/* Add Image + Export — max-width matches the 15-swatch picker row
+              above (356px mobile / 444px desktop; see that row for the math). */}
           <div className="flex flex-col items-center gap-2">
             <input
               ref={imageInputRef}
@@ -937,7 +1147,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             <button
               type="button"
               onClick={handleImageButton}
-              className="w-full max-w-[368px] md:max-w-[445px] py-2.5 rounded-full border border-black/15 bg-white text-sm font-semibold text-text-primary dark:text-black hover:bg-black/[0.03] transition-colors inline-flex items-center justify-center gap-2"
+              className="w-full max-w-[356px] md:max-w-[444px] py-2.5 rounded-full border border-black/15 bg-white text-sm font-semibold text-text-primary dark:text-black hover:bg-black/[0.03] transition-colors inline-flex items-center justify-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                 <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -950,7 +1160,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
               type="button"
               onClick={handleExport}
               disabled={!tiles?.length || isExporting}
-              className="w-full max-w-[368px] md:max-w-[445px] py-2.5 rounded-full text-sm font-semibold text-white disabled:opacity-40 transition-opacity"
+              className="w-full max-w-[356px] md:max-w-[444px] py-2.5 rounded-full text-sm font-semibold text-white disabled:opacity-40 transition-opacity"
               style={{ background: "var(--gradient-brand)" }}
             >
               {isExporting ? "Exporting…" : "Export"}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AddDeckToListButton from "@/app/components/AddDeckToListButton";
 import DeckCardGrid from "@/app/components/DeckCardGrid";
 import DeckListCard from "@/app/components/DeckListCard";
 import DeckMulliganModule from "@/app/components/DeckMulliganModule";
@@ -209,6 +210,30 @@ export default function DeckProfileView({
       add: deckCardAddTarget(c),
     }));
 
+  // Every distinct printing in the deck, for "Add Deck to List". Built from
+  // result.cards rather than ownableCards so basic Energy comes along: a list
+  // is a general collection of cards (a binder page, a wants list, a "cards
+  // in this deck" list), not the acquisition-gap math DeckOwnershipModule
+  // does — so "freely obtainable" isn't a reason to silently drop lines from
+  // a control that promises the whole deck. A user who doesn't want the
+  // Energy can uncheck it in one tap; Energy that quietly never arrived is
+  // invisible. (In practice TCG Live's symbol form — "Basic {D} Energy" —
+  // has no card-DB entry and drops out via the null filter below anyway;
+  // spelled-out lines like "Darkness Energy" do resolve.)
+  //
+  // De-duplicated by setId+number because deck lists carry quantities (4x
+  // the same card) while a list holds a printing once. The items API treats
+  // a 23505 as success, so duplicates wouldn't error — but firing 60 POSTs
+  // where ~25 will do is still wrong.
+  const deckListCards = Array.from(
+    new Map(
+      (result.cards ?? [])
+        .map((c) => deckCardAddTarget(c))
+        .filter((t): t is NonNullable<typeof t> => t !== null)
+        .map((t) => [`${t.setId}-${t.number}`, { setId: t.setId, number: t.number }]),
+    ).values(),
+  );
+
   const CARD_CLS = "rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm";
   const TRACK_CLS = "bg-black/5";
   const dateStr = new Date(profiledAt).toLocaleDateString("en-US", {
@@ -347,15 +372,27 @@ export default function DeckProfileView({
           {postCtaSlot}
 
           {/* Deck List — meta variant with multiple variants gets the carousel,
-              all other variants get the standard collapsible card. */}
-          {variant === "meta" && deckLists && deckLists.length > 1 ? (
-            <MetaDeckListCarousel
-              deckLists={deckLists}
-              creators={deckListCreators}
-            />
-          ) : (
-            <DeckListCard deckList={deckList} />
-          )}
+              all other variants get the standard collapsible card. The
+              "Add Deck to List" button rides directly above it in a tighter
+              gap-2 stack so the two read as one module rather than as two
+              unrelated rows in the page's gap-4 rhythm. Not gated by variant:
+              a meta archetype's list isn't the viewer's own deck, but wanting
+              its cards in a list is exactly why someone opens that page. On a
+              multi-variant meta page it adds the primary `deckList`'s cards
+              rather than whichever carousel slide is showing — consistent
+              with every other module here (price, ownership, mulligan all
+              read the same primary `analysis`). */}
+          <div className="flex flex-col gap-2">
+            <AddDeckToListButton cards={deckListCards} />
+            {variant === "meta" && deckLists && deckLists.length > 1 ? (
+              <MetaDeckListCarousel
+                deckLists={deckLists}
+                creators={deckListCreators}
+              />
+            ) : (
+              <DeckListCard deckList={deckList} />
+            )}
+          </div>
 
           {/* Cards Owned — signed-in users with a tracked collection only;
               renders null otherwise. */}

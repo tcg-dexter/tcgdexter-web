@@ -1,6 +1,8 @@
 "use client";
 
-import ReplayViewer from "@/app/components/replay/ReplayViewer";
+import ReplayViewer, {
+  REPLAY_TOP_MAT_ID,
+} from "@/app/components/replay/ReplayViewer";
 import BackButton from "@/app/components/ui/BackButton";
 import {
   BattleStatChart,
@@ -57,6 +59,31 @@ const HERO_ROTATION_DEG = 5;
 // rotated card's bounding box is h·cos(θ) + w·sin(θ), ~5.9% taller than
 // the card at 5° — so 80% here occupies ~85% of the panel.
 const HERO_HEIGHT_PCT = 80;
+
+/**
+ * Jump the page to the replay board, top mat flush with the top of the
+ * window (bar the breathing room and toolbar clearance the mat carries as
+ * its own scroll-margin — see REPLAY_TOP_MAT_SCROLL_MT, which is why there
+ * is no pixel subtraction here).
+ *
+ * A no-op when the anchor is absent, which is the case whenever there's no
+ * battle log to render — the button is withheld in that case anyway, so
+ * this is belt-and-braces against the viewer failing to mount.
+ */
+function scrollToReplay() {
+  const target = document.getElementById(REPLAY_TOP_MAT_ID);
+  if (!target) return;
+  // Honour the OS's reduced-motion setting: the same jump, just without
+  // the travel. matchMedia rather than a CSS-only approach because the
+  // behavior is chosen here, at the call, not by a scroll-behavior rule.
+  const reducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
+  target.scrollIntoView({
+    behavior: reducedMotion ? "auto" : "smooth",
+    block: "start",
+  });
+}
 
 export default function BattleLogPage({
   battleId,
@@ -162,6 +189,7 @@ export default function BattleLogPage({
             leftAlt={playerLabel}
             rightImageUrl={opponentImageUrl}
             rightAlt={opponentLabel}
+            onWatchReplay={hasBattleLog ? scrollToReplay : undefined}
           />
 
           <div className="flex-1 p-5 md:p-6">
@@ -249,6 +277,7 @@ function BattleBanner({
   leftAlt,
   rightImageUrl,
   rightAlt,
+  onWatchReplay,
 }: {
   gradient: string;
   ghostImageUrl: string | null;
@@ -256,6 +285,11 @@ function BattleBanner({
   leftAlt: string;
   rightImageUrl: string | null;
   rightAlt: string;
+  /** Jumps the page to the replay board. Omitted when this battle has no
+   *  log — there's nothing to view, and the page shows the "No battle log
+   *  available" card in the viewer's place — and the pill drops with it
+   *  rather than rendering a button that scrolls to nothing. */
+  onWatchReplay?: () => void;
 }) {
   return (
     <div
@@ -299,6 +333,25 @@ function BattleBanner({
           xOffsetPct={-50 + HERO_STEP_PCT}
           rotationDeg={HERO_ROTATION_DEG}
         />
+      )}
+
+      {onWatchReplay && (
+        // Bottom-centre, on the panel's one axis of symmetry: the hero pair
+        // is centred, so this is the only anchor that meets both cards the
+        // same way at every panel size — a corner would tuck under one card
+        // and float free of the other as the panel grows from its 190px
+        // mobile height to the details column's on md. It does sit over the
+        // cards' bottom edges — HERO_HEIGHT_PCT leaves ~7% of the panel
+        // clear below them, which is less than a tap target — so z-20 puts
+        // it above both cards and the ghost, and the fill and shadow carry
+        // it against the artwork.
+        <button
+          type="button"
+          onClick={onWatchReplay}
+          className="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 md:bottom-4 inline-flex items-center justify-center rounded-full bg-white px-5 py-2 text-[11px] font-semibold tracking-[0.15em] text-black shadow-md hover:shadow-lg transition"
+        >
+          WATCH REPLAY
+        </button>
       )}
     </div>
   );

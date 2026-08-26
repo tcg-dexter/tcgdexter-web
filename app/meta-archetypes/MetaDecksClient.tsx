@@ -97,8 +97,8 @@ export default function MetaDecksClient({ items }: Props) {
           >
             <option value="representation:desc">Meta Share ↓</option>
             <option value="representation:asc">Meta Share ↑</option>
-            <option value="name:asc">Deck Name (A–Z)</option>
-            <option value="name:desc">Deck Name (Z–A)</option>
+            <option value="name:asc">Deck Name ↑</option>
+            <option value="name:desc">Deck Name ↓</option>
             <option value="likes:desc">Likes ↓</option>
             <option value="likes:asc">Likes ↑</option>
             <option value="pokemon:desc">Pokémon Card Count ↓</option>

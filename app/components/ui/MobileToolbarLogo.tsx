@@ -31,6 +31,9 @@ import { usePathname } from "next/navigation";
  *    route (see its `page.tsx`) that immediately 302s here server-side
  *    and never actually renders client-side, so matching it in
  *    `isTopLevelPath` would be dead code.
+ *  - Card-list detail pages (`/u/<username>/lists/<shortId>`). There is
+ *    no `/u/<username>/lists` index route — the profile page's own Lists
+ *    tab is the index — so only the detail path is matched.
  *  - Meta archetype detail pages (`/meta-archetypes/<slug>`) and their
  *    variant/decklist sub-route (`/meta-archetypes/<slug>/<variantIndex>`).
  *  - Playmat Studio (`/admin-tools/deck-mat`) — replaces the page's former
@@ -39,6 +42,7 @@ import { usePathname } from "next/navigation";
  *    (`/spotlight/<slug>`) — the detail page paints the toolbar in the
  *    banner's accent color, same overlay treatment as meta archetypes.
  *  - Card detail pages (`/cards/<id>`).
+ *  - Trainer directory (`/trainers`).
  *  - Battle log pages (`/battles/<id>`) — the match replay surface,
  *    reached from the Battles feed.
  *  All of the above except the bare `/`-adjacent front-door pages DO
@@ -59,6 +63,7 @@ const TOP_LEVEL_EXACT = new Set<string>([
   "/learn",
   "/admin-tools/deck-mat",
   "/spotlight",
+  "/trainers",
 ]);
 
 function isTopLevelPath(pathname: string): boolean {
@@ -68,6 +73,11 @@ function isTopLevelPath(pathname: string): boolean {
   // User profile root (/u/<username>) and its deck-detail sub-route
   // (/u/<username>/<deckId>) — the canonical saved-deck-profile URL.
   if (/^\/u\/[^/]+(\/[^/]+)?$/.test(pathname)) return true;
+  // Card-list detail page: /u/<username>/lists/<shortId>. Three segments
+  // deep, so the profile/deck-detail pattern above stops short of it.
+  // Only the detail route exists (the profile's Lists tab is the index),
+  // so there's nothing to match at /u/<username>/lists itself.
+  if (/^\/u\/[^/]+\/lists\/[^/]+$/.test(pathname)) return true;
   // Meta archetype detail (banner page) and its variant/decklist
   // sub-route: /meta-archetypes/<slug> or /meta-archetypes/<slug>/<variantIndex>.
   if (/^\/meta-archetypes\/[^/]+(\/[^/]+)?$/.test(pathname)) return true;

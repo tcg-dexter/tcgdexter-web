@@ -18,6 +18,7 @@ import {
   MAT_PADDING,
   MAT_ASPECT,
 } from "@/app/admin-tools/deck-mat/DeckMatClient";
+import { shade } from "@/lib/color";
 
 // Hardcoded default mat style for the replay/play boards.
 const BOARD_GRADIENT = MAT_STYLES.find((s) => s.key === "fire-lightning")!.gradient;
@@ -547,6 +548,21 @@ export function PokemonCardImage({
         : hpPct > 20
           ? "#facc15"
           : "#ef4444";
+  // The bar fills left-to-right in a darker-to-lighter sweep of whichever
+  // state color it is, so the fill has some depth instead of reading as a
+  // flat block. The dark stop is derived with shade() rather than paired
+  // hexes per state — one number to tune, and a new state color can't ship
+  // with a mismatched partner. -28% sits in the same family as the playmat
+  // gradients (-22) but a touch deeper, which the small bar needs for the
+  // two stops to separate at all at 3–5px tall.
+  //
+  // "transparent" isn't a hex and has no darker version — shade() would
+  // hand it straight back and the gradient would be transparent→transparent
+  // — so the no-printed-HP case stays the flat keyword it always was.
+  const hpFill =
+    hpColor === "transparent"
+      ? "transparent"
+      : `linear-gradient(90deg, ${shade(hpColor, -28)} 0%, ${hpColor} 100%)`;
 
   return (
     <div
@@ -657,7 +673,7 @@ export function PokemonCardImage({
           >
             <div
               className="h-full rounded-full"
-              style={{ width: `${hpPct}%`, background: hpColor }}
+              style={{ width: `${hpPct}%`, background: hpFill }}
             />
           </div>
         </div>
