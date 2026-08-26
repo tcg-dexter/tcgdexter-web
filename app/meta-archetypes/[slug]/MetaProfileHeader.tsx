@@ -110,7 +110,7 @@ const CARD_MAX_ROTATION_DEG = 12;     // degrees at the leftmost/rightmost
  *  the two banners open at the same rate. Rightmost card leads — its delay
  *  is 0 and delay grows moving left toward the stack — the same direction
  *  TeamCards uses. */
-const FAN_STAGGER_MS = 45;
+const FAN_STAGGER_MS = 75;
 
 interface Props {
   /** Archetype display name, e.g. "Dragapult". */

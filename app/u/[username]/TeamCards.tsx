@@ -85,7 +85,7 @@ const STACK = SLOT_GEOMETRY[0];
  *  card leads — its delay is 0 and delay grows moving left toward the
  *  stack — so the fan reads as opening away from where the cards started
  *  rather than as a ripple moving in the same direction as the stack. */
-const FAN_STAGGER_MS = 45;
+const FAN_STAGGER_MS = 75;
 
 function slotStyle(g: SlotGeometry, index: number): CSSProperties {
   return {
