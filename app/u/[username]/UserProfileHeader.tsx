@@ -1,10 +1,9 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { shade } from "@/lib/color";
 import { ENERGY_HEX } from "@/app/components/DeckProfileView";
 import { StatCard } from "@/app/components/StatCard";
 import AvatarPicker from "./AvatarPicker";
 import AnimatedGradient from "@/app/components/AnimatedGradient";
-import { FAN_TOTAL_MS } from "@/lib/entranceTiming";
 
 /**
  * Energy-accent keys the picker (and DB check constraint) accept.
@@ -125,26 +124,6 @@ export default function UserProfileHeader({
           <div className="absolute bottom-3 right-6 pointer-events-auto">
             {bannerOverlay}
           </div>
-        </div>
-      )}
-
-      {/* Hero glow — dissolves in behind the card fan once it's done
-          settling (see .dx-hero-glow in globals.css), sitting between the
-          gradient and the fan in DOM order so it paints on top of the one
-          and behind the other without needing an explicit z-index dance. */}
-      {bannerFan && (
-        <div
-          aria-hidden="true"
-          className={`absolute inset-x-0 top-0 ${bannerBox} overflow-hidden z-0 pointer-events-none flex items-center justify-center`}
-        >
-          <div
-            className="dx-hero-glow w-[60%] aspect-square rounded-full"
-            style={{
-              background:
-                "radial-gradient(circle, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 65%)",
-              "--glow-start-delay": `${FAN_TOTAL_MS}ms`,
-            } as CSSProperties}
-          />
         </div>
       )}
 

@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { shade } from "@/lib/color";
 import { StatCard, ResponsiveLabel } from "@/app/components/StatCard";
-import { FAN_START_DELAY_MS, FAN_STAGGER_MS, FAN_TOTAL_MS } from "@/lib/entranceTiming";
+import { FAN_START_DELAY_MS, FAN_STAGGER_MS } from "@/lib/entranceTiming";
 
 /**
  * Twitter-profile-style header for a meta deck page.
@@ -237,26 +237,6 @@ export default function MetaProfileHeader({
         className="relative w-full overflow-hidden h-[calc(34vw-12px)] sm:h-auto sm:aspect-[4.6875/1]"
         style={{ background: bannerGradient }}
       >
-        {/* Hero glow — dissolves in behind the card fan once it's done
-            settling (see .dx-hero-glow in globals.css). Sits before the
-            cards layer in DOM order so it paints on top of the banner's
-            background color/gradient and behind the cards. */}
-        {cardCount > 0 && (
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 flex items-center justify-center pointer-events-none"
-          >
-            <div
-              className="dx-hero-glow w-[60%] aspect-square rounded-full"
-              style={{
-                background:
-                  "radial-gradient(circle, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 65%)",
-                "--glow-start-delay": `${FAN_TOTAL_MS}ms`,
-              } as CSSProperties}
-            />
-          </div>
-        )}
-
         {/* Cards layer — constrained to the same max-w-6xl ± px-6 the
             variant grid below uses, so the fan spans the full width of
             the deck-list preview row regardless of viewport. */}
