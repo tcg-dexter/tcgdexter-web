@@ -6,6 +6,7 @@ import {
   normalizePerspective,
   summarize,
   type BattleLogSummary,
+  type BattleLogParseResult,
 } from "@/lib/battle-log";
 import { clientTz, celebrateStreak } from "@/lib/streak-client";
 
@@ -21,6 +22,106 @@ const META_ARCHETYPES = [
   "Rocket's Honchkrow", "Rocket's Mewtwo", "Slowking", "Starmie Froslass",
   "Steven's Metagross", "Tera Box",
 ];
+
+/** Strip a trailing rule-box suffix ("ex", "V", "VMAX", "VSTAR", "GX") off a
+ *  battle-log card name so it can be compared against the bare species /
+ *  archetype names in META_ARCHETYPES ("Dragapult ex" -> "Dragapult"). */
+function normalizeSpeciesName(raw: string): string {
+  return raw.replace(/\s+(ex|V|VMAX|VSTAR|GX)$/i, "").trim();
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** True if `needle` appears in `haystack` as a whole word (both already
+ *  lowercased) — used to test a species name against a (possibly compound)
+ *  archetype label without matching partial words. */
+function hasWord(haystack: string, needle: string): boolean {
+  return new RegExp(`(^|\\s)${escapeRegExp(needle)}($|\\s)`).test(haystack);
+}
+
+/** Best-effort guess at the opponent's meta archetype from the Pokémon they
+ *  actually played, so the field isn't left blank after Analyze. Candidates
+ *  are ranked by damage dealt first (mirrors resolveOpponentHero's own
+ *  gameplay-inference cascade: the top-damage attacker is the strongest
+ *  signal), then by how often they were played/evolved into for Pokémon
+ *  that never attacked (e.g. an Ogerpon that just sat on the bench).
+ *  Adjacent pairs of top candidates are checked against the compound,
+ *  two-species archetype labels ("Dragapult Dusknoir") before falling back
+ *  to single-species matches, so a partner Pokémon isn't dropped just
+ *  because it attacked less than the headliner. Purely a starting point —
+ *  the field stays editable. */
+function guessOpponentArchetype(normalized: BattleLogParseResult): string | null {
+  const attackDamage = new Map<string, number>();
+  const playCounts = new Map<string, number>();
+
+  for (const a of normalized.actions) {
+    if (a.actor !== "opponent") continue;
+    if (a.action_type === "attack") {
+      const attacker = typeof a.payload.attacker === "string" ? a.payload.attacker : null;
+      const damage = typeof a.payload.damage === "number" ? a.payload.damage : 0;
+      if (attacker && damage > 0) {
+        const name = normalizeSpeciesName(attacker);
+        attackDamage.set(name, (attackDamage.get(name) ?? 0) + damage);
+      }
+    } else if (a.action_type === "play_to_active" || a.action_type === "play_to_bench") {
+      const card = typeof a.payload.card === "string" ? a.payload.card : null;
+      if (card) {
+        const name = normalizeSpeciesName(card);
+        playCounts.set(name, (playCounts.get(name) ?? 0) + 1);
+      }
+    } else if (a.action_type === "evolve") {
+      const to = typeof a.payload.to === "string" ? a.payload.to : null;
+      if (to) {
+        const name = normalizeSpeciesName(to);
+        playCounts.set(name, (playCounts.get(name) ?? 0) + 1);
+      }
+    }
+  }
+
+  // Rank: every attacker by damage dealt (highest first), then every
+  // played/evolved-into Pokémon that never attacked, by play count. Ties in
+  // insertion order are fine here — this only needs to be a reasonable
+  // starting guess.
+  const byDamage = Array.from(attackDamage.entries()).sort((a, b) => b[1] - a[1]);
+  const byPlays = Array.from(playCounts.entries()).sort((a, b) => b[1] - a[1]);
+  const seen = new Set<string>();
+  const candidates: string[] = [];
+  for (const [name] of [...byDamage, ...byPlays]) {
+    if (seen.has(name)) continue;
+    seen.add(name);
+    candidates.push(name);
+  }
+  if (candidates.length === 0) return null;
+
+  const lower = candidates.map((c) => c.toLowerCase());
+
+  // Compound (two-species) archetypes first, checking nearby-ranked pairs
+  // so a lower-damage partner Pokémon can still complete the match.
+  for (let i = 0; i < lower.length; i++) {
+    for (let j = i + 1; j < lower.length; j++) {
+      const compound = META_ARCHETYPES.find((a) => {
+        const al = a.toLowerCase();
+        return hasWord(al, lower[i]) && hasWord(al, lower[j]);
+      });
+      if (compound) return compound;
+    }
+  }
+
+  // Then single-species: exact label match beats a partial (substring)
+  // match, but a lower-ranked candidate's exact match still beats a
+  // higher-ranked candidate's partial one.
+  for (const name of lower) {
+    const exact = META_ARCHETYPES.find((a) => a.toLowerCase() === name);
+    if (exact) return exact;
+  }
+  for (const name of lower) {
+    const partial = META_ARCHETYPES.find((a) => hasWord(a.toLowerCase(), name));
+    if (partial) return partial;
+  }
+  return null;
+}
 
 // Same chip palette as BattleForm. Keep these in lockstep.
 const RESULT_STYLE = {
@@ -69,7 +170,8 @@ export default function BattleLogImportTab({
   // Optional fields
   const [opponentArchetype, setOpponentArchetype] = useState("");
   const [notes, setNotes] = useState("");
-  const [showDateField, setShowDateField] = useState(false);
+  // TCG Live imports default to today's date, like the manual log form.
+  const [showDateField, setShowDateField] = useState(true);
   const [matchDate, setMatchDate] = useState(() => new Date().toISOString().slice(0, 10));
 
   // Autocomplete state
@@ -148,6 +250,7 @@ export default function BattleLogImportTab({
     const sum = summarize(normalized);
     setSummary(sum);
     setResult(sum.result);
+    setOpponentArchetype(guessOpponentArchetype(normalized) ?? "");
     setPhase("review");
   }
 
@@ -159,6 +262,7 @@ export default function BattleLogImportTab({
     const sum = summarize(normalized);
     setSummary(sum);
     setResult(sum.result);
+    setOpponentArchetype(guessOpponentArchetype(normalized) ?? "");
     // If the user just picked a handle we don't have stored, offer to save it.
     if (!savedHandle) setSavePromptVisible(true);
   }
