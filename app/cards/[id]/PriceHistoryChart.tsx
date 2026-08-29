@@ -61,7 +61,9 @@ export default function PriceHistoryChart({ points }: { points: PricePoint[] }) 
   const delta = last.price - first.price;
   const deltaPct = first.price !== 0 ? (delta / first.price) * 100 : 0;
   const isFlat = Math.abs(delta) < 0.005;
-  const isUp = delta > 0;
+  // Rightmost value above leftmost → green; flat or down keeps the red.
+  const isUp = last.price > first.price;
+  const lineColor = isUp ? "#16a34a" : "#dc2626";
   const deltaColor = isFlat
     ? "text-text-muted"
     : isUp
@@ -96,7 +98,7 @@ export default function PriceHistoryChart({ points }: { points: PricePoint[] }) 
   }
 
   return (
-    <section className="mt-10 rounded-2xl p-[1.5px] bg-gradient-brand shadow-sm">
+    <section className="mt-10 rounded-2xl p-[1.5px] bg-gradient-to-r from-neutral-300 to-neutral-500 dark:from-neutral-600 dark:to-neutral-400 shadow-sm">
       <div className="rounded-[14.5px] bg-white/95 dark:bg-surface-elevated backdrop-blur-xl p-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
@@ -122,19 +124,28 @@ export default function PriceHistoryChart({ points }: { points: PricePoint[] }) 
           </div>
 
           {canShow30d && (
-            <div className="inline-flex rounded-full bg-surface-2 p-1 self-start">
+            <div
+              className="relative flex items-center h-[30px] rounded-full bg-black/5 dark:bg-white/5 p-[3px] self-start"
+              role="tablist"
+            >
+              <div
+                aria-hidden
+                className={`absolute inset-y-[3px] left-[3px] w-[calc(50%-3px)] rounded-full bg-black dark:bg-white shadow-sm transition-transform duration-300 ease-in-out ${
+                  range === "30d" ? "translate-x-full" : "translate-x-0"
+                }`}
+              />
               {(["7d", "30d"] as const).map((r) => (
                 <button
                   key={r}
                   type="button"
+                  role="tab"
+                  aria-selected={range === r}
                   onClick={() => {
                     setRange(r);
                     setHoverIndex(null);
                   }}
-                  className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors ${
-                    range === r
-                      ? "bg-accent text-white shadow-sm"
-                      : "text-text-secondary hover:text-text-primary"
+                  className={`relative z-10 h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${
+                    range === r ? "text-white dark:text-black" : "text-text-muted"
                   }`}
                 >
                   {r.toUpperCase()}
@@ -159,8 +170,8 @@ export default function PriceHistoryChart({ points }: { points: PricePoint[] }) 
           >
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.28" />
-                <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
+                <stop offset="0%" stopColor={lineColor} stopOpacity="0.28" />
+                <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
               </linearGradient>
             </defs>
 
@@ -170,13 +181,13 @@ export default function PriceHistoryChart({ points }: { points: PricePoint[] }) 
               <polyline
                 points={linePoints}
                 fill="none"
-                stroke="var(--accent)"
+                stroke={lineColor}
                 strokeWidth="2.5"
                 strokeLinejoin="round"
                 strokeLinecap="round"
               />
             ) : (
-              <circle cx={WIDTH / 2} cy={HEIGHT / 2} r="4" fill="var(--accent)" />
+              <circle cx={WIDTH / 2} cy={HEIGHT / 2} r="4" fill={lineColor} />
             )}
 
             {hoverIndex !== null && visible[hoverIndex] && (
@@ -194,7 +205,7 @@ export default function PriceHistoryChart({ points }: { points: PricePoint[] }) 
                   cx={xFor(hoverIndex)}
                   cy={yFor(visible[hoverIndex].price)}
                   r="5"
-                  fill="var(--accent)"
+                  fill={lineColor}
                   stroke="var(--surface-elevated)"
                   strokeWidth="2"
                 />
