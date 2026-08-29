@@ -166,6 +166,11 @@ export default function BattleLogImportTab({
   const [savedHandle, setSavedHandle] = useState<string | null | undefined>(undefined);
   const [savePromptVisible, setSavePromptVisible] = useState(false);
   const [savePromptChecked, setSavePromptChecked] = useState(true);
+  // True when playerHandle was auto-matched against the user's saved TCG
+  // Live handle rather than defaulted/manually picked — hides the "which
+  // player is you?" picker entirely in that case since there's nothing to
+  // confirm. "Not you?" reveals it as an escape hatch.
+  const [handleConfident, setHandleConfident] = useState(false);
 
   // Optional fields
   const [opponentArchetype, setOpponentArchetype] = useState("");
@@ -259,9 +264,11 @@ export default function BattleLogImportTab({
         .slice(0, 2)
         .find((h) => h.toLowerCase() === resolvedSavedHandle.toLowerCase())!;
       setSavePromptVisible(false);
+      setHandleConfident(true);
     } else {
       initial = parsed.handles[0];
       setSavePromptVisible(!resolvedSavedHandle); // offer to save only if none stored
+      setHandleConfident(false);
     }
     setPlayerHandle(initial);
 
@@ -275,6 +282,7 @@ export default function BattleLogImportTab({
 
   function handlePickPlayer(h: string) {
     setPlayerHandle(h);
+    setHandleConfident(false);
     // Re-derive summary for the new perspective.
     const parsed = parseBattleLog(raw.trim());
     const normalized = normalizePerspective(parsed, h);
@@ -392,41 +400,59 @@ export default function BattleLogImportTab({
   // ── Review phase ──────────────────────────────────────────────
   return (
     <div key="review" className="pt-2 animate-tab-fade">
-      {/* Handle picker */}
+      {/* Handle picker — skipped entirely once the saved TCG Live handle
+          has matched a player in the log; there's nothing to confirm.
+          "Not you?" is the escape hatch if that match is ever wrong. */}
       <div className="mb-3">
-        <p className="text-xs font-semibold text-text-secondary mb-2">
-          Which player is you?
-        </p>
-        <div className="flex gap-2">
-          {handles.map((h) => {
-            const selected = playerHandle === h;
-            return (
-              <button
-                key={h}
-                onClick={() => handlePickPlayer(h)}
-                className={`flex-1 rounded-full py-2 text-sm font-semibold transition-all truncate ${
-                  selected
-                    ? "bg-gradient-brand text-white"
-                    : "bg-bg text-text-secondary shadow-[inset_0_0_0_1px_var(--border)] hover:bg-surface-2"
-                }`}
-              >
-                {h}
-              </button>
-            );
-          })}
-        </div>
-        {savePromptVisible && playerHandle && (
-          <label className="mt-2 flex items-start gap-2 text-xs text-text-secondary cursor-pointer">
-            <input
-              type="checkbox"
-              checked={savePromptChecked}
-              onChange={(e) => setSavePromptChecked(e.target.checked)}
-              className="mt-0.5"
-            />
-            <span>
-              Save <span className="font-semibold">{playerHandle}</span> as my TCG Live username for future imports.
-            </span>
-          </label>
+        {handleConfident && playerHandle ? (
+          <p className="text-xs text-text-secondary">
+            Logging as <span className="font-semibold text-text-primary">{playerHandle}</span>
+            {" · "}
+            <button
+              type="button"
+              onClick={() => setHandleConfident(false)}
+              className="text-accent hover:text-accent-light transition-colors"
+            >
+              Not you?
+            </button>
+          </p>
+        ) : (
+          <>
+            <p className="text-xs font-semibold text-text-secondary mb-2">
+              Which player is you?
+            </p>
+            <div className="flex gap-2">
+              {handles.map((h) => {
+                const selected = playerHandle === h;
+                return (
+                  <button
+                    key={h}
+                    onClick={() => handlePickPlayer(h)}
+                    className={`flex-1 rounded-full py-2 text-sm font-semibold transition-all truncate ${
+                      selected
+                        ? "bg-gradient-brand text-white"
+                        : "bg-bg text-text-secondary shadow-[inset_0_0_0_1px_var(--border)] hover:bg-surface-2"
+                    }`}
+                  >
+                    {h}
+                  </button>
+                );
+              })}
+            </div>
+            {savePromptVisible && playerHandle && (
+              <label className="mt-2 flex items-start gap-2 text-xs text-text-secondary cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={savePromptChecked}
+                  onChange={(e) => setSavePromptChecked(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>
+                  Save <span className="font-semibold">{playerHandle}</span> as my TCG Live username for future imports.
+                </span>
+              </label>
+            )}
+          </>
         )}
       </div>
 
