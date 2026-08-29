@@ -39,7 +39,7 @@ function formatDateLabel(iso: string): string {
  * scrubs through days exactly like hovering with a cursor does.
  */
 export default function PriceHistoryChart({ points }: { points: PricePoint[] }) {
-  const [range, setRange] = useState<Range>("7d");
+  const [range, setRange] = useState<Range>("30d");
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const gradientId = useId();
 
