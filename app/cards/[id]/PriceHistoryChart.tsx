@@ -166,7 +166,7 @@ export default function PriceHistoryChart({ points }: { points: PricePoint[] }) 
                     setRange(r);
                     setHoverIndex(null);
                   }}
-                  className={`relative z-10 h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${
+                  className={`relative z-10 h-full flex-1 min-w-0 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${
                     range === r ? "text-white dark:text-black" : "text-text-muted"
                   }`}
                 >
