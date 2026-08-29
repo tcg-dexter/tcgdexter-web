@@ -16,7 +16,9 @@ import { findCardAppearances } from "@/lib/cardAppearances";
 import { hydrateListPreviews, type ListRow, type ListSummary } from "@/lib/lists";
 import AppearsInCarousel from "./AppearsInCarousel";
 import ListsCarousel from "./ListsCarousel";
+import PriceHistoryChart from "./PriceHistoryChart";
 import { shopListingsForCard } from "@/lib/shopListings";
+import { getCardPriceHistory } from "@/lib/priceHistory";
 import ShopListingsPanel from "../ShopListingsPanel";
 
 interface Props {
@@ -39,9 +41,15 @@ export default async function CardDetailPage({ params }: Props) {
   if (!card || !raw) notFound();
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [
+    {
+      data: { user },
+    },
+    priceHistory,
+  ] = await Promise.all([
+    supabase.auth.getUser(),
+    getCardPriceHistory(card.setId, card.number, card.name),
+  ]);
 
   // First "Appears in" batch (top meta variants containing this exact
   // printing). Server-render the first 10 so the section paints with the
@@ -123,6 +131,8 @@ export default async function CardDetailPage({ params }: Props) {
       )}
 
       <ListsCarousel lists={listsWithCard} />
+
+      <PriceHistoryChart points={priceHistory} />
 
       {moreByArtist.length > 0 && (
         <div className="mt-10">
