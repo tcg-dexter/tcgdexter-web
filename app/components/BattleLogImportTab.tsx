@@ -192,25 +192,42 @@ export default function BattleLogImportTab({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // Lazily fetch the user's saved TCG Live handle on mount.
+  // Lazily fetch the user's saved TCG Live handle on mount. The promise is
+  // cached in a ref (not just the `savedHandle` state) so handleAnalyze can
+  // await it directly — clicking Analyze right after pasting can easily
+  // outrace this fetch, and reading the still-`undefined` state at that
+  // moment used to fall through to "no saved handle", silently re-asking
+  // the user to pick + save their handle on every single import even
+  // though it was already saved from the first one.
+  const savedHandlePromiseRef = useRef<Promise<string | null> | null>(null);
+
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/profile/tcg-live-handle")
+    const promise = fetch("/api/profile/tcg-live-handle")
       .then((r) => (r.ok ? r.json() : { tcg_live_handle: null }))
-      .then((j) => {
-        if (!cancelled) setSavedHandle(j.tcg_live_handle ?? null);
-      })
-      .catch(() => {
-        if (!cancelled) setSavedHandle(null);
-      });
+      .then((j) => (j.tcg_live_handle as string | null) ?? null)
+      .catch(() => null);
+    savedHandlePromiseRef.current = promise;
+    promise.then((handle) => {
+      if (!cancelled) setSavedHandle(handle);
+    });
     return () => {
       cancelled = true;
     };
   }, []);
 
+  /** Resolves the saved handle, waiting on the in-flight fetch if the
+   *  mount-time request hasn't come back yet instead of assuming "none". */
+  async function resolveSavedHandle(): Promise<string | null> {
+    if (savedHandle !== undefined) return savedHandle;
+    const resolved = await (savedHandlePromiseRef.current ?? Promise.resolve(null));
+    setSavedHandle(resolved);
+    return resolved;
+  }
+
   /* ─── Actions ──────────────────────────────────────────────── */
 
-  function handleAnalyze() {
+  async function handleAnalyze() {
     setError(null);
     const text = raw.trim();
     if (text.length < 50) {
@@ -228,21 +245,23 @@ export default function BattleLogImportTab({
     setHandles(parsed.handles.slice(0, 2));
     setUnmatchedCount(parsed.unmatched.length);
 
+    const resolvedSavedHandle = await resolveSavedHandle();
+
     // Auto-pick perspective if the saved handle matches one of the detected.
     let initial: string;
     if (
-      savedHandle &&
+      resolvedSavedHandle &&
       parsed.handles.slice(0, 2).some(
-        (h) => h.toLowerCase() === savedHandle.toLowerCase(),
+        (h) => h.toLowerCase() === resolvedSavedHandle.toLowerCase(),
       )
     ) {
       initial = parsed.handles
         .slice(0, 2)
-        .find((h) => h.toLowerCase() === savedHandle.toLowerCase())!;
+        .find((h) => h.toLowerCase() === resolvedSavedHandle.toLowerCase())!;
       setSavePromptVisible(false);
     } else {
       initial = parsed.handles[0];
-      setSavePromptVisible(!savedHandle); // offer to save only if none stored
+      setSavePromptVisible(!resolvedSavedHandle); // offer to save only if none stored
     }
     setPlayerHandle(initial);
 
