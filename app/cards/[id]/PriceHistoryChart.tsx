@@ -145,7 +145,14 @@ export default function PriceHistoryChart({ points }: { points: PricePoint[] }) 
                 aria-hidden
                 className="absolute inset-y-[3px] left-[3px] rounded-full bg-black dark:bg-white shadow-sm transition-transform duration-300 ease-in-out"
                 style={{
-                  width: `calc(${100 / availableRanges.length}% - 3px)`,
+                  // The track has 3px of padding on every side, so each
+                  // button's true width is (100% - 6px) / N — not
+                  // 100%/N minus a flat 3px. Those only coincide at N=2;
+                  // for 3+ options the old formula under-sized the slider
+                  // and translateX(index*100%) compounded the shortfall
+                  // with every step, drifting it off-center from later
+                  // items.
+                  width: `calc((100% - 6px) / ${availableRanges.length})`,
                   transform: `translateX(${availableRanges.indexOf(range) * 100}%)`,
                 }}
               />
