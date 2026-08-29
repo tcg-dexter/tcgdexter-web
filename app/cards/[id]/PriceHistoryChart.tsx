@@ -70,8 +70,6 @@ export default function PriceHistoryChart({ points }: { points: PricePoint[] }) 
       ? "text-green-600 dark:text-green-500"
       : "text-red-600 dark:text-red-500";
 
-  const active = hoverIndex !== null ? visible[hoverIndex] : last;
-
   function updateHover(clientX: number, target: SVGSVGElement) {
     if (visible.length === 0) return;
     const rect = target.getBoundingClientRect();
@@ -105,7 +103,7 @@ export default function PriceHistoryChart({ points }: { points: PricePoint[] }) 
             <h2 className="text-lg font-semibold text-text-primary">Price History</h2>
             <div className="mt-1 flex items-baseline gap-2">
               <span className="text-2xl font-bold text-text-primary tabular-nums">
-                {formatCurrency(active.price)}
+                {formatCurrency(last.price)}
               </span>
               {!isFlat ? (
                 <span className={`text-sm font-semibold tabular-nums ${deltaColor}`}>
@@ -118,8 +116,7 @@ export default function PriceHistoryChart({ points }: { points: PricePoint[] }) 
               )}
             </div>
             <p className="text-xs text-text-muted mt-0.5">
-              {formatDateLabel(active.date)}
-              {hoverIndex === null && " · latest"}
+              {formatDateLabel(last.date)} · latest
             </p>
           </div>
 
@@ -212,6 +209,25 @@ export default function PriceHistoryChart({ points }: { points: PricePoint[] }) 
               </>
             )}
           </svg>
+
+          {hoverIndex !== null && visible[hoverIndex] && (
+            <div
+              className="absolute -translate-x-1/2 -translate-y-full pb-2 pointer-events-none z-20"
+              style={{
+                left: `${(xFor(hoverIndex) / WIDTH) * 100}%`,
+                top: `${(PAD_TOP / HEIGHT) * 100}%`,
+              }}
+            >
+              <div className="rounded-lg border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated shadow-md px-2.5 py-1.5 text-center whitespace-nowrap">
+                <div className="text-sm font-bold text-text-primary tabular-nums">
+                  {formatCurrency(visible[hoverIndex].price)}
+                </div>
+                <div className="text-[10px] text-text-muted mt-0.5">
+                  {formatDateLabel(visible[hoverIndex].date)}
+                </div>
+              </div>
+            </div>
+          )}
 
           {visible.length > 1 && (
             <div className="flex justify-between text-[11px] text-text-muted mt-1 px-1">
