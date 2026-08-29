@@ -33,7 +33,7 @@ export interface PricePoint {
   price: number;
 }
 
-/** Last 30 days of market price for one printing, ascending by date. */
+/** Last 90 days of market price for one printing, ascending by date. */
 export async function getCardPriceHistory(
   setId: string,
   number: string,
@@ -41,7 +41,7 @@ export async function getCardPriceHistory(
 ): Promise<PricePoint[]> {
   const cardId = priceHistoryCardId(setId, number, name);
   const since = new Date();
-  since.setUTCDate(since.getUTCDate() - 30);
+  since.setUTCDate(since.getUTCDate() - 90);
 
   const supabase = await createClient();
   const { data, error } = await supabase

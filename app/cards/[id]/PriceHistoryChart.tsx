@@ -9,6 +9,18 @@ const PAD_X = 4;
 const PAD_TOP = 20;
 const PAD_BOTTOM = 12;
 
+type Range = "7d" | "30d" | "60d" | "90d";
+
+// A tier is offered once there's more data than the previous tier's day
+// count — e.g. 30D only shows up once there's more than a week of history,
+// mirroring how a single card can be too new to have earned longer tiers.
+const RANGE_TIERS: Array<{ range: Range; days: number; threshold: number }> = [
+  { range: "7d", days: 7, threshold: 0 },
+  { range: "30d", days: 30, threshold: 7 },
+  { range: "60d", days: 60, threshold: 30 },
+  { range: "90d", days: 90, threshold: 60 },
+];
+
 function formatCurrency(n: number): string {
   const sign = n < 0 ? "-" : "";
   const abs = Math.abs(n);
@@ -27,16 +39,20 @@ function formatDateLabel(iso: string): string {
  * scrubs through days exactly like hovering with a cursor does.
  */
 export default function PriceHistoryChart({ points }: { points: PricePoint[] }) {
-  const [range, setRange] = useState<"7d" | "30d">("7d");
+  const [range, setRange] = useState<Range>("7d");
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const gradientId = useId();
 
-  const visible = useMemo(() => {
-    const n = range === "7d" ? 7 : 30;
-    return points.slice(Math.max(0, points.length - n));
-  }, [points, range]);
+  const availableRanges = useMemo(
+    () => RANGE_TIERS.filter((t) => points.length > t.threshold).map((t) => t.range),
+    [points]
+  );
 
-  const canShow30d = points.length > 7;
+  const rangeDays = RANGE_TIERS.find((t) => t.range === range)?.days ?? 7;
+
+  const visible = useMemo(() => {
+    return points.slice(Math.max(0, points.length - rangeDays));
+  }, [points, rangeDays]);
 
   const prices = visible.map((p) => p.price);
   const min = prices.length ? Math.min(...prices) : 0;
@@ -120,18 +136,20 @@ export default function PriceHistoryChart({ points }: { points: PricePoint[] }) 
             </p>
           </div>
 
-          {canShow30d && (
+          {availableRanges.length > 1 && (
             <div
               className="relative flex items-center h-[30px] rounded-full bg-black/5 dark:bg-white/5 p-[3px] self-start"
               role="tablist"
             >
               <div
                 aria-hidden
-                className={`absolute inset-y-[3px] left-[3px] w-[calc(50%-3px)] rounded-full bg-black dark:bg-white shadow-sm transition-transform duration-300 ease-in-out ${
-                  range === "30d" ? "translate-x-full" : "translate-x-0"
-                }`}
+                className="absolute inset-y-[3px] left-[3px] rounded-full bg-black dark:bg-white shadow-sm transition-transform duration-300 ease-in-out"
+                style={{
+                  width: `calc(${100 / availableRanges.length}% - 3px)`,
+                  transform: `translateX(${availableRanges.indexOf(range) * 100}%)`,
+                }}
               />
-              {(["7d", "30d"] as const).map((r) => (
+              {availableRanges.map((r) => (
                 <button
                   key={r}
                   type="button"
@@ -158,7 +176,7 @@ export default function PriceHistoryChart({ points }: { points: PricePoint[] }) 
             preserveAspectRatio="none"
             className="w-full h-[160px] sm:h-[200px] touch-none cursor-crosshair"
             role="img"
-            aria-label={`Market price over the last ${range === "7d" ? "7" : "30"} days, from ${formatCurrency(min)} to ${formatCurrency(max)}`}
+            aria-label={`Market price over the last ${rangeDays} days, from ${formatCurrency(min)} to ${formatCurrency(max)}`}
             onPointerMove={handlePointerMove}
             onPointerDown={handlePointerMove}
             onPointerLeave={handlePointerLeave}
