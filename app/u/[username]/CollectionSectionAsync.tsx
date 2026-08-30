@@ -36,6 +36,11 @@ export default async function CollectionSectionAsync({
     loadCollectionValueHistory(userId),
   ]);
 
+  // null (not zeroes) means the stats couldn't be loaded — see
+  // loadCollectionStats. Render nothing rather than an empty-collection
+  // claim we can't stand behind.
+  if (!stats) return null;
+
   return (
     <CollectionSection
       stats={stats}

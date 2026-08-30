@@ -40,6 +40,8 @@ export interface CollectionStats {
   totalValue: number;
 }
 
+/** A collection that really is empty — distinct from `null`, which means the
+ *  stats couldn't be loaded at all. See loadCollectionStats. */
 export const EMPTY_COLLECTION_STATS: CollectionStats = {
   totalCards: 0,
   uniqueCards: 0,
@@ -82,8 +84,20 @@ export function canViewCollection({
  * A printing missing from price history contributes 0 to value but still
  * counts toward cards/unique/sets — understating the value is less visible
  * than dropping the card from the counts.
+ *
+ * Returns `null` when the stats can't be loaded, which the caller renders as
+ * "no module" rather than as an empty collection. The distinction matters: a
+ * zeroed result reads as `totalCards === 0`, which is the same shape as
+ * genuinely owning nothing, so a failure would tell someone with thousands
+ * of cards that their collection is empty — and hide the value chart with
+ * it. The realistic trigger is a deploy landing ahead of its migration, or
+ * PostgREST not having reloaded its schema cache, both of which resolve on
+ * their own; showing nothing until they do is honest, claiming an empty
+ * collection is not.
  */
-export async function loadCollectionStats(userId: string): Promise<CollectionStats> {
+export async function loadCollectionStats(
+  userId: string,
+): Promise<CollectionStats | null> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("collection_stats", {
     target: userId,
@@ -91,7 +105,7 @@ export async function loadCollectionStats(userId: string): Promise<CollectionSta
 
   if (error) {
     console.error("[collection] stats failed:", error);
-    return EMPTY_COLLECTION_STATS;
+    return null;
   }
 
   // A set-returning function comes back as an array; the aggregate always
