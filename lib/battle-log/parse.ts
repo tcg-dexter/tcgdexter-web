@@ -669,9 +669,47 @@ const PATTERNS: Pattern[] = [
  */
 function extractChildActions(block: Block): ParsedAction[] {
   const out: ParsedAction[] = [];
+  // Nearest "drew ... and played them to the Bench" dash above, waiting for
+  // the bullet that names the cards. Same document-order pairing as
+  // extractDiscardDraw — bullets carry no marker saying which dash owns them.
+  let pendingBench: { actor: string; raw: string } | null = null;
+
   for (const child of block.children) {
-    if (child.kind !== "dash") continue;
+    if (child.kind === "bullet") {
+      if (pendingBench) {
+        for (const name of splitCardList(child.text)) {
+          out.push(action("play_to_bench", pendingBench.actor, pendingBench.raw, { card: name }));
+        }
+        pendingBench = null;
+      }
+      continue;
+    }
     const t = normalizeQuotes(child.text);
+    // Any other dash ends the previous one's bullet run, so an unrelated
+    // later list can't be misattributed to it.
+    pendingBench = null;
+
+    // Pokémon fetched from the deck straight onto the Bench — Buddy-Buddy
+    // Poffin, a Telepathic Psychic Energy trigger.
+    //
+    // These were dropped entirely, and the consequences showed up much later
+    // and looked like something else: the engine never put the Pokémon on the
+    // bench, so when one of them was promoted the switch_active handler
+    // conjured it out of nowhere, and a viewer saw a card appear in the
+    // Active Spot having never been anywhere. Every name is right there in
+    // the bullet underneath.
+    const benchMulti = t.match(
+      /^(.+?) drew (\d+) cards? and played them to the Bench\.$/,
+    );
+    if (benchMulti) {
+      pendingBench = { actor: benchMulti[1], raw: child.raw };
+      continue;
+    }
+    const benchOne = t.match(/^(.+?) drew (.+?) and played it to the Bench\.$/);
+    if (benchOne) {
+      out.push(action("play_to_bench", benchOne[1], child.raw, { card: benchOne[2] }));
+      continue;
+    }
 
     const cond = t.match(
       /^(.+?)'s (.+?) is now (Poisoned|Burned|Asleep|Confused|Paralyzed)\.$/,

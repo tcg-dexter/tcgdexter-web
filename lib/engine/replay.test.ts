@@ -51,11 +51,40 @@ describe("engine.replay (example-1)", () => {
     expect(oppDiscardNames).toContain("N's Zoroark ex");
   });
 
-  it("flags parser gaps via warn-level diagnostics rather than silently dropping state", () => {
-    const codes = new Set(result.diagnostics.map((d) => d.code));
-    // The Buddy-Buddy Poffin path means Froakie never reaches the bench,
-    // so the later "evolved Froakie to Frogadier" raises this code.
-    expect(codes.has("evolve_source_missing")).toBe(true);
+  it("replays the whole fixture without losing track of a Pokémon", () => {
+    // This used to assert the opposite: that "evolved Froakie to Frogadier"
+    // raised evolve_source_missing, because the Buddy-Buddy Poffin line that
+    // benched Froakie ("drew 2 cards and played them to the Bench", with the
+    // names on the bullet underneath) was dropped by the parser and the
+    // Pokémon never reached the board.
+    //
+    // The parser reads those lines now, and the whole cascade this fixture
+    // used to produce — evolve_source_missing, attach_target_missing,
+    // switch_target_missing, ko_target_missing — is gone with it. What is
+    // left is informational only. Keeping the assertion pointed at "no warn
+    // or error" rather than deleting it means a future parser change that
+    // re-loses a Pokémon fails here instead of quietly degrading the board.
+    const loud = result.diagnostics.filter((d) => d.severity !== "info");
+    expect(loud.map((d) => `${d.severity}:${d.code} ${d.message}`)).toEqual([]);
+  });
+
+  it("still surfaces a genuine rules conflict rather than swallowing it", () => {
+    // The counterpart to the assertion above: quiet diagnostics on example-1
+    // must mean "nothing went wrong", not "the machinery stopped reporting".
+    // example-3's log implies a seventh Pokémon on a five-slot bench, and the
+    // engine says so.
+    const other = replay(
+      normalizePerspective(
+        parseBattleLog(
+          readFileSync(
+            join(__dirname, "..", "battle-log", "fixtures", "example-3-same-name-attach.txt"),
+            "utf8",
+          ),
+        ),
+        "Nnova12",
+      ),
+    );
+    expect(other.diagnostics.some((d) => d.severity === "warn")).toBe(true);
   });
 
   it("tracks the active stadium card and its owner", () => {
