@@ -727,7 +727,62 @@ function extractChildActions(block: Block): ParsedAction[] {
           from_condition: counter[4],
         }),
       );
+      continue;
     }
+
+    // Damage counters moved between Pokémon — Munkidori's Adrena-Brain.
+    //
+    // Both possessives are unreliable, exactly as for the placement lines
+    // below: Adrena-Brain moves damage from your own Pokémon onto the
+    // opponent's, and the log stamps both ends with the same handle. Only
+    // the names are trustworthy, so they are all the payload carries.
+    const moved = t.match(
+      /^(.+?) moved (\d+) damage counters? from (.+?)'s (.+?) to (.+?)'s (.+?)\.$/,
+    );
+    if (moved) {
+      out.push(
+        action("damage_counters_moved", moved[1], child.raw, {
+          counters: Number(moved[2]),
+          from: moved[4],
+          to: moved[6],
+        }),
+      );
+      continue;
+    }
+  }
+
+  // Effect-driven damage counters, gathered across the whole block into ONE
+  // action rather than one per line.
+  //
+  // Froslass's Freezing Shroud puts a counter on every Pokémon in play with
+  // an ability — both players' — and TCG Live writes one child line each:
+  //
+  //   Qjiaaap's Froslass used Freezing Shroud.
+  //   - a11father put a damage counter on Qjiaaap's N's Zoroark ex.
+  //
+  // Neither handle on those lines can be trusted. The leading actor flips
+  // between checkups for the same Froslass, and the possessive is stamped
+  // with one player's name for every target including the opponent's — the
+  // N's Zoroark ex above is a11father's. What IS reliable is the set of
+  // names, so the whole activation becomes a single action listing them and
+  // the engine resolves them together against both boards. That also stops
+  // the replay from treating one ability as six separate events.
+  const placements = block.children.flatMap((child) => {
+    if (child.kind !== "dash") return [];
+    const m = normalizeQuotes(child.text).match(
+      /^(.+?) put (?:a|(\d+)) damage counters? on (.+?)'s (.+?)\.$/,
+    );
+    return m ? [{ actor: m[1], count: Number(m[2] ?? 1), name: m[4], raw: child.raw }] : [];
+  });
+  if (placements.length > 0) {
+    out.push(
+      action("damage_counters_placed", placements[0].actor, block.text, {
+        // One entry per line, duplicates included: three "Munkidori" lines
+        // mean three different Munkidori in play, not one hit three times.
+        targets: placements.map((p) => p.name),
+        counters: placements.map((p) => p.count),
+      }),
+    );
   }
   return out;
 }

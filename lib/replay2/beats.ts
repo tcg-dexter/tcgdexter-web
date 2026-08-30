@@ -112,6 +112,26 @@ export type Beat = BeatBase &
     | { kind: "prize_taken"; count: number }
     | { kind: "condition"; pokemon: string; condition: string }
     | { kind: "damage_counters"; pokemon: string; counters: number }
+    /** One effect placing counters on several Pokémon at once — Freezing
+     *  Shroud during Pokémon Checkup. `applied` is what the engine actually
+     *  resolved, with the owner it landed on, since the log's own owner
+     *  attribution is unreliable; `targets` is what the log claimed, kept so
+     *  the board can still say something when a target didn't resolve. */
+    | {
+        kind: "damage_counters_placed";
+        applied: { pokemon: string; owner: BeatActor; counters: number }[];
+        targets: string[];
+      }
+    /** Counters moved between two Pokémon — Adrena-Brain. */
+    | {
+        kind: "damage_counters_moved";
+        from: string;
+        to: string;
+        counters: number;
+        fromOwner: BeatActor | null;
+        toOwner: BeatActor | null;
+        resolved: boolean;
+      }
     | { kind: "discard"; cards: string[] }
     | { kind: "discard_from_pokemon"; card: string; from: string }
     | { kind: "shuffle"; count: number }
@@ -245,6 +265,10 @@ const WEIGHTS: Record<string, BeatWeight> = {
   ability_used: "normal",
   condition_applied: "normal",
   damage_counter_placed: "normal",
+  // A board-wide effect that can shift several Pokémon at once toward a
+  // knockout — worth more than the ordinary turn texture around it.
+  damage_counters_placed: "major",
+  damage_counters_moved: "major",
   opening_hand: "normal",
 
   // Board-shape changes the eye should follow.
@@ -444,6 +468,38 @@ function toBeat(ev: EngineEvent, action: ParsedAction | undefined): Beat {
         kind: "damage_counters",
         pokemon: str(d.pokemon ?? p.pokemon),
         counters: num(d.counters ?? p.counters),
+      };
+
+    case "damage_counters_placed": {
+      const applied = Array.isArray(d.applied) ? d.applied : [];
+      return {
+        ...base,
+        kind: "damage_counters_placed",
+        applied: applied.flatMap((raw) => {
+          if (typeof raw !== "object" || raw === null) return [];
+          const r = raw as Record<string, unknown>;
+          return [
+            {
+              pokemon: str(r.pokemon),
+              owner: toActor(str(r.owner, "system")),
+              counters: num(r.counters, 1),
+            },
+          ];
+        }),
+        targets: strArray(d.targets ?? p.targets),
+      };
+    }
+
+    case "damage_counters_moved":
+      return {
+        ...base,
+        kind: "damage_counters_moved",
+        from: str(d.from ?? p.from),
+        to: str(d.to ?? p.to),
+        counters: num(d.counters ?? p.counters),
+        fromOwner: d.fromOwner ? toActor(str(d.fromOwner)) : null,
+        toOwner: d.toOwner ? toActor(str(d.toOwner)) : null,
+        resolved: bool(d.resolved),
       };
 
     case "discard": {

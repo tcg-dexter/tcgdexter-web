@@ -94,6 +94,13 @@ function subjectsOf(beat: Beat): {
       return { ...none, target: named(beat.pokemon, "active") };
     case "discard_from_pokemon":
       return { ...none, target: named(beat.from) };
+    case "damage_counters_moved":
+      // The counters come off `from` and land on `to`, and the two are
+      // routinely on opposite mats — Adrena-Brain's whole point is moving
+      // your own damage onto the opponent. Each mat claims whichever end it
+      // holds, so both cards perform; targetOnOpposingMat can't express that,
+      // hence the pair being resolved independently below.
+      return { actor: named(beat.from), target: named(beat.to), targetOnOpposingMat: false };
     case "retreat":
       // The log names only the energy discarded to pay for it. The Pokémon
       // retreating is whichever one is still Active on this frame — the
@@ -112,9 +119,17 @@ function subjectsOf(beat: Beat): {
 export interface BeatClaim {
   actorId: string | null;
   targetId: string | null;
+  /**
+   * Cards struck by an effect that hits several at once, and how much damage
+   * each took. Freezing Shroud puts a counter on every Pokémon in play with
+   * an ability, which can be eight cards across both mats — a single
+   * targetId cannot express that, and picking one of them to animate would
+   * misrepresent what happened.
+   */
+  struck: Record<string, number>;
 }
 
-export const NO_CLAIM: BeatClaim = { actorId: null, targetId: null };
+export const NO_CLAIM: BeatClaim = { actorId: null, targetId: null, struck: {} };
 
 interface ClaimCandidate {
   id: string;
@@ -176,15 +191,61 @@ export function resolveClaim(
 ): BeatClaim {
   if (!beat || !matActor) return NO_CLAIM;
   const { actor, target, targetOnOpposingMat } = subjectsOf(beat);
-  const onActorMat = matActor === beat.actor;
-  const targetMat = targetOnOpposingMat ? beat.actor !== matActor : onActorMat;
+  // Most beats belong to one player's mat. Two don't: Freezing Shroud puts
+  // counters on Pokémon across BOTH boards, and Adrena-Brain moves damage
+  // from a Pokémon on one mat to a Pokémon on the other. For those, each mat
+  // resolves whatever it happens to be holding rather than checking whose
+  // turn it is first — the log's own owner attribution on those lines is
+  // wrong anyway (see lib/battle-log/parse.ts).
+  const boardWide =
+    beat.kind === "damage_counters_placed" || beat.kind === "damage_counters_moved";
+  const onActorMat = boardWide || matActor === beat.actor;
+  const targetMat = boardWide
+    ? true
+    : targetOnOpposingMat
+      ? beat.actor !== matActor
+      : onActorMat;
   const resolve = (subject: Subject): string | null =>
     resolveOnMat(subject, cards.active, cards.bench) ??
     resolveOnMat(subject, previous.active, previous.bench);
   return {
     actorId: onActorMat ? resolve(actor) : null,
     targetId: targetMat ? resolve(target) : null,
+    struck: beat.kind === "damage_counters_placed"
+      ? resolveStruck(beat.applied, matActor, cards)
+      : {},
   };
+}
+
+/**
+ * Which of this mat's cards a multi-target effect landed on.
+ *
+ * Works from the engine's `applied` list rather than the log's `targets`:
+ * the engine has already decided which board each hit resolved to, so the
+ * owner is trustworthy here even though the handle on the original log line
+ * was not. Filtering by owner first is what keeps a Munkidori on one mat from
+ * claiming a hit that landed on the identically named one opposite.
+ *
+ * Within a mat, each entry claims a distinct card for the same reason the
+ * reducer does: the effect hits each Pokémon once, so two entries with the
+ * same name mean two Pokémon, not one taking double.
+ */
+function resolveStruck(
+  applied: { pokemon: string; owner: string; counters: number }[],
+  matActor: "player" | "opponent",
+  cards: MatCards,
+): Record<string, number> {
+  const pool = cards.active ? [cards.active, ...cards.bench] : cards.bench;
+  const claimed = new Set<string>();
+  const struck: Record<string, number> = {};
+  for (const hit of applied) {
+    if (hit.owner !== matActor) continue;
+    const card = pool.find((c) => !claimed.has(c.id) && c.name === hit.pokemon);
+    if (!card) continue;
+    claimed.add(card.id);
+    struck[card.id] = hit.counters * 10;
+  }
+  return struck;
 }
 
 /**

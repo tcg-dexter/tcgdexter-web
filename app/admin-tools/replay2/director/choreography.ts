@@ -216,6 +216,28 @@ const SHAPE_BY_KIND: Record<Beat["kind"], ChoreographySpec> = {
       { phase: "settle", ms: 220 },
     ],
   },
+  // Freezing Shroud hitting the whole board at once. Longer than a single
+  // counter placement because there is genuinely more to watch — counters
+  // landing on up to eight Pokémon across both mats — and because it is the
+  // kind of effect that quietly decides a game two turns later.
+  damage_counters_placed: {
+    phases: [
+      { phase: "anticipate", ms: 200 },
+      { phase: "act", ms: 240 },
+      { phase: "impact", ms: 460 },
+      { phase: "settle", ms: 320 },
+    ],
+  },
+  // Adrena-Brain. Two subjects and a transfer between them, so the beat has
+  // to hold long enough to see damage leave one card and arrive on another.
+  damage_counters_moved: {
+    phases: [
+      { phase: "anticipate", ms: 160 },
+      { phase: "act", ms: 340 },
+      { phase: "impact", ms: 300 },
+      { phase: "settle", ms: 260 },
+    ],
+  },
   discard_from_pokemon: {
     phases: [
       { phase: "act", ms: 240 },

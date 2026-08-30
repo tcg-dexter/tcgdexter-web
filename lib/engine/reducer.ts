@@ -42,6 +42,27 @@ function sideOf(state: GameState, actor: Actor): PlayerSide | null {
   return null;
 }
 
+/**
+ * Every Pokémon in play, both sides, Active before Bench.
+ *
+ * Needed by the effects that reach across both mats — Freezing Shroud puts a
+ * counter on every Pokémon with an ability, Adrena-Brain moves damage from
+ * your own onto the opponent's. For those, the log's own owner attribution is
+ * actively wrong (TCG Live stamps one player's handle on every line of the
+ * group, opponent's Pokémon included), so the target cannot be looked up on
+ * "the actor's side" the way every other action can. Only the names are
+ * trustworthy, and they have to be matched against the whole board.
+ */
+function allInPlay(state: GameState): { mon: PokemonInPlay; owner: Actor }[] {
+  const out: { mon: PokemonInPlay; owner: Actor }[] = [];
+  for (const owner of ["player", "opponent"] as const) {
+    const side = state.sides[owner];
+    if (side.active) out.push({ mon: side.active, owner });
+    for (const b of side.bench) out.push({ mon: b, owner });
+  }
+  return out;
+}
+
 function otherActor(actor: Actor): Actor {
   if (actor === "player") return "opponent";
   if (actor === "opponent") return "player";
@@ -767,6 +788,71 @@ export function applyAction(
         found.mon.conditions.push(condition);
       }
       event.detail = { pokemon: targetName, condition };
+      break;
+    }
+
+    /* ── Effect-driven damage counters ────────────────────────── */
+
+    case "damage_counters_placed": {
+      // One activation, every Pokémon it hit. See the ActionType docs and
+      // parse.ts: this arrives as a single action listing all the targets
+      // precisely because they can only be resolved as a set.
+      const targets = (payload.targets as string[] | undefined) ?? [];
+      const counts = (payload.counters as number[] | undefined) ?? [];
+      const inPlay = allInPlay(state);
+      const claimed = new Set<PokemonInPlay>();
+      const applied: { pokemon: string; owner: Actor; counters: number }[] = [];
+      targets.forEach((name, i) => {
+        const counters = Number(counts[i] ?? 1);
+        // Each line is a DIFFERENT Pokémon: the effect hits each one once, so
+        // three "Munkidori" lines mean three Munkidori in play rather than one
+        // taking three counters. Claiming each match in turn is what keeps
+        // them apart, given the names are identical and the handles are junk.
+        const hit = inPlay.find(
+          (e) => !claimed.has(e.mon) && e.mon.card.name === name,
+        );
+        if (!hit) {
+          diag("info", "counter_target_missing", `No Pokémon named ${name} in play to take a damage counter`, { name });
+          return;
+        }
+        claimed.add(hit.mon);
+        hit.mon.damage += counters * 10;
+        applied.push({ pokemon: name, owner: hit.owner, counters });
+      });
+      event.detail = { applied, targets };
+      break;
+    }
+
+    case "damage_counters_moved": {
+      const counters = Number(payload.counters ?? 0);
+      const fromName = String(payload.from ?? "");
+      const toName = String(payload.to ?? "");
+      const inPlay = allInPlay(state);
+      // Prefer a source that actually has the damage to give: with two
+      // same-named Pokémon in play, the one carrying counters is the one the
+      // move came off, and the log gives nothing else to separate them.
+      const src =
+        inPlay.find((e) => e.mon.card.name === fromName && e.mon.damage >= counters * 10) ??
+        inPlay.find((e) => e.mon.card.name === fromName);
+      const dst = inPlay.find((e) => e.mon !== src?.mon && e.mon.card.name === toName);
+      if (!src || !dst) {
+        diag("info", "counter_move_unresolved", `Could not move counters from ${fromName} to ${toName}`, { fromName, toName });
+        event.detail = { from: fromName, to: toName, counters, resolved: false };
+        break;
+      }
+      // Never move more than is there — a mis-resolved source would
+      // otherwise drive a Pokémon's damage negative and inflate the target's.
+      const moved = Math.min(counters * 10, src.mon.damage);
+      src.mon.damage -= moved;
+      dst.mon.damage += moved;
+      event.detail = {
+        from: fromName,
+        to: toName,
+        counters: moved / 10,
+        fromOwner: src.owner,
+        toOwner: dst.owner,
+        resolved: true,
+      };
       break;
     }
 

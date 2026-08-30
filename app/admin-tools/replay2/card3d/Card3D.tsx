@@ -69,13 +69,20 @@ const POSES: Record<CardPose, PoseSpec> = {
  * play no recoil and emit no debris. Context is read at render time, so the
  * departing card sees the current beat like everything else.
  */
-export const ClaimContext = createContext<((id: string) => CardRole | null) | null>(
-  null,
-);
+export interface CardClaim {
+  role: CardRole | null;
+  /** Damage this specific card is taking, when the beat hits several at once
+   *  and each takes its own amount. Null falls back to the beat's own. */
+  damage: number | null;
+}
 
-export function useClaim(id: string | null): CardRole | null {
+const UNCLAIMED: CardClaim = { role: null, damage: null };
+
+export const ClaimContext = createContext<((id: string) => CardClaim) | null>(null);
+
+export function useClaim(id: string | null): CardClaim {
   const resolve = useContext(ClaimContext);
-  return resolve && id ? resolve(id) : null;
+  return resolve && id ? resolve(id) : UNCLAIMED;
 }
 
 /**
@@ -140,7 +147,10 @@ export interface CardPerformance {
  * identically named bench-sitter on its own, because it cannot see the rest
  * of the board.
  */
-export function useCardPerformance(role: CardRole | null): CardPerformance {
+export function useCardPerformance(
+  role: CardRole | null,
+  damageOverride: number | null = null,
+): CardPerformance {
   const { beat, phase, instant, reducedMotion } = useBeat();
 
   const resting: CardPerformance = {
@@ -164,11 +174,12 @@ export function useCardPerformance(role: CardRole | null): CardPerformance {
     role: "target",
     pose: poseFor("target", phase, climax),
     incomingDamage:
-      beat.kind === "attack" && beat.damage > 0
+      damageOverride ??
+      (beat.kind === "attack" && beat.damage > 0
         ? beat.damage
         : beat.kind === "damage_counters" && beat.counters > 0
           ? beat.counters * 10
-          : null,
+          : null),
   };
 }
 

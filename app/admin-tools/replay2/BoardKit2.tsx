@@ -44,13 +44,9 @@ import {
   useClaim,
   usePreviousMatCards,
   useTravelLift,
+  type CardClaim,
 } from "./card3d/Card3D";
-import {
-  focusRole,
-  resolveClaim,
-  type CardRole,
-  type MatCards,
-} from "./card3d/claim";
+import { focusRole, resolveClaim, type MatCards } from "./card3d/claim";
 import {
   conditionColor,
   emitFocus,
@@ -617,7 +613,7 @@ export function PokemonCardImage({
   // bench. Via context rather than a prop so a card still exiting the board
   // (a knockout) sees the beat that removed it; see ClaimContext.
   const claim = useClaim(perform ? mon.id : null);
-  const perf = useCardPerformance(claim);
+  const perf = useCardPerformance(claim.role, claim.damage);
   const { instant: beatInstant, reducedMotion } = useBeat();
   // The card's own box, so it can tell the FX layer and the camera where it
   // is. Nothing else needs board geometry as a result — see fxBus.
@@ -667,6 +663,19 @@ export function PokemonCardImage({
         });
       } else if (perfBeat.kind === "damage_counters") {
         emitFx({ kind: "impact", clientX: cx, clientY: cy, intensity: 0.5, color: "#ff8a5c" });
+      } else if (perfBeat.kind === "damage_counters_placed") {
+        // Every Pokémon the effect reached takes its own hit, on both mats at
+        // once. Icy rather than the attack red: this is an effect settling
+        // over the board during checkup, not a blow being thrown.
+        emitFx({
+          kind: "impact",
+          clientX: cx,
+          clientY: cy,
+          intensity: 0.55,
+          color: "#93c5fd",
+        });
+      } else if (perfBeat.kind === "damage_counters_moved") {
+        emitFx({ kind: "impact", clientX: cx, clientY: cy, intensity: 0.6, color: "#c084fc" });
       } else if (perfBeat.kind === "condition") {
         // Converging rather than bursting: a condition settles onto a
         // Pokémon and stays there. A burst would read as it being shaken off.
@@ -700,6 +709,13 @@ export function PokemonCardImage({
 
     if (perfRole === "actor" && perfPhase === "act" && perfBeat.kind === "ability") {
       emitFx({ kind: "spark", clientX: cx, clientY: cy, intensity: 1, color: "#a5f3fc" });
+    }
+
+    // Damage leaving the Pokémon it was moved off. The counterpart landing on
+    // the destination is emitted by that card, on the other mat, as its own
+    // "target" — the two halves of Adrena-Brain are two cards performing.
+    if (perfRole === "actor" && perfPhase === "act" && perfBeat.kind === "damage_counters_moved") {
+      emitFx({ kind: "spark", clientX: cx, clientY: cy, intensity: 0.9, color: "#c084fc" });
     }
 
     // Name the move over the card using it. Emitted on `act` so the plate is
@@ -1175,10 +1191,17 @@ export function PlayerMat({
   const previousMatCards = usePreviousMatCards(matCards);
   const claim = resolveClaim(currentBeat, actor ?? null, matCards, previousMatCards);
   const claimFor = useMemo(() => {
-    const { actorId, targetId } = claim;
-    return (id: string): CardRole | null =>
-      id === actorId ? "actor" : id === targetId ? "target" : null;
-  }, [claim.actorId, claim.targetId]);
+    const { actorId, targetId, struck } = claim;
+    return (id: string): CardClaim => ({
+      role:
+        id === actorId
+          ? "actor"
+          : id === targetId || id in struck
+            ? "target"
+            : null,
+      damage: struck[id] ?? null,
+    });
+  }, [claim.actorId, claim.targetId, claim.struck]);
 
   // A spring, not a linear tween. v1's constant-velocity 300ms ease is what a
   // sprite does; a card set down by a hand decelerates into place and stops
