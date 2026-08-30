@@ -21,7 +21,7 @@ const EXAMPLE = fixture("example-1.txt");
  */
 const ALL_FIXTURES: { name: string; handle: string }[] = [
   { name: "example-1.txt", handle: "MoonSheikah" },
-  { name: "example-2-verbose.txt", handle: "Ash" },
+  { name: "example-2-verbose.txt", handle: "a11father" },
   { name: "example-3-same-name-attach.txt", handle: "Nnova12" },
 ];
 
@@ -87,10 +87,16 @@ describe("climax beats carry what the choreographer needs", () => {
     }
   });
 
-  it("names the knocked-out Pokémon and where it stood", () => {
+  it("names the knocked-out Pokémon, and its slot only when that is known", () => {
     for (const ko of kos) {
       expect(ko.pokemon).not.toBe("");
-      expect(["active", "bench"]).toContain(ko.where);
+      // null is a legitimate answer, not a gap. The parser's knockout line
+      // never states a slot, so `where` comes from the engine finding the
+      // Pokémon in play — and it can't, for one it never tracked into play
+      // (see the bulk-bench-line case above). A null means "don't constrain
+      // by position"; defaulting it to "active" would confidently pin a
+      // benched knockout's debris to the wrong card.
+      expect([null, "active", "bench"]).toContain(ko.where);
       expect(ko.weight).toBe("climax");
     }
   });

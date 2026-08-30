@@ -42,6 +42,20 @@ export type BeatWeight = "ambient" | "normal" | "major" | "climax";
 
 export type TrainerSubtype = "item" | "supporter" | "tool" | "stadium";
 
+/**
+ * Where on a mat a beat's subject is standing, when that is known.
+ *
+ * `null` means the log didn't say and the engine couldn't resolve it — NOT
+ * "the Active Spot". The board treats a null as "don't constrain by
+ * position", which degrades to name matching; defaulting it to "active"
+ * instead would confidently animate the wrong card.
+ */
+export type BoardSlot = "active" | "bench" | null;
+
+function toSlot(v: unknown): BoardSlot {
+  return v === "active" || v === "bench" ? v : null;
+}
+
 export interface SplashHit {
   handle: string;
   pokemon: string;
@@ -69,6 +83,11 @@ export type Beat = BeatBase &
          *  by type without a catalog lookup in the browser. */
         energyType: string;
         target: string;
+        /** Which slot the receiving Pokémon is in. The parser records it on
+         *  every attachment line ("...in the Active Spot" / "...on the
+         *  Bench") and it was being dropped; the board needs it to tell two
+         *  same-named Pokémon apart. */
+        location: BoardSlot;
         /** Attached by a card effect rather than the once-per-turn manual
          *  attachment — a smaller moment, so it gets a lighter beat. */
         viaEffect: boolean;
@@ -89,7 +108,7 @@ export type Beat = BeatBase &
         weaknessBonus: number | null;
         splash: SplashHit[];
       }
-    | { kind: "knock_out"; pokemon: string; where: "active" | "bench" }
+    | { kind: "knock_out"; pokemon: string; where: BoardSlot }
     | { kind: "prize_taken"; count: number }
     | { kind: "condition"; pokemon: string; condition: string }
     | { kind: "damage_counters"; pokemon: string; counters: number }
@@ -298,6 +317,7 @@ function toBeat(ev: EngineEvent, action: ParsedAction | undefined): Beat {
         energy,
         energyType: energyTypeFromName(energy),
         target: str(d.target ?? p.target),
+        location: toSlot(p.location),
         viaEffect,
         tool: bool(d.tool),
       };
@@ -394,15 +414,18 @@ function toBeat(ev: EngineEvent, action: ParsedAction | undefined): Beat {
         splash: splashArray(d.splash ?? p.splash_damage),
       };
 
-    case "knock_out": {
-      const where = d.where ?? p.location;
+    case "knock_out":
+      // The engine resolves `where` by finding the Pokémon in play; the
+      // parser's own line never says. So an unresolvable knockout — the
+      // untracked-Pokémon case documented above — leaves this null rather
+      // than guessing "active", which would have pinned a benched knockout's
+      // debris to the wrong card.
       return {
         ...base,
         kind: "knock_out",
         pokemon: str(d.pokemon ?? p.pokemon),
-        where: where === "bench" ? "bench" : "active",
+        where: toSlot(d.where),
       };
-    }
 
     case "prize_taken":
       return { ...base, kind: "prize_taken", count: num(d.count ?? p.count, 1) };

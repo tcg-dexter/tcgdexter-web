@@ -19,6 +19,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -35,13 +36,21 @@ import { shade } from "@/lib/color";
 import { MatActorContext, useBeat, useMatActor } from "./director/BeatContext";
 import {
   CardSurface,
+  ClaimContext,
   DamageBurst,
   FoilSheen,
-  focusRole,
   travelStyle,
   useCardPerformance,
+  useClaim,
+  usePreviousMatCards,
   useTravelLift,
 } from "./card3d/Card3D";
+import {
+  focusRole,
+  resolveClaim,
+  type CardRole,
+  type MatCards,
+} from "./card3d/claim";
 import {
   conditionColor,
   emitFocus,
@@ -564,7 +573,6 @@ export function PokemonCardImage({
   face = "art",
   perform = true,
   idle = false,
-  isActive = false,
 }: {
   mon: PokemonFrame;
   width: number;
@@ -599,15 +607,17 @@ export function PokemonCardImage({
   /** This is the Active Pokémon — give it a slow idle so the board is never
    *  completely still. */
   idle?: boolean;
-  /** This card occupies the Active spot. Beat matching needs it for the beats
-   *  the log describes positionally rather than by name — a retreat names
-   *  only the energy it discarded, and means "the one that was Active". */
-  isActive?: boolean;
+
 }) {
   const inspect = useContext(InspectContext);
   // Passing null rather than skipping the call: the hook has to run on every
   // render regardless of whether this card is performing.
-  const perf = useCardPerformance(perform ? mon.name : null, { isActive });
+  // Role comes from the mat, which can see the whole board — a card on its
+  // own cannot tell an attacker from an identically named Pokémon on the
+  // bench. Via context rather than a prop so a card still exiting the board
+  // (a knockout) sees the beat that removed it; see ClaimContext.
+  const claim = useClaim(perform ? mon.id : null);
+  const perf = useCardPerformance(claim);
   const { instant: beatInstant, reducedMotion } = useBeat();
   // The card's own box, so it can tell the FX layer and the camera where it
   // is. Nothing else needs board geometry as a result — see fxBus.
@@ -1153,6 +1163,23 @@ export function PlayerMat({
   actor?: "player" | "opponent";
 }) {
   const isPlayer = side === "player";
+
+  // Which cards on THIS mat the current beat is about, resolved once here
+  // rather than guessed per card. See resolveClaim: a card matching on its
+  // own name can only answer "does the beat mention something called what I
+  // am called?", which every duplicate on the board answers yes to — which is
+  // how an attack ended up being attributed to a benched Pokémon sharing the
+  // attacker's name.
+  const { beat: currentBeat } = useBeat();
+  const matCards = useMemo<MatCards>(() => ({ active, bench }), [active, bench]);
+  const previousMatCards = usePreviousMatCards(matCards);
+  const claim = resolveClaim(currentBeat, actor ?? null, matCards, previousMatCards);
+  const claimFor = useMemo(() => {
+    const { actorId, targetId } = claim;
+    return (id: string): CardRole | null =>
+      id === actorId ? "actor" : id === targetId ? "target" : null;
+  }, [claim.actorId, claim.targetId]);
+
   // A spring, not a linear tween. v1's constant-velocity 300ms ease is what a
   // sprite does; a card set down by a hand decelerates into place and stops
   // dead. Paired with the travel lift below (which raises the card and
@@ -1248,6 +1275,7 @@ export function PlayerMat({
 
   return (
     <MatActorContext.Provider value={actor ?? null}>
+    <ClaimContext.Provider value={claimFor}>
     <LayoutGroup id={side}>
       {/* The mat itself does NOT clip its contents.
           
@@ -1411,6 +1439,7 @@ export function PlayerMat({
         </AnimatePresence>
       </div>
     </LayoutGroup>
+    </ClaimContext.Provider>
     </MatActorContext.Provider>
   );
 }
@@ -1468,7 +1497,6 @@ function ActiveSlot({
         dimmed={interact?.dimActive}
         face={face}
         idle
-        isActive
       />
     </motion.div>
   );

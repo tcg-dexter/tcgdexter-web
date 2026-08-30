@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useRef, useState, type ReactNode } from "react";
 import {
   AnimatePresence,
   motion,
@@ -8,7 +8,8 @@ import {
   useSpring,
   useTransform,
 } from "framer-motion";
-import { useBeat, useMatActor } from "../director/BeatContext";
+import { useBeat } from "../director/BeatContext";
+import { type CardRole, type MatCards } from "./claim";
 import type { Beat } from "@/lib/replay2/beats";
 import type { BeatPhase } from "../director/choreography";
 
@@ -24,7 +25,6 @@ import type { BeatPhase } from "../director/choreography";
  * normal DOM node that can still be tapped and inspected.
  */
 
-export type CardRole = "actor" | "target" | "bystander";
 
 export type CardPose =
   /** Flat on the table. */
@@ -53,80 +53,53 @@ const POSES: Record<CardPose, PoseSpec> = {
   strike: { z: 46, rotateX: -14, scale: 1.1, shadow: 22 },
   recoil: { z: -8, rotateX: 7, scale: 0.965, shadow: 2 },
 };
-
 /* ──────────────────────────────────────────────────────────────── */
-/* Beat → role                                                      */
+/* Claim delivery                                                   */
 /* ──────────────────────────────────────────────────────────────── */
 
 /**
- * What a beat's subject is, when it has one.
+ * A card's role reaches it through context rather than as a prop, and that is
+ * load-bearing rather than a style choice.
  *
- * Usually a name — that's all the log gives, since the engine's instance ids
- * don't survive into the event stream. But some beats name nobody and still
- * clearly happen TO a card: a retreat is written as "paid the cost and
- * withdrew", with the Pokémon it happened to implied by being the one in the
- * Active spot. Those resolve positionally instead.
+ * AnimatePresence renders an exiting child from the element it cached when
+ * the child was removed, so that element's PROPS are frozen at their last
+ * values. A knocked-out Pokémon is exactly that case: it leaves the board on
+ * the very frame that knocks it out, so a `claim` passed down as a prop would
+ * be whatever it was one beat earlier — never "target" — and the card would
+ * play no recoil and emit no debris. Context is read at render time, so the
+ * departing card sees the current beat like everything else.
  */
-type Subject = { name: string } | "active" | null;
+export const ClaimContext = createContext<((id: string) => CardRole | null) | null>(
+  null,
+);
 
-/**
- * Who a beat is about: the Pokémon doing the thing, and the one it happens to.
- *
- * Subjects sit on the actor's own mat unless stated otherwise. An attack is
- * the one beat that reaches across the board.
- */
-function subjectsOf(beat: Beat): {
-  actor: Subject;
-  target: Subject;
-  targetOnOpposingMat: boolean;
-} {
-  const none = { actor: null as Subject, target: null as Subject, targetOnOpposingMat: false };
-  const named = (n: string): Subject => (n ? { name: n } : null);
-  switch (beat.kind) {
-    case "attack":
-      return {
-        actor: named(beat.attacker),
-        target: named(beat.defender),
-        targetOnOpposingMat: true,
-      };
-    case "ability":
-      return { ...none, actor: named(beat.source) };
-    case "evolve":
-      // The post-evolution name: by the time this frame renders, the card on
-      // the board is already the new stage.
-      return { ...none, actor: named(beat.to) };
-    case "switch_active":
-      return { ...none, actor: named(beat.promoted) };
-    case "play_to_slot":
-      return { ...none, actor: named(beat.card) };
-    case "attach_energy":
-      return { ...none, target: named(beat.target) };
-    case "knock_out":
-      return { ...none, target: named(beat.pokemon) };
-    case "condition":
-      return { ...none, target: named(beat.pokemon) };
-    case "damage_counters":
-      return { ...none, target: named(beat.pokemon) };
-    case "discard_from_pokemon":
-      return { ...none, target: named(beat.from) };
-    case "retreat":
-      // The log names only the energy discarded to pay for it. The Pokémon
-      // retreating is whichever one is still Active on this frame — the
-      // promotion of its replacement arrives as its own switch_active beat.
-      return { ...none, target: "active" };
-    default:
-      return none;
-  }
+export function useClaim(id: string | null): CardRole | null {
+  const resolve = useContext(ClaimContext);
+  return resolve && id ? resolve(id) : null;
 }
 
-function subjectMatches(
-  subject: Subject,
-  monName: string,
-  isActive: boolean,
-): boolean {
-  if (subject == null) return false;
-  if (subject === "active") return isActive;
-  return subject.name === monName;
+/**
+ * Remembers the previous DISTINCT board for a mat.
+ *
+ * Written during render rather than in an effect on purpose: an effect would
+ * update the moment the knockout frame first painted, and every later render
+ * of that frame — one per beat phase — would find the departing card already
+ * forgotten, dropping its recoil part-way through its own exit. The write is
+ * idempotent (re-rendering with the same cards changes nothing), which is
+ * what makes it safe to do here.
+ */
+export function usePreviousMatCards(cards: MatCards): MatCards {
+  const ref = useRef<{ current: MatCards; previous: MatCards }>({
+    current: { active: null, bench: [] },
+    previous: { active: null, bench: [] },
+  });
+  if (
+    ref.current.current.active !== cards.active ||
+    ref.current.current.bench !== cards.bench
+  ) {
+    ref.current = { current: cards, previous: ref.current.current };
+  }
+  return ref.current.previous;
 }
 
 /** Pose for a role at a phase. Climax beats get the striking poses; anything
@@ -148,17 +121,6 @@ function poseFor(role: CardRole, phase: BeatPhase, climax: boolean): CardPose {
   }
 }
 
-/**
- * Which of a beat's two subjects the camera should look at.
- *
- * The target when there is one: an attack's story is where the damage lands,
- * not where it was thrown from, and an energy attachment or a condition has
- * no actor card at all. Falls back to the actor for the beats that are purely
- * someone doing something — an ability firing, a Pokémon being promoted.
- */
-export function focusRole(beat: Beat): CardRole {
-  return subjectsOf(beat).target ? "target" : "actor";
-}
 
 export interface CardPerformance {
   role: CardRole;
@@ -171,21 +133,15 @@ export interface CardPerformance {
 }
 
 /**
- * Resolve what a named Pokémon should be doing right now.
+ * What this card should be doing right now.
  *
- * Matching is by name within a mat, which is the best the log supports. It
- * can over-match: two Noctowl on one bench both answer to "Noctowl", so both
- * will lift together for a beat that named one of them. That is a deliberate
- * trade — the alternative is no performance at all on a board where duplicate
- * names are ordinary, and two cards leaning in together reads as emphasis
- * rather than as a bug.
+ * Takes the role its mat has already assigned it (see resolveClaim) rather
+ * than working it out from a name — the card cannot tell an attacker from an
+ * identically named bench-sitter on its own, because it cannot see the rest
+ * of the board.
  */
-export function useCardPerformance(
-  monName: string | null,
-  opts: { isActive?: boolean } = {},
-): CardPerformance {
+export function useCardPerformance(role: CardRole | null): CardPerformance {
   const { beat, phase, instant, reducedMotion } = useBeat();
-  const matActor = useMatActor();
 
   const resting: CardPerformance = {
     role: "bystander",
@@ -195,34 +151,25 @@ export function useCardPerformance(
     incomingDamage: null,
   };
   // A jump has no performance to give, and reduced motion has asked for none.
-  if (!beat || !monName || instant || reducedMotion) return resting;
-  // Without a mat identity there's no way to tell the attacker from an
-  // identically named Pokémon on the other side of the board.
-  if (!matActor) return resting;
+  if (!beat || !role || role === "bystander" || instant || reducedMotion) {
+    return resting;
+  }
 
-  const { actor, target, targetOnOpposingMat } = subjectsOf(beat);
-  const isActive = opts.isActive === true;
-  const onActorMat = matActor === beat.actor;
-  const targetMat = targetOnOpposingMat ? beat.actor !== matActor : onActorMat;
-
-  if (onActorMat && subjectMatches(actor, monName, isActive)) {
-    const climax = beat.weight === "climax";
+  const climax = beat.weight === "climax";
+  if (role === "actor") {
     return { ...resting, role: "actor", pose: poseFor("actor", phase, climax) };
   }
-  if (targetMat && subjectMatches(target, monName, isActive)) {
-    return {
-      ...resting,
-      role: "target",
-      pose: poseFor("target", phase, beat.weight === "climax"),
-      incomingDamage:
-        beat.kind === "attack" && beat.damage > 0
-          ? beat.damage
-          : beat.kind === "damage_counters" && beat.counters > 0
-            ? beat.counters * 10
-            : null,
-    };
-  }
-  return resting;
+  return {
+    ...resting,
+    role: "target",
+    pose: poseFor("target", phase, climax),
+    incomingDamage:
+      beat.kind === "attack" && beat.damage > 0
+        ? beat.damage
+        : beat.kind === "damage_counters" && beat.counters > 0
+          ? beat.counters * 10
+          : null,
+  };
 }
 
 /* ──────────────────────────────────────────────────────────────── */
