@@ -26,6 +26,17 @@ function priceIndex(): Map<string, number> {
   return PRICE_INDEX;
 }
 
+/**
+ * NOTE: this paging-and-summing approach is kept only for the Sets data view
+ * (`app/api/collection/data-view/route.ts`), which needs `uniqueOwnedBySet`
+ * — a per-set breakdown that has to walk the rows anyway.
+ *
+ * For plain headline totals, use the `collection_stats()` SQL function
+ * instead (lib/collection.ts → loadCollectionStats, migration
+ * 20260830_collection_stats.sql). It returns one row rather than paging the
+ * whole collection, and its value figure matches the profile module's chart.
+ * Please don't add a third copy of this loop.
+ */
 export interface CollectionStats {
   cardCount: number;
   marketValue: number;

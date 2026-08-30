@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -26,13 +27,9 @@ import TeamCards, { type TeamCardRef } from "./TeamCards";
 import { BattleCard } from "@/app/components/BattleCard";
 import { loadOwnerRecentBattles } from "@/lib/recent-battles";
 import ProfileTabs from "./ProfileTabs";
-import CollectionSection from "./CollectionSection";
-import {
-  EMPTY_COLLECTION_STATS,
-  canViewCollection,
-  loadCollectionStats,
-  loadCollectionValueHistory,
-} from "@/lib/collection";
+import CollectionSectionAsync from "./CollectionSectionAsync";
+import CollectionSectionSkeleton from "./CollectionSectionSkeleton";
+import { canViewCollection } from "@/lib/collection";
 import AchievementsModule from "./AchievementsModule";
 import {
   listAchievements,
@@ -291,21 +288,19 @@ export default async function ProfilePage({
     : [];
 
   // Collection module (bottom of the page). Owner always; visitors only
-  // when the owner opted in — see canViewCollection, whose rule
-  // collection_value_history() also enforces in SQL. Skipping both loads
-  // when it isn't visible keeps a private collection off the wire entirely
-  // rather than fetching it and hiding it at render time.
+  // when the owner opted in — see canViewCollection, whose rule both
+  // collection_stats() and collection_value_history() also enforce in SQL.
+  // Deciding here rather than inside the module keeps a hidden collection
+  // off the wire entirely instead of fetching it and hiding it at render.
+  //
+  // Note this is only the decision — the queries themselves live in
+  // CollectionSectionAsync, behind a Suspense boundary, so they never block
+  // the rest of the page.
   const showCollection = canViewCollection({
     isOwner,
     profileIsPublic: profile.is_public,
     collectionPublic: profile.collection_public,
   });
-  const [collectionStats, collectionValueHistory] = showCollection
-    ? await Promise.all([
-        loadCollectionStats(profile.id),
-        loadCollectionValueHistory(profile.id),
-      ])
-    : [EMPTY_COLLECTION_STATS, []];
 
   // Visitor placeholder for owner-private cells.
   const ownerOnly = (value: string) => (isOwner ? value : "—");
@@ -665,13 +660,14 @@ export default async function ProfilePage({
       )}
 
       {showCollection && (
-        <CollectionSection
-          stats={collectionStats}
-          valueHistory={collectionValueHistory}
-          isOwner={isOwner}
-          collectionPublic={profile.collection_public}
-          gradientCss={bannerGradient}
-        />
+        <Suspense fallback={<CollectionSectionSkeleton />}>
+          <CollectionSectionAsync
+            userId={profile.id}
+            isOwner={isOwner}
+            collectionPublic={profile.collection_public}
+            gradientCss={bannerGradient}
+          />
+        </Suspense>
       )}
       </FollowPanelBody>
       </FollowPanelProvider>

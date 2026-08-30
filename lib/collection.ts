@@ -1,7 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { getCardById } from "@/lib/cardsIndex";
-import { fetchAllPages } from "@/lib/trainerActivity";
 import type { PricePoint } from "@/lib/priceHistory";
 
 /**
@@ -13,25 +10,24 @@ import type { PricePoint } from "@/lib/priceHistory";
  * — a deliberately separate opt-in from `is_public`, since what someone
  * owns (and what it's worth) is a different disclosure from which decks
  * they've shared. `canViewCollection` is the single place that rule is
- * expressed on the app side; `collection_value_history()` re-checks the
- * same rule in SQL, because it runs SECURITY DEFINER and so can't take the
- * caller's word for it.
+ * expressed on the app side; both SQL functions below re-check the same
+ * rule themselves, because they run SECURITY DEFINER over an owner-only
+ * table and so can't take the caller's word for it.
  *
- * ── Why the admin client ──
- * `user_card_collection` is owner-only under RLS
- * (user_card_collection_owner_select), so the anon/session client returns
- * nothing at all when a visitor looks at someone else's public collection.
- * Reading it through the service-role client is the same approach
- * lib/trainerActivity.ts already takes for `matches` on the public trainer
- * directory. Every caller here is gated on canViewCollection first.
+ * ── Why the session client, never the admin client ──
+ * Both functions recognise the owner via `auth.uid()`, which is NULL under
+ * the service-role client. Reading them through `createAdminClient()` would
+ * therefore return *nothing* for an owner viewing their own still-private
+ * collection — silently, and only in the one case least likely to be
+ * covered by a spot check. `createClient()` from @/lib/supabase/server
+ * carries the session, so it stays the only client used here.
+ *
+ * ── Why both are RPCs ──
+ * The app-side shape of either query is enormous relative to its answer: the
+ * stats are four numbers derived from every row of a collection (2,216 rows
+ * for the largest real one), and the history is one row per owned printing
+ * per day. Both aggregate in Postgres and return what's actually rendered.
  */
-
-/** One row of a user's collection. */
-interface CollectionRow {
-  set_id: string;
-  number: string;
-  quantity: number;
-}
 
 export interface CollectionStats {
   /** Every copy, including duplicates and multiple variants of a printing. */
@@ -71,60 +67,51 @@ export function canViewCollection({
 /**
  * Headline counts plus total market value.
  *
- * Value is summed against the bundled card index rather than
- * `card_price_history`'s latest row, so the total always reconciles with the
- * per-card prices the catalog shows — two different sources would let the
- * module disagree with the cards it links out to.
+ * Delegates to `collection_stats()` (see 20260830_collection_stats.sql).
+ * This used to page every collection row over the wire and reduce them here
+ * — 2,216 rows across three round trips for the largest real collection, to
+ * produce four numbers.
  *
- * A printing the index can't resolve (an unreleased set the bundle predates)
- * still counts toward totalCards/uniqueCards/totalSets and contributes 0 to
- * value: dropping it from the counts too would understate the collection,
- * which is the more visible error of the two.
+ * Value comes from `card_price_history`'s latest row per card — the same
+ * table the chart beside it is drawn from, rather than the bundled card
+ * index, so the two agree in source and method. Not bit-identical, though:
+ * this takes each card's own most recent priced date, while the chart groups
+ * by a shared date, so on a day the price pipeline has only partly written
+ * they can differ slightly.
+ *
+ * A printing missing from price history contributes 0 to value but still
+ * counts toward cards/unique/sets — understating the value is less visible
+ * than dropping the card from the counts.
  */
 export async function loadCollectionStats(userId: string): Promise<CollectionStats> {
-  // Same guard as loadPublicBattleActivity: the service-role key is absent
-  // in some environments, and createAdminClient throws rather than silently
-  // falling back to anon. Zeroed stats degrade the module to its empty
-  // state; letting this throw would take the whole profile page down.
-  let rows: CollectionRow[];
-  try {
-    const admin = createAdminClient();
-    rows = await fetchAllPages<CollectionRow>((from, to) =>
-      admin
-        .from("user_card_collection")
-        .select("set_id, number, quantity")
-        .eq("user_id", userId)
-        .gt("quantity", 0)
-        .order("set_id")
-        .order("number")
-        .range(from, to)
-        .then(({ data }) => ({ data: (data ?? []) as CollectionRow[] })),
-    );
-  } catch (e) {
-    console.error("[collection] stats unavailable:", e);
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("collection_stats", {
+    target: userId,
+  });
+
+  if (error) {
+    console.error("[collection] stats failed:", error);
     return EMPTY_COLLECTION_STATS;
   }
 
-  const printings = new Set<string>();
-  const sets = new Set<string>();
-  let totalCards = 0;
-  let totalValue = 0;
+  // A set-returning function comes back as an array; the aggregate always
+  // yields exactly one row, and none at all if the visibility gate closed.
+  const row = (
+    data as Array<{
+      total_cards: number | string;
+      unique_cards: number | string;
+      total_sets: number | string;
+      total_value: number | string;
+    }> | null
+  )?.[0];
+  if (!row) return EMPTY_COLLECTION_STATS;
 
-  for (const row of rows) {
-    const qty = Number(row.quantity) || 0;
-    if (qty <= 0) continue;
-    totalCards += qty;
-    printings.add(`${row.set_id}-${row.number}`);
-    sets.add(row.set_id);
-    const card = getCardById(`${row.set_id}-${row.number}`);
-    if (card) totalValue += card.marketPrice * qty;
-  }
-
+  // bigint and numeric both arrive as strings over PostgREST.
   return {
-    totalCards,
-    uniqueCards: printings.size,
-    totalSets: sets.size,
-    totalValue,
+    totalCards: Number(row.total_cards) || 0,
+    uniqueCards: Number(row.unique_cards) || 0,
+    totalSets: Number(row.total_sets) || 0,
+    totalValue: Number(row.total_value) || 0,
   };
 }
 
@@ -136,9 +123,8 @@ export async function loadCollectionStats(userId: string): Promise<CollectionSta
  * printing per day, which for a 2,000-printing collection is ~180k rows
  * fetched just to add them up. The function returns one row per day.
  *
- * Called through the session client, not the admin client — the function is
- * SECURITY DEFINER and reads `auth.uid()` to recognise the owner, which is
- * only populated on a client carrying the user's session.
+ * Called through the session client, not the admin client — see the note at
+ * the top of this file.
  */
 export async function loadCollectionValueHistory(
   userId: string,
