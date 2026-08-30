@@ -13,6 +13,7 @@
     "build:card-types": "node scripts/build_card_types.mjs",
     "ml:extract": "tsx scripts/ml/extract.ts",
     "ml:selfplay": "tsx scripts/ml/selfplay.ts",
+    "ml:gen-decks": "tsx scripts/ml/gen_decks.ts",
     "ml:duel": "tsx scripts/ml/policy_duel.ts",
     "reengagement": "node --env-file=.env.local --import tsx scripts/reengagement.ts",
     "email:preview": "tsx scripts/email-preview.ts",
