@@ -166,6 +166,27 @@ describe("board beats carry their targets", () => {
 // A beat that falls through to "generic" gets paced but not choreographed.
 // That's the intended landing spot for future parser additions, not for the
 // action types the breadth pass is supposed to have covered.
+// The move name plate is driven entirely by these two fields. If a parser
+// change stopped populating them the plate wouldn't break — it would just
+// quietly never appear, which is the kind of regression nobody files a bug
+// for and nobody notices for a month.
+describe("moves are named", () => {
+  it("gives every attack and ability a label, in any fixture", () => {
+    for (const { name, handle } of ALL_FIXTURES) {
+      const all = buildBeats(fixture(name), handle);
+      const attacks = all.filter((b) => b.kind === "attack");
+      const abilities = all.filter((b) => b.kind === "ability");
+      expect(attacks.length + abilities.length, `${name} has no moves`).toBeGreaterThan(0);
+      for (const b of attacks) {
+        expect((b as Extract<Beat, { kind: "attack" }>).attack, `${name}: unnamed attack`).toBeTruthy();
+      }
+      for (const b of abilities) {
+        expect((b as Extract<Beat, { kind: "ability" }>).ability, `${name}: unnamed ability`).toBeTruthy();
+      }
+    }
+  });
+});
+
 describe("choreography coverage", () => {
   it("leaves no known action type on the generic fallback, in any fixture", () => {
     for (const { name, handle } of ALL_FIXTURES) {

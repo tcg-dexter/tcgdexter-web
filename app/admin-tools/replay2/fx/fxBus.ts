@@ -54,11 +54,38 @@ export interface FxFocus {
   climax: boolean;
 }
 
+/**
+ * The name of the attack or ability being used, and where the card using it
+ * is standing.
+ *
+ * Rides the bus for the same reason focus does, plus one of its own: the
+ * plate has to out-paint the whole board. Rendered inside the card it would
+ * sit under the bench overlay on the top mat (the bench is a later sibling of
+ * the grid, so it paints over the Active slot) and under the mat tabs on the
+ * bottom one, where the Active is top-pinned and the plate lands outside the
+ * mat entirely. Board level is the only place it reliably wins.
+ */
+export interface FxMovePlate {
+  actionIndex: number;
+  /** Attack or ability name, already checked non-empty by the emitter. */
+  label: string;
+  kind: "attack" | "ability";
+  /** Horizontal centre of the acting card. */
+  clientX: number;
+  /** TOP edge of the acting card — the plate hangs above it. */
+  clientY: number;
+  /** The card's width, so the plate scales with the board rather than being
+   *  a fixed size that swamps a small mat and gets lost on a large one. */
+  cardWidth: number;
+}
+
 type FxListener = (e: FxEvent) => void;
 type FocusListener = (f: FxFocus) => void;
+type PlateListener = (p: FxMovePlate) => void;
 
 const fxListeners = new Set<FxListener>();
 const focusListeners = new Set<FocusListener>();
+const plateListeners = new Set<PlateListener>();
 
 export function emitFx(e: FxEvent): void {
   fxListeners.forEach((l) => l(e));
@@ -76,6 +103,15 @@ export function emitFocus(f: FxFocus): void {
 export function onFocus(l: FocusListener): () => void {
   focusListeners.add(l);
   return () => focusListeners.delete(l);
+}
+
+export function emitMovePlate(p: FxMovePlate): void {
+  plateListeners.forEach((l) => l(p));
+}
+
+export function onMovePlate(l: PlateListener): () => void {
+  plateListeners.add(l);
+  return () => plateListeners.delete(l);
 }
 
 /* ──────────────────────────────────────────────────────────────── */

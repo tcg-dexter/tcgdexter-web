@@ -42,7 +42,13 @@ import {
   useCardPerformance,
   useTravelLift,
 } from "./card3d/Card3D";
-import { conditionColor, emitFocus, emitFx, energyColor } from "./fx/fxBus";
+import {
+  conditionColor,
+  emitFocus,
+  emitFx,
+  emitMovePlate,
+  energyColor,
+} from "./fx/fxBus";
 
 // Default mat gradient when a caller doesn't resolve one of its own — the
 // AI-player practice mode boards (PlayClient.tsx) still use this as-is.
@@ -684,6 +690,35 @@ export function PokemonCardImage({
 
     if (perfRole === "actor" && perfPhase === "act" && perfBeat.kind === "ability") {
       emitFx({ kind: "spark", clientX: cx, clientY: cy, intensity: 1, color: "#a5f3fc" });
+    }
+
+    // Name the move over the card using it. Emitted on `act` so the plate is
+    // fully in and drifting by `impact`, which is when the damage lands on
+    // the other mat — the two are one event, and they're kept together by
+    // both hanging off the director's phase rather than off timers of their
+    // own.
+    //
+    // The plate is drawn at board level (see MoveNamePlate), so this reports
+    // the card's top-centre rather than rendering anything here.
+    if (perfRole === "actor" && perfPhase === "act") {
+      // An attack whose name the parser didn't capture has nothing to say,
+      // and a blank plate is worse than none.
+      const label =
+        perfBeat.kind === "attack"
+          ? perfBeat.attack
+          : perfBeat.kind === "ability"
+            ? perfBeat.ability
+            : null;
+      if (label) {
+        emitMovePlate({
+          actionIndex: perfBeat.actionIndex,
+          label,
+          kind: perfBeat.kind === "attack" ? "attack" : "ability",
+          clientX: cx,
+          clientY: r.top,
+          cardWidth: r.width,
+        });
+      }
     }
   }, [perform, reducedMotion, beatInstant, perfBeat, perfPhase, perfRole]);
   const clickable = onClick != null || (inspectable && inspect != null);

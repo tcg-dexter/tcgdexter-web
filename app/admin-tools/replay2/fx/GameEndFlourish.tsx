@@ -42,7 +42,7 @@ export function GameEndFlourish({
       {active && !reducedMotion && (
         <motion.div
           key="game-end"
-          className="pointer-events-none absolute inset-0 z-40 overflow-hidden"
+          className="pointer-events-none absolute inset-0 z-50 overflow-hidden"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

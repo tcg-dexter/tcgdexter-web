@@ -50,6 +50,7 @@ import { useDirector } from "./director/useDirector";
 import { BeatProvider } from "./director/BeatContext";
 import { FxCanvas } from "./fx/FxCanvas";
 import { GameEndFlourish } from "./fx/GameEndFlourish";
+import { MoveNamePlate } from "./fx/MoveNamePlate";
 import { useCamera } from "./fx/useCamera";
 import type { BeatPhase } from "./director/choreography";
 import { MAT_ASPECT } from "@/lib/playmat-layout";
@@ -1473,6 +1474,8 @@ function Board({
           }
         >
         <FxCanvas reducedMotion={reducedMotion} />
+        {/* Above the particles: the plate names what caused them. */}
+        <MoveNamePlate beat={beat} phase={beatPhase} reducedMotion={reducedMotion} />
         {/* Above the canvas: the flourish is the subject at that moment, not
             something for particles to be drawn over. The board pins the
             opponent to the top mat and the submitting player to the bottom,
