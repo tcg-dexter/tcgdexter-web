@@ -25,6 +25,15 @@ import {
   MAT_ASPECT,
 } from "@/app/admin-tools/deck-mat/DeckMatClient";
 import { shade } from "@/lib/color";
+import { MatActorContext, useBeat } from "./director/BeatContext";
+import {
+  CardSurface,
+  DamageBurst,
+  FoilSheen,
+  travelStyle,
+  useCardPerformance,
+  useTravelLift,
+} from "./card3d/Card3D";
 
 // Default mat gradient when a caller doesn't resolve one of its own — the
 // AI-player practice mode boards (PlayClient.tsx) still use this as-is.
@@ -498,6 +507,8 @@ export function PokemonCardImage({
   footer,
   dimmed,
   face = "art",
+  perform = true,
+  idle = false,
 }: {
   mon: PokemonFrame;
   width: number;
@@ -525,8 +536,19 @@ export function PokemonCardImage({
   dimmed?: boolean;
   /** See CardFace — "label" names the Pokémon instead of showing its art. */
   face?: CardFace;
+  /** Perform the current beat: pose, sheen, damage counters, pointer tilt.
+   *  Off inside the card inspector, where the card is already the whole
+   *  subject and a lifted, tilting copy of it just wobbles. */
+  perform?: boolean;
+  /** This is the Active Pokémon — give it a slow idle so the board is never
+   *  completely still. */
+  idle?: boolean;
 }) {
   const inspect = useContext(InspectContext);
+  // Passing null rather than skipping the call: the hook has to run on every
+  // render regardless of whether this card is performing.
+  const perf = useCardPerformance(perform ? mon.name : null);
+  const { instant: beatInstant, reducedMotion } = useBeat();
   const clickable = onClick != null || (inspectable && inspect != null);
   const remainingHp = mon.hp != null ? Math.max(0, mon.hp - mon.damage) : null;
   const hadFallback = !mon.imageUrl;
@@ -572,6 +594,13 @@ export function PokemonCardImage({
       : `linear-gradient(90deg, ${shade(hpColor, -28)} 0%, ${hpColor} 100%)`;
 
   return (
+    <CardSurface
+      pose={perf.pose}
+      width={m.containerW}
+      radius={m.radius}
+      tilt={perform}
+      idle={idle}
+    >
     <div
       className={`relative bg-black shadow-sm transition-opacity duration-200 ${
         clickable ? "cursor-pointer" : ""
@@ -618,24 +647,49 @@ export function PokemonCardImage({
         {face === "label" ? (
           <CardLabelFace text={mon.name} width={width} />
         ) : (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={mon.imageUrl ?? CARD_BACK_URL}
-              alt={mon.name}
-              className="h-full w-full object-cover"
-              onError={(e) => {
-                if (e.currentTarget.src !== CARD_BACK_URL) {
-                  e.currentTarget.src = CARD_BACK_URL;
-                }
-              }}
-            />
-            {hadFallback && (
-              <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[7px] font-semibold leading-tight text-white line-clamp-2">
-                {mon.name}
-              </div>
-            )}
-          </>
+          // Keyed on the name so an evolution mounts a NEW face over the old
+          // one rather than swapping the src in place.
+          //
+          // This is the paper gesture: you don't transform a Pokémon into its
+          // next stage, you put a card down on top of it. Both faces are
+          // present through the transition — AnimatePresence keeps the outgoing
+          // one mounted, still showing the pre-evolution art — so the new stage
+          // is visibly landing on the old, which is what the log line actually
+          // describes. It earns its keep on a plain bench drop too, where a
+          // card now falls onto the mat instead of materialising there.
+          //
+          // Suppressed on a jump: a scrub would otherwise rain every card on
+          // the board onto the mat at once.
+          <AnimatePresence initial={false}>
+            <motion.div
+              key={mon.name}
+              className="absolute inset-0"
+              initial={
+                beatInstant || reducedMotion || !perform
+                  ? false
+                  : { y: -m.cardH * 0.5, rotateZ: -8, opacity: 0 }
+              }
+              animate={{ y: 0, rotateZ: 0, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 460, damping: 30, mass: 0.8 }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={mon.imageUrl ?? CARD_BACK_URL}
+                alt={mon.name}
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  if (e.currentTarget.src !== CARD_BACK_URL) {
+                    e.currentTarget.src = CARD_BACK_URL;
+                  }
+                }}
+              />
+              {hadFallback && (
+                <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[7px] font-semibold leading-tight text-white line-clamp-2">
+                  {mon.name}
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
         )}
         {mon.conditions.length > 0 && (
           // Status pills stay on the card, stacked up from the bottom-right.
@@ -659,6 +713,25 @@ export function PokemonCardImage({
             <EnergyRow types={mon.energyTypes} iconSize={energyIconSize} />
           </div>
         )}
+        {/* The light catching a foil as it's tilted into the play. Only the
+            card actually doing something gets it — a sheen on every card at
+            once is glitter, not emphasis. */}
+        <FoilSheen
+          active={perf.role === "actor" && (perf.pose === "windup" || perf.pose === "strike")}
+          radius={m.cardRadius}
+        />
+        <AnimatePresence>
+          {perf.role === "target" &&
+            perf.phase === "impact" &&
+            perf.incomingDamage != null && (
+              <DamageBurst
+                key={`${perf.beat?.actionIndex}-dmg`}
+                amount={perf.incomingDamage}
+                fontSize={Math.max(11, Math.round(m.cardW * 0.34))}
+                radius={m.cardRadius}
+              />
+            )}
+        </AnimatePresence>
       </div>
 
       {/* Info strip — HP header (label + remaining/total) above the HP bar. */}
@@ -678,9 +751,16 @@ export function PokemonCardImage({
             className="w-full overflow-hidden rounded-full bg-white/20"
             style={{ height: barH }}
           >
-            <div
+            {/* Drains rather than jumps. An HP bar that snaps to its new
+                length is the single clearest tell that the board is a
+                sequence of stills; draining it over the impact ties the
+                number to the blow that caused it. */}
+            <motion.div
               className="h-full rounded-full"
-              style={{ width: `${hpPct}%`, background: hpFill }}
+              style={{ background: hpFill }}
+              initial={false}
+              animate={{ width: `${hpPct}%` }}
+              transition={{ type: "spring", stiffness: 180, damping: 26 }}
             />
           </div>
         </div>
@@ -693,6 +773,7 @@ export function PokemonCardImage({
         </div>
       )}
     </div>
+    </CardSurface>
   );
 }
 
@@ -801,6 +882,7 @@ export function PlayerMat({
   matWidth,
   interact,
   instant,
+  actor,
   onDiscardClick,
   matGradient = BOARD_GRADIENT,
   face = "art",
@@ -838,11 +920,27 @@ export function PlayerMat({
    *  rather than its art — the Learn to Play board draws this mat that way
    *  so the regions read as regions instead of as a particular matchup. */
   face?: CardFace;
+  /** Whose cards this mat is showing. NOT the same as `side`, which names the
+   *  visual slot and is deliberately pinned (the top mat is always laid out
+   *  "player"-style with its tray on its own floor) regardless of whose data
+   *  it holds. Replay 2.0's beat matching needs to know the attacker from the
+   *  defender, so it gets its own prop rather than misreading `side`.
+   *  Omitted by callers with no beats (the AI-player practice mode), where
+   *  every card simply rests. */
+  actor?: "player" | "opponent";
 }) {
   const isPlayer = side === "player";
-  // 0s still runs through the same framer-motion code path, so layout
+  // A spring, not a linear tween. v1's constant-velocity 300ms ease is what a
+  // sprite does; a card set down by a hand decelerates into place and stops
+  // dead. Paired with the travel lift below (which raises the card and
+  // deepens its shadow while it's in the air), a promotion reads as being
+  // picked up and put down rather than sliding across the mat.
+  //
+  // instant still runs through the same framer-motion path so layout
   // bookkeeping stays consistent — the move just lands on the same tick.
-  const moveTransition = { duration: instant ? 0 : 0.3, ease: "easeInOut" } as const;
+  const moveTransition = instant
+    ? ({ duration: 0 } as const)
+    : ({ type: "spring", stiffness: 320, damping: 30, mass: 0.9 } as const);
   const texScale = matWidth > 0 ? matWidth / 600 : 1;
   const inspect = useContext(InspectContext);
 
@@ -909,36 +1007,24 @@ export function PlayerMat({
     <div className="flex justify-center" style={{ minWidth: activeTray.containerW }}>
       <AnimatePresence mode="wait">
         {active && (
-          <motion.div
+          <ActiveSlot
             key={active.id}
-            layoutId={`${side}-${active.id}`}
-            // The expanded holder grows down into the bench overlay's band,
-            // and that overlay is positioned (z-0) while this column is not —
-            // so without an explicit layer the bench would paint over the
-            // attack list. Only raised when there IS a footer, to leave the
-            // promotion animation's stacking exactly as it was.
-            className={interact?.activeFooter ? "relative z-20" : undefined}
-            style={{ width: activeTray.containerW }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: instant ? 0 : 0.2, layout: moveTransition }}
-          >
-            <PokemonCardImage
-              mon={active}
-              width={cardWidth}
-              onClick={interact?.onActiveClick}
-              footer={interact?.activeFooter}
-              dimmed={interact?.dimActive}
-              face={face}
-            />
-          </motion.div>
+            mon={active}
+            side={side}
+            containerW={activeTray.containerW}
+            cardWidth={cardWidth}
+            instant={instant}
+            moveTransition={moveTransition}
+            interact={interact}
+            face={face}
+          />
         )}
       </AnimatePresence>
     </div>
   );
 
   return (
+    <MatActorContext.Provider value={actor ?? null}>
     <LayoutGroup id={side}>
       <div
         className="relative rounded-xl overflow-hidden"
@@ -996,23 +1082,19 @@ export function PlayerMat({
             style={{ top: benchTop, left: MAT_PADDING, width: innerW, gap: BOARD_CARD_GAP }}
           >
             {bench.map((mon, i) => (
-              <motion.div
+              <BenchSlot
                 key={mon.id}
-                layoutId={`${side}-${mon.id}`}
-                className="shrink-0"
-                style={{ width: benchTray.containerW }}
-                transition={moveTransition}
-              >
-                <PokemonCardImage
-                  mon={mon}
-                  width={benchCardWidth}
-                  onClick={
-                    interact?.onBenchClick ? () => interact.onBenchClick!(i) : undefined
-                  }
-                  dimmed={interact?.dimBench?.[i]}
-                  face={face}
-                />
-              </motion.div>
+                mon={mon}
+                side={side}
+                containerW={benchTray.containerW}
+                cardWidth={benchCardWidth}
+                moveTransition={moveTransition}
+                onClick={
+                  interact?.onBenchClick ? () => interact.onBenchClick!(i) : undefined
+                }
+                dimmed={interact?.dimBench?.[i]}
+                face={face}
+              />
             ))}
           </div>
         )}
@@ -1025,10 +1107,10 @@ export function PlayerMat({
               className="absolute z-10"
               style={{ top: overlayTop, left: stadiumLeft, width: cardWidth }}
               title={stadium.name}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
+              initial={{ opacity: 0, y: -14, scale: 1.06 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.94 }}
+              transition={{ type: "spring", stiffness: 380, damping: 28 }}
             >
               <FloatingCard
                 name={stadium.name}
@@ -1046,10 +1128,13 @@ export function PlayerMat({
               className="absolute z-10"
               style={{ top: playedTrainerTop, left: playedTrainerLeft, width: cardWidth }}
               title={lastPlayedTrainer.name}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              // A Trainer is played face-up onto the mat and then discarded,
+              // so it arrives with a flick and leaves by being swept away —
+              // not by dissolving where it lies.
+              initial={{ opacity: 0, y: -22, rotateZ: -7, scale: 1.1 }}
+              animate={{ opacity: 1, y: 0, rotateZ: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 10, rotateZ: 5, scale: 0.9 }}
+              transition={{ type: "spring", stiffness: 420, damping: 26 }}
             >
               <FloatingCard
                 name={lastPlayedTrainer.name}
@@ -1062,6 +1147,107 @@ export function PlayerMat({
         </AnimatePresence>
       </div>
     </LayoutGroup>
+    </MatActorContext.Provider>
+  );
+}
+
+/**
+ * The Active slot. Its own component so it can hold the travel-lift state a
+ * promotion needs — a bench Pokémon arriving here flies in on a shared
+ * layoutId, and the lift is what turns that flight into a hand moving a card.
+ */
+function ActiveSlot({
+  mon,
+  side,
+  containerW,
+  cardWidth,
+  instant,
+  moveTransition,
+  interact,
+  face,
+}: {
+  mon: PokemonFrame;
+  side: "player" | "opponent";
+  containerW: number;
+  cardWidth: number;
+  instant?: boolean;
+  moveTransition: object;
+  interact?: MatInteraction;
+  face?: CardFace;
+}) {
+  const { traveling, handlers } = useTravelLift();
+  return (
+    <motion.div
+      layoutId={`${side}-${mon.id}`}
+      // The expanded holder grows down into the bench overlay's band, and
+      // that overlay is positioned (z-0) while this column is not — so
+      // without an explicit layer the bench would paint over the attack
+      // list. Only raised when there IS a footer, to leave the promotion
+      // animation's stacking exactly as it was.
+      className={interact?.activeFooter ? "relative z-20" : undefined}
+      style={{ width: containerW, transformStyle: "preserve-3d" }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1, ...travelStyle(traveling) }}
+      // Leaving the Active slot means one of two things — knocked out, or
+      // retreated — and both are the card being swept off the table rather
+      // than dissolving in place. v1 faded it, which reads as the card
+      // never having been there.
+      exit={{ opacity: 0, scale: 0.84, rotateZ: -7, y: 14 }}
+      transition={{ duration: instant ? 0 : 0.24, layout: moveTransition }}
+      {...handlers}
+    >
+      <PokemonCardImage
+        mon={mon}
+        width={cardWidth}
+        onClick={interact?.onActiveClick}
+        footer={interact?.activeFooter}
+        dimmed={interact?.dimActive}
+        face={face}
+        idle
+      />
+    </motion.div>
+  );
+}
+
+/** One bench Pokémon. Split out for the same reason as ActiveSlot: the
+ *  travel lift is per-card state, and hooks can't live inside a .map. */
+function BenchSlot({
+  mon,
+  side,
+  containerW,
+  cardWidth,
+  moveTransition,
+  onClick,
+  dimmed,
+  face,
+}: {
+  mon: PokemonFrame;
+  side: "player" | "opponent";
+  containerW: number;
+  cardWidth: number;
+  moveTransition: object;
+  onClick?: () => void;
+  dimmed?: boolean;
+  face?: CardFace;
+}) {
+  const { traveling, handlers } = useTravelLift();
+  return (
+    <motion.div
+      layoutId={`${side}-${mon.id}`}
+      className="shrink-0"
+      style={{ width: containerW, transformStyle: "preserve-3d" }}
+      animate={travelStyle(traveling)}
+      transition={{ layout: moveTransition }}
+      {...handlers}
+    >
+      <PokemonCardImage
+        mon={mon}
+        width={cardWidth}
+        onClick={onClick}
+        dimmed={dimmed}
+        face={face}
+      />
+    </motion.div>
   );
 }
 
@@ -1169,6 +1355,10 @@ export function ReplayCardInspector({
         width={pokeWidth}
         inspectable={false}
         energyIconSize={Math.max(12, Math.round(pokeWidth * 0.14))}
+        // Frozen. The inspector is a still of one card at one moment; a copy
+        // of it posing along with the beat behind it would be a second,
+        // contradicting board.
+        perform={false}
       />
     );
   } else {

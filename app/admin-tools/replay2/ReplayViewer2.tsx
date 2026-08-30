@@ -47,6 +47,7 @@ import {
 } from "./BoardKit2";
 import { indexBeats, type Beat, type ReplayPayload2 } from "@/lib/replay2/beats";
 import { useDirector } from "./director/useDirector";
+import { BeatProvider } from "./director/BeatContext";
 import type { BeatPhase } from "./director/choreography";
 import { MAT_ASPECT } from "@/lib/playmat-layout";
 import { MAT_STYLES } from "@/app/admin-tools/deck-mat/DeckMatClient";
@@ -1313,6 +1314,7 @@ function Board({
   instant,
   beat,
   beatPhase,
+  reducedMotion,
   playerMatGradient,
   opponentMatGradient,
   matInspect,
@@ -1337,6 +1339,10 @@ function Board({
    *  without every layer threading its own props down through BoardKit. */
   beat: Beat | null;
   beatPhase: BeatPhase;
+  /** The viewer honours prefers-reduced-motion — every card rests, the
+   *  pointer tilt is off, and the idle breathing stops. Resolved once in
+   *  ReplayViewer2 and handed down rather than queried per card. */
+  reducedMotion: boolean;
   /** When set (desktop, thread+board forming a 16:9 rect), the mat width
    *  is derived from this height budget instead of measured from an
    *  ambient container width — see BOARD_VERTICAL_CHROME_PX. Null falls
@@ -1393,6 +1399,12 @@ function Board({
   const cardWidth = computeReplayCardWidth(matWidth);
 
   return (
+    <BeatProvider
+      beat={beat}
+      phase={beatPhase}
+      instant={instant}
+      reducedMotion={reducedMotion}
+    >
     <div
       ref={matContainerRef}
       className="mt-4"
@@ -1455,6 +1467,7 @@ function Board({
               cardWidth={cardWidth}
               matWidth={matWidth}
               instant={instant}
+              actor="opponent"
               matGradient={opponentMatGradient}
               onDiscardClick={() => onOpenDiscardInspect("opponent")}
             />
@@ -1533,6 +1546,7 @@ function Board({
               cardWidth={cardWidth}
               matWidth={matWidth}
               instant={instant}
+              actor="player"
               matGradient={playerMatGradient}
               onDiscardClick={() => onOpenDiscardInspect("player")}
             />
@@ -1597,6 +1611,7 @@ function Board({
         <ReplayCardInspector target={inspect} onClose={onCloseInspect} />
       )}
     </div>
+    </BeatProvider>
   );
 }
 
@@ -2309,6 +2324,25 @@ export default function ReplayViewer({
     return () => mq.removeEventListener("change", onChange);
   }, []);
 
+  // Replay 2.0 leans hard on motion — poses, tilt, lifts, an idle breath on
+  // the Active. All of it collapses to a still board when the OS asks for
+  // reduced motion; the replay still plays, beat pacing and all, it just
+  // stops moving cards to say so. Watched live rather than read once, since
+  // the setting can be toggled while the page is open.
+  //
+  // Defaults to false during SSR and the first client tick. That's the right
+  // way round: the query resolves before any beat has performed, so a
+  // motion-sensitive viewer never sees a frame of movement, and a viewer
+  // without the setting never sees the board start out frozen.
+  const [reducedMotion, setReducedMotion] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReducedMotion(mq.matches);
+    const onChange = () => setReducedMotion(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
   // Width available to the thread+board row — the budget the whole 16:9
   // rect has to fit into. Board derives its own width from the resulting
   // height budget (rowWidth * 9/16) rather than the other way around, so
@@ -2399,6 +2433,7 @@ export default function ReplayViewer({
             instant={instant}
             beat={currentBeat}
             beatPhase={beatPhase}
+            reducedMotion={reducedMotion}
             playerMatGradient={playerMatGradient}
             opponentMatGradient={opponentMatGradient}
             matInspect={matInspect}
