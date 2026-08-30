@@ -107,3 +107,20 @@ const ENERGY_COLORS: Record<string, string> = {
 export function energyColor(type: string): string {
   return ENERGY_COLORS[type] ?? ENERGY_COLORS.Colorless;
 }
+
+/**
+ * One colour per special condition, matched to the pills already on the cards
+ * (CONDITION_PILL in BoardKit2) so the wash that announces a condition and the
+ * badge that records it are visibly the same thing.
+ */
+const CONDITION_COLORS: Record<string, string> = {
+  Poisoned: "#9333ea",
+  Burned: "#f97316",
+  Confused: "#facc15",
+  Asleep: "#0ea5e9",
+  Paralyzed: "#fbbf24",
+};
+
+export function conditionColor(condition: string): string {
+  return CONDITION_COLORS[condition] ?? "#94a3b8";
+}

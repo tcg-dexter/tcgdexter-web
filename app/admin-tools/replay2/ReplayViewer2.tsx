@@ -49,6 +49,7 @@ import { indexBeats, type Beat, type ReplayPayload2 } from "@/lib/replay2/beats"
 import { useDirector } from "./director/useDirector";
 import { BeatProvider } from "./director/BeatContext";
 import { FxCanvas } from "./fx/FxCanvas";
+import { GameEndFlourish } from "./fx/GameEndFlourish";
 import { useCamera } from "./fx/useCamera";
 import type { BeatPhase } from "./director/choreography";
 import { MAT_ASPECT } from "@/lib/playmat-layout";
@@ -1472,6 +1473,29 @@ function Board({
           }
         >
         <FxCanvas reducedMotion={reducedMotion} />
+        {/* Above the canvas: the flourish is the subject at that moment, not
+            something for particles to be drawn over. The board pins the
+            opponent to the top mat and the submitting player to the bottom,
+            so the winner's actor maps straight onto an edge. */}
+        <GameEndFlourish
+          beat={beat}
+          phase={beatPhase}
+          reducedMotion={reducedMotion}
+          winnerEdge={
+            beat?.kind === "game_end" && beat.winner != null
+              ? beat.winner === "player"
+                ? "bottom"
+                : "top"
+              : null
+          }
+          winnerName={
+            beat?.kind === "game_end" && beat.winner != null
+              ? (beat.winner === "player"
+                  ? frame?.player.handle
+                  : frame?.opponent.handle) ?? null
+              : null
+          }
+        />
         <div className="flex flex-col" style={{ gap: TAB_GAP_PX }}>
           {/* z-10 on the mat wrappers so each mat paints over the tab tucked
               beneath it. The wrappers are plain positioning shells — mat

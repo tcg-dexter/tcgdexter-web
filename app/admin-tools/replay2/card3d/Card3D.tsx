@@ -59,50 +59,74 @@ const POSES: Record<CardPose, PoseSpec> = {
 /* ──────────────────────────────────────────────────────────────── */
 
 /**
- * Who a beat is about: the Pokémon doing the thing, and the one it happens
- * to. Both are names, because that is all the log gives — the engine's
- * instance ids don't survive into the event stream (see beats.ts on the
- * knock_out case in particular).
+ * What a beat's subject is, when it has one.
  *
- * `side` is the actor's own mat unless stated otherwise. An attack is the one
- * beat that reaches across the board.
+ * Usually a name — that's all the log gives, since the engine's instance ids
+ * don't survive into the event stream. But some beats name nobody and still
+ * clearly happen TO a card: a retreat is written as "paid the cost and
+ * withdrew", with the Pokémon it happened to implied by being the one in the
+ * Active spot. Those resolve positionally instead.
+ */
+type Subject = { name: string } | "active" | null;
+
+/**
+ * Who a beat is about: the Pokémon doing the thing, and the one it happens to.
+ *
+ * Subjects sit on the actor's own mat unless stated otherwise. An attack is
+ * the one beat that reaches across the board.
  */
 function subjectsOf(beat: Beat): {
-  actorName: string | null;
-  targetName: string | null;
+  actor: Subject;
+  target: Subject;
   targetOnOpposingMat: boolean;
 } {
-  const none = { actorName: null, targetName: null, targetOnOpposingMat: false };
+  const none = { actor: null as Subject, target: null as Subject, targetOnOpposingMat: false };
+  const named = (n: string): Subject => (n ? { name: n } : null);
   switch (beat.kind) {
     case "attack":
       return {
-        actorName: beat.attacker || null,
-        targetName: beat.defender || null,
+        actor: named(beat.attacker),
+        target: named(beat.defender),
         targetOnOpposingMat: true,
       };
     case "ability":
-      return { ...none, actorName: beat.source || null };
+      return { ...none, actor: named(beat.source) };
     case "evolve":
       // The post-evolution name: by the time this frame renders, the card on
       // the board is already the new stage.
-      return { ...none, actorName: beat.to || null };
+      return { ...none, actor: named(beat.to) };
     case "switch_active":
-      return { ...none, actorName: beat.promoted || null };
+      return { ...none, actor: named(beat.promoted) };
     case "play_to_slot":
-      return { ...none, actorName: beat.card || null };
+      return { ...none, actor: named(beat.card) };
     case "attach_energy":
-      return { ...none, targetName: beat.target || null };
+      return { ...none, target: named(beat.target) };
     case "knock_out":
-      return { ...none, targetName: beat.pokemon || null };
+      return { ...none, target: named(beat.pokemon) };
     case "condition":
-      return { ...none, targetName: beat.pokemon || null };
+      return { ...none, target: named(beat.pokemon) };
     case "damage_counters":
-      return { ...none, targetName: beat.pokemon || null };
+      return { ...none, target: named(beat.pokemon) };
     case "discard_from_pokemon":
-      return { ...none, targetName: beat.from || null };
+      return { ...none, target: named(beat.from) };
+    case "retreat":
+      // The log names only the energy discarded to pay for it. The Pokémon
+      // retreating is whichever one is still Active on this frame — the
+      // promotion of its replacement arrives as its own switch_active beat.
+      return { ...none, target: "active" };
     default:
       return none;
   }
+}
+
+function subjectMatches(
+  subject: Subject,
+  monName: string,
+  isActive: boolean,
+): boolean {
+  if (subject == null) return false;
+  if (subject === "active") return isActive;
+  return subject.name === monName;
 }
 
 /** Pose for a role at a phase. Climax beats get the striking poses; anything
@@ -133,7 +157,7 @@ function poseFor(role: CardRole, phase: BeatPhase, climax: boolean): CardPose {
  * someone doing something — an ability firing, a Pokémon being promoted.
  */
 export function focusRole(beat: Beat): CardRole {
-  return subjectsOf(beat).targetName ? "target" : "actor";
+  return subjectsOf(beat).target ? "target" : "actor";
 }
 
 export interface CardPerformance {
@@ -156,7 +180,10 @@ export interface CardPerformance {
  * names are ordinary, and two cards leaning in together reads as emphasis
  * rather than as a bug.
  */
-export function useCardPerformance(monName: string | null): CardPerformance {
+export function useCardPerformance(
+  monName: string | null,
+  opts: { isActive?: boolean } = {},
+): CardPerformance {
   const { beat, phase, instant, reducedMotion } = useBeat();
   const matActor = useMatActor();
 
@@ -173,15 +200,16 @@ export function useCardPerformance(monName: string | null): CardPerformance {
   // identically named Pokémon on the other side of the board.
   if (!matActor) return resting;
 
-  const { actorName, targetName, targetOnOpposingMat } = subjectsOf(beat);
+  const { actor, target, targetOnOpposingMat } = subjectsOf(beat);
+  const isActive = opts.isActive === true;
   const onActorMat = matActor === beat.actor;
   const targetMat = targetOnOpposingMat ? beat.actor !== matActor : onActorMat;
 
-  if (onActorMat && actorName && actorName === monName) {
+  if (onActorMat && subjectMatches(actor, monName, isActive)) {
     const climax = beat.weight === "climax";
     return { ...resting, role: "actor", pose: poseFor("actor", phase, climax) };
   }
-  if (targetMat && targetName && targetName === monName) {
+  if (targetMat && subjectMatches(target, monName, isActive)) {
     return {
       ...resting,
       role: "target",

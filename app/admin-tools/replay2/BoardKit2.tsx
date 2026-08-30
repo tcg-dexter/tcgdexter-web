@@ -42,7 +42,7 @@ import {
   useCardPerformance,
   useTravelLift,
 } from "./card3d/Card3D";
-import { emitFocus, emitFx, energyColor } from "./fx/fxBus";
+import { conditionColor, emitFocus, emitFx, energyColor } from "./fx/fxBus";
 
 // Default mat gradient when a caller doesn't resolve one of its own — the
 // AI-player practice mode boards (PlayClient.tsx) still use this as-is.
@@ -314,6 +314,29 @@ export function Pile({
   const inspect = useContext(InspectContext);
   const m = replayTrayMetrics(width);
   const fontSize = Math.max(6, Math.round((m.strip * 0.34) / CARD_IMAGE_BUMP));
+
+  // Piles were the last inert thing on the board: every card that enters or
+  // leaves the game passes through one, and they registered it by silently
+  // changing a number. `kind` names which pile this is so a beat can pick the
+  // one it concerns — a draw pulses the deck, a discard pulses the discard.
+  const pileKind: "draw" | "discard" | null =
+    label === "Draw" ? "draw" : label === "Discard" ? "discard" : null;
+  const { beat, phase, instant, reducedMotion } = useBeat();
+  const matActor = useMatActor();
+  const pileActive =
+    !reducedMotion &&
+    !instant &&
+    beat != null &&
+    matActor != null &&
+    beat.actor === matActor &&
+    phase === "act" &&
+    ((pileKind === "draw" && (beat.kind === "draw" || beat.kind === "shuffle")) ||
+      (pileKind === "discard" &&
+        (beat.kind === "discard" ||
+          beat.kind === "discard_from_pokemon" ||
+          beat.kind === "play_trainer" ||
+          beat.kind === "retreat")));
+
   // Landscape card slot at full card proportions: the card's long edge (342)
   // runs horizontally, its short edge (245 → `width`) vertically — i.e. the
   // portrait card turned on its side, same size. The holder widens to suit.
@@ -330,10 +353,27 @@ export function Pile({
   const clickable = onClick != null ? count > 0 : inspect != null && !useCardBack && Boolean(topName);
 
   return (
-    <div
+    <motion.div
       className={`relative bg-black shadow-sm ${className}`}
       style={{ width: holderW, borderRadius: m.radius, padding: m.pad }}
       title={hint ? `${label} · ${hint}` : label}
+      // A nudge and a rim of light, not a bounce. This fires several times a
+      // turn — cards are drawn, Trainers are discarded — so it has to be
+      // legible at a glance and completely ignorable, or it becomes the
+      // busiest thing on a board where it is the least important.
+      animate={
+        pileActive
+          ? {
+              scale: [1, 1.055, 1],
+              boxShadow: [
+                "0 0 0 0 rgba(255,255,255,0)",
+                "0 0 14px 2px rgba(255,255,255,0.5)",
+                "0 0 0 0 rgba(255,255,255,0)",
+              ],
+            }
+          : { scale: 1, boxShadow: "0 0 0 0 rgba(255,255,255,0)" }
+      }
+      transition={{ duration: 0.42, ease: "easeOut" }}
     >
       {/* Landscape card slot — inset by the holder padding for concentric corners. */}
       <div
@@ -387,7 +427,7 @@ export function Pile({
         <span className="font-bold uppercase">{label}</span>
         <span className="font-semibold tabular-nums">{count}</span>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -518,6 +558,7 @@ export function PokemonCardImage({
   face = "art",
   perform = true,
   idle = false,
+  isActive = false,
 }: {
   mon: PokemonFrame;
   width: number;
@@ -552,11 +593,15 @@ export function PokemonCardImage({
   /** This is the Active Pokémon — give it a slow idle so the board is never
    *  completely still. */
   idle?: boolean;
+  /** This card occupies the Active spot. Beat matching needs it for the beats
+   *  the log describes positionally rather than by name — a retreat names
+   *  only the energy it discarded, and means "the one that was Active". */
+  isActive?: boolean;
 }) {
   const inspect = useContext(InspectContext);
   // Passing null rather than skipping the call: the hook has to run on every
   // render regardless of whether this card is performing.
-  const perf = useCardPerformance(perform ? mon.name : null);
+  const perf = useCardPerformance(perform ? mon.name : null, { isActive });
   const { instant: beatInstant, reducedMotion } = useBeat();
   // The card's own box, so it can tell the FX layer and the camera where it
   // is. Nothing else needs board geometry as a result — see fxBus.
@@ -606,6 +651,18 @@ export function PokemonCardImage({
         });
       } else if (perfBeat.kind === "damage_counters") {
         emitFx({ kind: "impact", clientX: cx, clientY: cy, intensity: 0.5, color: "#ff8a5c" });
+      } else if (perfBeat.kind === "condition") {
+        // Converging rather than bursting: a condition settles onto a
+        // Pokémon and stays there. A burst would read as it being shaken off.
+        emitFx({
+          kind: "converge",
+          clientX: cx,
+          clientY: cy,
+          intensity: 1.1,
+          color: conditionColor(perfBeat.condition),
+        });
+      } else if (perfBeat.kind === "discard_from_pokemon") {
+        emitFx({ kind: "spark", clientX: cx, clientY: cy, intensity: 0.7, color: "#cbd5e1" });
       } else if (perfBeat.kind === "knock_out") {
         // Fired from the card on its way out: AnimatePresence keeps a
         // knocked-out Pokémon mounted through its exit, so it is still here
@@ -801,6 +858,27 @@ export function PokemonCardImage({
           active={perf.role === "actor" && (perf.pose === "windup" || perf.pose === "strike")}
           radius={m.cardRadius}
         />
+        {/* The condition's own colour washing over the card as it takes
+            hold — the pill in the corner is a record, this is the event. */}
+        <AnimatePresence>
+          {perf.role === "target" &&
+            perf.phase === "impact" &&
+            perf.beat?.kind === "condition" && (
+              <motion.div
+                key={`${perf.beat.actionIndex}-cond`}
+                className="pointer-events-none absolute inset-0 z-20"
+                style={{
+                  borderRadius: m.cardRadius,
+                  background: conditionColor(perf.beat.condition),
+                  mixBlendMode: "hard-light",
+                }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0, 0.62, 0.28] }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+              />
+            )}
+        </AnimatePresence>
         <AnimatePresence>
           {perf.role === "target" &&
             perf.phase === "impact" &&
@@ -1322,6 +1400,7 @@ function ActiveSlot({
         dimmed={interact?.dimActive}
         face={face}
         idle
+        isActive
       />
     </motion.div>
   );
@@ -1384,12 +1463,69 @@ function FloatingCard({
   face?: CardFace;
 }) {
   const inspect = useContext(InspectContext);
+
+  // Trainers and Stadiums never became beat subjects: the card matcher works
+  // on Pokémon in play, and these two are the only cards that sit on a mat
+  // without being one. Which left the busiest line in any log — several
+  // Trainers a turn — as the one action with no acknowledgement anywhere on
+  // the board.
+  const { beat, phase, instant, reducedMotion } = useBeat();
+  const matActor = useMatActor();
+  const floatRef = useRef<HTMLDivElement>(null);
+  const firedRef = useRef<number | null>(null);
+
+  const isSubject =
+    beat != null &&
+    ((beat.kind === "play_trainer" && beat.card === name && beat.actor === matActor) ||
+      // A Stadium firing belongs to the board rather than to a player, so it
+      // is matched on the card alone — its `actor` is as often `system` as it
+      // is whoever owns it.
+      (beat.kind === "effect_activated" && beat.card === name));
+  const lit = isSubject && !reducedMotion && !instant && (phase === "act" || phase === "impact");
+
+  useEffect(() => {
+    if (!isSubject || reducedMotion || instant) return;
+    if (phase !== "act") return;
+    if (!beat || firedRef.current === beat.actionIndex) return;
+    const el = floatRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (r.width === 0) return;
+    firedRef.current = beat.actionIndex;
+    emitFocus({
+      clientX: r.left + r.width / 2,
+      clientY: r.top + r.height / 2,
+      actionIndex: beat.actionIndex,
+      climax: false,
+    });
+    emitFx({
+      kind: "spark",
+      clientX: r.left + r.width / 2,
+      clientY: r.top + r.height / 2,
+      intensity: 0.9,
+      // Supporters are the turn's one big decision; Items and Stadiums are
+      // texture. Colouring them apart means a glance at the board says which
+      // kind of play just happened without reading the card.
+      color:
+        beat.kind === "play_trainer" && beat.subtype === "supporter"
+          ? "#fbbf24"
+          : "#e2e8f0",
+    });
+  }, [isSubject, phase, beat, instant, reducedMotion]);
+
   return (
-    <div
+    <motion.div
+      ref={floatRef}
       className={`relative w-full overflow-hidden rounded bg-white ${inspect ? "cursor-pointer" : ""}`}
       style={{ aspectRatio: "245 / 342" }}
       role={inspect ? "button" : undefined}
       onClick={inspect ? () => inspect({ kind: "card", name, imageUrl }) : undefined}
+      animate={
+        lit
+          ? { scale: 1.07, boxShadow: "0 10px 26px rgba(0,0,0,0.34)" }
+          : { scale: 1, boxShadow: "0 0px 0px rgba(0,0,0,0)" }
+      }
+      transition={{ type: "spring", stiffness: 420, damping: 26 }}
     >
       {face === "label" ? (
         <CardLabelFace text={name} width={width} />
@@ -1411,7 +1547,8 @@ function FloatingCard({
           )}
         </>
       )}
-    </div>
+      <FoilSheen active={lit} radius={4} />
+    </motion.div>
   );
 }
 

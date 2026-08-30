@@ -101,6 +101,10 @@ export type Beat = BeatBase &
     | { kind: "mulligan"; count: number }
     | { kind: "opening_hand"; handSize: number }
     | { kind: "mulligan_total"; total: number }
+    /** A passive card firing on its own — a Stadium's trigger, a Tool's.
+     *  Nobody "plays" it, so it has an actor of `system` as often as not and
+     *  the card named is the only subject there is. */
+    | { kind: "effect_activated"; card: string }
     | { kind: "chose_first"; firstPlayer: BeatActor | null }
     | { kind: "turn_start"; turn: number; playerTurnNumber: number }
     | { kind: "turn_end" }
@@ -204,7 +208,7 @@ const WEIGHTS: Record<string, BeatWeight> = {
   reveal: "ambient",
   add_to_hand: "ambient",
   move_to_hand: "ambient",
-  effect_activated: "ambient",
+  effect_activated: "normal",
   mulligan_total: "ambient",
   mulligan_bonus_draw: "ambient",
   damage_dealt: "ambient",
@@ -463,6 +467,9 @@ function toBeat(ev: EngineEvent, action: ParsedAction | undefined): Beat {
 
     case "mulligan_total":
       return { ...base, kind: "mulligan_total", total: num(d.mulligans ?? p.total, 1) };
+
+    case "effect_activated":
+      return { ...base, kind: "effect_activated", card: str(d.card ?? p.card) };
 
     case "opening_hand":
       return { ...base, kind: "opening_hand", handSize: num(d.handSize ?? p.count, 7) };

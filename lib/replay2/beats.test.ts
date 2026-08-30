@@ -4,10 +4,26 @@ import { join } from "node:path";
 import { buildReplayPayload } from "@/lib/replay/frames";
 import { buildBeats, indexBeats, type Beat } from "./beats";
 
-const EXAMPLE = readFileSync(
-  join(__dirname, "..", "battle-log", "fixtures", "example-1.txt"),
-  "utf8",
-);
+function fixture(name: string): string {
+  return readFileSync(join(__dirname, "..", "battle-log", "fixtures", name), "utf8");
+}
+
+const EXAMPLE = fixture("example-1.txt");
+
+/**
+ * Every fixture, with the handle each is normalized to (the same ones
+ * frames.test.ts uses).
+ *
+ * The coverage suite below walks all three. It used to walk only example-1,
+ * and that let sixteen `effect_activated` beats sit on the generic fallback
+ * in example-3 while the test reported full coverage — the exact failure the
+ * test exists to catch, hidden by the fixture it happened not to look at.
+ */
+const ALL_FIXTURES: { name: string; handle: string }[] = [
+  { name: "example-1.txt", handle: "MoonSheikah" },
+  { name: "example-2-verbose.txt", handle: "Ash" },
+  { name: "example-3-same-name-attach.txt", handle: "Nnova12" },
+];
 
 const HANDLE = "MoonSheikah";
 const beats = buildBeats(EXAMPLE, HANDLE);
@@ -151,8 +167,12 @@ describe("board beats carry their targets", () => {
 // That's the intended landing spot for future parser additions, not for the
 // action types the breadth pass is supposed to have covered.
 describe("choreography coverage", () => {
-  it("leaves no known action type on the generic fallback", () => {
-    const leftovers = ofKind("generic").map((b) => b.actionKind);
-    expect(Array.from(new Set(leftovers))).toEqual([]);
+  it("leaves no known action type on the generic fallback, in any fixture", () => {
+    for (const { name, handle } of ALL_FIXTURES) {
+      const leftovers = buildBeats(fixture(name), handle)
+        .filter((b) => b.kind === "generic")
+        .map((b) => (b as Extract<Beat, { kind: "generic" }>).actionKind);
+      expect(Array.from(new Set(leftovers)), `unmapped in ${name}`).toEqual([]);
+    }
   });
 });
