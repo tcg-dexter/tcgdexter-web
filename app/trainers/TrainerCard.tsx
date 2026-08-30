@@ -75,7 +75,10 @@ const HEAT_GAP_PX = 2;
  * caller opts into, so the grid card and the list row can't drift apart.
  * A ring, not a border: it's drawn outside the box, so the circle's
  * diameter stays exactly `size` and the sprite keeps its own margin
- * instead of losing a pixel to the outline.
+ * instead of losing a pixel to the outline. The card detail page's
+ * Pokémon avatar (CardDetailPanel.tsx) matches this treatment — solid
+ * ink at the same weight, deliberately not the translucent
+ * border-black/10 the profile EditAvatar uses.
  */
 function TrainerAvatar({
   trainer,
@@ -87,7 +90,7 @@ function TrainerAvatar({
   const sprite = Math.round(size * 0.78);
   return (
     <div
-      className="relative rounded-full flex items-center justify-center overflow-hidden shrink-0 ring-1 ring-black dark:ring-white"
+      className="relative rounded-full flex items-center justify-center overflow-hidden shrink-0 ring-2 ring-black dark:ring-white"
       style={{
         width: size,
         height: size,
