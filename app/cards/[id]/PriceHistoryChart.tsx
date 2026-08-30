@@ -33,12 +33,28 @@ function formatDateLabel(iso: string): string {
 }
 
 /**
- * Market-price line chart for a single printing, above "More by {artist}"
- * on the card detail page. Pointer events unify mouse hover (desktop) and
- * touch drag (mobile) into one handler — dragging a finger across the chart
- * scrubs through days exactly like hovering with a cursor does.
+ * Market-price line chart, used for a single printing on the card detail
+ * page (above "More by {artist}") and for the aggregate value of a whole
+ * collection on the profile Collection module. Nothing in the rendering is
+ * per-card — it plots a dated currency series — so the two callers differ
+ * only in `title` and outer spacing.
+ *
+ * Pointer events unify mouse hover (desktop) and touch drag (mobile) into
+ * one handler — dragging a finger across the chart scrubs through days
+ * exactly like hovering with a cursor does.
  */
-export default function PriceHistoryChart({ points }: { points: PricePoint[] }) {
+export default function PriceHistoryChart({
+  points,
+  title = "Price History",
+  className = "mt-10",
+}: {
+  points: PricePoint[];
+  /** Heading, and the noun used in the chart's aria-label. */
+  title?: string;
+  /** Outer spacing. The card page wants its default top margin; the
+   *  Collection module already sits in a spaced stack. */
+  className?: string;
+}) {
   const [range, setRange] = useState<Range>("30d");
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const gradientId = useId();
@@ -112,11 +128,11 @@ export default function PriceHistoryChart({ points }: { points: PricePoint[] }) 
   }
 
   return (
-    <section className="mt-10 rounded-2xl p-[1.5px] bg-gradient-to-r from-neutral-300 to-neutral-500 dark:from-neutral-600 dark:to-neutral-400 shadow-sm">
+    <section className={`${className} rounded-2xl p-[1.5px] bg-gradient-to-r from-neutral-300 to-neutral-500 dark:from-neutral-600 dark:to-neutral-400 shadow-sm`}>
       <div className="rounded-[14.5px] bg-white/95 dark:bg-surface-elevated backdrop-blur-xl p-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h2 className="text-lg font-semibold text-text-primary">Price History</h2>
+            <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
             <div className="mt-1 flex items-baseline gap-2">
               <span className="text-2xl font-bold text-text-primary tabular-nums">
                 {formatCurrency(last.price)}
@@ -183,7 +199,7 @@ export default function PriceHistoryChart({ points }: { points: PricePoint[] }) 
             preserveAspectRatio="none"
             className="w-full h-[160px] sm:h-[200px] touch-none cursor-crosshair"
             role="img"
-            aria-label={`Market price over the last ${rangeDays} days, from ${formatCurrency(min)} to ${formatCurrency(max)}`}
+            aria-label={`${title} over the last ${rangeDays} days, from ${formatCurrency(min)} to ${formatCurrency(max)}`}
             onPointerMove={handlePointerMove}
             onPointerDown={handlePointerMove}
             onPointerLeave={handlePointerLeave}

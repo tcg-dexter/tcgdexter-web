@@ -34,7 +34,7 @@ export async function GET() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name, username, is_public, avatar_url, bio, theme_preference, email_reengagement")
+    .select("display_name, username, is_public, avatar_url, bio, theme_preference, email_reengagement, collection_public")
     .eq("id", user.id)
     .single();
 
@@ -46,6 +46,7 @@ export async function GET() {
     bio: profile?.bio ?? null,
     theme_preference: profile?.theme_preference ?? "light",
     email_reengagement: profile?.email_reengagement ?? true,
+    collection_public: profile?.collection_public ?? false,
   });
 }
 
@@ -85,6 +86,7 @@ export async function PATCH(req: Request) {
     theme_preference?: string;
     email_reengagement?: boolean;
     onboarding_dismissed?: boolean;
+    collection_public?: boolean;
   };
   try {
     body = await req.json();
@@ -266,6 +268,13 @@ export async function PATCH(req: Request) {
   // Master opt-in for re-engagement emails (streak-at-risk, near-badge).
   if (typeof body.email_reengagement === "boolean") {
     updates.email_reengagement = body.email_reengagement;
+  }
+
+  // ── collection_public ─────────────────────────────────────────────
+  // Opt-in for the profile's Collection module. Separate from is_public:
+  // a public profile does not imply a public collection.
+  if (typeof body.collection_public === "boolean") {
+    updates.collection_public = body.collection_public;
   }
 
   // ── onboarding_dismissed ──────────────────────────────────────────

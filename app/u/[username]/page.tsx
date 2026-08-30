@@ -26,6 +26,13 @@ import TeamCards, { type TeamCardRef } from "./TeamCards";
 import { BattleCard } from "@/app/components/BattleCard";
 import { loadOwnerRecentBattles } from "@/lib/recent-battles";
 import ProfileTabs from "./ProfileTabs";
+import CollectionSection from "./CollectionSection";
+import {
+  EMPTY_COLLECTION_STATS,
+  canViewCollection,
+  loadCollectionStats,
+  loadCollectionValueHistory,
+} from "@/lib/collection";
 import AchievementsModule from "./AchievementsModule";
 import {
   listAchievements,
@@ -55,6 +62,7 @@ interface ProfileRow {
   onboarding_dismissed: boolean;
   follower_count: number;
   following_count: number;
+  collection_public: boolean;
 }
 
 interface DeckRow {
@@ -136,7 +144,7 @@ export default async function ProfilePage({
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, display_name, username, bio, created_at, is_public, tcg_live_handle, avatar_url, banner_accent, team_cards, onboarding_dismissed, follower_count, following_count"
+      "id, display_name, username, bio, created_at, is_public, tcg_live_handle, avatar_url, banner_accent, team_cards, onboarding_dismissed, follower_count, following_count, collection_public"
     )
     .eq("username", username.toLowerCase())
     .maybeSingle<ProfileRow>();
@@ -281,6 +289,23 @@ export default async function ProfilePage({
   const recentBattles = isOwner
     ? await loadOwnerRecentBattles(supabase, profile.id, profile.username, 3)
     : [];
+
+  // Collection module (bottom of the page). Owner always; visitors only
+  // when the owner opted in — see canViewCollection, whose rule
+  // collection_value_history() also enforces in SQL. Skipping both loads
+  // when it isn't visible keeps a private collection off the wire entirely
+  // rather than fetching it and hiding it at render time.
+  const showCollection = canViewCollection({
+    isOwner,
+    profileIsPublic: profile.is_public,
+    collectionPublic: profile.collection_public,
+  });
+  const [collectionStats, collectionValueHistory] = showCollection
+    ? await Promise.all([
+        loadCollectionStats(profile.id),
+        loadCollectionValueHistory(profile.id),
+      ])
+    : [EMPTY_COLLECTION_STATS, []];
 
   // Visitor placeholder for owner-private cells.
   const ownerOnly = (value: string) => (isOwner ? value : "—");
@@ -637,6 +662,16 @@ export default async function ProfilePage({
             </div>
           )}
         </div>
+      )}
+
+      {showCollection && (
+        <CollectionSection
+          stats={collectionStats}
+          valueHistory={collectionValueHistory}
+          isOwner={isOwner}
+          collectionPublic={profile.collection_public}
+          gradientCss={bannerGradient}
+        />
       )}
       </FollowPanelBody>
       </FollowPanelProvider>
