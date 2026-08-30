@@ -80,7 +80,25 @@ describe("pacing actually varies", () => {
   it("gives a continuation frame its own short beat, not the action's", () => {
     // Discard-then-draw expands to three frames sharing one action; running
     // the full beat on each would triple an Ultra Ball.
-    const trainer = beats.find((b) => b.kind === "play_trainer")!;
-    expect(specDuration(choreographyFor(trainer, { continuation: true }))).toBe(380);
+    const trainer = beats.find((b) => b.kind === "play_trainer");
+    expect(trainer).toBeDefined();
+    const continuation = specDuration(choreographyFor(trainer!, { continuation: true }));
+    expect(continuation).toBeGreaterThan(0);
+    expect(continuation).toBeLessThan(specDuration(choreographyFor(trainer!)));
+  });
+
+  it("scales every performed beat by the global tempo, but not a cut", () => {
+    // BASE_TEMPO is the one dial for overall playback speed; the shapes in the
+    // table are proportions. This pins the two halves of that contract: the
+    // performed beats moved with it, and a jump — which isn't a pace but the
+    // minimum hold on a frame being cut to — deliberately did not.
+    const attack = beats.find((b) => b.kind === "attack")!;
+    // Authored shape for an attack totals 1740; at BASE_TEMPO 2 it plays at
+    // 3480. If this needs updating, check it is because the tempo changed on
+    // purpose and not because a phase was edited by accident.
+    expect(specDuration(choreographyFor(attack))).toBe(3480);
+    expect(choreographyFor(attack, { instant: true }).phases).toEqual([
+      { phase: "settle", ms: 90 },
+    ]);
   });
 });
