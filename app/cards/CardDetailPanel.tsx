@@ -57,7 +57,7 @@ export default function CardDetailPanel({ card, raw, renderCardImage }: Props) {
         <div className="md:hidden flex items-center gap-3">
           {isPokemon && (
             <span
-              className="w-14 h-14 rounded-full shrink-0 inline-flex items-center justify-center overflow-hidden shadow-md"
+              className="w-14 h-14 rounded-full shrink-0 inline-flex items-center justify-center overflow-hidden shadow-md border border-black/10 dark:border-white/10"
               style={{ background: avatarBg }}
               aria-hidden
             >
@@ -81,7 +81,7 @@ export default function CardDetailPanel({ card, raw, renderCardImage }: Props) {
         <div className="hidden md:flex items-center gap-3">
           {isPokemon && (
             <span
-              className="w-14 h-14 rounded-full shrink-0 inline-flex items-center justify-center overflow-hidden shadow-md"
+              className="w-14 h-14 rounded-full shrink-0 inline-flex items-center justify-center overflow-hidden shadow-md border border-black/10 dark:border-white/10"
               style={{ background: avatarBg }}
               aria-hidden
             >
