@@ -5,7 +5,6 @@ import { variantDisplayLabel } from "@/lib/inventory";
 import { normalizeForSearch } from "@/lib/searchNormalize";
 import type { CardIndexEntry } from "@/lib/cardsIndex";
 import type { OwnershipFilter } from "@/lib/cardSearch";
-import type { GridColumns } from "@/app/components/ui/GridDensityMenu";
 import { useInventory } from "./InventoryContext";
 import { GridView, ListView, type SelectionProps } from "./CardCollectionView";
 
@@ -223,7 +222,6 @@ export function VariantFilteredView({
   cards,
   variantFilter,
   view,
-  columns,
   selectMode,
   selectedOrder,
   onToggleSelect,
@@ -231,9 +229,6 @@ export function VariantFilteredView({
   cards: CardIndexEntry[];
   variantFilter: string[];
   view: "grid" | "list";
-  /** Pass-through to GridView's density override; omit for its responsive
-   *  default (the catalog never pins a column count). */
-  columns?: GridColumns;
 } & SelectionProps) {
   const { presentVariants } = useInventory();
   const displayed = useMemo(() => {
@@ -255,7 +250,6 @@ export function VariantFilteredView({
   return view === "grid" ? (
     <GridView
       cards={displayed}
-      columns={columns}
       selectMode={selectMode}
       selectedOrder={selectedOrder}
       onToggleSelect={onToggleSelect}

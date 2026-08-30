@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { cardImageFallbacks, cardImageSmall } from "@/lib/cardImages";
 import type { CardIndexEntry } from "@/lib/cardsIndex";
-import type { GridColumns } from "@/app/components/ui/GridDensityMenu";
 import CardImage from "./CardImage";
 import GridTile from "./GridTile";
 import SelectionCircle from "./SelectionCircle";
@@ -31,39 +30,22 @@ export interface SelectionProps {
   onToggleSelect?: (card: CardIndexEntry) => void;
 }
 
-/**
- * Fixed column counts for the grid-density control. Tailwind's JIT only
- * emits classes it can see as complete literals, so `grid-cols-${n}` would
- * silently produce an unstyled grid — hence the explicit map.
- */
-const COLUMN_CLASS: Record<GridColumns, string> = {
-  2: "grid-cols-2",
-  3: "grid-cols-3",
-  4: "grid-cols-4",
-  5: "grid-cols-5",
-  6: "grid-cols-6",
-};
-
-/** Default when no column count is pinned — the card catalog relies on it. */
+/** Every card grid — catalog and list detail alike — sizes itself off the
+ *  viewport. The list page used to be able to pin a fixed cards-per-row
+ *  instead; that control is gone, so this is the only layout now. */
 const RESPONSIVE_COLUMNS =
   "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6";
 
 export function GridView({
   cards,
-  columns,
   selectMode,
   selectedOrder,
   onToggleSelect,
 }: {
   cards: CardIndexEntry[];
-  /** Pin the grid to this many cards per row at every breakpoint. Omit to
-   *  keep the responsive default. */
-  columns?: GridColumns;
 } & SelectionProps) {
   return (
-    <div
-      className={`grid ${columns ? COLUMN_CLASS[columns] : RESPONSIVE_COLUMNS} gap-3`}
-    >
+    <div className={`grid ${RESPONSIVE_COLUMNS} gap-3`}>
       {cards.map((c, i) => (
         <GridTile
           key={c.id}
