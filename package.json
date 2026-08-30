@@ -18,7 +18,8 @@
     "reengagement": "node --env-file=.env.local --import tsx scripts/reengagement.ts",
     "email:preview": "tsx scripts/email-preview.ts",
     "digest:test": "node --env-file=.env.local --import tsx scripts/weekly-digest-test.ts",
-    "digest": "node --env-file=.env.local --import tsx scripts/weekly-digest.ts"
+    "digest": "node --env-file=.env.local --import tsx scripts/weekly-digest.ts",
+    "backfill:battle-logs": "node --env-file=.env.local --import tsx scripts/backfill-battle-log-parse.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.0",
