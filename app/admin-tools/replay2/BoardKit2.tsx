@@ -1214,19 +1214,45 @@ export function PlayerMat({
   return (
     <MatActorContext.Provider value={actor ?? null}>
     <LayoutGroup id={side}>
+      {/* The mat itself does NOT clip its contents.
+          
+          v1 painted the gradient and texture on this element and gave it
+          overflow-hidden to keep them inside the rounded corners — which was
+          free, because nothing ever left the mat. Replay 2.0's cards lift:
+          a bench Pokémon at full strike is scaled 1.10 and pushed ~46px
+          toward the viewer, which perspective turns into roughly 21% of
+          extra height, about half of it above the card. The opponent's bench
+          sits MAT_PADDING (8px) from the top edge, so a struck or lifted card
+          had its top sheared off by the mat boundary.
+
+          So the background moves to its own clipped layer and the mat
+          becomes a plain positioning shell. The background still has the
+          rounded corners; the cards are simply no longer inside anything
+          that trims them. Cards overflowing the mat edge is correct — a card
+          held above the table should break its silhouette. */}
       <div
-        className="relative rounded-xl overflow-hidden"
+        className="relative rounded-xl"
         style={{
           padding: MAT_PADDING,
           height: matWidth > 0 ? matWidth * MAT_ASPECT : undefined,
-          backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(BOARD_TEXTURE.svg)}"), ${matGradient}`,
-          backgroundSize: `${BOARD_TEXTURE.w * texScale}px ${BOARD_TEXTURE.h * texScale}px, auto`,
         }}
       >
-        {/* ── 3-column grid: left-rail | center | right-rail. Rails are sized
-            to the rotated (landscape) pile holders. ── */}
         <div
-          className="grid h-full gap-1.5 sm:gap-3"
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-xl overflow-hidden"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(BOARD_TEXTURE.svg)}"), ${matGradient}`,
+            backgroundSize: `${BOARD_TEXTURE.w * texScale}px ${BOARD_TEXTURE.h * texScale}px, auto`,
+          }}
+        />
+        {/* ── 3-column grid: left-rail | center | right-rail. Rails are sized
+            to the rotated (landscape) pile holders. ──
+
+            `relative` so the rails paint above the background layer: that
+            layer is positioned and this content would otherwise be static,
+            which puts it underneath regardless of DOM order. */}
+        <div
+          className="relative grid h-full gap-1.5 sm:gap-3"
           style={{ gridTemplateColumns: `${railW}px 1fr ${railW}px` }}
         >
           {/* Left rail — cards rotate top-toward-left (outer edge). On the top
@@ -1266,7 +1292,14 @@ export function PlayerMat({
             // card, a Pokémon with no printed HP has no bar), and hanging them
             // from a shared TOP left their card art at different heights. The
             // bottom edge is the one the eye reads as the row.
-            className="absolute z-0 flex items-end justify-center overflow-hidden"
+            // No overflow-hidden: it was the inner half of the clipping pair
+            // described on the mat above, and the one that bit first — the
+            // row's box is only as tall as its holders, so ANY lift was
+            // trimmed at its top edge immediately, not just one near the mat
+            // boundary. Nothing needs the clip: benchCardWidth is derived by
+            // dividing the mat's inner width among the cards, so the row is
+            // sized to fit rather than relying on being cut off.
+            className="absolute z-0 flex items-end justify-center"
             style={{ top: benchTop, left: MAT_PADDING, width: innerW, gap: BOARD_CARD_GAP }}
           >
             {/* Wrapped so a Pokémon leaving the bench — knocked out, or
