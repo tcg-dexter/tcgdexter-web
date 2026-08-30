@@ -1320,6 +1320,7 @@ function Board({
   beatPhase,
   reducedMotion,
   anyInspectorOpen,
+  actionContinues,
   playerMatGradient,
   opponentMatGradient,
   matInspect,
@@ -1346,6 +1347,10 @@ function Board({
   beatPhase: BeatPhase;
   /** Suppresses the camera: see its `enabled` argument. */
   anyInspectorOpen: boolean;
+  /** The frame after this one belongs to the same action — an expanded
+   *  discard-then-draw exchange mid-flight. Overlays that describe the
+   *  ACTION rather than the frame use it to stay put across the seam. */
+  actionContinues: boolean;
   /** The viewer honours prefers-reduced-motion — every card rests, the
    *  pointer tilt is off, and the idle breathing stops. Resolved once in
    *  ReplayViewer2 and handed down rather than queried per card. */
@@ -1475,7 +1480,12 @@ function Board({
         >
         <FxCanvas reducedMotion={reducedMotion} />
         {/* Above the particles: the plate names what caused them. */}
-        <MoveNamePlate beat={beat} phase={beatPhase} reducedMotion={reducedMotion} />
+        <MoveNamePlate
+          beat={beat}
+          phase={beatPhase}
+          actionContinues={actionContinues}
+          reducedMotion={reducedMotion}
+        />
         {/* Above the canvas: the flourish is the subject at that moment, not
             something for particles to be drawn over. The board pins the
             opponent to the top mat and the submitting player to the bottom,
@@ -2290,6 +2300,18 @@ export default function ReplayViewer({
     [data],
   );
 
+  // Whether the NEXT frame is a later beat of the action on screen now. An
+  // overlay that belongs to the action rather than to the frame — the move
+  // name plate — uses this to survive the seam between an exchange's stages
+  // instead of exiting and re-entering at each one.
+  //
+  // Bounds-checked rather than left to isContinuation, which compares two
+  // array lookups: past the end of the frame list both are undefined and
+  // compare equal, so the last frame of a replay would report that its
+  // action carries on and the plate would never leave.
+  const actionContinues =
+    frameIndex + 1 < frameCount && isContinuation(frameIndex + 1);
+
   const advance = useCallback(() => {
     setInstant(false);
     setFrameIndex((i) => (i >= frameCount - 1 ? i : i + 1));
@@ -2511,6 +2533,7 @@ export default function ReplayViewer({
             beatPhase={beatPhase}
             reducedMotion={reducedMotion}
             anyInspectorOpen={anyInspectorOpen}
+            actionContinues={actionContinues}
             playerMatGradient={playerMatGradient}
             opponentMatGradient={opponentMatGradient}
             matInspect={matInspect}

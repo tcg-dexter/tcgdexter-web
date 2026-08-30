@@ -17,6 +17,15 @@ import type { BeatPhase } from "../director/choreography";
  * `act` phase, so by `impact` — when the damage counter lands on the other
  * mat — it is fully on screen and drifting. The two read as one event because
  * the director is driving both from the same phase clock.
+ *
+ * One plate per ACTION, not per frame. Some actions are drawn across several
+ * frames: `buildReplayPayload` expands a pay-cards-to-get-cards exchange into
+ * a play / discard / draw trio sharing one actionIndex, which is how a Trade
+ * or an Ultra Ball reaches the board. Each of those frames runs its own short
+ * continuation beat, so the phase clock returns to `act` on every one of
+ * them — and a plate whose visibility keyed off the phase alone flickered
+ * out and back in three times for a single ability. It now holds through
+ * `settle` for as long as more frames of the same action are still to come.
  */
 
 interface PlateState extends FxMovePlate {
@@ -31,10 +40,14 @@ interface PlateState extends FxMovePlate {
 export function MoveNamePlate({
   beat,
   phase,
+  actionContinues,
   reducedMotion,
 }: {
   beat: Beat | null;
   phase: BeatPhase;
+  /** The next frame is another beat of this same action — so this `settle`
+   *  is a pause inside the move, not the end of it. */
+  actionContinues: boolean;
   reducedMotion: boolean;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -61,16 +74,17 @@ export function MoveNamePlate({
     });
   }, [reducedMotion]);
 
-  // On screen for the action it belongs to, and only for the phases where the
-  // move is actually happening. Driving the exit off the phase rather than a
-  // timeout keeps it locked to the director: at 0.5x it lingers with the
-  // blow, at 4x it leaves with it.
+  // On screen for the action it belongs to, and off again once that action is
+  // genuinely finished — which is the last frame's `settle`, not every
+  // frame's. Driving the exit off the phase rather than a timeout keeps it
+  // locked to the director: at 0.5x it lingers with the blow, at 4x it leaves
+  // with it.
   const visible =
     plate != null &&
     !reducedMotion &&
     beat != null &&
     beat.actionIndex === plate.actionIndex &&
-    (phase === "act" || phase === "impact");
+    (phase !== "settle" || actionContinues);
 
   const accent =
     plate?.kind === "ability"
