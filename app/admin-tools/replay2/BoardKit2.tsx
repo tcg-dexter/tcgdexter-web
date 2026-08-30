@@ -15,7 +15,14 @@
 // threads an `interact` bundle down to its cards. With none of those set,
 // behavior is exactly the replay board's (tap → card inspector).
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import {
@@ -25,15 +32,17 @@ import {
   MAT_ASPECT,
 } from "@/app/admin-tools/deck-mat/DeckMatClient";
 import { shade } from "@/lib/color";
-import { MatActorContext, useBeat } from "./director/BeatContext";
+import { MatActorContext, useBeat, useMatActor } from "./director/BeatContext";
 import {
   CardSurface,
   DamageBurst,
   FoilSheen,
+  focusRole,
   travelStyle,
   useCardPerformance,
   useTravelLift,
 } from "./card3d/Card3D";
+import { emitFocus, emitFx, energyColor } from "./fx/fxBus";
 
 // Default mat gradient when a caller doesn't resolve one of its own — the
 // AI-player practice mode boards (PlayClient.tsx) still use this as-is.
@@ -549,6 +558,77 @@ export function PokemonCardImage({
   // render regardless of whether this card is performing.
   const perf = useCardPerformance(perform ? mon.name : null);
   const { instant: beatInstant, reducedMotion } = useBeat();
+  // The card's own box, so it can tell the FX layer and the camera where it
+  // is. Nothing else needs board geometry as a result — see fxBus.
+  const boxRef = useRef<HTMLDivElement>(null);
+  // Last (action, phase, role) this card fired for. Effects are one-shot
+  // punctuation, and React will happily re-run an effect for an unrelated
+  // re-render mid-beat; without this a held frame emits a burst per render.
+  const firedRef = useRef<string | null>(null);
+
+  const { role: perfRole, phase: perfPhase, beat: perfBeat } = perf;
+  useEffect(() => {
+    if (!perform || reducedMotion || beatInstant) return;
+    if (!perfBeat || perfRole === "bystander") return;
+    const key = `${perfBeat.actionIndex}:${perfPhase}:${perfRole}`;
+    if (firedRef.current === key) return;
+    const el = boxRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (r.width === 0) return;
+    firedRef.current = key;
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+
+    // Ask for the camera on every phase; it keeps only the first request per
+    // action, so this doesn't need to work out which phase came first.
+    if (perfRole === focusRole(perfBeat)) {
+      emitFocus({
+        clientX: cx,
+        clientY: cy,
+        actionIndex: perfBeat.actionIndex,
+        climax: perfBeat.weight === "climax",
+      });
+    }
+
+    if (perfRole === "target" && perfPhase === "impact") {
+      if (perfBeat.kind === "attack") {
+        // Damage read as intensity, flattened with a square root so a 330
+        // doesn't produce three times the debris of a 110 — past a point
+        // more particles stop reading as more force and start reading as
+        // more particles. 120 is roughly a one-prize hit.
+        emitFx({
+          kind: "impact",
+          clientX: cx,
+          clientY: cy,
+          intensity: Math.min(2.2, Math.sqrt(perfBeat.damage / 120)),
+          color: "#ff5a4d",
+        });
+      } else if (perfBeat.kind === "damage_counters") {
+        emitFx({ kind: "impact", clientX: cx, clientY: cy, intensity: 0.5, color: "#ff8a5c" });
+      } else if (perfBeat.kind === "knock_out") {
+        // Fired from the card on its way out: AnimatePresence keeps a
+        // knocked-out Pokémon mounted through its exit, so it is still here
+        // to say where it fell. The engine's own event can't help — by this
+        // frame the card is in the discard pile.
+        emitFx({ kind: "debris", clientX: cx, clientY: cy, intensity: 1.5, color: "#f8fafc" });
+      }
+    }
+
+    if (perfRole === "target" && perfPhase === "act" && perfBeat.kind === "attach_energy") {
+      emitFx({
+        kind: "converge",
+        clientX: cx,
+        clientY: cy,
+        intensity: 1,
+        color: energyColor(perfBeat.energyType),
+      });
+    }
+
+    if (perfRole === "actor" && perfPhase === "act" && perfBeat.kind === "ability") {
+      emitFx({ kind: "spark", clientX: cx, clientY: cy, intensity: 1, color: "#a5f3fc" });
+    }
+  }, [perform, reducedMotion, beatInstant, perfBeat, perfPhase, perfRole]);
   const clickable = onClick != null || (inspectable && inspect != null);
   const remainingHp = mon.hp != null ? Math.max(0, mon.hp - mon.damage) : null;
   const hadFallback = !mon.imageUrl;
@@ -641,6 +721,7 @@ export function PokemonCardImage({
       {/* Card image — full size (same as the stand-alone cards), inset by the
           holder padding for a concentric corner radius. */}
       <div
+        ref={boxRef}
         className="relative w-full overflow-hidden bg-white"
         style={{ height: m.cardH, borderRadius: m.cardRadius, marginTop: toolPeek, zIndex: 1 }}
       >
@@ -795,6 +876,34 @@ export function StackedPrizePile({
   const m = replayTrayMetrics(width);
   const fontSize = Math.max(6, Math.round((m.strip * 0.34) / CARD_IMAGE_BUMP));
   const layers = Math.max(0, Math.min(6, count));
+
+  // Claiming a prize is the only thing that happens to this pile, and it's
+  // the thing the whole game is scored on — so it gets a flourish of its own
+  // rather than being the one board element that silently decrements.
+  const { beat, phase, instant, reducedMotion } = useBeat();
+  const matActor = useMatActor();
+  const pileRef = useRef<HTMLDivElement>(null);
+  const firedRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (reducedMotion || instant) return;
+    if (!beat || beat.kind !== "prize_taken" || phase !== "act") return;
+    if (matActor == null || beat.actor !== matActor) return;
+    if (firedRef.current === beat.actionIndex) return;
+    const el = pileRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (r.width === 0) return;
+    firedRef.current = beat.actionIndex;
+    emitFx({
+      kind: "spark",
+      clientX: r.left + r.width / 2,
+      clientY: r.top + r.height / 2,
+      // Scales with a multi-prize take: two prizes off a Pokémon ex should
+      // land harder than one.
+      intensity: 0.8 + 0.5 * Math.max(0, beat.count - 1),
+      color: "#fde68a",
+    });
+  }, [beat, phase, instant, reducedMotion, matActor]);
   // Landscape card slot at full proportions (long edge horizontal).
   const L = pileCardLong(width);
   const H = width;
@@ -807,6 +916,7 @@ export function StackedPrizePile({
 
   return (
     <div
+      ref={pileRef}
       className="relative bg-black shadow-sm"
       style={{ width: holderW, borderRadius: m.radius, padding: m.pad }}
       title={label}
@@ -1081,6 +1191,13 @@ export function PlayerMat({
             className="absolute z-0 flex items-end justify-center overflow-hidden"
             style={{ top: benchTop, left: MAT_PADDING, width: innerW, gap: BOARD_CARD_GAP }}
           >
+            {/* Wrapped so a Pokémon leaving the bench — knocked out, or
+                promoted away — is still mounted through its exit. Beyond
+                looking better than a card blinking out, it is what lets a
+                benched knockout emit its debris from where it actually
+                stood: by the knockout frame the engine has already moved
+                the card to the discard. */}
+            <AnimatePresence initial={false}>
             {bench.map((mon, i) => (
               <BenchSlot
                 key={mon.id}
@@ -1096,6 +1213,7 @@ export function PlayerMat({
                 face={face}
               />
             ))}
+            </AnimatePresence>
           </div>
         )}
 
@@ -1237,7 +1355,8 @@ function BenchSlot({
       className="shrink-0"
       style={{ width: containerW, transformStyle: "preserve-3d" }}
       animate={travelStyle(traveling)}
-      transition={{ layout: moveTransition }}
+      exit={{ opacity: 0, scale: 0.84, rotateZ: -7, y: 14 }}
+      transition={{ layout: moveTransition, duration: 0.24 }}
       {...handlers}
     >
       <PokemonCardImage

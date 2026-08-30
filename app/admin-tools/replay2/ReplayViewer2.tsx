@@ -48,6 +48,8 @@ import {
 import { indexBeats, type Beat, type ReplayPayload2 } from "@/lib/replay2/beats";
 import { useDirector } from "./director/useDirector";
 import { BeatProvider } from "./director/BeatContext";
+import { FxCanvas } from "./fx/FxCanvas";
+import { useCamera } from "./fx/useCamera";
 import type { BeatPhase } from "./director/choreography";
 import { MAT_ASPECT } from "@/lib/playmat-layout";
 import { MAT_STYLES } from "@/app/admin-tools/deck-mat/DeckMatClient";
@@ -1315,6 +1317,7 @@ function Board({
   beat,
   beatPhase,
   reducedMotion,
+  anyInspectorOpen,
   playerMatGradient,
   opponentMatGradient,
   matInspect,
@@ -1339,6 +1342,8 @@ function Board({
    *  without every layer threading its own props down through BoardKit. */
   beat: Beat | null;
   beatPhase: BeatPhase;
+  /** Suppresses the camera: see its `enabled` argument. */
+  anyInspectorOpen: boolean;
   /** The viewer honours prefers-reduced-motion — every card rests, the
    *  pointer tilt is off, and the idle breathing stops. Resolved once in
    *  ReplayViewer2 and handed down rather than queried per card. */
@@ -1391,6 +1396,21 @@ function Board({
     return () => ro.disconnect();
   }, [heightBudget]);
 
+  // Anything the current beat is about pulls the board toward it. The
+  // container measured here is the mats stack, not the outer column, so the
+  // camera's offsets are a fraction of the board rather than of the page.
+  const stageRef = useRef<HTMLDivElement>(null);
+  const camera = useCamera({
+    containerRef: stageRef,
+    phase: beatPhase,
+    actionIndex: frame?.actionIndex ?? null,
+    reducedMotion,
+    // An open inspector means the viewer is reading the board rather than
+    // watching it; a board that leans and jolts underneath a card they are
+    // trying to study is actively unhelpful.
+    enabled: !anyInspectorOpen,
+  });
+
   const matWidth =
     heightBudget != null
       ? Math.max(20, (heightBudget - BOARD_VERTICAL_CHROME_PX) / (2 * MAT_ASPECT))
@@ -1424,6 +1444,34 @@ function Board({
         </div>
       ) : (
         <>
+        {/* Camera stage. The transform lives on a wrapper around the mats so
+            the mats' own layout — which every geometry calculation in
+            BoardKit depends on — is untouched by it. The FX canvas sits
+            inside the same wrapper so bursts travel with the board they were
+            emitted onto. */}
+        <motion.div
+          ref={stageRef}
+          className="relative"
+          style={{ transformOrigin: "center center" }}
+          animate={{
+            scale: camera.scale,
+            // The jolt rides on top of the lean, as keyframes returning to
+            // the camera's current offset rather than to zero — otherwise a
+            // shake during a push-in yanks the board back to centre.
+            x: camera.shake
+              ? [camera.x, camera.x - 9, camera.x + 7, camera.x - 4, camera.x]
+              : camera.x,
+            y: camera.shake
+              ? [camera.y, camera.y + 5, camera.y - 4, camera.y + 2, camera.y]
+              : camera.y,
+          }}
+          transition={
+            camera.shake
+              ? { duration: 0.32, ease: "easeOut" }
+              : { type: "spring", stiffness: 150, damping: 26, mass: 1.1 }
+          }
+        >
+        <FxCanvas reducedMotion={reducedMotion} />
         <div className="flex flex-col" style={{ gap: TAB_GAP_PX }}>
           {/* z-10 on the mat wrappers so each mat paints over the tab tucked
               beneath it. The wrappers are plain positioning shells — mat
@@ -1593,6 +1641,7 @@ function Board({
           </div>
           </InspectContext.Provider>
         </div>
+        </motion.div>
         {/* Player's hand, always the bottom mat's now that the swap above
             pins the submitting user there — see HandStrip. Cards open
             through the same mat-overlay inspector as the mat itself,
@@ -2434,6 +2483,7 @@ export default function ReplayViewer({
             beat={currentBeat}
             beatPhase={beatPhase}
             reducedMotion={reducedMotion}
+            anyInspectorOpen={anyInspectorOpen}
             playerMatGradient={playerMatGradient}
             opponentMatGradient={opponentMatGradient}
             matInspect={matInspect}

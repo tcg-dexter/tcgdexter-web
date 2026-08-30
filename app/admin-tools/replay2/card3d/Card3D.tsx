@@ -124,6 +124,18 @@ function poseFor(role: CardRole, phase: BeatPhase, climax: boolean): CardPose {
   }
 }
 
+/**
+ * Which of a beat's two subjects the camera should look at.
+ *
+ * The target when there is one: an attack's story is where the damage lands,
+ * not where it was thrown from, and an energy attachment or a condition has
+ * no actor card at all. Falls back to the actor for the beats that are purely
+ * someone doing something — an ability firing, a Pokémon being promoted.
+ */
+export function focusRole(beat: Beat): CardRole {
+  return subjectsOf(beat).targetName ? "target" : "actor";
+}
+
 export interface CardPerformance {
   role: CardRole;
   pose: CardPose;
