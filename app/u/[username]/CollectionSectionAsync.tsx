@@ -39,6 +39,10 @@ export default async function CollectionSectionAsync({
   // null (not zeroes) means the stats couldn't be loaded — see
   // loadCollectionStats. Render nothing rather than an empty-collection
   // claim we can't stand behind.
+  //
+  // valueHistory has its own null-means-failed convention, handled one level
+  // down in CollectionSection rather than here: a failed chart shouldn't take
+  // the whole module with it when the stats around it loaded fine.
   if (!stats) return null;
 
   return (

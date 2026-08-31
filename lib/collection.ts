@@ -139,21 +139,32 @@ export async function loadCollectionStats(
  *
  * Called through the session client, not the admin client — see the note at
  * the top of this file.
+ *
+ * Returns `null` when the query FAILED, distinct from `[]` for a collection
+ * that genuinely has no priced history yet. The caller renders those two
+ * differently, and the difference is not academic: this query is the one
+ * that timed out under load (57014), and because both outcomes used to
+ * collapse to `[]` — which PriceHistoryChart draws as nothing — a real
+ * failure was pixel-identical to "no data". Diagnosing one such incident
+ * took two wrong theories and a trip through the runtime logs.
  */
 export async function loadCollectionValueHistory(
   userId: string,
   days = 90,
-): Promise<PricePoint[]> {
+): Promise<PricePoint[] | null> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("collection_value_history", {
     target: userId,
     days,
   });
 
-  if (error || !data) {
-    if (error) console.error("[collection] value history failed:", error);
-    return [];
+  // Keep this log: it is what finally identified the statement timeout,
+  // and it is still the only place the Postgres error code surfaces.
+  if (error) {
+    console.error("[collection] value history failed:", error);
+    return null;
   }
+  if (!data) return [];
 
   return (data as Array<{ date: string; value: number | string }>).map((row) => ({
     date: row.date,

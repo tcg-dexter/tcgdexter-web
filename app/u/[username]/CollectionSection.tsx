@@ -14,7 +14,9 @@ function formatValue(n: number): string {
 
 interface Props {
   stats: CollectionStats;
-  valueHistory: PricePoint[];
+  /** `null` means the value query failed — rendered as an explicit note, not
+   *  as an absent chart. `[]` is the honest "no history yet". */
+  valueHistory: PricePoint[] | null;
   isOwner: boolean;
   /** Owner's opt-in state. Only read when isOwner — it drives the
    *  "Private" badge that tells them why visitors can't see this. */
@@ -106,13 +108,29 @@ export default function CollectionSection({
             <StatCard label="Sets" value={stats.totalSets.toLocaleString()} />
           </div>
 
-          {/* Renders nothing below two data points — a collection newer than
-              the price-history backfill has no curve to draw yet. */}
-          <PriceHistoryChart
-            points={valueHistory}
-            title="Collection Value"
-            className=""
-          />
+          {/* Three distinct outcomes, deliberately:
+                null            → the query failed; say so.
+                fewer than 2    → nothing, handled inside PriceHistoryChart —
+                                  a collection newer than the price-history
+                                  backfill has no curve to draw, and a
+                                  standing note about it would be noise on an
+                                  otherwise healthy module.
+                otherwise       → the chart.
+              Only the failure gets UI, because it's the state that is
+              otherwise invisible: it used to render exactly like "no data". */}
+          {valueHistory === null ? (
+            <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-6 text-center">
+              <p className="text-xs text-text-muted">
+                Collection value history is temporarily unavailable.
+              </p>
+            </div>
+          ) : (
+            <PriceHistoryChart
+              points={valueHistory}
+              title="Collection Value"
+              className=""
+            />
+          )}
         </div>
       )}
     </div>

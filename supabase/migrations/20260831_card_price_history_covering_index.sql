@@ -1,0 +1,41 @@
+-- Apply manually via Supabase MCP `apply_migration` — there is no CI
+-- migration runner for this repo (see CLAUDE.md).
+--
+-- No `notify pgrst, 'reload schema'` needed here: this adds an index, not
+-- new API surface.
+--
+-- Fixes the profile Collection module's value chart timing out on a cold
+-- cache. The observed failure, from the Vercel runtime log on /u/dexter:
+--
+--   [collection] value history failed: { code: '57014',
+--     message: 'canceling statement due to statement timeout' }
+--
+-- collection_value_history() reads one row per owned printing per day —
+-- ~138k rows for the largest real collection (1,813 printings × 76 days).
+-- The (card_id, date) primary key already groups a card's rows together in
+-- the INDEX, so the range scan per card is fine. The problem is the heap:
+-- the table is written one date at a time by the daily dexter-ops
+-- pipeline, so a single card's 76 rows land in 76 different heap pages.
+-- Every row fetch is therefore its own page access, and EXPLAIN showed
+-- `Buffers: shared hit=138286` — roughly one buffer touch per row.
+--
+-- Warm, that's ~360ms and survives. Cold, those same accesses are real I/O
+-- and blow the `authenticated` role's statement timeout, so the chart fails
+-- intermittently depending on what happens to be cached. (Running the query
+-- by hand warms it, which is exactly why this looked like it had fixed
+-- itself mid-investigation.)
+--
+-- INCLUDE (market_price) is the fix: market_price is the only column the
+-- aggregate reads beyond the key, so carrying it in the index makes the
+-- scan INDEX-ONLY and the badly-correlated heap is never touched at all.
+--
+-- Also serves collection_stats(), whose per-printing
+-- `order by date desc limit 1` lateral becomes a backward index-only seek.
+--
+-- NOTE: an index-only scan still consults the visibility map, so if EXPLAIN
+-- reports a high `Heap Fetches` after this lands, the table needs a VACUUM
+-- before the benefit shows up. The ANALYZE below only refreshes statistics.
+create index if not exists card_price_history_card_date_price_idx
+  on public.card_price_history (card_id, date) include (market_price);
+
+analyze public.card_price_history;
