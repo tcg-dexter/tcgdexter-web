@@ -57,6 +57,7 @@ import {
 import { focusRole, resolveClaim, type MatCards } from "./card3d/claim";
 import {
   conditionColor,
+  drawFlightFor,
   emitDrawFlight,
   emitFocus,
   emitFx,
@@ -354,9 +355,10 @@ export function Pile({
   useEffect(() => {
     if (pileKind !== "draw" || reducedMotion || instant) return;
     if (!beat || phase !== "act") return;
-    if (beat.kind !== "draw" && beat.kind !== "opening_hand") return;
     if (matActor == null || beat.actor !== matActor) return;
     if (drewRef.current === beat.actionIndex) return;
+    const flight = drawFlightFor(beat);
+    if (!flight) return;
     const el = pileRef.current;
     const mat = matBounds?.();
     if (!el || !mat) return;
@@ -366,10 +368,8 @@ export function Pile({
     emitDrawFlight({
       actionIndex: beat.actionIndex,
       actor: matActor,
-      count: beat.kind === "opening_hand" ? beat.handSize : Math.max(1, beat.count),
-      // An opening hand is always shown; a turn draw only when the log named
-      // the card, which it does for the exporting player and not the opponent.
-      revealed: beat.kind === "opening_hand" || beat.cards.length > 0,
+      count: flight.count,
+      revealed: flight.revealed,
       pileLeft: r.left,
       pileTop: r.top,
       pileWidth: r.width,

@@ -95,32 +95,46 @@ export function DrawFlight({
    * exactly the ones that just arrived — and they already carry resolved art
    * because the board needs it for the hand strip anyway.
    *
-   * Only the player's hand is real; the opponent's is unrevealed placeholders,
-   * which is correct — their draw should be face-down.
+   * Read from whichever side drew, NOT from the player's hand. It is tempting
+   * to assume the player is the one with real cards, and it is wrong: the log
+   * names the draws of whoever exported it, and that account is not always the
+   * side the payload is normalized to. In example-1 it is the opponent whose
+   * draws are named. Each HandCard carries its own `revealed` flag, so
+   * deferring to that gets both cases right and needs no rule about sides.
    */
   const faces: (HandCard | null)[] = (() => {
     if (!flight || !frame) return [];
     const n = Math.min(flight.count, MAX_SHOWN);
-    if (!flight.revealed || flight.actor !== "player") {
-      return Array.from({ length: n }, () => null);
-    }
-    const hand = frame.player.hand;
+    if (!flight.revealed) return Array.from({ length: n }, () => null);
+    const hand = flight.actor === "player" ? frame.player.hand : frame.opponent.hand;
     const drawn = hand.slice(Math.max(0, hand.length - flight.count));
     return Array.from({ length: n }, (_, i) => drawn[i] ?? null);
   })();
 
-  if (!flight || faces.length === 0) return null;
+  // NOTE: no early return before the host element below.
+  //
+  // The subscriber measures `hostRef` to convert client coordinates into the
+  // stage's, so the host has to be in the DOM before the first flight arrives.
+  // Returning null while there is nothing to draw meant the ref was always
+  // null when an emit landed, the handler bailed, state never updated, and the
+  // host never rendered — the animation could not start even once.
+  const ready = flight != null && faces.length > 0;
 
-  const w = Math.max(28, Math.round(flight.cardWidth * 0.86));
+  const w = ready ? Math.max(28, Math.round(flight!.cardWidth * 0.86)) : 0;
   const h = w * (342 / 245);
-  const midX = flight.matX + flight.matW / 2;
-  const midY = flight.matY + flight.matH / 2;
+  const midX = ready ? flight!.matX + flight!.matW / 2 : 0;
+  const midY = ready ? flight!.matY + flight!.matH / 2 : 0;
   // The player's hand sits under the board; the opponent's is off screen
   // entirely, so their cards leave past the top of their own mat.
-  const endY =
-    flight.actor === "player" ? flight.matY + flight.matH + h * 0.9 : flight.matY - h * 1.1;
-  const fan = Math.min(w * 0.72, (flight.matW * 0.8) / Math.max(1, faces.length));
-  const showScrim = active && flight.revealed && phase === "impact";
+  const endY = !ready
+    ? 0
+    : flight!.actor === "player"
+      ? flight!.matY + flight!.matH + h * 0.9
+      : flight!.matY - h * 1.1;
+  const fan = ready
+    ? Math.min(w * 0.72, (flight!.matW * 0.8) / Math.max(1, faces.length))
+    : 0;
+  const showScrim = ready && active && flight!.revealed && phase === "impact";
 
   return (
     <div ref={hostRef} className="pointer-events-none absolute inset-0 z-[35]">
@@ -130,13 +144,13 @@ export function DrawFlight({
       <AnimatePresence>
         {showScrim && (
           <motion.div
-            key={`${flight.actionIndex}-scrim`}
+            key={`${flight!.actionIndex}-scrim`}
             className="absolute rounded-xl"
             style={{
-              left: flight.matX,
-              top: flight.matY,
-              width: flight.matW,
-              height: flight.matH,
+              left: flight!.matX,
+              top: flight!.matY,
+              width: flight!.matW,
+              height: flight!.matH,
               backgroundColor: "color-mix(in srgb, var(--bg) 90%, transparent)",
             }}
             initial={{ opacity: 0 }}
@@ -148,13 +162,14 @@ export function DrawFlight({
       </AnimatePresence>
 
       <AnimatePresence>
-        {active &&
+        {ready &&
+          active &&
           faces.map((card, i) => {
             const offset = (i - (faces.length - 1) / 2) * fan;
             const landing = phase === "settle";
             return (
               <motion.div
-                key={`${flight.actionIndex}-${i}`}
+                key={`${flight!.actionIndex}-${i}`}
                 className="absolute"
                 style={{
                   width: w,
@@ -166,8 +181,8 @@ export function DrawFlight({
                 }}
                 // Starts on the deck: small, and turned away from the viewer.
                 initial={{
-                  left: flight.pileX - w / 2,
-                  top: flight.pileY - h / 2,
+                  left: flight!.pileX - w / 2,
+                  top: flight!.pileY - h / 2,
                   scale: 0.55,
                   rotateY: 180,
                   opacity: 0,

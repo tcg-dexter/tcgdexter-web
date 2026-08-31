@@ -154,6 +154,36 @@ export function onMovePlate(l: PlateListener): () => void {
   return () => plateListeners.delete(l);
 }
 
+/**
+ * Whether a beat sends a card out of the deck, and what it should look like.
+ *
+ * Split out from the draw pile's emit so the decision can be checked against
+ * real logs. Everything else about the flight is geometry the pile measures at
+ * the moment it fires; this is the only part with a judgement in it.
+ *
+ * Returns null for anything that isn't a draw — including the draws folded
+ * into a Trade or an Ultra Ball, which arrive as `ability` and `play_trainer`
+ * beats with their own exchange overlay and would otherwise be animated twice.
+ */
+export function drawFlightFor(
+  beat: { kind: string; count?: number; cards?: string[]; handSize?: number } | null,
+): { count: number; revealed: boolean } | null {
+  if (!beat) return null;
+  if (beat.kind === "opening_hand") {
+    // Always shown: the opening hand is the one draw everybody is entitled to
+    // see, and the log always lists it for the exporting player.
+    return { count: Math.max(1, beat.handSize ?? 7), revealed: true };
+  }
+  if (beat.kind !== "draw") return null;
+  return {
+    count: Math.max(1, beat.count ?? 1),
+    // The log names the draws of whoever exported it — which is not always
+    // the side the payload is normalized to — so this is what decides
+    // face-up versus face-down, rather than any rule about sides.
+    revealed: (beat.cards?.length ?? 0) > 0,
+  };
+}
+
 export function emitDrawFlight(d: FxDrawFlight): void {
   drawListeners.forEach((l) => l(d));
 }
