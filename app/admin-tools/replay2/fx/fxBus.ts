@@ -103,10 +103,27 @@ export interface FxDrawFlight {
   actor: "player" | "opponent";
   /** How many cards left the deck. */
   count: number;
+  /**
+   * The deck's CARD SLOT, not its holder — the landscape rectangle the sleeve
+   * actually occupies, inside the black tray's padding and above its footer.
+   *
+   * A card leaving the deck starts as that exact rectangle, so it has to be
+   * that rectangle that's measured. Reporting the holder instead put the
+   * departing card a few pixels out and a footer's height too tall, which is
+   * precisely the seam a viewer notices when the thing they're watching is
+   * "did that card come off the top of the deck".
+   */
   pileLeft: number;
   pileTop: number;
   pileWidth: number;
   pileHeight: number;
+  /**
+   * Which way the deck's cards are turned, matching RotatedCardFace: "cw" on
+   * the right rail, "ccw" on the left. A card in flight starts at this angle
+   * — lying down, as it was in the deck — and turns upright on its way to the
+   * hand, which is the whole point of the movement.
+   */
+  pileRotate: "cw" | "ccw";
   matLeft: number;
   matTop: number;
   matWidth: number;

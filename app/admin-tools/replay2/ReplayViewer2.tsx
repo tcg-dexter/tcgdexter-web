@@ -898,7 +898,17 @@ function HandStrip({
               // the fade, contradicting it.
               className={`relative shrink-0 overflow-hidden rounded ${clickable ? "cursor-pointer" : ""}`}
               style={{ width: cardWidth, height: visibleHeight, scrollSnapAlign: "start" }}
-              initial={{ opacity: 0, y: -8 }}
+              // A card arriving from the deck must NOT fade in: it is already
+              // on screen, standing upright over the draw pile, and this
+              // element is that same card continuing its move. Fading it up
+              // from nothing is the one thing that would give the handoff
+              // away. Cards that appear in the hand by some other route — a
+              // scrub, a card returned from play — still fade.
+              initial={
+                flipOrderRef.current.has(card.id)
+                  ? { opacity: 1, y: 0 }
+                  : { opacity: 0, y: -8 }
+              }
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: instant ? 0 : 0.25, ease: "easeOut" }}

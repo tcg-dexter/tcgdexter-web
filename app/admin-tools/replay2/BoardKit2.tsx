@@ -346,6 +346,9 @@ export function Pile({
   const matActor = useMatActor();
   const matBounds = useMatBounds();
   const pileRef = useRef<HTMLDivElement>(null);
+  // The card slot inside the holder. What a drawn card flies FROM is the
+  // sleeve the viewer can see, not the tray around it.
+  const pileSlotRef = useRef<HTMLDivElement>(null);
   const drewRef = useRef<number | null>(null);
 
   // The draw pile is the only thing that knows where the draw pile is, so it
@@ -359,7 +362,7 @@ export function Pile({
     if (drewRef.current === beat.actionIndex) return;
     const flight = drawFlightFor(beat);
     if (!flight) return;
-    const el = pileRef.current;
+    const el = pileSlotRef.current;
     const mat = matBounds?.();
     if (!el || !mat) return;
     const r = el.getBoundingClientRect();
@@ -373,13 +376,14 @@ export function Pile({
       pileTop: r.top,
       pileWidth: r.width,
       pileHeight: r.height,
+      pileRotate: rotate,
       matLeft: mat.left,
       matTop: mat.top,
       matWidth: mat.width,
       matHeight: mat.height,
       cardWidth: width,
     });
-  }, [beat, phase, instant, reducedMotion, matActor, matBounds, pileKind, width]);
+  }, [beat, phase, instant, reducedMotion, matActor, matBounds, pileKind, width, rotate]);
 
   const pileActive =
     !reducedMotion &&
@@ -436,6 +440,7 @@ export function Pile({
     >
       {/* Landscape card slot — inset by the holder padding for concentric corners. */}
       <div
+        ref={pileSlotRef}
         className={`relative w-full overflow-hidden ${clickable ? "cursor-pointer" : ""}`}
         style={{
           height: H,

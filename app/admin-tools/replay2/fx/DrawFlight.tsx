@@ -16,28 +16,62 @@ import type { HandCard, ReplayFrame } from "@/lib/replay/frames";
  * never showed.
  *
  * Face-down the whole way. A card is not turned over on its way out of the
- * deck — it is put in a hand, and looked at there. The earlier version held it
- * face-up over the middle of the mat first, which is a thing no player does
- * and which meant the card had to be shown twice: once presented, once in the
- * hand. Now it travels once and turns over where it lands (see the hand strip,
- * which keeps the opening seven face-down until the first turn begins).
+ * deck — it is put in a hand, and looked at there. It travels once and turns
+ * over where it lands (see the hand strip, which holds a card's back until the
+ * rest of its draw has arrived).
  *
- * Dealt one at a time, not as a block. Cards sit stacked on the deck and leave
- * it in quick succession — which is how a hand is actually dealt, and which
- * turns the opening seven from a single shuffle-and-appear into something with
- * a rhythm to watch. Each card goes to the hand as the hand's OWN element, via
- * a shared layoutId, so one card moves rather than two being swapped; the
- * opponent's leave up and out of frame, their hand not being on screen.
+ * Dealt one at a time, not as a block — which is how a hand is actually dealt,
+ * and which turns the opening seven from a single shuffle-and-appear into
+ * something with a rhythm to watch.
+ *
+ * THE MOVE, in three parts, because the deck and the hand hold a card in two
+ * different orientations and the turn between them is the thing worth
+ * watching:
+ *
+ *   waiting   The card is the deck. It is drawn as the deck's own sleeve, at
+ *             the deck's own landscape rectangle, lying down exactly as the
+ *             pile renders it — so it is invisible against the pile until it
+ *             moves, and what leaves is unmistakably the top card.
+ *   turning   Its turn comes: the card lifts off the pile and stands up,
+ *             the box going landscape → portrait while the sleeve inside
+ *             counter-rotates from the deck's angle to upright. One motion,
+ *             not a fade between two pictures.
+ *   handoff   Standing upright and clear of the deck, it stops rendering and
+ *             the hand's OWN element — same layoutId, same portrait sleeve —
+ *             picks the movement up and carries it into the strip, cropping
+ *             to the hand's half-height on the way. One card moves; nothing
+ *             is swapped in view.
+ *
+ * The rotation is deliberately finished BEFORE the handoff rather than during
+ * it. A shared-layout transition animates a box by projecting it, and a
+ * rotation riding on that projection skews; keeping the two legs separate
+ * means each is doing the one thing it is good at.
+ *
+ * The opponent's cards have no hand on screen to become, so they take the
+ * first two parts and then leave past the top of their own mat.
  *
  * The cadence comes from `staggerMs`, which the viewer derives from the beat's
  * own choreographed length and the playback speed, so the whole deal finishes
  * inside its beat at 0.5x and at 4x alike.
  */
 
+/**
+ * How long a card spends standing up, as a multiple of the gap between deals.
+ *
+ * Expressed against the stagger rather than in milliseconds so it inherits the
+ * playback speed and the beat-length cap for free: whatever cadence the viewer
+ * settles on, a card's turn is a beat and a half of it, and the cards in the
+ * air overlap without the deal ever running past its own beat.
+ */
+const TURN_RATIO = 1.5;
+
 interface FlightState extends FxDrawFlight {
-  /** Stage-local geometry, converted once on arrival. */
-  pileX: number;
-  pileY: number;
+  /** Stage-local geometry, converted once on arrival. The pile rect is the
+   *  deck's card slot: landscape, so slotW is the card's long edge. */
+  slotX: number;
+  slotY: number;
+  slotW: number;
+  slotH: number;
   matX: number;
   matY: number;
   matW: number;
@@ -96,6 +130,12 @@ export function DrawFlight({
     action: -1,
     count: 0,
   });
+  // How many have finished standing up and been handed to the hand. Trails
+  // `release` by one card's turn.
+  const [handedState, setHanded] = useState<{ action: number; count: number }>({
+    action: -1,
+    count: 0,
+  });
   // Read through a ref so the subscription isn't torn down and rebuilt every
   // time the parent re-renders with a new callback identity — it would drop
   // emits that land in the gap.
@@ -117,8 +157,10 @@ export function DrawFlight({
       onStartedRef.current?.(d.actionIndex);
       setFlight({
         ...d,
-        pileX: (d.pileLeft - r.left + d.pileWidth / 2) * sx,
-        pileY: (d.pileTop - r.top + d.pileHeight / 2) * sy,
+        slotX: (d.pileLeft - r.left) * sx,
+        slotY: (d.pileTop - r.top) * sy,
+        slotW: d.pileWidth * sx,
+        slotH: d.pileHeight * sy,
         matX: (d.matLeft - r.left) * sx,
         matY: (d.matTop - r.top) * sy,
         matW: d.matWidth * sx,
@@ -167,12 +209,29 @@ export function DrawFlight({
   // host never rendered — the animation could not start even once.
   const ready = flight != null && faces.length > 0;
 
-  const w = ready ? Math.max(28, Math.round(flight!.cardWidth * 0.86)) : 0;
-  const h = w * (342 / 245);
+  /**
+   * The card, in both orientations, taken from the deck's own measured slot
+   * rather than from cardWidth.
+   *
+   * The slot IS the card lying down: its long edge across, its short edge
+   * down. So the upright card is that rectangle's two sides swapped, and the
+   * two poses are guaranteed to be the same card at the same scale — which is
+   * what lets the turn read as one object rotating instead of a box resizing.
+   */
+  const slotW = ready ? flight!.slotW : 0;
+  const slotH = ready ? flight!.slotH : 0;
+  const upW = slotH;
+  const upH = slotW;
+  const cx = ready ? flight!.slotX + slotW / 2 : 0;
+  const cy = ready ? flight!.slotY + slotH / 2 : 0;
+  // Matches RotatedCardFace: the deck's sleeve is a portrait card turned by
+  // this much, so a card leaving it starts there and unwinds to upright.
+  const deg = ready ? (flight!.pileRotate === "cw" ? 90 : -90) : 0;
+
   const midX = ready ? flight!.matX + flight!.matW / 2 : 0;
   const midY = ready ? flight!.matY + flight!.matH / 2 : 0;
   /**
-   * Which way the cards peel off the deck: toward the middle of their own mat.
+   * Which way a card comes off the deck: toward the middle of its own mat.
    *
    * The two mats are mirrored. The top mat keeps its draw pile at the bottom
    * left; the bottom mat keeps its at the TOP RIGHT, because each player's
@@ -184,18 +243,22 @@ export function DrawFlight({
    * Aiming at the mat's own centre makes both correct by construction rather
    * than by two hard-coded cases, and stays correct if the rails ever move.
    */
-  const liftLen = ready ? Math.hypot(midX - flight!.pileX, midY - flight!.pileY) || 1 : 1;
-  const liftUx = ready ? (midX - flight!.pileX) / liftLen : 0;
-  const liftUy = ready ? (midY - flight!.pileY) / liftLen : 0;
+  const liftLen = ready ? Math.hypot(midX - cx, midY - cy) || 1 : 1;
+  const liftUx = ready ? (midX - cx) / liftLen : 0;
+  const liftUy = ready ? (midY - cy) / liftLen : 0;
+  // Far enough off the pile that the card is clear of it before the hand
+  // takes over, and no further: this is a card being lifted out of a deck,
+  // not thrown across the mat.
+  const lift = upH * 0.42;
   // The player's hand sits under the board; the opponent's is off screen
   // entirely, so their cards leave past the top of their own mat.
   const endY = !ready
     ? 0
     : flight!.actor === "player"
-      ? flight!.matY + flight!.matH + h * 0.9
-      : flight!.matY - h * 1.1;
+      ? flight!.matY + flight!.matH + upH * 0.9
+      : flight!.matY - upH * 1.1;
   const fan = ready
-    ? Math.min(w * 0.72, (flight!.matW * 0.8) / Math.max(1, faces.length))
+    ? Math.min(upW * 0.72, (flight!.matW * 0.8) / Math.max(1, faces.length))
     : 0;
   /**
    * Whether these cards have real hand elements to become.
@@ -212,31 +275,51 @@ export function DrawFlight({
   const flightActionIndex = ready ? flight!.actionIndex : null;
   const total = faces.length;
   const released = ready && release.action === flightActionIndex ? release.count : 0;
+  const handed = ready && handedState.action === flightActionIndex ? handedState.count : 0;
 
   /**
    * The deal itself.
    *
-   * A single interval rather than one timeout per card: the cards are
-   * identical in every way but their turn, and an interval is the thing that
-   * can be torn down in one go when the playhead moves. Scrubbing away
-   * mid-deal aborts it and the frame's own hand takes over, which is the
-   * correct outcome — the state was always right, only the performance is
-   * being cut short.
+   * Two clocks rather than one, offset by the length of a card's turn: a card
+   * starts standing up at `i * stagger`, and hands off to the hand once it is
+   * upright. Driving the handoff from a clock rather than from the turn's own
+   * onAnimationComplete keeps it deterministic — an interrupted or dropped
+   * completion callback would strand a card mid-air with the hand still
+   * holding its place open for it.
    */
   useEffect(() => {
     if (!active || flightActionIndex == null || total === 0) return;
     setRelease({ action: flightActionIndex, count: 0 });
-    let n = 0;
+    setHanded({ action: flightActionIndex, count: 0 });
     // Floored so a pathological speed or a very short beat can't turn this
     // into a busy loop; the deal simply becomes near-simultaneous.
     const step = Math.max(35, staggerMs);
-    const id = setInterval(() => {
+    let n = 0;
+    const dealing = setInterval(() => {
       n += 1;
       setRelease({ action: flightActionIndex, count: n });
-      onLandedRef.current?.(flightActionIndex, n);
-      if (n >= total) clearInterval(id);
+      if (n >= total) clearInterval(dealing);
     }, step);
-    return () => clearInterval(id);
+    let m = 0;
+    let handing: ReturnType<typeof setInterval> | null = null;
+    const first = setTimeout(() => {
+      const tick = () => {
+        m += 1;
+        setHanded({ action: flightActionIndex, count: m });
+        // The hand un-hides a card when it ARRIVES, not when it leaves the
+        // deck — for the stretch in between, the only copy of it on screen is
+        // the one in the air.
+        onLandedRef.current?.(flightActionIndex, m);
+        if (m >= total && handing) clearInterval(handing);
+      };
+      tick();
+      if (total > 1) handing = setInterval(tick, step);
+    }, step * TURN_RATIO);
+    return () => {
+      clearInterval(dealing);
+      clearTimeout(first);
+      if (handing) clearInterval(handing);
+    };
   }, [active, flightActionIndex, total, staggerMs]);
 
   return (
@@ -245,53 +328,64 @@ export function DrawFlight({
         {ready &&
           active &&
           faces.map((card, i) => {
-            const gone = i < released;
-            // A released card with a hand element waiting for it stops
+            const turning = i < released;
+            const arrived = i < handed;
+            // An arrived card with a hand element waiting for it stops
             // rendering here entirely — the strip's element shares its
-            // layoutId and picks the movement up, so one card travels. One
-            // with nowhere to go (the opponent's) flies out of frame instead.
-            if (gone && handoff) return null;
+            // layoutId and picks the movement up from exactly this pose, so
+            // one card travels and nothing is swapped in view. One with
+            // nowhere to go (the opponent's) leaves frame instead.
+            if (arrived && handoff) return null;
             const offset = (i - (faces.length - 1) / 2) * fan;
+            // Upright and clear of the deck. Also where the hand's element
+            // takes over, which is why it is a pose and not a waypoint.
+            const stood = {
+              left: cx - upW / 2 + liftUx * lift,
+              top: cy - upH / 2 + liftUy * lift,
+              width: upW,
+              height: upH,
+            };
             return (
               <motion.div
                 key={`${flight!.actionIndex}-${i}`}
                 className="absolute"
                 style={{
-                  width: w,
-                  height: h,
-                  // Later cards sit under earlier ones, so the pile reads as a
-                  // pile and the card leaving is always the one on top.
+                  // Later cards sit under earlier ones, so the deck reads as a
+                  // stack and what leaves is always the card on top.
                   zIndex: faces.length - i,
-                  transformStyle: "preserve-3d",
                 }}
-                // Starts on the deck, flat and unlifted.
+                // Starts AS the deck: the pile's own card slot, to the pixel.
+                // Against the sleeve already drawn there it is invisible until
+                // it moves, which is what makes the card look like it came off
+                // the top rather than appearing next to it.
                 initial={{
-                  left: flight!.pileX - w / 2,
-                  top: flight!.pileY - h / 2,
-                  scale: 0.8,
-                  opacity: 0,
+                  left: flight!.slotX,
+                  top: flight!.slotY,
+                  width: slotW,
+                  height: slotH,
                 }}
                 // The card that will become a hand element carries that
                 // element's layoutId, so framer animates one card into the
                 // strip rather than swapping two.
                 layoutId={handoff && card ? `hand-${card.id}` : undefined}
                 animate={
-                  gone
+                  arrived
                     ? {
-                        left: midX + offset - w / 2,
-                        top: endY - h / 2,
-                        scale: 0.7,
+                        // Only the opponent's get here: no hand to join, so
+                        // they carry on past the edge of their own mat.
+                        ...stood,
+                        left: midX + offset - upW / 2,
+                        top: endY - upH / 2,
                         opacity: 0,
                       }
-                    : {
-                        // Waiting its turn: stacked on the deck, peeled a
-                        // little toward the mat's middle so the stack has
-                        // depth rather than being one card thick.
-                        left: flight!.pileX - w / 2 + liftUx * (h * 0.1 + i * 1.6),
-                        top: flight!.pileY - h / 2 + liftUy * (h * 0.1 + i * 1.6),
-                        scale: 1,
-                        opacity: 1,
-                      }
+                    : turning
+                      ? stood
+                      : {
+                          left: flight!.slotX,
+                          top: flight!.slotY,
+                          width: slotW,
+                          height: slotH,
+                        }
                 }
                 // A handoff card must leave in the same commit its hand
                 // element arrives: any exit duration keeps both alive at once,
@@ -304,8 +398,8 @@ export function DrawFlight({
                 }
                 transition={{
                   type: "spring",
-                  stiffness: gone ? 200 : 320,
-                  damping: 30,
+                  stiffness: arrived ? 200 : 300,
+                  damping: arrived ? 30 : 26,
                   mass: 0.8,
                   // The move into the hand is the shared-layout leg, and it
                   // is the one the eye follows — given its own spring so the
@@ -313,15 +407,26 @@ export function DrawFlight({
                   layout: { type: "spring", stiffness: 260, damping: 32, mass: 0.9 },
                 }}
               >
-                {/* Always face-down, and wearing the deck's own back rather
-                    than the printed Pokémon one — these cards are coming off
-                    that pile, and they should look like it. CardSleeve is the
-                    single definition of that back, shared with the draw pile
-                    and the prize stack, so changing it later changes it
-                    everywhere at once. */}
-                <div className="relative h-full w-full overflow-hidden rounded shadow-[0_10px_26px_rgba(0,0,0,0.4)]">
+                {/* The card itself, always upright-sized and turned to suit —
+                    it is the SAME rectangle in both poses, just rotated, which
+                    is what makes the move read as one object standing up
+                    rather than a box changing shape. Its bounding box at the
+                    deck's angle is exactly the landscape slot above, so the
+                    two agree to the pixel at rest and are free to disagree
+                    mid-turn, where the overflow is the point.
+                    
+                    CardSleeve is the single definition of the deck's back,
+                    shared with the pile and the prize stack, so a card in the
+                    air is wearing literally what it was wearing in the deck. */}
+                <motion.div
+                  className="absolute overflow-hidden rounded shadow-[0_10px_26px_rgba(0,0,0,0.4)]"
+                  style={{ left: "50%", top: "50%", width: upW, height: upH }}
+                  initial={{ x: "-50%", y: "-50%", rotate: deg }}
+                  animate={{ x: "-50%", y: "-50%", rotate: turning ? 0 : deg }}
+                  transition={{ type: "spring", stiffness: 240, damping: 24, mass: 0.7 }}
+                >
                   <CardSleeve radius={6} />
-                </div>
+                </motion.div>
               </motion.div>
             );
           })}
