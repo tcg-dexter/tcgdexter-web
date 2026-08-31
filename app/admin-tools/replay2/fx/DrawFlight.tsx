@@ -159,6 +159,23 @@ export function DrawFlight({
   const w = ready ? Math.max(28, Math.round(flight!.cardWidth * 0.86)) : 0;
   const h = w * (342 / 245);
   const midX = ready ? flight!.matX + flight!.matW / 2 : 0;
+  const midY = ready ? flight!.matY + flight!.matH / 2 : 0;
+  /**
+   * Which way the cards peel off the deck: toward the middle of their own mat.
+   *
+   * The two mats are mirrored. The top mat keeps its draw pile at the bottom
+   * left; the bottom mat keeps its at the TOP RIGHT, because each player's
+   * rails run outward from the centre line. A fixed "lift upward" therefore
+   * pointed into the mat on one side and straight out of it on the other,
+   * where the cards climbed away from the board before turning round to reach
+   * the hand.
+   *
+   * Aiming at the mat's own centre makes both correct by construction rather
+   * than by two hard-coded cases, and stays correct if the rails ever move.
+   */
+  const liftLen = ready ? Math.hypot(midX - flight!.pileX, midY - flight!.pileY) || 1 : 1;
+  const liftUx = ready ? (midX - flight!.pileX) / liftLen : 0;
+  const liftUy = ready ? (midY - flight!.pileY) / liftLen : 0;
   // The player's hand sits under the board; the opponent's is off screen
   // entirely, so their cards leave past the top of their own mat.
   const endY = !ready
@@ -244,13 +261,16 @@ export function DrawFlight({
                         opacity: 0,
                       }
                     : {
-                        // Lifted off the deck and fanned a little, still ON the
-                        // deck. The journey to the hand is the shared-layout
-                        // move at `settle`, not a second position here — a
-                        // waypoint in the middle of the mat is exactly the
-                        // presentation step this no longer does.
-                        left: flight!.pileX - w / 2 + offset * 0.22,
-                        top: flight!.pileY - h / 2 - h * 0.14 - i * 2,
+                        // Lifted off the deck and fanned a little, still ON
+                        // the deck. The journey to the hand is the
+                        // shared-layout move at `settle`, not a second
+                        // position here — a waypoint in the middle of the mat
+                        // is exactly the presentation step this no longer
+                        // does. The per-card term stacks them slightly as
+                        // they peel off, in the same direction.
+                        left:
+                          flight!.pileX - w / 2 + liftUx * (h * 0.16 + i * 2) + offset * 0.22,
+                        top: flight!.pileY - h / 2 + liftUy * (h * 0.16 + i * 2),
                         scale: 1,
                         rotateY: 0,
                         opacity: 1,
