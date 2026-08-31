@@ -5,7 +5,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { onDrawFlight, type FxDrawFlight } from "./fxBus";
 import { CardSleeve } from "../BoardKit2";
 import type { Beat } from "@/lib/replay2/beats";
-import type { BeatPhase } from "../director/choreography";
 import type { HandCard, ReplayFrame } from "@/lib/replay/frames";
 
 /**
@@ -23,13 +22,16 @@ import type { HandCard, ReplayFrame } from "@/lib/replay/frames";
  * hand. Now it travels once and turns over where it lands (see the hand strip,
  * which keeps the opening seven face-down until the first turn begins).
  *
- * Two beats, driven by the director's phases rather than timers of its own, so
- * the flight stays locked to playback speed:
+ * Dealt one at a time, not as a block. Cards sit stacked on the deck and leave
+ * it in quick succession — which is how a hand is actually dealt, and which
+ * turns the opening seven from a single shuffle-and-appear into something with
+ * a rhythm to watch. Each card goes to the hand as the hand's OWN element, via
+ * a shared layoutId, so one card moves rather than two being swapped; the
+ * opponent's leave up and out of frame, their hand not being on screen.
  *
- *   act     the card lifts off the deck
- *   settle  it goes to the hand — as the hand's OWN element, via a shared
- *           layoutId, so one card moves rather than two being swapped; or, for
- *           the opponent, up and out of frame, their hand not being on screen
+ * The cadence comes from `staggerMs`, which the viewer derives from the beat's
+ * own choreographed length and the playback speed, so the whole deal finishes
+ * inside its beat at 0.5x and at 4x alike.
  */
 
 interface FlightState extends FxDrawFlight {
@@ -42,23 +44,27 @@ interface FlightState extends FxDrawFlight {
   matH: number;
 }
 
-/** How many cards are drawn at once before the fan stops adding to the
- *  picture. An opening hand of seven fits; anything larger is a Hilda or a
- *  Lillie's Determination and reads as "a lot" either way. */
-const MAX_SHOWN = 7;
-
 export function DrawFlight({
   beat,
-  phase,
   frame,
   reducedMotion,
+  staggerMs,
   onLanded,
   onStarted,
 }: {
   beat: Beat | null;
-  phase: BeatPhase;
   frame: ReplayFrame | null;
   reducedMotion: boolean;
+  /**
+   * Real milliseconds between one card leaving the deck and the next.
+   *
+   * Passed in rather than chosen here because the two things that decide it
+   * both live in the viewer: the beat's choreographed duration and the
+   * playback speed. A deal that outran its own beat would leave cards on the
+   * deck when the frame advanced, and they would arrive in the hand with no
+   * flight at all.
+   */
+  staggerMs: number;
   /**
    * Fired the moment the cards finish arriving.
    *
@@ -68,7 +74,7 @@ export function DrawFlight({
    * flying toward. This is the signal that lets exactly one of them exist at a
    * time.
    */
-  onLanded?: (actionIndex: number) => void;
+  onLanded?: (actionIndex: number, released: number) => void;
   /**
    * Fired when a flight is accepted and about to render.
    *
@@ -83,7 +89,13 @@ export function DrawFlight({
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [flight, setFlight] = useState<FlightState | null>(null);
-  const [landedFor, setLandedFor] = useState<number | null>(null);
+  // How many cards have left the deck so far, and for which action. The hand
+  // reads the same number through onLanded, which is what keeps exactly one
+  // copy of each card on screen while the deal is running.
+  const [release, setRelease] = useState<{ action: number; count: number }>({
+    action: -1,
+    count: 0,
+  });
   // Read through a ref so the subscription isn't torn down and rebuilt every
   // time the parent re-renders with a new callback identity — it would drop
   // emits that land in the gap.
@@ -141,10 +153,9 @@ export function DrawFlight({
    */
   const faces: (HandCard | null)[] = (() => {
     if (!flight || !frame) return [];
-    const n = Math.min(flight.count, MAX_SHOWN);
     const hand = flight.actor === "player" ? frame.player.hand : frame.opponent.hand;
     const drawn = hand.slice(Math.max(0, hand.length - flight.count));
-    return Array.from({ length: n }, (_, i) => drawn[i] ?? null);
+    return Array.from({ length: flight.count }, (_, i) => drawn[i] ?? null);
   })();
 
   // NOTE: no early return before the host element below.
@@ -186,43 +197,61 @@ export function DrawFlight({
   const fan = ready
     ? Math.min(w * 0.72, (flight!.matW * 0.8) / Math.max(1, faces.length))
     : 0;
-  const landed = ready && landedFor === flight!.actionIndex;
-  const settling = phase === "settle";
   /**
    * Whether these cards have real hand elements to become.
    *
    * Only the player's hand is on screen, and only a named draw resolves to
-   * hand cards with ids. When both hold, the flight doesn't fly to the hand
-   * and dissolve — it simply stops rendering, and the hand elements that take
-   * its place share its layoutId, so framer moves the very same card into the
-   * strip. The opponent's cards have nothing to become and still leave frame
-   * on their own.
+   * hand cards with ids. When both hold, a released card doesn't fly to the
+   * hand and dissolve — it simply stops rendering, and the hand element that
+   * takes its place shares its layoutId, so framer moves the very same card
+   * into the strip. The opponent's cards have nothing to become and leave
+   * frame on their own instead.
    */
   const handoff = ready && flight!.actor === "player" && faces.some((f) => f != null);
 
-  // The handoff moment. Retiring the flight and mounting the hand in the same
-  // commit is what lets framer treat them as one element; an exit animation
-  // here would keep both alive at once and turn the move into a crossfade
-  // between two cards.
   const flightActionIndex = ready ? flight!.actionIndex : null;
+  const total = faces.length;
+  const released = ready && release.action === flightActionIndex ? release.count : 0;
+
+  /**
+   * The deal itself.
+   *
+   * A single interval rather than one timeout per card: the cards are
+   * identical in every way but their turn, and an interval is the thing that
+   * can be torn down in one go when the playhead moves. Scrubbing away
+   * mid-deal aborts it and the frame's own hand takes over, which is the
+   * correct outcome — the state was always right, only the performance is
+   * being cut short.
+   */
   useEffect(() => {
-    if (!active || !handoff || !settling || flightActionIndex == null) return;
-    if (landedFor === flightActionIndex) return;
-    setLandedFor(flightActionIndex);
-    onLandedRef.current?.(flightActionIndex);
-  }, [active, handoff, settling, flightActionIndex, landedFor]);
+    if (!active || flightActionIndex == null || total === 0) return;
+    setRelease({ action: flightActionIndex, count: 0 });
+    let n = 0;
+    // Floored so a pathological speed or a very short beat can't turn this
+    // into a busy loop; the deal simply becomes near-simultaneous.
+    const step = Math.max(35, staggerMs);
+    const id = setInterval(() => {
+      n += 1;
+      setRelease({ action: flightActionIndex, count: n });
+      onLandedRef.current?.(flightActionIndex, n);
+      if (n >= total) clearInterval(id);
+    }, step);
+    return () => clearInterval(id);
+  }, [active, flightActionIndex, total, staggerMs]);
 
   return (
     <div ref={hostRef} className="pointer-events-none absolute inset-0 z-[35]">
       <AnimatePresence>
         {ready &&
           active &&
-          !landed &&
           faces.map((card, i) => {
+            const gone = i < released;
+            // A released card with a hand element waiting for it stops
+            // rendering here entirely — the strip's element shares its
+            // layoutId and picks the movement up, so one card travels. One
+            // with nowhere to go (the opponent's) flies out of frame instead.
+            if (gone && handoff) return null;
             const offset = (i - (faces.length - 1) / 2) * fan;
-            // Only cards with nowhere to land fly out; the rest are handed to
-            // the hand strip above.
-            const landing = settling && !handoff;
             return (
               <motion.div
                 key={`${flight!.actionIndex}-${i}`}
@@ -230,49 +259,37 @@ export function DrawFlight({
                 style={{
                   width: w,
                   height: h,
+                  // Later cards sit under earlier ones, so the pile reads as a
+                  // pile and the card leaving is always the one on top.
+                  zIndex: faces.length - i,
                   transformStyle: "preserve-3d",
-                  // Without a perspective the rotateY below just squashes the
-                  // card horizontally; with one it turns.
-                  transformPerspective: Math.max(600, w * 9),
                 }}
-                // Starts on the deck: small, and turned away from the viewer.
+                // Starts on the deck, flat and unlifted.
                 initial={{
                   left: flight!.pileX - w / 2,
                   top: flight!.pileY - h / 2,
                   scale: 0.8,
-                  rotateY: 0,
                   opacity: 0,
                 }}
                 // The card that will become a hand element carries that
                 // element's layoutId, so framer animates one card into the
                 // strip rather than swapping two.
-                layoutId={
-                  handoff && card ? `hand-${card.id}` : undefined
-                }
+                layoutId={handoff && card ? `hand-${card.id}` : undefined}
                 animate={
-                  landing
+                  gone
                     ? {
                         left: midX + offset - w / 2,
                         top: endY - h / 2,
                         scale: 0.7,
-                        rotateY: 0,
-                        // Leaves frame rather than landing: this branch is the
-                        // opponent's draw, which has no visible hand to go to.
                         opacity: 0,
                       }
                     : {
-                        // Lifted off the deck and fanned a little, still ON
-                        // the deck. The journey to the hand is the
-                        // shared-layout move at `settle`, not a second
-                        // position here — a waypoint in the middle of the mat
-                        // is exactly the presentation step this no longer
-                        // does. The per-card term stacks them slightly as
-                        // they peel off, in the same direction.
-                        left:
-                          flight!.pileX - w / 2 + liftUx * (h * 0.16 + i * 2) + offset * 0.22,
-                        top: flight!.pileY - h / 2 + liftUy * (h * 0.16 + i * 2),
+                        // Waiting its turn: stacked on the deck, peeled a
+                        // little toward the mat's middle so the stack has
+                        // depth rather than being one card thick.
+                        left: flight!.pileX - w / 2 + liftUx * (h * 0.1 + i * 1.6),
+                        top: flight!.pileY - h / 2 + liftUy * (h * 0.1 + i * 1.6),
                         scale: 1,
-                        rotateY: 0,
                         opacity: 1,
                       }
                 }
@@ -285,20 +302,9 @@ export function DrawFlight({
                     ? { opacity: 0, transition: { duration: 0 } }
                     : { opacity: 0, transition: { duration: 0.18 } }
                 }
-                onAnimationComplete={() => {
-                  // Only the last card of the fan, and only on the leg that
-                  // ends in the hand — this fires for the flight out of the
-                  // deck too, which is not the moment the hand should fill.
-                  if (!landing || i !== faces.length - 1) return;
-                  setLandedFor(flight!.actionIndex);
-                  onLanded?.(flight!.actionIndex);
-                }}
                 transition={{
-                  // Staggered so a seven-card opening hand deals rather than
-                  // arriving as one block.
-                  delay: landing ? i * 0.03 : i * 0.05,
                   type: "spring",
-                  stiffness: landing ? 200 : 260,
+                  stiffness: gone ? 200 : 320,
                   damping: 30,
                   mass: 0.8,
                   // The move into the hand is the shared-layout leg, and it

@@ -288,12 +288,16 @@ const SHAPE_BY_KIND: Record<Beat["kind"], ChoreographySpec> = {
       { phase: "settle", ms: 220 },
     ],
   },
-  // Seven at once, dealt in a stagger — the lift needs longer than a single
-  // card's, and the hand it fills stays face-down until the first turn.
+  // Seven cards dealt one at a time, so this is the one beat whose length is
+  // set by a count rather than by feel: the deal has to finish inside it, or
+  // cards arrive in the hand with no flight behind them (see drawStaggerMs in
+  // the viewer, which caps the cadence against exactly this duration). Long
+  // enough for seven at the base cadence, plus room for the last one to land
+  // and for the hand to turn over.
   opening_hand: {
     phases: [
-      { phase: "act", ms: 380 },
-      { phase: "settle", ms: 320 },
+      { phase: "act", ms: 460 },
+      { phase: "settle", ms: 460 },
     ],
   },
   // A mulligan is a small public misfortune, and the overlay reveals a hand

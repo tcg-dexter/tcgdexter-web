@@ -56,6 +56,7 @@ import { GameEndFlourish } from "./fx/GameEndFlourish";
 import { MoveNamePlate } from "./fx/MoveNamePlate";
 import { DrawFlight } from "./fx/DrawFlight";
 import { useCamera } from "./fx/useCamera";
+import { specDuration } from "./director/choreography";
 import type { BeatPhase } from "./director/choreography";
 import { MAT_ASPECT } from "@/lib/playmat-layout";
 import { MAT_STYLES } from "@/app/admin-tools/deck-mat/DeckMatClient";
@@ -456,13 +457,12 @@ function DiscardDrawOverlay({
   // reads honestly instead of the overlay silently showing fewer.
   const unknownDrawn = Math.max(0, detail.drawnCount - detail.drawn.length);
   const shown =
-    Math.min(1, DISCARD_DRAW_MAX_PER_GROUP) +
     Math.min(detail.discarded.length, DISCARD_DRAW_MAX_PER_GROUP) +
     Math.min(detail.drawn.length + unknownDrawn, DISCARD_DRAW_MAX_PER_GROUP);
 
-  // Width budget: mat, less the overlay's own px-2, the two arrows, and the
-  // three inter-group gaps. Each card also carries an 8%-of-itself gap.
-  const widthBudget = matWidth - 16 - 2 * 12 - 2 * 16;
+  // Width budget: mat, less the overlay's own px-2, the one arrow, and the
+  // inter-group gaps. Each card also carries an 8%-of-itself gap.
+  const widthBudget = matWidth - 16 - 12 - 16;
   const fromWidth = widthBudget / (shown * 1.08);
   // Height budget: mat height, less breathing room, the label line and the
   // gap above it. 342/245 converts a card's width to its height.
@@ -491,19 +491,16 @@ function DiscardDrawOverlay({
           groups only ever appear, and the whole overlay leaves at once. */}
       <motion.div layout className="flex items-center gap-3 sm:gap-4">
         <AnimatePresence initial={false}>
-          <DiscardDrawGroup
-            key="play"
-            // A Pokémon-triggered exchange (ability or attack — the parser
-            // doesn't distinguish the two textually, both come through as
-            // "X's Y used Z") names the ability/attack itself here instead
-            // of the generic "Play", since "Play" would be a false claim —
-            // nothing was played, the Pokémon already in play acted.
-            // abilityName is null for the trainer-card case (Ultra Ball and
-            // the like), where "Play" is accurate.
-            label={detail.abilityName ?? "Play"}
-            cards={[detail.source]}
-            width={w}
-          />
+          {/* No "Play" group.
+              
+              The card that triggered the exchange used to lead the row, back
+              when the overlay was the only thing on screen that could say what
+              caused it. The move name plate now sweeps in above this overlay
+              carrying exactly that — the ability's name, or the Trainer's —
+              so repeating it as a card here says the same thing twice and
+              costs the two groups that actually matter a third of the width.
+              What's left is the transaction itself: what it cost, what it
+              bought. `detail.source` is still read for the plate's label. */}
           {reached >= 1 && (
             <DiscardDrawGroup
               key="discard"
@@ -511,7 +508,6 @@ function DiscardDrawOverlay({
               cards={detail.discarded}
               width={w}
               dimmed
-              leadWithArrow
             />
           )}
           {reached >= 2 && (
@@ -700,6 +696,12 @@ const HAND_STRIP_GAP_PX = 8;
 // against matWidth, that one against a card width it's still solving for).
 const HAND_STRIP_CHEVRON_PX = 24;
 
+/** Base gap between one card leaving the deck and the next, at 1x. Fast
+ *  enough to read as dealing rather than as seven separate draws, slow
+ *  enough that the cards are individually countable. Scaled by playback
+ *  speed and capped against the beat's own length — see drawStaggerMs. */
+const DRAW_STAGGER_MS = 150;
+
 /**
  * The submitting user's hand, anchored directly below their mat — always
  * the bottom mat now that Board pins the player there (see Board's comment
@@ -728,6 +730,7 @@ function HandStrip({
   cardWidth,
   matWidth,
   instant,
+  holdFlip,
   onCardClick,
 }: {
   cards: HandCard[];
@@ -738,6 +741,16 @@ function HandStrip({
    *  inspector's own thumbnail rows are. */
   matWidth: number;
   instant: boolean;
+  /**
+   * More cards from the same draw are still on their way.
+   *
+   * Cards arrive face-down and turn over in the hand, but a hand being DEALT
+   * should be turned over once it is complete — that is what a player does,
+   * and turning each card as it lands makes the deal read as seven unrelated
+   * draws instead of one. While this is true, arrivals hold their back; when
+   * it goes false they turn over together, in the order they arrived.
+   */
+  holdFlip: boolean;
   /** Opens the mat-overlay inspector for a tapped card. Omitted (or a
    *  card that isn't `revealed`) means the card isn't clickable — there's
    *  nothing to inspect about a card the log never named. */
@@ -761,16 +774,33 @@ function HandStrip({
    * and the flip they were owed would silently never run.
    */
   const seenRef = useRef<Set<string>>(new Set());
-  const arrivalOrder = new Map<string, number>();
+  /**
+   * Arrival order, kept for as long as the card is in the hand.
+   *
+   * It outlives "has this card been seen" on purpose. The flip's stagger is
+   * read from it, and the moment a card is marked seen its arrival order
+   * would otherwise vanish — changing the delay of an animation that is
+   * still running. Entries are pruned when the card leaves the hand, which
+   * is the only point at which the order can no longer matter.
+   */
+  const flipOrderRef = useRef<Map<string, number>>(new Map());
   let arriving = 0;
   for (const card of cards) {
-    if (!seenRef.current.has(card.id)) arrivalOrder.set(card.id, arriving++);
+    if (!seenRef.current.has(card.id)) flipOrderRef.current.set(card.id, arriving++);
   }
   const idKey = cards.map((c) => c.id).join(",");
   useEffect(() => {
-    seenRef.current = new Set(cards.map((c) => c.id));
+    const ids = new Set(cards.map((c) => c.id));
+    flipOrderRef.current.forEach((_order, id) => {
+      if (!ids.has(id)) flipOrderRef.current.delete(id);
+    });
+    // Held back while the rest of the deal is still in the air: a card marked
+    // seen has nothing left to reveal, and marking the first of seven seen
+    // would strand it face-up while its six siblings were still coming.
+    if (holdFlip) return;
+    seenRef.current = ids;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idKey]);
+  }, [idKey, holdFlip]);
 
   const updateOverflow = () => {
     const el = scrollRef.current;
@@ -849,7 +879,7 @@ function HandStrip({
           {cards.map((card, index) => {
             const clickable = card.revealed && onCardClick != null;
             const flipsOnArrival =
-              !instant && card.revealed && arrivalOrder.has(card.id);
+              !instant && card.revealed && flipOrderRef.current.has(card.id);
             return (
             <motion.div
               key={card.id}
@@ -903,13 +933,18 @@ function HandStrip({
                 // nothing to reveal, and one the log never named has no face
                 // to turn to.
                 initial={{ rotateY: flipsOnArrival ? 180 : 0 }}
-                animate={{ rotateY: 0 }}
+                // Stays face-down until the rest of its draw has landed, then
+                // turns over. For a single-card draw the two are the same
+                // moment and it flips on arrival, as before.
+                animate={{ rotateY: flipsOnArrival && holdFlip ? 180 : 0 }}
                 transition={{
                   duration: instant ? 0 : 0.45,
                   ease: [0.4, 0, 0.2, 1],
-                  // Long enough to land first, then dealt in a run rather than
-                  // turning over as one block.
-                  delay: flipsOnArrival ? 0.08 + (arrivalOrder.get(card.id) ?? 0) * 0.06 : 0,
+                  // Long enough to land first, then turned over in a run
+                  // rather than as one block.
+                  delay: flipsOnArrival
+                    ? 0.08 + (flipOrderRef.current.get(card.id) ?? 0) * 0.06
+                    : 0,
                 }}
               >
                 {/* Front. The image renders at the card's FULL height inside a
@@ -1447,6 +1482,7 @@ function Board({
   instant,
   beat,
   beatPhase,
+  drawStaggerMs,
   reducedMotion,
   anyInspectorOpen,
   actionContinues,
@@ -1474,6 +1510,9 @@ function Board({
    *  without every layer threading its own props down through BoardKit. */
   beat: Beat | null;
   beatPhase: BeatPhase;
+  /** Real milliseconds between two cards leaving the deck — see the viewer,
+   *  which solves it against the beat's length and the playback speed. */
+  drawStaggerMs: number;
   /** Suppresses the camera: see its `enabled` argument. */
   anyInspectorOpen: boolean;
   /** The frame after this one belongs to the same action — an expanded
@@ -1559,7 +1598,10 @@ function Board({
   //
   // Only the player's, because only the player's hand is on screen; the
   // opponent's cards fly up and out of frame with nothing to hand off to.
-  const [landedAction, setLandedAction] = useState<number | null>(null);
+  const [landed, setLanded] = useState<{ action: number; count: number }>({
+    action: -1,
+    count: 0,
+  });
   const [startedAction, setStartedAction] = useState<number | null>(null);
   const drawnInFlight = (() => {
     if (instant || reducedMotion || !beat || beat.actor !== "player") return 0;
@@ -1567,9 +1609,13 @@ function Board({
     // a draw: if the flight never got off the ground, the hand must show the
     // cards rather than hide what nothing is carrying.
     if (startedAction !== beat.actionIndex) return 0;
-    if (landedAction === beat.actionIndex) return 0;
     const flight = drawFlightFor(beat);
-    return flight ? flight.count : 0;
+    if (!flight) return 0;
+    // Cards are dealt one at a time, so they are un-hidden one at a time.
+    // The engine pushes drawn cards onto the END of the hand in order, so
+    // hiding the trailing N reveals exactly the ones already dealt.
+    const released = landed.action === beat.actionIndex ? landed.count : 0;
+    return Math.max(0, flight.count - released);
   })();
   const visibleHand = frame
     ? frame.player.hand.slice(0, Math.max(0, frame.player.hand.length - drawnInFlight))
@@ -1648,10 +1694,10 @@ function Board({
         {/* Cards leaving the deck. Below the name plate, above the mats. */}
         <DrawFlight
           beat={beat}
-          phase={beatPhase}
           frame={frame}
           reducedMotion={reducedMotion}
-          onLanded={setLandedAction}
+          staggerMs={drawStaggerMs}
+          onLanded={(action, count) => setLanded({ action, count })}
           onStarted={setStartedAction}
         />
         {/* Above the particles: the plate names what caused them. */}
@@ -1867,6 +1913,7 @@ function Board({
           cardWidth={cardWidth}
           matWidth={matWidth}
           instant={instant}
+          holdFlip={drawnInFlight > 0}
           onCardClick={(target) => onOpenMatInspect("player", target)}
         />
         </>
@@ -2498,7 +2545,11 @@ export default function ReplayViewer({
   // The playback clock. Replaces v1's fixed-interval auto-advance: each frame
   // now holds for as long as its beat has earned, and ticks through that
   // beat's phases while it does. See director/choreography.ts.
-  const { phase: beatPhase, beat: currentBeat } = useDirector({
+  const {
+    phase: beatPhase,
+    beat: currentBeat,
+    spec: currentSpec,
+  } = useDirector({
     beatAt,
     isContinuation,
     frameIndex,
@@ -2508,6 +2559,27 @@ export default function ReplayViewer({
     instant,
     onAdvance: advance,
   });
+
+  /**
+   * How long one card waits before the next leaves the deck.
+   *
+   * Solved here because both inputs live here: the beat's choreographed length
+   * and the playback speed. The deal has to finish inside its own beat — a
+   * card still on the deck when the frame advances would appear in the hand
+   * with no flight to account for it — so the base cadence is capped against
+   * the time actually available, which is what keeps a two-card turn draw and
+   * a seven-card opening hand both looking dealt at 0.5x and at 4x.
+   */
+  const drawStaggerMs = (() => {
+    const scale = 1 / Math.max(0.1, speed);
+    const base = DRAW_STAGGER_MS * scale;
+    const flight = drawFlightFor(currentBeat);
+    if (!flight) return base;
+    // 0.78 rather than the whole beat: the last card still needs its own
+    // travel time after it is released.
+    const available = (specDuration(currentSpec) * scale * 0.78) / flight.count;
+    return Math.min(base, available);
+  })();
 
   // Pause automatically when the last frame is reached.
   useEffect(() => {
@@ -2709,6 +2781,7 @@ export default function ReplayViewer({
             instant={instant}
             beat={currentBeat}
             beatPhase={beatPhase}
+            drawStaggerMs={drawStaggerMs}
             reducedMotion={reducedMotion}
             anyInspectorOpen={anyInspectorOpen}
             actionContinues={actionContinues}
