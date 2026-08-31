@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { onDrawFlight, type FxDrawFlight } from "./fxBus";
-import { CARD_BACK_URL } from "../BoardKit2";
+import { CardSleeve } from "../BoardKit2";
 import type { Beat } from "@/lib/replay2/beats";
 import type { BeatPhase } from "../director/choreography";
 import type { HandCard, ReplayFrame } from "@/lib/replay/frames";
@@ -287,23 +287,15 @@ export function DrawFlight({
                   layout: { type: "spring", stiffness: 260, damping: 32, mass: 0.9 },
                 }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  // Always face-down. What the card is becomes visible when
-                  // it turns over in the hand, not before.
-                  src={CARD_BACK_URL}
-                  alt=""
-                  className="h-full w-full rounded object-cover shadow-[0_10px_26px_rgba(0,0,0,0.4)]"
-                  // Deliberately NOT backface-hidden. This is one image being
-                  // turned, not a two-sided card: hiding the backface would
-                  // make it invisible for the whole first half of the spin,
-                  // which is exactly the half where it is leaving the deck.
-                  onError={(e) => {
-                    if (e.currentTarget.src !== CARD_BACK_URL) {
-                      e.currentTarget.src = CARD_BACK_URL;
-                    }
-                  }}
-                />
+                {/* Always face-down, and wearing the deck's own back rather
+                    than the printed Pokémon one — these cards are coming off
+                    that pile, and they should look like it. CardSleeve is the
+                    single definition of that back, shared with the draw pile
+                    and the prize stack, so changing it later changes it
+                    everywhere at once. */}
+                <div className="relative h-full w-full overflow-hidden rounded shadow-[0_10px_26px_rgba(0,0,0,0.4)]">
+                  <CardSleeve radius={6} />
+                </div>
               </motion.div>
             );
           })}

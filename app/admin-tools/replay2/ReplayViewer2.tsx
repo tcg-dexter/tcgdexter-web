@@ -40,6 +40,7 @@ import type {
 import {
   BOARD_GRADIENT,
   CARD_BACK_URL,
+  CardSleeve,
   InspectContext,
   PlayerMat,
   ReplayCardInspector,
@@ -727,7 +728,6 @@ function HandStrip({
   cardWidth,
   matWidth,
   instant,
-  faceDown,
   onCardClick,
 }: {
   cards: HandCard[];
@@ -738,16 +738,6 @@ function HandStrip({
    *  inspector's own thumbnail rows are. */
   matWidth: number;
   instant: boolean;
-  /**
-   * Hold the hand face-down.
-   *
-   * Set through the whole of setup, so the opening seven arrive from the deck
-   * as backs and turn over together when the first turn begins — which is when
-   * a player actually looks at them. Derived from the frame's turn number
-   * rather than remembered, so scrubbing into the middle of a game shows a
-   * face-up hand instead of whatever state a counter happened to be left in.
-   */
-  faceDown: boolean;
   /** Opens the mat-overlay inspector for a tapped card. Omitted (or a
    *  card that isn't `revealed`) means the card isn't clickable — there's
    *  nothing to inspect about a card the log never named. */
@@ -755,6 +745,32 @@ function HandStrip({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [overflow, setOverflow] = useState({ left: false, right: false });
+
+  /**
+   * Which cards are arriving for the first time, and in what order.
+   *
+   * A card arrives from the deck face-down and turns over once it is in the
+   * hand — so the flip belongs to the moment of arrival, not to any point on
+   * the clock. Working it out from the cards themselves keeps that true in
+   * every case: the opening seven turn over as a run, a single turn draw turns
+   * over on its own, and a card already sitting in the hand never flips again
+   * no matter what else changes around it.
+   *
+   * Recorded in an effect rather than during render. Marking cards seen while
+   * rendering would let a double-render retire them before they ever mounted,
+   * and the flip they were owed would silently never run.
+   */
+  const seenRef = useRef<Set<string>>(new Set());
+  const arrivalOrder = new Map<string, number>();
+  let arriving = 0;
+  for (const card of cards) {
+    if (!seenRef.current.has(card.id)) arrivalOrder.set(card.id, arriving++);
+  }
+  const idKey = cards.map((c) => c.id).join(",");
+  useEffect(() => {
+    seenRef.current = new Set(cards.map((c) => c.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idKey]);
 
   const updateOverflow = () => {
     const el = scrollRef.current;
@@ -831,7 +847,9 @@ function HandStrip({
       >
         <AnimatePresence initial={false}>
           {cards.map((card, index) => {
-            const clickable = card.revealed && onCardClick != null && !faceDown;
+            const clickable = card.revealed && onCardClick != null;
+            const flipsOnArrival =
+              !instant && card.revealed && arrivalOrder.has(card.id);
             return (
             <motion.div
               key={card.id}
@@ -880,14 +898,18 @@ function HandStrip({
                   transformStyle: "preserve-3d",
                   transformPerspective: Math.max(600, cardWidth * 9),
                 }}
-                initial={false}
-                animate={{ rotateY: faceDown && card.revealed ? 180 : 0 }}
+                // Starts showing its back and turns over, but only on the
+                // render it first appears — a card already in the hand has
+                // nothing to reveal, and one the log never named has no face
+                // to turn to.
+                initial={{ rotateY: flipsOnArrival ? 180 : 0 }}
+                animate={{ rotateY: 0 }}
                 transition={{
-                  duration: instant ? 0 : 0.5,
+                  duration: instant ? 0 : 0.45,
                   ease: [0.4, 0, 0.2, 1],
-                  // Dealt, not revealed all at once: the hand turns over left
-                  // to right as the first turn starts.
-                  delay: instant ? 0 : index * 0.055,
+                  // Long enough to land first, then dealt in a run rather than
+                  // turning over as one block.
+                  delay: flipsOnArrival ? 0.08 + (arrivalOrder.get(card.id) ?? 0) * 0.06 : 0,
                 }}
               >
                 {/* Front. The image renders at the card's FULL height inside a
@@ -897,13 +919,19 @@ function HandStrip({
                   className="absolute inset-0 overflow-hidden rounded"
                   style={{ backfaceVisibility: "hidden" }}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={card.revealed ? card.imageUrl ?? undefined : CARD_BACK_URL}
-                    alt={card.revealed ? card.name : "Face-down card"}
-                    className="absolute inset-x-0 top-0 w-full object-cover"
-                    style={{ height: cardHeight }}
-                  />
+                  {card.revealed ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={card.imageUrl ?? undefined}
+                      alt={card.name}
+                      className="absolute inset-x-0 top-0 w-full object-cover"
+                      style={{ height: cardHeight }}
+                    />
+                  ) : (
+                    // A card the log never named. It wears the deck's back for
+                    // good, rather than the printed Pokémon one.
+                    <CardSleeve radius={4} />
+                  )}
                   {card.revealed && !card.imageUrl && (
                     // Catalog miss on a revealed card — same treatment as the
                     // overlay cards: show the name rather than nothing.
@@ -918,13 +946,7 @@ function HandStrip({
                   style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
                   aria-hidden
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={CARD_BACK_URL}
-                    alt=""
-                    className="absolute inset-x-0 top-0 w-full object-cover"
-                    style={{ height: cardHeight }}
-                  />
+                  <CardSleeve radius={4} />
                 </div>
               </motion.div>
               {/* Fades the cropped edge into the page background instead of
@@ -987,6 +1009,7 @@ function AttachedCardsRow({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [overflow, setOverflow] = useState({ left: false, right: false });
+
 
   const updateOverflow = () => {
     const el = scrollRef.current;
@@ -1841,9 +1864,6 @@ function Board({
             always the player's own. */}
         <HandStrip
           cards={visibleHand}
-          // Setup is turn 0; the first turn is 1. The hand turns over on that
-          // boundary.
-          faceDown={(frame?.turn ?? 0) < 1}
           cardWidth={cardWidth}
           matWidth={matWidth}
           instant={instant}
