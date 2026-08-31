@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useContext, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   AnimatePresence,
   motion,
@@ -358,16 +365,32 @@ export function FoilSheen({ active, radius }: { active: boolean; radius: number 
  * someone drops onto the card, and they land with weight. So this drops from
  * above, overshoots, and settles — rather than fading in, which reads as a
  * notification rather than an object.
+ *
+ * Presented as a struck badge rather than a bare "−140". The minus sign was
+ * doing the work of saying "this is damage", which a number sitting on its own
+ * over a card needs a sign for; on a coloured plate it doesn't, and the plate
+ * says it louder. It also matches the move name plate that named the attack a
+ * beat earlier, so cause and effect are visibly the same kind of object.
  */
 export function DamageBurst({
   amount,
   fontSize,
   radius,
+  tint,
 }: {
   amount: number;
   fontSize: number;
   radius: number;
+  /** Overrides the attack colouring — between-turns Poison and Burn damage
+   *  carries its own condition's colour so the badge agrees with the border
+   *  being drawn around the card at the same moment. */
+  tint?: { from: string; to: string; glow: string };
 }) {
+  const accent = tint ?? {
+    from: "#b91c1c",
+    to: "#f97316",
+    glow: "rgba(249,115,22,0.65)",
+  };
   return (
     <motion.div
       className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center"
@@ -385,20 +408,151 @@ export function DamageBurst({
         animate={{ opacity: 0 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
       />
-      <motion.span
-        className="relative select-none font-black tabular-nums text-white"
-        style={{
-          fontSize,
-          textShadow:
-            "0 2px 6px rgba(0,0,0,0.85), 0 0 2px rgba(0,0,0,0.9), 0 0 18px rgba(239,68,68,0.9)",
-        }}
+      <motion.div
+        className="relative flex items-center justify-center"
         initial={{ y: -fontSize * 1.4, scale: 1.9, opacity: 0 }}
         animate={{ y: 0, scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 700, damping: 18, mass: 0.6 }}
       >
-        −{amount}
-      </motion.span>
+        <div
+          className="absolute inset-y-0 -inset-x-2"
+          style={{
+            background: `linear-gradient(100deg, ${accent.from}, ${accent.to})`,
+            transform: "skewX(-13deg)",
+            boxShadow: `0 3px 14px ${accent.glow}`,
+            borderRadius: 3,
+          }}
+        />
+        <span
+          className="relative select-none font-black tabular-nums leading-none text-white"
+          style={{
+            fontSize,
+            padding: `${fontSize * 0.22}px ${fontSize * 0.42}px`,
+            textShadow: "0 1px 3px rgba(0,0,0,0.5)",
+          }}
+        >
+          {amount}
+        </span>
+      </motion.div>
     </motion.div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────── */
+/* Condition border                                                 */
+/* ──────────────────────────────────────────────────────────────── */
+
+/** Perimeter of a rounded rectangle, clockwise from the top-left corner. */
+function roundedRectPath(w: number, h: number, r: number): string {
+  const rr = Math.max(0, Math.min(r, w / 2, h / 2));
+  return [
+    `M ${rr} 0`,
+    `H ${w - rr}`,
+    `A ${rr} ${rr} 0 0 1 ${w} ${rr}`,
+    `V ${h - rr}`,
+    `A ${rr} ${rr} 0 0 1 ${w - rr} ${h}`,
+    `H ${rr}`,
+    `A ${rr} ${rr} 0 0 1 0 ${h - rr}`,
+    `V ${rr}`,
+    `A ${rr} ${rr} 0 0 1 ${rr} 0`,
+    "Z",
+  ].join(" ");
+}
+
+/**
+ * Measure an element. Needed because the condition border is drawn as a real
+ * path around the card holder, and the holder's height depends on what it
+ * contains — a Tool peeking above the art, an HP bar that isn't there for a
+ * Pokémon with no printed HP. Scaling one viewBox to fit would turn the
+ * corner radii into ellipses.
+ */
+export function useElementSize<T extends HTMLElement>(): [
+  React.RefObject<T>,
+  { width: number; height: number },
+] {
+  const ref = useRef<T>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      setSize((prev) =>
+        // Guarded: the camera scales the board, and writing every
+        // sub-pixel change back into state would re-render every card on
+        // the mat for the whole of a push-in.
+        Math.abs(prev.width - r.width) < 0.5 && Math.abs(prev.height - r.height) < 0.5
+          ? prev
+          : { width: r.width, height: r.height },
+      );
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, size];
+}
+
+/**
+ * A line drawn around the outside of the card as a Special Condition bites.
+ *
+ * Between-turns Poison and Burn damage had nothing of its own: it arrived as a
+ * damage counter identical to an attack's, on a card nobody had just attacked,
+ * with only the small corner pill to say why. Drawing the card's outline in
+ * the condition's colour ties the damage to the badge already sitting on it.
+ *
+ * A stroked path rather than a CSS border so it can be drawn rather than
+ * simply appear — the travelling line is what reads as the condition acting,
+ * where a border switching on reads as a selection state.
+ */
+export function ConditionBorder({
+  width,
+  height,
+  radius,
+  color,
+}: {
+  width: number;
+  height: number;
+  radius: number;
+  color: string;
+}) {
+  if (width <= 0 || height <= 0) return null;
+  // Sits just outside the black holder, so it reads as a ring around the card
+  // rather than a frame drawn on top of its contents.
+  const pad = 3;
+  const stroke = 2.5;
+  const w = width + pad * 2;
+  const h = height + pad * 2;
+  return (
+    <motion.svg
+      className="pointer-events-none absolute"
+      style={{ left: -pad, top: -pad, zIndex: 25, overflow: "visible" }}
+      width={w}
+      height={h}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.35 } }}
+      aria-hidden
+    >
+      <motion.path
+        d={roundedRectPath(w - stroke, h - stroke, radius + pad)}
+        transform={`translate(${stroke / 2} ${stroke / 2})`}
+        fill="none"
+        stroke={color}
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        style={{ filter: `drop-shadow(0 0 5px ${color})` }}
+        // pathLength normalises the perimeter to 1, so one dash of length 1
+        // covers the whole outline and the offset is simply "how much is yet
+        // to be drawn" — no need to know the real perimeter in pixels.
+        pathLength={1}
+        strokeDasharray="1 1"
+        initial={{ strokeDashoffset: 1 }}
+        animate={{ strokeDashoffset: 0 }}
+        transition={{ duration: 0.6, ease: "easeInOut" }}
+      />
+    </motion.svg>
   );
 }
 

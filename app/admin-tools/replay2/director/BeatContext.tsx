@@ -68,3 +68,16 @@ export const MatActorContext = createContext<"player" | "opponent" | null>(null)
 export function useMatActor(): "player" | "opponent" | null {
   return useContext(MatActorContext);
 }
+
+/**
+ * The on-screen bounds of the mat a subtree belongs to.
+ *
+ * A getter rather than a value: mat geometry is only ever needed at the
+ * instant something is emitted, and publishing a rect through context would
+ * mean re-rendering every card on the mat whenever the camera moved it.
+ */
+export const MatBoundsContext = createContext<(() => DOMRect | null) | null>(null);
+
+export function useMatBounds(): (() => DOMRect | null) | null {
+  return useContext(MatBoundsContext);
+}

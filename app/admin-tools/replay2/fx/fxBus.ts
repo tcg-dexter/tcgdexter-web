@@ -70,12 +70,22 @@ export interface FxMovePlate {
   /** Attack or ability name, already checked non-empty by the emitter. */
   label: string;
   kind: "attack" | "ability";
-  /** Horizontal centre of the acting card. */
-  clientX: number;
-  /** TOP edge of the acting card — the plate hangs above it. */
-  clientY: number;
-  /** The card's width, so the plate scales with the board rather than being
-   *  a fixed size that swamps a small mat and gets lost on a large one. */
+  /** Whose mat the move belongs to. */
+  actor: "player" | "opponent";
+  /**
+   * The MAT's on-screen box, not the card's.
+   *
+   * The plate used to hang above whichever card was acting, which put it in a
+   * different place every beat and sometimes over the bench it was trying to
+   * describe. Anchoring to the mat gives it one home per player, so the eye
+   * learns where to find it.
+   */
+  matLeft: number;
+  matTop: number;
+  matWidth: number;
+  matHeight: number;
+  /** The acting card's width, so the plate scales with the board rather than
+   *  being a fixed size that swamps a small mat and gets lost on a large one. */
   cardWidth: number;
 }
 
@@ -151,7 +161,10 @@ export function energyColor(type: string): string {
  */
 const CONDITION_COLORS: Record<string, string> = {
   Poisoned: "#9333ea",
-  Burned: "#f97316",
+  // Red rather than the orange of the corner pill: burn reads as red, and the
+  // ring drawn around the card is a bigger, more literal statement than the
+  // badge. If the two should match, the pill is the one to move.
+  Burned: "#ef4444",
   Confused: "#facc15",
   Asleep: "#0ea5e9",
   Paralyzed: "#fbbf24",

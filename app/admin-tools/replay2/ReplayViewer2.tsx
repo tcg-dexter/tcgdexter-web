@@ -1484,6 +1484,9 @@ function Board({
           beat={beat}
           phase={beatPhase}
           actionContinues={actionContinues}
+          // A discard-then-draw or a mulligan reveal fills the middle of that
+          // player's mat, which is exactly where the plate sits.
+          exchangeActor={frame?.discardDraw?.actor ?? frame?.mulligan?.actor ?? null}
           reducedMotion={reducedMotion}
         />
         {/* Above the canvas: the flourish is the subject at that moment, not

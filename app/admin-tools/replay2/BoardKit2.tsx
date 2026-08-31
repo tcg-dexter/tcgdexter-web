@@ -33,12 +33,20 @@ import {
   MAT_ASPECT,
 } from "@/app/admin-tools/deck-mat/DeckMatClient";
 import { shade } from "@/lib/color";
-import { MatActorContext, useBeat, useMatActor } from "./director/BeatContext";
+import {
+  MatActorContext,
+  MatBoundsContext,
+  useBeat,
+  useMatActor,
+  useMatBounds,
+} from "./director/BeatContext";
 import {
   CardSurface,
   ClaimContext,
+  ConditionBorder,
   DamageBurst,
   FoilSheen,
+  useElementSize,
   travelStyle,
   useCardPerformance,
   useClaim,
@@ -618,6 +626,12 @@ export function PokemonCardImage({
   // The card's own box, so it can tell the FX layer and the camera where it
   // is. Nothing else needs board geometry as a result — see fxBus.
   const boxRef = useRef<HTMLDivElement>(null);
+  // The black holder, measured so the condition border can be drawn as a real
+  // path around it — its height varies with what it contains.
+  const [holderRef, holderSize] = useElementSize<HTMLDivElement>();
+  // Where this card's mat is, for the move name plate — which is anchored to
+  // the mat rather than to the card that emitted it.
+  const matBounds = useMatBounds();
   // Last (action, phase, role) this card fired for. Effects are one-shot
   // punctuation, and React will happily re-run an effect for an unrelated
   // re-render mid-beat; without this a held frame emits a burst per render.
@@ -735,18 +749,22 @@ export function PokemonCardImage({
           : perfBeat.kind === "ability"
             ? perfBeat.ability
             : null;
-      if (label) {
+      const mat = matBounds?.();
+      if (label && mat) {
         emitMovePlate({
           actionIndex: perfBeat.actionIndex,
           label,
           kind: perfBeat.kind === "attack" ? "attack" : "ability",
-          clientX: cx,
-          clientY: r.top,
+          actor: perfBeat.actor === "opponent" ? "opponent" : "player",
+          matLeft: mat.left,
+          matTop: mat.top,
+          matWidth: mat.width,
+          matHeight: mat.height,
           cardWidth: r.width,
         });
       }
     }
-  }, [perform, reducedMotion, beatInstant, perfBeat, perfPhase, perfRole]);
+  }, [perform, reducedMotion, beatInstant, perfBeat, perfPhase, perfRole, matBounds]);
   const clickable = onClick != null || (inspectable && inspect != null);
   // Damage the card is SHOWING, which is not always the damage it has.
   //
@@ -772,6 +790,17 @@ export function PokemonCardImage({
   // wait for the counter to land before it starts moving.
   const damageJustLanded =
     perf.role === "target" && perf.incomingDamage != null && perf.phase === "impact";
+
+  // Which Special Condition is dealing this beat's damage, if one is. Poison
+  // and Burn tick between turns, on a card nobody just attacked — the corner
+  // pill was the only thing saying why, and it looks the same whether or not
+  // it just fired.
+  const conditionDamage =
+    perf.role === "target" &&
+    perf.beat?.kind === "damage_counters" &&
+    perf.beat.fromCondition
+      ? perf.beat.fromCondition
+      : null;
 
   const remainingHp = mon.hp != null ? Math.max(0, mon.hp - shownDamage) : null;
   const hadFallback = !mon.imageUrl;
@@ -825,6 +854,7 @@ export function PokemonCardImage({
       idle={idle}
     >
     <div
+      ref={holderRef}
       className={`relative bg-black shadow-sm transition-opacity duration-200 ${
         clickable ? "cursor-pointer" : ""
       } ${dimmed ? "opacity-50" : ""}`}
@@ -974,6 +1004,18 @@ export function PokemonCardImage({
                 amount={perf.incomingDamage}
                 fontSize={Math.max(11, Math.round(m.cardW * 0.34))}
                 radius={m.cardRadius}
+                tint={
+                  // Condition damage wears its condition's colour, so the
+                  // badge agrees with the ring being drawn around the card at
+                  // the same moment instead of contradicting it.
+                  conditionDamage
+                    ? {
+                        from: shade(conditionColor(conditionDamage), -30),
+                        to: conditionColor(conditionDamage),
+                        glow: `${conditionColor(conditionDamage)}99`,
+                      }
+                    : undefined
+                }
               />
             )}
         </AnimatePresence>
@@ -1027,6 +1069,19 @@ export function PokemonCardImage({
           {footer}
         </div>
       )}
+      {/* Drawn around the holder rather than the card art, so it rings the
+          whole object the way the black container defines it. */}
+      <AnimatePresence>
+        {conditionDamage && (perf.phase === "impact" || perf.phase === "settle") && (
+          <ConditionBorder
+            key={`${perf.beat?.actionIndex}-cond-border`}
+            width={holderSize.width}
+            height={holderSize.height}
+            radius={m.radius}
+            color={conditionColor(conditionDamage)}
+          />
+        )}
+      </AnimatePresence>
     </div>
     </CardSurface>
   );
@@ -1222,6 +1277,13 @@ export function PlayerMat({
   // how an attack ended up being attributed to a benched Pokémon sharing the
   // attacker's name.
   const { beat: currentBeat } = useBeat();
+  const matRef = useRef<HTMLDivElement>(null);
+  // Stable across renders so publishing it doesn't churn every consumer; it
+  // reads the ref at call time, which is the only moment the answer matters.
+  const matBoundsGetter = useMemo(
+    () => () => matRef.current?.getBoundingClientRect() ?? null,
+    [],
+  );
   const matCards = useMemo<MatCards>(() => ({ active, bench }), [active, bench]);
   const previousMatCards = usePreviousMatCards(matCards);
   const claim = resolveClaim(currentBeat, actor ?? null, matCards, previousMatCards);
@@ -1333,6 +1395,7 @@ export function PlayerMat({
 
   return (
     <MatActorContext.Provider value={actor ?? null}>
+    <MatBoundsContext.Provider value={matBoundsGetter}>
     <ClaimContext.Provider value={claimFor}>
     <LayoutGroup id={side}>
       {/* The mat itself does NOT clip its contents.
@@ -1352,6 +1415,7 @@ export function PlayerMat({
           that trims them. Cards overflowing the mat edge is correct — a card
           held above the table should break its silhouette. */}
       <div
+        ref={matRef}
         className="relative rounded-xl"
         style={{
           padding: MAT_PADDING,
@@ -1498,6 +1562,7 @@ export function PlayerMat({
       </div>
     </LayoutGroup>
     </ClaimContext.Provider>
+    </MatBoundsContext.Provider>
     </MatActorContext.Provider>
   );
 }

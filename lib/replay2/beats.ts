@@ -111,7 +111,15 @@ export type Beat = BeatBase &
     | { kind: "knock_out"; pokemon: string; where: BoardSlot }
     | { kind: "prize_taken"; count: number }
     | { kind: "condition"; pokemon: string; condition: string }
-    | { kind: "damage_counters"; pokemon: string; counters: number }
+    | {
+        kind: "damage_counters";
+        pokemon: string;
+        counters: number;
+        /** The Special Condition that caused it — "Poisoned" or "Burned" —
+         *  when that's why the counters landed. The board colours its
+         *  between-turns damage by it. */
+        fromCondition: string | null;
+      }
     /** One effect placing counters on several Pokémon at once — Freezing
      *  Shroud during Pokémon Checkup. `applied` is what the engine actually
      *  resolved, with the owner it landed on, since the log's own owner
@@ -468,6 +476,7 @@ function toBeat(ev: EngineEvent, action: ParsedAction | undefined): Beat {
         kind: "damage_counters",
         pokemon: str(d.pokemon ?? p.pokemon),
         counters: num(d.counters ?? p.counters),
+        fromCondition: strOrNull(d.from_condition ?? p.from_condition),
       };
 
     case "damage_counters_placed": {

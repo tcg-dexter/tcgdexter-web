@@ -63,6 +63,23 @@ function allInPlay(state: GameState): { mon: PokemonInPlay; owner: Actor }[] {
   return out;
 }
 
+/**
+ * Send a Pokémon from the Active Spot to the Bench.
+ *
+ * Special Conditions are removed when a Pokémon leaves the Active Spot — by
+ * ANY means, not just a retreat. The retreat handler cleared them itself,
+ * which covered the obvious case and hid the rest: a promotion after a
+ * knockout, a Boss's Orders, a Pecharunt's Subjugating Chains all move the
+ * Active out with no retreat action in the log, and the outgoing Pokémon kept
+ * its badge on the bench for the remainder of the game.
+ */
+function benchOutgoingActive(side: PlayerSide): void {
+  if (!side.active) return;
+  side.active.conditions = [];
+  side.bench.push(side.active);
+  side.active = null;
+}
+
 function otherActor(actor: Actor): Actor {
   if (actor === "player") return "opponent";
   if (actor === "opponent") return "player";
@@ -560,15 +577,13 @@ export function applyAction(
         // every frame after a knockout.
         diag("info", "switch_target_missing", `Promote ${targetName} but not on bench; conjured it`, { targetName });
         const conjured = makePokemon(makeCard(targetName), state.turn.number);
-        if (side.active) side.bench.push(side.active);
+        benchOutgoingActive(side);
         side.active = conjured;
         event.detail = { promoted: targetName, conjured: true };
         break;
       }
       const incoming = side.bench.splice(benchIdx, 1)[0];
-      if (side.active) {
-        side.bench.push(side.active);
-      }
+      benchOutgoingActive(side);
       side.active = incoming;
       side.active.conditions = []; // conditions clear when leaving play; promotion treats it as fresh
       event.detail = { promoted: targetName };
