@@ -49,14 +49,43 @@ export function DrawFlight({
   phase,
   frame,
   reducedMotion,
+  onLanded,
+  onStarted,
 }: {
   beat: Beat | null;
   phase: BeatPhase;
   frame: ReplayFrame | null;
   reducedMotion: boolean;
+  /**
+   * Fired the moment the cards finish arriving.
+   *
+   * The hand holds them back until this lands. A drawn card is in the frame's
+   * hand from the instant the action resolves, so without a handoff the same
+   * card is on screen twice — mid-flight and already sitting in the hand it is
+   * flying toward. This is the signal that lets exactly one of them exist at a
+   * time.
+   */
+  onLanded?: (actionIndex: number) => void;
+  /**
+   * Fired when a flight is accepted and about to render.
+   *
+   * The hand only holds cards back once this says there is something carrying
+   * them. Without it, any reason the flight failed to start — a host not yet
+   * measurable, a mat that reported nothing — would hide the drawn cards from
+   * the hand with no animation to account for them, and they would simply be
+   * missing. Failing back to "briefly in two places" is much cheaper than
+   * failing to "nowhere at all".
+   */
+  onStarted?: (actionIndex: number) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [flight, setFlight] = useState<FlightState | null>(null);
+  const [landedFor, setLandedFor] = useState<number | null>(null);
+  // Read through a ref so the subscription isn't torn down and rebuilt every
+  // time the parent re-renders with a new callback identity — it would drop
+  // emits that land in the gap.
+  const onStartedRef = useRef(onStarted);
+  onStartedRef.current = onStarted;
 
   useEffect(() => {
     if (reducedMotion) return;
@@ -68,6 +97,7 @@ export function DrawFlight({
       // Divide out the camera, exactly as the FX canvas and the name plate do.
       const sx = host.offsetWidth / r.width;
       const sy = host.offsetHeight / r.height;
+      onStartedRef.current?.(d.actionIndex);
       setFlight({
         ...d,
         pileX: (d.pileLeft - r.left + d.pileWidth / 2) * sx,
@@ -134,7 +164,8 @@ export function DrawFlight({
   const fan = ready
     ? Math.min(w * 0.72, (flight!.matW * 0.8) / Math.max(1, faces.length))
     : 0;
-  const showScrim = ready && active && flight!.revealed && phase === "impact";
+  const landed = ready && landedFor === flight!.actionIndex;
+  const showScrim = ready && active && !landed && flight!.revealed && phase === "impact";
 
   return (
     <div ref={hostRef} className="pointer-events-none absolute inset-0 z-[35]">
@@ -164,6 +195,7 @@ export function DrawFlight({
       <AnimatePresence>
         {ready &&
           active &&
+          !landed &&
           faces.map((card, i) => {
             const offset = (i - (faces.length - 1) / 2) * fan;
             const landing = phase === "settle";
@@ -194,7 +226,11 @@ export function DrawFlight({
                         top: endY - h / 2,
                         scale: 0.7,
                         rotateY: 0,
-                        opacity: 0,
+                        // Arrives solid. It used to fade out on the way down,
+                        // which read as the card evaporating short of the hand
+                        // — and the hand had already been showing it the whole
+                        // time anyway, so nothing looked handed over.
+                        opacity: 1,
                       }
                     : {
                         left: midX + offset - w / 2,
@@ -205,6 +241,14 @@ export function DrawFlight({
                       }
                 }
                 exit={{ opacity: 0, transition: { duration: 0.18 } }}
+                onAnimationComplete={() => {
+                  // Only the last card of the fan, and only on the leg that
+                  // ends in the hand — this fires for the flight out of the
+                  // deck too, which is not the moment the hand should fill.
+                  if (!landing || i !== faces.length - 1) return;
+                  setLandedFor(flight!.actionIndex);
+                  onLanded?.(flight!.actionIndex);
+                }}
                 transition={{
                   // Staggered so a seven-card opening hand deals rather than
                   // arriving as one block.

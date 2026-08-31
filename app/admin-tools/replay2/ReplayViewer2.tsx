@@ -35,6 +35,7 @@ import type {
   MulliganFrame,
   ReplayFrame,
   ReplayPayload,
+  SideFrame,
 } from "@/lib/replay/frames";
 import {
   BOARD_GRADIENT,
@@ -49,6 +50,7 @@ import { indexBeats, type Beat, type ReplayPayload2 } from "@/lib/replay2/beats"
 import { useDirector } from "./director/useDirector";
 import { BeatProvider } from "./director/BeatContext";
 import { FxCanvas } from "./fx/FxCanvas";
+import { drawFlightFor } from "./fx/fxBus";
 import { GameEndFlourish } from "./fx/GameEndFlourish";
 import { MoveNamePlate } from "./fx/MoveNamePlate";
 import { DrawFlight } from "./fx/DrawFlight";
@@ -1311,6 +1313,42 @@ function DiscardPileOverlay({
   );
 }
 
+/**
+ * A side's discard pile, minus the Trainer still sitting on the mat.
+ *
+ * A played Trainer is in the discard the instant its action resolves — the
+ * engine has nowhere else to put it — but the board deliberately keeps showing
+ * it floating beside the Active Pokémon for that frame, which is where it
+ * physically is. So the card was on screen twice: face-up on the mat, and
+ * again as the top of the discard pile it had not visibly travelled to yet.
+ *
+ * Matched by name against the top of the pile rather than assumed. The engine
+ * pushes the Trainer last within its own action, so it IS the top card — but a
+ * name check costs nothing and fails safe: an unexpected pile order hides
+ * nothing rather than hiding the wrong card.
+ */
+function discardExcludingFloatingTrainer(
+  side: SideFrame | null,
+  floating: { name: string } | null,
+) {
+  if (!side) return { count: 0, top: null, topImageUrl: null, pile: [] };
+  if (!floating || side.discard[0]?.name !== floating.name) {
+    return {
+      count: side.discardCount,
+      top: side.discardTop,
+      topImageUrl: side.discardTopImageUrl,
+      pile: side.discard,
+    };
+  }
+  const rest = side.discard.slice(1);
+  return {
+    count: Math.max(0, side.discardCount - 1),
+    top: rest[0]?.name ?? null,
+    topImageUrl: rest[0]?.imageUrl ?? null,
+    pile: rest,
+  };
+}
+
 function Board({
   frame,
   loading,
@@ -1419,6 +1457,43 @@ function Board({
     enabled: !anyInspectorOpen,
   });
 
+  // The Trainer floating on each mat, if any — used to keep it out of that
+  // side's discard pile until it has visibly left the mat.
+  // Cards still in the air on their way to the hand.
+  //
+  // A drawn card is in the frame's hand from the instant its action resolves,
+  // so the hand strip was already showing what the flight was still carrying —
+  // the same card in two places, which is the whole thing this is fixing. The
+  // hand holds the trailing N back until DrawFlight reports them landed, and
+  // the two swap in one render.
+  //
+  // Only the player's, because only the player's hand is on screen; the
+  // opponent's cards fly up and out of frame with nothing to hand off to.
+  const [landedAction, setLandedAction] = useState<number | null>(null);
+  const [startedAction, setStartedAction] = useState<number | null>(null);
+  const drawnInFlight = (() => {
+    if (instant || reducedMotion || !beat || beat.actor !== "player") return 0;
+    // Gated on a flight having actually started, not merely on the beat being
+    // a draw: if the flight never got off the ground, the hand must show the
+    // cards rather than hide what nothing is carrying.
+    if (startedAction !== beat.actionIndex) return 0;
+    if (landedAction === beat.actionIndex) return 0;
+    const flight = drawFlightFor(beat);
+    return flight ? flight.count : 0;
+  })();
+  const visibleHand = frame
+    ? frame.player.hand.slice(0, Math.max(0, frame.player.hand.length - drawnInFlight))
+    : [];
+
+  const opponentDiscard = discardExcludingFloatingTrainer(
+    frame?.opponent ?? null,
+    frame?.lastPlayedTrainer?.actor === "opponent" ? frame.lastPlayedTrainer : null,
+  );
+  const playerDiscard = discardExcludingFloatingTrainer(
+    frame?.player ?? null,
+    frame?.lastPlayedTrainer?.actor === "player" ? frame.lastPlayedTrainer : null,
+  );
+
   const matWidth =
     heightBudget != null
       ? Math.max(20, (heightBudget - BOARD_VERTICAL_CHROME_PX) / (2 * MAT_ASPECT))
@@ -1486,6 +1561,8 @@ function Board({
           phase={beatPhase}
           frame={frame}
           reducedMotion={reducedMotion}
+          onLanded={setLandedAction}
+          onStarted={setStartedAction}
         />
         {/* Above the particles: the plate names what caused them. */}
         <MoveNamePlate
@@ -1548,9 +1625,9 @@ function Board({
               side="player"
               bench={frame.opponent.bench}
               active={frame.opponent.active}
-              discardCount={frame.opponent.discardCount}
-              discardTop={frame.opponent.discardTop}
-              discardTopImageUrl={frame.opponent.discardTopImageUrl}
+              discardCount={opponentDiscard.count}
+              discardTop={opponentDiscard.top}
+              discardTopImageUrl={opponentDiscard.topImageUrl}
               deckCount={frame.opponent.deckCount}
               handCount={frame.opponent.handCount}
               prizesRemaining={frame.opponent.prizesRemaining}
@@ -1601,7 +1678,7 @@ function Board({
             <AnimatePresence>
               {discardInspect.opponent && (
                 <DiscardPileOverlay
-                  cards={frame.opponent.discard}
+                  cards={opponentDiscard.pile}
                   matWidth={matWidth}
                   onClose={() => onCloseDiscardInspect("opponent")}
                 />
@@ -1627,9 +1704,9 @@ function Board({
               side="opponent"
               bench={frame.player.bench}
               active={frame.player.active}
-              discardCount={frame.player.discardCount}
-              discardTop={frame.player.discardTop}
-              discardTopImageUrl={frame.player.discardTopImageUrl}
+              discardCount={playerDiscard.count}
+              discardTop={playerDiscard.top}
+              discardTopImageUrl={playerDiscard.topImageUrl}
               deckCount={frame.player.deckCount}
               handCount={frame.player.handCount}
               prizesRemaining={frame.player.prizesRemaining}
@@ -1680,7 +1757,7 @@ function Board({
             <AnimatePresence>
               {discardInspect.player && (
                 <DiscardPileOverlay
-                  cards={frame.player.discard}
+                  cards={playerDiscard.pile}
                   matWidth={matWidth}
                   onClose={() => onCloseDiscardInspect("player")}
                 />
@@ -1696,7 +1773,7 @@ function Board({
             always on the player's (bottom) mat, since a hand card is
             always the player's own. */}
         <HandStrip
-          cards={frame.player.hand}
+          cards={visibleHand}
           cardWidth={cardWidth}
           matWidth={matWidth}
           instant={instant}
