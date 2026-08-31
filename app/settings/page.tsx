@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import EditDisplayName from "@/app/profile/EditDisplayName";
 import EditBio from "@/app/profile/EditBio";
 import EditPublicToggle from "@/app/profile/EditPublicToggle";
-import EditCollectionPublicToggle from "@/app/profile/EditCollectionPublicToggle";
 import SignOutButton from "@/app/profile/SignOutButton";
 import DeleteAccountButton from "@/app/settings/DeleteAccountButton";
 import AppearanceToggle from "@/app/settings/AppearanceToggle";
@@ -19,7 +18,7 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name, username, bio, is_public, created_at, email_reengagement, collection_public")
+    .select("display_name, username, bio, is_public, created_at, email_reengagement")
     .eq("id", user.id)
     .single();
 
@@ -74,10 +73,6 @@ export default async function SettingsPage() {
           <EditPublicToggle
             initialIsPublic={profile?.is_public ?? false}
             hasDisplayName={Boolean(profile?.display_name)}
-          />
-          <EditCollectionPublicToggle
-            initialCollectionPublic={profile?.collection_public ?? false}
-            profileIsPublic={profile?.is_public ?? false}
           />
         </div>
       </div>

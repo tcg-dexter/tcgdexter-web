@@ -27,15 +27,19 @@ function priceIndex(): Map<string, number> {
 }
 
 /**
- * NOTE: this paging-and-summing approach is kept only for the Sets data view
+ * NOTE: this paging-and-summing approach exists for the Sets data view
  * (`app/api/collection/data-view/route.ts`), which needs `uniqueOwnedBySet`
- * — a per-set breakdown that has to walk the rows anyway.
+ * — a per-set breakdown that has to walk the rows anyway. That per-set
+ * requirement is the whole justification for walking them; plain headline
+ * totals do not need it.
  *
- * For plain headline totals, use the `collection_stats()` SQL function
- * instead (lib/collection.ts → loadCollectionStats, migration
- * 20260830_collection_stats.sql). It returns one row rather than paging the
- * whole collection, and its value figure matches the profile module's chart.
- * Please don't add a third copy of this loop.
+ * There was briefly a second consumer: a Collection module on user profile
+ * pages, backed by a `collection_stats()` SQL aggregate. It was removed
+ * (see 20260831_drop_collection_module.sql) because the aggregate cost more
+ * to compute than the summary was worth — the value-over-time query beside
+ * it hit the statement timeout on the largest real collection. Worth knowing
+ * before reaching for this loop to power a new headline-stats surface: the
+ * expensive part is the collection scan itself, not where it runs.
  */
 export interface CollectionStats {
   cardCount: number;

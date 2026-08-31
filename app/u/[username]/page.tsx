@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -27,9 +26,6 @@ import TeamCards, { type TeamCardRef } from "./TeamCards";
 import { BattleCard } from "@/app/components/BattleCard";
 import { loadOwnerRecentBattles } from "@/lib/recent-battles";
 import ProfileTabs from "./ProfileTabs";
-import CollectionSectionAsync from "./CollectionSectionAsync";
-import CollectionSectionSkeleton from "./CollectionSectionSkeleton";
-import { canViewCollection } from "@/lib/collection";
 import AchievementsModule from "./AchievementsModule";
 import {
   listAchievements,
@@ -59,7 +55,6 @@ interface ProfileRow {
   onboarding_dismissed: boolean;
   follower_count: number;
   following_count: number;
-  collection_public: boolean;
 }
 
 interface DeckRow {
@@ -141,7 +136,7 @@ export default async function ProfilePage({
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, display_name, username, bio, created_at, is_public, tcg_live_handle, avatar_url, banner_accent, team_cards, onboarding_dismissed, follower_count, following_count, collection_public"
+      "id, display_name, username, bio, created_at, is_public, tcg_live_handle, avatar_url, banner_accent, team_cards, onboarding_dismissed, follower_count, following_count"
     )
     .eq("username", username.toLowerCase())
     .maybeSingle<ProfileRow>();
@@ -286,21 +281,6 @@ export default async function ProfilePage({
   const recentBattles = isOwner
     ? await loadOwnerRecentBattles(supabase, profile.id, profile.username, 3)
     : [];
-
-  // Collection module (bottom of the page). Owner always; visitors only
-  // when the owner opted in — see canViewCollection, whose rule both
-  // collection_stats() and collection_value_history() also enforce in SQL.
-  // Deciding here rather than inside the module keeps a hidden collection
-  // off the wire entirely instead of fetching it and hiding it at render.
-  //
-  // Note this is only the decision — the queries themselves live in
-  // CollectionSectionAsync, behind a Suspense boundary, so they never block
-  // the rest of the page.
-  const showCollection = canViewCollection({
-    isOwner,
-    profileIsPublic: profile.is_public,
-    collectionPublic: profile.collection_public,
-  });
 
   // Visitor placeholder for owner-private cells.
   const ownerOnly = (value: string) => (isOwner ? value : "—");
@@ -659,16 +639,6 @@ export default async function ProfilePage({
         </div>
       )}
 
-      {showCollection && (
-        <Suspense fallback={<CollectionSectionSkeleton />}>
-          <CollectionSectionAsync
-            userId={profile.id}
-            isOwner={isOwner}
-            collectionPublic={profile.collection_public}
-            gradientCss={bannerGradient}
-          />
-        </Suspense>
-      )}
       </FollowPanelBody>
       </FollowPanelProvider>
     </main>
