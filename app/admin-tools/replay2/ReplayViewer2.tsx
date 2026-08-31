@@ -51,6 +51,7 @@ import { BeatProvider } from "./director/BeatContext";
 import { FxCanvas } from "./fx/FxCanvas";
 import { GameEndFlourish } from "./fx/GameEndFlourish";
 import { MoveNamePlate } from "./fx/MoveNamePlate";
+import { DrawFlight } from "./fx/DrawFlight";
 import { useCamera } from "./fx/useCamera";
 import type { BeatPhase } from "./director/choreography";
 import { MAT_ASPECT } from "@/lib/playmat-layout";
@@ -1479,6 +1480,13 @@ function Board({
           }
         >
         <FxCanvas reducedMotion={reducedMotion} />
+        {/* Cards leaving the deck. Below the name plate, above the mats. */}
+        <DrawFlight
+          beat={beat}
+          phase={beatPhase}
+          frame={frame}
+          reducedMotion={reducedMotion}
+        />
         {/* Above the particles: the plate names what caused them. */}
         <MoveNamePlate
           beat={beat}

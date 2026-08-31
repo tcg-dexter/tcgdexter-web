@@ -92,9 +92,10 @@ export function MoveNamePlate({
     (phase !== "settle" || actionContinues);
 
   // A discard-then-draw or a mulligan reveal fills the middle of the mat with
-  // cards. Rather than sit on top of them, the plate moves to the top edge and
-  // becomes a pill there — out of the way, still legible, and its own shape
-  // says the mat is busy underneath.
+  // cards. Rather than sit on top of them, the plate moves to the top edge —
+  // out of the way, still legible. Only its position and scale change: it is
+  // the same object either way, and giving it a second silhouette made it
+  // read as a different kind of thing.
   const island = plate != null && exchangeActor === plate.actor;
 
   const accent =
@@ -106,8 +107,8 @@ export function MoveNamePlate({
   // produces readable text.
   const base = plate ? Math.max(10, Math.round(plate.cardWidth * 0.17)) : 12;
   const fontSize = island ? Math.max(9, Math.round(base * 0.86)) : base;
-  const padX = fontSize * (island ? 1.15 : 0.85);
-  const padY = fontSize * (island ? 0.45 : 0.4);
+  const padX = fontSize * 0.85;
+  const padY = fontSize * 0.4;
 
   return (
     <div ref={hostRef} className="pointer-events-none absolute inset-0 z-40">
@@ -155,9 +156,9 @@ export function MoveNamePlate({
                     className="absolute inset-y-0 -inset-x-2"
                     style={{
                       background: `linear-gradient(100deg, ${accent.from}, ${accent.to})`,
-                      transform: island ? undefined : "skewX(-13deg)",
+                      transform: "skewX(-13deg)",
                       boxShadow: `0 4px 18px ${accent.glow}`,
-                      borderRadius: island ? 999 : 3,
+                      borderRadius: 3,
                     }}
                     initial={{ x: "-135%", opacity: 0, scaleX: 0.55 }}
                     animate={{ x: "0%", opacity: 1, scaleX: 1 }}

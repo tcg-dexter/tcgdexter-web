@@ -89,13 +89,43 @@ export interface FxMovePlate {
   cardWidth: number;
 }
 
+/**
+ * A card leaving the deck.
+ *
+ * Drawing was the one thing that happened every single turn and had no
+ * physical account of itself: the deck's count went down, the hand's went up,
+ * and nothing travelled between them. This carries the geometry needed to fly
+ * a card from one to the other — emitted by the draw pile, which is the only
+ * component that knows where it is.
+ */
+export interface FxDrawFlight {
+  actionIndex: number;
+  actor: "player" | "opponent";
+  /** How many cards left the deck. */
+  count: number;
+  /** The log named them, so they are shown face-up over a dimmed mat before
+   *  they land. An unnamed draw — the opponent's, mostly — stays face-down. */
+  revealed: boolean;
+  pileLeft: number;
+  pileTop: number;
+  pileWidth: number;
+  pileHeight: number;
+  matLeft: number;
+  matTop: number;
+  matWidth: number;
+  matHeight: number;
+  cardWidth: number;
+}
+
 type FxListener = (e: FxEvent) => void;
 type FocusListener = (f: FxFocus) => void;
 type PlateListener = (p: FxMovePlate) => void;
+type DrawListener = (d: FxDrawFlight) => void;
 
 const fxListeners = new Set<FxListener>();
 const focusListeners = new Set<FocusListener>();
 const plateListeners = new Set<PlateListener>();
+const drawListeners = new Set<DrawListener>();
 
 export function emitFx(e: FxEvent): void {
   fxListeners.forEach((l) => l(e));
@@ -122,6 +152,15 @@ export function emitMovePlate(p: FxMovePlate): void {
 export function onMovePlate(l: PlateListener): () => void {
   plateListeners.add(l);
   return () => plateListeners.delete(l);
+}
+
+export function emitDrawFlight(d: FxDrawFlight): void {
+  drawListeners.forEach((l) => l(d));
+}
+
+export function onDrawFlight(l: DrawListener): () => void {
+  drawListeners.add(l);
+  return () => drawListeners.delete(l);
 }
 
 /* ──────────────────────────────────────────────────────────────── */

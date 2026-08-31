@@ -57,6 +57,7 @@ import {
 import { focusRole, resolveClaim, type MatCards } from "./card3d/claim";
 import {
   conditionColor,
+  emitDrawFlight,
   emitFocus,
   emitFx,
   emitMovePlate,
@@ -342,6 +343,45 @@ export function Pile({
     label === "Draw" ? "draw" : label === "Discard" ? "discard" : null;
   const { beat, phase, instant, reducedMotion } = useBeat();
   const matActor = useMatActor();
+  const matBounds = useMatBounds();
+  const pileRef = useRef<HTMLDivElement>(null);
+  const drewRef = useRef<number | null>(null);
+
+  // The draw pile is the only thing that knows where the draw pile is, so it
+  // is what tells the board where a drawn card should fly from. Fires on
+  // `act`, the phase where the card leaves the deck — see DrawFlight for the
+  // rest of the sequence.
+  useEffect(() => {
+    if (pileKind !== "draw" || reducedMotion || instant) return;
+    if (!beat || phase !== "act") return;
+    if (beat.kind !== "draw" && beat.kind !== "opening_hand") return;
+    if (matActor == null || beat.actor !== matActor) return;
+    if (drewRef.current === beat.actionIndex) return;
+    const el = pileRef.current;
+    const mat = matBounds?.();
+    if (!el || !mat) return;
+    const r = el.getBoundingClientRect();
+    if (r.width === 0) return;
+    drewRef.current = beat.actionIndex;
+    emitDrawFlight({
+      actionIndex: beat.actionIndex,
+      actor: matActor,
+      count: beat.kind === "opening_hand" ? beat.handSize : Math.max(1, beat.count),
+      // An opening hand is always shown; a turn draw only when the log named
+      // the card, which it does for the exporting player and not the opponent.
+      revealed: beat.kind === "opening_hand" || beat.cards.length > 0,
+      pileLeft: r.left,
+      pileTop: r.top,
+      pileWidth: r.width,
+      pileHeight: r.height,
+      matLeft: mat.left,
+      matTop: mat.top,
+      matWidth: mat.width,
+      matHeight: mat.height,
+      cardWidth: width,
+    });
+  }, [beat, phase, instant, reducedMotion, matActor, matBounds, pileKind, width]);
+
   const pileActive =
     !reducedMotion &&
     !instant &&
@@ -373,6 +413,7 @@ export function Pile({
 
   return (
     <motion.div
+      ref={pileRef}
       className={`relative bg-black shadow-sm ${className}`}
       style={{ width: holderW, borderRadius: m.radius, padding: m.pad }}
       title={hint ? `${label} · ${hint}` : label}
@@ -721,9 +762,10 @@ export function PokemonCardImage({
       });
     }
 
-    if (perfRole === "actor" && perfPhase === "act" && perfBeat.kind === "ability") {
-      emitFx({ kind: "spark", clientX: cx, clientY: cy, intensity: 1, color: "#a5f3fc" });
-    }
+    // No burst for an ability. Abilities are the most-used line in a modern
+    // log — a Trade every turn, often twice — and a spark on each one turned
+    // routine card draw into the busiest thing on the board. The move name
+    // plate already says an ability fired, and says which.
 
     // Damage leaving the Pokémon it was moved off. The counterpart landing on
     // the destination is emitted by that card, on the other mat, as its own
@@ -995,30 +1037,6 @@ export function PokemonCardImage({
               />
             )}
         </AnimatePresence>
-        <AnimatePresence>
-          {perf.role === "target" &&
-            perf.phase === "impact" &&
-            perf.incomingDamage != null && (
-              <DamageBurst
-                key={`${perf.beat?.actionIndex}-dmg`}
-                amount={perf.incomingDamage}
-                fontSize={Math.max(11, Math.round(m.cardW * 0.34))}
-                radius={m.cardRadius}
-                tint={
-                  // Condition damage wears its condition's colour, so the
-                  // badge agrees with the ring being drawn around the card at
-                  // the same moment instead of contradicting it.
-                  conditionDamage
-                    ? {
-                        from: shade(conditionColor(conditionDamage), -30),
-                        to: conditionColor(conditionDamage),
-                        glow: `${conditionColor(conditionDamage)}99`,
-                      }
-                    : undefined
-                }
-              />
-            )}
-        </AnimatePresence>
       </div>
 
       {/* Info strip — HP header (label + remaining/total) above the HP bar. */}
@@ -1069,6 +1087,34 @@ export function PokemonCardImage({
           {footer}
         </div>
       )}
+      {/* Damage sits at holder level, not inside the card-art box. Contained
+          by the art it was boxed in by the black frame around it, which is
+          the one part of the card that reads as the object's edge — a number
+          announcing a hit should sit on top of the whole thing. */}
+      <AnimatePresence>
+        {perf.role === "target" &&
+          perf.phase === "impact" &&
+          perf.incomingDamage != null && (
+            <DamageBurst
+              key={`${perf.beat?.actionIndex}-dmg`}
+              amount={perf.incomingDamage}
+              fontSize={Math.max(11, Math.round(m.cardW * 0.34))}
+              radius={m.radius}
+              tint={
+                // Condition damage wears its condition's colour, so the badge
+                // agrees with the ring being drawn around the card at the same
+                // moment instead of contradicting it.
+                conditionDamage
+                  ? {
+                      from: shade(conditionColor(conditionDamage), -30),
+                      to: conditionColor(conditionDamage),
+                      glow: `${conditionColor(conditionDamage)}99`,
+                    }
+                  : undefined
+              }
+            />
+          )}
+      </AnimatePresence>
       {/* Drawn around the holder rather than the card art, so it rings the
           whole object the way the black container defines it. */}
       <AnimatePresence>
