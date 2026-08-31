@@ -748,7 +748,32 @@ export function PokemonCardImage({
     }
   }, [perform, reducedMotion, beatInstant, perfBeat, perfPhase, perfRole]);
   const clickable = onClick != null || (inspectable && inspect != null);
-  const remainingHp = mon.hp != null ? Math.max(0, mon.hp - mon.damage) : null;
+  // Damage the card is SHOWING, which is not always the damage it has.
+  //
+  // A frame is the board after its action, so a struck Pokémon arrives at the
+  // beat already carrying the damage. Left alone, the HP bar therefore drained
+  // on the beat's first phase — during the attacker's wind-up, more than a
+  // second before the blow lands and the counter drops onto the card. The
+  // consequence was announcing itself before the cause.
+  //
+  // So the card holds its pre-damage reading through the wind-up and pays it
+  // at `impact`, alongside the number. Only ever a presentational delay: the
+  // frame's own damage is what's shown from `impact` onward, and any path
+  // without a performance (a scrub, reduced motion) has no incomingDamage and
+  // reads the frame directly.
+  const holdingDamage =
+    perf.role === "target" &&
+    perf.incomingDamage != null &&
+    (perf.phase === "anticipate" || perf.phase === "act");
+  const shownDamage = holdingDamage
+    ? Math.max(0, mon.damage - (perf.incomingDamage ?? 0))
+    : mon.damage;
+  // True on the single phase where the held damage is released, so the bar can
+  // wait for the counter to land before it starts moving.
+  const damageJustLanded =
+    perf.role === "target" && perf.incomingDamage != null && perf.phase === "impact";
+
+  const remainingHp = mon.hp != null ? Math.max(0, mon.hp - shownDamage) : null;
   const hadFallback = !mon.imageUrl;
   const m = replayTrayMetrics(width);
   const barH = Math.max(3, Math.round(m.strip * 0.22));
@@ -974,13 +999,23 @@ export function PokemonCardImage({
             {/* Drains rather than jumps. An HP bar that snaps to its new
                 length is the single clearest tell that the board is a
                 sequence of stills; draining it over the impact ties the
-                number to the blow that caused it. */}
+                number to the blow that caused it.
+                
+                The short delay lets the damage counter land first. Cause,
+                then consequence — the bar chasing the number reads as the
+                hit doing something, where the two moving together reads as
+                one event twice. */}
             <motion.div
               className="h-full rounded-full"
               style={{ background: hpFill }}
               initial={false}
               animate={{ width: `${hpPct}%` }}
-              transition={{ type: "spring", stiffness: 180, damping: 26 }}
+              transition={{
+                type: "spring",
+                stiffness: 180,
+                damping: 26,
+                delay: damageJustLanded ? 0.17 : 0,
+              }}
             />
           </div>
         </div>
