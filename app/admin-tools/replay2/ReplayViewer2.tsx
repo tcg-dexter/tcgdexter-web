@@ -825,6 +825,14 @@ function HandStrip({
             <motion.div
               key={card.id}
               layout
+              // Shared with the card in flight from the deck (see DrawFlight).
+              // The drawn card does not get replaced by a hand card when it
+              // arrives — it BECOMES this element, animating from wherever it
+              // was hovering over the mat into its slot in the hand, resizing
+              // into the cropped strip on the way. Without the shared id there
+              // are two separate cards and a handoff to disguise; with it
+              // there is one card that moves.
+              layoutId={`hand-${card.id}`}
               // No drop shadow: it would sit below the card's cropped edge,
               // right where the gradient is trying to fade the card into
               // the background — a shadow there reads as a hard edge under

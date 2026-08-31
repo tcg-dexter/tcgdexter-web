@@ -86,6 +86,8 @@ export function DrawFlight({
   // emits that land in the gap.
   const onStartedRef = useRef(onStarted);
   onStartedRef.current = onStarted;
+  const onLandedRef = useRef(onLanded);
+  onLandedRef.current = onLanded;
 
   useEffect(() => {
     if (reducedMotion) return;
@@ -165,7 +167,31 @@ export function DrawFlight({
     ? Math.min(w * 0.72, (flight!.matW * 0.8) / Math.max(1, faces.length))
     : 0;
   const landed = ready && landedFor === flight!.actionIndex;
+  const settling = phase === "settle";
+  /**
+   * Whether these cards have real hand elements to become.
+   *
+   * Only the player's hand is on screen, and only a named draw resolves to
+   * hand cards with ids. When both hold, the flight doesn't fly to the hand
+   * and dissolve — it simply stops rendering, and the hand elements that take
+   * its place share its layoutId, so framer moves the very same card into the
+   * strip. The opponent's cards have nothing to become and still leave frame
+   * on their own.
+   */
+  const handoff = ready && flight!.actor === "player" && faces.some((f) => f != null);
   const showScrim = ready && active && !landed && flight!.revealed && phase === "impact";
+
+  // The handoff moment. Retiring the flight and mounting the hand in the same
+  // commit is what lets framer treat them as one element; an exit animation
+  // here would keep both alive at once and turn the move into a crossfade
+  // between two cards.
+  const flightActionIndex = ready ? flight!.actionIndex : null;
+  useEffect(() => {
+    if (!active || !handoff || !settling || flightActionIndex == null) return;
+    if (landedFor === flightActionIndex) return;
+    setLandedFor(flightActionIndex);
+    onLandedRef.current?.(flightActionIndex);
+  }, [active, handoff, settling, flightActionIndex, landedFor]);
 
   return (
     <div ref={hostRef} className="pointer-events-none absolute inset-0 z-[35]">
@@ -198,7 +224,9 @@ export function DrawFlight({
           !landed &&
           faces.map((card, i) => {
             const offset = (i - (faces.length - 1) / 2) * fan;
-            const landing = phase === "settle";
+            // Only cards with nowhere to land fly out; the rest are handed to
+            // the hand strip above.
+            const landing = settling && !handoff;
             return (
               <motion.div
                 key={`${flight!.actionIndex}-${i}`}
@@ -219,6 +247,12 @@ export function DrawFlight({
                   rotateY: 180,
                   opacity: 0,
                 }}
+                // The card that will become a hand element carries that
+                // element's layoutId, so framer animates one card into the
+                // strip rather than swapping two.
+                layoutId={
+                  handoff && card ? `hand-${card.id}` : undefined
+                }
                 animate={
                   landing
                     ? {
@@ -226,11 +260,9 @@ export function DrawFlight({
                         top: endY - h / 2,
                         scale: 0.7,
                         rotateY: 0,
-                        // Arrives solid. It used to fade out on the way down,
-                        // which read as the card evaporating short of the hand
-                        // — and the hand had already been showing it the whole
-                        // time anyway, so nothing looked handed over.
-                        opacity: 1,
+                        // Leaves frame rather than landing: this branch is the
+                        // opponent's draw, which has no visible hand to go to.
+                        opacity: 0,
                       }
                     : {
                         left: midX + offset - w / 2,
@@ -240,7 +272,15 @@ export function DrawFlight({
                         opacity: 1,
                       }
                 }
-                exit={{ opacity: 0, transition: { duration: 0.18 } }}
+                // A handoff card must leave in the same commit its hand
+                // element arrives: any exit duration keeps both alive at once,
+                // and two live elements sharing a layoutId crossfade instead
+                // of moving. Cards leaving frame keep their fade.
+                exit={
+                  handoff
+                    ? { opacity: 0, transition: { duration: 0 } }
+                    : { opacity: 0, transition: { duration: 0.18 } }
+                }
                 onAnimationComplete={() => {
                   // Only the last card of the fan, and only on the leg that
                   // ends in the hand — this fires for the flight out of the
@@ -257,6 +297,10 @@ export function DrawFlight({
                   stiffness: landing ? 200 : 260,
                   damping: 30,
                   mass: 0.8,
+                  // The move into the hand is the shared-layout leg, and it
+                  // is the one the eye follows — given its own spring so the
+                  // card settles into the strip rather than snapping.
+                  layout: { type: "spring", stiffness: 260, damping: 32, mass: 0.9 },
                 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
