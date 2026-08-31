@@ -261,13 +261,14 @@ const SHAPE_BY_KIND: Record<Beat["kind"], ChoreographySpec> = {
       { phase: "settle", ms: 160 },
     ],
   },
-  // Cheap and constant. Drawing is the metronome of a turn, not an event.
-  // A draw whose cards the log NAMES gets the longer shape below instead —
-  // there is something to read, and no time to read it in 270.
+  // A card off the deck and into the hand. No `impact`: nothing is held up
+  // to be read any more — the card travels face-down and turns over in the
+  // hand, where it stays, rather than being presented over the mat first.
+  // `act` is the lift off the deck; `settle` hands it to the hand strip.
   draw: {
     phases: [
-      { phase: "act", ms: 200 },
-      { phase: "settle", ms: 70 },
+      { phase: "act", ms: 190 },
+      { phase: "settle", ms: 190 },
     ],
   },
 
@@ -287,11 +288,12 @@ const SHAPE_BY_KIND: Record<Beat["kind"], ChoreographySpec> = {
       { phase: "settle", ms: 220 },
     ],
   },
+  // Seven at once, dealt in a stagger — the lift needs longer than a single
+  // card's, and the hand it fills stays face-down until the first turn.
   opening_hand: {
     phases: [
-      { phase: "act", ms: 300 },
-      { phase: "impact", ms: 420 },
-      { phase: "settle", ms: 260 },
+      { phase: "act", ms: 380 },
+      { phase: "settle", ms: 320 },
     ],
   },
   // A mulligan is a small public misfortune, and the overlay reveals a hand
@@ -354,25 +356,6 @@ const SHAPE_BY_KIND: Record<Beat["kind"], ChoreographySpec> = {
 };
 
 /**
- * A draw the log named.
- *
- * The card leaves the deck on `act`, is held face-up over the dimmed mat on
- * `impact`, and lands on `settle` — so the phase clock drives the three beats
- * of the flight without the animation needing timers of its own.
- *
- * Longer than a bare draw by design, and it is the most frequently played beat
- * in the whole replay, so it is also the first place to look if playback ever
- * feels padded.
- */
-const SHAPE_DRAW_REVEAL: ChoreographySpec = {
-  phases: [
-    { phase: "act", ms: 240 },
-    { phase: "impact", ms: 260 },
-    { phase: "settle", ms: 180 },
-  ],
-};
-
-/**
  * A frame that repeats the previous frame's actionIndex.
  *
  * `buildReplayPayload` expands a discard-then-draw exchange into three frames
@@ -429,7 +412,6 @@ const BY_KIND = Object.fromEntries(
 ) as Record<Beat["kind"], ChoreographySpec>;
 
 const CONTINUATION = atTempo(SHAPE_CONTINUATION);
-const DRAW_REVEAL = atTempo(SHAPE_DRAW_REVEAL);
 
 /**
  * A jump — scrub, turn skip, battle load, rewind. There is no performance to
@@ -451,8 +433,6 @@ export function choreographyFor(
   // No beat at all — frame 0, or a frame whose action the engine never
   // emitted an event for. Paced like ordinary turn texture.
   if (!beat) return BY_WEIGHT.normal;
-  // The one beat whose shape depends on its contents rather than its kind.
-  if (beat.kind === "draw" && beat.cards.length > 0) return DRAW_REVEAL;
   return BY_KIND[beat.kind];
 }
 
@@ -460,7 +440,6 @@ export function choreographyFor(
  *  than trusting that each was looked at. */
 export const ALL_SPECS: ChoreographySpec[] = Object.values(BY_KIND).concat([
   CONTINUATION,
-  DRAW_REVEAL,
   INSTANT,
   ...Object.values(BY_WEIGHT),
 ]);

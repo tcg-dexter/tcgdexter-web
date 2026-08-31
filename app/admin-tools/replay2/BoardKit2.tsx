@@ -369,7 +369,6 @@ export function Pile({
       actionIndex: beat.actionIndex,
       actor: matActor,
       count: flight.count,
-      revealed: flight.revealed,
       pileLeft: r.left,
       pileTop: r.top,
       pileWidth: r.width,

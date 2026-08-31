@@ -727,6 +727,7 @@ function HandStrip({
   cardWidth,
   matWidth,
   instant,
+  faceDown,
   onCardClick,
 }: {
   cards: HandCard[];
@@ -737,6 +738,16 @@ function HandStrip({
    *  inspector's own thumbnail rows are. */
   matWidth: number;
   instant: boolean;
+  /**
+   * Hold the hand face-down.
+   *
+   * Set through the whole of setup, so the opening seven arrive from the deck
+   * as backs and turn over together when the first turn begins — which is when
+   * a player actually looks at them. Derived from the frame's turn number
+   * rather than remembered, so scrubbing into the middle of a game shows a
+   * face-up hand instead of whatever state a counter happened to be left in.
+   */
+  faceDown: boolean;
   /** Opens the mat-overlay inspector for a tapped card. Omitted (or a
    *  card that isn't `revealed`) means the card isn't clickable — there's
    *  nothing to inspect about a card the log never named. */
@@ -819,8 +830,8 @@ function HandStrip({
         style={{ width: viewportWidth, gap: HAND_STRIP_GAP_PX, scrollSnapType: "x proximity" }}
       >
         <AnimatePresence initial={false}>
-          {cards.map((card) => {
-            const clickable = card.revealed && onCardClick != null;
+          {cards.map((card, index) => {
+            const clickable = card.revealed && onCardClick != null && !faceDown;
             return (
             <motion.div
               key={card.id}
@@ -851,28 +862,76 @@ function HandStrip({
                   : undefined
               }
             >
-              {/* The image renders at the card's FULL height inside a
-                  wrapper cropped to visibleHeight — top-anchored, so it's
-                  the bottom that's cut off rather than the top. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={card.revealed ? card.imageUrl ?? undefined : CARD_BACK_URL}
-                alt={card.revealed ? card.name : "Face-down card"}
-                className="absolute inset-x-0 top-0 w-full object-cover"
-                style={{ height: cardHeight }}
-              />
-              {card.revealed && !card.imageUrl && (
-                // Catalog miss on a revealed card — same treatment as the
-                // overlay cards: show the name rather than nothing.
-                <div className="absolute inset-0 flex items-center justify-center bg-white p-1 text-center text-[8px] font-semibold leading-tight text-black">
-                  {card.name}
+              {/* A real two-sided card, turned over in place.
+                  
+                  The flip lives on an inner element so the outer one is free
+                  to run its layout / layoutId animation: both drive the same
+                  `transform`, and sharing an element makes the arrival from
+                  the deck and the turn-over fight each other.
+                  
+                  Both faces are always rendered, the back pre-rotated behind
+                  the front, and backface-visibility hides whichever is facing
+                  away. That is what makes it a card being turned rather than
+                  an image being swapped at the halfway point — there is no
+                  moment where the wrong side is briefly visible. */}
+              <motion.div
+                className="absolute inset-0"
+                style={{
+                  transformStyle: "preserve-3d",
+                  transformPerspective: Math.max(600, cardWidth * 9),
+                }}
+                initial={false}
+                animate={{ rotateY: faceDown && card.revealed ? 180 : 0 }}
+                transition={{
+                  duration: instant ? 0 : 0.5,
+                  ease: [0.4, 0, 0.2, 1],
+                  // Dealt, not revealed all at once: the hand turns over left
+                  // to right as the first turn starts.
+                  delay: instant ? 0 : index * 0.055,
+                }}
+              >
+                {/* Front. The image renders at the card's FULL height inside a
+                    wrapper cropped to visibleHeight — top-anchored, so it's
+                    the bottom that's cut off rather than the top. */}
+                <div
+                  className="absolute inset-0 overflow-hidden rounded"
+                  style={{ backfaceVisibility: "hidden" }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={card.revealed ? card.imageUrl ?? undefined : CARD_BACK_URL}
+                    alt={card.revealed ? card.name : "Face-down card"}
+                    className="absolute inset-x-0 top-0 w-full object-cover"
+                    style={{ height: cardHeight }}
+                  />
+                  {card.revealed && !card.imageUrl && (
+                    // Catalog miss on a revealed card — same treatment as the
+                    // overlay cards: show the name rather than nothing.
+                    <div className="absolute inset-0 flex items-center justify-center bg-white p-1 text-center text-[8px] font-semibold leading-tight text-black">
+                      {card.name}
+                    </div>
+                  )}
                 </div>
-              )}
+                {/* Back. */}
+                <div
+                  className="absolute inset-0 overflow-hidden rounded"
+                  style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+                  aria-hidden
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={CARD_BACK_URL}
+                    alt=""
+                    className="absolute inset-x-0 top-0 w-full object-cover"
+                    style={{ height: cardHeight }}
+                  />
+                </div>
+              </motion.div>
               {/* Fades the cropped edge into the page background instead of
                   ending the card on a hard cut line — the same "peeking
                   content, gradient into var(--bg)" treatment the desktop
                   thread uses at its own scroll edges. */}
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-b from-transparent to-[var(--bg)]" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-1/2 bg-gradient-to-b from-transparent to-[var(--bg)]" />
             </motion.div>
             );
           })}
@@ -1782,6 +1841,9 @@ function Board({
             always the player's own. */}
         <HandStrip
           cards={visibleHand}
+          // Setup is turn 0; the first turn is 1. The hand turns over on that
+          // boundary.
+          faceDown={(frame?.turn ?? 0) < 1}
           cardWidth={cardWidth}
           matWidth={matWidth}
           instant={instant}

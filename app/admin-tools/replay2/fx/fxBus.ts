@@ -103,9 +103,6 @@ export interface FxDrawFlight {
   actor: "player" | "opponent";
   /** How many cards left the deck. */
   count: number;
-  /** The log named them, so they are shown face-up over a dimmed mat before
-   *  they land. An unnamed draw — the opponent's, mostly — stays face-down. */
-  revealed: boolean;
   pileLeft: number;
   pileTop: number;
   pileWidth: number;

@@ -16,17 +16,20 @@ import type { HandCard, ReplayFrame } from "@/lib/replay/frames";
  * nothing travelled between them. The board's busiest event was the one it
  * never showed.
  *
- * Three beats, driven by the director's phases rather than timers of its own,
- * so the flight stays locked to playback speed:
+ * Face-down the whole way. A card is not turned over on its way out of the
+ * deck — it is put in a hand, and looked at there. The earlier version held it
+ * face-up over the middle of the mat first, which is a thing no player does
+ * and which meant the card had to be shown twice: once presented, once in the
+ * hand. Now it travels once and turns over where it lands (see the hand strip,
+ * which keeps the opening seven face-down until the first turn begins).
  *
- *   act     the card lifts off the deck and turns toward the viewer
- *   impact  (named draws only) it hangs face-up over the dimmed mat
- *   settle  it lands — into the hand for the player, up and out of frame past
- *           the top of the mat for the opponent, whose hand isn't on screen
+ * Two beats, driven by the director's phases rather than timers of its own, so
+ * the flight stays locked to playback speed:
  *
- * An unnamed draw has no `impact` phase in its choreography at all, so it
- * simply passes through the middle and away — face-down, because nobody saw
- * what it was.
+ *   act     the card lifts off the deck
+ *   settle  it goes to the hand — as the hand's OWN element, via a shared
+ *           layoutId, so one card moves rather than two being swapped; or, for
+ *           the opponent, up and out of frame, their hand not being on screen
  */
 
 interface FlightState extends FxDrawFlight {
@@ -119,7 +122,12 @@ export function DrawFlight({
     beat.actionIndex === flight.actionIndex;
 
   /**
-   * The faces to show, taken from the frame's hand rather than from the beat.
+   * The hand slots these cards are destined for.
+   *
+   * Not for their art — the flight is face-down, so nothing here is drawn from
+   * the card itself. It is for the ids: each flying card carries the layoutId
+   * of the hand element it will become, which is what makes the landing one
+   * card moving rather than two cards swapped.
    *
    * The beat names the cards but carries no art, and resolving names to images
    * in the browser would mean shipping the card catalog to it. The engine
@@ -127,17 +135,13 @@ export function DrawFlight({
    * exactly the ones that just arrived — and they already carry resolved art
    * because the board needs it for the hand strip anyway.
    *
-   * Read from whichever side drew, NOT from the player's hand. It is tempting
-   * to assume the player is the one with real cards, and it is wrong: the log
-   * names the draws of whoever exported it, and that account is not always the
-   * side the payload is normalized to. In example-1 it is the opponent whose
-   * draws are named. Each HandCard carries its own `revealed` flag, so
-   * deferring to that gets both cases right and needs no rule about sides.
+   * Read from whichever side drew rather than assuming the player: the engine
+   * pushes drawn cards onto the end of that side's hand, so the last N are the
+   * ones that just arrived.
    */
   const faces: (HandCard | null)[] = (() => {
     if (!flight || !frame) return [];
     const n = Math.min(flight.count, MAX_SHOWN);
-    if (!flight.revealed) return Array.from({ length: n }, () => null);
     const hand = flight.actor === "player" ? frame.player.hand : frame.opponent.hand;
     const drawn = hand.slice(Math.max(0, hand.length - flight.count));
     return Array.from({ length: n }, (_, i) => drawn[i] ?? null);
@@ -155,7 +159,6 @@ export function DrawFlight({
   const w = ready ? Math.max(28, Math.round(flight!.cardWidth * 0.86)) : 0;
   const h = w * (342 / 245);
   const midX = ready ? flight!.matX + flight!.matW / 2 : 0;
-  const midY = ready ? flight!.matY + flight!.matH / 2 : 0;
   // The player's hand sits under the board; the opponent's is off screen
   // entirely, so their cards leave past the top of their own mat.
   const endY = !ready
@@ -179,7 +182,6 @@ export function DrawFlight({
    * on their own.
    */
   const handoff = ready && flight!.actor === "player" && faces.some((f) => f != null);
-  const showScrim = ready && active && !landed && flight!.revealed && phase === "impact";
 
   // The handoff moment. Retiring the flight and mounting the hand in the same
   // commit is what lets framer treat them as one element; an exit animation
@@ -195,29 +197,6 @@ export function DrawFlight({
 
   return (
     <div ref={hostRef} className="pointer-events-none absolute inset-0 z-[35]">
-      {/* The same dimming the discard/draw exchange overlay uses — 90% of the
-          page background rather than a black scrim, so it reads as the app
-          quieting the mat rather than a modal over it. */}
-      <AnimatePresence>
-        {showScrim && (
-          <motion.div
-            key={`${flight!.actionIndex}-scrim`}
-            className="absolute rounded-xl"
-            style={{
-              left: flight!.matX,
-              top: flight!.matY,
-              width: flight!.matW,
-              height: flight!.matH,
-              backgroundColor: "color-mix(in srgb, var(--bg) 90%, transparent)",
-            }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-          />
-        )}
-      </AnimatePresence>
-
       <AnimatePresence>
         {ready &&
           active &&
@@ -243,8 +222,8 @@ export function DrawFlight({
                 initial={{
                   left: flight!.pileX - w / 2,
                   top: flight!.pileY - h / 2,
-                  scale: 0.55,
-                  rotateY: 180,
+                  scale: 0.8,
+                  rotateY: 0,
                   opacity: 0,
                 }}
                 // The card that will become a hand element carries that
@@ -265,8 +244,13 @@ export function DrawFlight({
                         opacity: 0,
                       }
                     : {
-                        left: midX + offset - w / 2,
-                        top: midY - h / 2,
+                        // Lifted off the deck and fanned a little, still ON the
+                        // deck. The journey to the hand is the shared-layout
+                        // move at `settle`, not a second position here — a
+                        // waypoint in the middle of the mat is exactly the
+                        // presentation step this no longer does.
+                        left: flight!.pileX - w / 2 + offset * 0.22,
+                        top: flight!.pileY - h / 2 - h * 0.14 - i * 2,
                         scale: 1,
                         rotateY: 0,
                         opacity: 1,
@@ -305,7 +289,9 @@ export function DrawFlight({
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={(card?.revealed ? card.imageUrl : null) ?? CARD_BACK_URL}
+                  // Always face-down. What the card is becomes visible when
+                  // it turns over in the hand, not before.
+                  src={CARD_BACK_URL}
                   alt=""
                   className="h-full w-full rounded object-cover shadow-[0_10px_26px_rgba(0,0,0,0.4)]"
                   // Deliberately NOT backface-hidden. This is one image being
