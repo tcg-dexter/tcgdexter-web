@@ -171,18 +171,22 @@ function MatBorder({ colorway }: { colorway: SpotlightColorway }) {
       preserveAspectRatio="none"
       aria-hidden
     >
-      {/* The stroke draws in, un-draws, and draws again — a continuous
-          ease-in / ease-out loop rather than one draw that lands and sits
-          static waiting for the beat to end. Half-beat draw times keep the
-          motion legible without feeling frantic.
+      {/* The stroke draws in and then continues in the SAME direction — the
+          dash's leading edge keeps moving around the outline, so the tail
+          catches up from the start and the whole thing erases forward.
+          One continuous forward motion, not a draw that reverses back to
+          nothing.
 
-          repeatType "reverse" reuses the same forward transition on the way
-          back, so the ease-in of the draw becomes the ease-out of the
-          un-draw for free — no separate easing curve to keep in step.
+          Both endpoints (offset 1 and offset -1) are "nothing visible" —
+          the pattern is fully outside the path in either state — so the
+          repeat's jump from -1 back to 1 is imperceptible, and the eye
+          reads the loop as a stroke that keeps going the same way.
 
-          On exit, framer stops the loop and the parent motion.div fades
-          the whole overlay's opacity, so the stroke leaves with everything
-          else rather than needing its own exit transition. */}
+          easeInOut applied to the whole [1, 0, -1] curve gives a soft
+          acceleration at the start and deceleration at the end of each
+          pass, so the motion breathes rather than sitting at constant
+          speed. On exit, framer stops the loop and the parent motion.div
+          fades the overlay out. */}
       <motion.rect
         x={stroke / 2}
         y={stroke / 2}
@@ -197,12 +201,12 @@ function MatBorder({ colorway }: { colorway: SpotlightColorway }) {
         pathLength={1}
         strokeDasharray="1 1"
         initial={{ strokeDashoffset: 1 }}
-        animate={{ strokeDashoffset: 0 }}
+        animate={{ strokeDashoffset: [1, 0, -1] }}
         transition={{
-          duration: 1.1,
+          duration: 2.2,
           ease: "easeInOut",
           repeat: Infinity,
-          repeatType: "reverse",
+          repeatType: "loop",
         }}
         style={{
           filter: `drop-shadow(0 0 6px ${glow})`,

@@ -1013,7 +1013,7 @@ export function PokemonCardImage({
     >
     <div
       ref={holderRef}
-      className={`relative shadow-sm transition-opacity duration-200 ${
+      className={`relative bg-black shadow-sm transition-opacity duration-200 ${
         clickable ? "cursor-pointer" : ""
       } ${dimmed ? "opacity-50" : ""}`}
       style={{ width: m.containerW, borderRadius: m.radius, padding: m.pad }}
@@ -1026,45 +1026,32 @@ export function PokemonCardImage({
           : undefined)
       }
     >
-      {/* The holder's own black background, on its own layer instead of
-          painted straight onto the container above.
+      {/* The black holder is painted DIRECTLY on this div, the same way it
+          was before the setup reveal split it out into a separate animated
+          layer.
 
-          A card placed during setup starts on the mat with nothing framing
-          it — no container to have "arrived" in yet — and this is what grows
-          in around it once the flip lands: the frame snapping into place
-          rather than the black simply being there from the first paint. Any
-          other placement keeps it mounted at full strength from the start,
-          same as before this had its own layer. Keyed with the card above so
-          the two remount — and the frame resets to "not yet earned" — in
-          lockstep on every new placement.
+          The split was there to let the frame "grow in" around the card
+          only after the setup flip landed — an absolute inset-0 motion.div
+          that faded and scaled up on a delay. The problem was that layer
+          needed z-index -1 to sit behind the HP bar's plain flow content
+          (see the CSS painting rule: non-positioned flow paints BEFORE
+          positioned descendants at z-index 0+), and z-index -1 doesn't
+          stay contained inside a `position: relative` parent — it escapes
+          upward to the nearest stacking-context ancestor, which for this
+          card is CardSurface's rotating motion.div. That put the black
+          layer BEHIND everything CardSurface renders, and depending on the
+          browser and the beat it either z-fought with the card image
+          layers, painted at partial opacity, or (during the exit of an
+          AnimatePresence swap on evolution) briefly rendered twice, each
+          copy fighting the other for its share of pixels. The visible
+          symptom was flicker and a faded frame that reads as glitchy —
+          the "graphical artifacts on the black card container".
 
-          z-index -1, not 0: the HP row and footer below the art are plain
-          flow content with no position of their own, and CSS paints
-          non-positioned flow content BEFORE any positioned descendant at
-          z-index 0 or above, regardless of DOM order. At 0 this "background"
-          layer was painting IN FRONT of them — a solid black sheet over the
-          HP bar and attack list, not a backdrop behind it. -1 paints before
-          that flow content, same as an ordinary background would. */}
-      <AnimatePresence initial={false}>
-        <motion.div
-          key={mon.name}
-          className="pointer-events-none absolute inset-0"
-          style={{ borderRadius: m.radius, background: "#000", zIndex: -1 }}
-          initial={isSetupReveal ? { opacity: 0, scale: 0.82 } : false}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={
-            isSetupReveal
-              ? {
-                  delay: (SETUP_HOLD_MS + SETUP_TURN_MS) / 1000,
-                  type: "spring",
-                  stiffness: 300,
-                  damping: 16,
-                  mass: 0.6,
-                }
-              : { duration: 0 }
-          }
-        />
-      </AnimatePresence>
+          Painting the black on the holder itself sidesteps all of that:
+          it's the holder's own background, so it lives in the holder's
+          normal painting slot with no z-index arithmetic. The face-down
+          reveal still works — the flip is on the card image inside, which
+          just sits inside a holder that was already black. */}
       {/* Tool card(s) behind the Pokémon, shifted up so the title band shows
           above the Pokémon card, still inside the black holder. */}
       {tools.map((tool, i) => (
