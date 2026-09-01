@@ -166,7 +166,21 @@ function MatBorder({ colorway }: { colorway: SpotlightColorway }) {
   const stroke = 3;
   return (
     <svg
-      className="pointer-events-none absolute inset-0"
+      className="pointer-events-none absolute inset-0 block h-full w-full"
+      // Explicit 100% both axes rather than relying on absolute inset-0 to
+      // stretch the SVG: an SVG with a viewBox and no explicit size has an
+      // INTRINSIC ASPECT RATIO (here 1:1 from the 100×100 viewBox), and
+      // some browsers keep the SVG at that ratio even under top:0/bottom:0,
+      // fitting the shorter axis and leaving the longer one unfilled. The
+      // symptom on this mat (wider than tall) was the outline appearing on
+      // three sides — top, left, right — with the bottom missing entirely,
+      // because the SVG had squared itself to the mat's HEIGHT and its own
+      // bottom sat well above the mat's actual bottom edge. h-full w-full
+      // overrides the intrinsic ratio and forces the SVG to fill; the
+      // preserveAspectRatio="none" below is what lets the rect inside
+      // stretch non-uniformly to trace the mat's real proportions.
+      width="100%"
+      height="100%"
       viewBox="0 0 100 100"
       preserveAspectRatio="none"
       aria-hidden
