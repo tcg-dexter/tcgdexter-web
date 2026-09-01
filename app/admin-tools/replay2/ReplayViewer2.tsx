@@ -53,7 +53,7 @@ import { BeatProvider } from "./director/BeatContext";
 import { FxCanvas } from "./fx/FxCanvas";
 import { drawFlightFor } from "./fx/fxBus";
 import { GameEndFlourish } from "./fx/GameEndFlourish";
-import { SetupCeremony, SetupMatBorder } from "./fx/SetupCeremony";
+import { SetupMatCeremony } from "./fx/SetupCeremony";
 import { MoveNamePlate } from "./fx/MoveNamePlate";
 import { DrawFlight } from "./fx/DrawFlight";
 import { useCamera } from "./fx/useCamera";
@@ -1854,20 +1854,8 @@ function Board({
             the actor of coin_flip stage="won" (or of chose_first), not
             necessarily the first player: the winner can choose to go
             second, and the plate names that too. */}
-        {/* Setup: three mat-highlight ceremonies, one per line the log
-            carries — the caller's call, the winner's win, and the winner's
-            turn-order pick. Each fires on the matching player's mat. The
-            wash + plate live here at board level; the animated border
-            itself renders INSIDE each mat wrapper (see SetupMatBorder
-            below), so the stroke traces the mat's actual box rather than
-            an approximation of it. */}
-        <SetupCeremony
-          beat={beat}
-          phase={beatPhase}
-          reducedMotion={reducedMotion}
-          playerHandle={frame?.player.handle ?? null}
-          opponentHandle={frame?.opponent.handle ?? null}
-        />
+        {/* Setup ceremonies are drawn ON each mat, not at board level —
+            see SetupMatCeremony inside each mat wrapper below. */}
         <div className="flex flex-col" style={{ gap: TAB_GAP_PX }}>
           {/* z-10 on the mat wrappers so each mat paints over the tab tucked
               beneath it. The wrappers are plain positioning shells — mat
@@ -1892,10 +1880,11 @@ function Board({
             id={REPLAY_TOP_MAT_ID}
             className={`relative z-10 ${REPLAY_TOP_MAT_SCROLL_MT}`}
           >
-            {/* Setup border, inline so the stroke traces the mat's own box.
-                See SetupMatBorder — it watches the beat and only lights up
-                when a setup ceremony concerns this mat's actor. */}
-            <SetupMatBorder actor="opponent" />
+            {/* Setup ceremony overlay, inline so its border, wash, and
+                plate all sit ON this mat and nothing else. See
+                SetupMatCeremony — watches the beat and only lights up when
+                a setup ceremony concerns this mat's actor. */}
+            <SetupMatCeremony actor="opponent" handle={frame.opponent.handle ?? null} />
             <PlayerMat
               side="player"
               bench={frame.opponent.bench}
@@ -1975,9 +1964,9 @@ function Board({
             value={(target) => onOpenMatInspect("player", target)}
           >
           <div className="relative z-10">
-            {/* Setup border for the bottom mat — see the twin on the top
-                mat above and SetupMatBorder itself. */}
-            <SetupMatBorder actor="player" />
+            {/* Setup ceremony overlay for the bottom mat — see its twin on
+                the top mat above and SetupMatCeremony itself. */}
+            <SetupMatCeremony actor="player" handle={frame.player.handle ?? null} />
             <PlayerMat
               side="opponent"
               bench={frame.player.bench}
