@@ -700,6 +700,7 @@ function HandStrip({
   cardWidth,
   matWidth,
   instant,
+  hidden,
   onCardClick,
 }: {
   cards: HandCard[];
@@ -710,11 +711,19 @@ function HandStrip({
    *  inspector's own thumbnail rows are. */
   matWidth: number;
   instant: boolean;
+  /** Suppresses the strip's contents while still reserving its height.
+   *  Setup keeps the hand hidden through the ceremony (coin flip, mulligans,
+   *  basics placed) — the 7-card opening hand would otherwise flash under
+   *  the mat, get half-emptied as basics are placed from it, then reappear
+   *  full one draw later, all before the game has visibly begun. See
+   *  ReplayViewer's firstPlayerDrawFrameIndex. */
+  hidden?: boolean;
   /** Opens the mat-overlay inspector for a tapped card. Omitted (or a
    *  card that isn't `revealed`) means the card isn't clickable — there's
    *  nothing to inspect about a card the log never named. */
   onCardClick?: (target: InspectTarget) => void;
 }) {
+  const effectiveCards = hidden ? [] : cards;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [overflow, setOverflow] = useState({ left: false, right: false });
 
@@ -734,29 +743,10 @@ function HandStrip({
     // of cards reflowed differently, so re-measure on every card identity
     // change rather than gating on length alone.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cards.map((c) => c.id).join(","), cardWidth, matWidth]);
+  }, [effectiveCards.map((c) => c.id).join(","), cardWidth, matWidth]);
 
   const cardHeight = Math.round((cardWidth * 342) / 245);
   const visibleHeight = Math.round((cardHeight * HAND_STRIP_VISIBLE_PCT) / 100);
-
-  // An empty hand still holds its place. The strip's height is a pure
-  // function of cardWidth — the gap above it plus one cropped card — so it
-  // can be reserved before there's a card to put in it, and it has to be:
-  // returning null here made the board a strip shorter than it would be one
-  // draw later, so the first card drawn grew the whole column and shoved
-  // the transport controls down the page mid-playback. Only the space is
-  // reserved, never anything visible: no chevrons, no scroll container, no
-  // border, and aria-hidden so a purely geometric box stays out of the
-  // accessibility tree.
-  if (cards.length === 0) {
-    return (
-      <div
-        aria-hidden
-        className="pointer-events-none"
-        style={{ marginTop: HAND_STRIP_TOP_GAP_PX, height: visibleHeight }}
-      />
-    );
-  }
 
   // How many cards actually fit in one row under the mat: n*cardWidth +
   // (n-1)*gap <= available, solved for n and floored — at least 1, so a
@@ -766,8 +756,18 @@ function HandStrip({
     1,
     Math.floor((availableWidth + HAND_STRIP_GAP_PX) / (cardWidth + HAND_STRIP_GAP_PX)),
   );
-  const shown = Math.min(cards.length, maxVisible);
-  const viewportWidth = shown * cardWidth + (shown - 1) * HAND_STRIP_GAP_PX;
+  const shown = Math.min(effectiveCards.length, maxVisible);
+  // Empty (hidden or genuinely empty) hand still holds its place: the strip's
+  // height is a pure function of cardWidth (the gap above plus one cropped
+  // card), and returning a short row on those frames made the whole board
+  // grow a strip taller one draw later, shoving the transport controls down
+  // the page mid-playback. min-height on the outer row reserves it in both
+  // states; the scroll viewport collapses to width 0 rather than centring an
+  // empty box, and the chevrons stay disabled/invisible via `visible`.
+  const viewportWidth =
+    effectiveCards.length === 0
+      ? 0
+      : shown * cardWidth + (shown - 1) * HAND_STRIP_GAP_PX;
 
   const step = cardWidth + HAND_STRIP_GAP_PX;
   function scrollByCard(dir: 1 | -1) {
@@ -777,11 +777,12 @@ function HandStrip({
   return (
     <div
       className="flex items-center justify-center gap-1"
-      style={{ marginTop: HAND_STRIP_TOP_GAP_PX }}
+      style={{ marginTop: HAND_STRIP_TOP_GAP_PX, minHeight: visibleHeight }}
+      aria-hidden={effectiveCards.length === 0}
     >
       <AttachedRowChevron
         direction="left"
-        visible={overflow.left}
+        visible={overflow.left && effectiveCards.length > 0}
         onClick={() => scrollByCard(-1)}
         label="hand"
       />
@@ -791,8 +792,12 @@ function HandStrip({
         className="flex items-start overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         style={{ width: viewportWidth, gap: HAND_STRIP_GAP_PX, scrollSnapType: "x proximity" }}
       >
+        {/* AnimatePresence stays mounted across the hidden→revealed switch so
+            the cards that appear on the first draw frame actually animate in
+            — otherwise the strip would remount with a full hand and the
+            children's enter animation would be suppressed. */}
         <AnimatePresence initial={false}>
-          {cards.map((card) => {
+          {effectiveCards.map((card) => {
             const clickable = card.revealed && onCardClick != null;
             return (
             <motion.div
@@ -845,7 +850,7 @@ function HandStrip({
       </div>
       <AttachedRowChevron
         direction="right"
-        visible={overflow.right}
+        visible={overflow.right && effectiveCards.length > 0}
         onClick={() => scrollByCard(1)}
         label="hand"
       />
@@ -1292,6 +1297,7 @@ function Board({
   error,
   heightBudget,
   instant,
+  revealPlayerHand,
   playerMatGradient,
   opponentMatGradient,
   matInspect,
@@ -1310,6 +1316,10 @@ function Board({
   /** Skip card layout animations because the playhead jumped rather than
    *  stepped — see the `instant` state in ReplayViewer. */
   instant: boolean;
+  /** False while the playhead is still in the setup ceremony (before the
+   *  player's first draw), so the HandStrip stays empty then. See
+   *  ReplayViewer's firstPlayerDrawFrameIndex. */
+  revealPlayerHand: boolean;
   /** When set (desktop, thread+board forming a 16:9 rect), the mat width
    *  is derived from this height budget instead of measured from an
    *  ambient container width — see BOARD_VERTICAL_CHROME_PX. Null falls
@@ -1558,6 +1568,7 @@ function Board({
           cardWidth={cardWidth}
           matWidth={matWidth}
           instant={instant}
+          hidden={!revealPlayerHand}
           onCardClick={(target) => onOpenMatInspect("player", target)}
         />
         </>
@@ -2185,6 +2196,35 @@ export default function ReplayViewer({
     setPlaying(true);
   }
 
+  // Frame index at which the player's hand should first appear — the first
+  // frame past setup (turn >= 1) where the player is the actor and their
+  // hand grew, i.e. the start-of-turn draw on the player's first turn (turn
+  // 1 if they went first, turn 2 if not). Until then the HandStrip stays
+  // hidden: the 7-card opening hand would otherwise flash under the mat
+  // during the setup ceremony (coin flip, mulligans, basics played),
+  // get partially emptied as basics are placed from it, and then reappear
+  // one draw later — all before the game has visibly begun. Null when no
+  // qualifying frame exists (truncated log); the strip stays hidden then,
+  // which is safer than flashing a hand for a game that never started.
+  const firstPlayerDrawFrameIndex = useMemo(() => {
+    if (!data) return null;
+    for (let i = 1; i < data.frames.length; i++) {
+      const f = data.frames[i];
+      const prev = data.frames[i - 1];
+      if (
+        f.actor === "player" &&
+        f.turn >= 1 &&
+        f.player.handCount > prev.player.handCount
+      ) {
+        return i;
+      }
+    }
+    return null;
+  }, [data]);
+
+  const revealPlayerHand =
+    firstPlayerDrawFrameIndex != null && frameIndex >= firstPlayerDrawFrameIndex;
+
   // Index of every frame that opens a new turn (turn number changes vs the
   // prior frame). Drives the outer chevrons — back/forward by whole turn —
   // without scanning the frame array on every click.
@@ -2335,6 +2375,7 @@ export default function ReplayViewer({
             error={error}
             heightBudget={heightBudget}
             instant={instant}
+            revealPlayerHand={revealPlayerHand}
             playerMatGradient={playerMatGradient}
             opponentMatGradient={opponentMatGradient}
             matInspect={matInspect}
