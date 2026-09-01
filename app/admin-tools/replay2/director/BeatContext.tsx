@@ -25,6 +25,16 @@ export interface BeatContextValue {
   instant: boolean;
   /** The viewer honours prefers-reduced-motion; every card should rest. */
   reducedMotion: boolean;
+  /**
+   * The frame belongs to game setup — before the first turn_start, while
+   * Pokémon are being placed face-down and haven't been revealed yet.
+   *
+   * `state.turn.number` starts at 0 and only advances on turn_start (see
+   * lib/engine/initial.ts), so the frame's own turn number is what setup
+   * placements are told apart from an ordinary bench drop by: same
+   * `play_to_slot` beat, different phase of the game around it.
+   */
+  duringSetup: boolean;
 }
 
 const REST: BeatContextValue = {
@@ -32,6 +42,7 @@ const REST: BeatContextValue = {
   phase: "settle",
   instant: false,
   reducedMotion: false,
+  duringSetup: false,
 };
 
 const BeatContext = createContext<BeatContextValue>(REST);
@@ -41,11 +52,12 @@ export function BeatProvider({
   phase,
   instant,
   reducedMotion,
+  duringSetup,
   children,
 }: BeatContextValue & { children: ReactNode }) {
   const value = useMemo(
-    () => ({ beat, phase, instant, reducedMotion }),
-    [beat, phase, instant, reducedMotion],
+    () => ({ beat, phase, instant, reducedMotion, duringSetup }),
+    [beat, phase, instant, reducedMotion, duringSetup],
   );
   return <BeatContext.Provider value={value}>{children}</BeatContext.Provider>;
 }
@@ -80,4 +92,19 @@ export const MatBoundsContext = createContext<(() => DOMRect | null) | null>(nul
 
 export function useMatBounds(): (() => DOMRect | null) | null {
   return useContext(MatBoundsContext);
+}
+
+/**
+ * The CSS gradient of the mat a subtree belongs to.
+ *
+ * Every face-down surface — the draw pile, the prize stack, a card mid-flight,
+ * a setup placement still showing its back — is the same object: this side's
+ * deck. They should all read as cut from the one sleeve, so there is one
+ * source for the colour rather than each place that draws a back deciding
+ * for itself.
+ */
+export const MatGradientContext = createContext<string | null>(null);
+
+export function useMatGradient(): string | null {
+  return useContext(MatGradientContext);
 }

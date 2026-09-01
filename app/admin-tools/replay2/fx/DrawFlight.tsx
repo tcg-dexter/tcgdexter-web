@@ -83,6 +83,8 @@ export function DrawFlight({
   frame,
   reducedMotion,
   staggerMs,
+  playerSleeveGradient,
+  opponentSleeveGradient,
   onLanded,
   onStarted,
 }: {
@@ -99,6 +101,9 @@ export function DrawFlight({
    * flight at all.
    */
   staggerMs: number;
+  /** Sleeve colour for cards leaving each side's deck — see CardSleeve. */
+  playerSleeveGradient?: string | null;
+  opponentSleeveGradient?: string | null;
   /**
    * Fired the moment the cards finish arriving.
    *
@@ -208,6 +213,12 @@ export function DrawFlight({
   // null when an emit landed, the handler bailed, state never updated, and the
   // host never rendered — the animation could not start even once.
   const ready = flight != null && faces.length > 0;
+
+  const sleeveGradient = ready
+    ? flight!.actor === "player"
+      ? playerSleeveGradient
+      : opponentSleeveGradient
+    : null;
 
   /**
    * The card, in both orientations, taken from the deck's own measured slot
@@ -425,7 +436,7 @@ export function DrawFlight({
                   animate={{ x: "-50%", y: "-50%", rotate: turning ? 0 : deg }}
                   transition={{ type: "spring", stiffness: 240, damping: 24, mass: 0.7 }}
                 >
-                  <CardSleeve radius={6} />
+                  <CardSleeve radius={6} gradient={sleeveGradient} />
                 </motion.div>
               </motion.div>
             );

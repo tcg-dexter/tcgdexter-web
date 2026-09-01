@@ -731,6 +731,7 @@ function HandStrip({
   matWidth,
   instant,
   holdFlip,
+  sleeveGradient,
   onCardClick,
 }: {
   cards: HandCard[];
@@ -751,6 +752,8 @@ function HandStrip({
    * it goes false they turn over together, in the order they arrived.
    */
   holdFlip: boolean;
+  /** This hand's own deck's sleeve colour — see CardSleeve. */
+  sleeveGradient?: string | null;
   /** Opens the mat-overlay inspector for a tapped card. Omitted (or a
    *  card that isn't `revealed`) means the card isn't clickable — there's
    *  nothing to inspect about a card the log never named. */
@@ -975,7 +978,7 @@ function HandStrip({
                   ) : (
                     // A card the log never named. It wears the deck's back for
                     // good, rather than the printed Pokémon one.
-                    <CardSleeve radius={4} />
+                    <CardSleeve radius={4} gradient={sleeveGradient} />
                   )}
                   {card.revealed && !card.imageUrl && (
                     // Catalog miss on a revealed card — same treatment as the
@@ -991,7 +994,7 @@ function HandStrip({
                   style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
                   aria-hidden
                 >
-                  <CardSleeve radius={4} />
+                  <CardSleeve radius={4} gradient={sleeveGradient} />
                 </div>
               </motion.div>
               {/* Fades the cropped edge into the page background instead of
@@ -1653,6 +1656,7 @@ function Board({
       phase={beatPhase}
       instant={instant}
       reducedMotion={reducedMotion}
+      duringSetup={(frame?.turn ?? 1) === 0}
     >
     <div
       ref={matContainerRef}
@@ -1707,6 +1711,8 @@ function Board({
           frame={frame}
           reducedMotion={reducedMotion}
           staggerMs={drawStaggerMs}
+          playerSleeveGradient={playerMatGradient}
+          opponentSleeveGradient={opponentMatGradient}
           onLanded={(action, count) => setLanded({ action, count })}
           onStarted={setStartedAction}
         />
@@ -1924,6 +1930,7 @@ function Board({
           matWidth={matWidth}
           instant={instant}
           holdFlip={drawnInFlight > 0}
+          sleeveGradient={playerMatGradient}
           onCardClick={(target) => onOpenMatInspect("player", target)}
         />
         </>

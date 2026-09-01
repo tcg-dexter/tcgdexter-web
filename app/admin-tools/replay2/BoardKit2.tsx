@@ -36,9 +36,11 @@ import { shade } from "@/lib/color";
 import {
   MatActorContext,
   MatBoundsContext,
+  MatGradientContext,
   useBeat,
   useMatActor,
   useMatBounds,
+  useMatGradient,
 } from "./director/BeatContext";
 import {
   CardSurface,
@@ -144,6 +146,21 @@ export const TRAY_TOTAL_RATIO =
 // with them, but the footer/label text is pinned to its pre-bump pixel size
 // (see the `/ CARD_IMAGE_BUMP` in the font-size computations).
 const CARD_IMAGE_BUMP = 1.1;
+
+/**
+ * Setup-reveal timing, in ms, unscaled by playback speed.
+ *
+ * Placement during setup is played at a fixed pace rather than tied to the
+ * `play_to_slot` beat's own choreographed length: a setup hand can be six
+ * Pokémon dropped back-to-back, and letting a general-purpose beat spec (tuned
+ * for an ordinary mid-game bench drop) govern a face-down reveal would rush
+ * or drag it depending on how many other things share that shape. HOLD is how
+ * long a card sits visibly face-down before it moves — long enough to read as
+ * "placed face down" rather than "flipped instantly" — and TURN is the
+ * raise-and-flip itself.
+ */
+const SETUP_HOLD_MS = 260;
+const SETUP_TURN_MS = 420;
 
 /** Text size for anything living inside a black card holder (the HP row, the
  *  pile labels, the Active's attack rows). Exported so callers rendering into
@@ -258,13 +275,27 @@ function RotatedCardFace({
 // the seam where the "card sleeve" becomes customizable later. The shadow
 // mirrors the stacked-card shadow in Playmat Studio so layered sleeves read
 // with depth. Fills its positioned parent.
-export function CardSleeve({ radius, shadow }: { radius: number; shadow?: boolean }) {
+export function CardSleeve({
+  radius,
+  shadow,
+  gradient,
+}: {
+  radius: number;
+  shadow?: boolean;
+  /** The sleeve's own colour, as a CSS gradient — the same string the mat
+   *  itself is painted with (see matGradientForPrimary), so a deck's back
+   *  reads as cut from its own mat rather than every deck sharing one look.
+   *  Falls back to the site's brand gradient where no mat is in scope: a
+   *  card outside any PlayerMat context (the inspector's own thumbnail,
+   *  say) has no side to match. */
+  gradient?: string | null;
+}) {
   return (
     <div
       className="absolute inset-0"
       style={{
         borderRadius: radius,
-        background: "var(--gradient-brand)",
+        background: gradient || "var(--gradient-brand)",
         boxShadow: shadow ? "0 -2px 2px rgba(0,0,0,0.33)" : undefined,
       }}
     />
@@ -308,6 +339,7 @@ export function Pile({
   topImageUrl,
   hint,
   useCardBack,
+  sleeveGradient,
   onClick,
   face = "art",
   className = "",
@@ -324,6 +356,9 @@ export function Pile({
   hint?: string;
   /** Render the standard card-back image as the face. */
   useCardBack?: boolean;
+  /** This pile's mat's sleeve colour — see CardSleeve. Only meaningful with
+   *  useCardBack; a face-up pile has no back to colour. */
+  sleeveGradient?: string | null;
   /** Overrides the default single-card InspectContext tap (top card only)
    *  with a caller-supplied handler — the Replay viewer's discard pile uses
    *  this to open its full-pile inspector instead. */
@@ -461,7 +496,7 @@ export function Pile({
         }
       >
         {useCardBack ? (
-          <CardSleeve radius={m.cardRadius} />
+          <CardSleeve radius={m.cardRadius} gradient={sleeveGradient} />
         ) : !hasFace ? null : face === "label" ? (
           <CardLabelFace text={topName ?? ""} width={width} />
         ) : (
@@ -667,7 +702,10 @@ export function PokemonCardImage({
   // (a knockout) sees the beat that removed it; see ClaimContext.
   const claim = useClaim(perform ? mon.id : null);
   const perf = useCardPerformance(claim.role, claim.damage);
-  const { instant: beatInstant, reducedMotion } = useBeat();
+  const { instant: beatInstant, reducedMotion, duringSetup } = useBeat();
+  // This card's own mat's sleeve colour — see CardSleeve — for the face-down
+  // back it wears during a setup reveal.
+  const sleeveGradient = useMatGradient();
   // The card's own box, so it can tell the FX layer and the camera where it
   // is. Nothing else needs board geometry as a result — see fxBus.
   const boxRef = useRef<HTMLDivElement>(null);
@@ -891,6 +929,22 @@ export function PokemonCardImage({
       ? "transparent"
       : `linear-gradient(90deg, ${shade(hpColor, -28)} 0%, ${hpColor} 100%)`;
 
+  // A Pokémon placed during setup is placed face-down, same as it would be
+  // across a real table — only the players' own eyes know what's under it
+  // until everyone's ready. It gets the raise-and-flip below instead of the
+  // ordinary "card falls onto the mat" entrance; a bench drop or evolution
+  // later in the same game keeps that one, since only setup is face-down.
+  //
+  // Gated on the same terms as that entrance (perform / !beatInstant /
+  // !reducedMotion) so a cold load or a scrub lands the board silently rather
+  // than replaying a flip for cards that were simply already there.
+  const isSetupReveal =
+    perform && !beatInstant && !reducedMotion && duringSetup && face !== "label";
+  const setupHoldFrac = SETUP_HOLD_MS / (SETUP_HOLD_MS + SETUP_TURN_MS);
+  // The raise+flip lands a little before the end of the window, leaving the
+  // tail for a settle back onto the mat rather than stopping dead at the peak.
+  const setupPeakFrac = setupHoldFrac + (1 - setupHoldFrac) * 0.7;
+
   return (
     <CardSurface
       pose={perf.pose}
@@ -901,7 +955,7 @@ export function PokemonCardImage({
     >
     <div
       ref={holderRef}
-      className={`relative bg-black shadow-sm transition-opacity duration-200 ${
+      className={`relative shadow-sm transition-opacity duration-200 ${
         clickable ? "cursor-pointer" : ""
       } ${dimmed ? "opacity-50" : ""}`}
       style={{ width: m.containerW, borderRadius: m.radius, padding: m.pad }}
@@ -914,6 +968,37 @@ export function PokemonCardImage({
           : undefined)
       }
     >
+      {/* The holder's own black background, on its own layer instead of
+          painted straight onto the container above.
+          
+          A card placed during setup starts on the mat with nothing framing
+          it — no container to have "arrived" in yet — and this is what grows
+          in around it once the flip lands: the frame snapping into place
+          rather than the black simply being there from the first paint. Any
+          other placement keeps it mounted at full strength from the start,
+          same as before this had its own layer. Keyed with the card above so
+          the two remount — and the frame resets to "not yet earned" — in
+          lockstep on every new placement. */}
+      <AnimatePresence initial={false}>
+        <motion.div
+          key={mon.name}
+          className="pointer-events-none absolute inset-0"
+          style={{ borderRadius: m.radius, background: "#000", zIndex: 0 }}
+          initial={isSetupReveal ? { opacity: 0, scale: 0.82 } : false}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={
+            isSetupReveal
+              ? {
+                  delay: (SETUP_HOLD_MS + SETUP_TURN_MS) / 1000,
+                  type: "spring",
+                  stiffness: 300,
+                  damping: 16,
+                  mass: 0.6,
+                }
+              : { duration: 0 }
+          }
+        />
+      </AnimatePresence>
       {/* Tool card(s) behind the Pokémon, shifted up so the title band shows
           above the Pokémon card, still inside the black holder. */}
       {tools.map((tool, i) => (
@@ -964,28 +1049,87 @@ export function PokemonCardImage({
             <motion.div
               key={mon.name}
               className="absolute inset-0"
+              style={{
+                transformStyle: "preserve-3d",
+                // Self-contained rather than relying on CardSurface's own
+                // perspective: two plain, untransformed divs (the holder,
+                // then this card's own box) sit between this element and
+                // that ancestor, and a plain div with no transform of its
+                // own flattens the 3D context passing through it. Without
+                // this the rotateY below would squash the card horizontally
+                // instead of turning it.
+                transformPerspective: Math.max(600, m.cardW * 9),
+              }}
               initial={
                 beatInstant || reducedMotion || !perform
                   ? false
-                  : { y: -m.cardH * 0.5, rotateZ: -8, opacity: 0 }
+                  : isSetupReveal
+                    ? { y: 0, scale: 1, rotateY: 180, rotateZ: 0, opacity: 1 }
+                    : { y: -m.cardH * 0.5, rotateZ: -8, opacity: 0 }
               }
-              animate={{ y: 0, rotateZ: 0, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 460, damping: 30, mass: 0.8 }}
+              animate={
+                isSetupReveal
+                  ? {
+                      // Sits still, face-down, through the hold; rises and
+                      // turns face-up across the middle stretch; settles
+                      // back onto the mat for the tail. rotateZ never
+                      // enters the setup pose — swiveling face-up on rotateY
+                      // is the whole gesture, and adding a tilt on top of it
+                      // would read as the card losing its balance rather
+                      // than turning over.
+                      y: [0, 0, -m.cardH * 0.24, 0],
+                      scale: [1, 1, 1.07, 1],
+                      rotateY: [180, 180, 0, 0],
+                      rotateZ: 0,
+                      opacity: 1,
+                    }
+                  : { y: 0, rotateZ: 0, opacity: 1 }
+              }
+              transition={
+                isSetupReveal
+                  ? {
+                      duration: (SETUP_HOLD_MS + SETUP_TURN_MS) / 1000,
+                      times: [0, setupHoldFrac, setupPeakFrac, 1],
+                      ease: "easeInOut",
+                    }
+                  : { type: "spring", stiffness: 460, damping: 30, mass: 0.8 }
+              }
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={mon.imageUrl ?? CARD_BACK_URL}
-                alt={mon.name}
-                className="h-full w-full object-cover"
-                onError={(e) => {
-                  if (e.currentTarget.src !== CARD_BACK_URL) {
-                    e.currentTarget.src = CARD_BACK_URL;
-                  }
-                }}
-              />
-              {hadFallback && (
-                <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[7px] font-semibold leading-tight text-white line-clamp-2">
-                  {mon.name}
+              {/* Front: the printed art. Hidden by its own backface once the
+                  card has turned past 90° on its way to face-down — which
+                  only the non-setup path ever does, since the setup pose
+                  never leaves rotateY 0 once it lands. */}
+              <div className="absolute inset-0" style={{ backfaceVisibility: "hidden" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={mon.imageUrl ?? CARD_BACK_URL}
+                  alt={mon.name}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    if (e.currentTarget.src !== CARD_BACK_URL) {
+                      e.currentTarget.src = CARD_BACK_URL;
+                    }
+                  }}
+                />
+                {hadFallback && (
+                  <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[7px] font-semibold leading-tight text-white line-clamp-2">
+                    {mon.name}
+                  </div>
+                )}
+              </div>
+              {/* Back: this mat's own sleeve colour (see CardSleeve), pinned
+                  180° so it's the face the viewer sees for as long as the
+                  outer element itself is at 180 — i.e. through the hold, and
+                  no further. Only rendered for a setup reveal: elsewhere the
+                  outer rotateY never moves and this would sit permanently
+                  hidden behind the front, existing for nothing. */}
+              {isSetupReveal && (
+                <div
+                  className="absolute inset-0 overflow-hidden"
+                  style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+                  aria-hidden
+                >
+                  <CardSleeve radius={m.cardRadius} gradient={sleeveGradient} />
                 </div>
               )}
             </motion.div>
@@ -1146,11 +1290,14 @@ export function StackedPrizePile({
   count,
   width,
   rotate: _rotate,
+  sleeveGradient,
 }: {
   label: string;
   count: number;
   width: number;
   rotate: PileRotate;
+  /** This pile's mat's sleeve colour — see CardSleeve. */
+  sleeveGradient?: string | null;
 }) {
   const m = replayTrayMetrics(width);
   const fontSize = Math.max(6, Math.round((m.strip * 0.34) / CARD_IMAGE_BUMP));
@@ -1215,7 +1362,7 @@ export function StackedPrizePile({
               className="absolute left-0 right-0"
               style={{ height: H, top: i * offset, zIndex: i }}
             >
-              <CardSleeve radius={m.cardRadius} shadow={i > 0} />
+              <CardSleeve radius={m.cardRadius} shadow={i > 0} gradient={sleeveGradient} />
             </div>
           ))
         )}
@@ -1446,6 +1593,7 @@ export function PlayerMat({
   return (
     <MatActorContext.Provider value={actor ?? null}>
     <MatBoundsContext.Provider value={matBoundsGetter}>
+    <MatGradientContext.Provider value={matGradient}>
     <ClaimContext.Provider value={claimFor}>
     <LayoutGroup id={side}>
       {/* The mat itself does NOT clip its contents.
@@ -1496,10 +1644,10 @@ export function PlayerMat({
             {isPlayer ? (
               <>
                 <Pile label="Discard" count={discardCount} width={cardWidth} rotate="ccw" topName={discardTop} topImageUrl={discardTopImageUrl} onClick={onDiscardClick} face={face} />
-                <Pile label="Draw" count={deckCount} width={cardWidth} rotate="ccw" hint={`${handCount} in hand`} useCardBack />
+                <Pile label="Draw" count={deckCount} width={cardWidth} rotate="ccw" hint={`${handCount} in hand`} useCardBack sleeveGradient={matGradient} />
               </>
             ) : (
-              <StackedPrizePile label="Prizes" count={prizesRemaining} width={cardWidth} rotate="ccw" />
+              <StackedPrizePile label="Prizes" count={prizesRemaining} width={cardWidth} rotate="ccw" sleeveGradient={matGradient} />
             )}
           </div>
           {/* Center: active card only — bench is an absolute overlay */}
@@ -1510,10 +1658,10 @@ export function PlayerMat({
               (player) mat the piles anchor to the bottom of the mat. */}
           <div className={`flex h-full flex-col gap-1.5 sm:gap-3 ${isPlayer ? "justify-end" : ""}`}>
             {isPlayer ? (
-              <StackedPrizePile label="Prizes" count={prizesRemaining} width={cardWidth} rotate="cw" />
+              <StackedPrizePile label="Prizes" count={prizesRemaining} width={cardWidth} rotate="cw" sleeveGradient={matGradient} />
             ) : (
               <>
-                <Pile label="Draw" count={deckCount} width={cardWidth} rotate="cw" hint={`${handCount} in hand`} useCardBack />
+                <Pile label="Draw" count={deckCount} width={cardWidth} rotate="cw" hint={`${handCount} in hand`} useCardBack sleeveGradient={matGradient} />
                 <Pile label="Discard" count={discardCount} width={cardWidth} rotate="cw" topName={discardTop} topImageUrl={discardTopImageUrl} onClick={onDiscardClick} face={face} />
               </>
             )}
@@ -1612,6 +1760,7 @@ export function PlayerMat({
       </div>
     </LayoutGroup>
     </ClaimContext.Provider>
+    </MatGradientContext.Provider>
     </MatBoundsContext.Provider>
     </MatActorContext.Provider>
   );
