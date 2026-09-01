@@ -43,6 +43,7 @@ import {
   CardSleeve,
   InspectContext,
   PlayerMat,
+  PlayerMatWidescreen,
   ReplayCardInspector,
   computeReplayCardWidth,
   type InspectTarget,
@@ -304,14 +305,34 @@ function MatTab({
   name,
   prizesRemaining,
   edge,
+  widescreen,
+  anchor,
+  pipsFirst,
 }: {
   name: string;
   prizesRemaining: number;
   /** Which mat edge the tab hangs off: "bottom" tucks up under the mat
-   *  above it, "top" tucks down under the mat below it. */
+   *  above it, "top" tucks down under the mat below it. Ignored when
+   *  `widescreen` is set — see below. */
   edge: "bottom" | "top";
+  /**
+   * Widescreen's own placement: both mats sit side by side rather than
+   * stacked, so there's no shared top/bottom edge for a tab to tuck under —
+   * instead both tabs hang above their own (now portrait) mat and tuck down
+   * into it, positioned toward whichever of their mat's own top corners sits
+   * nearest the gap between the two columns.
+   */
+  widescreen?: boolean;
+  /** Which side of the mat's own top edge the tab sits at. The opponent's
+   *  column is on the board's left, so ITS inner corner — the one nearest
+   *  the player's column — is its own right; the player's column is on the
+   *  right, so its inner corner is its own left. Pass whichever corner is
+   *  the inner one for this mat. */
+  anchor?: "left" | "right";
+  /** Content order: pips before the name, or after. */
+  pipsFirst?: boolean;
 }) {
-  const hangsBelow = edge === "bottom";
+  const hangsBelow = widescreen ? false : edge === "bottom";
   // The column's flex `gap` lands between every pair of its children —
   // including mat↔tab, where the tab is supposed to overlap the mat, not
   // stand off it. Cancelling the gap here is what makes the tuck actually
@@ -331,7 +352,11 @@ function MatTab({
       // dark. The prize pips deliberately don't invert with it; see
       // PrizePips for how they stay legible against both.
       className={`relative z-0 w-fit max-w-full bg-[#1a1a1a] px-3 text-white dark:bg-white dark:text-[#1a1a1a] ${
-        hangsBelow ? "self-start rounded-b-xl" : "self-end rounded-t-xl"
+        widescreen
+          ? `${anchor === "left" ? "self-start" : "self-end"} rounded-b-xl`
+          : hangsBelow
+            ? "self-start rounded-b-xl"
+            : "self-end rounded-t-xl"
       }`}
       // The tucked strip is expressed as padding rather than as part of a
       // fixed overall height, so the box below is exactly the band that
@@ -368,10 +393,10 @@ function MatTab({
         className="flex items-center gap-2"
         style={{ height: TAB_CONTENT_PX }}
       >
-        {hangsBelow && <PrizePips remaining={prizesRemaining} />}
+        {(widescreen ? pipsFirst : hangsBelow) && <PrizePips remaining={prizesRemaining} />}
         <span className="min-w-0 truncate text-xs font-bold">{name}</span>
-        {!hangsBelow && (
-          <PrizePips remaining={prizesRemaining} reverse />
+        {!(widescreen ? pipsFirst : hangsBelow) && (
+          <PrizePips remaining={prizesRemaining} reverse={!widescreen} />
         )}
       </div>
     </div>
@@ -695,6 +720,9 @@ const HAND_STRIP_GAP_PX = 8;
 // own constant since the two rows size against different things (this one
 // against matWidth, that one against a card width it's still solving for).
 const HAND_STRIP_CHEVRON_PX = 24;
+
+/** Gap between the two side-by-side columns in widescreen mode. */
+const WIDESCREEN_GAP_PX = 20;
 
 /** Base gap between one card leaving the deck and the next, at 1x. Fast
  *  enough to read as dealing rather than as seven separate draws, slow
@@ -1497,6 +1525,7 @@ function Board({
   beatPhase,
   drawStaggerMs,
   reducedMotion,
+  widescreen,
   anyInspectorOpen,
   actionContinues,
   playerMatGradient,
@@ -1526,6 +1555,11 @@ function Board({
   /** Real milliseconds between two cards leaving the deck — see the viewer,
    *  which solves it against the beat's length and the playback speed. */
   drawStaggerMs: number;
+  /** Mats side by side (opponent left, player right) instead of stacked,
+   *  each rendered by PlayerMatWidescreen instead of PlayerMat — see that
+   *  component's own doc comment for why it's a separate layout rather than
+   *  a rotated copy of the portrait one. */
+  widescreen: boolean;
   /** Suppresses the camera: see its `enabled` argument. */
   anyInspectorOpen: boolean;
   /** The frame after this one belongs to the same action — an expanded
@@ -1650,6 +1684,14 @@ function Board({
 
   const cardWidth = computeReplayCardWidth(matWidth);
 
+  // Widescreen's own sizing: two columns side by side rather than two mats
+  // stacked, so the available width splits in half instead of the available
+  // HEIGHT splitting in half (matWidth/cardWidth above). heightBudget is
+  // never set in widescreen (see ReplayViewer2), so measuredWidth here is
+  // already "the whole row" rather than one mat's share of a 16:9 rect.
+  const widescreenColumnWidth = Math.max(20, (measuredWidth - WIDESCREEN_GAP_PX) / 2);
+  const widescreenCardWidth = computeReplayCardWidth(widescreenColumnWidth);
+
   return (
     <BeatProvider
       beat={beat}
@@ -1749,7 +1791,178 @@ function Board({
               : null
           }
         />
-        <div className="flex flex-col" style={{ gap: TAB_GAP_PX }}>
+{widescreen ? (
+          <div className="flex items-start justify-center" style={{ gap: WIDESCREEN_GAP_PX }}>
+          {/* Opponent — left. */}
+          <div style={{ width: widescreenColumnWidth }}>
+            <MatTab
+              widescreen
+              anchor="right"
+              pipsFirst={false}
+              edge="bottom"
+              name={frame.opponent.handle ?? "Opponent"}
+              prizesRemaining={frame.opponent.prizesRemaining}
+            />
+            <InspectContext.Provider
+              value={(target) => onOpenMatInspect("opponent", target)}
+            >
+            <div className="relative z-10">
+              <PlayerMatWidescreen
+                side="player"
+                bench={frame.opponent.bench}
+                active={frame.opponent.active}
+                discardCount={opponentDiscard.count}
+                discardTop={opponentDiscard.top}
+                discardTopImageUrl={opponentDiscard.topImageUrl}
+                deckCount={frame.opponent.deckCount}
+                handCount={frame.opponent.handCount}
+                prizesRemaining={frame.opponent.prizesRemaining}
+                stadium={frame.stadium?.owner === "opponent" ? frame.stadium : null}
+                lastPlayedTrainer={
+                  frame.lastPlayedTrainer?.actor === "opponent"
+                    ? frame.lastPlayedTrainer
+                    : null
+                }
+                matWidth={widescreenColumnWidth}
+                instant={instant}
+                actor="opponent"
+                matGradient={opponentMatGradient}
+                onDiscardClick={() => onOpenDiscardInspect("opponent")}
+              />
+              <AnimatePresence>
+                {frame.discardDraw?.actor === "opponent" && (
+                  <DiscardDrawOverlay
+                    key={frame.actionIndex}
+                    detail={frame.discardDraw}
+                    cardWidth={widescreenCardWidth}
+                    matWidth={widescreenColumnWidth}
+                  />
+                )}
+              </AnimatePresence>
+              <AnimatePresence>
+                {frame.mulligan?.actor === "opponent" && (
+                  <MulliganOverlay
+                    key="mulligan-opponent"
+                    detail={frame.mulligan}
+                    cardWidth={widescreenCardWidth}
+                    matWidth={widescreenColumnWidth}
+                  />
+                )}
+              </AnimatePresence>
+              <AnimatePresence>
+                {matInspect.opponent && (
+                  <MatCardInspector
+                    target={matInspect.opponent}
+                    cardWidth={widescreenCardWidth}
+                    matWidth={widescreenColumnWidth}
+                    onExpand={() => onExpandInspect("opponent", matInspect.opponent!)}
+                    onClose={() => onCloseMatInspect("opponent")}
+                  />
+                )}
+              </AnimatePresence>
+              <AnimatePresence>
+                {discardInspect.opponent && (
+                  <DiscardPileOverlay
+                    cards={opponentDiscard.pile}
+                    matWidth={widescreenColumnWidth}
+                    onClose={() => onCloseDiscardInspect("opponent")}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
+            </InspectContext.Provider>
+          </div>
+          {/* Player — right, own hand strip docked below its column. */}
+          <div style={{ width: widescreenColumnWidth }}>
+            <MatTab
+              widescreen
+              anchor="left"
+              pipsFirst
+              edge="top"
+              name={frame.player.handle ?? "Player"}
+              prizesRemaining={frame.player.prizesRemaining}
+            />
+            <InspectContext.Provider
+              value={(target) => onOpenMatInspect("player", target)}
+            >
+            <div className="relative z-10">
+              <PlayerMatWidescreen
+                side="opponent"
+                bench={frame.player.bench}
+                active={frame.player.active}
+                discardCount={playerDiscard.count}
+                discardTop={playerDiscard.top}
+                discardTopImageUrl={playerDiscard.topImageUrl}
+                deckCount={frame.player.deckCount}
+                handCount={frame.player.handCount}
+                prizesRemaining={frame.player.prizesRemaining}
+                stadium={frame.stadium?.owner === "player" ? frame.stadium : null}
+                lastPlayedTrainer={
+                  frame.lastPlayedTrainer?.actor === "player"
+                    ? frame.lastPlayedTrainer
+                    : null
+                }
+                matWidth={widescreenColumnWidth}
+                instant={instant}
+                actor="player"
+                matGradient={playerMatGradient}
+                onDiscardClick={() => onOpenDiscardInspect("player")}
+              />
+              <AnimatePresence>
+                {frame.discardDraw?.actor === "player" && (
+                  <DiscardDrawOverlay
+                    key={frame.actionIndex}
+                    detail={frame.discardDraw}
+                    cardWidth={widescreenCardWidth}
+                    matWidth={widescreenColumnWidth}
+                  />
+                )}
+              </AnimatePresence>
+              <AnimatePresence>
+                {frame.mulligan?.actor === "player" && (
+                  <MulliganOverlay
+                    key="mulligan-player"
+                    detail={frame.mulligan}
+                    cardWidth={widescreenCardWidth}
+                    matWidth={widescreenColumnWidth}
+                  />
+                )}
+              </AnimatePresence>
+              <AnimatePresence>
+                {matInspect.player && (
+                  <MatCardInspector
+                    target={matInspect.player}
+                    cardWidth={widescreenCardWidth}
+                    matWidth={widescreenColumnWidth}
+                    onExpand={() => onExpandInspect("player", matInspect.player!)}
+                    onClose={() => onCloseMatInspect("player")}
+                  />
+                )}
+              </AnimatePresence>
+              <AnimatePresence>
+                {discardInspect.player && (
+                  <DiscardPileOverlay
+                    cards={playerDiscard.pile}
+                    matWidth={widescreenColumnWidth}
+                    onClose={() => onCloseDiscardInspect("player")}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
+            </InspectContext.Provider>
+            <HandStrip
+              cards={visibleHand}
+              cardWidth={widescreenCardWidth}
+              matWidth={widescreenColumnWidth}
+              instant={instant}
+              holdFlip={drawnInFlight > 0}
+              sleeveGradient={playerMatGradient}
+              onCardClick={(target) => onOpenMatInspect("player", target)}
+            />
+          </div>
+        </div>
+        ) : (
+          <div className="flex flex-col" style={{ gap: TAB_GAP_PX }}>
           {/* z-10 on the mat wrappers so each mat paints over the tab tucked
               beneath it. The wrappers are plain positioning shells — mat
               geometry stays entirely inside PlayerMat.
@@ -1917,13 +2130,16 @@ function Board({
             </AnimatePresence>
           </div>
           </InspectContext.Provider>
+
         </div>
+        )}
         </motion.div>
         {/* Player's hand, always the bottom mat's now that the swap above
             pins the submitting user there — see HandStrip. Cards open
             through the same mat-overlay inspector as the mat itself,
             always on the player's (bottom) mat, since a hand card is
             always the player's own. */}
+        {!widescreen && (
         <HandStrip
           cards={visibleHand}
           cardWidth={cardWidth}
@@ -1933,6 +2149,7 @@ function Board({
           sleeveGradient={playerMatGradient}
           onCardClick={(target) => onOpenMatInspect("player", target)}
         />
+        )}
         </>
       )}
       {inspect && (
@@ -1971,6 +2188,8 @@ function PlaybackModule({
   onTurnBack,
   onTurnForward,
   onScrub,
+  widescreen,
+  onToggleWidescreen,
 }: {
   frameIndex: number;
   frameCount: number;
@@ -1994,6 +2213,8 @@ function PlaybackModule({
   onTurnBack: () => void;
   onTurnForward: () => void;
   onScrub: (frameIndex: number) => void;
+  widescreen: boolean;
+  onToggleWidescreen: () => void;
 }) {
   const turnLabel =
     frameCount === 0
@@ -2077,8 +2298,9 @@ function PlaybackModule({
         />
       </div>
 
-      <div className="mt-1.5 flex justify-center">
+      <div className="mt-1.5 flex items-center justify-center gap-2">
         <SpeedMenu speed={speed} onSelect={onSelectSpeed} />
+        <WidescreenToggle widescreen={widescreen} onToggle={onToggleWidescreen} />
       </div>
     </div>
   );
@@ -2166,6 +2388,40 @@ function StepCapsule({
 // the shared container to fit), and picking one collapses the row back
 // down to just the new value. The motion is the affordance.
 const SPEED_OPTIONS: (0.5 | 1 | 2 | 4)[] = [0.5, 1, 2, 4];
+
+/**
+ * Toggles widescreen: mats side by side and rotated, thread below the
+ * controls. A landscape-rectangle glyph rather than words — the row it
+ * sits in is already crowded with the speed picker, and the icon is the
+ * shape of the thing it turns on.
+ */
+function WidescreenToggle({
+  widescreen,
+  onToggle,
+}: {
+  widescreen: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={widescreen}
+      aria-label={widescreen ? "Switch to standard layout" : "Switch to widescreen layout"}
+      title={widescreen ? "Switch to standard layout" : "Switch to widescreen layout"}
+      className={`flex h-7 items-center gap-1 rounded-full border px-2.5 text-[10px] font-semibold uppercase tracking-wide transition-colors ${
+        widescreen
+          ? "border-accent bg-accent text-white"
+          : "border-black/10 text-text-secondary hover:bg-surface dark:border-white/10"
+      }`}
+    >
+      <svg viewBox="0 0 20 14" className="h-3 w-4 fill-none stroke-current" strokeWidth={1.6} aria-hidden>
+        <rect x="1" y="1" width="18" height="12" rx="2" />
+      </svg>
+      Wide
+    </button>
+  );
+}
 
 function SpeedMenu({
   speed,
@@ -2676,6 +2932,12 @@ export default function ReplayViewer({
   // playhead advances, instead of scrollIntoView dragging the whole page.
   const threadScrollRef = useRef<HTMLDivElement>(null);
 
+  // Manual, not orientation-detected — the user reaches for this on a wide
+  // desktop window or a phone they've turned sideways, and either is just as
+  // easily reached back out of, so there's no viewport signal reliable enough
+  // to drive it automatically without also fighting the user's own toggle.
+  const [widescreen, setWidescreen] = useState(false);
+
   // Which layout to build. Null until matchMedia resolves on the client:
   // the two layouts each mount their own BattleLogDetail, so committing
   // before we know would fetch the thread twice and throw the first copy
@@ -2725,8 +2987,12 @@ export default function ReplayViewer({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  // Never set in widescreen: that layout isn't two mats fit inside a 16:9
+  // rect, it's two columns filling whatever width the row actually has —
+  // Board's own measured-width fallback (see its heightBudget prop doc) is
+  // already exactly that behavior.
   const heightBudget =
-    isDesktop === true && rowWidth != null ? (rowWidth * 9) / 16 : null;
+    !widescreen && isDesktop === true && rowWidth != null ? (rowWidth * 9) / 16 : null;
 
   // Pin the thread aside to the board's measured height so it scrolls
   // inside a fixed envelope instead of stretching the row to fit its own
@@ -2758,7 +3024,7 @@ export default function ReplayViewer({
           of arm's reach. Mobile drops the aside entirely and puts the
           thread below the controls instead. */}
       <div ref={rowRef} className="lg:flex lg:items-start lg:gap-6">
-        {isDesktop === true && (
+        {isDesktop === true && !widescreen && (
           <aside
             key={battleId}
             className="relative hidden min-w-0 lg:flex lg:flex-1 lg:flex-col lg:overflow-hidden"
@@ -2789,12 +3055,20 @@ export default function ReplayViewer({
             <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-12 bg-gradient-to-t from-[var(--bg)] to-transparent" />
           </aside>
         )}
-        <div ref={boardRef} className="lg:shrink-0">
+        {/* Widescreen drops the aside but keeps rowRef's lg:flex, which
+            would otherwise leave this the row's only flex item and size it
+            to its own content — zero, since nothing inside has a width until
+            THIS div gets one (the measuredWidth fallback below reads its
+            size back off matContainerRef, a descendant). lg:flex-1 breaks
+            that circularity by sizing this from the row's own definite width
+            instead of its children's. */}
+        <div ref={boardRef} className={widescreen ? "lg:flex-1 lg:min-w-0" : "lg:shrink-0"}>
           <Board
             frame={frame}
             loading={loading}
             error={error}
             heightBudget={heightBudget}
+            widescreen={widescreen}
             instant={instant}
             beat={currentBeat}
             beatPhase={beatPhase}
@@ -2840,6 +3114,8 @@ export default function ReplayViewer({
         onTurnBack={() => { setPlaying(false); setInstant(true); stepTurnBack(); }}
         onTurnForward={() => { setPlaying(false); setInstant(true); stepTurnForward(); }}
         onScrub={(i) => { setPlaying(false); setInstant(true); setFrameIndex(i); }}
+        widescreen={widescreen}
+        onToggleWidescreen={() => setWidescreen((w) => !w)}
       />
 
       {/* Mobile: the thread sits under the controls, rendered in full with
@@ -2851,7 +3127,7 @@ export default function ReplayViewer({
           Mobile already shows the whole thread at full opacity, so there's
           nothing for it to spotlight against — passing it would just dim
           everything after the playhead for no reason. */}
-      {isDesktop === false && !hideThreadOnMobile && (
+      {(isDesktop === false || widescreen) && !hideThreadOnMobile && (
         <div className="mt-6">
           <BattleLogDetail
             battleId={battleId}

@@ -232,7 +232,7 @@ export type PileRotate = "cw" | "ccw";
 // A single card face turned on its side to fill a landscape `L × H` slot. The
 // source art is portrait (245:342), so we render it at `H × L` (still 245:342)
 // and rotate ±90° about the center; its bounding box then matches the slot.
-function RotatedCardFace({
+export function RotatedCardFace({
   src,
   alt,
   L,
@@ -657,9 +657,21 @@ export function PokemonCardImage({
   face = "art",
   perform = true,
   idle = false,
+  widescreen = false,
 }: {
   mon: PokemonFrame;
   width: number;
+  /** Widescreen mode: the printed art is turned on its side, same technique
+   *  and the same fixed direction ("cw") the piles already use, so it reads
+   *  as belonging to the same sideways board rather than each card picking
+   *  its own way to fall. Everything else about the card — HP bar, energy
+   *  row, attack footer, tool peek — stays exactly as it is upright and
+   *  below the art, same as the portrait board; only the art turns. Setup's
+   *  face-down reveal is skipped here rather than adapted: that choreography
+   *  is built entirely around a portrait card, and widescreen is a new-enough
+   *  surface that it can start without it rather than carry over a treatment
+   *  tuned for a shape it no longer has. */
+  widescreen?: boolean;
   /** When true (board context), tapping opens the card inspector. The
    *  inspector renders its own copy with this off so it can't re-open. */
   inspectable?: boolean;
@@ -889,6 +901,15 @@ export function PokemonCardImage({
   const remainingHp = mon.hp != null ? Math.max(0, mon.hp - shownDamage) : null;
   const hadFallback = !mon.imageUrl;
   const m = replayTrayMetrics(width);
+  // The art slot, turned on its side: same split Pile already uses between
+  // "metrics" (m, still solved from the upright card width — padding, radius,
+  // font sizes all still want the card's actual size, not its rotated
+  // footprint) and the slot's own dimensions, which swap. artW/artH are the
+  // BOX; the printed card itself renders through RotatedCardFace at the
+  // portrait size turned to fill it.
+  const artW = widescreen ? pileCardLong(width) : width;
+  const artH = widescreen ? width : m.cardH;
+  const containerW = widescreen ? artW + 2 * m.pad : m.containerW;
   const barH = Math.max(3, Math.round(m.strip * 0.22));
   const hpFontSize = holderFontSize(width);
   // A tool sits behind the Pokémon card, shifted up so its title peeks
@@ -897,7 +918,7 @@ export function PokemonCardImage({
   // Tools render as art behind the Pokémon card; a label face has no art for
   // them to peek out from, so the label mode drops them.
   const tools = face === "label" ? [] : (mon.tools ?? []);
-  const toolPeek = tools.length > 0 ? Math.round(m.cardH * 0.13) : 0;
+  const toolPeek = tools.length > 0 ? Math.round(artH * 0.13) : 0;
 
   // HP as a percentage of the card's printed maximum.
   const hpPct =
@@ -939,7 +960,7 @@ export function PokemonCardImage({
   // !reducedMotion) so a cold load or a scrub lands the board silently rather
   // than replaying a flip for cards that were simply already there.
   const isSetupReveal =
-    perform && !beatInstant && !reducedMotion && duringSetup && face !== "label";
+    perform && !beatInstant && !reducedMotion && duringSetup && face !== "label" && !widescreen;
   const setupHoldFrac = SETUP_HOLD_MS / (SETUP_HOLD_MS + SETUP_TURN_MS);
   // The raise+flip lands a little before the end of the window, leaving the
   // tail for a settle back onto the mat rather than stopping dead at the peak.
@@ -948,7 +969,7 @@ export function PokemonCardImage({
   return (
     <CardSurface
       pose={perf.pose}
-      width={m.containerW}
+      width={containerW}
       radius={m.radius}
       tilt={perform}
       idle={idle}
@@ -958,7 +979,7 @@ export function PokemonCardImage({
       className={`relative shadow-sm transition-opacity duration-200 ${
         clickable ? "cursor-pointer" : ""
       } ${dimmed ? "opacity-50" : ""}`}
-      style={{ width: m.containerW, borderRadius: m.radius, padding: m.pad }}
+      style={{ width: containerW, borderRadius: m.radius, padding: m.pad }}
       title={mon.name}
       role={clickable ? "button" : undefined}
       onClick={
@@ -1012,8 +1033,8 @@ export function PokemonCardImage({
           style={{
             top: m.pad + i * Math.round(toolPeek * 0.5),
             left: m.pad,
-            width: m.cardW,
-            height: m.cardH,
+            width: artW,
+            height: artH,
             borderRadius: m.cardRadius,
             zIndex: 0,
           }}
@@ -1027,10 +1048,34 @@ export function PokemonCardImage({
       <div
         ref={boxRef}
         className="relative w-full overflow-hidden bg-white"
-        style={{ height: m.cardH, borderRadius: m.cardRadius, marginTop: toolPeek, zIndex: 1 }}
+        style={{ height: artH, borderRadius: m.cardRadius, marginTop: toolPeek, zIndex: 1 }}
       >
         {face === "label" ? (
           <CardLabelFace text={mon.name} width={width} />
+        ) : widescreen ? (
+          // The printed art turned on its side — same technique the piles
+          // already use (RotatedCardFace), and the same fixed "cw" direction
+          // for every card on the board, so nothing has to reason about which
+          // way THIS card should fall. No entrance/evolution/setup choreography
+          // here: those are all built around a portrait card that these
+          // dimensions no longer are, so a widescreen placement simply
+          // appears — the trade is a static art swap for a much smaller,
+          // lower-risk change than adapting every one of them to a rotated box.
+          <>
+            <RotatedCardFace
+              src={mon.imageUrl ?? CARD_BACK_URL}
+              alt={mon.name}
+              L={artW}
+              H={artH}
+              radius={m.cardRadius}
+              rotate="cw"
+            />
+            {hadFallback && (
+              <div className="absolute inset-x-1 top-1 rounded bg-black/60 px-1 py-0.5 text-center text-[7px] font-semibold leading-tight text-white line-clamp-2">
+                {mon.name}
+              </div>
+            )}
+          </>
         ) : (
           // Keyed on the name so an evolution mounts a NEW face over the old
           // one rather than swapping the src in place.
@@ -1767,6 +1812,250 @@ export function PlayerMat({
 }
 
 /**
+ * The widescreen mat: the same board data as PlayerMat, arranged as one
+ * narrow vertical column instead of a wide horizontal strip, for the
+ * side-by-side (opponent-left, player-right) layout Board switches to in
+ * widescreen mode.
+ *
+ * Deliberately NOT a rotated copy of PlayerMat's own grid. PlayerMat's
+ * geometry — the rail widths, the stadium/trainer float offsets, the
+ * bench-overlay math — is all solved in pixels for a WIDE, SHORT rectangle;
+ * rotating that whole assembly with a CSS transform would also have to drag
+ * every card's black holder (HP bar, energy row, attack footer) around with
+ * it, and then fight that same transform back off each one to keep them
+ * upright and below their card — two transforms cancelling on every card,
+ * for a result identical to just not rotating them in the first place. A
+ * fresh column sidesteps that: nothing here is rotated except the printed
+ * card art itself (PokemonCardImage's own `widescreen` prop, same technique
+ * the piles already use), so the chrome around it is upright and below by
+ * simply never having been anything else.
+ *
+ * Order top-to-bottom is Active, then Bench, then the piles. PlayerMat's own
+ * P1/P2 split (see its doc comment) puts each side's Active nearest the
+ * gap between the two mats and everything else toward that side's own outer
+ * edge; a column has no left/right gap to lean toward, so instead it's
+ * top-to-bottom, with Active — the thing both sides face — closest to the
+ * tag at the very top (see MatTab's widescreen layout) and the piles, the
+ * most "my own business" part of the board, at the bottom.
+ *
+ * Scope note: the stadium and last-played-Trainer float as a small inline
+ * row under the Active rather than at PlayerMat's precise floating offset —
+ * that offset is solved against the wide-mat geometry this column doesn't
+ * have. Everything else — claim resolution, draw flights, prize sparks, the
+ * discard/draw and mulligan overlays — is the same context wiring as
+ * PlayerMat, so beats, FX and inspectors all work identically.
+ */
+export function PlayerMatWidescreen({
+  side,
+  bench,
+  active,
+  discardCount,
+  discardTop,
+  discardTopImageUrl,
+  deckCount,
+  handCount,
+  prizesRemaining,
+  stadium,
+  lastPlayedTrainer,
+  matWidth,
+  interact,
+  instant,
+  actor,
+  onDiscardClick,
+  matGradient = BOARD_GRADIENT,
+  face = "art",
+}: {
+  side: "player" | "opponent";
+  bench: PokemonFrame[];
+  active: PokemonFrame | null;
+  discardCount: number;
+  discardTop?: string | null;
+  discardTopImageUrl?: string | null;
+  deckCount: number;
+  handCount: number;
+  prizesRemaining: number;
+  stadium: { name: string; imageUrl: string | null } | null;
+  lastPlayedTrainer: { name: string; imageUrl: string | null } | null;
+  /** The column's own width — analogous to PlayerMat's `matWidth`, but here
+   *  it drives a narrow vertical strip instead of a wide short one, and card
+   *  sizes are solved from it directly rather than taking a separate
+   *  cardWidth prop (see wsCardWidth below). */
+  matWidth: number;
+  interact?: MatInteraction;
+  instant?: boolean;
+  face?: CardFace;
+  actor?: "player" | "opponent";
+  onDiscardClick?: () => void;
+  matGradient?: string;
+}) {
+  const { beat: currentBeat } = useBeat();
+  const matRef = useRef<HTMLDivElement>(null);
+  const matBoundsGetter = useMemo(
+    () => () => matRef.current?.getBoundingClientRect() ?? null,
+    [],
+  );
+  const matCards = useMemo<MatCards>(() => ({ active, bench }), [active, bench]);
+  const previousMatCards = usePreviousMatCards(matCards);
+  const claim = resolveClaim(currentBeat, actor ?? null, matCards, previousMatCards);
+  const claimFor = useMemo(() => {
+    const { actorId, targetId, struck } = claim;
+    return (id: string): CardClaim => ({
+      role:
+        id === actorId
+          ? "actor"
+          : id === targetId || id in struck
+            ? "target"
+            : null,
+      damage: struck[id] ?? null,
+    });
+  }, [claim.actorId, claim.targetId, claim.struck]);
+  const moveTransition = instant
+    ? ({ duration: 0 } as const)
+    : ({ type: "spring", stiffness: 320, damping: 30, mass: 0.9 } as const);
+  const texScale = matWidth > 0 ? matWidth / 600 : 1;
+
+  const innerW = Math.max(0, matWidth - 2 * MAT_PADDING);
+  // Solved so a card's ROTATED holder (long edge + 2×pad — see PokemonCardImage's
+  // widescreen branch and Pile, which both derive the same shape) fits the
+  // column's inner width exactly, rather than the column being sized to fit a
+  // card chosen some other way. Every card on this mat — active, bench, and
+  // the piles — renders at this one width, so the column reads as a single
+  // consistent lane rather than a mix of sizes.
+  const wsCardWidth = Math.max(20, Math.floor(innerW / (342 / 245 + 2 * TRAY_PAD_RATIO)));
+  // Bench reads as secondary at a slightly smaller size, the same relationship
+  // portrait mode draws between an Active and its bench — just expressed as a
+  // flat ratio here instead of solved against a shared row height, since nothing
+  // here shares a row.
+  const benchCardWidth = Math.max(16, Math.round(wsCardWidth * 0.82));
+
+  return (
+    <MatActorContext.Provider value={actor ?? null}>
+    <MatBoundsContext.Provider value={matBoundsGetter}>
+    <MatGradientContext.Provider value={matGradient}>
+    <ClaimContext.Provider value={claimFor}>
+    <LayoutGroup id={`${side}-ws`}>
+      <div
+        ref={matRef}
+        className="relative rounded-xl"
+        style={{ padding: MAT_PADDING, width: matWidth > 0 ? matWidth : undefined }}
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-xl overflow-hidden"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(BOARD_TEXTURE.svg)}"), ${matGradient}`,
+            backgroundSize: `${BOARD_TEXTURE.w * texScale}px ${BOARD_TEXTURE.h * texScale}px, auto`,
+          }}
+        />
+        <div className="relative flex flex-col items-center gap-2 sm:gap-3">
+          <div className="flex justify-center">
+            <AnimatePresence mode="wait">
+              {active && (
+                <ActiveSlot
+                  key={active.id}
+                  mon={active}
+                  side={side}
+                  containerW={wsCardWidth}
+                  cardWidth={wsCardWidth}
+                  instant={instant}
+                  moveTransition={moveTransition}
+                  interact={interact}
+                  face={face}
+                  widescreen
+                />
+              )}
+            </AnimatePresence>
+          </div>
+          {(stadium || lastPlayedTrainer) && (
+            <div className="flex items-center justify-center gap-2">
+              <AnimatePresence>
+                {stadium && (
+                  <motion.div
+                    key={stadium.name}
+                    title={stadium.name}
+                    initial={{ opacity: 0, y: -10, scale: 1.06 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.94 }}
+                    transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                  >
+                    <FloatingCard name={stadium.name} imageUrl={stadium.imageUrl} width={benchCardWidth} face={face} />
+                  </motion.div>
+                )}
+                {lastPlayedTrainer && (
+                  <motion.div
+                    key={lastPlayedTrainer.name}
+                    title={lastPlayedTrainer.name}
+                    initial={{ opacity: 0, y: -16, rotateZ: -7, scale: 1.1 }}
+                    animate={{ opacity: 1, y: 0, rotateZ: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: 10, rotateZ: 5, scale: 0.9 }}
+                    transition={{ type: "spring", stiffness: 420, damping: 26 }}
+                  >
+                    <FloatingCard name={lastPlayedTrainer.name} imageUrl={lastPlayedTrainer.imageUrl} width={benchCardWidth} face={face} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+          {bench.length > 0 && (
+            <div className="flex flex-col items-center gap-2">
+              <AnimatePresence initial={false}>
+                {bench.map((mon, i) => (
+                  <BenchSlot
+                    key={mon.id}
+                    mon={mon}
+                    side={side}
+                    containerW={benchCardWidth}
+                    cardWidth={benchCardWidth}
+                    moveTransition={moveTransition}
+                    onClick={interact?.onBenchClick ? () => interact.onBenchClick!(i) : undefined}
+                    dimmed={interact?.dimBench?.[i]}
+                    face={face}
+                    widescreen
+                  />
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
+          <div className="flex flex-col items-center gap-2">
+            <Pile
+              label="Discard"
+              count={discardCount}
+              width={wsCardWidth}
+              rotate="cw"
+              topName={discardTop}
+              topImageUrl={discardTopImageUrl}
+              onClick={onDiscardClick}
+              face={face}
+              sleeveGradient={matGradient}
+            />
+            <Pile
+              label="Draw"
+              count={deckCount}
+              width={wsCardWidth}
+              rotate="cw"
+              hint={`${handCount} in hand`}
+              useCardBack
+              sleeveGradient={matGradient}
+            />
+            <StackedPrizePile
+              label="Prizes"
+              count={prizesRemaining}
+              width={wsCardWidth}
+              rotate="cw"
+              sleeveGradient={matGradient}
+            />
+          </div>
+        </div>
+      </div>
+    </LayoutGroup>
+    </ClaimContext.Provider>
+    </MatGradientContext.Provider>
+    </MatBoundsContext.Provider>
+    </MatActorContext.Provider>
+  );
+}
+
+/**
  * The Active slot. Its own component so it can hold the travel-lift state a
  * promotion needs — a bench Pokémon arriving here flies in on a shared
  * layoutId, and the lift is what turns that flight into a hand moving a card.
@@ -1780,6 +2069,7 @@ function ActiveSlot({
   moveTransition,
   interact,
   face,
+  widescreen,
 }: {
   mon: PokemonFrame;
   side: "player" | "opponent";
@@ -1789,6 +2079,7 @@ function ActiveSlot({
   moveTransition: object;
   interact?: MatInteraction;
   face?: CardFace;
+  widescreen?: boolean;
 }) {
   const { traveling, handlers } = useTravelLift();
   return (
@@ -1819,6 +2110,7 @@ function ActiveSlot({
         dimmed={interact?.dimActive}
         face={face}
         idle
+        widescreen={widescreen}
       />
     </motion.div>
   );
@@ -1835,6 +2127,7 @@ function BenchSlot({
   onClick,
   dimmed,
   face,
+  widescreen,
 }: {
   mon: PokemonFrame;
   side: "player" | "opponent";
@@ -1844,6 +2137,7 @@ function BenchSlot({
   onClick?: () => void;
   dimmed?: boolean;
   face?: CardFace;
+  widescreen?: boolean;
 }) {
   const { traveling, handlers } = useTravelLift();
   return (
@@ -1862,6 +2156,7 @@ function BenchSlot({
         onClick={onClick}
         dimmed={dimmed}
         face={face}
+        widescreen={widescreen}
       />
     </motion.div>
   );
