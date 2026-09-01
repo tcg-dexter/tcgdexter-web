@@ -55,9 +55,12 @@ function spotlightFor(
   if (beat.kind === "chose_first") {
     if (beat.firstPlayer == null) return null;
     // The actor of chose_first is the toss winner — they are the one who
-    // just decided. Whether they chose 1st or 2nd is derivable: if they
-    // picked themselves as firstPlayer the answer is 1st, otherwise 2nd.
-    const ordinal = beat.firstPlayer === beat.actor ? "1st" : "2nd";
+    // just decided. Whether they chose first or second is derivable: if
+    // they picked themselves as firstPlayer the answer is first, otherwise
+    // second. Spelled-out rather than "1st"/"2nd" — the plate reads better
+    // as prose, and there is no page geometry cramped enough to need the
+    // abbreviation.
+    const ordinal = beat.firstPlayer === beat.actor ? "first" : "second";
     return { colorway: "warm", label: `${name} will go ${ordinal}` };
   }
   return null;
@@ -168,6 +171,18 @@ function MatBorder({ colorway }: { colorway: SpotlightColorway }) {
       preserveAspectRatio="none"
       aria-hidden
     >
+      {/* The stroke draws in, un-draws, and draws again — a continuous
+          ease-in / ease-out loop rather than one draw that lands and sits
+          static waiting for the beat to end. Half-beat draw times keep the
+          motion legible without feeling frantic.
+
+          repeatType "reverse" reuses the same forward transition on the way
+          back, so the ease-in of the draw becomes the ease-out of the
+          un-draw for free — no separate easing curve to keep in step.
+
+          On exit, framer stops the loop and the parent motion.div fades
+          the whole overlay's opacity, so the stroke leaves with everything
+          else rather than needing its own exit transition. */}
       <motion.rect
         x={stroke / 2}
         y={stroke / 2}
@@ -183,7 +198,12 @@ function MatBorder({ colorway }: { colorway: SpotlightColorway }) {
         strokeDasharray="1 1"
         initial={{ strokeDashoffset: 1 }}
         animate={{ strokeDashoffset: 0 }}
-        transition={{ duration: 0.9, ease: "easeInOut" }}
+        transition={{
+          duration: 1.1,
+          ease: "easeInOut",
+          repeat: Infinity,
+          repeatType: "reverse",
+        }}
         style={{
           filter: `drop-shadow(0 0 6px ${glow})`,
           vectorEffect: "non-scaling-stroke",
