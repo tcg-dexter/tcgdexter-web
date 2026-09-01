@@ -970,7 +970,7 @@ export function PokemonCardImage({
     >
       {/* The holder's own black background, on its own layer instead of
           painted straight onto the container above.
-          
+
           A card placed during setup starts on the mat with nothing framing
           it — no container to have "arrived" in yet — and this is what grows
           in around it once the flip lands: the frame snapping into place
@@ -978,12 +978,20 @@ export function PokemonCardImage({
           other placement keeps it mounted at full strength from the start,
           same as before this had its own layer. Keyed with the card above so
           the two remount — and the frame resets to "not yet earned" — in
-          lockstep on every new placement. */}
+          lockstep on every new placement.
+
+          z-index -1, not 0: the HP row and footer below the art are plain
+          flow content with no position of their own, and CSS paints
+          non-positioned flow content BEFORE any positioned descendant at
+          z-index 0 or above, regardless of DOM order. At 0 this "background"
+          layer was painting IN FRONT of them — a solid black sheet over the
+          HP bar and attack list, not a backdrop behind it. -1 paints before
+          that flow content, same as an ordinary background would. */}
       <AnimatePresence initial={false}>
         <motion.div
           key={mon.name}
           className="pointer-events-none absolute inset-0"
-          style={{ borderRadius: m.radius, background: "#000", zIndex: 0 }}
+          style={{ borderRadius: m.radius, background: "#000", zIndex: -1 }}
           initial={isSetupReveal ? { opacity: 0, scale: 0.82 } : false}
           animate={{ opacity: 1, scale: 1 }}
           transition={
