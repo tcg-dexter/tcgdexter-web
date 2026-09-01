@@ -420,6 +420,9 @@ export function Pile({
     });
   }, [beat, phase, instant, reducedMotion, matActor, matBounds, pileKind, width, rotate]);
 
+  // The pile's own reaction to the beat happening AT it: a nudge and a
+  // glint. Both draws and the opening hand — opening_hand is the biggest
+  // draw of the game — plus discards routed to that side's pile.
   const pileActive =
     !reducedMotion &&
     !instant &&
@@ -427,12 +430,57 @@ export function Pile({
     matActor != null &&
     beat.actor === matActor &&
     phase === "act" &&
-    ((pileKind === "draw" && (beat.kind === "draw" || beat.kind === "shuffle")) ||
+    ((pileKind === "draw" &&
+      (beat.kind === "draw" ||
+        beat.kind === "opening_hand" ||
+        beat.kind === "shuffle")) ||
       (pileKind === "discard" &&
         (beat.kind === "discard" ||
           beat.kind === "discard_from_pokemon" ||
           beat.kind === "play_trainer" ||
           beat.kind === "retreat")));
+
+  // The opening hand also gets its own anticipate: the deck lifts and glows
+  // before the first card leaves, so the ceremony has a beat of its own that
+  // says "something is about to happen" rather than the deal simply
+  // starting. Only for opening_hand — a regular turn draw is a bookkeeping
+  // beat, not a ceremony.
+  const pileWinding =
+    !reducedMotion &&
+    !instant &&
+    beat != null &&
+    matActor != null &&
+    beat.actor === matActor &&
+    pileKind === "draw" &&
+    beat.kind === "opening_hand" &&
+    phase === "anticipate";
+
+  // Sleeve-coloured spark at the deck when the wind-up begins — leans into
+  // the per-mat sleeve gradient introduced with the setup reveal, so the
+  // two ceremonies read as part of the same board.
+  const sleeveGradientFromCtx = useMatGradient();
+  const wound = useRef<number | null>(null);
+  useEffect(() => {
+    if (!pileWinding) return;
+    if (wound.current === beat!.actionIndex) return;
+    wound.current = beat!.actionIndex;
+    const el = pileSlotRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (r.width === 0) return;
+    emitFx({
+      kind: "spark",
+      clientX: r.left + r.width / 2,
+      clientY: r.top + r.height / 2,
+      intensity: 1.3,
+      // Warm neutral rather than the raw sleeve gradient — this is a burst
+      // reading against ANY mat colour, and a golden spark stays legible
+      // where the mat's own hue would sometimes disappear into it.
+      color: "#fde68a",
+    });
+    // Silence lint on the sleeve-gradient ref used for the ring below.
+    void sleeveGradientFromCtx;
+  }, [pileWinding, beat, sleeveGradientFromCtx]);
 
   // Landscape card slot at full card proportions: the card's long edge (342)
   // runs horizontally, its short edge (245 → `width`) vertically — i.e. the
@@ -460,16 +508,26 @@ export function Pile({
       // legible at a glance and completely ignorable, or it becomes the
       // busiest thing on a board where it is the least important.
       animate={
-        pileActive
+        pileWinding
           ? {
-              scale: [1, 1.055, 1],
-              boxShadow: [
-                "0 0 0 0 rgba(255,255,255,0)",
-                "0 0 14px 2px rgba(255,255,255,0.5)",
-                "0 0 0 0 rgba(255,255,255,0)",
-              ],
+              // Lifts and glows and stays there through the wind-up, so the
+              // deck reads as gathering itself rather than the same nudge
+              // repeating.
+              scale: 1.08,
+              boxShadow: "0 10px 28px 4px rgba(255,214,102,0.55)",
+              y: -6,
             }
-          : { scale: 1, boxShadow: "0 0 0 0 rgba(255,255,255,0)" }
+          : pileActive
+            ? {
+                scale: [1, 1.055, 1],
+                boxShadow: [
+                  "0 0 0 0 rgba(255,255,255,0)",
+                  "0 0 14px 2px rgba(255,255,255,0.5)",
+                  "0 0 0 0 rgba(255,255,255,0)",
+                ],
+                y: 0,
+              }
+            : { scale: 1, boxShadow: "0 0 0 0 rgba(255,255,255,0)", y: 0 }
       }
       transition={{ duration: 0.42, ease: "easeOut" }}
     >

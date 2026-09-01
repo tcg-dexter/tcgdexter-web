@@ -53,6 +53,7 @@ import { BeatProvider } from "./director/BeatContext";
 import { FxCanvas } from "./fx/FxCanvas";
 import { drawFlightFor } from "./fx/fxBus";
 import { GameEndFlourish } from "./fx/GameEndFlourish";
+import { SetupCeremony } from "./fx/SetupCeremony";
 import { MoveNamePlate } from "./fx/MoveNamePlate";
 import { DrawFlight } from "./fx/DrawFlight";
 import { useCamera } from "./fx/useCamera";
@@ -1744,6 +1745,29 @@ function Board({
           winnerName={
             beat?.kind === "game_end" && beat.winner != null
               ? (beat.winner === "player"
+                  ? frame?.player.handle
+                  : frame?.opponent.handle) ?? null
+              : null
+          }
+        />
+        {/* Same layer as the winner flourish, at the OTHER end of the game.
+            Both are one-off ceremonies over the whole board rather than about
+            a card. The winner→edge mapping is identical: the submitting player
+            is pinned to the bottom mat, the opponent to the top. */}
+        <SetupCeremony
+          beat={beat}
+          phase={beatPhase}
+          reducedMotion={reducedMotion}
+          firstPlayerEdge={
+            beat?.kind === "chose_first" && beat.firstPlayer != null
+              ? beat.firstPlayer === "player"
+                ? "bottom"
+                : "top"
+              : null
+          }
+          firstPlayerName={
+            beat?.kind === "chose_first" && beat.firstPlayer != null
+              ? (beat.firstPlayer === "player"
                   ? frame?.player.handle
                   : frame?.opponent.handle) ?? null
               : null

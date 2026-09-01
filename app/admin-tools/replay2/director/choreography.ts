@@ -274,30 +274,43 @@ const SHAPE_BY_KIND: Record<Beat["kind"], ChoreographySpec> = {
 
   /* ── Setup ───────────────────────────────────────────────────── */
 
-  // The one moment before the game where something is genuinely at stake.
+  // Long enough to actually watch the coin spin, land, and be read. The
+  // ceremony was one of the flattest beats in the replay; it now carries an
+  // animation of its own, and the extra time is what lets that read as a
+  // moment rather than a flash.
   coin_flip: {
     phases: [
-      { phase: "anticipate", ms: 260 },
-      { phase: "impact", ms: 300 },
-      { phase: "settle", ms: 280 },
+      { phase: "anticipate", ms: 360 },
+      { phase: "impact", ms: 560 },
+      { phase: "settle", ms: 560 },
     ],
   },
+  // Two phases now spend real time on the choice: an act for the light
+  // gathering on the winning mat and their name landing, and a settle long
+  // enough that the caller isn't cut off mid-word before the opening hand
+  // arrives on top of them.
   chose_first: {
     phases: [
-      { phase: "act", ms: 280 },
-      { phase: "settle", ms: 220 },
+      { phase: "act", ms: 420 },
+      { phase: "settle", ms: 480 },
     ],
   },
   // Seven cards dealt one at a time, so this is the one beat whose length is
   // set by a count rather than by feel: the deal has to finish inside it, or
   // cards arrive in the hand with no flight behind them (see drawStaggerMs in
-  // the viewer, which caps the cadence against exactly this duration). Long
-  // enough for seven at the base cadence, plus room for the last one to land
-  // and for the hand to turn over.
+  // the viewer, which caps the cadence against exactly this duration).
+  //
+  // Three phases now: an `anticipate` for the deck to gather itself before it
+  // opens, then `act` for the deal itself, then `settle` for the last card to
+  // land and for the hand to turn over as one. The anticipate is short — long
+  // enough to notice the deck is about to do something, not so long that the
+  // ceremony drags in front of a viewer who has already sat through the coin
+  // flip and the first-player call.
   opening_hand: {
     phases: [
-      { phase: "act", ms: 460 },
-      { phase: "settle", ms: 460 },
+      { phase: "anticipate", ms: 280 },
+      { phase: "act", ms: 520 },
+      { phase: "settle", ms: 520 },
     ],
   },
   // A mulligan is a small public misfortune, and the overlay reveals a hand

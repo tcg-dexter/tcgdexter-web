@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { onDrawFlight, type FxDrawFlight } from "./fxBus";
+import { emitFocus, emitFx, onDrawFlight, type FxDrawFlight } from "./fxBus";
 import { CardSleeve } from "../BoardKit2";
 import type { Beat } from "@/lib/replay2/beats";
 import type { HandCard, ReplayFrame } from "@/lib/replay/frames";
@@ -306,9 +306,34 @@ export function DrawFlight({
     // into a busy loop; the deal simply becomes near-simultaneous.
     const step = Math.max(35, staggerMs);
     let n = 0;
+    // The pile's own coordinates in host space, so bursts here fire whether
+    // or not the mat is measurable at emit time.
+    const pileCX = flight!.slotX + flight!.slotW / 2;
+    const pileCY = flight!.slotY + flight!.slotH / 2;
+    // client rect of the host, resolved once per deal — the pileCX / pileCY
+    // above are in host coordinates and have to translate back to client
+    // pixels for the fxBus, which operates in the viewport's own space.
+    const hostBounds = hostRef.current?.getBoundingClientRect() ?? null;
+    const isOpening = beat?.kind === "opening_hand";
+    const toClientX = (hx: number) =>
+      hostBounds ? hostBounds.left + hx : hx;
+    const toClientY = (hy: number) =>
+      hostBounds ? hostBounds.top + hy : hy;
     const dealing = setInterval(() => {
       n += 1;
       setRelease({ action: flightActionIndex, count: n });
+      // A little spark on the deck the moment a card leaves it — small,
+      // frequent, sleeve-warm. Only for the opening hand: the ordinary turn
+      // draw is a bookkeeping beat that shouldn't be decorated on every use.
+      if (isOpening) {
+        emitFx({
+          kind: "spark",
+          clientX: toClientX(pileCX),
+          clientY: toClientY(pileCY),
+          intensity: 0.55,
+          color: "#fde68a",
+        });
+      }
       if (n >= total) clearInterval(dealing);
     }, step);
     let m = 0;
@@ -321,6 +346,27 @@ export function DrawFlight({
         // deck — for the stretch in between, the only copy of it on screen is
         // the one in the air.
         onLandedRef.current?.(flightActionIndex, m);
+        // Each landing gets a small burst where the card stopped, and the
+        // last one lights the hand up: a bigger spark plus a focus request
+        // so the camera pushes in on the seven waiting to be revealed.
+        if (isOpening) {
+          const isLast = m >= total;
+          emitFx({
+            kind: "spark",
+            clientX: toClientX(midX),
+            clientY: toClientY(endY - upH * 0.4),
+            intensity: isLast ? 1.6 : 0.7,
+            color: "#fde68a",
+          });
+          if (isLast) {
+            emitFocus({
+              clientX: toClientX(midX),
+              clientY: toClientY(endY - upH * 0.2),
+              actionIndex: flightActionIndex,
+              climax: true,
+            });
+          }
+        }
         if (m >= total && handing) clearInterval(handing);
       };
       tick();
