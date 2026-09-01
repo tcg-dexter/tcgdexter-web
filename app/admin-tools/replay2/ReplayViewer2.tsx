@@ -1847,24 +1847,56 @@ function Board({
             Both are one-off ceremonies over the whole board rather than about
             a card. The winner→edge mapping is identical: the submitting player
             is pinned to the bottom mat, the opponent to the top. */}
+        {/* Setup: two mat-highlight ceremonies over the whole board — the
+            caller's mat on the "call" beat, the winner's mat on the "won" +
+            "chose_first" beats. Actor→edge maps the same way the winner
+            flourish at the other end of the match does. The toss WINNER is
+            the actor of coin_flip stage="won" (or of chose_first), not
+            necessarily the first player: the winner can choose to go
+            second, and the plate names that too. */}
         <SetupCeremony
           beat={beat}
           phase={beatPhase}
           reducedMotion={reducedMotion}
-          firstPlayerEdge={
-            beat?.kind === "chose_first" && beat.firstPlayer != null
-              ? beat.firstPlayer === "player"
+          callerEdge={
+            beat?.kind === "coin_flip" && beat.stage === "call" && beat.actor !== "system"
+              ? beat.actor === "player"
                 ? "bottom"
                 : "top"
               : null
           }
-          firstPlayerName={
-            beat?.kind === "chose_first" && beat.firstPlayer != null
-              ? (beat.firstPlayer === "player"
+          callerName={
+            beat?.kind === "coin_flip" && beat.stage === "call" && beat.actor !== "system"
+              ? (beat.actor === "player"
                   ? frame?.player.handle
                   : frame?.opponent.handle) ?? null
               : null
           }
+          winnerEdge={(() => {
+            const actor =
+              beat?.kind === "coin_flip" && beat.stage === "won"
+                ? beat.actor
+                : beat?.kind === "chose_first"
+                  ? beat.actor
+                  : null;
+            if (actor == null || actor === "system") return null;
+            return actor === "player" ? "bottom" : "top";
+          })()}
+          winnerName={(() => {
+            const actor =
+              beat?.kind === "coin_flip" && beat.stage === "won"
+                ? beat.actor
+                : beat?.kind === "chose_first"
+                  ? beat.actor
+                  : null;
+            if (actor == null || actor === "system") return null;
+            return (actor === "player" ? frame?.player.handle : frame?.opponent.handle) ?? null;
+          })()}
+          winnerOrder={(() => {
+            if (beat?.kind !== "chose_first") return null;
+            if (beat.firstPlayer == null || beat.actor === "system") return null;
+            return beat.firstPlayer === beat.actor ? "first" : "second";
+          })()}
         />
         <div className="flex flex-col" style={{ gap: TAB_GAP_PX }}>
           {/* z-10 on the mat wrappers so each mat paints over the tab tucked

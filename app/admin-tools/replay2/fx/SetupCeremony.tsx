@@ -1,293 +1,339 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useRef } from "react";
 import type { Beat } from "@/lib/replay2/beats";
 import type { BeatPhase } from "../director/choreography";
-import { emitFx } from "./fxBus";
 
 /**
- * The ceremonies that open a game — the coin flip that decides turn order,
- * and the announcement of who chose to go first.
+ * The two ceremonies that open the match — the caller's call, then the
+ * winner's decision on turn order. Each is one mat lit up, an animated
+ * border drawn around it, and a plate over it naming what just happened.
  *
- * Setup used to play out over an empty board. The coin flip was pure narration
- * in the thread and the "player X goes first" line landed with nothing on
- * screen to acknowledge it, so a viewer scrubbing past the first ten seconds
- * of a match saw nothing at all until the opening hand arrived. These are
- * the two moments where the game leaves the abstract and becomes THIS game,
- * between these two people — an occasion, on the same terms as game_end at
- * the other end of the match.
+ * Board-level rather than per-mat: nothing here is about a card, and the
+ * plate belongs to the whole ceremony (its own object, not a card badge).
  *
- * Board-level rather than per-mat: neither is about a card, and the coin
- * doesn't belong to either player. The first-player call is anchored to the
- * winner's mat edge (top or bottom) rather than centred so the board itself
- * says who — the same trick GameEndFlourish uses at the end of the game.
+ * A previous version rendered a spinning coin. It was theatrical but read as
+ * an event happening OFF the board rather than one that decided how the
+ * board would begin — the mats stood empty and dim while it played, and the
+ * moment the coin landed nothing on the mats acknowledged that anything had
+ * happened. Highlighting the caller's mat, then the winner's, ties both
+ * moments to the players whose game is about to start.
  */
 
 interface Props {
   beat: Beat | null;
   phase: BeatPhase;
   reducedMotion: boolean;
-  /** Which visual half the first-player call belongs to, when there is one. */
-  firstPlayerEdge: "top" | "bottom" | null;
-  /** Handle to name in the first-player call. */
-  firstPlayerName: string | null;
+  /**
+   * Which visual half each ceremony belongs to. Both are resolved by the
+   * caller from the frame's own handles — the board pins the submitting
+   * player to the bottom mat and the opponent to the top, so an actor maps
+   * straight onto an edge. `null` disables the ceremony (a mulligan-only
+   * setup, or a beat whose actor wasn't recorded).
+   */
+  callerEdge: "top" | "bottom" | null;
+  callerName: string | null;
+  /** The TOSS winner's mat and name — the actor of coin_flip stage="won"
+   *  and of chose_first. NOT necessarily the first player: the winner can
+   *  choose to go second, and the plate names that too. */
+  winnerEdge: "top" | "bottom" | null;
+  winnerName: string | null;
+  /** The winner's chosen order — "first" or "second". Renders as the
+   *  ordinal in the winner plate. Null omits the ordinal (unusual — the
+   *  log always names it, but the plate stays readable without it). */
+  winnerOrder: "first" | "second" | null;
 }
 
 export function SetupCeremony({
   beat,
   phase,
   reducedMotion,
-  firstPlayerEdge,
-  firstPlayerName,
+  callerEdge,
+  callerName,
+  winnerEdge,
+  winnerName,
+  winnerOrder,
 }: Props) {
-  return (
-    <>
-      <CoinFlip beat={beat} phase={phase} reducedMotion={reducedMotion} />
-      <FirstPlayerCall
-        beat={beat}
-        phase={phase}
-        reducedMotion={reducedMotion}
-        edge={firstPlayerEdge}
-        name={firstPlayerName}
-      />
-    </>
-  );
-}
+  // What to render this beat, if anything. Only one ceremony is on screen at
+  // a time — this replaces both the coin spin and the older half-mat wash of
+  // FirstPlayerCall with a single Spotlight variant per beat.
+  //
+  //   coin_flip / "call" — the caller's mat, with their call.
+  //   coin_flip / "won"  — a brief winner nod, no plate. Almost immediately
+  //                        superseded by chose_first, and a plate here would
+  //                        be redundant with the one that comes next.
+  //   chose_first        — the winner's mat, with the toss result AND the
+  //                        turn order in one plate.
+  let active: null | {
+    edge: "top" | "bottom";
+    label: string | null;
+    kind: "call" | "wonBrief" | "decision";
+  } = null;
 
-/* ──────────────────────────────────────────────────────────────── */
-/* Coin flip                                                        */
-/* ──────────────────────────────────────────────────────────────── */
-
-/**
- * A physical coin, spinning end-over-end on the Y axis.
- *
- * Two faces baked as CSS gradients rather than art: a coin is a shape more
- * than a picture, and shipping a real Poké Ball or minted image would tie the
- * ceremony to a single visual — this is more likely to feel like the app's
- * own coin. Heads is the site's brand red, tails is a cooler slate, and the
- * label reads exactly what the log said the choice was, so the ceremony still
- * tells the truth even when the log chose an unusual word.
- *
- * The spin runs through anticipate + impact, decelerating into the settle
- * phase — its own timing rather than framer's default because the whole point
- * of a coin flip is the moment it stops.
- */
-function CoinFlip({
-  beat,
-  phase,
-  reducedMotion,
-}: {
-  beat: Beat | null;
-  phase: BeatPhase;
-  reducedMotion: boolean;
-}) {
-  const active = beat?.kind === "coin_flip";
-  const spinning = active && (phase === "anticipate" || phase === "impact");
-  const landed = active && phase === "settle";
-  const choice = beat?.kind === "coin_flip" ? beat.choice : null;
-
-  // A single burst on landing, timed to the coin actually stopping. Ref-guarded
-  // so a held phase doesn't re-fire every render.
-  const firedRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (!landed || reducedMotion) return;
-    if (firedRef.current === beat?.actionIndex) return;
-    firedRef.current = beat?.actionIndex ?? null;
-    // Centred on the viewport rather than measured — the coin is fixed at
-    // 50%/50% of the stage, and a stage bounds lookup would cost a ref just
-    // to arrive at the same answer.
-    emitFx({
-      kind: "spark",
-      clientX: window.innerWidth / 2,
-      clientY: window.innerHeight / 2,
-      intensity: 1.4,
-      color: "#fde68a",
-    });
-  }, [landed, reducedMotion, beat?.actionIndex]);
+  if (beat?.kind === "coin_flip" && beat.stage === "call") {
+    if (callerEdge && callerName) {
+      const call = (beat.choice ?? "").toLowerCase();
+      const choice = call === "heads" || call === "tails" ? call : "the coin";
+      active = { edge: callerEdge, label: `${callerName} calls ${choice}`, kind: "call" };
+    }
+  } else if (beat?.kind === "coin_flip" && beat.stage === "won") {
+    // The winner's mat lights briefly on its own, but with no plate: the
+    // next beat's plate says "won the toss AND will go 1st/2nd" and doing
+    // both here first would land the same word twice back-to-back.
+    if (winnerEdge) {
+      active = { edge: winnerEdge, label: null, kind: "wonBrief" };
+    }
+  } else if (beat?.kind === "chose_first") {
+    if (winnerEdge && winnerName) {
+      const order = winnerOrder ?? "first";
+      const ordinal = order === "second" ? "2nd" : "1st";
+      active = {
+        edge: winnerEdge,
+        label: `${winnerName} won the toss and will go ${ordinal}`,
+        kind: "decision",
+      };
+    }
+  }
 
   return (
     <AnimatePresence>
-      {active && !reducedMotion && (
-        <motion.div
-          key={`coin-${beat!.actionIndex}`}
-          className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          {/* A dim wash so the coin reads against the mats behind it,
-              without hiding them — the ceremony belongs OVER the board it
-              is about, not in front of a blank curtain. */}
-          <div
-            aria-hidden
-            className="absolute inset-0"
-            style={{
-              background: "color-mix(in srgb, var(--bg) 55%, transparent)",
-            }}
-          />
-          <div
-            style={{
-              perspective: 900,
-              width: "min(28vw, 180px)",
-              aspectRatio: "1 / 1",
-            }}
-          >
-            <motion.div
-              className="relative h-full w-full"
-              style={{ transformStyle: "preserve-3d" }}
-              // Six full turns during the spin, then one more slow one into
-              // settle — total is the whole beat, so the coin is turning
-              // through every ms it is on screen.
-              animate={{
-                rotateY: spinning ? [0, 2160] : landed ? 2520 : 0,
-                scale: landed ? [1, 1.08, 1] : 1,
-              }}
-              transition={
-                spinning
-                  ? { duration: 0.56, ease: "linear" }
-                  : landed
-                    ? {
-                        rotateY: { duration: 0.42, ease: [0.16, 1, 0.3, 1] },
-                        scale: { duration: 0.42, times: [0, 0.5, 1] },
-                      }
-                    : { duration: 0.2 }
-              }
-            >
-              {/* Heads. */}
-              <CoinFace facing="front" tint="warm" label={choice ?? "heads"} />
-              {/* Tails, pre-rotated so the SAME element is drawn on both sides
-                  of the same coin rather than two separate elements — that is
-                  what backface-visibility makes possible, and it is what keeps
-                  the coin thick-looking rather than flat. */}
-              <CoinFace facing="back" tint="cool" label={choice ?? "tails"} />
-            </motion.div>
-          </div>
-        </motion.div>
+      {active && !reducedMotion && phase !== "anticipate" && (
+        <Spotlight
+          key={`${beat!.actionIndex}-${active.kind}`}
+          edge={active.edge}
+          label={active.label}
+          kind={active.kind}
+          phase={phase}
+        />
       )}
     </AnimatePresence>
   );
 }
 
-function CoinFace({
-  facing,
-  tint,
-  label,
-}: {
-  facing: "front" | "back";
-  /** Which of the two disc gradients this face wears. */
-  tint: "warm" | "cool";
-  label: string;
-}) {
-  const gradient =
-    tint === "warm"
-      ? "radial-gradient(circle at 32% 30%, #ffe3a0 0%, #f4b34a 45%, #b46612 100%)"
-      : "radial-gradient(circle at 32% 30%, #dbe7f0 0%, #7a94a8 55%, #2f3f4d 100%)";
-  return (
-    <div
-      className="absolute inset-0 flex items-center justify-center rounded-full"
-      style={{
-        background: gradient,
-        boxShadow:
-          "inset 0 0 10px rgba(0,0,0,0.28), 0 12px 26px rgba(0,0,0,0.42)",
-        backfaceVisibility: "hidden",
-        transform: facing === "front" ? undefined : "rotateY(180deg)",
-        // A thin rim of a slightly darker shade of the same tint, so the coin
-        // has an edge instead of ending on the shadow. Painted with a second
-        // background layered under the disc.
-        border: `2px solid ${tint === "warm" ? "#8a4712" : "#22303c"}`,
-      }}
-    >
-      <span
-        className="select-none font-black uppercase tracking-[0.14em] text-white"
-        style={{
-          fontSize: "clamp(11px, 2.6vw, 20px)",
-          textShadow: "0 2px 6px rgba(0,0,0,0.5)",
-        }}
-      >
-        {label}
-      </span>
-    </div>
-  );
-}
-
 /* ──────────────────────────────────────────────────────────────── */
-/* Chose first                                                      */
+/* Spotlight                                                        */
 /* ──────────────────────────────────────────────────────────────── */
 
 /**
- * The winner of the flip declares. Their mat's half of the board catches
- * light and their name lands with "GOES FIRST" — same shape as the game-end
- * flourish, quieter, and never announced until it happens.
+ * One mat's half of the board, lit up.
  *
- * The half-mat wash is on their edge specifically rather than the whole
- * board, so the visual claim is unmistakable in a way the label alone would
- * not be — two identical name banners at the beginning and end of a game
- * would land differently only for someone who was watching for them.
+ * A stroked rounded rectangle draws around the mat's outline the way the
+ * poison border does around a struck card — one continuous path from a
+ * single starting point, so the eye follows the stroke as it lands rather
+ * than the whole outline appearing at once. Behind it, a warm wash on the
+ * same half of the board, and the plate carrying the label sits centred
+ * over the mat.
+ *
+ * The mat's shape is approximated rather than measured. Both mats are the
+ * same size, stacked with a small gap, and each occupies almost exactly
+ * one half of the camera stage: taking half the stage minus the gap gives a
+ * rectangle that traces the visible mat closely enough for the stroke to
+ * read as its own edge. Measuring exactly would mean a ref through
+ * PlayerMat's context all the way here — worth the plumbing when the answer
+ * differs, not when it doesn't.
  */
-function FirstPlayerCall({
-  beat,
-  phase,
-  reducedMotion,
+function Spotlight({
   edge,
-  name,
+  label,
+  kind,
+  phase,
 }: {
-  beat: Beat | null;
+  edge: "top" | "bottom";
+  label: string | null;
+  kind: "call" | "wonBrief" | "decision";
   phase: BeatPhase;
-  reducedMotion: boolean;
-  edge: "top" | "bottom" | null;
-  name: string | null;
 }) {
-  const active =
-    beat?.kind === "chose_first" &&
-    edge != null &&
-    phase !== "anticipate";
+  const winner = kind !== "call";
+  // Same warm gold that GameEndFlourish uses on the winning half at the
+  // other end of the match, so the winning-mat spotlight visually rhymes
+  // with the winning-mat flourish that closes it out. The caller reads as
+  // neutral rather than triumphant — it is just a call, not a win — so it
+  // wears a cooler blue.
+  const strokeColor = winner ? "#facc15" : "#38bdf8";
+  const strokeGlow = winner ? "rgba(250, 204, 21, 0.7)" : "rgba(56, 189, 248, 0.6)";
+  const washColor = winner ? "rgba(255, 238, 170, 0.45)" : "rgba(191, 219, 254, 0.34)";
+  const plateFrom = winner ? "#b45309" : "#0369a1";
+  const plateTo = winner ? "#f59e0b" : "#22d3ee";
+  const plateGlow = winner ? "rgba(245, 158, 11, 0.6)" : "rgba(34, 211, 238, 0.55)";
   return (
-    <AnimatePresence>
-      {active && !reducedMotion && (
-        <motion.div
-          key={`first-${beat!.actionIndex}`}
-          className="pointer-events-none absolute inset-0 z-40 overflow-hidden"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.25 }}
+    <motion.div
+      className="pointer-events-none absolute inset-0 z-40 overflow-hidden"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25 }}
+    >
+      {/* The wash. Gathers on the ceremony's own half of the board, so the
+          board itself says who this ceremony is about before the plate is
+          read — same trick GameEndFlourish uses on the winner's side at the
+          end. */}
+      <motion.div
+        className="absolute inset-x-0"
+        style={{
+          [edge]: 0,
+          height: "50%",
+          background:
+            edge === "bottom"
+              ? `linear-gradient(to top, ${washColor}, transparent 80%)`
+              : `linear-gradient(to bottom, ${washColor}, transparent 80%)`,
+        }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 1, 0.75] }}
+        transition={{ duration: 0.9, ease: "easeOut" }}
+      />
+      {/* The border draw. A single stroked path that runs its length once,
+          the way ConditionBorder does around a struck card. */}
+      <SpotlightBorder edge={edge} color={strokeColor} glow={strokeGlow} />
+      {/* The plate. Skipped for the brief "won" nod between the call and
+          the decision — that beat exists so the winner's mat isn't dark
+          during "won the coin toss", not to duplicate the plate that
+          follows. */}
+      {label && (
+        <div
+          className="absolute inset-x-0 flex justify-center"
+          style={
+            edge === "bottom"
+              ? { bottom: "24%" }
+              : { top: "24%" }
+          }
         >
-          <motion.div
-            className="absolute inset-x-0"
-            style={{
-              [edge!]: 0,
-              height: "50%",
-              background:
-                edge === "bottom"
-                  ? "linear-gradient(to top, rgba(255,238,170,0.42), transparent 82%)"
-                  : "linear-gradient(to bottom, rgba(255,238,170,0.42), transparent 82%)",
-            }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 1, 0.6] }}
-            transition={{ duration: 0.9, ease: "easeOut" }}
-          />
-          {name && (
-            <motion.div
-              className="absolute inset-0 flex items-center justify-center"
-              initial={{ opacity: 0, scale: 1.16 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: "spring", stiffness: 260, damping: 22, delay: 0.12 }}
-            >
-              <span
-                className="select-none px-3 text-center font-black uppercase tracking-[0.18em] text-white"
-                style={{
-                  fontSize: "clamp(12px, 2.6vw, 26px)",
-                  textShadow: "0 3px 14px rgba(0,0,0,0.85), 0 0 34px rgba(255,214,102,0.65)",
-                }}
-              >
-                {name} <span className="opacity-80">goes first</span>
-              </span>
-            </motion.div>
-          )}
-        </motion.div>
+          <Plate label={label} from={plateFrom} to={plateTo} glow={plateGlow} phase={phase} />
+        </div>
       )}
-    </AnimatePresence>
+    </motion.div>
+  );
+}
+
+/**
+ * The stroked outline itself.
+ *
+ * Half of the container tall, with a small inset that stands in for the
+ * mat's own padding, and rounded corners in the neighbourhood of the mat's
+ * own radius. pathLength normalises the perimeter to 1 so a single dash of
+ * length 1 covers it — same trick ConditionBorder uses so the drawing has
+ * a definite length regardless of size.
+ */
+function SpotlightBorder({
+  edge,
+  color,
+  glow,
+}: {
+  edge: "top" | "bottom";
+  color: string;
+  glow: string;
+}) {
+  const stroke = 3;
+  // Inset small enough that the stroke reads as ringing the mat itself, not
+  // a rectangle floating over it.
+  const inset = 6;
+  return (
+    <motion.svg
+      className="pointer-events-none absolute"
+      style={{
+        left: inset,
+        right: inset,
+        [edge]: inset,
+        // 50% of the container minus the top/bottom insets, so both mats
+        // get their share and nothing crosses into the other side.
+        height: `calc(50% - ${inset * 2}px)`,
+        width: `calc(100% - ${inset * 2}px)`,
+        overflow: "visible",
+      }}
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      aria-hidden
+    >
+      <motion.rect
+        x={stroke / 2}
+        y={stroke / 2}
+        width={100 - stroke}
+        height={100 - stroke}
+        rx={3}
+        ry={3}
+        fill="none"
+        stroke={color}
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        pathLength={1}
+        strokeDasharray="1 1"
+        initial={{ strokeDashoffset: 1, opacity: 0 }}
+        animate={{ strokeDashoffset: 0, opacity: 1 }}
+        exit={{ opacity: 0, transition: { duration: 0.35 } }}
+        transition={{
+          strokeDashoffset: { duration: 0.9, ease: "easeInOut" },
+          opacity: { duration: 0.18 },
+        }}
+        style={{
+          filter: `drop-shadow(0 0 6px ${glow})`,
+          // vector-effect prevents the stroke from stretching with the box
+          // when preserveAspectRatio="none" scales the viewBox axes
+          // independently — the outline draws on a rectangle, the STROKE
+          // stays a stroke.
+          vectorEffect: "non-scaling-stroke",
+        }}
+      />
+    </motion.svg>
+  );
+}
+
+/**
+ * The label plate. Same silhouette as MoveNamePlate and the overlay plates —
+ * a skewed coloured bar with white uppercase black text — plus the same
+ * cross-fade entrance MoveNamePlate uses, so the ceremonies feel of a piece
+ * with everything else the board says over itself.
+ */
+function Plate({
+  label,
+  from,
+  to,
+  glow,
+  phase,
+}: {
+  label: string;
+  from: string;
+  to: string;
+  glow: string;
+  phase: BeatPhase;
+}) {
+  // Drift on `act`, hold on `settle`, so the plate rides the same phase
+  // clock every other plate does.
+  const drift = phase === "settle" ? -6 : 0;
+  return (
+    <motion.div
+      initial={{ y: 8 }}
+      animate={{ y: drift }}
+      transition={{ duration: 0.9, ease: "linear" }}
+    >
+      <div className="relative flex items-center justify-center">
+        <motion.div
+          aria-hidden
+          className="absolute inset-y-0 -inset-x-2"
+          style={{
+            background: `linear-gradient(100deg, ${from}, ${to})`,
+            transform: "skewX(-13deg)",
+            boxShadow: `0 6px 22px ${glow}`,
+            borderRadius: 3,
+          }}
+          initial={{ x: "-135%", opacity: 0, scaleX: 0.55 }}
+          animate={{ x: "0%", opacity: 1, scaleX: 1 }}
+          exit={{ x: "150%", opacity: 0, scaleX: 0.7 }}
+          transition={{ duration: 0.42, ease: [0.4, 0, 0.2, 1] }}
+        />
+        <motion.span
+          className="relative select-none whitespace-nowrap px-4 py-1.5 font-black uppercase leading-none text-white"
+          style={{
+            fontSize: "clamp(11px, 1.9vw, 20px)",
+            letterSpacing: "0.06em",
+            textShadow: "0 1px 3px rgba(0,0,0,0.55)",
+          }}
+          initial={{ x: "115%", opacity: 0 }}
+          animate={{ x: "0%", opacity: 1 }}
+          exit={{ x: "-130%", opacity: 0 }}
+          transition={{ duration: 0.42, ease: [0.4, 0, 0.2, 1] }}
+        >
+          {label}
+        </motion.span>
+      </div>
+    </motion.div>
   );
 }

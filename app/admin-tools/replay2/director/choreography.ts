@@ -274,25 +274,29 @@ const SHAPE_BY_KIND: Record<Beat["kind"], ChoreographySpec> = {
 
   /* ── Setup ───────────────────────────────────────────────────── */
 
-  // Long enough to actually watch the coin spin, land, and be read. The
-  // ceremony was one of the flattest beats in the replay; it now carries an
-  // animation of its own, and the extra time is what lets that read as a
-  // moment rather than a flash.
+  // The caller-and-winner ceremonies each get their own beat now — the
+  // spotlight has to draw around the mat AND the plate has to land and be
+  // read, both of which want a full act phase, plus a settle so the beat
+  // doesn't end the same moment the plate stops moving. The "won" stage is
+  // largely superseded by chose_first (same actor, plus the go-first
+  // decision), so it holds only briefly.
   coin_flip: {
     phases: [
-      { phase: "anticipate", ms: 360 },
-      { phase: "impact", ms: 560 },
-      { phase: "settle", ms: 560 },
+      { phase: "anticipate", ms: 220 },
+      { phase: "act", ms: 620 },
+      { phase: "settle", ms: 620 },
     ],
   },
-  // Two phases now spend real time on the choice: an act for the light
-  // gathering on the winning mat and their name landing, and a settle long
-  // enough that the caller isn't cut off mid-word before the opening hand
-  // arrives on top of them.
+  // Longer than the caller beat above: this plate carries two sentences of
+  // real information ("won the toss AND will go 1st/2nd") plus its own mat
+  // spotlight, and it is the last thing before the opening hand starts to
+  // deal, so it should stand as its own moment rather than blur into the
+  // deck's wind-up.
   chose_first: {
     phases: [
-      { phase: "act", ms: 420 },
-      { phase: "settle", ms: 480 },
+      { phase: "anticipate", ms: 200 },
+      { phase: "act", ms: 640 },
+      { phase: "settle", ms: 640 },
     ],
   },
   // Seven cards dealt one at a time, so this is the one beat whose length is

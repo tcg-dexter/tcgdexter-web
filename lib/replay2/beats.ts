@@ -155,7 +155,17 @@ export type Beat = BeatBase &
     | { kind: "chose_first"; firstPlayer: BeatActor | null }
     | { kind: "turn_start"; turn: number; playerTurnNumber: number }
     | { kind: "turn_end" }
-    | { kind: "coin_flip"; choice: string | null }
+    /**
+     * The flip comes through as two distinct log lines — "X chose heads for
+     * the opening coin flip" (call) and "X won the coin toss" (won) — and
+     * the ceremony treats them as two separate beats: the caller's mat
+     * spotlights on `call`, the winner's on `won` (though the winner's
+     * plate is largely superseded by the following chose_first, so its
+     * choreography is short and low-key). Merging them like it used to did
+     * mean two identical beats fired for the same event and nothing said
+     * which was which.
+     */
+    | { kind: "coin_flip"; stage: "call" | "won"; choice: string | null }
     | { kind: "game_end"; winner: BeatActor | null; reason: string | null }
     /** Anything without its own choreography yet. Carries the raw action
      *  type so the director can still pace it and a breadth pass can find
@@ -590,8 +600,15 @@ function toBeat(ev: EngineEvent, action: ParsedAction | undefined): Beat {
       return { ...base, kind: "turn_end" };
 
     case "coin_flip":
+      return {
+        ...base,
+        kind: "coin_flip",
+        stage: "call",
+        choice: strOrNull(d.choice ?? p.choice),
+      };
+
     case "coin_toss_won":
-      return { ...base, kind: "coin_flip", choice: strOrNull(d.choice ?? p.choice) };
+      return { ...base, kind: "coin_flip", stage: "won", choice: null };
 
     case "game_end": {
       // detail.winner is already resolved from handle to side by the
