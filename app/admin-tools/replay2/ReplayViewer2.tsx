@@ -391,6 +391,93 @@ const DISCARD_DRAW_MAX_PER_GROUP = 5;
 // overlay is asking.
 const OVERLAY_CARD_MIN_PX = 26;
 
+/**
+ * A single-line label plate for the transaction overlays, cut from the same
+ * cloth as the on-mat move name plate: skewed coloured bar with a warm
+ * gradient wash, white uppercase black text, soft glow. What used to be
+ * plain 9px muted-grey text now reads at plate weight — the discard/draw and
+ * mulligan captions are important enough to name what they are, and the
+ * three overlays now share one visual language.
+ *
+ * Not the MoveNamePlate component itself: that one carries an entrance
+ * (bar-in-from-left, text-in-from-right), a hold-and-drift, and a
+ * per-action lifecycle keyed off the beat clock. This plate lives inside an
+ * overlay that already runs its own AnimatePresence and doesn't need
+ * another set of moving parts inside it — the shape is what mattered.
+ */
+type PlateColorway = "action" | "discard" | "draw" | "mulligan" | "pile";
+const PLATE_COLORWAYS: Record<
+  PlateColorway,
+  { from: string; to: string; glow: string }
+> = {
+  // Ability plate — same cyan/teal MoveNamePlate uses. Kept in case a caller
+  // ever wants the "action was performed" look inside an overlay.
+  action: { from: "#0891b2", to: "#22d3ee", glow: "rgba(34,211,238,0.55)" },
+  // Discards read as spent — cooler, slate-toned.
+  discard: { from: "#475569", to: "#94a3b8", glow: "rgba(148,163,184,0.5)" },
+  // Draws read as gain — warm violet into fuchsia, the direction Trainers
+  // (Ultra Ball, Trade) already read as.
+  draw: { from: "#7c3aed", to: "#c084fc", glow: "rgba(192,132,252,0.55)" },
+  // Mulligans are misfortune — muted amber, present but subdued.
+  mulligan: { from: "#b45309", to: "#f59e0b", glow: "rgba(245,158,11,0.55)" },
+  // The full discard pile inspector — a step darker than a single discard
+  // group so the "the whole pile" reading holds against the pile's own
+  // stacked mass.
+  pile: { from: "#334155", to: "#64748b", glow: "rgba(100,116,139,0.5)" },
+};
+
+function OverlayPlate({
+  label,
+  colorway,
+  count,
+  cardWidth,
+}: {
+  label: string;
+  colorway: PlateColorway;
+  /** Trailing count, e.g. "· 24" beside "Discard Pile". Rendered as its own
+   *  slightly less bold run so the plate reads as label-then-number rather
+   *  than one long phrase. */
+  count?: number;
+  /** Scales the plate's text against the card size beside it — the same
+   *  relationship MoveNamePlate uses (card-width × ratio, with a floor). */
+  cardWidth: number;
+}) {
+  const accent = PLATE_COLORWAYS[colorway];
+  const fontSize = Math.max(10, Math.round(cardWidth * 0.14));
+  const padX = fontSize * 0.85;
+  const padY = fontSize * 0.4;
+  return (
+    <div className="relative flex items-center justify-center">
+      <div
+        aria-hidden
+        className="absolute inset-y-0 -inset-x-2"
+        style={{
+          background: `linear-gradient(100deg, ${accent.from}, ${accent.to})`,
+          transform: "skewX(-13deg)",
+          boxShadow: `0 4px 14px ${accent.glow}`,
+          borderRadius: 3,
+        }}
+      />
+      <span
+        className="relative select-none whitespace-nowrap font-black uppercase leading-none text-white"
+        style={{
+          fontSize,
+          padding: `${padY}px ${padX}px`,
+          letterSpacing: "0.06em",
+          textShadow: "0 1px 3px rgba(0,0,0,0.55)",
+        }}
+      >
+        {label}
+        {count != null && (
+          <span className="ml-1 font-bold tabular-nums opacity-85">
+            · {count}
+          </span>
+        )}
+      </span>
+    </div>
+  );
+}
+
 /** A single card face for any full-mat overlay: art when the catalog
  *  resolved it, the bare name over a plain card back otherwise — a
  *  catalog miss still carries the information the art would have, so it's
@@ -468,9 +555,15 @@ function DiscardDrawOverlay({
   // Height budget: mat height, less breathing room, the label line and the
   // gap above it. 342/245 converts a card's width to its height.
   const fromHeight = (matWidth * MAT_ASPECT - 24 - 12 - 6) / (342 / 245);
+  // 50% larger than the shared thumbnail baseline — the transaction overlays
+  // are the moment where a card exists to be READ, not just counted, and the
+  // old ~0.92× cap pinned them at close to the size the mat's own art
+  // renders at even on a large board. Still fenced by fromWidth/fromHeight
+  // so cards can't grow past what the mat actually has room for; the
+  // ceiling just gets out of the way where there IS room.
   const w = Math.max(
     OVERLAY_CARD_MIN_PX,
-    Math.round(Math.min(cardWidth * 0.92, fromWidth, fromHeight)),
+    Math.round(Math.min(cardWidth * 1.4, fromWidth, fromHeight)),
   );
 
   const reached = DISCARD_DRAW_STAGES.indexOf(detail.stage);
@@ -588,9 +681,11 @@ function DiscardDrawGroup({
           </span>
         )}
       </div>
-      <span className="whitespace-nowrap text-[9px] font-bold uppercase tracking-wider text-text-secondary">
-        {label}
-      </span>
+      <OverlayPlate
+        label={label}
+        colorway={label === "Discard" ? "discard" : "draw"}
+        cardWidth={width}
+      />
       </div>
     </motion.div>
   );
@@ -640,9 +735,11 @@ function MulliganOverlay({
   const availableForRows =
     matWidth * MAT_ASPECT - 24 - 16 - (detail.totalRows - 1) * MULLIGAN_ROW_GAP_PX;
   const fromHeight = availableForRows / detail.totalRows / (342 / 245);
+  // Same 50%-larger treatment as the discard/draw overlay above — cards are
+  // meant to be read, not counted.
   const w = Math.max(
     OVERLAY_CARD_MIN_PX,
-    Math.round(Math.min(cardWidth * 0.92, fromWidth, fromHeight)),
+    Math.round(Math.min(cardWidth * 1.4, fromWidth, fromHeight)),
   );
 
   return (
@@ -657,9 +754,7 @@ function MulliganOverlay({
       {/* `layout` re-centres the stack vertically as rows land, the same
           way the discard/draw overlay's row re-centres horizontally. */}
       <motion.div layout className="flex flex-col items-center" style={{ gap: MULLIGAN_ROW_GAP_PX }}>
-        <span className="whitespace-nowrap text-[9px] font-bold uppercase tracking-wider text-text-secondary">
-          Mulligan
-        </span>
+        <OverlayPlate label="Mulligan" colorway="mulligan" cardWidth={w} />
         <AnimatePresence initial={false}>
           {detail.rows.map((row, i) => (
             <motion.div
@@ -1418,9 +1513,7 @@ function DiscardPileOverlay({
     >
       <OverlayCloseButton onClick={onClose} label="Close discard pile" />
       <div className="flex flex-col items-center gap-1.5" style={{ maxHeight: matHeight - 24 }}>
-        <span className="whitespace-nowrap text-[9px] font-bold uppercase tracking-wider text-text-secondary">
-          Discard Pile · {cards.length}
-        </span>
+        <OverlayPlate label="Discard Pile" count={cards.length} colorway="pile" cardWidth={w} />
         {/* The only scrolling surface in this overlay — a pile past what
             fits vertically scrolls here instead of growing the grid past
             the mat or shrinking the cards further.

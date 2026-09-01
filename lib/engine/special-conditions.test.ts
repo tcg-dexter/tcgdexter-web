@@ -64,3 +64,48 @@ describe("leaving the Active Spot", () => {
     expect(result.finalState.sides.player.active?.conditions).toEqual([]);
   });
 });
+
+/**
+ * Subjugating Chains — the switch and the poison happen in ONE ability, and
+ * the log names them in the order the game does. If they arrive at the
+ * reducer the other way round the promotion turns into a fresh entrance and
+ * wipes the condition off, which is the bug this covers.
+ *
+ * The full log-line pattern under the ability:
+ *
+ *   H's X was switched with H's Y to become the Active Pokémon.
+ *   H's X is now Poisoned.
+ *
+ * Plus a top-level "H's X is now in the Active Spot." block after the
+ * ability that used to be the only way the switch reached the reducer.
+ */
+const CHAINS_LOG = `Setup
+a11father chose heads for the opening coin flip.
+a11father won the coin toss.
+a11father decided to go first.
+a11father drew 7 cards for the opening hand.
+FenrisDWolf drew 7 cards for the opening hand.
+a11father played (me1_88_ph) Yveltal to the Active Spot.
+a11father played (sv9_175) N's Zoroark ex to the Bench.
+a11father played (sv6-5_39) Pecharunt ex to the Bench.
+FenrisDWolf played (me1_77) Mega Lucario ex to the Active Spot.
+
+a11father's Turn
+a11father drew a card.
+a11father's (sv6-5_39) Pecharunt ex used Subjugating Chains.
+- a11father's (sv9_175) N's Zoroark ex was switched with a11father's (me1_88_ph) Yveltal to become the Active Pokémon.
+- a11father's (sv9_175) N's Zoroark ex is now Poisoned.
+a11father's (sv9_175) N's Zoroark ex is now in the Active Spot.
+a11father ended their turn.`;
+
+describe("Subjugating Chains and its cousins", () => {
+  it("switches BEFORE poisoning, so the condition lands on the new Active", () => {
+    const r = replay(normalizePerspective(parseBattleLog(CHAINS_LOG), "a11father"));
+    const side = r.finalState.sides.player;
+    expect(side.active?.card.name).toBe("N's Zoroark ex");
+    expect(side.active?.conditions).toEqual(["Poisoned"]);
+    const yveltal = side.bench.find((p) => p.card.name === "Yveltal");
+    expect(yveltal, "Yveltal should be back on the bench").toBeDefined();
+    expect(yveltal!.conditions).toEqual([]);
+  });
+});

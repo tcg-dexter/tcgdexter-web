@@ -585,7 +585,17 @@ export function applyAction(
       const incoming = side.bench.splice(benchIdx, 1)[0];
       benchOutgoingActive(side);
       side.active = incoming;
-      side.active.conditions = []; // conditions clear when leaving play; promotion treats it as fresh
+      // No wipe of the incoming's conditions — a bench Pokémon shouldn't
+      // have any to begin with, since conditions only ever apply to the
+      // Active (see benchOutgoingActive, which clears the OUTGOING side of
+      // the swap). The exception is exactly Pecharunt ex's Subjugating
+      // Chains, where the ability applies Poisoned to the incoming card in
+      // the same beat as the switch itself — the log names the poison
+      // BEFORE the top-level "is now in the Active Spot" that lands here,
+      // so wiping conditions here strips it off the moment it was applied.
+      // The rules-correct outcome is that the incoming Pokémon becomes
+      // Active WITH the condition; preserving whatever is on it delivers
+      // that without the parser having to reorder log lines.
       event.detail = { promoted: targetName };
       break;
     }
