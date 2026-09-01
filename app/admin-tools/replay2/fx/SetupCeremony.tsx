@@ -171,22 +171,35 @@ function MatBorder({ colorway }: { colorway: SpotlightColorway }) {
       preserveAspectRatio="none"
       aria-hidden
     >
-      {/* The stroke draws in and then continues in the SAME direction — the
-          dash's leading edge keeps moving around the outline, so the tail
-          catches up from the start and the whole thing erases forward.
-          One continuous forward motion, not a draw that reverses back to
-          nothing.
+      {/* A short "gap" chases forward around the outline — the rectangle is
+          drawn most of the way, and a small dark arc travels around it,
+          continuously in one direction, never reversing.
 
-          Both endpoints (offset 1 and offset -1) are "nothing visible" —
-          the pattern is fully outside the path in either state — so the
-          repeat's jump from -1 back to 1 is imperceptible, and the eye
-          reads the loop as a stroke that keeps going the same way.
+          Why this instead of animating a full-length dash from invisible
+          to full and back: with dasharray "1 1" the visible line GROWS
+          from one edge (offset 1 → 0) and then SHRINKS from that same
+          edge (offset 0 → -1). Both edges move the same way in the
+          pattern's own frame, but VISUALLY the second phase reads as the
+          first phase in reverse — the eye tracks the moving edge, and
+          "the edge grew, then it retreated" is the whole animation. A
+          proper chase needs a dash SHORTER than the outline; then the
+          visible arc slides forward around the perimeter without ever
+          reversing.
 
-          easeInOut applied to the whole [1, 0, -1] curve gives a soft
-          acceleration at the start and deceleration at the end of each
-          pass, so the motion breathes rather than sitting at constant
-          speed. On exit, framer stops the loop and the parent motion.div
-          fades the overlay out. */}
+          Dash 0.7 / gap 0.3: most of the outline is lit at any moment, so
+          the rectangle still reads as a drawn border rather than a chase
+          runner. The 30% gap is the moving element — small enough to
+          look like a light travelling along the edge, big enough to see.
+
+          Offset animates 0 → -1 over one period on a plain loop. The
+          endpoints wrap identically (the pattern's period is 1), so the
+          jump from -1 back to 0 is invisible — the eye sees one
+          continuous forward motion.
+
+          Linear ease, not easeInOut: the chase reads best at a steady
+          pace. easeInOut here would make the gap hesitate near the
+          top-left corner every cycle, which looks like a stall rather
+          than a rhythm. */}
       <motion.rect
         x={stroke / 2}
         y={stroke / 2}
@@ -199,14 +212,13 @@ function MatBorder({ colorway }: { colorway: SpotlightColorway }) {
         strokeWidth={stroke}
         strokeLinecap="round"
         pathLength={1}
-        strokeDasharray="1 1"
-        initial={{ strokeDashoffset: 1 }}
-        animate={{ strokeDashoffset: [1, 0, -1] }}
+        strokeDasharray="0.7 0.3"
+        initial={{ strokeDashoffset: 0 }}
+        animate={{ strokeDashoffset: -1 }}
         transition={{
-          duration: 2.2,
-          ease: "easeInOut",
+          duration: 2.4,
+          ease: "linear",
           repeat: Infinity,
-          repeatType: "loop",
         }}
         style={{
           filter: `drop-shadow(0 0 6px ${glow})`,
