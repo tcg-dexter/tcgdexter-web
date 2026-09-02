@@ -85,7 +85,6 @@ export function DrawFlight({
   staggerMs,
   playerSleeveGradient,
   opponentSleeveGradient,
-  handoffToPlayerHand = true,
   onLanded,
   onStarted,
 }: {
@@ -105,18 +104,6 @@ export function DrawFlight({
   /** Sleeve colour for cards leaving each side's deck — see CardSleeve. */
   playerSleeveGradient?: string | null;
   opponentSleeveGradient?: string | null;
-  /**
-   * Whether the player's hand strip is on screen to receive the flight.
-   *
-   * Defaults on because the ordinary turn draw always has a strip to land in.
-   * The viewer passes false during the setup ceremony: before the player's
-   * first draw the strip is hidden, so an opening-hand card has no
-   * `hand-<id>` element to become — without this the flight would run through
-   * its handoff branch and then vanish at the moment of arrival. With it, the
-   * cards leave frame past the bottom of the mat instead, the same route the
-   * opponent's flights already take.
-   */
-  handoffToPlayerHand?: boolean;
   /**
    * Fired the moment the cards finish arriving.
    *
@@ -294,11 +281,7 @@ export function DrawFlight({
    * into the strip. The opponent's cards have nothing to become and leave
    * frame on their own instead.
    */
-  const handoff =
-    ready &&
-    flight!.actor === "player" &&
-    faces.some((f) => f != null) &&
-    handoffToPlayerHand;
+  const handoff = ready && flight!.actor === "player" && faces.some((f) => f != null);
 
   const flightActionIndex = ready ? flight!.actionIndex : null;
   const total = faces.length;

@@ -1593,7 +1593,6 @@ function Board({
   reducedMotion,
   anyInspectorOpen,
   actionContinues,
-  revealPlayerHand,
   playerMatGradient,
   opponentMatGradient,
   matInspect,
@@ -1627,12 +1626,6 @@ function Board({
    *  discard-then-draw exchange mid-flight. Overlays that describe the
    *  ACTION rather than the frame use it to stay put across the seam. */
   actionContinues: boolean;
-  /** False while the playhead is still in the setup ceremony (before the
-   *  player's first draw): the hand strip stays empty and DrawFlight for the
-   *  opening hand fires without a handoff target, so the seven cards leave
-   *  the deck and disperse rather than landing in a hand nobody has drawn
-   *  from yet. Solved in ReplayViewer — see firstPlayerDrawFrameIndex. */
-  revealPlayerHand: boolean;
   /** The viewer honours prefers-reduced-motion — every card rests, the
    *  pointer tilt is off, and the idle breathing stops. Resolved once in
    *  ReplayViewer2 and handed down rather than queried per card. */
@@ -1719,25 +1712,29 @@ function Board({
   const [startedAction, setStartedAction] = useState<number | null>(null);
   const drawnInFlight = (() => {
     if (instant || reducedMotion || !beat || beat.actor !== "player") return 0;
-    // Gated on a flight having actually started, not merely on the beat being
-    // a draw: if the flight never got off the ground, the hand must show the
-    // cards rather than hide what nothing is carrying.
-    if (startedAction !== beat.actionIndex) return 0;
     const flight = drawFlightFor(beat);
     if (!flight) return 0;
+    // Opening_hand hides the whole hand from the moment the beat starts, not
+    // only from when DrawFlight's onStarted fires — the beat has an
+    // `anticipate` phase before its `act`, and the pile emits the flight on
+    // `act`, so gating on startedAction like an ordinary draw would let the
+    // hand briefly show all seven cards during the anticipate and then
+    // remove them again once the deal begins. The deck pile is always on
+    // screen through setup, so a flight that never starts is not a real risk
+    // here — the safety net stays on for the ordinary turn draw, whose
+    // wind-up is shorter and where a stuck flight would leave a hand full of
+    // cards that never appeared to have been drawn.
+    const opening = beat.kind === "opening_hand";
+    if (!opening && startedAction !== beat.actionIndex) return 0;
     // Cards are dealt one at a time, so they are un-hidden one at a time.
     // The engine pushes drawn cards onto the END of the hand in order, so
     // hiding the trailing N reveals exactly the ones already dealt.
     const released = landed.action === beat.actionIndex ? landed.count : 0;
     return Math.max(0, flight.count - released);
   })();
-  const visibleHand =
-    frame && revealPlayerHand
-      ? frame.player.hand.slice(
-          0,
-          Math.max(0, frame.player.hand.length - drawnInFlight),
-        )
-      : [];
+  const visibleHand = frame
+    ? frame.player.hand.slice(0, Math.max(0, frame.player.hand.length - drawnInFlight))
+    : [];
 
   const opponentDiscard = discardExcludingFloatingTrainer(
     frame?.opponent ?? null,
@@ -1818,10 +1815,6 @@ function Board({
           staggerMs={drawStaggerMs}
           playerSleeveGradient={playerMatGradient}
           opponentSleeveGradient={opponentMatGradient}
-          // False before the player's first draw — during the opening-hand
-          // deal the strip is hidden, so there's no `hand-<id>` element to
-          // hand the flight off to and the cards leave frame instead.
-          handoffToPlayerHand={revealPlayerHand}
           onLanded={(action, count) => setLanded({ action, count })}
           onStarted={setStartedAction}
         />
@@ -2757,36 +2750,6 @@ export default function ReplayViewer({
     setPlaying(true);
   }
 
-  // Frame index at which the player's hand should first appear — the first
-  // frame past setup (turn >= 1) where the player is the actor and their hand
-  // grew, i.e. the start-of-turn draw on the player's first turn (turn 1 if
-  // they went first, turn 2 if not). Until then the HandStrip stays empty and
-  // DrawFlight for the opening hand fires without a handoff target, so the
-  // seven cards dealt during the ceremony leave the deck and don't populate a
-  // hand nobody has drawn from yet. On or after this frame the strip renders
-  // its cards normally, and the first draw's own flight is what visibly puts
-  // the hand on screen. Null when no qualifying frame exists (truncated log);
-  // the strip stays hidden then, which is safer than presenting a hand for a
-  // game that never started.
-  const firstPlayerDrawFrameIndex = useMemo(() => {
-    if (!data) return null;
-    for (let i = 1; i < data.frames.length; i++) {
-      const f = data.frames[i];
-      const prev = data.frames[i - 1];
-      if (
-        f.actor === "player" &&
-        f.turn >= 1 &&
-        f.player.handCount > prev.player.handCount
-      ) {
-        return i;
-      }
-    }
-    return null;
-  }, [data]);
-
-  const revealPlayerHand =
-    firstPlayerDrawFrameIndex != null && frameIndex >= firstPlayerDrawFrameIndex;
-
   // Index of every frame that opens a new turn (turn number changes vs the
   // prior frame). Drives the outer chevrons — back/forward by whole turn —
   // without scanning the frame array on every click.
@@ -2962,7 +2925,6 @@ export default function ReplayViewer({
             reducedMotion={reducedMotion}
             anyInspectorOpen={anyInspectorOpen}
             actionContinues={actionContinues}
-            revealPlayerHand={revealPlayerHand}
             playerMatGradient={playerMatGradient}
             opponentMatGradient={opponentMatGradient}
             matInspect={matInspect}
