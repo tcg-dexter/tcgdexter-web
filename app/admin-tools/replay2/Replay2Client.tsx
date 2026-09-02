@@ -4,7 +4,6 @@
 // (battle picker, "{X} vs {Y}" wordmark bar) around the 2.0 viewer.
 
 import { useState } from "react";
-import Link from "next/link";
 import ReplayViewer2 from "./ReplayViewer2";
 
 export interface ReplayBattleOption {
@@ -29,23 +28,11 @@ export default function Replay2Client({ options }: Replay2ClientProps) {
   return (
     <main className="min-h-dvh bg-bg pb-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-6">
-        <header className="mb-5 flex items-baseline justify-between gap-3">
-          <div>
-            <Link
-              href="/admin-tools"
-              className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted hover:text-text-primary"
-            >
-              ← Admin Tools
-            </Link>
-            <h1 className="mt-1 text-2xl font-bold text-text-primary">
-              Replay 2.0
-            </h1>
-            <p className="mt-0.5 text-xs text-text-secondary">
-              The replay as a performance — beat-driven motion, FX and camera.
-            </p>
-          </div>
-        </header>
-
+        {/* The "Replay 2.0" title, description, and Admin Tools back-link
+            used to live here. Removed so the "{X} vs {Y}" wordmark bar
+            (rendered inside ReplayViewer2 via renderHeader) is the first
+            thing above the board, buying back the vertical room needed
+            for the whole playback view to fit on screen at load. */}
         {selectedId && (
           <ReplayViewer2
             key={selectedId}

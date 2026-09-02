@@ -3146,6 +3146,45 @@ export default function ReplayViewer({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // Vertical viewport budget for the whole playback view — the row
+  // (thread + board + optional side controls) has to fit into whatever the
+  // window has above the fold minus the chrome above and below it, so the
+  // full replay is visible at load with no scrolling. Everything landing
+  // above the row (site nav, page pt-6, the matchup wordmark bar) and
+  // below it (the horizontal PlaybackModule under the row in standard
+  // mode, plus breathing room before the battle selector) is subtracted
+  // from `window.innerHeight`. In widescreen there's no PlaybackModule
+  // BELOW the row — it moved into a third column beside the board — so
+  // the below-row subtraction drops out.
+  const [rowHeightBudget, setRowHeightBudget] = useState<number | null>(null);
+  useEffect(() => {
+    if (isDesktop !== true) {
+      setRowHeightBudget(null);
+      return;
+    }
+    const measure = () => {
+      const SITE_NAV_PX = 56; // h-14
+      const PAGE_TOP_PADDING_PX = 24; // pt-6 on the page container
+      const MATCHUP_BAR_PX = 42 + 16; // wordmark image + its mt-4
+      const BELOW_ROW_BREATHING_PX = 16; // between row and whatever follows
+      const HORIZONTAL_PLAYBACK_PX = 24 + 20 + 32 + 44 + 12 + 24; // mt-6 + scrubber + mt-8 + control row + mt-1.5 + speed
+      const chromeAbove = SITE_NAV_PX + PAGE_TOP_PADDING_PX + MATCHUP_BAR_PX;
+      const chromeBelow = threadCollapsedActive
+        ? BELOW_ROW_BREATHING_PX
+        : HORIZONTAL_PLAYBACK_PX + BELOW_ROW_BREATHING_PX;
+      // Floor at 320px so nothing collapses to zero on a very short window
+      // (a touch-screen laptop in landscape with dev tools open, say) —
+      // some scrolling is better than an unusable board.
+      setRowHeightBudget(
+        Math.max(320, window.innerHeight - chromeAbove - chromeBelow),
+      );
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [isDesktop, threadCollapsedActive]);
+
   // The board's own horizontal budget in widescreen: whatever the row has,
   // less the two flanking thin columns (thread aside on the left, playback
   // column on the right) and the gaps between them.
@@ -3153,21 +3192,44 @@ export default function ReplayViewer({
     threadCollapsedActive && rowWidth != null
       ? Math.max(200, rowWidth - 2 * WIDESCREEN_SIDE_COL_PX - 2 * WIDESCREEN_GAP_PX)
       : null;
+  // Widescreen mat height responds to the viewport too: at short heights
+  // the fixed 340 would overflow, so cap it against whatever the viewport
+  // has room for. The vertical playback column beside the board sizes
+  // against the same boardHeight, so shrinking here shrinks it in lockstep.
+  const widescreenMatHeight =
+    rowHeightBudget != null
+      ? Math.max(
+          200,
+          Math.min(
+            WIDESCREEN_MAT_HEIGHT_PX,
+            Math.floor((rowHeightBudget - BOARD_VERTICAL_CHROME_PX) / 2),
+          ),
+        )
+      : WIDESCREEN_MAT_HEIGHT_PX;
   const matAspect =
     widescreenBoardColumnWidth != null
-      ? WIDESCREEN_MAT_HEIGHT_PX / widescreenBoardColumnWidth
+      ? widescreenMatHeight / widescreenBoardColumnWidth
       : MAT_ASPECT;
   const heightBudget =
     isDesktop !== true || rowWidth == null
       ? null
       : widescreenBoardColumnWidth != null
-        // In widescreen the height budget is exactly what two fixed-height
-        // mats plus the vertical chrome around them need — everything above
-        // reduces cleanly to matWidth = widescreenBoardColumnWidth back in
-        // Board's derivation. Not tied to rowWidth at all: a wider viewport
-        // widens the mats but doesn't grow them taller.
-        ? 2 * WIDESCREEN_MAT_HEIGHT_PX + BOARD_VERTICAL_CHROME_PX
-        : (rowWidth * 9) / 16;
+        // Widescreen: two fixed-height mats plus vertical chrome —
+        // matWidth reduces cleanly back to widescreenBoardColumnWidth in
+        // Board's derivation. A wider viewport widens the mats but never
+        // grows them taller; a shorter viewport shrinks them so the whole
+        // row still fits above the fold.
+        ? 2 * widescreenMatHeight + BOARD_VERTICAL_CHROME_PX
+        // Standard: 16:9 envelope on rowWidth, capped against the
+        // vertical viewport budget so the row plus the PlaybackModule
+        // below it fit above the fold. 16:9 is already shorter than a
+        // 4:3 envelope, so a typical widescreen (or 4:3) monitor lands
+        // this well within the fold without extra math; the viewport cap
+        // only bites on unusually short windows.
+        : Math.max(
+            200,
+            Math.min((rowWidth * 9) / 16, rowHeightBudget ?? Infinity),
+          );
 
   // Pin the thread aside to the board's measured height so it scrolls
   // inside a fixed envelope instead of stretching the row to fit its own
