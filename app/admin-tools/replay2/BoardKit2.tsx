@@ -452,33 +452,6 @@ export function Pile({
     beat.kind === "opening_hand" &&
     phase === "anticipate";
 
-  // Sleeve-coloured spark at the deck when the wind-up begins — leans into
-  // the per-mat sleeve gradient introduced with the setup reveal, so the
-  // two ceremonies read as part of the same board.
-  const sleeveGradientFromCtx = useMatGradient();
-  const wound = useRef<number | null>(null);
-  useEffect(() => {
-    if (!pileWinding) return;
-    if (wound.current === beat!.actionIndex) return;
-    wound.current = beat!.actionIndex;
-    const el = pileSlotRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    if (r.width === 0) return;
-    emitFx({
-      kind: "spark",
-      clientX: r.left + r.width / 2,
-      clientY: r.top + r.height / 2,
-      intensity: 1.3,
-      // Warm neutral rather than the raw sleeve gradient — this is a burst
-      // reading against ANY mat colour, and a golden spark stays legible
-      // where the mat's own hue would sometimes disappear into it.
-      color: "#fde68a",
-    });
-    // Silence lint on the sleeve-gradient ref used for the ring below.
-    void sleeveGradientFromCtx;
-  }, [pileWinding, beat, sleeveGradientFromCtx]);
-
   // Landscape card slot at full card proportions: the card's long edge (342)
   // runs horizontally, its short edge (245 → `width`) vertically — i.e. the
   // portrait card turned on its side, same size. The holder widens to suit.
@@ -1259,19 +1232,33 @@ export function PokemonCardImage({
         </AnimatePresence>
       </div>
 
-      {/* Info strip — HP header (label + remaining/total) above the HP bar. */}
+      {/* Info strip — HP header (label + remaining/total) above the HP bar.
+
+          Hidden while the card is face-down through setup: the row's
+          "HP · <number>" is a public stat that shouldn't leak before the
+          cards are revealed, and the bar's fill starts at 0 so the reveal
+          gets to fill it up rather than showing it already full. The
+          container reserves its height either way (opacity, not
+          display:none), so the mat's footprint doesn't grow a strip taller
+          the moment setup ends. */}
       {hpPct != null && (
         <div
           className="flex flex-col gap-[1px]"
           style={{ marginTop: m.gap }}
         >
-          <div
+          <motion.div
             className="flex items-center justify-between leading-none text-white"
             style={{ fontSize: hpFontSize }}
+            initial={false}
+            animate={{ opacity: setupFaceDown ? 0 : 1 }}
+            transition={{
+              duration: SETUP_TURN_MS / 1000,
+              ease: "easeInOut",
+            }}
           >
             <span className="font-bold uppercase">HP</span>
             <span className="font-semibold tabular-nums">{remainingHp}</span>
-          </div>
+          </motion.div>
           <div
             className="w-full overflow-hidden rounded-full bg-white/20"
             style={{ height: barH }}
@@ -1280,22 +1267,29 @@ export function PokemonCardImage({
                 length is the single clearest tell that the board is a
                 sequence of stills; draining it over the impact ties the
                 number to the blow that caused it.
-                
-                The short delay lets the damage counter land first. Cause,
-                then consequence — the bar chasing the number reads as the
-                hit doing something, where the two moving together reads as
-                one event twice. */}
+
+                During setup the width is pinned to 0 so the boundary flip
+                gets to fill it up alongside the card turning face-up,
+                matching SETUP_TURN_MS so the fill and the turn end
+                together. The short delay after a damage event lets the
+                damage counter land first — cause, then consequence — but
+                only when there IS damage; the setup reveal isn't a hit,
+                so the fill runs on time. */}
             <motion.div
               className="h-full rounded-full"
               style={{ background: hpFill }}
               initial={false}
-              animate={{ width: `${hpPct}%` }}
-              transition={{
-                type: "spring",
-                stiffness: 180,
-                damping: 26,
-                delay: damageJustLanded ? 0.17 : 0,
-              }}
+              animate={{ width: setupFaceDown ? "0%" : `${hpPct}%` }}
+              transition={
+                setupFaceDown || isSetupReveal
+                  ? { duration: SETUP_TURN_MS / 1000, ease: "easeOut" }
+                  : {
+                      type: "spring",
+                      stiffness: 180,
+                      damping: 26,
+                      delay: damageJustLanded ? 0.17 : 0,
+                    }
+              }
             />
           </div>
         </div>

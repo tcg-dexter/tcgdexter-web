@@ -306,11 +306,7 @@ export function DrawFlight({
     // into a busy loop; the deal simply becomes near-simultaneous.
     const step = Math.max(35, staggerMs);
     let n = 0;
-    // The pile's own coordinates in host space, so bursts here fire whether
-    // or not the mat is measurable at emit time.
-    const pileCX = flight!.slotX + flight!.slotW / 2;
-    const pileCY = flight!.slotY + flight!.slotH / 2;
-    // client rect of the host, resolved once per deal — the pileCX / pileCY
+    // client rect of the host, resolved once per deal — flight coordinates
     // above are in host coordinates and have to translate back to client
     // pixels for the fxBus, which operates in the viewport's own space.
     const hostBounds = hostRef.current?.getBoundingClientRect() ?? null;
@@ -322,18 +318,10 @@ export function DrawFlight({
     const dealing = setInterval(() => {
       n += 1;
       setRelease({ action: flightActionIndex, count: n });
-      // A little spark on the deck the moment a card leaves it — small,
-      // frequent, sleeve-warm. Only for the opening hand: the ordinary turn
-      // draw is a bookkeeping beat that shouldn't be decorated on every use.
-      if (isOpening) {
-        emitFx({
-          kind: "spark",
-          clientX: toClientX(pileCX),
-          clientY: toClientY(pileCY),
-          intensity: 0.55,
-          color: "#fde68a",
-        });
-      }
+      // No spark on the deck as a card leaves it: this fires on every draw,
+      // and a pile that lights up several times a turn reads as effects
+      // decoration rather than something worth noticing. The card lifting
+      // off the pile is its own account.
       if (n >= total) clearInterval(dealing);
     }, step);
     let m = 0;
