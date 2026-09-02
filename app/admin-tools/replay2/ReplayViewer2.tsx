@@ -2908,6 +2908,15 @@ export default function ReplayViewer({
     return () => mq.removeEventListener("change", onChange);
   }, []);
 
+  // Desktop-only: collapse the details thread into a thin column of avatars
+  // + turn chips + connecting lines, and move the playback controls to the
+  // right of the board to fill the freed space. Mat sizing is unaffected —
+  // heightBudget is derived from the whole row's width, which doesn't
+  // change when the aside within it does. Ignored on mobile (thread lives
+  // below the controls there and the toggle wouldn't earn its keep).
+  const [threadCollapsed, setThreadCollapsed] = useState(false);
+  const threadCollapsedActive = isDesktop === true && threadCollapsed;
+
   // Replay 2.0 leans hard on motion — poses, tilt, lifts, an idle breath on
   // the Active. All of it collapses to a still board when the OS asks for
   // reduced motion; the replay still plays, beat pacing and all, it just
@@ -2965,6 +2974,30 @@ export default function ReplayViewer({
     return () => ro.disconnect();
   }, [frame?.actionIndex, battleId]);
 
+  const playbackModule = (
+    <PlaybackModule
+      frameIndex={frameIndex}
+      frameCount={frameCount}
+      turnStartIndices={turnStartIndices}
+      currentTurn={frame?.turn ?? null}
+      totalTurns={totalTurns}
+      canStepBack={canStepBack}
+      canStepForward={canStepForward}
+      canTurnBack={canTurnBack}
+      canTurnForward={canTurnForward}
+      playing={playing}
+      speed={speed}
+      atEnd={atEnd}
+      onTogglePlay={togglePlay}
+      onSelectSpeed={(s) => setSpeed(s)}
+      onStepBack={() => { setPlaying(false); setInstant(false); canStepBack && setFrameIndex((i) => i - 1); }}
+      onStepForward={() => { setPlaying(false); setInstant(false); canStepForward && setFrameIndex((i) => i + 1); }}
+      onTurnBack={() => { setPlaying(false); setInstant(true); stepTurnBack(); }}
+      onTurnForward={() => { setPlaying(false); setInstant(true); stepTurnForward(); }}
+      onScrub={(i) => { setPlaying(false); setInstant(true); setFrameIndex(i); }}
+    />
+  );
+
   return (
     <>
       {renderHeader?.(data)}
@@ -2975,18 +3008,51 @@ export default function ReplayViewer({
           something to clip against — without this the thread would
           stretch the row taller than the board, pushing the controls out
           of arm's reach. Mobile drops the aside entirely and puts the
-          thread below the controls instead. */}
+          thread below the controls instead.
+
+          When the aside is collapsed on desktop it drops to a thin column
+          (avatars + turn chips + lines only) and the transport controls
+          move into a third column on the right, filling the width the
+          aside gave up. The board's own measured width is unaffected —
+          heightBudget reads rowWidth, not the aside's fraction of it. */}
       <div ref={rowRef} className="lg:flex lg:items-start lg:gap-6">
         {isDesktop === true && (
           <aside
             key={battleId}
-            className="relative hidden min-w-0 lg:flex lg:flex-1 lg:flex-col lg:overflow-hidden"
+            className={`relative hidden min-w-0 lg:flex lg:flex-col lg:overflow-hidden ${
+              threadCollapsedActive ? "lg:w-[76px] lg:shrink-0" : "lg:flex-1"
+            }`}
             style={
               boardHeight != null
                 ? { height: `${boardHeight}px`, marginTop: "1rem" }
                 : undefined
             }
           >
+            {/* Toggle: chevron that flips direction to say which way the
+                thread is about to go. Sits at the top of the aside in both
+                states so its position doesn't jump when the width does. */}
+            <div className="flex items-center justify-end pb-1">
+              <button
+                type="button"
+                onClick={() => setThreadCollapsed((v) => !v)}
+                aria-label={threadCollapsedActive ? "Expand details thread" : "Collapse details thread"}
+                title={threadCollapsedActive ? "Expand details" : "Collapse details"}
+                className="flex h-6 w-6 items-center justify-center rounded-full border border-black/10 dark:border-white/10 text-text-secondary hover:bg-surface"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.25}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d={threadCollapsedActive ? "M9 6l6 6-6 6" : "M15 6l-6 6 6 6"} />
+                </svg>
+              </button>
+            </div>
             <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-gradient-to-b from-[var(--bg)] to-transparent" />
             <div
               ref={threadScrollRef}
@@ -3002,6 +3068,7 @@ export default function ReplayViewer({
                 opponentColor={opponentColor}
                 hideScoreCards
                 compactAvatars
+                collapsed={threadCollapsedActive}
                 scrollContainerRef={threadScrollRef}
               />
             </div>
@@ -3034,32 +3101,24 @@ export default function ReplayViewer({
             onCloseInspect={() => setInspect(null)}
           />
         </div>
+        {threadCollapsedActive && (
+          // Third column: the transport controls, top-aligned with the
+          // board and taking up whatever width the collapsed aside gave
+          // back. min-w-0 so the row's flex math doesn't overflow when
+          // the scrubber inside runs long. The PlaybackModule brings its
+          // own mt-6, which sits a hair below the board's mt-4 — visible,
+          // deliberate breathing room rather than a slight misalignment.
+          <div className="hidden min-w-0 lg:flex lg:flex-1 lg:flex-col">
+            {playbackModule}
+          </div>
+        )}
       </div>
 
-      {/* Transport controls + scrubbable timeline, spanning the full
-          thread+board row above (not just the mat column) so it reads as
-          one wide player bar underneath the whole viewport. */}
-      <PlaybackModule
-        frameIndex={frameIndex}
-        frameCount={frameCount}
-        turnStartIndices={turnStartIndices}
-        currentTurn={frame?.turn ?? null}
-        totalTurns={totalTurns}
-        canStepBack={canStepBack}
-        canStepForward={canStepForward}
-        canTurnBack={canTurnBack}
-        canTurnForward={canTurnForward}
-        playing={playing}
-        speed={speed}
-        atEnd={atEnd}
-        onTogglePlay={togglePlay}
-        onSelectSpeed={(s) => setSpeed(s)}
-        onStepBack={() => { setPlaying(false); setInstant(false); canStepBack && setFrameIndex((i) => i - 1); }}
-        onStepForward={() => { setPlaying(false); setInstant(false); canStepForward && setFrameIndex((i) => i + 1); }}
-        onTurnBack={() => { setPlaying(false); setInstant(true); stepTurnBack(); }}
-        onTurnForward={() => { setPlaying(false); setInstant(true); stepTurnForward(); }}
-        onScrub={(i) => { setPlaying(false); setInstant(true); setFrameIndex(i); }}
-      />
+      {/* Bottom transport row — spans the full thread+board width. Hidden
+          on desktop when the transport has moved into the row above; still
+          shown on mobile regardless (where the aside doesn't exist and the
+          thread lives further down the page). */}
+      {!threadCollapsedActive && playbackModule}
 
       {/* Mobile: the thread sits under the controls, rendered in full with
           no scroll envelope of its own — the page scrolls it. Deliberately
