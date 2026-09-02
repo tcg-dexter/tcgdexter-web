@@ -49,7 +49,7 @@ import {
 } from "./BoardKit2";
 import { indexBeats, type Beat, type ReplayPayload2 } from "@/lib/replay2/beats";
 import { useDirector } from "./director/useDirector";
-import { BeatProvider } from "./director/BeatContext";
+import { BeatProvider, useBeat } from "./director/BeatContext";
 import { FxCanvas } from "./fx/FxCanvas";
 import { drawFlightFor } from "./fx/fxBus";
 import { GameEndFlourish } from "./fx/GameEndFlourish";
@@ -545,6 +545,7 @@ function DiscardDrawOverlay({
   cardWidth: number;
   matWidth: number;
 }) {
+  const { matAspect } = useBeat();
   // Cards the log counted but couldn't name — the verbose export reports
   // "drew 3 cards" with no list. Shown as facedown backs so the count still
   // reads honestly instead of the overlay silently showing fewer.
@@ -559,7 +560,7 @@ function DiscardDrawOverlay({
   const fromWidth = widthBudget / (shown * 1.08);
   // Height budget: mat height, less breathing room, the label line and the
   // gap above it. 342/245 converts a card's width to its height.
-  const fromHeight = (matWidth * MAT_ASPECT - 24 - 12 - 6) / (342 / 245);
+  const fromHeight = (matWidth * matAspect - 24 - 12 - 6) / (342 / 245);
   // 50% larger than the shared thumbnail baseline — the transaction overlays
   // are the moment where a card exists to be READ, not just counted, and the
   // old ~0.92× cap pinned them at close to the size the mat's own art
@@ -727,6 +728,7 @@ function MulliganOverlay({
   cardWidth: number;
   matWidth: number;
 }) {
+  const { matAspect } = useBeat();
   const cardsPerRow = Math.max(1, ...detail.rows.map((r) => r.length));
 
   // Width budget: mat, less the overlay's own px-2. Each card carries an
@@ -738,7 +740,7 @@ function MulliganOverlay({
   // the ones revealed so far — with a gap between each. 342/245 converts a
   // card's height back to the width that produces it.
   const availableForRows =
-    matWidth * MAT_ASPECT - 24 - 16 - (detail.totalRows - 1) * MULLIGAN_ROW_GAP_PX;
+    matWidth * matAspect - 24 - 16 - (detail.totalRows - 1) * MULLIGAN_ROW_GAP_PX;
   const fromHeight = availableForRows / detail.totalRows / (342 / 245);
   // Same 50%-larger treatment as the discard/draw overlay above — cards are
   // meant to be read, not counted.
@@ -808,6 +810,7 @@ function PrizeOverlay({
   cardWidth: number;
   matWidth: number;
 }) {
+  const { matAspect } = useBeat();
   const cards = detail.cards.length > 0
     ? detail.cards
     : // Prize was taken but no add_to_hand followed to name it (opponent
@@ -821,7 +824,7 @@ function PrizeOverlay({
   const widthBudget = matWidth - 16;
   const fromWidth = widthBudget / (shown * 1.08);
   // Height budget: mat height, less breathing room and the caption line.
-  const fromHeight = (matWidth * MAT_ASPECT - 24 - 12 - 6) / (342 / 245);
+  const fromHeight = (matWidth * matAspect - 24 - 12 - 6) / (342 / 245);
   const w = Math.max(
     OVERLAY_CARD_MIN_PX,
     Math.round(Math.min(cardWidth * 1.4, fromWidth, fromHeight)),
@@ -1378,8 +1381,11 @@ const INSPECTOR_OVERLAY_GRADIENT_BG =
  *  and the reference size every smaller thumbnail row (attached cards,
  *  the discard pile grid) scales off of. 32px reserves breathing room from
  *  the mat edges on every side. */
-function fitCardToMat(matWidth: number): { w: number; h: number } {
-  const heightBudget = matWidth * MAT_ASPECT - 32;
+function fitCardToMat(
+  matWidth: number,
+  matAspect: number,
+): { w: number; h: number } {
+  const heightBudget = matWidth * matAspect - 32;
   const fromWidth = matWidth - 32;
   const fromHeight = (heightBudget * 245) / 342;
   const w = Math.max(OVERLAY_CARD_MIN_PX, Math.round(Math.min(fromWidth, fromHeight)));
@@ -1396,8 +1402,8 @@ function fitCardToMat(matWidth: number): { w: number; h: number } {
  * point every overlay on a given mat shares, regardless of whether that
  * overlay actually renders a big card of its own (the discard pile doesn't).
  */
-function attachedScaleCardWidth(matWidth: number): number {
-  const { h: primaryH } = fitCardToMat(matWidth);
+function attachedScaleCardWidth(matWidth: number, matAspect: number): number {
+  const { h: primaryH } = fitCardToMat(matWidth, matAspect);
   const attachedH = Math.round((primaryH * ATTACHED_ROW_PCT) / 100);
   // Clamped against the mat's width too, not just the card's height: at up
   // to ATTACHED_ROW_MAX_VISIBLE cards wide plus a chevron on each side, the
@@ -1471,6 +1477,7 @@ function MatCardInspector({
   onExpand: () => void;
   onClose: () => void;
 }) {
+  const { matAspect } = useBeat();
   const card: DiscardDrawCard =
     target.kind === "pokemon"
       ? { name: target.mon.name, imageUrl: target.mon.imageUrl }
@@ -1482,8 +1489,8 @@ function MatCardInspector({
   // as the discard/draw and mulligan overlays' card sizing. Unaffected by
   // attachedCards — the row below overlays the card rather than sharing
   // its footprint, so there's nothing extra to budget for here.
-  const { w } = fitCardToMat(matWidth);
-  const attachedW = attachedScaleCardWidth(matWidth);
+  const { w } = fitCardToMat(matWidth, matAspect);
+  const attachedW = attachedScaleCardWidth(matWidth, matAspect);
 
   return (
     <motion.div
@@ -1571,11 +1578,12 @@ function DiscardPileOverlay({
   matWidth: number;
   onClose: () => void;
 }) {
-  const matHeight = matWidth * MAT_ASPECT;
+  const { matAspect } = useBeat();
+  const matHeight = matWidth * matAspect;
   // Same thumbnail size the card inspector's attached-cards row uses, so a
   // card reads as the same size wherever it shows up rather than each
   // overlay solving its own size independently.
-  const w = attachedScaleCardWidth(matWidth);
+  const w = attachedScaleCardWidth(matWidth, matAspect);
   const cardH = Math.round((w * 342) / 245);
   const rowWidth = DISCARD_GRID_COLS * w + (DISCARD_GRID_COLS - 1) * DISCARD_GRID_GAP_PX;
   // Target DISCARD_GRID_VISIBLE_ROWS tall, but never more height than the
@@ -1679,6 +1687,7 @@ function Board({
   reducedMotion,
   anyInspectorOpen,
   actionContinues,
+  matAspect,
   playerMatGradient,
   opponentMatGradient,
   matInspect,
@@ -1712,6 +1721,12 @@ function Board({
    *  discard-then-draw exchange mid-flight. Overlays that describe the
    *  ACTION rather than the frame use it to stay put across the seam. */
   actionContinues: boolean;
+  /** Height-over-width ratio for a mat. Standard 14/24 in the default
+   *  layout; the widescreen (collapsed-thread) layout hands over a flatter
+   *  ratio so the two mats read shorter and wider on a widescreen display
+   *  without the cards themselves growing (computeReplayCardWidth caps
+   *  against the mat's inner height either way). */
+  matAspect: number;
   /** The viewer honours prefers-reduced-motion — every card rests, the
    *  pointer tilt is off, and the idle breathing stops. Resolved once in
    *  ReplayViewer2 and handed down rather than queried per card. */
@@ -1833,16 +1848,17 @@ function Board({
 
   const matWidth =
     heightBudget != null
-      ? Math.max(20, (heightBudget - BOARD_VERTICAL_CHROME_PX) / (2 * MAT_ASPECT))
+      ? Math.max(20, (heightBudget - BOARD_VERTICAL_CHROME_PX) / (2 * matAspect))
       : measuredWidth;
 
-  const cardWidth = computeReplayCardWidth(matWidth);
+  const cardWidth = computeReplayCardWidth(matWidth, matAspect);
 
   return (
     <BeatProvider
       beat={beat}
       phase={beatPhase}
       instant={instant}
+      matAspect={matAspect}
       reducedMotion={reducedMotion}
       duringSetup={(frame?.turn ?? 1) === 0}
     >
@@ -2183,6 +2199,7 @@ function PlaybackModule({
   playing,
   atEnd,
   speed,
+  orientation = "horizontal",
   onTogglePlay,
   onSelectSpeed,
   onStepBack,
@@ -2206,6 +2223,15 @@ function PlaybackModule({
    *  from the beginning instead of resuming. */
   atEnd: boolean;
   speed: 0.5 | 1 | 2 | 4;
+  /**
+   * Layout. `"horizontal"` is the standard bar under the row (wide
+   * scrubber, labelled stepper capsules flanking a big play button).
+   * `"vertical"` is the widescreen (collapsed-thread) column: a vertical
+   * scrubber running top→bottom, icon-only steppers stacked, and the
+   * speed picker at the bottom — all in a thin column that mirrors the
+   * collapsed thread aside on the far side of the board.
+   */
+  orientation?: "horizontal" | "vertical";
   onTogglePlay: () => void;
   onSelectSpeed: (speed: 0.5 | 1 | 2 | 4) => void;
   onStepBack: () => void;
@@ -2220,6 +2246,68 @@ function PlaybackModule({
       : currentTurn === 0
         ? "Setup"
         : `Turn ${currentTurn} / ${totalTurns}`;
+  const playButton = (
+    <button
+      type="button"
+      onClick={onTogglePlay}
+      disabled={frameCount === 0}
+      aria-label={playing ? "Pause" : atEnd ? "Replay from the start" : "Play"}
+      title={playing ? "Pause" : atEnd ? "Replay from the start" : "Play"}
+      className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-full border border-black/10 dark:border-white/10 text-text-primary hover:bg-surface disabled:opacity-30"
+    >
+      {!playing && atEnd ? <ReplayIcon /> : <PlayPauseIcon playing={playing} />}
+    </button>
+  );
+  if (orientation === "vertical") {
+    // Vertical column, mirrors the collapsed thread aside on the far side.
+    // Scrubber runs top→bottom as flex-1 so it takes whatever the column
+    // has to give; the stepper stack and speed picker sit under it at
+    // fixed heights. Steppers are icon-only (« / ‹ / play / › / »); their
+    // titles carry the labelling that ordinarily rides in a capsule.
+    return (
+      <div className="flex h-full flex-col items-center gap-3 pt-2">
+        <Scrubber
+          frameIndex={frameIndex}
+          frameCount={frameCount}
+          turnStartIndices={turnStartIndices}
+          onScrub={onScrub}
+          orientation="vertical"
+        />
+        <div className="flex flex-col items-center gap-1.5">
+          <IconStepper
+            direction="back"
+            double
+            disabled={!canTurnBack}
+            onClick={onTurnBack}
+            label="Previous turn"
+          />
+          <IconStepper
+            direction="back"
+            disabled={!canStepBack}
+            onClick={onStepBack}
+            label="Previous action"
+          />
+          {playButton}
+          <IconStepper
+            direction="forward"
+            disabled={!canStepForward}
+            onClick={onStepForward}
+            label="Next action"
+          />
+          <IconStepper
+            direction="forward"
+            double
+            disabled={!canTurnForward}
+            onClick={onTurnForward}
+            label="Next turn"
+          />
+        </div>
+        <div className="flex justify-center pb-2">
+          <SpeedMenu speed={speed} onSelect={onSelectSpeed} />
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="mt-6">
       <Scrubber
@@ -2276,16 +2364,7 @@ function PlaybackModule({
         {/* Enabled whenever there are frames at all — parked on the last
             one it restarts rather than sitting dead, so a finished replay
             can be watched again without reaching for the scrubber. */}
-        <button
-          type="button"
-          onClick={onTogglePlay}
-          disabled={frameCount === 0}
-          aria-label={playing ? "Pause" : atEnd ? "Replay from the start" : "Play"}
-          title={playing ? "Pause" : atEnd ? "Replay from the start" : "Play"}
-          className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-full border border-black/10 dark:border-white/10 text-text-primary hover:bg-surface disabled:opacity-30"
-        >
-          {!playing && atEnd ? <ReplayIcon /> : <PlayPauseIcon playing={playing} />}
-        </button>
+        {playButton}
 
         <StepCapsule
           label="Turn"
@@ -2376,6 +2455,54 @@ function StepCapsule({
         <span aria-hidden>›</span>
       </button>
     </div>
+  );
+}
+
+/**
+ * Icon-only stepper for the vertical playback column — a single chevron
+ * button (single or double). Same button silhouette as the play control
+ * so the vertical stack reads as a family, but stripped of the capsule
+ * chrome and the "Action" / "Turn" text labels that the horizontal bar
+ * carries. The intent is on the title/aria-label alone; the direction is
+ * on the chevron, and how many chevrons says single-step (action) vs
+ * whole-turn (turn).
+ */
+function IconStepper({
+  direction,
+  double,
+  disabled,
+  onClick,
+  label,
+}: {
+  direction: "back" | "forward";
+  double?: boolean;
+  disabled: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  // Two chevrons stacked with a small horizontal offset — the standard
+  // double-chevron glyph. Single is just the one chevron centred.
+  const path = direction === "back" ? "M15 6l-6 6 6 6" : "M9 6l6 6-6 6";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className="flex h-9 w-9 items-center justify-center rounded-full border border-black/10 dark:border-white/10 text-text-secondary transition-colors hover:text-text-primary hover:bg-surface disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-text-secondary"
+    >
+      {double ? (
+        <svg viewBox="0 0 24 24" className="h-3.5 w-4" fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d={path} transform="translate(-3 0)" />
+          <path d={path} transform="translate(3 0)" />
+        </svg>
+      ) : (
+        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d={path} />
+        </svg>
+      )}
+    </button>
   );
 }
 
@@ -2481,11 +2608,13 @@ function Scrubber({
   frameCount,
   turnStartIndices,
   onScrub,
+  orientation = "horizontal",
 }: {
   frameIndex: number;
   frameCount: number;
   turnStartIndices: number[];
   onScrub: (frameIndex: number) => void;
+  orientation?: "horizontal" | "vertical";
 }) {
   const max = Math.max(0, frameCount - 1);
   const clamped = Math.min(frameIndex, max);
@@ -2496,6 +2625,51 @@ function Scrubber({
   // 6px-tall input by a hand-tuned negative offset — which is what left the
   // puck sitting a few pixels high, since the offset had to guess at the
   // UA's default runnable-track box.
+  if (orientation === "vertical") {
+    // Vertical: same track + notches + native range input, but everything
+    // rotates 90° via CSS. `writingMode: vertical-lr` makes the browser
+    // treat the range input as vertical (top=min, bottom=max) — supported
+    // in all modern engines, no pointer-event replacement needed. The
+    // track gradient flips to top→bottom to match.
+    return (
+      <div className="relative flex-1 w-full flex justify-center">
+        <div className="relative h-full w-4 flex items-center justify-center">
+          <div
+            className="pointer-events-none absolute top-0 bottom-0 left-1/2 w-1.5 -translate-x-1/2 rounded-full"
+            style={{
+              background: `linear-gradient(to bottom, var(--text-primary) ${pct}%, var(--border) ${pct}%)`,
+            }}
+          />
+          <div className="pointer-events-none absolute top-0 bottom-0 left-1/2 w-1.5 -translate-x-1/2">
+            {turnStartIndices.map((i) => (
+              <span
+                key={i}
+                className="absolute left-0 h-px w-1.5 bg-bg"
+                style={{ top: `${max > 0 ? (i / max) * 100 : 0}%` }}
+              />
+            ))}
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={max}
+            step={1}
+            value={clamped}
+            disabled={max === 0}
+            onChange={(e) => onScrub(Number(e.target.value))}
+            aria-label="Scrub through the replay"
+            aria-orientation="vertical"
+            style={{ writingMode: "vertical-lr" as const }}
+            className="relative block h-full w-4 cursor-pointer appearance-none bg-transparent disabled:cursor-not-allowed
+              [&::-webkit-slider-runnable-track]:w-4 [&::-webkit-slider-runnable-track]:bg-transparent
+              [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-black/20 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow
+              [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-black/20 [&::-moz-range-thumb]:bg-white
+              [&::-moz-range-track]:w-4 [&::-moz-range-track]:bg-transparent"
+          />
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="relative py-2">
       {/* Track: progress up to the playhead, then the unplayed remainder. */}
@@ -2917,6 +3091,14 @@ export default function ReplayViewer({
   const [threadCollapsed, setThreadCollapsed] = useState(false);
   const threadCollapsedActive = isDesktop === true && threadCollapsed;
 
+  // Widescreen mat aspect for the collapsed-thread layout: the two stacked
+  // mats read shorter and wider on a widescreen display, side better against
+  // the thin thread + controls columns flanking them. Cards don't grow —
+  // computeReplayCardWidth caps against the mat's inner height, which
+  // shrinks with the flatter aspect and does the capping automatically.
+  const WIDESCREEN_MAT_ASPECT = 10 / 24;
+  const matAspect = threadCollapsedActive ? WIDESCREEN_MAT_ASPECT : MAT_ASPECT;
+
   // Replay 2.0 leans hard on motion — poses, tilt, lifts, an idle breath on
   // the Active. All of it collapses to a still board when the OS asks for
   // reduced motion; the replay still plays, beat pacing and all, it just
@@ -2974,7 +3156,7 @@ export default function ReplayViewer({
     return () => ro.disconnect();
   }, [frame?.actionIndex, battleId]);
 
-  const playbackModule = (
+  const renderPlaybackModule = (orientation: "horizontal" | "vertical") => (
     <PlaybackModule
       frameIndex={frameIndex}
       frameCount={frameCount}
@@ -2988,6 +3170,7 @@ export default function ReplayViewer({
       playing={playing}
       speed={speed}
       atEnd={atEnd}
+      orientation={orientation}
       onTogglePlay={togglePlay}
       onSelectSpeed={(s) => setSpeed(s)}
       onStepBack={() => { setPlaying(false); setInstant(false); canStepBack && setFrameIndex((i) => i - 1); }}
@@ -3088,6 +3271,7 @@ export default function ReplayViewer({
             reducedMotion={reducedMotion}
             anyInspectorOpen={anyInspectorOpen}
             actionContinues={actionContinues}
+            matAspect={matAspect}
             playerMatGradient={playerMatGradient}
             opponentMatGradient={opponentMatGradient}
             matInspect={matInspect}
@@ -3102,14 +3286,21 @@ export default function ReplayViewer({
           />
         </div>
         {threadCollapsedActive && (
-          // Third column: the transport controls, top-aligned with the
-          // board and taking up whatever width the collapsed aside gave
-          // back. min-w-0 so the row's flex math doesn't overflow when
-          // the scrubber inside runs long. The PlaybackModule brings its
-          // own mt-6, which sits a hair below the board's mt-4 — visible,
-          // deliberate breathing room rather than a slight misalignment.
-          <div className="hidden min-w-0 lg:flex lg:flex-1 lg:flex-col">
-            {playbackModule}
+          // Third column: the transport controls, mirroring the thread
+          // aside's width and pinned to the board's measured height so
+          // the vertical scrubber has something to fill. Vertical
+          // orientation is a completely different layout from the
+          // horizontal bar — scrubber runs top→bottom, icon-only steppers
+          // stacked, speed picker at the bottom.
+          <div
+            className="hidden w-[76px] shrink-0 lg:flex lg:flex-col"
+            style={
+              boardHeight != null
+                ? { height: `${boardHeight}px`, marginTop: "1rem" }
+                : undefined
+            }
+          >
+            {renderPlaybackModule("vertical")}
           </div>
         )}
       </div>
@@ -3118,7 +3309,7 @@ export default function ReplayViewer({
           on desktop when the transport has moved into the row above; still
           shown on mobile regardless (where the aside doesn't exist and the
           thread lives further down the page). */}
-      {!threadCollapsedActive && playbackModule}
+      {!threadCollapsedActive && renderPlaybackModule("horizontal")}
 
       {/* Mobile: the thread sits under the controls, rendered in full with
           no scroll envelope of its own — the page scrolls it. Deliberately

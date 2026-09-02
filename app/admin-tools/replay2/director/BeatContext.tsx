@@ -3,6 +3,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { Beat } from "@/lib/replay2/beats";
 import type { BeatPhase } from "./choreography";
+import { MAT_ASPECT } from "@/lib/playmat-layout";
 
 /**
  * The beat currently being performed, available to any card on the board.
@@ -35,6 +36,14 @@ export interface BeatContextValue {
    * `play_to_slot` beat, different phase of the game around it.
    */
   duringSetup: boolean;
+  /**
+   * Height-over-width ratio for a single mat. Contextual so the widescreen
+   * layout (collapsed thread → wider, shorter mats) can override it without
+   * every consumer solving its own aspect. `lib/playmat-layout` supplies the
+   * standard value; the collapsed-thread layout in ReplayViewer2 passes a
+   * flatter one.
+   */
+  matAspect: number;
 }
 
 const REST: BeatContextValue = {
@@ -43,6 +52,7 @@ const REST: BeatContextValue = {
   instant: false,
   reducedMotion: false,
   duringSetup: false,
+  matAspect: MAT_ASPECT,
 };
 
 const BeatContext = createContext<BeatContextValue>(REST);
@@ -53,11 +63,12 @@ export function BeatProvider({
   instant,
   reducedMotion,
   duringSetup,
+  matAspect,
   children,
 }: BeatContextValue & { children: ReactNode }) {
   const value = useMemo(
-    () => ({ beat, phase, instant, reducedMotion, duringSetup }),
-    [beat, phase, instant, reducedMotion, duringSetup],
+    () => ({ beat, phase, instant, reducedMotion, duringSetup, matAspect }),
+    [beat, phase, instant, reducedMotion, duringSetup, matAspect],
   );
   return <BeatContext.Provider value={value}>{children}</BeatContext.Provider>;
 }

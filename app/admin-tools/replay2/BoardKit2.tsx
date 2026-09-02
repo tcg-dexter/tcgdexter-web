@@ -169,9 +169,12 @@ export function holderFontSize(cardWidth: number): number {
 // float gap between the active and its stadium / played-trainer neighbours.
 const BOARD_CARD_GAP = 4;
 
-export function computeReplayCardWidth(matWidth: number): number {
+export function computeReplayCardWidth(
+  matWidth: number,
+  matAspect: number = MAT_ASPECT,
+): number {
   const innerW = matWidth - 2 * MAT_PADDING;
-  const innerH = matWidth * MAT_ASPECT - 2 * MAT_PADDING;
+  const innerH = matWidth * matAspect - 2 * MAT_PADDING;
   const ROW_GAP = 6;
   // Two tray rows (bench + active) must fit the mat height; size from the
   // tray's full height, not the bare card.
@@ -1567,7 +1570,7 @@ export function PlayerMat({
   // am called?", which every duplicate on the board answers yes to — which is
   // how an attack ended up being attributed to a benched Pokémon sharing the
   // attacker's name.
-  const { beat: currentBeat } = useBeat();
+  const { beat: currentBeat, matAspect } = useBeat();
   const matRef = useRef<HTMLDivElement>(null);
   // Stable across renders so publishing it doesn't churn every consumer; it
   // reads the ref at call time, which is the only moment the answer matters.
@@ -1609,7 +1612,7 @@ export function PlayerMat({
   // The center column's horizontal midpoint is always innerW/2 regardless of
   // gap size (the gaps cancel out in the algebra). Active card is centered there.
   const innerW = matWidth - 2 * MAT_PADDING;
-  const innerH = matWidth * MAT_ASPECT - 2 * MAT_PADDING;
+  const innerH = matWidth * matAspect - 2 * MAT_PADDING;
   const cardH = cardWidth * (342 / 245);
   const FLOAT_GAP = BOARD_CARD_GAP; // px between floating card and its anchor
 
@@ -1711,7 +1714,7 @@ export function PlayerMat({
         className="relative rounded-xl"
         style={{
           padding: MAT_PADDING,
-          height: matWidth > 0 ? matWidth * MAT_ASPECT : undefined,
+          height: matWidth > 0 ? matWidth * matAspect : undefined,
         }}
       >
         <div
