@@ -2,7 +2,8 @@ import { normalizePerspective, parseBattleLog } from "@/lib/battle-log";
 import { replay } from "@/lib/engine";
 import type { EngineEvent } from "@/lib/engine";
 import type { ParsedAction } from "@/lib/battle-log";
-import type { ReplayPayload } from "@/lib/replay/frames";
+import type { DiscardDrawCard, ReplayPayload } from "@/lib/replay/frames";
+import { cardImageUrlForAnyName } from "@/lib/primaryCardImage";
 
 /**
  * Replay 2.0's beat stream.
@@ -109,7 +110,26 @@ export type Beat = BeatBase &
         splash: SplashHit[];
       }
     | { kind: "knock_out"; pokemon: string; where: BoardSlot }
-    | { kind: "prize_taken"; count: number }
+    /**
+     * The cards taken alongside the prize count, each with resolved art.
+     *
+     * TCG Live logs a prize claim as `prize_taken` (count only) followed by
+     * one `add_to_hand` line per card — named ("Ceruledge ex was added to
+     * X's hand.") when the exporter is the acting player, hidden ("A card
+     * was added to X's hand.") when it's not. That split is faithful to the
+     * log's event stream but breaks the overlay's ask, which wants a single
+     * moment naming what was taken.
+     *
+     * Enriched at `buildBeats` time by looking ahead at the next N events
+     * of the same actor for `add_to_hand`. Each entry carries the card
+     * name and its resolved image URL (null when the log hid the card, or
+     * when the catalog didn't recognise the name). Resolved server-side
+     * for the same reason frames.ts does its own: the card catalog is
+     * large and this keeps it out of the client bundle. The bottom mat's
+     * prize overlay renders these; the top mat's flight ignores them
+     * (opponent's prizes fly face-down regardless).
+     */
+    | { kind: "prize_taken"; count: number; cards: DiscardDrawCard[] }
     | { kind: "condition"; pokemon: string; condition: string }
     | {
         kind: "damage_counters";
@@ -470,7 +490,15 @@ function toBeat(ev: EngineEvent, action: ParsedAction | undefined): Beat {
       };
 
     case "prize_taken":
-      return { ...base, kind: "prize_taken", count: num(d.count ?? p.count, 1) };
+      // `cards` is filled in by buildBeats' look-ahead pass — the enrichment
+      // needs the whole event stream, which this per-event mapper doesn't
+      // have. Default to an empty array so the shape is stable either way.
+      return {
+        ...base,
+        kind: "prize_taken",
+        count: num(d.count ?? p.count, 1),
+        cards: [],
+      };
 
     case "condition_applied":
       return {
@@ -651,7 +679,36 @@ export function buildBeats(battleLogRaw: string, playerHandle: string): Beat[] {
   // EngineEvent.actionIndex indexes the normalized action stream, which is
   // what feeds the reducer — so this is the action that produced the event,
   // payload and all.
-  return result.events.map((ev) => toBeat(ev, normalized.actions[ev.actionIndex]));
+  const beats = result.events.map((ev) =>
+    toBeat(ev, normalized.actions[ev.actionIndex]),
+  );
+
+  // Look-ahead enrichment for prize_taken: the log emits `prize_taken` (count
+  // only) followed by one `add_to_hand` per card, and the bottom-mat overlay
+  // wants both as one moment. Walk the immediately following events of the
+  // same actor and collect up to `count` add_to_hand entries, each carrying
+  // the named card (with resolved art) or a hidden placeholder when the log
+  // withheld it (opponent's take, mostly).
+  for (let i = 0; i < beats.length; i++) {
+    const beat = beats[i];
+    if (beat.kind !== "prize_taken") continue;
+    const cards: DiscardDrawCard[] = [];
+    for (let j = i + 1; j < result.events.length && cards.length < beat.count; j++) {
+      const next = result.events[j];
+      if (next.actor !== beat.actor) break;
+      const nextAction = normalized.actions[next.actionIndex];
+      if (nextAction?.action_type !== "add_to_hand") break;
+      const raw = nextAction.payload.card;
+      const name = typeof raw === "string" && raw.length > 0 ? raw : null;
+      cards.push({
+        name: name ?? "",
+        imageUrl: name ? cardImageUrlForAnyName(name) : null,
+      });
+    }
+    beats[i] = { ...beat, cards };
+  }
+
+  return beats;
 }
 
 /** Beats keyed by actionIndex, for the viewer's per-frame lookup. */

@@ -405,7 +405,7 @@ const OVERLAY_CARD_MIN_PX = 26;
  * overlay that already runs its own AnimatePresence and doesn't need
  * another set of moving parts inside it — the shape is what mattered.
  */
-type PlateColorway = "action" | "discard" | "draw" | "mulligan" | "pile";
+type PlateColorway = "action" | "discard" | "draw" | "mulligan" | "pile" | "prize";
 const PLATE_COLORWAYS: Record<
   PlateColorway,
   { from: string; to: string; glow: string }
@@ -424,6 +424,11 @@ const PLATE_COLORWAYS: Record<
   // group so the "the whole pile" reading holds against the pile's own
   // stacked mass.
   pile: { from: "#334155", to: "#64748b", glow: "rgba(100,116,139,0.5)" },
+  // A prize claim is the game's own scoring event — warm gold into deep
+  // amber, matching the mat-spotlight colourway the winner beats already
+  // use, and heavier than an ordinary draw so the plate reads as a scoring
+  // moment rather than an ordinary card-shuffle event.
+  prize: { from: "#b45309", to: "#facc15", glow: "rgba(250,204,21,0.6)" },
 };
 
 function OverlayPlate({
@@ -772,6 +777,87 @@ function MulliganOverlay({
             </motion.div>
           ))}
         </AnimatePresence>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/**
+ * Full-mat overlay for a claimed prize — one card per prize taken, with a
+ * "PRIZE"/"PRIZES" plate above them. Same visual family as the
+ * discard/draw and mulligan overlays (full-mat scrim, plate + card row) so
+ * the whole scoring moment reads as of a piece with the other transactions.
+ *
+ * Bottom mat only. The opponent's prize takes as a face-down flight from
+ * their own prize pile — see StackedPrizePile — because there is no visible
+ * hand on the top mat to reveal into, and dressing an opponent's prize with
+ * this overlay would leak information the log itself withheld (their prizes
+ * are hidden on the exporter's log).
+ *
+ * Card size solves against both axes, capped at 1.4× cardWidth like
+ * DiscardDrawOverlay's groups: at one or two prizes there is plenty of room
+ * on the mat, and letting the cards read as cards for the moment they're
+ * on screen matters more than shrinking them to some proportional baseline.
+ */
+function PrizeOverlay({
+  detail,
+  cardWidth,
+  matWidth,
+}: {
+  detail: Extract<Beat, { kind: "prize_taken" }>;
+  cardWidth: number;
+  matWidth: number;
+}) {
+  const cards = detail.cards.length > 0
+    ? detail.cards
+    : // Prize was taken but no add_to_hand followed to name it (opponent
+      // side quirks, truncated log) — still show a facedown placeholder per
+      // prize so the plate isn't over an empty mat.
+      (Array.from({ length: detail.count }, () => ({ name: "", imageUrl: null })) as DiscardDrawCard[]);
+  const shown = Math.min(cards.length, 5);
+
+  // Width budget: mat, less the overlay's own px-2. Each card carries an
+  // 8%-of-itself gap, same ratio the other overlays use.
+  const widthBudget = matWidth - 16;
+  const fromWidth = widthBudget / (shown * 1.08);
+  // Height budget: mat height, less breathing room and the caption line.
+  const fromHeight = (matWidth * MAT_ASPECT - 24 - 12 - 6) / (342 / 245);
+  const w = Math.max(
+    OVERLAY_CARD_MIN_PX,
+    Math.round(Math.min(cardWidth * 1.4, fromWidth, fromHeight)),
+  );
+
+  const label = detail.count === 1 ? "Prize" : "Prizes";
+
+  return (
+    <motion.div
+      className="absolute inset-0 z-30 flex items-center justify-center overflow-hidden rounded-xl px-2"
+      // 90% of the page background rather than a flat black scrim — same
+      // treatment DiscardDrawOverlay and MulliganOverlay use so the three
+      // read as one language when they surface.
+      style={{ backgroundColor: "color-mix(in srgb, var(--bg) 90%, transparent)" }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+    >
+      {/* Plate ABOVE the cards, unlike the discard/draw overlay where the
+          plate labels each group beneath it — a prize claim is one indivisible
+          moment, so the label heads the row rather than tucks under it. */}
+      <motion.div
+        layout
+        className="flex flex-col items-center"
+        style={{ gap: Math.round(w * 0.08) }}
+      >
+        <OverlayPlate label={label} colorway="prize" cardWidth={w} count={detail.count > 1 ? detail.count : undefined} />
+        <div
+          className="flex items-center"
+          style={{ gap: Math.round(w * 0.08) }}
+        >
+          {cards.slice(0, shown).map((card, i) => (
+            <OverlayCardThumb key={`${card.name}-${i}`} card={card} width={w} />
+          ))}
+        </div>
       </motion.div>
     </motion.div>
   );
@@ -2013,6 +2099,16 @@ function Board({
                 <MulliganOverlay
                   key="mulligan-player"
                   detail={frame.mulligan}
+                  cardWidth={cardWidth}
+                  matWidth={matWidth}
+                />
+              )}
+            </AnimatePresence>
+            <AnimatePresence>
+              {beat?.kind === "prize_taken" && beat.actor === "player" && (
+                <PrizeOverlay
+                  key={`prize-${beat.actionIndex}`}
+                  detail={beat}
                   cardWidth={cardWidth}
                   matWidth={matWidth}
                 />

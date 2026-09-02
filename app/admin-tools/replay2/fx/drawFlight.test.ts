@@ -17,13 +17,18 @@ const FIXTURES: { name: string; handle: string }[] = [
   { name: "example-3-same-name-attach.txt", handle: "Nnova12" },
 ];
 
-describe("which beats send a card out of the deck", () => {
-  it("flies both opening hands and every turn draw", () => {
+describe("which beats send a card out of a pile", () => {
+  it("flies opening hands, turn draws, and prize takes", () => {
     for (const { name, handle } of FIXTURES) {
       const beats = beatsOf(name, handle);
       const flights = beats.filter((b) => drawFlightFor(b) != null);
-      const draws = beats.filter((b) => b.kind === "draw" || b.kind === "opening_hand");
-      expect(flights.length, `${name}`).toBe(draws.length);
+      const drivers = beats.filter(
+        (b) =>
+          b.kind === "draw" ||
+          b.kind === "opening_hand" ||
+          b.kind === "prize_taken",
+      );
+      expect(flights.length, `${name}`).toBe(drivers.length);
       expect(flights.length).toBeGreaterThan(0);
     }
   });

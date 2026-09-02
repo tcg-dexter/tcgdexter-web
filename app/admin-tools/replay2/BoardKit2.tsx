@@ -392,6 +392,11 @@ export function Pile({
     if (!beat || phase !== "act") return;
     if (matActor == null || beat.actor !== matActor) return;
     if (drewRef.current === beat.actionIndex) return;
+    // drawFlightFor recognises prize_taken so the viewer's stagger scaler
+    // fits its deal to the beat length, but a prize doesn't come off the
+    // DRAW pile — it comes off the prize pile — so this emitter has to
+    // ignore it. StackedPrizePile emits the prize flight itself.
+    if (beat.kind !== "draw" && beat.kind !== "opening_hand") return;
     const flight = drawFlightFor(beat);
     if (!flight) return;
     const el = pileSlotRef.current;
@@ -1355,7 +1360,7 @@ export function StackedPrizePile({
   label,
   count,
   width,
-  rotate: _rotate,
+  rotate,
   sleeveGradient,
 }: {
   label: string;
@@ -1368,41 +1373,64 @@ export function StackedPrizePile({
   const m = replayTrayMetrics(width);
   const fontSize = Math.max(6, Math.round((m.strip * 0.34) / CARD_IMAGE_BUMP));
   const layers = Math.max(0, Math.min(6, count));
+  const offset = Math.max(3, Math.round(width * 0.09));
 
   // Claiming a prize is the only thing that happens to this pile, and it's
   // the thing the whole game is scored on — so it gets a flourish of its own
   // rather than being the one board element that silently decrements.
+  //
+  // Opponent's take: the top mat has no visible hand, so the flight leaves
+  // the prize pile face-down and exits past the top of the mat — same shape
+  // as an opponent draw, just from a different pile.
+  //
+  // Player's take: the flight is skipped entirely. PrizeOverlay on the
+  // bottom mat shows the actual card art with a "PRIZE(s)" plate; a flight
+  // in front of that overlay would compete with it. See PrizeOverlay.
   const { beat, phase, instant, reducedMotion } = useBeat();
   const matActor = useMatActor();
+  const matBounds = useMatBounds();
   const pileRef = useRef<HTMLDivElement>(null);
   const firedRef = useRef<number | null>(null);
   useEffect(() => {
     if (reducedMotion || instant) return;
     if (!beat || beat.kind !== "prize_taken" || phase !== "act") return;
-    if (matActor == null || beat.actor !== matActor) return;
+    if (matActor !== "opponent" || beat.actor !== matActor) return;
     if (firedRef.current === beat.actionIndex) return;
     const el = pileRef.current;
-    if (!el) return;
+    const mat = matBounds?.();
+    if (!el || !mat) return;
     const r = el.getBoundingClientRect();
     if (r.width === 0) return;
     firedRef.current = beat.actionIndex;
-    emitFx({
-      kind: "spark",
-      clientX: r.left + r.width / 2,
-      clientY: r.top + r.height / 2,
-      // Scales with a multi-prize take: two prizes off a Pokémon ex should
-      // land harder than one.
-      intensity: 0.8 + 0.5 * Math.max(0, beat.count - 1),
-      color: "#fde68a",
+    // Fly from the TOP visible sleeve in the stack: the pile decrements
+    // from the top, so that's the one that just left. `layers` reflects the
+    // count BEFORE the reducer removed the taken cards on this frame — the
+    // pile's own render pulls straight from state — so no adjustment is
+    // needed for this to point at the card that was there a moment ago.
+    const L = pileCardLong(width);
+    const topCardTop = r.top + m.pad + Math.max(0, layers - 1) * offset;
+    emitDrawFlight({
+      actionIndex: beat.actionIndex,
+      actor: matActor,
+      count: beat.count,
+      pileLeft: r.left + m.pad,
+      pileTop: topCardTop,
+      pileWidth: L,
+      pileHeight: width,
+      pileRotate: rotate,
+      matLeft: mat.left,
+      matTop: mat.top,
+      matWidth: mat.width,
+      matHeight: mat.height,
+      cardWidth: width,
     });
-  }, [beat, phase, instant, reducedMotion, matActor]);
-  // Landscape card slot at full proportions (long edge horizontal).
+  }, [beat, phase, instant, reducedMotion, matActor, matBounds, width, layers, offset, m.pad, rotate]);
+  // Landscape card slot at full proportions (long edge horizontal). `offset`
+  // above is the per-layer vertical inset — the card area grows to contain
+  // the stack rather than shrinking the cards.
   const L = pileCardLong(width);
   const H = width;
   const holderW = L + 2 * m.pad;
-  // Per-layer vertical offset, in px. The card area grows to contain the stack
-  // rather than shrinking the cards.
-  const offset = Math.max(3, Math.round(width * 0.09));
   const stackSpan = layers > 0 ? (layers - 1) * offset : 0;
   const areaH = H + stackSpan;
 

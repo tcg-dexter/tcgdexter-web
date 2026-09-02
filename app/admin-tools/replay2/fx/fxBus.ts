@@ -180,7 +180,7 @@ export function onMovePlate(l: PlateListener): () => void {
  * beats with their own exchange overlay and would otherwise be animated twice.
  */
 export function drawFlightFor(
-  beat: { kind: string; count?: number; cards?: string[]; handSize?: number } | null,
+  beat: { kind: string; count?: number; cards?: unknown; handSize?: number } | null,
 ): { count: number; revealed: boolean } | null {
   if (!beat) return null;
   if (beat.kind === "opening_hand") {
@@ -188,13 +188,21 @@ export function drawFlightFor(
     // see, and the log always lists it for the exporting player.
     return { count: Math.max(1, beat.handSize ?? 7), revealed: true };
   }
+  if (beat.kind === "prize_taken") {
+    // Prize claims fly like an opponent's draw (from the prize pile toward
+    // the mat, exiting off the top). The stagger scaler in ReplayViewer2
+    // reads this to fit the deal inside the prize_taken beat's length —
+    // otherwise two prizes off a Pokémon ex outrun their own beat and land
+    // in the discard with no flight behind them.
+    return { count: Math.max(1, beat.count ?? 1), revealed: false };
+  }
   if (beat.kind !== "draw") return null;
   return {
     count: Math.max(1, beat.count ?? 1),
     // The log names the draws of whoever exported it — which is not always
     // the side the payload is normalized to — so this is what decides
     // face-up versus face-down, rather than any rule about sides.
-    revealed: (beat.cards?.length ?? 0) > 0,
+    revealed: Array.isArray(beat.cards) && beat.cards.length > 0,
   };
 }
 
