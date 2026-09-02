@@ -2631,8 +2631,14 @@ function Scrubber({
     // treat the range input as vertical (top=min, bottom=max) — supported
     // in all modern engines, no pointer-event replacement needed. The
     // track gradient flips to top→bottom to match.
+    //
+    // min-h-0 is what lets flex-1 shrink below the input's intrinsic
+    // height inside a flex column. Without it a range input's default
+    // min-height keeps the scrubber propping the column open past its
+    // parent's height, and the buttons or speed picker below fall off
+    // the bottom.
     return (
-      <div className="relative flex-1 w-full flex justify-center">
+      <div className="relative flex-1 min-h-0 w-full flex justify-center">
         <div className="relative h-full w-4 flex items-center justify-center">
           <div
             className="pointer-events-none absolute top-0 bottom-0 left-1/2 w-1.5 -translate-x-1/2 rounded-full"
@@ -3091,14 +3097,6 @@ export default function ReplayViewer({
   const [threadCollapsed, setThreadCollapsed] = useState(false);
   const threadCollapsedActive = isDesktop === true && threadCollapsed;
 
-  // Widescreen mat aspect for the collapsed-thread layout: the two stacked
-  // mats read shorter and wider on a widescreen display, side better against
-  // the thin thread + controls columns flanking them. Cards don't grow —
-  // computeReplayCardWidth caps against the mat's inner height, which
-  // shrinks with the flatter aspect and does the capping automatically.
-  const WIDESCREEN_MAT_ASPECT = 10 / 24;
-  const matAspect = threadCollapsedActive ? WIDESCREEN_MAT_ASPECT : MAT_ASPECT;
-
   // Replay 2.0 leans hard on motion — poses, tilt, lifts, an idle breath on
   // the Active. All of it collapses to a still board when the OS asks for
   // reduced motion; the replay still plays, beat pacing and all, it just
@@ -3118,10 +3116,23 @@ export default function ReplayViewer({
     return () => mq.removeEventListener("change", onChange);
   }, []);
 
-  // Width available to the thread+board row — the budget the whole 16:9
-  // rect has to fit into. Board derives its own width from the resulting
-  // height budget (rowWidth * 9/16) rather than the other way around, so
-  // mats are only ever as large as the 16:9 envelope allows.
+  // Width available to the thread+board row.
+  //
+  // Standard layout: the board derives its own width from a 16:9 height
+  // budget on rowWidth, so the mats are only ever as large as the 16:9
+  // envelope allows.
+  //
+  // Widescreen (collapsed-thread) layout: the mat HEIGHT is fixed and the
+  // WIDTH extends to whatever the row's middle column has room for. That
+  // way the two mats read as one wide widescreen board rather than a 16:9
+  // envelope with cramped sides, and the vertical playback column beside
+  // them stays pinned to the same height as the mats regardless of viewport
+  // width. matAspect is then derived from that pair (height/width), and the
+  // rest of the codebase reads it from BeatContext so overlays and card
+  // sizing solve against the same shape the mat is painted at.
+  const WIDESCREEN_MAT_HEIGHT_PX = 340;
+  const WIDESCREEN_SIDE_COL_PX = 76;
+  const WIDESCREEN_GAP_PX = 24;
   const rowRef = useRef<HTMLDivElement>(null);
   const [rowWidth, setRowWidth] = useState<number | null>(null);
   useEffect(() => {
@@ -3135,8 +3146,28 @@ export default function ReplayViewer({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  // The board's own horizontal budget in widescreen: whatever the row has,
+  // less the two flanking thin columns (thread aside on the left, playback
+  // column on the right) and the gaps between them.
+  const widescreenBoardColumnWidth =
+    threadCollapsedActive && rowWidth != null
+      ? Math.max(200, rowWidth - 2 * WIDESCREEN_SIDE_COL_PX - 2 * WIDESCREEN_GAP_PX)
+      : null;
+  const matAspect =
+    widescreenBoardColumnWidth != null
+      ? WIDESCREEN_MAT_HEIGHT_PX / widescreenBoardColumnWidth
+      : MAT_ASPECT;
   const heightBudget =
-    isDesktop === true && rowWidth != null ? (rowWidth * 9) / 16 : null;
+    isDesktop !== true || rowWidth == null
+      ? null
+      : widescreenBoardColumnWidth != null
+        // In widescreen the height budget is exactly what two fixed-height
+        // mats plus the vertical chrome around them need — everything above
+        // reduces cleanly to matWidth = widescreenBoardColumnWidth back in
+        // Board's derivation. Not tied to rowWidth at all: a wider viewport
+        // widens the mats but doesn't grow them taller.
+        ? 2 * WIDESCREEN_MAT_HEIGHT_PX + BOARD_VERTICAL_CHROME_PX
+        : (rowWidth * 9) / 16;
 
   // Pin the thread aside to the board's measured height so it scrolls
   // inside a fixed envelope instead of stretching the row to fit its own
