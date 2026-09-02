@@ -150,16 +150,13 @@ const CARD_IMAGE_BUMP = 1.1;
 /**
  * Setup-reveal timing, in ms, unscaled by playback speed.
  *
- * Placement during setup is played at a fixed pace rather than tied to the
- * `play_to_slot` beat's own choreographed length: a setup hand can be six
- * Pokémon dropped back-to-back, and letting a general-purpose beat spec (tuned
- * for an ordinary mid-game bench drop) govern a face-down reveal would rush
- * or drag it depending on how many other things share that shape. HOLD is how
- * long a card sits visibly face-down before it moves — long enough to read as
- * "placed face down" rather than "flipped instantly" — and TURN is the
- * raise-and-flip itself.
+ * The reveal is the raise-and-flip every setup Pokémon takes together on the
+ * setup→turn-1 boundary. Fixed pace rather than tied to any beat's own
+ * choreographed length: the reveal isn't a play_to_slot animation any more,
+ * it's the single "hands off, cards in play now" moment that runs on the
+ * turn_start beat regardless of how many basics are on the mat, so a
+ * per-beat spec would be the wrong ruler.
  */
-const SETUP_HOLD_MS = 260;
 const SETUP_TURN_MS = 420;
 
 /** Text size for anything living inside a black card holder (the HP row, the
@@ -987,21 +984,31 @@ export function PokemonCardImage({
       ? "transparent"
       : `linear-gradient(90deg, ${shade(hpColor, -28)} 0%, ${hpColor} 100%)`;
 
-  // A Pokémon placed during setup is placed face-down, same as it would be
-  // across a real table — only the players' own eyes know what's under it
-  // until everyone's ready. It gets the raise-and-flip below instead of the
-  // ordinary "card falls onto the mat" entrance; a bench drop or evolution
-  // later in the same game keeps that one, since only setup is face-down.
+  // A Pokémon placed during setup lands face-down — same as it would be
+  // across a real table, only the player's own eyes know what's under it
+  // until everyone's ready. It STAYS face-down through the whole ceremony;
+  // when the setup ends (duringSetup goes false on the turn_start turn 1
+  // frame) every one of these cards raises and turns face-up together,
+  // instead of the flip firing per placement mid-setup.
   //
-  // Gated on the same terms as that entrance (perform / !beatInstant /
-  // !reducedMotion) so a cold load or a scrub lands the board silently rather
-  // than replaying a flip for cards that were simply already there.
-  const isSetupReveal =
+  // Gated on the same terms as the ordinary entrance (perform /
+  // !beatInstant / !reducedMotion) so a cold load or a scrub lands the
+  // board silently rather than replaying a flip for cards that were simply
+  // already there.
+  //
+  // everSetup is per-component, so a card that mounted during setup takes
+  // the raise-and-turn on the boundary; a card first mounted after setup
+  // (a bench drop, an evolution) skips the ceremony entirely.
+  const setupFaceDown =
     perform && !beatInstant && !reducedMotion && duringSetup && face !== "label";
-  const setupHoldFrac = SETUP_HOLD_MS / (SETUP_HOLD_MS + SETUP_TURN_MS);
+  const [everSetup, setEverSetup] = useState(setupFaceDown);
+  useEffect(() => {
+    if (setupFaceDown) setEverSetup(true);
+  }, [setupFaceDown]);
+  const isSetupReveal = everSetup && !setupFaceDown;
   // The raise+flip lands a little before the end of the window, leaving the
   // tail for a settle back onto the mat rather than stopping dead at the peak.
-  const setupPeakFrac = setupHoldFrac + (1 - setupHoldFrac) * 0.7;
+  const setupPeakFrac = 0.7;
 
   return (
     <CardSurface
@@ -1116,36 +1123,47 @@ export function PokemonCardImage({
               initial={
                 beatInstant || reducedMotion || !perform
                   ? false
-                  : isSetupReveal
+                  : setupFaceDown
                     ? { y: 0, scale: 1, rotateY: 180, rotateZ: 0, opacity: 1 }
                     : { y: -m.cardH * 0.5, rotateZ: -8, opacity: 0 }
               }
               animate={
-                isSetupReveal
-                  ? {
-                      // Sits still, face-down, through the hold; rises and
-                      // turns face-up across the middle stretch; settles
-                      // back onto the mat for the tail. rotateZ never
-                      // enters the setup pose — swiveling face-up on rotateY
-                      // is the whole gesture, and adding a tilt on top of it
-                      // would read as the card losing its balance rather
-                      // than turning over.
-                      y: [0, 0, -m.cardH * 0.24, 0],
-                      scale: [1, 1, 1.07, 1],
-                      rotateY: [180, 180, 0, 0],
-                      rotateZ: 0,
-                      opacity: 1,
-                    }
-                  : { y: 0, rotateZ: 0, opacity: 1 }
+                setupFaceDown
+                  ? // Sits face-down on the mat for the whole ceremony —
+                    // no rise, no flip, until the setup→turn-1 boundary
+                    // switches this off.
+                    { y: 0, scale: 1, rotateY: 180, rotateZ: 0, opacity: 1 }
+                  : isSetupReveal
+                    ? {
+                        // The reveal: rise off the mat and turn face-up in
+                        // one motion, then settle back down. Fires once per
+                        // card on the boundary — everSetup gates it so a
+                        // later bench drop or evolution never inherits it.
+                        // rotateZ stays 0 through the turn — swivelling on
+                        // rotateY is the whole gesture, and a tilt on top
+                        // would read as the card losing its balance rather
+                        // than turning over.
+                        y: [0, -m.cardH * 0.24, 0],
+                        scale: [1, 1.07, 1],
+                        rotateY: [180, 0, 0],
+                        rotateZ: 0,
+                        opacity: 1,
+                      }
+                    : { y: 0, rotateZ: 0, opacity: 1 }
               }
               transition={
-                isSetupReveal
-                  ? {
-                      duration: (SETUP_HOLD_MS + SETUP_TURN_MS) / 1000,
-                      times: [0, setupHoldFrac, setupPeakFrac, 1],
-                      ease: "easeInOut",
-                    }
-                  : { type: "spring", stiffness: 460, damping: 30, mass: 0.8 }
+                setupFaceDown
+                  ? { type: "spring", stiffness: 460, damping: 30, mass: 0.8 }
+                  : isSetupReveal
+                    ? {
+                        // Only the turn itself now — everSetup means the
+                        // hold is behind us, so this is the raise+flip half
+                        // of the old (hold + turn) spec, at the same length.
+                        duration: SETUP_TURN_MS / 1000,
+                        times: [0, setupPeakFrac, 1],
+                        ease: "easeInOut",
+                      }
+                    : { type: "spring", stiffness: 460, damping: 30, mass: 0.8 }
               }
             >
               {/* Front: the printed art. Hidden by its own backface once the
@@ -1172,11 +1190,12 @@ export function PokemonCardImage({
               </div>
               {/* Back: this mat's own sleeve colour (see CardSleeve), pinned
                   180° so it's the face the viewer sees for as long as the
-                  outer element itself is at 180 — i.e. through the hold, and
-                  no further. Only rendered for a setup reveal: elsewhere the
-                  outer rotateY never moves and this would sit permanently
-                  hidden behind the front, existing for nothing. */}
-              {isSetupReveal && (
+                  outer element itself is at 180 — i.e. throughout setup,
+                  and during the raise+flip that turns it over. Rendered
+                  whenever the card is or has been face-down; elsewhere it
+                  would sit permanently hidden behind the front, existing
+                  for nothing. */}
+              {(setupFaceDown || isSetupReveal) && (
                 <div
                   className="absolute inset-0 overflow-hidden"
                   style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
