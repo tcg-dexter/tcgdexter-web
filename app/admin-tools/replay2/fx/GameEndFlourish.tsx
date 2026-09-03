@@ -60,6 +60,12 @@ export function GameEndFlourish({
                   winnerEdge === "bottom"
                     ? "linear-gradient(to top, rgba(255,238,170,0.55), transparent 78%)"
                     : "linear-gradient(to bottom, rgba(255,238,170,0.55), transparent 78%)",
+                // Round the corners on the winner's edge to the mat's own
+                // rounded-xl (12px). Without this the square glow fills the
+                // transparent triangles outside the mat's rounded corners, so
+                // the mat's bottom (or top) reads as square during the win.
+                borderRadius:
+                  winnerEdge === "bottom" ? "0 0 12px 12px" : "12px 12px 0 0",
               }}
               initial={{ opacity: 0 }}
               animate={{ opacity: [0, 1, 0.72] }}
@@ -81,21 +87,38 @@ export function GameEndFlourish({
             transition={{ duration: 0.95, ease: "easeInOut" }}
           />
           {winnerName && (
+            // The name on a plate, centred over the winner's OWN mat (their
+            // half) rather than the whole board — a mat overlay, so it reads as
+            // belonging to their side. The plate mirrors the house skewed-gold
+            // bar (SetupCeremony's MatPlate); the text keeps its original size.
             <motion.div
-              className="absolute inset-0 flex items-center justify-center"
+              className="absolute inset-x-0 flex items-center justify-center"
+              style={{ [winnerEdge ?? "bottom"]: 0, height: "50%" }}
               initial={{ opacity: 0, scale: 1.3 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ type: "spring", stiffness: 260, damping: 22, delay: 0.18 }}
             >
-              <span
-                className="select-none px-4 text-center font-black uppercase tracking-[0.18em] text-white"
-                style={{
-                  fontSize: "clamp(14px, 3.2vw, 34px)",
-                  textShadow: "0 3px 18px rgba(0,0,0,0.8), 0 0 40px rgba(255,214,102,0.7)",
-                }}
-              >
-                {winnerName} wins
-              </span>
+              <div className="relative flex items-center justify-center">
+                <div
+                  aria-hidden
+                  className="absolute inset-y-0 -inset-x-3"
+                  style={{
+                    background: "linear-gradient(100deg, #b45309, #f59e0b)",
+                    transform: "skewX(-13deg)",
+                    boxShadow: "0 6px 22px rgba(245,158,11,0.6)",
+                    borderRadius: 4,
+                  }}
+                />
+                <span
+                  className="relative select-none whitespace-nowrap px-5 py-1.5 text-center font-black uppercase tracking-[0.14em] text-white"
+                  style={{
+                    fontSize: "clamp(14px, 3.2vw, 34px)",
+                    textShadow: "0 2px 6px rgba(0,0,0,0.6)",
+                  }}
+                >
+                  {winnerName} wins
+                </span>
+              </div>
             </motion.div>
           )}
         </motion.div>
