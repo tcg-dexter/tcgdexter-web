@@ -25,7 +25,14 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import {
+  AnimatePresence,
+  motion,
+  useMotionValue,
+  useMotionTemplate,
+  useSpring,
+  useTransform,
+} from "framer-motion";
 import BattleLogDetail from "@/app/components/BattleLogDetail";
 import { DISCARD_DRAW_STAGES } from "@/lib/replay/frames";
 import type {
@@ -1803,19 +1810,32 @@ function Board({
   // in as the camera leans into the mat, so the frame only reads during the
   // moments the board is actually zoomed. 0.09 is useCamera's climax delta
   // (MAX_SCALE_CLIMAX − 1); a normal focus (~1.035) lands partway up.
-  const zoomAmount = Math.min(1, Math.max(0, (camera.scale - 1) / 0.09));
-  // The stage is clipped to the frame by an animated rounded clip-path that
-  // rides zoomAmount on the SAME spring as the camera: tight (inset 0, so the
-  // push-in is contained) at full zoom, loosened well past the frame at rest
-  // so the draw-flight cards can arc out into the hand uncut. Because it springs
-  // with the camera rather than toggling on a threshold, the clip tightens in
-  // and loosens out in lockstep — no hard on/off — and its `round` keeps the
-  // corners curved throughout instead of snapping to 90°. The loosened inset is
-  // negative (expands the clip region past the frame) by more than any flight's
-  // reach beyond the mat.
-  const CLIP_LOOSEN_PX = 220;
-  const clipInset = -(1 - zoomAmount) * CLIP_LOOSEN_PX;
-  const clipPath = `inset(${clipInset}px round 12px)`;
+  // The viewfinder (vignette + clip) rides ONE spring so every part of it moves
+  // together and consistently. camera.scale is a discrete target that jumps
+  // between beats; feeding it straight to three separate `animate` springs (as
+  // an earlier pass did) let them drift out of step and let framer snap the
+  // clip-path's rounding on and off. Instead: push the raw zoom target (0 at
+  // rest → 1 at a climax push; 0.09 is useCamera's climax delta) into one
+  // MotionValue, spring it once, and derive opacity, the clip inset and the
+  // edge reach from that single spring with useTransform — so they are always
+  // in lockstep and continuous, never toggled on a threshold.
+  const zoomTarget = useMotionValue(0);
+  useEffect(() => {
+    zoomTarget.set(Math.min(1, Math.max(0, (camera.scale - 1) / 0.09)));
+  }, [camera.scale, zoomTarget]);
+  const zoom = useSpring(zoomTarget, { stiffness: 150, damping: 26, mass: 1.1 });
+
+  // Clip inset: 0 at full zoom (tight to the frame, containing the push-in),
+  // strongly negative at rest so the region expands well past the frame and a
+  // resting board's draw-flight cards arc out into the hand uncut. Built with
+  // useMotionTemplate so `round 12px` is a constant literal that is ALWAYS
+  // present — the corners stay concentric with the mats at every point in the
+  // animation, never snapping to 90°.
+  const CLIP_LOOSEN_PX = 240;
+  const clipInsetPx = useTransform(zoom, (z) => -(1 - z) * CLIP_LOOSEN_PX);
+  const clipPath = useMotionTemplate`inset(${clipInsetPx}px round 12px)`;
+  // Each vignette edge grows inward from its own edge as the camera pushes in.
+  const edgeReach = useTransform(zoom, (z) => 0.35 + 0.65 * z);
 
   // The Trainer floating on each mat, if any — used to keep it out of that
   // side's discard pile until it has visibly left the mat.
@@ -1921,12 +1941,7 @@ function Board({
             cutting square 90° corners. Loosened well past the frame at rest, so
             a resting board's draw flights (which arc out past the mat edge into
             the hand, which itself lives outside this frame) are never cut. */}
-        <motion.div
-          className="relative"
-          initial={false}
-          animate={{ clipPath }}
-          transition={{ type: "spring", stiffness: 150, damping: 26, mass: 1.1 }}
-        >
+        <motion.div className="relative" style={{ clipPath }}>
         <motion.div
           ref={stageRef}
           className="relative"
@@ -2198,36 +2213,31 @@ function Board({
         {/* Viewfinder vignette — site-bg fading inward on all four edges, the
             same "content peeking, gradient into var(--bg)" treatment the hand
             cards and the thread's scroll edges use. Above the mats (z-20),
-            pinned to the frame's resting box. It rides the camera: opacity and
-            each edge's inward reach track zoomAmount, so the frame is invisible
-            on a resting board and grows in from the edges in concert with the
-            push-in — then recedes as the camera pulls back. */}
+            pinned to the frame's resting box. Every part is driven by the one
+            `zoom` spring via style (not per-element `animate`), so its opacity
+            and each edge's inward reach stay perfectly in step with the clip
+            and with each other: invisible on a resting board, growing in from
+            the edges as the camera pushes in, receding as it pulls back. */}
         <motion.div
           aria-hidden
           className="pointer-events-none absolute inset-0 z-20"
-          initial={false}
-          animate={{ opacity: zoomAmount }}
-          transition={{ type: "spring", stiffness: 150, damping: 26, mass: 1.1 }}
+          style={{ opacity: zoom }}
         >
           <motion.div
             className="absolute inset-x-0 top-0 h-[4.5%] origin-top bg-gradient-to-b from-[var(--bg)] to-transparent"
-            animate={{ scaleY: 0.35 + 0.65 * zoomAmount }}
-            transition={{ type: "spring", stiffness: 150, damping: 26, mass: 1.1 }}
+            style={{ scaleY: edgeReach }}
           />
           <motion.div
             className="absolute inset-x-0 bottom-0 h-[4.5%] origin-bottom bg-gradient-to-t from-[var(--bg)] to-transparent"
-            animate={{ scaleY: 0.35 + 0.65 * zoomAmount }}
-            transition={{ type: "spring", stiffness: 150, damping: 26, mass: 1.1 }}
+            style={{ scaleY: edgeReach }}
           />
           <motion.div
             className="absolute inset-y-0 left-0 w-[3%] origin-left bg-gradient-to-r from-[var(--bg)] to-transparent"
-            animate={{ scaleX: 0.35 + 0.65 * zoomAmount }}
-            transition={{ type: "spring", stiffness: 150, damping: 26, mass: 1.1 }}
+            style={{ scaleX: edgeReach }}
           />
           <motion.div
             className="absolute inset-y-0 right-0 w-[3%] origin-right bg-gradient-to-l from-[var(--bg)] to-transparent"
-            animate={{ scaleX: 0.35 + 0.65 * zoomAmount }}
-            transition={{ type: "spring", stiffness: 150, damping: 26, mass: 1.1 }}
+            style={{ scaleX: edgeReach }}
           />
         </motion.div>
         </motion.div>
