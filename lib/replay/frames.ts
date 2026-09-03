@@ -1,5 +1,5 @@
 import { normalizePerspective, parseBattleLog } from "@/lib/battle-log";
-import { lookupCard, lookupPrintingByLiveId, replay } from "@/lib/engine";
+import { lookupCard, lookupPrintingByLiveId, replay, solveEnergyAttribution } from "@/lib/engine";
 import type { GameState, PokemonInPlay } from "@/lib/engine";
 import { cardImageUrlForAnyName, cardImageUrlForName } from "@/lib/primaryCardImage";
 import { cardImageSmall } from "@/lib/cardImages";
@@ -535,7 +535,11 @@ export function buildReplayPayload(
 ): ReplayPayload {
   const parsed = parseBattleLog(battleLogRaw);
   const normalized = normalizePerspective(parsed, playerHandle);
-  const result = replay(normalized);
+  // Resolve which same-printing duplicate each ambiguous energy attach belongs
+  // to before building the board, so the rendered per-Pokémon energy reflects
+  // the distribution the log constrains rather than piling on the first match.
+  const resolveAmbiguous = solveEnergyAttribution(normalized);
+  const result = replay(normalized, { resolveAmbiguous });
 
   // Row count each actor's mulligan sequence ends at, known up front so
   // every beat in the sequence sizes its cards for the eventual total
