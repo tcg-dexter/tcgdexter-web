@@ -2927,6 +2927,20 @@ export default function ReplayViewer({
     [data?.opponentPrimaryName],
   );
 
+  // Jump the playhead to a thread post's first action (an avatar click). The
+  // thread and the board join on actionIndex === the log's sequence, so land
+  // on the first frame at or after that sequence — the beginning of the turn.
+  const jumpToSequence = useCallback(
+    (sequence: number) => {
+      if (!data) return;
+      const idx = data.frames.findIndex((f) => f.actionIndex >= sequence);
+      setPlaying(false);
+      setInstant(true);
+      setFrameIndex(idx === -1 ? data.frames.length - 1 : idx);
+    },
+    [data],
+  );
+
   const frameCount = data?.frames.length ?? 0;
   // Turn numbers are monotonic (0 = setup, then 1, 2, 3… per lib/engine/sim's
   // state.turn.number), so the last frame's is the battle's turn total.
@@ -3371,6 +3385,7 @@ export default function ReplayViewer({
                 opponentColor={opponentColor}
                 playerAvatarBg={playerMatGradient}
                 opponentAvatarBg={opponentMatGradient}
+                onJumpToSequence={jumpToSequence}
                 hideScoreCards
                 compactAvatars
                 collapsed={threadCollapsedActive}
@@ -3452,6 +3467,7 @@ export default function ReplayViewer({
             opponentColor={opponentColor}
             playerAvatarBg={playerMatGradient}
             opponentAvatarBg={opponentMatGradient}
+            onJumpToSequence={jumpToSequence}
             hideScoreCards
           />
         </div>

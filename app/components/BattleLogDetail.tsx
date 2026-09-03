@@ -519,6 +519,10 @@ interface Props {
    *  (including ones after it) is dimmed. The thread itself is always
    *  rendered in full — this drives the spotlight, not what's in the DOM. */
   maxSequence?: number | null;
+  /** Replay tool only: clicking a post's avatar jumps the playhead to that
+   *  post's first action (the beginning of its turn). Given the action
+   *  sequence to jump to; the viewer maps it to a frame. */
+  onJumpToSequence?: (sequence: number) => void;
   /** When true, the inline ScoreCards (initial board snapshot + each
    *  prize-taking moment) are omitted. Used by the Replay tool where the
    *  live board view already represents that state. */
@@ -541,7 +545,7 @@ interface Props {
   scrollContainerRef?: MutableRefObject<HTMLDivElement | null>;
 }
 
-export default function BattleLogDetail({ battleId, apiUrl, result, playerColor, opponentColor, playerAvatarBg, opponentAvatarBg, maxSequence, hideScoreCards, compactAvatars, collapsed, scrollContainerRef }: Props) {
+export default function BattleLogDetail({ battleId, apiUrl, result, playerColor, opponentColor, playerAvatarBg, opponentAvatarBg, maxSequence, onJumpToSequence, hideScoreCards, compactAvatars, collapsed, scrollContainerRef }: Props) {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -942,6 +946,7 @@ export default function BattleLogDetail({ battleId, apiUrl, result, playerColor,
               opponentHandle={opponentHandle}
               playerAvatarBg={playerAvatarBg}
               opponentAvatarBg={opponentAvatarBg}
+              onJumpToSequence={onJumpToSequence}
               dimmed={currentPostKey != null && post.key !== currentPostKey}
               rootRef={post.key === currentPostKey ? currentPostRef : undefined}
             />
@@ -978,6 +983,7 @@ export default function BattleLogDetail({ battleId, apiUrl, result, playerColor,
             opponentHandle={opponentHandle}
             playerAvatarBg={playerAvatarBg}
             opponentAvatarBg={opponentAvatarBg}
+            onJumpToSequence={onJumpToSequence}
             dimmed={currentPostKey != null && post.key !== currentPostKey}
             rootRef={post.key === currentPostKey ? currentPostRef : undefined}
           />,
@@ -1102,6 +1108,7 @@ function ThreadPost({
   opponentHandle,
   playerAvatarBg,
   opponentAvatarBg,
+  onJumpToSequence,
   dimmed,
   rootRef,
 }: {
@@ -1119,6 +1126,8 @@ function ThreadPost({
    *  when the caller wants monograms keyed to their board mat (Replay). */
   playerAvatarBg?: string;
   opponentAvatarBg?: string;
+  /** Replay tool only: jump the playhead to this post's first action. */
+  onJumpToSequence?: (sequence: number) => void;
   /** Playhead mode only — true once a later post has become current,
    *  fading this one out of the spotlight. */
   dimmed?: boolean;
@@ -1152,11 +1161,15 @@ function ThreadPost({
   const density = POST_DENSITY[compactAvatars ? "compact" : "regular"];
   const isTurnPost = post.label.startsWith("Turn ");
 
-  const avatarBlock = (
-    <div
-      className={`relative flex shrink-0 items-center justify-center rounded-full font-bold text-white ${density.avatar}`}
-      style={avatarStyle}
-    >
+  // Clicking an avatar jumps the replay playhead to this post's first action
+  // — the beginning of its turn. Available for any post with actions when the
+  // caller wired onJumpToSequence (the Replay tool).
+  const jumpSequence = post.actions.length
+    ? Math.min(...post.actions.map((a) => a.sequence))
+    : null;
+  const canJump = onJumpToSequence != null && jumpSequence != null;
+  const avatarInner = (
+    <>
       {post.system?.label ? (
         <span className={`font-bold tracking-tight ${density.systemLabel}`}>
           {post.system.label}
@@ -1176,6 +1189,22 @@ function ThreadPost({
           </svg>
         </span>
       )}
+    </>
+  );
+  const avatarBase = `relative flex shrink-0 items-center justify-center rounded-full font-bold text-white ${density.avatar}`;
+  const avatarBlock = canJump ? (
+    <button
+      type="button"
+      onClick={() => onJumpToSequence!(jumpSequence!)}
+      aria-label={`Jump to ${post.label || "this moment"}`}
+      className={`${avatarBase} cursor-pointer transition hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1`}
+      style={avatarStyle}
+    >
+      {avatarInner}
+    </button>
+  ) : (
+    <div className={avatarBase} style={avatarStyle}>
+      {avatarInner}
     </div>
   );
 
