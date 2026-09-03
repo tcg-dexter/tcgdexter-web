@@ -1838,13 +1838,14 @@ function Board({
   // every frame — corners stay concentric with the mats, never snapping to 90°.
   const CLIP_LOOSEN_PX = 240;
   const CLIP_TIGHTEN_AT = 0.15;
+  // Corner radius of the whole viewer (the clip AND the rounded-rect vignette
+  // below share it so the hard clip edge and the soft fade curve together).
+  const VIEWER_RADIUS_PX = 16;
   const clipInsetPx = useTransform(
     zoom,
     (z) => -Math.max(0, 1 - z / CLIP_TIGHTEN_AT) * CLIP_LOOSEN_PX,
   );
-  const clipPath = useMotionTemplate`inset(${clipInsetPx}px round 12px)`;
-  // Each vignette edge grows inward from its own edge as the camera pushes in.
-  const edgeReach = useTransform(zoom, (z) => 0.35 + 0.65 * z);
+  const clipPath = useMotionTemplate`inset(${clipInsetPx}px round ${VIEWER_RADIUS_PX}px)`;
 
   // The Trainer floating on each mat, if any — used to keep it out of that
   // side's discard pile until it has visibly left the mat.
@@ -2219,36 +2220,24 @@ function Board({
           </InspectContext.Provider>
         </div>
         </motion.div>
-        {/* Viewfinder vignette — site-bg fading inward on all four edges, the
-            same "content peeking, gradient into var(--bg)" treatment the hand
-            cards and the thread's scroll edges use. Above the mats (z-20),
-            pinned to the frame's resting box. Every part is driven by the one
-            `zoom` spring via style (not per-element `animate`), so its opacity
-            and each edge's inward reach stay perfectly in step with the clip
-            and with each other: invisible on a resting board, growing in from
-            the edges as the camera pushes in, receding as it pulls back. */}
+        {/* Viewfinder vignette — ONE rounded-rect overlay of the play area with
+            an inset box-shadow of the site bg. `box-shadow: inset` fills from
+            the border inward and, crucially, follows the element's own
+            border-radius, so the fade curves at the corners instead of meeting
+            in the square notch four straight edge strips used to make. Matched
+            to the clip's VIEWER_RADIUS_PX so the soft fade and the hard clip
+            edge round together. Opacity rides the one `zoom` spring, so it is
+            invisible on a resting board and fades in with the push-in. The
+            small blur/spread keep the band thin. */}
         <motion.div
           aria-hidden
           className="pointer-events-none absolute inset-0 z-20"
-          style={{ opacity: zoom }}
-        >
-          <motion.div
-            className="absolute inset-x-0 top-0 h-[4.5%] origin-top bg-gradient-to-b from-[var(--bg)] to-transparent"
-            style={{ scaleY: edgeReach }}
-          />
-          <motion.div
-            className="absolute inset-x-0 bottom-0 h-[4.5%] origin-bottom bg-gradient-to-t from-[var(--bg)] to-transparent"
-            style={{ scaleY: edgeReach }}
-          />
-          <motion.div
-            className="absolute inset-y-0 left-0 w-[3%] origin-left bg-gradient-to-r from-[var(--bg)] to-transparent"
-            style={{ scaleX: edgeReach }}
-          />
-          <motion.div
-            className="absolute inset-y-0 right-0 w-[3%] origin-right bg-gradient-to-l from-[var(--bg)] to-transparent"
-            style={{ scaleX: edgeReach }}
-          />
-        </motion.div>
+          style={{
+            opacity: zoom,
+            borderRadius: VIEWER_RADIUS_PX,
+            boxShadow: "inset 0 0 26px 4px var(--bg)",
+          }}
+        />
         </motion.div>
         {/* Player's hand, always the bottom mat's now that the swap above
             pins the submitting user there — see HandStrip. Cards open
