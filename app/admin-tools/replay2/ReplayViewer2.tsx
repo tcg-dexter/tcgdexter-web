@@ -1886,6 +1886,11 @@ function Board({
             BoardKit depends on — is untouched by it. The FX canvas sits
             inside the same wrapper so bursts travel with the board they were
             emitted onto. */}
+        {/* Viewfinder frame (not scaled). The camera pushes in on the stage
+            INSIDE this box; the vignette below sits on the frame, not the
+            stage, so the mats' edges dissolve into the page at the frame
+            rather than reading as a hard-cut rectangle when zoomed. */}
+        <div className="relative">
         <motion.div
           ref={stageRef}
           className="relative"
@@ -2154,6 +2159,18 @@ function Board({
           </InspectContext.Provider>
         </div>
         </motion.div>
+        {/* Viewfinder vignette — site-bg fading inward on all four edges, the
+            same "content peeking, gradient into var(--bg)" treatment the hand
+            cards and the thread's scroll edges use. Above the mats (z-20),
+            pinned to the frame's resting box, so a camera push-in fades off
+            into the background instead of ending on a hard rectangle. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 z-20">
+          <div className="absolute inset-x-0 top-0 h-[9%] bg-gradient-to-b from-[var(--bg)] to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-[9%] bg-gradient-to-t from-[var(--bg)] to-transparent" />
+          <div className="absolute inset-y-0 left-0 w-[6%] bg-gradient-to-r from-[var(--bg)] to-transparent" />
+          <div className="absolute inset-y-0 right-0 w-[6%] bg-gradient-to-l from-[var(--bg)] to-transparent" />
+        </div>
+        </div>
         {/* Player's hand, always the bottom mat's now that the swap above
             pins the submitting user there — see HandStrip. Cards open
             through the same mat-overlay inspector as the mat itself,

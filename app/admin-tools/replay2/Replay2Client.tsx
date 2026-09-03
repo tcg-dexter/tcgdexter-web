@@ -75,7 +75,9 @@ function ReplayHeader({
   const left = playerPrimaryName ?? "?";
   const right = opponentPrimaryName ?? "?";
   return (
-    <div className="mt-4 hidden items-center gap-6 lg:flex">
+    // relative z-10 so a camera push-in on the board below (its scaled stage
+    // overflows its box) passes UNDER the matchup title rather than over it.
+    <div className="relative z-10 mt-4 hidden items-center gap-6 lg:flex">
       <div className="flex flex-1 min-w-0 items-baseline gap-2 text-xl font-semibold text-text-primary">
         <span className="truncate">{left}</span>
         <span className="text-base font-normal text-text-muted">vs</span>
