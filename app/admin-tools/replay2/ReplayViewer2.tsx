@@ -1803,6 +1803,10 @@ function Board({
     frame?.discardDraw != null ||
     frame?.mulligan != null ||
     beat?.kind === "prize_taken";
+  // The setup ceremony is its own choreographed sequence (coin flip, first
+  // hands, face-down placements); a camera push-in on top of it fights that
+  // staging, so keep the board still until the first turn begins.
+  const duringSetup = (frame?.turn ?? 1) === 0;
   const camera = useCamera({
     containerRef: stageRef,
     phase: beatPhase,
@@ -1811,8 +1815,8 @@ function Board({
     // An open inspector means the viewer is reading the board rather than
     // watching it; a board that leans and jolts underneath a card they are
     // trying to study is actively unhelpful. A mat overlay likewise wants a
-    // still, un-zoomed board beneath it.
-    enabled: !anyInspectorOpen && !hasMatOverlay,
+    // still, un-zoomed board beneath it, and the setup ceremony stages itself.
+    enabled: !anyInspectorOpen && !hasMatOverlay && !duringSetup,
   });
 
   // How far the camera is pushed in, 0 (at rest) → 1 (a climax push). The
@@ -1924,7 +1928,7 @@ function Board({
       matAspect={matAspect}
       widescreen={widescreen}
       reducedMotion={reducedMotion}
-      duringSetup={(frame?.turn ?? 1) === 0}
+      duringSetup={duringSetup}
     >
     <div
       ref={matContainerRef}
