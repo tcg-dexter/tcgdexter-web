@@ -3249,6 +3249,16 @@ export default function ReplayViewer({
     return () => ro.disconnect();
   }, [frame?.actionIndex, battleId]);
 
+  // Height the flanking columns (thread aside, vertical playback) pin to so
+  // they stand exactly as tall as the two playmats. In widescreen the mats'
+  // combined height is heightBudget by construction (2*matHeight + chrome),
+  // which is exact; the separately-measured boardHeight can drift by the
+  // board's own mt-4 (margin collapsing) and leave the columns overhanging
+  // the mats by ~16px. Standard mode has no vertical column and keeps the
+  // measured value for the full-detail aside.
+  const sideColumnHeight =
+    threadCollapsedActive && heightBudget != null ? heightBudget : boardHeight;
+
   const renderPlaybackModule = (orientation: "horizontal" | "vertical") => (
     <PlaybackModule
       frameIndex={frameIndex}
@@ -3299,8 +3309,8 @@ export default function ReplayViewer({
               threadCollapsedActive ? "lg:w-[76px] lg:shrink-0" : "lg:flex-1"
             }`}
             style={
-              boardHeight != null
-                ? { height: `${boardHeight}px`, marginTop: "1rem" }
+              sideColumnHeight != null
+                ? { height: `${sideColumnHeight}px`, marginTop: "1rem" }
                 : undefined
             }
           >
@@ -3388,8 +3398,8 @@ export default function ReplayViewer({
           <div
             className="hidden w-[76px] shrink-0 lg:flex lg:flex-col"
             style={
-              boardHeight != null
-                ? { height: `${boardHeight}px`, marginTop: "1rem" }
+              sideColumnHeight != null
+                ? { height: `${sideColumnHeight}px`, marginTop: "1rem" }
                 : undefined
             }
           >
