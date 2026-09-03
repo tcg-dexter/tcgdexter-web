@@ -1784,14 +1784,16 @@ export function PlayerMat({
           className="relative grid h-full gap-1.5 sm:gap-3"
           style={{ gridTemplateColumns: `${pileRailW}px 1fr ${pileRailW}px` }}
         >
-          {/* Left rail — cards rotate top-toward-left (outer edge). On the top
-              (player) mat the piles anchor to the bottom of the mat. In
-              widescreen the draw/discard pair sits in a row (draw outer,
-              discard inner) instead of a vertical stack. */}
+          {/* Left rail — cards rotate top-toward-left (outer edge). Piles
+              anchor to the mat's active edge — bottom on the player-style mat,
+              top on the opponent-style one — same as the vertical stack. In
+              widescreen the draw/discard pair sits in a row tucked to the outer
+              (left) edge, draw outermost, discard inboard. justify-start keeps
+              it pinned to that edge so it never drifts toward a wide bench. */}
           <div
             className={`flex h-full gap-1.5 sm:gap-3 ${
               widescreen
-                ? "flex-row items-end justify-center"
+                ? `flex-row justify-start ${isPlayer ? "items-end" : "items-start"}`
                 : `flex-col ${isPlayer ? "justify-end" : ""}`
             }`}
           >
@@ -1815,12 +1817,15 @@ export function PlayerMat({
           <div className={`flex h-full flex-col ${isPlayer ? "justify-end" : "justify-start"}`}>
             {activeRow}
           </div>
-          {/* Right rail — cards rotate top-toward-right (outer edge). On the top
-              (player) mat the piles anchor to the bottom of the mat. */}
+          {/* Right rail — cards rotate top-toward-right (outer edge). Piles
+              anchor to the mat's active edge like the left rail. In widescreen
+              the pair is tucked to the outer (right) edge with justify-end,
+              draw outermost, discard inboard; a lone prize pile likewise sits
+              at the right edge rather than floating in the middle of the rail. */}
           <div
             className={`flex h-full gap-1.5 sm:gap-3 ${
               widescreen
-                ? "flex-row items-end justify-center"
+                ? `flex-row justify-end ${isPlayer ? "items-end" : "items-start"}`
                 : `flex-col ${isPlayer ? "justify-end" : ""}`
             }`}
           >
