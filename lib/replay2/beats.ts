@@ -139,6 +139,11 @@ export type Beat = BeatBase &
          *  when that's why the counters landed. The board colours its
          *  between-turns damage by it. */
         fromCondition: string | null;
+        /** The Pokémon whose attack or ability caused this damage, when the
+         *  cause shares this beat's action (filled by buildBeats' enrichment
+         *  pass). Lets the damage badge wear the source's energy-type colour.
+         *  Null for condition damage, which keeps its own colouring. */
+        sourceName?: string | null;
       }
     /** One effect placing counters on several Pokémon at once — Freezing
      *  Shroud during Pokémon Checkup. `applied` is what the engine actually
@@ -149,6 +154,9 @@ export type Beat = BeatBase &
         kind: "damage_counters_placed";
         applied: { pokemon: string; owner: BeatActor; counters: number }[];
         targets: string[];
+        /** Source Pokémon of the attack/ability that placed these, when known
+         *  — see damage_counters.sourceName. */
+        sourceName?: string | null;
       }
     /** Counters moved between two Pokémon — Adrena-Brain. */
     | {
@@ -159,6 +167,9 @@ export type Beat = BeatBase &
         fromOwner: BeatActor | null;
         toOwner: BeatActor | null;
         resolved: boolean;
+        /** Source Pokémon of the attack/ability that moved these, when known
+         *  — see damage_counters.sourceName. */
+        sourceName?: string | null;
       }
     | { kind: "discard"; cards: string[] }
     | { kind: "discard_from_pokemon"; card: string; from: string }
@@ -706,6 +717,30 @@ export function buildBeats(battleLogRaw: string, playerHandle: string): Beat[] {
       });
     }
     beats[i] = { ...beat, cards };
+  }
+
+  // Attribute attack/ability damage to its source Pokémon, so the damage
+  // badge can wear that Pokémon's energy-type colour. A damage beat names
+  // only the struck Pokémon; the attack or ability that caused it shares the
+  // same actionIndex and precedes it in the stream, so carry that source
+  // forward across the action. Condition damage is left unstamped — it keeps
+  // its own condition colouring at the render site.
+  let cause: { actionIndex: number; name: string } | null = null;
+  for (let i = 0; i < beats.length; i++) {
+    const beat = beats[i];
+    if (beat.kind === "attack") {
+      cause = { actionIndex: beat.actionIndex, name: beat.attacker };
+    } else if (beat.kind === "ability") {
+      cause = { actionIndex: beat.actionIndex, name: beat.source };
+    } else if (
+      cause != null &&
+      cause.actionIndex === beat.actionIndex &&
+      (beat.kind === "damage_counters_placed" ||
+        beat.kind === "damage_counters_moved" ||
+        (beat.kind === "damage_counters" && !beat.fromCondition))
+    ) {
+      beats[i] = { ...beat, sourceName: cause.name };
+    }
   }
 
   return beats;

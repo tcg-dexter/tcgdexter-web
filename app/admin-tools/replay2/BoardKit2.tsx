@@ -33,6 +33,7 @@ import {
   MAT_ASPECT,
 } from "@/app/admin-tools/deck-mat/DeckMatClient";
 import { shade } from "@/lib/color";
+import { lookupCard } from "@/lib/engine";
 import {
   MatActorContext,
   MatBoundsContext,
@@ -71,6 +72,20 @@ import {
 // AI-player practice mode boards (PlayClient.tsx) still use this as-is.
 export const BOARD_GRADIENT = MAT_STYLES.find((s) => s.key === "fire-lightning")!.gradient;
 const BOARD_TEXTURE = TEXTURES.find((t) => t.key === "lines")!;
+
+/** A DamageBurst tint (from/to/glow) keyed to a Pokémon's printed energy
+ *  type, so an attack or ability hit reads in the attacker's colour. Returns
+ *  null when the source or its type is unknown, leaving DamageBurst's own
+ *  red→orange default. Mirrors the condition-tint shape used at the badge. */
+function energyTintForName(
+  name: string | null | undefined,
+): { from: string; to: string; glow: string } | null {
+  if (!name) return null;
+  const type = lookupCard(name)?.types?.[0];
+  if (!type) return null;
+  const hex = energyColor(type);
+  return { from: shade(hex, -30), to: hex, glow: `${hex}99` };
+}
 
 export interface PokemonFrame {
   /** Engine instance id — stable across turns, unique per Pokémon in play.
@@ -792,7 +807,9 @@ export function PokemonCardImage({
           clientX: cx,
           clientY: cy,
           intensity: Math.min(2.2, Math.sqrt(perfBeat.damage / 120)),
-          color: "#ff5a4d",
+          // Match the badge: the burst reads in the attacker's energy colour,
+          // falling back to the old attack red when its type is unknown.
+          color: energyTintForName(perfBeat.attacker)?.to ?? "#ff5a4d",
         });
       } else if (perfBeat.kind === "damage_counters") {
         emitFx({ kind: "impact", clientX: cx, clientY: cy, intensity: 0.5, color: "#ff8a5c" });
@@ -921,6 +938,19 @@ export function PokemonCardImage({
     perf.beat.fromCondition
       ? perf.beat.fromCondition
       : null;
+
+  // The Pokémon whose attack or ability is dealing this beat's damage, so the
+  // badge can wear its energy-type colour. Attacks name the attacker directly;
+  // ability/effect damage carries the source stamped on by buildBeats. Null
+  // for condition damage (coloured by the condition instead, below).
+  const damageSourceName =
+    perf.beat?.kind === "attack"
+      ? perf.beat.attacker
+      : perf.beat?.kind === "damage_counters" ||
+          perf.beat?.kind === "damage_counters_placed" ||
+          perf.beat?.kind === "damage_counters_moved"
+        ? perf.beat.sourceName ?? null
+        : null;
 
   const remainingHp = mon.hp != null ? Math.max(0, mon.hp - shownDamage) : null;
   const hadFallback = !mon.imageUrl;
@@ -1332,7 +1362,10 @@ export function PokemonCardImage({
                       to: conditionColor(conditionDamage),
                       glow: `${conditionColor(conditionDamage)}99`,
                     }
-                  : undefined
+                  : // An attack or ability hit reads in the triggering
+                    // Pokémon's energy colour; unknown source falls through to
+                    // DamageBurst's own red→orange default.
+                    energyTintForName(damageSourceName) ?? undefined
               }
             />
           )}
