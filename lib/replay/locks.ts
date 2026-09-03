@@ -45,10 +45,21 @@ function emptyLocks(): FrameLocks {
   };
 }
 
-/** Attack names that lock the Defender's retreat, read straight from the sim
- *  engine's effect catalog (any `attack_rider` whose ops apply the
- *  `cannot_retreat` status). Reusing it keeps this in lockstep with the
- *  engine's own card data instead of a hand-copied second list. */
+/** Attacks the sim catalog records as `cannot_retreat` but which are really
+ *  Item locks. The sim engine has no Item-lock status, so an attack whose real
+ *  text is "your opponent can't play Item cards during their next turn" gets
+ *  approximated there as a retreat lock. Left uncorrected, that renders the
+ *  wrong badge here — the whole point the reuse-the-catalog approach missed.
+ *  Reclassify them: dropped from the retreat set, added to the Item set. */
+const ITEM_LOCK_ATTACK_OVERRIDES = new Set<string>([
+  "Itchy Pollen", // Budew — the format's turn-1 Item lock, not a retreat lock.
+]);
+
+/** Attack names that lock the Defender's retreat, read from the sim engine's
+ *  effect catalog (any `attack_rider` whose ops apply the `cannot_retreat`
+ *  status) minus the reclassified Item locks above. Deriving from the catalog
+ *  keeps genuine retreat locks in lockstep with the engine's own card data; the
+ *  override list carves out the ones the catalog can't model correctly. */
 function buildRetreatLockAttacks(): Set<string> {
   const names = new Set<string>();
   for (const effects of Object.values(EFFECT_CARDS)) {
@@ -60,6 +71,7 @@ function buildRetreatLockAttacks(): Set<string> {
       if (locks) names.add(eff.trigger.attackName);
     }
   }
+  ITEM_LOCK_ATTACK_OVERRIDES.forEach((n) => names.delete(n));
   return names;
 }
 
@@ -82,8 +94,9 @@ const ITEM_LOCK_ABILITIES: ItemLockAbility[] = [
 ];
 
 /** Attacks that stop the Defender from playing Item cards during their next
- *  turn. Seeded — see the file header. */
-const ITEM_LOCK_ATTACKS = new Set<string>([]);
+ *  turn. Seeded from the reclassified sim entries plus any known additions —
+ *  see the file header and ITEM_LOCK_ATTACK_OVERRIDES. */
+const ITEM_LOCK_ATTACKS = new Set<string>(Array.from(ITEM_LOCK_ATTACK_OVERRIDES));
 
 function hasCardInZone(
   side: GameState["sides"]["player"],
