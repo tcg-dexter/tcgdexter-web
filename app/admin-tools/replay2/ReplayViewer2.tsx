@@ -1804,9 +1804,18 @@ function Board({
   // moments the board is actually zoomed. 0.09 is useCamera's climax delta
   // (MAX_SCALE_CLIMAX − 1); a normal focus (~1.035) lands partway up.
   const zoomAmount = Math.min(1, Math.max(0, (camera.scale - 1) / 0.09));
-  // The stage is clipped to the frame ONLY while pushed in — at rest the
-  // draw-flight cards arc out past the mat into the hand and must not be cut.
-  const zoomed = zoomAmount > 0.02;
+  // The stage is clipped to the frame by an animated rounded clip-path that
+  // rides zoomAmount on the SAME spring as the camera: tight (inset 0, so the
+  // push-in is contained) at full zoom, loosened well past the frame at rest
+  // so the draw-flight cards can arc out into the hand uncut. Because it springs
+  // with the camera rather than toggling on a threshold, the clip tightens in
+  // and loosens out in lockstep — no hard on/off — and its `round` keeps the
+  // corners curved throughout instead of snapping to 90°. The loosened inset is
+  // negative (expands the clip region past the frame) by more than any flight's
+  // reach beyond the mat.
+  const CLIP_LOOSEN_PX = 220;
+  const clipInset = -(1 - zoomAmount) * CLIP_LOOSEN_PX;
+  const clipPath = `inset(${clipInset}px round 12px)`;
 
   // The Trainer floating on each mat, if any — used to keep it out of that
   // side's discard pile until it has visibly left the mat.
@@ -1904,18 +1913,20 @@ function Board({
         {/* Viewfinder frame (not scaled). The camera pushes in on the stage
             INSIDE this box; the vignette below sits on the frame, not the
             stage, so the mats' edges dissolve into the page at the frame
-            rather than reading as a hard-cut rectangle when zoomed.
-            overflow-hidden clips the scaled stage to the frame so a push-in
-            never spills past the vignette onto the surrounding chrome — the
-            edge fade already softens the cut, and the hand strip below lives
-            outside this frame so its draw-flight handoff is unaffected. The
-            clip engages only while zoomed, so a resting board's draw flights
-            (which arc out past the mat edge into the hand) are never cut.
-            rounded-xl matches the mats' own corner radius so the clip curves
-            concentrically with them rather than cutting square 90° corners —
-            the frame's outer corners sit on the top mat's top corners and the
-            bottom mat's bottom corners. */}
-        <div className={`relative rounded-xl ${zoomed ? "overflow-hidden" : ""}`}>
+            rather than reading as a hard-cut rectangle when zoomed. An animated
+            rounded clip-path (clipInset) contains the scaled stage: it springs
+            with the camera so the clip tightens in and loosens out smoothly —
+            no hard on/off — and its `round 12px` matches the mats' corner
+            radius so the clip curves concentrically with them instead of
+            cutting square 90° corners. Loosened well past the frame at rest, so
+            a resting board's draw flights (which arc out past the mat edge into
+            the hand, which itself lives outside this frame) are never cut. */}
+        <motion.div
+          className="relative"
+          initial={false}
+          animate={{ clipPath }}
+          transition={{ type: "spring", stiffness: 150, damping: 26, mass: 1.1 }}
+        >
         <motion.div
           ref={stageRef}
           className="relative"
@@ -2219,7 +2230,7 @@ function Board({
             transition={{ type: "spring", stiffness: 150, damping: 26, mass: 1.1 }}
           />
         </motion.div>
-        </div>
+        </motion.div>
         {/* Player's hand, always the bottom mat's now that the swap above
             pins the submitting user there — see HandStrip. Cards open
             through the same mat-overlay inspector as the mat itself,
