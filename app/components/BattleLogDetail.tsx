@@ -457,7 +457,7 @@ interface SystemAccount {
 
 const SYSTEM_ACCOUNTS: Record<"setup" | "checkup" | "game", SystemAccount> = {
   setup: { displayName: "Setup", handle: "setup", glyph: "shuffle", bg: "#475569" },
-  checkup: { displayName: "Pokémon Checkup", handle: "checkup", glyph: "droplet", bg: "#7c3aed", label: "PC" },
+  checkup: { displayName: "Pokémon Checkup", handle: "checkup", glyph: "droplet", bg: "linear-gradient(135deg, #a855f7 0%, #7c3aed 52%, #6d28d9 100%)", label: "PC" },
   game: { displayName: "Game", handle: "game", glyph: "trophy", bg: "#0f172a" },
 };
 
