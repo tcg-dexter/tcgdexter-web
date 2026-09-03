@@ -1910,8 +1910,12 @@ function Board({
             edge fade already softens the cut, and the hand strip below lives
             outside this frame so its draw-flight handoff is unaffected. The
             clip engages only while zoomed, so a resting board's draw flights
-            (which arc out past the mat edge into the hand) are never cut. */}
-        <div className={`relative ${zoomed ? "overflow-hidden" : ""}`}>
+            (which arc out past the mat edge into the hand) are never cut.
+            rounded-xl matches the mats' own corner radius so the clip curves
+            concentrically with them rather than cutting square 90° corners —
+            the frame's outer corners sit on the top mat's top corners and the
+            bottom mat's bottom corners. */}
+        <div className={`relative rounded-xl ${zoomed ? "overflow-hidden" : ""}`}>
         <motion.div
           ref={stageRef}
           className="relative"
