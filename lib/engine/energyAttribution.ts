@@ -27,7 +27,7 @@ const SHORTFALL_CODE = "energy_discard_shortfall";
  *  instead of enumerating them all. Real duplicate scenarios are tiny (a
  *  handful of ambiguous attaches, two candidates each), so the exhaustive path
  *  is the normal one; the cap only guards a pathological log. */
-const EXHAUSTIVE_CAP = 512;
+const EXHAUSTIVE_CAP = 128;
 
 interface AmbiguousPoint {
   actionIndex: number;

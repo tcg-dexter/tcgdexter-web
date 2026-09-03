@@ -1,0 +1,283 @@
+Setup
+Gworgeo007 chose heads for the opening coin flip.
+Gworgeo007 won the coin toss.
+Gworgeo007 decided to go second.
+Gworgeo007 drew 7 cards for the opening hand.
+- 7 drawn cards.
+a11father drew 7 cards for the opening hand.
+- 7 drawn cards.
+   • (sv9_175) N's Zoroark ex, (me4_113) Special Red Card, (me3_62) Meowth ex, (sv9_27) N's Darmanitan, (me2-5_221) Budew, (sv9_175) N's Zoroark ex, (sv5_144) Buddy-Buddy Poffin
+Gworgeo007 played (me1_72) Makuhita to the Active Spot.
+Gworgeo007 played (sv6_112) Cornerstone Mask Ogerpon ex to the Bench.
+a11father played (me2-5_221) Budew to the Active Spot.
+
+a11father's Turn
+a11father drew (sv6_95) Munkidori.
+a11father played (sv5_144) Buddy-Buddy Poffin.
+- a11father drew 2 cards and played them to the Bench.
+   • (sv9_97) N's Zorua, (sv9_97) N's Zorua
+- a11father shuffled their deck.
+a11father ended their turn.
+
+Gworgeo007's Turn
+Gworgeo007 drew a card.
+Gworgeo007 played (me3_80) Poké Ball.
+- Gworgeo007 flipped a coin and it landed on heads.
+- Gworgeo007 drew (me1_77) Mega Lucario ex.
+- Gworgeo007 shuffled their deck.
+Gworgeo007 attached (zsv10-5_79) Air Balloon to (me1_72) Makuhita in the Active Spot.
+Gworgeo007 played (sv10_176_ph) Team Rocket's Petrel.
+- Gworgeo007 drew (me1_116) Fighting Gong.
+- Gworgeo007 shuffled their deck.
+Gworgeo007 played (me1_116) Fighting Gong.
+- Gworgeo007 drew (me1_76) Riolu.
+- Gworgeo007 shuffled their deck.
+Gworgeo007 played (me1_76) Riolu to the Bench.
+Gworgeo007 played (rsv10-5_85) Tool Scrapper.
+- (zsv10-5_79) Air Balloon was discarded from Gworgeo007's (me1_72) Makuhita.
+Gworgeo007 ended their turn.
+
+a11father's Turn
+a11father drew (sv9_153) N's PP Up.
+a11father evolved (sv9_97) N's Zorua to (sv9_175) N's Zoroark ex on the Bench.
+a11father evolved (sv9_97) N's Zorua to (sv9_175) N's Zoroark ex on the Bench.
+a11father's (sv9_175) N's Zoroark ex used Trade.
+- a11father discarded (sv6_95) Munkidori.
+- a11father drew 2 cards.
+   • (mee_7) Basic Darkness Energy, (me4_83_ph) Transformation Tome
+a11father attached (mee_7) Basic Darkness Energy to (sv9_175) N's Zoroark ex on the Bench.
+a11father's (sv9_175) N's Zoroark ex used Trade.
+- a11father discarded (sv9_153) N's PP Up.
+- a11father drew 2 cards.
+   • (sv5_152) Hero's Cape, (mebsp_31) N's Zekrom
+a11father played (mebsp_31) N's Zekrom to the Bench.
+a11father played (me3_62) Meowth ex to the Bench.
+a11father's (me3_62) Meowth ex used Last-Ditch Catch.
+- a11father drew (sv6-5_88) Janine's Secret Art.
+- a11father shuffled their deck.
+a11father played (sv6-5_88) Janine's Secret Art.
+- a11father attached (mee_7) Basic Darkness Energy to (sv9_175) N's Zoroark ex on the Bench.
+- a11father attached (mee_7) Basic Darkness Energy to (sv9_175) N's Zoroark ex on the Bench.
+- a11father shuffled their deck.
+a11father attached (sv5_152) Hero's Cape to (sv9_175) N's Zoroark ex on the Bench.
+a11father retreated (me2-5_221) Budew to the Bench.
+a11father's (sv9_175) N's Zoroark ex is now in the Active Spot.
+a11father's (sv9_175) N's Zoroark ex used Night Joker on Gworgeo007’s (me1_72) Makuhita for 250 damage.
+- a11father chose Rampaging Thunder
+Gworgeo007's (me1_72) Makuhita was Knocked Out!
+a11father took a Prize card.
+(mee_7) Basic Darkness Energy was added to a11father's hand.
+Gworgeo007's (me1_76) Riolu is now in the Active Spot.
+
+Gworgeo007's Turn
+Gworgeo007 drew a card.
+Gworgeo007 played (me1_74) Lunatone to the Bench.
+Gworgeo007 evolved (me1_76) Riolu to (me1_77) Mega Lucario ex in the Active Spot.
+Gworgeo007 played (me1_114) Boss's Orders.
+- a11father's (mebsp_31) N's Zekrom was switched with a11father's (sv9_175) N's Zoroark ex to become the Active Pokémon.
+a11father's (mebsp_31) N's Zekrom is now in the Active Spot.
+Gworgeo007 ended their turn.
+
+a11father's Turn
+a11father drew (sv6-5_63) Powerglass.
+a11father's (sv9_175) N's Zoroark ex used Trade.
+- a11father discarded (mee_7) Basic Darkness Energy.
+- a11father drew 2 cards.
+   • (sv5_144) Buddy-Buddy Poffin, (me1_119) Lillie's Determination
+a11father attached (sv6-5_63) Powerglass to (sv9_175) N's Zoroark ex on the Bench.
+a11father played (me1_119) Lillie's Determination.
+- a11father shuffled 4 cards into their deck.
+   • (me4_113) Special Red Card, (sv9_27) N's Darmanitan, (me4_83_ph) Transformation Tome, (sv5_144) Buddy-Buddy Poffin
+- a11father drew 6 cards.
+   • (me1_119) Lillie's Determination, (sv9_189) N's Zoroark ex, (me2-5_142) Fezandipiti ex, (mee_7) Basic Darkness Energy, (me3_81) Poké Pad, (me4_113) Special Red Card
+a11father's (sv9_175) N's Zoroark ex used Trade.
+- a11father discarded (sv9_189) N's Zoroark ex.
+- a11father drew 2 cards.
+   • (sv5_144) Buddy-Buddy Poffin, (me4_83_ph) Transformation Tome
+a11father ended their turn.
+
+Gworgeo007's Turn
+Gworgeo007 drew a card.
+Gworgeo007 attached (mee_6) Basic Fighting Energy to (me1_77) Mega Lucario ex in the Active Spot.
+Gworgeo007 played (me1_119) Lillie's Determination.
+- Gworgeo007 drew 8 cards.
+Gworgeo007 played (sv8_177) Gravity Mountain to the Stadium spot.
+Gworgeo007 played (me3_80) Poké Ball.
+- Gworgeo007 flipped a coin and it landed on heads.
+- Gworgeo007 drew (sv6-5_38) Fezandipiti ex.
+- Gworgeo007 shuffled their deck.
+Gworgeo007 played (sv6-5_38) Fezandipiti ex to the Bench.
+Gworgeo007 played (me1_75) Solrock to the Bench.
+Gworgeo007's (me1_74) Lunatone used Lunar Cycle.
+- Gworgeo007 discarded (mee_6) Basic Fighting Energy.
+- Gworgeo007 drew 3 cards.
+Gworgeo007 played (me1_124) Premium Power Pro.
+Gworgeo007 played (me1_116) Fighting Gong.
+- Gworgeo007 drew (me1_76) Riolu.
+- Gworgeo007 shuffled their deck.
+Gworgeo007 played (me1_116) Fighting Gong.
+- Gworgeo007 drew (mee_6) Basic Fighting Energy.
+- Gworgeo007 shuffled their deck.
+Gworgeo007's (me1_77) Mega Lucario ex used Aura Jab on a11father’s (mebsp_31) N's Zekrom for 160 damage.
+- Damage breakdown:
+   • Base damage: 130 damage
+   • (Item) (me1_124) Premium Power Pro: 30 damage
+   • Total damage: 160 damage
+
+- Gworgeo007 attached (mee_6) Basic Fighting Energy to (sv6_112) Cornerstone Mask Ogerpon ex on the Bench.
+a11father's (mebsp_31) N's Zekrom was Knocked Out!
+Gworgeo007 took a Prize card.
+A card was added to Gworgeo007's hand.
+a11father's (sv9_175) N's Zoroark ex is now in the Active Spot.
+
+a11father's Turn
+a11father drew (sv9_153) N's PP Up.
+a11father played (me3_81) Poké Pad.
+- a11father drew (mebsp_31) N's Zekrom.
+- a11father shuffled their deck.
+a11father played (mebsp_31) N's Zekrom to the Bench.
+a11father played (sv9_153) N's PP Up.
+- a11father attached (mee_7) Basic Darkness Energy to (sv9_175) N's Zoroark ex on the Bench.
+a11father played (me1_119) Lillie's Determination.
+- a11father shuffled 5 cards into their deck.
+   • (me2-5_142) Fezandipiti ex, (mee_7) Basic Darkness Energy, (me4_113) Special Red Card, (sv5_144) Buddy-Buddy Poffin, (me4_83_ph) Transformation Tome
+- a11father drew 6 cards.
+   • (sv9_153) N's PP Up, (sv6-5_39) Pecharunt ex, (sv9_97) N's Zorua, (me4_113) Special Red Card, (me1_114) Boss's Orders, (sv9_27) N's Darmanitan
+a11father's (sv9_175) N's Zoroark ex used Trade.
+- a11father discarded (sv9_27) N's Darmanitan.
+- a11father drew 2 cards.
+   • (sv9_143) Black Belt's Training, (sv8_170) Cyrano
+a11father's (sv9_175) N's Zoroark ex used Trade.
+- a11father discarded (sv9_97) N's Zorua.
+- a11father drew 2 cards.
+   • (sv9_152) N's Castle, (sv9_152) N's Castle
+a11father played (sv9_152) N's Castle to the Stadium spot.
+- Gworgeo007 discarded (sv8_177) Gravity Mountain.
+a11father's (sv9_175) N's Zoroark ex used Night Joker on Gworgeo007’s (me1_77) Mega Lucario ex for 250 damage.
+- a11father chose Rampaging Thunder
+
+Gworgeo007's Turn
+Gworgeo007 drew a card.
+Gworgeo007 played (me1_76) Riolu to the Bench.
+Gworgeo007 attached (me3_87) Rocky Fighting Energy to (me1_77) Mega Lucario ex in the Active Spot.
+Gworgeo007 played (me1_124) Premium Power Pro.
+Gworgeo007's (me1_77) Mega Lucario ex used Mega Brave on a11father’s (sv9_175) N's Zoroark ex for 300 damage.
+- Damage breakdown:
+   • Base damage: 270 damage
+   • (Item) (me1_124) Premium Power Pro: 30 damage
+   • Total damage: 300 damage
+
+
+a11father's Turn
+a11father drew (sv5_145) Ciphermaniac's Codebreaking.
+a11father played (sv5_145) Ciphermaniac's Codebreaking.
+- a11father shuffled their deck.
+a11father's (sv9_175) N's Zoroark ex used Trade.
+- a11father discarded (sv9_152) N's Castle.
+- a11father drew 2 cards.
+   • (sv8-5_95) Binding Mochi, (me2-5_154_ph2) N's Reshiram
+a11father played (sv6-5_39) Pecharunt ex to the Bench.
+a11father's (sv9_175) N's Zoroark ex was switched with a11father's (sv9_175) N's Zoroark ex to become the Active Pokémon.
+- a11father's (sv9_175) N's Zoroark ex is now Poisoned.
+a11father's (sv9_175) N's Zoroark ex is now in the Active Spot.
+a11father's (sv9_175) N's Zoroark ex used Night Joker on Gworgeo007’s (me1_77) Mega Lucario ex for 250 damage.
+- a11father chose Rampaging Thunder
+Gworgeo007's (me1_77) Mega Lucario ex was Knocked Out!
+- 3 cards were discarded from Gworgeo007's (me1_77) Mega Lucario ex.
+   • (mee_6) Basic Fighting Energy, (me3_87) Rocky Fighting Energy, (me1_76) Riolu
+a11father took 3 Prize cards.
+(me1_114) Boss's Orders was added to a11father's hand.
+(me1_131) Ultra Ball was added to a11father's hand.
+(mee_7) Basic Darkness Energy was added to a11father's hand.
+Gworgeo007's (me1_75) Solrock is now in the Active Spot.
+
+Pokémon Checkup
+1 damage counter was placed on a11father's (sv9_175) N's Zoroark ex for the Special Condition Poisoned.
+
+Gworgeo007's Turn
+Gworgeo007 drew a card.
+Gworgeo007 played (sv8_177) Gravity Mountain to the Stadium spot.
+- a11father discarded (sv9_152) N's Castle.
+Gworgeo007's (sv6-5_38) Fezandipiti ex used Flip the Script.
+- Gworgeo007 drew 3 cards.
+Gworgeo007 attached (sv5_154) Maximum Belt to (me1_76) Riolu on the Bench.
+Gworgeo007 played (me1_75) Solrock to the Bench.
+Gworgeo007 attached (mee_6) Basic Fighting Energy to (sv6_112) Cornerstone Mask Ogerpon ex on the Bench.
+Gworgeo007 played (me3_76_ph) Judge.
+- Gworgeo007 shuffled 4 cards into their deck.
+- a11father shuffled 10 cards into their deck.
+   • (sv9_153) N's PP Up, (me4_113) Special Red Card, (me1_114) Boss's Orders, (sv9_143) Black Belt's Training, (sv8_170) Cyrano, (sv8-5_95) Binding Mochi, (me2-5_154_ph2) N's Reshiram, (me1_114) Boss's Orders, (me1_131) Ultra Ball, (mee_7) Basic Darkness Energy
+- Gworgeo007 drew 4 cards.
+- a11father drew 4 cards.
+   • (mee_7) Basic Darkness Energy, (me1_119) Lillie's Determination, (me2-5_142) Fezandipiti ex, (sv8_170) Cyrano
+Gworgeo007 played (sv6-5_61) Night Stretcher.
+- Gworgeo007 moved Gworgeo007's (me1_77) Mega Lucario ex to their hand.
+Gworgeo007 evolved (me1_76) Riolu to (me1_77) Mega Lucario ex on the Bench.
+Gworgeo007 ended their turn.
+
+Pokémon Checkup
+1 damage counter was placed on a11father's (sv9_175) N's Zoroark ex for the Special Condition Poisoned.
+
+a11father's Turn
+a11father drew (mee_7) Basic Darkness Energy.
+a11father attached (mee_7) Basic Darkness Energy to (sv6-5_39) Pecharunt ex on the Bench.
+a11father played (me1_119) Lillie's Determination.
+- a11father shuffled 3 cards into their deck.
+   • (me2-5_142) Fezandipiti ex, (sv8_170) Cyrano, (mee_7) Basic Darkness Energy
+- a11father drew 6 cards.
+   • (sv8-5_95) Binding Mochi, (me1_114) Boss's Orders, (me4_83_ph) Transformation Tome, (mee_7) Basic Darkness Energy, (sv5_144) Buddy-Buddy Poffin, (me4_83_ph) Transformation Tome
+a11father's (sv9_175) N's Zoroark ex used Trade.
+- a11father discarded (sv8-5_95) Binding Mochi.
+- a11father drew 2 cards.
+   • (me2-5_154_ph2) N's Reshiram, (me4_113) Special Red Card
+a11father's (sv9_175) N's Zoroark ex used Trade.
+- a11father discarded (me2-5_154_ph2) N's Reshiram.
+- a11father drew 2 cards.
+   • (sv8_170) Cyrano, (mee_7) Basic Darkness Energy
+a11father retreated (sv9_175) N's Zoroark ex to the Bench.
+- 2 cards were discarded from a11father's (sv9_175) N's Zoroark ex.
+   • (mee_7) Basic Darkness Energy, (mee_7) Basic Darkness Energy
+a11father's (sv9_175) N's Zoroark ex is now in the Active Spot.
+a11father's (sv6-5_39) Pecharunt ex used Subjugating Chains.
+- a11father's (sv9_175) N's Zoroark ex was switched with a11father's (sv9_175) N's Zoroark ex to become the Active Pokémon.
+- a11father's (sv9_175) N's Zoroark ex is now Poisoned.
+a11father's (sv9_175) N's Zoroark ex is now in the Active Spot.
+a11father ended their turn.
+(sv6-5_63) Powerglass was activated.
+- a11father attached (mee_7) Basic Darkness Energy to (sv9_175) N's Zoroark ex in the Active Spot.
+
+Pokémon Checkup
+1 damage counter was placed on a11father's (sv9_175) N's Zoroark ex for the Special Condition Poisoned.
+
+Gworgeo007's Turn
+Gworgeo007 drew a card.
+Gworgeo007 didn't take an action in time.
+
+Pokémon Checkup
+1 damage counter was placed on a11father's (sv9_175) N's Zoroark ex for the Special Condition Poisoned.
+
+a11father's Turn
+a11father drew (sv8_170) Cyrano.
+a11father played (me4_83_ph) Transformation Tome.
+- a11father discarded (me4_83_ph) Transformation Tome.
+- a11father moved a11father's (me2-5_154_ph2) N's Reshiram to the Bench.
+- a11father moved a11father's (me2-5_221) Budew to the discard pile.
+a11father's (sv6-5_39) Pecharunt ex used Subjugating Chains.
+- a11father's (sv9_175) N's Zoroark ex was switched with a11father's (sv9_175) N's Zoroark ex to become the Active Pokémon.
+- a11father's (sv9_175) N's Zoroark ex is now Poisoned.
+a11father's (sv9_175) N's Zoroark ex is now in the Active Spot.
+a11father played (me1_114) Boss's Orders.
+- Gworgeo007's (me1_77) Mega Lucario ex was switched with Gworgeo007's (me1_75) Solrock to become the Active Pokémon.
+Gworgeo007's (me1_77) Mega Lucario ex is now in the Active Spot.
+a11father's (sv9_175) N's Zoroark ex used Night Joker on Gworgeo007’s (me1_77) Mega Lucario ex for 600 damage.
+- Damage breakdown:
+   • 30 damage counters: 600 damage
+
+- a11father chose Powerful Rage
+Gworgeo007's (me1_77) Mega Lucario ex was Knocked Out!
+- 2 cards were discarded from Gworgeo007's (me1_77) Mega Lucario ex.
+   • (me1_76) Riolu, (sv5_154) Maximum Belt
+a11father took 2 Prize cards.
+(me1_131) Ultra Ball was added to a11father's hand.
+(svbsp_189) N's Zorua was added to a11father's hand.
+All Prize cards taken. a11father wins.
