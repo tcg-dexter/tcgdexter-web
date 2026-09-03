@@ -3133,6 +3133,25 @@ export default function ReplayViewer({
   const [threadCollapsed, setThreadCollapsed] = useState(false);
   const threadCollapsedActive = isDesktop === true && threadCollapsed;
 
+  // Mobile landscape gets the same widescreen layout a collapsed-thread
+  // desktop does — wide short mats, a thin thread column, vertical controls —
+  // since a phone held sideways has the width for it and none of the height a
+  // stacked layout wants. Watched live so a rotate flips layouts without a
+  // reload. (A landscape tablet at ≥1024px is already isDesktop and keeps the
+  // full desktop layout.)
+  const [isLandscape, setIsLandscape] = useState<boolean | null>(null);
+  useEffect(() => {
+    const mq = window.matchMedia("(orientation: landscape)");
+    setIsLandscape(mq.matches);
+    const onChange = () => setIsLandscape(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  const mobileLandscape = isDesktop === false && isLandscape === true;
+  // The widescreen layout is active for a collapsed-thread desktop OR mobile
+  // landscape; desktop-uncollapsed and mobile-portrait use the standard stack.
+  const wideLayout = threadCollapsedActive || mobileLandscape;
+
   // Replay 2.0 leans hard on motion — poses, tilt, lifts, an idle breath on
   // the Active. All of it collapses to a still board when the OS asks for
   // reduced motion; the replay still plays, beat pacing and all, it just
@@ -3195,18 +3214,22 @@ export default function ReplayViewer({
   // the below-row subtraction drops out.
   const [rowHeightBudget, setRowHeightBudget] = useState<number | null>(null);
   useEffect(() => {
-    if (isDesktop !== true) {
+    if (isDesktop !== true && !mobileLandscape) {
       setRowHeightBudget(null);
       return;
     }
     const measure = () => {
       const SITE_NAV_PX = 56; // h-14
       const PAGE_TOP_PADDING_PX = 24; // pt-6 on the page container
-      const MATCHUP_BAR_PX = 42 + 16; // wordmark image + its mt-4
+      // The wordmark matchup bar only renders at lg (desktop); mobile
+      // landscape has no bar above the board.
+      const MATCHUP_BAR_PX = isDesktop === true ? 42 + 16 : 0;
       const BELOW_ROW_BREATHING_PX = 16; // between row and whatever follows
       const HORIZONTAL_PLAYBACK_PX = 24 + 20 + 32 + 44 + 12 + 24; // mt-6 + scrubber + mt-8 + control row + mt-1.5 + speed
       const chromeAbove = SITE_NAV_PX + PAGE_TOP_PADDING_PX + MATCHUP_BAR_PX;
-      const chromeBelow = threadCollapsedActive
+      // Widescreen (collapsed desktop or mobile landscape) keeps the transport
+      // in a side column, so nothing but breathing room sits below the row.
+      const chromeBelow = wideLayout
         ? BELOW_ROW_BREATHING_PX
         : HORIZONTAL_PLAYBACK_PX + BELOW_ROW_BREATHING_PX;
       // Floor at 320px so nothing collapses to zero on a very short window
@@ -3219,13 +3242,13 @@ export default function ReplayViewer({
     measure();
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
-  }, [isDesktop, threadCollapsedActive]);
+  }, [isDesktop, mobileLandscape, wideLayout]);
 
   // The board's own horizontal budget in widescreen: whatever the row has,
   // less the two flanking thin columns (thread aside on the left, playback
   // column on the right) and the gaps between them.
   const widescreenBoardColumnWidth =
-    threadCollapsedActive && rowWidth != null
+    wideLayout && rowWidth != null
       ? Math.max(200, rowWidth - 2 * WIDESCREEN_SIDE_COL_PX - 2 * WIDESCREEN_GAP_PX)
       : null;
   // Widescreen mat height responds to the viewport too: at short heights
@@ -3247,7 +3270,7 @@ export default function ReplayViewer({
       ? widescreenMatHeight / widescreenBoardColumnWidth
       : MAT_ASPECT;
   const heightBudget =
-    isDesktop !== true || rowWidth == null
+    (isDesktop !== true && !mobileLandscape) || rowWidth == null
       ? null
       : widescreenBoardColumnWidth != null
         // Widescreen: two fixed-height mats plus vertical chrome —
@@ -3293,7 +3316,7 @@ export default function ReplayViewer({
   // the mats by ~16px. Standard mode has no vertical column and keeps the
   // measured value for the full-detail aside.
   const sideColumnHeight =
-    threadCollapsedActive && heightBudget != null ? heightBudget : boardHeight;
+    wideLayout && heightBudget != null ? heightBudget : boardHeight;
 
   const renderPlaybackModule = (orientation: "horizontal" | "vertical") => (
     <PlaybackModule
@@ -3337,12 +3360,15 @@ export default function ReplayViewer({
           move into a third column on the right, filling the width the
           aside gave up. The board's own measured width is unaffected —
           heightBudget reads rowWidth, not the aside's fraction of it. */}
-      <div ref={rowRef} className="lg:flex lg:items-start lg:gap-6">
-        {isDesktop === true && (
+      <div
+        ref={rowRef}
+        className={wideLayout ? "flex items-start gap-6" : "lg:flex lg:items-start lg:gap-6"}
+      >
+        {(isDesktop === true || mobileLandscape) && (
           <aside
             key={battleId}
-            className={`relative hidden min-w-0 lg:flex lg:flex-col lg:overflow-hidden ${
-              threadCollapsedActive ? "lg:w-[76px] lg:shrink-0" : "lg:flex-1"
+            className={`relative flex min-w-0 flex-col overflow-hidden ${
+              wideLayout ? "w-[76px] shrink-0" : "flex-1"
             }`}
             style={
               sideColumnHeight != null
@@ -3351,8 +3377,10 @@ export default function ReplayViewer({
             }
           >
             {/* Toggle: chevron that flips direction to say which way the
-                thread is about to go. Sits at the top of the aside in both
-                states so its position doesn't jump when the width does. */}
+                thread is about to go. Desktop only — mobile landscape is
+                always the thin collapsed column, so a toggle there would do
+                nothing. */}
+            {isDesktop === true && (
             <div className="flex items-center justify-end pb-1">
               <button
                 type="button"
@@ -3375,6 +3403,7 @@ export default function ReplayViewer({
                 </svg>
               </button>
             </div>
+            )}
             <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-gradient-to-b from-[var(--bg)] to-transparent" />
             <div
               ref={threadScrollRef}
@@ -3393,14 +3422,14 @@ export default function ReplayViewer({
                 onJumpToSequence={jumpToSequence}
                 hideScoreCards
                 compactAvatars
-                collapsed={threadCollapsedActive}
+                collapsed={wideLayout}
                 scrollContainerRef={threadScrollRef}
               />
             </div>
             <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-12 bg-gradient-to-t from-[var(--bg)] to-transparent" />
           </aside>
         )}
-        <div ref={boardRef} className="lg:shrink-0">
+        <div ref={boardRef} className={wideLayout ? "shrink-0" : "lg:shrink-0"}>
           <Board
             frame={frame}
             loading={loading}
@@ -3428,7 +3457,7 @@ export default function ReplayViewer({
             onCloseInspect={() => setInspect(null)}
           />
         </div>
-        {threadCollapsedActive && (
+        {wideLayout && (
           // Third column: the transport controls, mirroring the thread
           // aside's width and pinned to the board's measured height so
           // the vertical scrubber has something to fill. Vertical
@@ -3436,7 +3465,7 @@ export default function ReplayViewer({
           // horizontal bar — scrubber runs top→bottom, icon-only steppers
           // stacked, speed picker at the bottom.
           <div
-            className="hidden w-[76px] shrink-0 lg:flex lg:flex-col"
+            className="flex w-[76px] shrink-0 flex-col"
             style={
               sideColumnHeight != null
                 ? { height: `${sideColumnHeight}px`, marginTop: "1rem" }
@@ -3452,7 +3481,7 @@ export default function ReplayViewer({
           on desktop when the transport has moved into the row above; still
           shown on mobile regardless (where the aside doesn't exist and the
           thread lives further down the page). */}
-      {!threadCollapsedActive && renderPlaybackModule("horizontal")}
+      {!wideLayout && renderPlaybackModule("horizontal")}
 
       {/* Mobile: the thread sits under the controls, rendered in full with
           no scroll envelope of its own — the page scrolls it. Deliberately
@@ -3463,7 +3492,7 @@ export default function ReplayViewer({
           Mobile already shows the whole thread at full opacity, so there's
           nothing for it to spotlight against — passing it would just dim
           everything after the playhead for no reason. */}
-      {isDesktop === false && !hideThreadOnMobile && (
+      {isDesktop === false && !mobileLandscape && !hideThreadOnMobile && (
         <div className="mt-6">
           <BattleLogDetail
             battleId={battleId}
