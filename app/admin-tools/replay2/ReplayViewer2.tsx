@@ -1794,6 +1794,15 @@ function Board({
   // container measured here is the mats stack, not the outer column, so the
   // camera's offsets are a fraction of the board rather than of the page.
   const stageRef = useRef<HTMLDivElement>(null);
+  // A mat overlay — a prize take, a trade-like discard/draw exchange, a
+  // mulligan reveal — takes over the mat with its own presentation. Any camera
+  // push-in still in place from the previous beat would sit under it, so treat
+  // an overlay like an open inspector and return the camera to standard (the
+  // stage springs back to scale 1) for as long as one is showing.
+  const hasMatOverlay =
+    frame?.discardDraw != null ||
+    frame?.mulligan != null ||
+    beat?.kind === "prize_taken";
   const camera = useCamera({
     containerRef: stageRef,
     phase: beatPhase,
@@ -1801,8 +1810,9 @@ function Board({
     reducedMotion,
     // An open inspector means the viewer is reading the board rather than
     // watching it; a board that leans and jolts underneath a card they are
-    // trying to study is actively unhelpful.
-    enabled: !anyInspectorOpen,
+    // trying to study is actively unhelpful. A mat overlay likewise wants a
+    // still, un-zoomed board beneath it.
+    enabled: !anyInspectorOpen && !hasMatOverlay,
   });
 
   // How far the camera is pushed in, 0 (at rest) → 1 (a climax push). The
