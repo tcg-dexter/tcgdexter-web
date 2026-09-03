@@ -86,12 +86,16 @@ function otherActor(actor: Actor): Actor {
   return "system";
 }
 
-function makeCard(name: string, opts: { revealed?: boolean } = {}): CardInstance {
+function makeCard(
+  name: string,
+  opts: { revealed?: boolean; printingId?: string } = {},
+): CardInstance {
   return {
     id: mintInstanceId("card"),
     name,
     catalog: null,
     ...(opts.revealed === false ? { unrevealed: true } : {}),
+    ...(opts.printingId ? { printingId: opts.printingId } : {}),
   };
 }
 
@@ -132,21 +136,35 @@ function findPokemon(
   side: PlayerSide,
   name: string,
   preferLocation?: "active" | "bench",
+  printingId?: string,
 ): { mon: PokemonInPlay; where: "active" | "bench"; benchIndex: number } | null {
-  const active =
-    side.active && side.active.card.name === name
-      ? { mon: side.active, where: "active" as const, benchIndex: -1 }
-      : null;
-  const bench = () => {
-    for (let i = 0; i < side.bench.length; i++) {
-      if (side.bench[i].card.name === name) {
-        return { mon: side.bench[i], where: "bench" as const, benchIndex: i };
+  const resolve = (pred: (m: PokemonInPlay) => boolean) => {
+    const active =
+      side.active && pred(side.active)
+        ? { mon: side.active, where: "active" as const, benchIndex: -1 }
+        : null;
+    const bench = () => {
+      for (let i = 0; i < side.bench.length; i++) {
+        if (pred(side.bench[i])) {
+          return { mon: side.bench[i], where: "bench" as const, benchIndex: i };
+        }
       }
-    }
-    return null;
+      return null;
+    };
+    if (preferLocation === "bench") return bench() ?? active;
+    return active ?? bench();
   };
-  if (preferLocation === "bench") return bench() ?? active;
-  return active ?? bench();
+  const byName = (m: PokemonInPlay) => m.card.name === name;
+  // With a printing id from the verbose export, first require an EXACT printing
+  // match so a same-named sibling of a different printing (two "N's Zoroark ex"
+  // from different sets, say) is never chosen while the right one is in play.
+  // Fall back to name-only — the standard export, or a card whose id we never
+  // saw — which keeps the original behaviour untouched when no id is given.
+  if (printingId != null) {
+    const strict = resolve((m) => byName(m) && m.card.printingId === printingId);
+    if (strict) return strict;
+  }
+  return resolve(byName);
 }
 
 function indexOfCardInZone(zone: CardInstance[], name: string): number {
@@ -286,8 +304,12 @@ export function applyAction(
       if (!side) break;
       const name = String(payload.card ?? "");
       if (!name) break;
+      const cardId = payload.card_id as string | undefined;
       const fromHand = popCardByName(side.hand, name);
-      const card = fromHand ?? makeCard(name);
+      const card = fromHand ?? makeCard(name, { printingId: cardId });
+      // Stamp the printing id onto a card that came from the tracked hand too,
+      // so its in-play identity carries the printing for later name resolution.
+      if (card.printingId == null && cardId) card.printingId = cardId;
       if (!fromHand) {
         diag("info", "card_not_in_hand", `${actor} played ${name} but it wasn't tracked in hand`, { name });
       }
@@ -464,7 +486,7 @@ export function applyAction(
       const targetName = String(payload.target ?? "");
       const viaEffect = Boolean(payload.via_effect);
       const location = payload.location as "active" | "bench" | undefined;
-      const found = findPokemon(side, targetName, location);
+      const found = findPokemon(side, targetName, location, payload.target_id as string | undefined);
       if (!found) {
         diag("warn", "attach_target_missing", `Attached ${energyName} to ${targetName} but target not in play`, { targetName });
         break;
@@ -504,7 +526,8 @@ export function applyAction(
       const fromName = String(payload.from ?? "");
       const toName = String(payload.to ?? "");
       const location = payload.location as "active" | "bench" | undefined;
-      const found = findPokemon(side, fromName, location);
+      const toId = payload.to_id as string | undefined;
+      const found = findPokemon(side, fromName, location, payload.from_id as string | undefined);
       if (!found) {
         diag("warn", "evolve_source_missing", `Evolved ${fromName} → ${toName} but base not in play`, { fromName, toName });
         break;
@@ -512,7 +535,8 @@ export function applyAction(
       if (found.mon.enteredPlayOnTurn === state.turn.number && !found.mon.evolvedThisTurn) {
         diag("info", "evolve_lock_violation", `Evolved ${fromName} on the same turn it was played`, { fromName });
       }
-      const newTop = popCardByName(side.hand, toName) ?? makeCard(toName);
+      const newTop = popCardByName(side.hand, toName) ?? makeCard(toName, { printingId: toId });
+      if (newTop.printingId == null && toId) newTop.printingId = toId;
       found.mon.stack = [...found.mon.stack, found.mon.card];
       found.mon.card = newTop;
       found.mon.evolvedThisTurn = true;
@@ -708,7 +732,7 @@ export function applyAction(
       const source = String(payload.source ?? "");
       const abilityName = String(payload.ability_name ?? "");
       if (side) {
-        const found = findPokemon(side, source);
+        const found = findPokemon(side, source, undefined, payload.source_id as string | undefined);
         if (found) found.mon.abilitiesUsedThisTurn.push(abilityName);
       }
       event.detail = { source, ability: abilityName };
@@ -733,7 +757,7 @@ export function applyAction(
             ? state.sides.opponent
             : sideOf(state, actor);
       if (!ownerSide || !cardName) break;
-      const target = findPokemon(ownerSide, pokemonName);
+      const target = findPokemon(ownerSide, pokemonName, undefined, payload.pokemon_id as string | undefined);
       if (!target) {
         // The pokemon may have just been knocked out and removed; pop a
         // placeholder discard so totals balance.
@@ -769,7 +793,7 @@ export function applyAction(
       const ownerSide = sideOf(state, actor);
       if (!ownerSide) break;
       const targetName = String(payload.pokemon ?? "");
-      const found = findPokemon(ownerSide, targetName);
+      const found = findPokemon(ownerSide, targetName, undefined, payload.pokemon_id as string | undefined);
       if (!found) {
         diag("info", "ko_target_missing", `Knocked Out target ${targetName} not in play`, { targetName });
         break;
@@ -804,7 +828,7 @@ export function applyAction(
       if (!ownerSide) break;
       const targetName = String(payload.pokemon ?? "");
       const condition = payload.condition as SpecialCondition;
-      const found = findPokemon(ownerSide, targetName);
+      const found = findPokemon(ownerSide, targetName, undefined, payload.pokemon_id as string | undefined);
       if (!found) {
         diag("info", "condition_target_missing", `Condition target ${targetName} not in play`, { targetName });
         break;
@@ -886,7 +910,7 @@ export function applyAction(
       if (!ownerSide) break;
       const targetName = String(payload.pokemon ?? "");
       const counters = Number(payload.counters ?? 0);
-      const found = findPokemon(ownerSide, targetName);
+      const found = findPokemon(ownerSide, targetName, undefined, payload.pokemon_id as string | undefined);
       if (!found) {
         diag("info", "counter_target_missing", `Counter target ${targetName} not in play`, { targetName });
         break;

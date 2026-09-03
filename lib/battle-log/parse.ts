@@ -35,12 +35,28 @@ import {
  * capture the id together with the name (they use `.+?`), so this runs once
  * per action after matching rather than complicating every regex.
  */
+// Fields naming a Pokémon INSTANCE (not an energy/trainer). For these we keep
+// the stripped printing id on a companion `${field}_id` so the reducer can tell
+// two same-named-but-different-printing Pokémon apart when resolving a target —
+// the global name→id map is lossy (first id wins), so per-occurrence is needed.
+const POKEMON_ID_FIELDS = new Set<string>([
+  "card",
+  "target",
+  "from",
+  "to",
+  "pokemon",
+  "source",
+  "attacker",
+  "defender",
+]);
+
 function stripActionCardIds(a: ParsedAction, ids: Record<string, string>): void {
   for (const f of CARD_NAME_FIELDS) {
     const v = a.payload[f];
     if (typeof v === "string") {
       const { name, id } = splitCardId(v);
       a.payload[f] = name;
+      if (id && POKEMON_ID_FIELDS.has(f)) a.payload[`${f}_id`] = id;
       if (id && !(name in ids)) ids[name] = id;
     }
   }
