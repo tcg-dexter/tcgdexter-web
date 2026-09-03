@@ -44,6 +44,13 @@ export interface BeatContextValue {
    * flatter one.
    */
   matAspect: number;
+  /**
+   * The board is in the wide, short widescreen layout (collapsed thread on
+   * desktop, or landscape mobile). Mats lay their draw/discard piles out
+   * horizontally there rather than stacked, so a short mat keeps vertical
+   * clearance between the piles and a bench a Stadium has grown.
+   */
+  widescreen: boolean;
 }
 
 const REST: BeatContextValue = {
@@ -53,6 +60,7 @@ const REST: BeatContextValue = {
   reducedMotion: false,
   duringSetup: false,
   matAspect: MAT_ASPECT,
+  widescreen: false,
 };
 
 const BeatContext = createContext<BeatContextValue>(REST);
@@ -64,11 +72,12 @@ export function BeatProvider({
   reducedMotion,
   duringSetup,
   matAspect,
+  widescreen,
   children,
 }: BeatContextValue & { children: ReactNode }) {
   const value = useMemo(
-    () => ({ beat, phase, instant, reducedMotion, duringSetup, matAspect }),
-    [beat, phase, instant, reducedMotion, duringSetup, matAspect],
+    () => ({ beat, phase, instant, reducedMotion, duringSetup, matAspect, widescreen }),
+    [beat, phase, instant, reducedMotion, duringSetup, matAspect, widescreen],
   );
   return <BeatContext.Provider value={value}>{children}</BeatContext.Provider>;
 }

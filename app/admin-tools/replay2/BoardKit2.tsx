@@ -1611,7 +1611,7 @@ export function PlayerMat({
   // am called?", which every duplicate on the board answers yes to — which is
   // how an attack ended up being attributed to a benched Pokémon sharing the
   // attacker's name.
-  const { beat: currentBeat, matAspect } = useBeat();
+  const { beat: currentBeat, matAspect, widescreen } = useBeat();
   const matRef = useRef<HTMLDivElement>(null);
   // Stable across renders so publishing it doesn't churn every consumer; it
   // reads the ref at call time, which is the only moment the answer matters.
@@ -1665,6 +1665,14 @@ export function PlayerMat({
   // Rail columns are sized to the rotated pile holders (landscape, full card
   // proportions), which are wider than the active's portrait holder.
   const railW = pileHolderWidth(cardWidth);
+  // Widescreen mats are short: two vertically-stacked pile holders reach up
+  // toward a bench a Stadium has grown to +5, so lay the draw/discard pair out
+  // side by side instead (draw on the outer edge, discard inboard). That halves
+  // the pile stack's height for clearance, at the cost of a wider rail — which
+  // the wide layout has room for. Both rails widen equally (the prize pile
+  // centres in its own) so the two mats' active Pokémon stay aligned.
+  const RAIL_PILE_GAP = 6;
+  const pileRailW = widescreen ? 2 * railW + RAIL_PILE_GAP : railW;
   // The active Pokémon's holder is wider than the bare card by 2*pad; the
   // floating stadium / played-trainer anchor off the holder's edge.
   const activeHalf = activeTray.containerW / 2;
@@ -1774,16 +1782,31 @@ export function PlayerMat({
             which puts it underneath regardless of DOM order. */}
         <div
           className="relative grid h-full gap-1.5 sm:gap-3"
-          style={{ gridTemplateColumns: `${railW}px 1fr ${railW}px` }}
+          style={{ gridTemplateColumns: `${pileRailW}px 1fr ${pileRailW}px` }}
         >
           {/* Left rail — cards rotate top-toward-left (outer edge). On the top
-              (player) mat the piles anchor to the bottom of the mat. */}
-          <div className={`flex h-full flex-col gap-1.5 sm:gap-3 ${isPlayer ? "justify-end" : ""}`}>
+              (player) mat the piles anchor to the bottom of the mat. In
+              widescreen the draw/discard pair sits in a row (draw outer,
+              discard inner) instead of a vertical stack. */}
+          <div
+            className={`flex h-full gap-1.5 sm:gap-3 ${
+              widescreen
+                ? "flex-row items-end justify-center"
+                : `flex-col ${isPlayer ? "justify-end" : ""}`
+            }`}
+          >
             {isPlayer ? (
-              <>
-                <Pile label="Discard" count={discardCount} width={cardWidth} rotate="ccw" topName={discardTop} topImageUrl={discardTopImageUrl} onClick={onDiscardClick} face={face} />
-                <Pile label="Draw" count={deckCount} width={cardWidth} rotate="ccw" hint={`${handCount} in hand`} useCardBack sleeveGradient={matGradient} />
-              </>
+              // Vertical: Discard over Draw. Widescreen row: Draw (outer/left)
+              // then Discard (inner/right).
+              widescreen
+                ? [
+                    <Pile key="draw" label="Draw" count={deckCount} width={cardWidth} rotate="ccw" hint={`${handCount} in hand`} useCardBack sleeveGradient={matGradient} />,
+                    <Pile key="discard" label="Discard" count={discardCount} width={cardWidth} rotate="ccw" topName={discardTop} topImageUrl={discardTopImageUrl} onClick={onDiscardClick} face={face} />,
+                  ]
+                : [
+                    <Pile key="discard" label="Discard" count={discardCount} width={cardWidth} rotate="ccw" topName={discardTop} topImageUrl={discardTopImageUrl} onClick={onDiscardClick} face={face} />,
+                    <Pile key="draw" label="Draw" count={deckCount} width={cardWidth} rotate="ccw" hint={`${handCount} in hand`} useCardBack sleeveGradient={matGradient} />,
+                  ]
             ) : (
               <StackedPrizePile label="Prizes" count={prizesRemaining} width={cardWidth} rotate="ccw" sleeveGradient={matGradient} />
             )}
@@ -1794,14 +1817,27 @@ export function PlayerMat({
           </div>
           {/* Right rail — cards rotate top-toward-right (outer edge). On the top
               (player) mat the piles anchor to the bottom of the mat. */}
-          <div className={`flex h-full flex-col gap-1.5 sm:gap-3 ${isPlayer ? "justify-end" : ""}`}>
+          <div
+            className={`flex h-full gap-1.5 sm:gap-3 ${
+              widescreen
+                ? "flex-row items-end justify-center"
+                : `flex-col ${isPlayer ? "justify-end" : ""}`
+            }`}
+          >
             {isPlayer ? (
               <StackedPrizePile label="Prizes" count={prizesRemaining} width={cardWidth} rotate="cw" sleeveGradient={matGradient} />
             ) : (
-              <>
-                <Pile label="Draw" count={deckCount} width={cardWidth} rotate="cw" hint={`${handCount} in hand`} useCardBack sleeveGradient={matGradient} />
-                <Pile label="Discard" count={discardCount} width={cardWidth} rotate="cw" topName={discardTop} topImageUrl={discardTopImageUrl} onClick={onDiscardClick} face={face} />
-              </>
+              // Vertical: Draw over Discard. Widescreen row: Discard
+              // (inner/left) then Draw (outer/right).
+              widescreen
+                ? [
+                    <Pile key="discard" label="Discard" count={discardCount} width={cardWidth} rotate="cw" topName={discardTop} topImageUrl={discardTopImageUrl} onClick={onDiscardClick} face={face} />,
+                    <Pile key="draw" label="Draw" count={deckCount} width={cardWidth} rotate="cw" hint={`${handCount} in hand`} useCardBack sleeveGradient={matGradient} />,
+                  ]
+                : [
+                    <Pile key="draw" label="Draw" count={deckCount} width={cardWidth} rotate="cw" hint={`${handCount} in hand`} useCardBack sleeveGradient={matGradient} />,
+                    <Pile key="discard" label="Discard" count={discardCount} width={cardWidth} rotate="cw" topName={discardTop} topImageUrl={discardTopImageUrl} onClick={onDiscardClick} face={face} />,
+                  ]
             )}
           </div>
         </div>

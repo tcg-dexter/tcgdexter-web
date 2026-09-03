@@ -1688,6 +1688,7 @@ function Board({
   anyInspectorOpen,
   actionContinues,
   matAspect,
+  widescreen,
   playerMatGradient,
   opponentMatGradient,
   matInspect,
@@ -1727,6 +1728,9 @@ function Board({
    *  without the cards themselves growing (computeReplayCardWidth caps
    *  against the mat's inner height either way). */
   matAspect: number;
+  /** The wide, short widescreen layout is active (collapsed-thread desktop or
+   *  landscape mobile) — mats lay their piles out horizontally. */
+  widescreen: boolean;
   /** The viewer honours prefers-reduced-motion — every card rests, the
    *  pointer tilt is off, and the idle breathing stops. Resolved once in
    *  ReplayViewer2 and handed down rather than queried per card. */
@@ -1859,6 +1863,7 @@ function Board({
       phase={beatPhase}
       instant={instant}
       matAspect={matAspect}
+      widescreen={widescreen}
       reducedMotion={reducedMotion}
       duringSetup={(frame?.turn ?? 1) === 0}
     >
@@ -3409,6 +3414,7 @@ export default function ReplayViewer({
             anyInspectorOpen={anyInspectorOpen}
             actionContinues={actionContinues}
             matAspect={matAspect}
+            widescreen={widescreenBoardColumnWidth != null}
             playerMatGradient={playerMatGradient}
             opponentMatGradient={opponentMatGradient}
             matInspect={matInspect}
