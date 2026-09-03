@@ -1,0 +1,277 @@
+Setup
+a11father chose tails for the opening coin flip.
+kenggg2 won the coin toss.
+kenggg2 decided to go second.
+a11father drew 7 cards for the opening hand.
+- 7 drawn cards.
+   • (me1_119) Lillie's Determination, (svbsp_189) N's Zorua, (me3_81) Poké Pad, (sv9_175) N's Zoroark ex, (sv8_170) Cyrano, (me1_119) Lillie's Determination, (me1_114) Boss's Orders
+kenggg2 drew 7 cards for the opening hand.
+- 7 drawn cards.
+a11father played (svbsp_189) N's Zorua to the Active Spot.
+kenggg2 played (sv5_128) Dunsparce to the Active Spot.
+
+a11father's Turn
+a11father drew (sv9_175) N's Zoroark ex.
+a11father played (me3_81) Poké Pad.
+- a11father drew (sv9_97) N's Zorua.
+- a11father shuffled their deck.
+a11father played (sv9_97) N's Zorua to the Bench.
+a11father ended their turn.
+
+kenggg2's Turn
+kenggg2 drew a card.
+kenggg2 played (sv6_128) Dreepy to the Bench.
+kenggg2 attached (mee_5) Basic Psychic Energy to (sv6_128) Dreepy on the Bench.
+kenggg2 played (me3_62) Meowth ex to the Bench.
+kenggg2's (me3_62) Meowth ex used Last-Ditch Catch.
+- kenggg2 drew (me1_119) Lillie's Determination.
+- kenggg2 shuffled their deck.
+kenggg2 played (me1_119) Lillie's Determination.
+- kenggg2 shuffled 4 cards into their deck.
+- kenggg2 drew 8 cards.
+kenggg2 played (sv5_144) Buddy-Buddy Poffin.
+- kenggg2 drew 2 cards and played them to the Bench.
+   • (sv8-5_4) Budew, (sv6_128) Dreepy
+- kenggg2 shuffled their deck.
+kenggg2 played (me3_81) Poké Pad.
+- kenggg2 drew (sv6_129) Drakloak.
+- kenggg2 shuffled their deck.
+kenggg2 played (me3_81) Poké Pad.
+- kenggg2 drew (sv5_129) Dudunsparce.
+- kenggg2 shuffled their deck.
+kenggg2 retreated (sv5_128) Dunsparce to the Bench.
+kenggg2's (sv8-5_4) Budew is now in the Active Spot.
+kenggg2's (sv8-5_4) Budew used Itchy Pollen on a11father’s (svbsp_189) N's Zorua for 20 damage. a11father's (svbsp_189) N's Zorua took 10 more damage because of Grass Weakness.
+- Damage breakdown:
+   • Base damage: 10 damage
+   • Weakness to Grass: 10 damage
+   • Total damage: 20 damage
+
+
+a11father's Turn
+a11father drew (sv5_144) Buddy-Buddy Poffin.
+a11father evolved (svbsp_189) N's Zorua to (sv9_175) N's Zoroark ex in the Active Spot.
+a11father evolved (sv9_97) N's Zorua to (sv9_175) N's Zoroark ex on the Bench.
+a11father's (sv9_175) N's Zoroark ex used Trade.
+- a11father discarded (sv5_144) Buddy-Buddy Poffin.
+- a11father drew 2 cards.
+   • (sv6-5_39) Pecharunt ex, (sv6-5_63) Powerglass
+a11father's (sv9_175) N's Zoroark ex used Trade.
+- a11father discarded (sv8_170) Cyrano.
+- a11father drew 2 cards.
+   • (mee_7) Basic Darkness Energy, (mee_7) Basic Darkness Energy
+a11father attached (mee_7) Basic Darkness Energy to (sv9_175) N's Zoroark ex in the Active Spot.
+a11father attached (sv6-5_63) Powerglass to (sv9_175) N's Zoroark ex in the Active Spot.
+a11father played (sv6-5_39) Pecharunt ex to the Bench.
+a11father played (me1_119) Lillie's Determination.
+- a11father shuffled 3 cards into their deck.
+   • (me1_119) Lillie's Determination, (me1_114) Boss's Orders, (mee_7) Basic Darkness Energy
+- a11father drew 8 cards.
+   • (sv9_153) N's PP Up, (me1_119) Lillie's Determination, (sv8_170) Cyrano, (sv9_189) N's Zoroark ex, (sv9_152) N's Castle, (sv9_153) N's PP Up, (me1_131) Ultra Ball, (sv9_143) Black Belt's Training
+a11father ended their turn.
+
+kenggg2's Turn
+kenggg2 drew a card.
+kenggg2 evolved (sv6_128) Dreepy to (sv6_129) Drakloak on the Bench.
+kenggg2 evolved (sv5_128) Dunsparce to (sv5_129) Dudunsparce on the Bench.
+kenggg2 played (sv5_129) Dudunsparce.
+- kenggg2 drew 3 cards.
+- kenggg2 shuffled 2 cards into their deck.
+   • (sv5_129) Dudunsparce, (sv5_128) Dunsparce
+kenggg2 evolved (sv6_128) Dreepy to (sv6_129) Drakloak on the Bench.
+kenggg2 played (me1_127) Risky Ruins to the Stadium spot.
+kenggg2 played (sv6_95) Munkidori to the Bench.
+Risky Ruins was activated.
+- kenggg2 put 2 damage counters on kenggg2's (sv6_95) Munkidori.
+kenggg2 played (sv6_128) Dreepy to the Bench.
+Risky Ruins was activated.
+- kenggg2 put 2 damage counters on kenggg2's (sv6_128) Dreepy.
+kenggg2 attached (mee_7) Basic Darkness Energy to (sv6_95) Munkidori on the Bench.
+kenggg2 played (me1_119) Lillie's Determination.
+- kenggg2 shuffled 3 cards into their deck.
+- kenggg2 drew 8 cards.
+kenggg2's (sv6_129) Drakloak used Recon Directive.
+- kenggg2 drew a card.
+kenggg2 played (me1_131) Ultra Ball.
+- kenggg2 discarded 2 cards.
+   • (sv8-5_4) Budew, (sv5_144) Buddy-Buddy Poffin
+- kenggg2 drew (sv6_129) Drakloak.
+- kenggg2 shuffled their deck.
+kenggg2's (sv6_129) Drakloak used Recon Directive.
+- kenggg2 drew a card.
+kenggg2's (sv6_95) Munkidori used Adrena-Brain.
+- kenggg2 moved 2 damage counters from kenggg2's (sv6_128) Dreepy to kenggg2's (sv9_175) N's Zoroark ex.
+kenggg2's (sv8-5_4) Budew used Itchy Pollen on a11father’s (sv9_175) N's Zoroark ex for 20 damage. a11father's (sv9_175) N's Zoroark ex took 10 more damage because of Grass Weakness.
+- Damage breakdown:
+   • Base damage: 10 damage
+   • Weakness to Grass: 10 damage
+   • Total damage: 20 damage
+
+
+a11father's Turn
+a11father drew (sv8-5_95) Binding Mochi.
+a11father's (sv9_175) N's Zoroark ex used Trade.
+- a11father discarded (me1_131) Ultra Ball.
+- a11father drew 2 cards.
+   • (mee_7) Basic Darkness Energy, (sv9_97) N's Zorua
+a11father attached (mee_7) Basic Darkness Energy to (sv9_175) N's Zoroark ex in the Active Spot.
+a11father played (sv9_152) N's Castle to the Stadium spot.
+- kenggg2 discarded (me1_127) Risky Ruins.
+a11father attached (sv8-5_95) Binding Mochi to (sv9_175) N's Zoroark ex on the Bench.
+a11father played (me1_119) Lillie's Determination.
+- a11father shuffled 6 cards into their deck.
+   • (sv9_153) N's PP Up, (sv8_170) Cyrano, (sv9_189) N's Zoroark ex, (sv9_153) N's PP Up, (sv9_143) Black Belt's Training, (sv9_97) N's Zorua
+- a11father drew 8 cards.
+   • (me4_83_ph) Transformation Tome, (sv5_145) Ciphermaniac's Codebreaking, (sv8_170) Cyrano, (mee_7) Basic Darkness Energy, (me2-5_154_ph2) N's Reshiram, (sv9_97) N's Zorua, (me1_131) Ultra Ball, (me1_114) Boss's Orders
+a11father played (me2-5_154_ph2) N's Reshiram to the Bench.
+a11father's (sv9_175) N's Zoroark ex used Trade.
+- a11father discarded (sv9_97) N's Zorua.
+- a11father drew 2 cards.
+   • (sv9_153) N's PP Up, (sv5_144) Buddy-Buddy Poffin
+a11father's (sv9_175) N's Zoroark ex used Night Joker on kenggg2’s (sv8-5_4) Budew for 170 damage.
+- a11father chose Virtuous Flame
+kenggg2's (sv8-5_4) Budew was Knocked Out!
+a11father took a Prize card.
+(me2-5_221) Budew was added to a11father's hand.
+kenggg2's (sv6_129) Drakloak is now in the Active Spot.
+
+kenggg2's Turn
+kenggg2 drew a card.
+kenggg2 evolved (sv6_128) Dreepy to (sv6_129) Drakloak on the Bench.
+kenggg2's (sv6_129) Drakloak used Recon Directive.
+- kenggg2 drew a card.
+kenggg2 attached (mee_2) Basic Fire Energy to (sv6_129) Drakloak in the Active Spot.
+kenggg2 evolved (sv6_129) Drakloak to (sv6_130) Dragapult ex in the Active Spot.
+kenggg2 played (sv5_128) Dunsparce to the Bench.
+kenggg2 attached (sv5_152) Hero's Cape to (sv6_130) Dragapult ex in the Active Spot.
+kenggg2 played (me3_76) Judge.
+- kenggg2 shuffled 4 cards into their deck.
+- a11father shuffled 9 cards into their deck.
+   • (me4_83_ph) Transformation Tome, (sv5_145) Ciphermaniac's Codebreaking, (sv8_170) Cyrano, (mee_7) Basic Darkness Energy, (me1_131) Ultra Ball, (me1_114) Boss's Orders, (sv9_153) N's PP Up, (sv5_144) Buddy-Buddy Poffin, (me2-5_221) Budew
+- kenggg2 drew 4 cards.
+- a11father drew 4 cards.
+   • (sv5_152) Hero's Cape, (me1_114) Boss's Orders, (me2-5_196) Night Stretcher, (mebsp_31) N's Zekrom
+kenggg2's (sv6_129) Drakloak used Recon Directive.
+- kenggg2 drew a card.
+kenggg2's (sv6_129) Drakloak used Recon Directive.
+- kenggg2 drew a card.
+kenggg2's (sv6_95) Munkidori used Adrena-Brain.
+- kenggg2 moved 2 damage counters from kenggg2's (sv6_95) Munkidori to kenggg2's (sv9_175) N's Zoroark ex.
+kenggg2's (sv6_130) Dragapult ex used Phantom Dive on a11father’s (sv9_175) N's Zoroark ex for 200 damage.
+- kenggg2 put 6 damage counters on kenggg2's (sv9_175) N's Zoroark ex.
+a11father's (sv9_175) N's Zoroark ex was Knocked Out!
+- 4 cards were discarded from a11father's (sv9_175) N's Zoroark ex.
+   • (mee_7) Basic Darkness Energy, (mee_7) Basic Darkness Energy, (svbsp_189) N's Zorua, (sv6-5_63) Powerglass
+kenggg2 took 2 Prize cards.
+A card was added to kenggg2's hand.
+A card was added to kenggg2's hand.
+a11father's (sv9_175) N's Zoroark ex is now in the Active Spot.
+
+a11father's Turn
+a11father drew (sv9_153) N's PP Up.
+a11father retreated (sv9_175) N's Zoroark ex to the Bench.
+a11father's (me2-5_154_ph2) N's Reshiram is now in the Active Spot.
+a11father played (me2-5_196) Night Stretcher.
+- a11father moved a11father's (mee_7) Basic Darkness Energy to their hand.
+a11father attached (mee_7) Basic Darkness Energy to (sv9_175) N's Zoroark ex on the Bench.
+a11father played (sv9_153) N's PP Up.
+- a11father attached (mee_7) Basic Darkness Energy to (sv9_175) N's Zoroark ex on the Bench.
+a11father's (sv6-5_39) Pecharunt ex used Subjugating Chains.
+- a11father's (sv9_175) N's Zoroark ex was switched with a11father's (me2-5_154_ph2) N's Reshiram to become the Active Pokémon.
+- a11father's (sv9_175) N's Zoroark ex is now Poisoned.
+a11father's (sv9_175) N's Zoroark ex is now in the Active Spot.
+a11father played (me1_114) Boss's Orders.
+- kenggg2's (me3_62) Meowth ex was switched with kenggg2's (sv6_130) Dragapult ex to become the Active Pokémon.
+kenggg2's (me3_62) Meowth ex is now in the Active Spot.
+a11father played (mebsp_31) N's Zekrom to the Bench.
+a11father's (sv9_175) N's Zoroark ex used Night Joker on kenggg2’s (me3_62) Meowth ex for 210 damage.
+- Damage breakdown:
+   • Base damage: 170 damage
+   • (Pokémon Tool) (sv8-5_95) Binding Mochi: 40 damage
+   • Total damage: 210 damage
+
+- a11father chose Virtuous Flame
+kenggg2's (me3_62) Meowth ex was Knocked Out!
+a11father took 2 Prize cards.
+(sv9_26) N's Darumaka was added to a11father's hand.
+(me2-5_196) Night Stretcher was added to a11father's hand.
+kenggg2's (sv6_130) Dragapult ex is now in the Active Spot.
+
+Pokémon Checkup
+1 damage counter was placed on a11father's (sv9_175) N's Zoroark ex for the Special Condition Poisoned.
+
+kenggg2's Turn
+kenggg2 drew a card.
+kenggg2 attached (mee_5) Basic Psychic Energy to (sv6_129) Drakloak on the Bench.
+kenggg2's (sv6_129) Drakloak used Recon Directive.
+- kenggg2 drew a card.
+kenggg2 played (sv5_144) Buddy-Buddy Poffin.
+- kenggg2 drew (sv9_120) Dunsparce and played it to the Bench.
+- kenggg2 shuffled their deck.
+kenggg2 played (me1_131) Ultra Ball.
+- kenggg2 discarded 2 cards.
+   • (sv9_121) Dudunsparce ex, (sv6_128) Dreepy
+- kenggg2 drew (sv5_129) Dudunsparce.
+- kenggg2 shuffled their deck.
+kenggg2 evolved (sv5_128) Dunsparce to (sv5_129) Dudunsparce on the Bench.
+kenggg2 played (sv5_129) Dudunsparce.
+- kenggg2 drew 3 cards.
+- kenggg2 shuffled 2 cards into their deck.
+   • (sv5_129) Dudunsparce, (sv5_128) Dunsparce
+kenggg2 played (me1_127) Risky Ruins to the Stadium spot.
+- a11father discarded (sv9_152) N's Castle.
+kenggg2's (sv6_129) Drakloak used Recon Directive.
+- kenggg2 drew a card.
+kenggg2 played (sv5_128) Dunsparce to the Bench.
+Risky Ruins was activated.
+- kenggg2 put 2 damage counters on kenggg2's (sv5_128) Dunsparce.
+kenggg2's (sv6_95) Munkidori used Adrena-Brain.
+- kenggg2 moved 2 damage counters from kenggg2's (sv5_128) Dunsparce to kenggg2's (sv6-5_39) Pecharunt ex.
+kenggg2 evolved (sv6_129) Drakloak to (sv6_130) Dragapult ex on the Bench.
+kenggg2 played (me2_87) Dawn.
+- kenggg2 drew (sv5_129) Dudunsparce.
+- kenggg2 shuffled their deck.
+kenggg2's (sv6_130) Dragapult ex used Phantom Dive on a11father’s (sv9_175) N's Zoroark ex for 200 damage.
+- kenggg2 put 6 damage counters on kenggg2's (sv6-5_39) Pecharunt ex.
+
+Pokémon Checkup
+1 damage counter was placed on a11father's (sv9_175) N's Zoroark ex for the Special Condition Poisoned.
+a11father's (sv9_175) N's Zoroark ex was Knocked Out!
+- 4 cards were discarded from a11father's (sv9_175) N's Zoroark ex.
+   • (mee_7) Basic Darkness Energy, (mee_7) Basic Darkness Energy, (sv9_97) N's Zorua, (sv8-5_95) Binding Mochi
+kenggg2 took 2 Prize cards.
+A card was added to kenggg2's hand.
+A card was added to kenggg2's hand.
+a11father's (sv6-5_39) Pecharunt ex is now in the Active Spot.
+
+a11father's Turn
+a11father drew (me1_119) Lillie's Determination.
+a11father played (sv9_26) N's Darumaka to the Bench.
+Risky Ruins was activated.
+- a11father put 2 damage counters on kenggg2's (sv9_26) N's Darumaka.
+a11father attached (sv5_152) Hero's Cape to (sv6-5_39) Pecharunt ex in the Active Spot.
+a11father played (me2-5_196) Night Stretcher.
+- a11father moved a11father's (mee_7) Basic Darkness Energy to their hand.
+a11father attached (mee_7) Basic Darkness Energy to (sv6-5_39) Pecharunt ex in the Active Spot.
+a11father played (me1_119) Lillie's Determination.
+- a11father drew 6 cards.
+   • (sv9_153) N's PP Up, (sv9_189) N's Zoroark ex, (me1_131) Ultra Ball, (mee_7) Basic Darkness Energy, (me2-5_221) Budew, (sv5_144) Buddy-Buddy Poffin
+a11father played (me1_131) Ultra Ball.
+- a11father discarded 2 cards.
+   • (sv5_144) Buddy-Buddy Poffin, (me2-5_221) Budew
+- a11father drew (sv9_27) N's Darmanitan.
+- a11father shuffled their deck.
+a11father ended their turn.
+
+kenggg2's Turn
+kenggg2 drew a card.
+kenggg2 played (me1_114) Boss's Orders.
+- a11father's (me2-5_154_ph2) N's Reshiram was switched with a11father's (sv6-5_39) Pecharunt ex to become the Active Pokémon.
+a11father's (me2-5_154_ph2) N's Reshiram is now in the Active Spot.
+kenggg2's (sv6_130) Dragapult ex used Phantom Dive on a11father’s (me2-5_154_ph2) N's Reshiram for 200 damage.
+- kenggg2 put 6 damage counters on kenggg2's (sv9_26) N's Darumaka.
+a11father's (me2-5_154_ph2) N's Reshiram was Knocked Out!
+a11father's (sv9_26) N's Darumaka was Knocked Out!
+kenggg2 took 2 Prize cards.
+A card was added to kenggg2's hand.
+Opponent took all of their Prize cards. kenggg2 wins.

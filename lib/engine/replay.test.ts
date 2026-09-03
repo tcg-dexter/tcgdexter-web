@@ -71,20 +71,34 @@ describe("engine.replay (example-1)", () => {
   it("still surfaces a genuine rules conflict rather than swallowing it", () => {
     // The counterpart to the assertion above: quiet diagnostics on example-1
     // must mean "nothing went wrong", not "the machinery stopped reporting".
-    // example-3's log implies a seventh Pokémon on a five-slot bench, and the
-    // engine says so.
-    const other = replay(
-      normalizePerspective(
-        parseBattleLog(
-          readFileSync(
-            join(__dirname, "..", "battle-log", "fixtures", "example-3-same-name-attach.txt"),
-            "utf8",
-          ),
-        ),
-        "Nnova12",
-      ),
-    );
-    expect(other.diagnostics.some((d) => d.severity === "warn")).toBe(true);
+    // A log that plays a sixth Pokémon onto a five-slot bench with nothing
+    // leaving is a genuine over-fill, and the engine must warn.
+    //
+    // (This used to point at example-3, whose apparent "seventh Pokémon" was
+    // actually a Dudunsparce shuffling itself back into the deck via Run Away
+    // Draw — a legal move the parser dropped, leaving a phantom on the bench.
+    // Now that self-return is modelled, that fixture is clean, so the positive
+    // control is a synthetic log that truly breaks the cap.)
+    const OVERFILL = `Setup
+alice chose heads for the opening coin flip.
+alice won the coin toss.
+alice decided to go first.
+alice drew 7 cards for the opening hand.
+bob drew 7 cards for the opening hand.
+alice played Pikachu to the Active Spot.
+bob played Bulbasaur to the Active Spot.
+
+alice's Turn
+alice played Voltorb to the Bench.
+alice played Voltorb to the Bench.
+alice played Voltorb to the Bench.
+alice played Voltorb to the Bench.
+alice played Voltorb to the Bench.
+alice played Voltorb to the Bench.
+alice ended their turn.
+`;
+    const other = replay(normalizePerspective(parseBattleLog(OVERFILL), "alice"));
+    expect(other.diagnostics.some((d) => d.code === "bench_full")).toBe(true);
   });
 
   it("tracks the active stadium card and its owner", () => {

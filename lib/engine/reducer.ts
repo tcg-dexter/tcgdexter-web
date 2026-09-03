@@ -701,6 +701,23 @@ export function applyAction(
       if (!side) break;
       const cardName = String(payload.card ?? "");
       if (!cardName) break;
+      // A Pokémon ability that shuffles the Pokémon itself back into the deck
+      // (Dudunsparce's Run Away Draw) reaches us as a bare "played X.". The
+      // parser flags it, but a Supporter that shuffles a copy of itself from
+      // hand (Lillie's Determination) sets the same flag — so we only treat it
+      // as a board removal when the card is genuinely in play. That removes it
+      // and frees a bench slot; anything else falls through to the trainer path.
+      if (payload.self_returned_to_deck) {
+        const inPlay = findPokemon(side, cardName, undefined, payload.card_id as string | undefined);
+        if (inPlay) {
+          const mon = inPlay.mon;
+          side.deck.push(mon.card, ...mon.stack, ...mon.attachedEnergy, ...mon.attachedTools);
+          if (inPlay.where === "active") side.active = null;
+          else side.bench.splice(inPlay.benchIndex, 1);
+          event.detail = { returnedToDeck: cardName, where: inPlay.where };
+          break;
+        }
+      }
       const card = popCardByName(side.hand, cardName) ?? makeCard(cardName);
       // Catalog-aware classification: many "played X" lines from the parser
       // are coded as play_item, but a Supporter should bump the per-turn

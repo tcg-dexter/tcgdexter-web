@@ -200,6 +200,45 @@ function extractDiscardDraw(block: Block): DiscardDraw {
   return { discarded, drawn, drawnCount, drawCounts };
 }
 
+/**
+ * Detect a Pokémon ability that shuffles the Pokémon itself back into its
+ * owner's deck — Dudunsparce's "Run Away Draw" and the like. TCG Live writes
+ * the activation as a bare "X played (id) Name." (no board location), with the
+ * self-return hidden in a child "shuffled N cards into their deck." line whose
+ * bullet list includes that same Pokémon (its whole evolution stack).
+ *
+ * Without modelling it, the benched Pokémon never leaves play and the bench
+ * over-counts (it can even exceed the 5-card cap). We only fire when the played
+ * Pokémon names *itself* in a shuffle-into-deck list, which no other draw/shuffle
+ * ability does, so this can't mistake a hand-shuffling effect for a board move.
+ *
+ * `playedValue` is the raw "(id) Name" as matched (id not yet stripped).
+ */
+function returnsSelfToDeck(block: Block, playedValue: string): boolean {
+  const playedName = splitCardId(playedValue).name;
+  let pendingShuffle = false;
+  for (const child of block.children) {
+    if (child.kind === "bullet") {
+      if (pendingShuffle) {
+        const names = splitCardList(child.text).map((c) => splitCardId(c).name);
+        if (names.includes(playedName)) return true;
+      }
+      continue;
+    }
+    const t = normalizeQuotes(child.text);
+    pendingShuffle = false;
+    // Multi-card form: names arrive on the bullet underneath.
+    if (/^(.+?) shuffled (\d+) cards? into their deck\.$/.test(t)) {
+      pendingShuffle = true;
+      continue;
+    }
+    // Single-card inline form: the name is on the dash itself.
+    const one = t.match(/^(.+?) shuffled (.+?) into their deck\.$/);
+    if (one && splitCardId(one[2]).name === playedName) return true;
+  }
+  return false;
+}
+
 export interface MulliganReveal {
   /** The mulligan's 1-indexed number for this player — "Mulligan 1",
    *  "Mulligan 2", etc. — as printed in the log, not a position in this
@@ -624,6 +663,12 @@ const PATTERNS: Pattern[] = [
         drawn_cards: dd.drawn,
         drawn_count: dd.drawnCount,
         forced_switches: switches,
+        // Signals a Pokémon ability that shuffles the Pokémon itself back into
+        // the deck (Dudunsparce's Run Away Draw), written as a bare "played X."
+        // The reducer confirms with an in-play check before removing it — a
+        // Supporter that shuffles a copy of itself from hand (Lillie's
+        // Determination) also names itself here but is never in play.
+        self_returned_to_deck: returnsSelfToDeck(b, m[2]),
       });
     },
   },
