@@ -52,6 +52,7 @@ export const ENERGY_HEX: Record<string, string> = {
 
 export interface DeckCreator {
   displayName: string;
+  username: string;
 }
 
 interface Props {
@@ -63,7 +64,7 @@ interface Props {
    *              save + share two-button row.
    * - "saved"  — viewing a saved deck (/my-decks/[id]); no logo,
    *              share button fills the full row (no save button).
-   * - "shared" — public shared link (/d/[shortId]); logo shown,
+   * - "shared" — public shared link (/d/[shortId]); no logo,
    *              save + share two-button row.
    * - "meta"   — meta archetype page; no logo,
    *              save + share two-button row.
@@ -277,16 +278,6 @@ export default function DeckProfileView({
             preTitle ? "xl:pt-8" : ""
           } ${effectiveSubtitle ? "pb-4" : "pb-2"}`}
         >
-          {variant === "shared" && (
-            <div className="flex justify-center mb-4">
-              <img
-                src="/logo-light.png"
-                alt="TCG Dexter"
-                className="max-w-full"
-                style={{ width: "288px", height: "auto" }}
-              />
-            </div>
-          )}
           <div>
             <div className="flex items-center gap-2">
               <h1 className="min-w-0 flex-1 truncate text-[22px] sm:text-[27px] font-bold tracking-tight text-on-gradient">
@@ -295,6 +286,14 @@ export default function DeckProfileView({
               {titleAction}
               {titleTrailing}
             </div>
+            {creator && (
+              <Link
+                href={`/u/${creator.username}`}
+                className="mt-1 inline-block text-sm font-semibold bg-gradient-brand bg-clip-text text-transparent"
+              >
+                {creator.displayName}
+              </Link>
+            )}
             {effectiveSubtitle && (
               <div className="mt-2 text-sm text-on-gradient-muted">
                 {effectiveSubtitle}
@@ -307,15 +306,6 @@ export default function DeckProfileView({
       {/* ── Results ────────────────────────────────────────── */}
       <main className="flex-1 px-6 pb-20">
         <div className="flex flex-col gap-4">
-
-          {/* Creator attribution */}
-          {creator && (
-            <div className={`flex items-center ${CARD_CLS} px-4 py-3`}>
-              <p className="text-sm font-semibold text-text-primary truncate">
-                {creator.displayName}
-              </p>
-            </div>
-          )}
 
           {/* ── Pre-overview slot: action buttons (saved), rank label (meta) ── */}
           {preOverviewSlot}
