@@ -505,6 +505,14 @@ interface Props {
   result?: "win" | "loss" | "draw" | null;
   playerColor?: string;
   opponentColor?: string;
+  /** Backgrounds for the two participants' monogram avatars. When set, the
+   *  player/opponent posts use these instead of the win/loss tint or the
+   *  name-hash fallback — the Replay viewer passes each side's mat gradient
+   *  so a monogram reads as cut from the same sleeve as its board mat. Any
+   *  CSS background value (a gradient string is fine). Other callers omit
+   *  these and keep the win/loss avatar colouring. */
+  playerAvatarBg?: string;
+  opponentAvatarBg?: string;
   /** When set, marks which post is "current" for the Replay tool's
    *  playhead — the last post with an action at or before this sequence.
    *  That post gets full opacity + auto-centering; every other post
@@ -533,7 +541,7 @@ interface Props {
   scrollContainerRef?: MutableRefObject<HTMLDivElement | null>;
 }
 
-export default function BattleLogDetail({ battleId, apiUrl, result, playerColor, opponentColor, maxSequence, hideScoreCards, compactAvatars, collapsed, scrollContainerRef }: Props) {
+export default function BattleLogDetail({ battleId, apiUrl, result, playerColor, opponentColor, playerAvatarBg, opponentAvatarBg, maxSequence, hideScoreCards, compactAvatars, collapsed, scrollContainerRef }: Props) {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -932,6 +940,8 @@ export default function BattleLogDetail({ battleId, apiUrl, result, playerColor,
               collapsed={collapsed}
               playerHandle={playerHandle}
               opponentHandle={opponentHandle}
+              playerAvatarBg={playerAvatarBg}
+              opponentAvatarBg={opponentAvatarBg}
               dimmed={currentPostKey != null && post.key !== currentPostKey}
               rootRef={post.key === currentPostKey ? currentPostRef : undefined}
             />
@@ -966,6 +976,8 @@ export default function BattleLogDetail({ battleId, apiUrl, result, playerColor,
             collapsed={collapsed}
             playerHandle={playerHandle}
             opponentHandle={opponentHandle}
+            playerAvatarBg={playerAvatarBg}
+            opponentAvatarBg={opponentAvatarBg}
             dimmed={currentPostKey != null && post.key !== currentPostKey}
             rootRef={post.key === currentPostKey ? currentPostRef : undefined}
           />,
@@ -1088,6 +1100,8 @@ function ThreadPost({
   collapsed,
   playerHandle,
   opponentHandle,
+  playerAvatarBg,
+  opponentAvatarBg,
   dimmed,
   rootRef,
 }: {
@@ -1101,6 +1115,10 @@ function ThreadPost({
   collapsed?: boolean;
   playerHandle: string;
   opponentHandle: string;
+  /** Mat-gradient backgrounds for the two participants' monogram avatars,
+   *  when the caller wants monograms keyed to their board mat (Replay). */
+  playerAvatarBg?: string;
+  opponentAvatarBg?: string;
   /** Playhead mode only — true once a later post has become current,
    *  fading this one out of the spotlight. */
   dimmed?: boolean;
@@ -1119,6 +1137,12 @@ function ThreadPost({
   const isResult = post.system?.handle === "game";
   const avatarStyle: CSSProperties = post.system
     ? { background: post.system.bg }
+    : // A participant monogram keyed to its board mat (Replay) — takes
+      // priority over the win/loss tint so each side reads as its own colour.
+      post.kind === "player" && playerAvatarBg
+    ? { background: playerAvatarBg }
+    : post.kind === "opponent" && opponentAvatarBg
+    ? { background: opponentAvatarBg }
     : post.outcome === "win"
     ? { background: WIN_GRADIENT }
     : post.outcome === "loss"

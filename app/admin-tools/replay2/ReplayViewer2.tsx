@@ -3352,6 +3352,8 @@ export default function ReplayViewer({
                 result={result}
                 playerColor={playerColor}
                 opponentColor={opponentColor}
+                playerAvatarBg={playerMatGradient}
+                opponentAvatarBg={opponentMatGradient}
                 hideScoreCards
                 compactAvatars
                 collapsed={threadCollapsedActive}
@@ -3431,6 +3433,8 @@ export default function ReplayViewer({
             result={result}
             playerColor={playerColor}
             opponentColor={opponentColor}
+            playerAvatarBg={playerMatGradient}
+            opponentAvatarBg={opponentMatGradient}
             hideScoreCards
           />
         </div>
