@@ -1798,6 +1798,16 @@ function Board({
     enabled: !anyInspectorOpen,
   });
 
+  // How far the camera is pushed in, 0 (at rest) → 1 (a climax push). The
+  // viewfinder vignette rides this: invisible on a resting board and fading
+  // in as the camera leans into the mat, so the frame only reads during the
+  // moments the board is actually zoomed. 0.09 is useCamera's climax delta
+  // (MAX_SCALE_CLIMAX − 1); a normal focus (~1.035) lands partway up.
+  const zoomAmount = Math.min(1, Math.max(0, (camera.scale - 1) / 0.09));
+  // The stage is clipped to the frame ONLY while pushed in — at rest the
+  // draw-flight cards arc out past the mat into the hand and must not be cut.
+  const zoomed = zoomAmount > 0.02;
+
   // The Trainer floating on each mat, if any — used to keep it out of that
   // side's discard pile until it has visibly left the mat.
   // Cards still in the air on their way to the hand.
@@ -1898,8 +1908,10 @@ function Board({
             overflow-hidden clips the scaled stage to the frame so a push-in
             never spills past the vignette onto the surrounding chrome — the
             edge fade already softens the cut, and the hand strip below lives
-            outside this frame so its draw-flight handoff is unaffected. */}
-        <div className="relative overflow-hidden">
+            outside this frame so its draw-flight handoff is unaffected. The
+            clip engages only while zoomed, so a resting board's draw flights
+            (which arc out past the mat edge into the hand) are never cut. */}
+        <div className={`relative ${zoomed ? "overflow-hidden" : ""}`}>
         <motion.div
           ref={stageRef}
           className="relative"
@@ -2171,14 +2183,38 @@ function Board({
         {/* Viewfinder vignette — site-bg fading inward on all four edges, the
             same "content peeking, gradient into var(--bg)" treatment the hand
             cards and the thread's scroll edges use. Above the mats (z-20),
-            pinned to the frame's resting box, so a camera push-in fades off
-            into the background instead of ending on a hard rectangle. */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 z-20">
-          <div className="absolute inset-x-0 top-0 h-[4.5%] bg-gradient-to-b from-[var(--bg)] to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 h-[4.5%] bg-gradient-to-t from-[var(--bg)] to-transparent" />
-          <div className="absolute inset-y-0 left-0 w-[3%] bg-gradient-to-r from-[var(--bg)] to-transparent" />
-          <div className="absolute inset-y-0 right-0 w-[3%] bg-gradient-to-l from-[var(--bg)] to-transparent" />
-        </div>
+            pinned to the frame's resting box. It rides the camera: opacity and
+            each edge's inward reach track zoomAmount, so the frame is invisible
+            on a resting board and grows in from the edges in concert with the
+            push-in — then recedes as the camera pulls back. */}
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-20"
+          initial={false}
+          animate={{ opacity: zoomAmount }}
+          transition={{ type: "spring", stiffness: 150, damping: 26, mass: 1.1 }}
+        >
+          <motion.div
+            className="absolute inset-x-0 top-0 h-[4.5%] origin-top bg-gradient-to-b from-[var(--bg)] to-transparent"
+            animate={{ scaleY: 0.35 + 0.65 * zoomAmount }}
+            transition={{ type: "spring", stiffness: 150, damping: 26, mass: 1.1 }}
+          />
+          <motion.div
+            className="absolute inset-x-0 bottom-0 h-[4.5%] origin-bottom bg-gradient-to-t from-[var(--bg)] to-transparent"
+            animate={{ scaleY: 0.35 + 0.65 * zoomAmount }}
+            transition={{ type: "spring", stiffness: 150, damping: 26, mass: 1.1 }}
+          />
+          <motion.div
+            className="absolute inset-y-0 left-0 w-[3%] origin-left bg-gradient-to-r from-[var(--bg)] to-transparent"
+            animate={{ scaleX: 0.35 + 0.65 * zoomAmount }}
+            transition={{ type: "spring", stiffness: 150, damping: 26, mass: 1.1 }}
+          />
+          <motion.div
+            className="absolute inset-y-0 right-0 w-[3%] origin-right bg-gradient-to-l from-[var(--bg)] to-transparent"
+            animate={{ scaleX: 0.35 + 0.65 * zoomAmount }}
+            transition={{ type: "spring", stiffness: 150, damping: 26, mass: 1.1 }}
+          />
+        </motion.div>
         </div>
         {/* Player's hand, always the bottom mat's now that the swap above
             pins the submitting user there — see HandStrip. Cards open
