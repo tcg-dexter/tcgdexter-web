@@ -1825,14 +1825,23 @@ function Board({
   }, [camera.scale, zoomTarget]);
   const zoom = useSpring(zoomTarget, { stiffness: 150, damping: 26, mass: 1.1 });
 
-  // Clip inset: 0 at full zoom (tight to the frame, containing the push-in),
-  // strongly negative at rest so the region expands well past the frame and a
-  // resting board's draw-flight cards arc out into the hand uncut. Built with
-  // useMotionTemplate so `round 12px` is a constant literal that is ALWAYS
-  // present — the corners stay concentric with the mats at every point in the
-  // animation, never snapping to 90°.
+  // Clip inset: 0 (tight to the frame, containing the push-in) for essentially
+  // any zoom, expanding strongly negative ONLY as the board settles back to
+  // true rest, where a draw-flight card arcs out past the mat into the hand and
+  // must not be cut. The key is that it reaches tight FAST: a normal focus beat
+  // only pushes to ~0.39 of a climax, so if looseness tracked (1 − zoom)
+  // linearly the clip would still sit ~150px past the frame on an ordinary
+  // zoom and the board would spill past the vignette. Tightening fully by
+  // CLIP_TIGHTEN_AT (a scale barely off rest, well before any visible spill)
+  // keeps every zoom clipped while still freeing the resting board's flights.
+  // Built with useMotionTemplate so `round 12px` is a constant literal present
+  // every frame — corners stay concentric with the mats, never snapping to 90°.
   const CLIP_LOOSEN_PX = 240;
-  const clipInsetPx = useTransform(zoom, (z) => -(1 - z) * CLIP_LOOSEN_PX);
+  const CLIP_TIGHTEN_AT = 0.15;
+  const clipInsetPx = useTransform(
+    zoom,
+    (z) => -Math.max(0, 1 - z / CLIP_TIGHTEN_AT) * CLIP_LOOSEN_PX,
+  );
   const clipPath = useMotionTemplate`inset(${clipInsetPx}px round 12px)`;
   // Each vignette edge grows inward from its own edge as the camera pushes in.
   const edgeReach = useTransform(zoom, (z) => 0.35 + 0.65 * z);
