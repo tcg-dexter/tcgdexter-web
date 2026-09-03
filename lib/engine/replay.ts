@@ -4,7 +4,7 @@
 // and diagnostics. Caller decides whether to keep all snapshots (useful
 // for a turn-by-turn UI) or just the final state (useful for validation).
 
-import { applyAction } from "./reducer";
+import { applyAction, type AmbiguityOracle } from "./reducer";
 import { buildInitialState } from "./initial";
 import type { BattleLogParseResult } from "@/lib/battle-log/types";
 import type {
@@ -18,6 +18,9 @@ export interface ReplayOptions {
   /** When false, only the final state is retained — saves memory for long
    *  replays where intermediate snapshots aren't needed. */
   keepSnapshots?: boolean;
+  /** Tie-breaker for same-name/same-printing duplicate references, used by the
+   *  energy-attribution solver to test each assignment. See AmbiguityOracle. */
+  resolveAmbiguous?: AmbiguityOracle;
 }
 
 export function replay(
@@ -32,7 +35,10 @@ export function replay(
   const diagnostics: EngineDiagnostic[] = [];
 
   parsed.actions.forEach((action, idx) => {
-    const result = applyAction(state, action, { actionIndex: idx });
+    const result = applyAction(state, action, {
+      actionIndex: idx,
+      resolveAmbiguous: options.resolveAmbiguous,
+    });
     state = result.state;
     events.push(result.event);
     if (result.diagnostics.length) diagnostics.push(...result.diagnostics);

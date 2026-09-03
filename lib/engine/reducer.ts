@@ -132,39 +132,74 @@ function makePokemon(card: CardInstance, turn: number, evolvedFromStack: CardIns
  * all (KO, conditions, damage counters — the parser gives them no zone to
  * prefer) keep exactly their previous active-first behavior.
  */
+type PokemonMatch = {
+  mon: PokemonInPlay;
+  where: "active" | "bench";
+  benchIndex: number;
+};
+
+/**
+ * Every in-play Pokémon a name (+ printing) reference could mean, in the
+ * order the resolver would consider them — active first (or bench first when
+ * `preferLocation` says so). When a printing id is given and any in-play card
+ * matches it exactly, only those are returned; otherwise it falls back to
+ * name-only matches. `findPokemon` takes the first of these; the ambiguity
+ * oracle (energy attribution) picks among them when there is more than one.
+ */
+function findPokemonCandidates(
+  side: PlayerSide,
+  name: string,
+  preferLocation?: "active" | "bench",
+  printingId?: string,
+): PokemonMatch[] {
+  const gather = (pred: (m: PokemonInPlay) => boolean): PokemonMatch[] => {
+    const active: PokemonMatch[] =
+      side.active && pred(side.active)
+        ? [{ mon: side.active, where: "active", benchIndex: -1 }]
+        : [];
+    const bench: PokemonMatch[] = [];
+    for (let i = 0; i < side.bench.length; i++) {
+      if (pred(side.bench[i])) {
+        bench.push({ mon: side.bench[i], where: "bench", benchIndex: i });
+      }
+    }
+    return preferLocation === "bench" ? [...bench, ...active] : [...active, ...bench];
+  };
+  const byName = (m: PokemonInPlay) => m.card.name === name;
+  // With a printing id from the verbose export, prefer an EXACT printing match
+  // so a same-named sibling of a different printing is never chosen while the
+  // right one is in play. Fall back to name-only (standard export, or a card
+  // whose id we never saw) — the original behaviour when no id is given.
+  if (printingId != null) {
+    const strict = gather((m) => byName(m) && m.card.printingId === printingId);
+    if (strict.length) return strict;
+  }
+  return gather(byName);
+}
+
 function findPokemon(
   side: PlayerSide,
   name: string,
   preferLocation?: "active" | "bench",
   printingId?: string,
-): { mon: PokemonInPlay; where: "active" | "bench"; benchIndex: number } | null {
-  const resolve = (pred: (m: PokemonInPlay) => boolean) => {
-    const active =
-      side.active && pred(side.active)
-        ? { mon: side.active, where: "active" as const, benchIndex: -1 }
-        : null;
-    const bench = () => {
-      for (let i = 0; i < side.bench.length; i++) {
-        if (pred(side.bench[i])) {
-          return { mon: side.bench[i], where: "bench" as const, benchIndex: i };
-        }
-      }
-      return null;
-    };
-    if (preferLocation === "bench") return bench() ?? active;
-    return active ?? bench();
-  };
-  const byName = (m: PokemonInPlay) => m.card.name === name;
-  // With a printing id from the verbose export, first require an EXACT printing
-  // match so a same-named sibling of a different printing (two "N's Zoroark ex"
-  // from different sets, say) is never chosen while the right one is in play.
-  // Fall back to name-only — the standard export, or a card whose id we never
-  // saw — which keeps the original behaviour untouched when no id is given.
-  if (printingId != null) {
-    const strict = resolve((m) => byName(m) && m.card.printingId === printingId);
-    if (strict) return strict;
-  }
-  return resolve(byName);
+): PokemonMatch | null {
+  return findPokemonCandidates(side, name, preferLocation, printingId)[0] ?? null;
+}
+
+/** Pick one candidate, letting the ambiguity oracle decide when more than one
+ *  is possible; otherwise the default first candidate. */
+function pickCandidate(
+  candidates: PokemonMatch[],
+  kind: string,
+  ctx: ApplyContext,
+): PokemonMatch | null {
+  if (candidates.length <= 1 || !ctx.resolveAmbiguous) return candidates[0] ?? null;
+  const chosen = ctx.resolveAmbiguous({
+    actionIndex: ctx.actionIndex,
+    kind,
+    candidateIds: candidates.map((c) => c.mon.id),
+  });
+  return candidates.find((c) => c.mon.id === chosen) ?? candidates[0];
 }
 
 function indexOfCardInZone(zone: CardInstance[], name: string): number {
@@ -194,9 +229,28 @@ function isPokemonTool(name: string): boolean {
 
 /* ─── Reducer ───────────────────────────────────────────────────── */
 
+/**
+ * Chooses among several in-play Pokémon a name reference could equally mean —
+ * two same-printing "N's Zoroark ex" on the same bench, say. The energy-
+ * attribution solver drives the replay through this to test each assignment;
+ * it's given the ambiguous candidates (in resolution order) and returns the
+ * instance id it wants. Returning null/undefined (or omitting the oracle
+ * entirely) keeps the default first-candidate behaviour.
+ */
+export interface AmbiguityOracle {
+  (info: {
+    actionIndex: number;
+    kind: string;
+    /** In-play instance ids the reference could mean, resolution order. */
+    candidateIds: string[];
+  }): string | null | undefined;
+}
+
 interface ApplyContext {
   /** Index into the original ParsedAction[]. Used for diagnostics traceability. */
   actionIndex: number;
+  /** Optional tie-breaker for same-name/same-printing duplicates. */
+  resolveAmbiguous?: AmbiguityOracle;
 }
 
 interface ApplyResult {
@@ -486,7 +540,11 @@ export function applyAction(
       const targetName = String(payload.target ?? "");
       const viaEffect = Boolean(payload.via_effect);
       const location = payload.location as "active" | "bench" | undefined;
-      const found = findPokemon(side, targetName, location, payload.target_id as string | undefined);
+      const found = pickCandidate(
+        findPokemonCandidates(side, targetName, location, payload.target_id as string | undefined),
+        "attach_energy",
+        ctx,
+      );
       if (!found) {
         diag("warn", "attach_target_missing", `Attached ${energyName} to ${targetName} but target not in play`, { targetName });
         break;
@@ -563,8 +621,18 @@ export function applyAction(
           const [card] = side.active.attachedEnergy.splice(idx, 1);
           side.discard.push(card);
         } else {
-          // Energy attached as something not matching name, still add a
-          // placeholder discard so totals stay consistent.
+          // The retreating Active was asked to pay an energy it isn't holding.
+          // On the standard path this is a benign name mismatch, but for the
+          // energy-attribution solver it is the key feasibility signal: an
+          // ambiguous-attach assignment that starves the instance which later
+          // pays this cost is wrong. Surface it as a diagnostic the solver
+          // can score, and keep the placeholder so totals stay consistent.
+          diag(
+            "info",
+            "energy_discard_shortfall",
+            `Retreat discarded ${energyName} but the Active wasn't holding it`,
+            { energyName },
+          );
           side.discard.push(makeCard(energyName));
         }
       }
