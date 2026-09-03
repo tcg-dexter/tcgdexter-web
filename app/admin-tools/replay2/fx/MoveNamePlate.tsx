@@ -101,7 +101,11 @@ export function MoveNamePlate({
   const accent =
     plate?.kind === "ability"
       ? { from: "#0891b2", to: "#22d3ee", glow: "rgba(34,211,238,0.55)" }
-      : { from: "#b91c1c", to: "#f97316", glow: "rgba(249,115,22,0.6)" };
+      : plate?.kind === "retreat"
+        // A neutral slate for a retreat — a positioning move, not a blow, so it
+        // reads apart from the attack red and the ability cyan.
+        ? { from: "#475569", to: "#94a3b8", glow: "rgba(100,116,139,0.5)" }
+        : { from: "#b91c1c", to: "#f97316", glow: "rgba(249,115,22,0.6)" };
 
   // Scaled off the card it belongs to, with a floor so a small board still
   // produces readable text.

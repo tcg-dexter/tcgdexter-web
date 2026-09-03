@@ -69,7 +69,7 @@ export interface FxMovePlate {
   actionIndex: number;
   /** Attack or ability name, already checked non-empty by the emitter. */
   label: string;
-  kind: "attack" | "ability";
+  kind: "attack" | "ability" | "retreat";
   /** Whose mat the move belongs to. */
   actor: "player" | "opponent";
   /**

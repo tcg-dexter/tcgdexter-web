@@ -865,6 +865,26 @@ export function PokemonCardImage({
       });
     }
 
+    // A retreat names nobody in the log, so the retreating card is claimed as
+    // the beat's TARGET (not actor); plate it here, on the Active on its way to
+    // the bench. Same mat-anchored plate the moves use, labelled "Retreat".
+    if (perfRole === "target" && perfPhase === "act" && perfBeat.kind === "retreat") {
+      const mat = matBounds?.();
+      if (mat) {
+        emitMovePlate({
+          actionIndex: perfBeat.actionIndex,
+          label: "Retreat",
+          kind: "retreat",
+          actor: perfBeat.actor === "opponent" ? "opponent" : "player",
+          matLeft: mat.left,
+          matTop: mat.top,
+          matWidth: mat.width,
+          matHeight: mat.height,
+          cardWidth: r.width,
+        });
+      }
+    }
+
     // No burst for an ability. Abilities are the most-used line in a modern
     // log — a Trade every turn, often twice — and a spark on each one turned
     // routine card draw into the busiest thing on the board. The move name
