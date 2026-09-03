@@ -1583,6 +1583,54 @@ export interface MatInteraction {
   dimBench?: boolean[];
 }
 
+/** A small padlock, sized to the surrounding text (1em). */
+function LockGlyph() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="1em"
+      height="1em"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      style={{ display: "block" }}
+    >
+      <rect x="4.5" y="10.5" width="15" height="10" rx="2.2" fill="currentColor" stroke="none" />
+      <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+    </svg>
+  );
+}
+
+/**
+ * Centered lock badges for a mat: a black capsule per active lock, reading
+ * "Item 🔒" / "Retreat 🔒", stacked horizontally when both are present. Purely
+ * an overlay — pointer-events off, floated above the board but below the card
+ * inspector. Lock state is derived (the log never states it) — see
+ * lib/replay/locks.ts.
+ */
+function LockBadges({ locks }: { locks?: { item: boolean; retreat: boolean } }) {
+  if (!locks || (!locks.item && !locks.retreat)) return null;
+  const badges: string[] = [];
+  if (locks.item) badges.push("Item");
+  if (locks.retreat) badges.push("Retreat");
+  return (
+    <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center gap-2">
+      {badges.map((label) => (
+        <span
+          key={label}
+          className="inline-flex items-center gap-1 rounded-full bg-black px-2.5 py-1 text-xs font-semibold text-white shadow-md ring-1 ring-white/15"
+        >
+          {label}
+          <LockGlyph />
+        </span>
+      ))}
+    </div>
+  );
+}
+
 // P1 mat: bench at top, active at bottom — actives face each other across the
 // gap between the two mats. P2 mat: active at top, bench at bottom.
 //
@@ -1609,6 +1657,7 @@ export function PlayerMat({
   onDiscardClick,
   matGradient = BOARD_GRADIENT,
   face = "art",
+  locks,
 }: {
   side: "player" | "opponent";
   bench: PokemonFrame[];
@@ -1651,6 +1700,10 @@ export function PlayerMat({
    *  Omitted by callers with no beats (the AI-player practice mode), where
    *  every card simply rests. */
   actor?: "player" | "opponent";
+  /** Derived Item / Retreat lock state for THIS mat's side. Each true value
+   *  raises a black capsule badge centered on the mat (stacked horizontally
+   *  when both). Neither lock is stated by the log — see lib/replay/locks.ts. */
+  locks?: { item: boolean; retreat: boolean };
 }) {
   const isPlayer = side === "player";
 
@@ -1823,6 +1876,7 @@ export function PlayerMat({
             backgroundSize: `${BOARD_TEXTURE.w * texScale}px ${BOARD_TEXTURE.h * texScale}px, auto`,
           }}
         />
+        <LockBadges locks={locks} />
         {/* ── 3-column grid: left-rail | center | right-rail. Rails are sized
             to the rotated (landscape) pile holders. ──
 

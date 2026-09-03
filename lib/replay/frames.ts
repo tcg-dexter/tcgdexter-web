@@ -3,6 +3,7 @@ import { lookupCard, lookupPrintingByLiveId, replay, solveEnergyAttribution } fr
 import type { GameState, PokemonInPlay } from "@/lib/engine";
 import { cardImageUrlForAnyName, cardImageUrlForName } from "@/lib/primaryCardImage";
 import { cardImageSmall } from "@/lib/cardImages";
+import { deriveLocks, type FrameLocks } from "./locks";
 
 /**
  * Builds the Replay viewer's frame stream from a battle's stored
@@ -201,6 +202,10 @@ export interface ReplayFrame {
    *  opponent. Null once the last row has been shown for a full frame — see
    *  MulliganFrame. */
   mulligan: MulliganFrame | null;
+  /** Derived Item / Retreat lock state per side — neither is announced by the
+   *  log, so both are computed from card effects (see lib/replay/locks.ts).
+   *  The viewer renders a badge on the affected side's mat. */
+  locks: FrameLocks;
 }
 
 export interface ReplayPayload {
@@ -414,6 +419,10 @@ function frameFromState(
   lastPlayedTrainer: LastPlayedTrainerFrame | null = null,
   discardDraw: DiscardDrawFrame | null = null,
   mulligan: MulliganFrame | null = null,
+  locks: FrameLocks = {
+    player: { item: false, retreat: false },
+    opponent: { item: false, retreat: false },
+  },
 ): ReplayFrame {
   return {
     actionIndex,
@@ -444,6 +453,7 @@ function frameFromState(
     lastPlayedTrainer,
     discardDraw,
     mulligan,
+    locks,
   };
 }
 
@@ -541,6 +551,10 @@ export function buildReplayPayload(
   const resolveAmbiguous = solveEnergyAttribution(normalized);
   const result = replay(normalized, { resolveAmbiguous });
 
+  // Item / Retreat lock state per snapshot — derived, since the log never
+  // states either directly (see lib/replay/locks.ts).
+  const locks = deriveLocks(result.states, normalized.actions);
+
   // Row count each actor's mulligan sequence ends at, known up front so
   // every beat in the sequence sizes its cards for the eventual total
   // instead of growing/shrinking as later rows land. A "mulligan" action
@@ -569,7 +583,19 @@ export function buildReplayPayload(
   // Frame 0 = initial state, before any action. Then one frame per action.
   const cardIds = normalized.cardIds;
   const frames: ReplayFrame[] = [];
-  frames.push(frameFromState(result.initialState, -1, "Setup", "system", cardIds, null));
+  frames.push(
+    frameFromState(
+      result.initialState,
+      -1,
+      "Setup",
+      "system",
+      cardIds,
+      null,
+      null,
+      null,
+      locks.initial,
+    ),
+  );
   result.states.forEach((state, idx) => {
     const action = normalized.actions[idx];
     const actor = (action.actor ?? "system") as "player" | "opponent" | "system";
@@ -629,6 +655,7 @@ export function buildReplayPayload(
           lastPlayedTrainer,
           i < stages.length ? stages[i] : null,
           i < mulliganBeats.length ? mulliganBeats[i] : null,
+          locks.perState[idx],
         ),
       );
     }

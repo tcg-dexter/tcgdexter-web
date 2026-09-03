@@ -2095,6 +2095,7 @@ function Board({
               actor="opponent"
               matGradient={opponentMatGradient}
               onDiscardClick={() => onOpenDiscardInspect("opponent")}
+              locks={frame.locks.opponent}
             />
             <AnimatePresence>
               {frame.discardDraw?.actor === "opponent" && (
@@ -2177,6 +2178,7 @@ function Board({
               actor="player"
               matGradient={playerMatGradient}
               onDiscardClick={() => onOpenDiscardInspect("player")}
+              locks={frame.locks.player}
             />
             <AnimatePresence>
               {frame.discardDraw?.actor === "player" && (
