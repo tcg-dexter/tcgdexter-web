@@ -1097,7 +1097,15 @@ export function PokemonCardImage({
           holder padding for a concentric corner radius. */}
       <div
         ref={boxRef}
-        className="relative w-full overflow-hidden bg-white"
+        // Backing behind the 3D card faces. White normally (a neutral base for
+        // the printed art), but black for a setup card: mid-flip both faces go
+        // edge-on with backfaceVisibility hidden, so this backing is what shows
+        // — and against the black holder a white flash reads as a glitch. Once
+        // the card lands face-up its art covers the box, so the colour only
+        // matters while it's turning.
+        className={`relative w-full overflow-hidden ${
+          setupFaceDown || isSetupReveal ? "bg-black" : "bg-white"
+        }`}
         style={{ height: m.cardH, borderRadius: m.cardRadius, marginTop: toolPeek, zIndex: 1 }}
       >
         {face === "label" ? (
