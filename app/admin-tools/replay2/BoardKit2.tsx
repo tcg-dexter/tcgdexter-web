@@ -87,6 +87,14 @@ function energyTintForName(
   return { from: shade(hex, -30), to: hex, glow: `${hex}99` };
 }
 
+// A poisoned Pokémon's black card holder wears this instead of flat black —
+// the same from→to the poison damage badge uses (conditionColor("Poisoned"),
+// darkened one end), so the frame agrees with the between-turns poison plate.
+const POISON_PLATE_GRADIENT = `linear-gradient(100deg, ${shade(
+  conditionColor("Poisoned"),
+  -30,
+)}, ${conditionColor("Poisoned")})`;
+
 export interface PokemonFrame {
   /** Engine instance id — stable across turns, unique per Pokémon in play.
    *  Required: React keys and framer-motion layoutIds derive from it, and
@@ -939,6 +947,10 @@ export function PokemonCardImage({
       ? perf.beat.fromCondition
       : null;
 
+  // A poisoned Pokémon's holder wears the poison gradient rather than flat
+  // black, so the frame carries the condition even between the damage ticks.
+  const isPoisoned = mon.conditions.includes("Poisoned");
+
   // The Pokémon whose attack or ability is dealing this beat's damage, so the
   // badge can wear its energy-type colour. Attacks name the attacker directly;
   // ability/effect damage carries the source stamped on by buildBeats. Null
@@ -1034,7 +1046,13 @@ export function PokemonCardImage({
       className={`relative bg-black shadow-sm transition-opacity duration-200 ${
         clickable ? "cursor-pointer" : ""
       } ${dimmed ? "opacity-50" : ""}`}
-      style={{ width: m.containerW, borderRadius: m.radius, padding: m.pad }}
+      style={{
+        width: m.containerW,
+        borderRadius: m.radius,
+        padding: m.pad,
+        // Overrides bg-black when poisoned.
+        ...(isPoisoned ? { background: POISON_PLATE_GRADIENT } : {}),
+      }}
       title={mon.name}
       role={clickable ? "button" : undefined}
       onClick={
