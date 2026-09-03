@@ -758,4 +758,6 @@ export function indexBeats(beats: Beat[]): Map<number, Beat> {
  */
 export interface ReplayPayload2 extends ReplayPayload {
   beats: Beat[];
+  /** The battle's raw log text, so the viewer can offer a "Copy Battle Log". */
+  battleLogRaw: string;
 }

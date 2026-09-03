@@ -28,11 +28,9 @@ export default function Replay2Client({ options }: Replay2ClientProps) {
   return (
     <main className="min-h-dvh bg-bg pb-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-6">
-        {/* The "Replay 2.0" title, description, and Admin Tools back-link
-            used to live here. Removed so the "{X} vs {Y}" wordmark bar
-            (rendered inside ReplayViewer2 via renderHeader) is the first
-            thing above the board, buying back the vertical room needed
-            for the whole playback view to fit on screen at load. */}
+        {/* No header: the page leads with the replay viewer. The matchup and
+            a Copy Battle Log capsule are rendered below the module, inside
+            ReplayViewer2. */}
         {selectedId && (
           <ReplayViewer2
             key={selectedId}
@@ -42,12 +40,6 @@ export default function Replay2Client({ options }: Replay2ClientProps) {
             // v1 log endpoint. Only the board payload needed a new route,
             // for the beats alongside it.
             logUrl={`/api/admin/replay/${selectedId}/log`}
-            renderHeader={(payload) => (
-              <ReplayHeader
-                playerPrimaryName={payload?.playerPrimaryName ?? null}
-                opponentPrimaryName={payload?.opponentPrimaryName ?? null}
-              />
-            )}
           />
         )}
 
@@ -58,47 +50,6 @@ export default function Replay2Client({ options }: Replay2ClientProps) {
         />
       </div>
     </main>
-  );
-}
-
-/* ──────────────────────────────────────────────────────────────── */
-/* Desktop header                                                   */
-/* ──────────────────────────────────────────────────────────────── */
-
-function ReplayHeader({
-  playerPrimaryName,
-  opponentPrimaryName,
-}: {
-  playerPrimaryName: string | null;
-  opponentPrimaryName: string | null;
-}) {
-  const left = playerPrimaryName ?? "?";
-  const right = opponentPrimaryName ?? "?";
-  return (
-    // relative z-10 so a camera push-in on the board below (its scaled stage
-    // overflows its box) passes UNDER the matchup title rather than over it.
-    <div className="relative z-10 mt-4 hidden items-center gap-6 lg:flex">
-      <div className="flex flex-1 min-w-0 items-baseline gap-2 text-xl font-semibold text-text-primary">
-        <span className="truncate">{left}</span>
-        <span className="text-base font-normal text-text-muted">vs</span>
-        <span className="truncate">{right}</span>
-      </div>
-      <div className="flex shrink-0 justify-center">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/logo-wordmark-light.png"
-          alt="TCG Dexter"
-          className="h-[42px] w-auto opacity-90 dark:hidden"
-        />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/logo-wordmark-dark.png"
-          alt="TCG Dexter"
-          className="hidden h-[42px] w-auto opacity-90 dark:block"
-        />
-      </div>
-      <div className="flex-1" />
-    </div>
   );
 }
 

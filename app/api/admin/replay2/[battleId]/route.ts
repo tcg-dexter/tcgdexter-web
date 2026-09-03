@@ -55,5 +55,6 @@ export async function GET(
   return NextResponse.json({
     ...buildReplayPayload(battle.id, battle.battle_log_raw, handle),
     beats: buildBeats(battle.battle_log_raw, handle),
+    battleLogRaw: battle.battle_log_raw,
   });
 }

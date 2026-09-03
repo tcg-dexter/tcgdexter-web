@@ -23,7 +23,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
 import {
   AnimatePresence,
@@ -41,7 +40,6 @@ import type {
   HandCard,
   MulliganFrame,
   ReplayFrame,
-  ReplayPayload,
   SideFrame,
 } from "@/lib/replay/frames";
 import {
@@ -2828,10 +2826,6 @@ interface ReplayViewerProps {
   replayUrl: string;
   /** GET endpoint backing the action thread (BattleLogDetail's apiUrl). */
   logUrl: string;
-  /** Rendered above the thread+board row, given the loaded payload. The
-   *  admin tool draws its "{X} vs {Y}" + wordmark bar here; the battles
-   *  page omits it, since its banner already names the matchup. */
-  renderHeader?: (payload: ReplayPayload | null) => ReactNode;
   /** Passed through to the thread for win/loss avatar treatment. */
   result?: "win" | "loss" | "draw" | null;
   playerColor?: string;
@@ -2860,7 +2854,6 @@ export default function ReplayViewer({
   battleId,
   replayUrl,
   logUrl,
-  renderHeader,
   result,
   playerColor,
   opponentColor,
@@ -3298,17 +3291,21 @@ export default function ReplayViewer({
     const measure = () => {
       const SITE_NAV_PX = 56; // h-14
       const PAGE_TOP_PADDING_PX = 24; // pt-6 on the page container
-      // The wordmark matchup bar only renders at lg (desktop); mobile
-      // landscape has no bar above the board.
-      const MATCHUP_BAR_PX = isDesktop === true ? 42 + 16 : 0;
+      // No header above the board any more — the page leads with the viewer.
       const BELOW_ROW_BREATHING_PX = 16; // between row and whatever follows
       const HORIZONTAL_PLAYBACK_PX = 24 + 20 + 32 + 44 + 12 + 24; // mt-6 + scrubber + mt-8 + control row + mt-1.5 + speed
-      const chromeAbove = SITE_NAV_PX + PAGE_TOP_PADDING_PX + MATCHUP_BAR_PX;
+      // The matchup + Copy Battle Log capsule now sit BELOW the whole module,
+      // so they count against the vertical budget: mt-6 + matchup line + gap +
+      // capsule. Keeps the footer above the fold at load.
+      const FOOTER_PX = 24 + 28 + 12 + 32;
+      const chromeAbove = SITE_NAV_PX + PAGE_TOP_PADDING_PX;
       // Widescreen (collapsed desktop or mobile landscape) keeps the transport
-      // in a side column, so nothing but breathing room sits below the row.
-      const chromeBelow = wideLayout
-        ? BELOW_ROW_BREATHING_PX
-        : HORIZONTAL_PLAYBACK_PX + BELOW_ROW_BREATHING_PX;
+      // in a side column, so nothing but breathing room sits below the row —
+      // then the footer under the module in both layouts.
+      const chromeBelow =
+        (wideLayout
+          ? BELOW_ROW_BREATHING_PX
+          : HORIZONTAL_PLAYBACK_PX + BELOW_ROW_BREATHING_PX) + FOOTER_PX;
       // Floor at 320px so nothing collapses to zero on a very short window
       // (a touch-screen laptop in landscape with dev tools open, say) —
       // some scrolling is better than an unusable board.
@@ -3422,8 +3419,6 @@ export default function ReplayViewer({
 
   return (
     <>
-      {renderHeader?.(data)}
-
       {/* Desktop: thread + board side by side, together forming a 16:9
           rect (rowWidth x rowWidth*9/16). The aside is pinned to the
           board's measured height so its inner scroll container has
@@ -3584,6 +3579,56 @@ export default function ReplayViewer({
           />
         </div>
       )}
+
+      {/* Below the whole module (standard or widescreen): the archetype
+          matchup, centred, and a capsule to copy the raw battle log. This is
+          where the removed header's matchup line now lives. */}
+      {data && (
+        <div className="mt-6 flex flex-col items-center gap-3">
+          <div className="flex items-baseline gap-2 text-lg font-semibold text-text-primary">
+            <span className="truncate">{data.playerPrimaryName ?? "?"}</span>
+            <span className="text-sm font-normal text-text-muted">vs</span>
+            <span className="truncate">{data.opponentPrimaryName ?? "?"}</span>
+          </div>
+          <CopyBattleLogButton text={data.battleLogRaw} />
+        </div>
+      )}
     </>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────── */
+/* Copy battle log                                                  */
+/* ──────────────────────────────────────────────────────────────── */
+
+function CopyBattleLogButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1600);
+        } catch {
+          // Clipboard access can be blocked (insecure context, denied
+          // permission); nothing useful to do but leave the label unchanged.
+        }
+      }}
+      className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-1.5 text-xs font-semibold text-text-primary transition hover:bg-surface dark:border-white/10"
+    >
+      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        {copied ? (
+          <path d="M5 12l5 5 9-11" />
+        ) : (
+          <>
+            <rect x="9" y="9" width="11" height="11" rx="2" />
+            <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+          </>
+        )}
+      </svg>
+      {copied ? "Copied!" : "Copy Battle Log"}
+    </button>
   );
 }
