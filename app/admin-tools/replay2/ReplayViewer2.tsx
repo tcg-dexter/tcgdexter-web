@@ -2247,7 +2247,7 @@ function Board({
           style={{
             opacity: zoom,
             borderRadius: VIEWER_RADIUS_PX,
-            boxShadow: "inset 0 0 26px 4px var(--bg)",
+            boxShadow: "inset 0 0 30px 9px var(--bg)",
           }}
         />
         </motion.div>

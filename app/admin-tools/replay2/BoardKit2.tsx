@@ -856,12 +856,23 @@ export function PokemonCardImage({
     }
 
     if (perfRole === "target" && perfPhase === "act" && perfBeat.kind === "attach_energy") {
+      const energyHue = energyColor(perfBeat.energyType);
+      // Attaching energy is easy to miss — a quiet converge on a busy board.
+      // Give it more presence: a stronger inward converge, then a spark where
+      // the energy lands, both in the energy's own colour.
       emitFx({
         kind: "converge",
         clientX: cx,
         clientY: cy,
+        intensity: 1.6,
+        color: energyHue,
+      });
+      emitFx({
+        kind: "spark",
+        clientX: cx,
+        clientY: cy,
         intensity: 1,
-        color: energyColor(perfBeat.energyType),
+        color: energyHue,
       });
     }
 
