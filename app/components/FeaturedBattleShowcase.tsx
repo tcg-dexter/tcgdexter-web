@@ -1,6 +1,6 @@
 "use client";
 
-import ReplayViewer from "@/app/components/replay/ReplayViewer";
+import ReplayViewer from "@/app/admin-tools/replay2/ReplayViewer2";
 import FeaturedBattleHero from "@/app/battles/FeaturedBattleHero";
 import type { RecentBattle } from "@/app/components/BattleCard";
 import type { BattleSideStatsPair } from "@/lib/battle-side-stats";
