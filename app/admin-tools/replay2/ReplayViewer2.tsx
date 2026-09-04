@@ -139,38 +139,56 @@ const EMPTY_FRAME: ReplayFrame = {
   },
 };
 
-/**
- * Sits over the middle of the board while the real first frame is still
- * loading — the same bobbing-card-backs motif the empty mats behind it are
- * dealt from, with no "Loading" label; the empty mats themselves already say
- * that plainly enough. Fades out the instant real data lands (see its caller).
- */
-function BoardLoadingCue() {
+/** An opening hand's worth (7) of face-down cards, gently overlapped into a
+ *  fan and bobbing like they're still being considered — centered on one
+ *  mat. `topPct` places it at that mat's own vertical center within the
+ *  board (25%/75% — the board is two equal-height mats stacked). */
+function MatLoadingHand({ topPct }: { topPct: string }) {
   return (
-    <motion.div
-      className="pointer-events-none absolute left-1/2 top-1/2 z-30 flex -translate-x-1/2 -translate-y-1/2 gap-3"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.4 }}
+    <div
+      className="absolute left-1/2 flex -translate-x-1/2 -translate-y-1/2"
+      style={{ top: topPct }}
     >
-      {[0, 1, 2].map((i) => (
+      {Array.from({ length: 7 }, (_, i) => (
         <motion.img
           key={i}
           src={CARD_BACK_URL}
           alt=""
           aria-hidden
-          className="h-14 w-auto rounded shadow-[0_6px_16px_rgba(0,0,0,0.4)] sm:h-16"
+          className={`h-10 w-auto rounded shadow-[0_6px_16px_rgba(0,0,0,0.4)] sm:h-12 ${
+            i === 0 ? "" : "-ml-4 sm:-ml-5"
+          }`}
           style={{ aspectRatio: "245 / 342" }}
-          animate={{ y: [0, -10, 0] }}
+          animate={{ y: [0, -8, 0] }}
           transition={{
             duration: 1.1,
             repeat: Infinity,
             ease: "easeInOut",
-            delay: i * 0.15,
+            delay: i * 0.1,
           }}
         />
       ))}
+    </div>
+  );
+}
+
+/**
+ * Sits over the board while the real first frame is still loading — an
+ * opening hand's worth of face-down cards centered on each mat, bobbing,
+ * with no "Loading" label; the empty mats themselves already say that
+ * plainly enough. Fades out the instant real data lands (see its caller).
+ */
+function BoardLoadingCue() {
+  return (
+    <motion.div
+      className="pointer-events-none absolute inset-0 z-30"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      <MatLoadingHand topPct="25%" />
+      <MatLoadingHand topPct="75%" />
     </motion.div>
   );
 }
