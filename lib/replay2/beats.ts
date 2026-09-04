@@ -760,4 +760,9 @@ export interface ReplayPayload2 extends ReplayPayload {
   beats: Beat[];
   /** The battle's raw log text, so the viewer can offer a "Copy Battle Log". */
   battleLogRaw: string;
+  /** Site username of the public profile that has claimed each side's TCG Live
+   *  handle, or null when none / not public. The viewer links the mat name tag
+   *  to /u/[username] when present. */
+  playerProfileUsername?: string | null;
+  opponentProfileUsername?: string | null;
 }

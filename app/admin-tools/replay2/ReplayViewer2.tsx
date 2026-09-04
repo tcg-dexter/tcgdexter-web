@@ -23,6 +23,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 import {
   AnimatePresence,
@@ -32,6 +33,7 @@ import {
   useSpring,
   useTransform,
 } from "framer-motion";
+import Link from "next/link";
 import BattleLogDetail from "@/app/components/BattleLogDetail";
 import { DISCARD_DRAW_STAGES } from "@/lib/replay/frames";
 import type {
@@ -311,12 +313,16 @@ function MatTab({
   name,
   prizesRemaining,
   edge,
+  profileUsername,
 }: {
   name: string;
   prizesRemaining: number;
   /** Which mat edge the tab hangs off: "bottom" tucks up under the mat
    *  above it, "top" tucks down under the mat below it. */
   edge: "bottom" | "top";
+  /** Site username of the public profile that claimed this player's TCG Live
+   *  handle, if any — makes the name a link to /u/[username]. */
+  profileUsername?: string | null;
 }) {
   const hangsBelow = edge === "bottom";
   // The column's flex `gap` lands between every pair of its children —
@@ -376,7 +382,16 @@ function MatTab({
         style={{ height: TAB_CONTENT_PX }}
       >
         {hangsBelow && <PrizePips remaining={prizesRemaining} />}
-        <span className="min-w-0 truncate text-xs font-bold">{name}</span>
+        {profileUsername ? (
+          <Link
+            href={`/u/${profileUsername}`}
+            className="min-w-0 truncate text-xs font-bold hover:underline"
+          >
+            {name}
+          </Link>
+        ) : (
+          <span className="min-w-0 truncate text-xs font-bold">{name}</span>
+        )}
         {!hangsBelow && (
           <PrizePips remaining={prizesRemaining} reverse />
         )}
@@ -1697,6 +1712,8 @@ function Board({
   widescreen,
   playerMatGradient,
   opponentMatGradient,
+  playerProfileUsername,
+  opponentProfileUsername,
   matInspect,
   discardInspect,
   inspect,
@@ -1751,6 +1768,10 @@ function Board({
    *  playerPrimaryName/opponentPrimaryName rather than per-frame. */
   playerMatGradient: string;
   opponentMatGradient: string;
+  /** Site username of the public profile that claimed each side's TCG Live
+   *  handle, or null. When set, the mat name tag links to /u/[username]. */
+  playerProfileUsername?: string | null;
+  opponentProfileUsername?: string | null;
   /** Stage 1 (per mat): what the mat-overlay card inspector is showing over
    *  each mat, if anything. Both mats can hold one at once — see
    *  ReplayViewer, which owns this (and everything else inspector-related)
@@ -2143,11 +2164,13 @@ function Board({
           <MatTab
             edge="bottom"
             name={frame.opponent.handle ?? "Opponent"}
+            profileUsername={opponentProfileUsername}
             prizesRemaining={frame.opponent.prizesRemaining}
           />
           <MatTab
             edge="top"
             name={frame.player.handle ?? "Player"}
+            profileUsername={playerProfileUsername}
             prizesRemaining={frame.player.prizesRemaining}
           />
           <InspectContext.Provider
@@ -2851,6 +2874,10 @@ interface ReplayViewerProps {
    *  either. Still just the initial value — the speed picker remains live,
    *  so a viewer can slow back down once they've engaged with it. */
   initialSpeed?: 0.5 | 1 | 2 | 4;
+  /** Content rendered below the matchup + Copy Battle Log block and above the
+   *  mobile thread — the battle page passes its stat header here so the page
+   *  reads viewer → controls → matchup → copy → stats → thread. */
+  belowMatchupSlot?: ReactNode;
 }
 
 export default function ReplayViewer({
@@ -2863,6 +2890,7 @@ export default function ReplayViewer({
   hideThreadOnMobile = false,
   autoPlay = false,
   initialSpeed = 1,
+  belowMatchupSlot,
 }: ReplayViewerProps) {
   const [data, setData] = useState<ReplayPayload2 | null>(null);
   const [loading, setLoading] = useState(false);
@@ -3536,6 +3564,8 @@ export default function ReplayViewer({
             widescreen={widescreenBoardColumnWidth != null}
             playerMatGradient={playerMatGradient}
             opponentMatGradient={opponentMatGradient}
+            playerProfileUsername={data?.playerProfileUsername ?? null}
+            opponentProfileUsername={data?.opponentProfileUsername ?? null}
             matInspect={matInspect}
             discardInspect={discardInspect}
             inspect={inspect}
@@ -3573,7 +3603,33 @@ export default function ReplayViewer({
           thread lives further down the page). */}
       {!wideLayout && renderPlaybackModule("horizontal")}
 
-      {/* Mobile: the thread sits under the controls, rendered in full with
+      {/* Below the whole module (standard or widescreen): the archetype
+          matchup, centred, and a capsule to copy the raw battle log. This is
+          where the removed header's matchup line now lives. Sits above the
+          mobile thread so the page reads viewer → controls → matchup → copy →
+          (stat header) → thread. */}
+      {data && (
+        <div className="mt-6 flex flex-col items-center gap-3">
+          <div className="flex items-center gap-2.5 text-lg font-semibold text-text-primary">
+            <MatchupAvatar name={data.playerPrimaryName} bg={playerMatGradient} />
+            <span className="max-w-[38vw] truncate sm:max-w-none">
+              {data.playerPrimaryName ?? "?"}
+            </span>
+            <VersusBadge />
+            <span className="max-w-[38vw] truncate sm:max-w-none">
+              {data.opponentPrimaryName ?? "?"}
+            </span>
+            <MatchupAvatar name={data.opponentPrimaryName} bg={opponentMatGradient} />
+          </div>
+          <CopyBattleLogButton text={data.battleLogRaw} />
+        </div>
+      )}
+
+      {/* Caller-supplied content between the matchup/copy block and the thread
+          — the battle page's stat header. */}
+      {belowMatchupSlot}
+
+      {/* Mobile: the thread sits under everything above, rendered in full with
           no scroll envelope of its own — the page scrolls it. Deliberately
           no scrollContainerRef, so the playhead never yanks the page as it
           advances. maxSequence is likewise omitted: that's what drives the
@@ -3595,26 +3651,6 @@ export default function ReplayViewer({
             onJumpToSequence={jumpToSequence}
             hideScoreCards
           />
-        </div>
-      )}
-
-      {/* Below the whole module (standard or widescreen): the archetype
-          matchup, centred, and a capsule to copy the raw battle log. This is
-          where the removed header's matchup line now lives. */}
-      {data && (
-        <div className="mt-6 flex flex-col items-center gap-3">
-          <div className="flex items-center gap-2.5 text-lg font-semibold text-text-primary">
-            <MatchupAvatar name={data.playerPrimaryName} bg={playerMatGradient} />
-            <span className="max-w-[38vw] truncate sm:max-w-none">
-              {data.playerPrimaryName ?? "?"}
-            </span>
-            <VersusBadge />
-            <span className="max-w-[38vw] truncate sm:max-w-none">
-              {data.opponentPrimaryName ?? "?"}
-            </span>
-            <MatchupAvatar name={data.opponentPrimaryName} bg={opponentMatGradient} />
-          </div>
-          <CopyBattleLogButton text={data.battleLogRaw} />
         </div>
       )}
     </>
