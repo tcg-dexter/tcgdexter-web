@@ -3607,18 +3607,43 @@ export default function ReplayViewer({
               aria-label="Play replay"
               title="Play replay"
               className="absolute left-1/2 top-1/2 z-30 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-white/15 shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl transition hover:scale-105 hover:bg-white/25 active:scale-95"
-              style={{ width: "clamp(72px, 30%, 168px)", aspectRatio: "1 / 1" }}
+              style={{ width: "clamp(64.8px, 27%, 151.2px)", aspectRatio: "1 / 1" }}
+            />
+          )}
+          {/* Triangle glyph, sized independently of the button above (a
+              separate absolutely-positioned sibling, centered on the same
+              point via the same clamp the button used before its 10%
+              trim) so shrinking the button doesn't shrink the icon — the
+              button reads smaller; the triangle reads exactly as it did.
+              pointer-events-none lets the click pass through to the button
+              beneath it. The stroke rides alongside the fill purely to round
+              the three corners (round linejoin) — the fill is what gives the
+              shape its solid body. */}
+          {!boardPlayCueDismissed && !anyInspectorOpen && !loading && !error && frameCount > 0 && (
+            <svg
+              viewBox="0 0 24 24"
+              className="pointer-events-none absolute left-1/2 top-1/2 z-30 text-white"
+              style={{
+                width: "clamp(36px, 15%, 84px)",
+                // Center on the button, then nudge right 6% of the icon's own
+                // width — same optical correction the triangle carried
+                // before (its fill isn't centered in its viewBox, so a
+                // dead-center translate reads as slightly left-heavy without
+                // it), just expressed as one transform instead of two
+                // Tailwind translate utilities stacked on the same element
+                // (only one wins — they share the same CSS custom property).
+                transform: "translate(-44%, -50%)",
+                filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.45))",
+              }}
+              fill="currentColor"
+              stroke="currentColor"
+              strokeWidth={1.4}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              aria-hidden
             >
-              <svg
-                viewBox="0 0 24 24"
-                className="h-1/2 w-1/2 translate-x-[6%] text-white"
-                style={{ filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.45))" }}
-                fill="currentColor"
-                aria-hidden
-              >
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            </button>
+              <path d="M8 5v14l11-7z" />
+            </svg>
           )}
           <Board
             frame={frame}
