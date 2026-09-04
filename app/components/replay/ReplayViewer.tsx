@@ -53,6 +53,56 @@ function matGradientForPrimary(name: string | null): string {
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
+/**
+ * Themed stand-in for the board while a replay is loading: the same
+ * fire-lightning mat gradient every board defaults to, a shimmer sweeping
+ * across it the way a foil card catches light, and three card backs
+ * bobbing like they're mid-deal. Replaces a plain "Loading replay…" box
+ * that matched nothing else on the page. Mirrored in Replay 2.0's
+ * ReplayViewer2 — keep the two in sync.
+ */
+function ReplayLoadingView() {
+  return (
+    <div
+      className="relative overflow-hidden rounded-2xl border border-black/8 p-10 text-center dark:border-white/10"
+      style={{ backgroundImage: BOARD_GRADIENT }}
+    >
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 left-0 w-1/3"
+        style={{
+          background:
+            "linear-gradient(100deg, transparent, rgba(255,255,255,0.28), transparent)",
+        }}
+        animate={{ x: ["-120%", "420%"] }}
+        transition={{ duration: 1.8, repeat: Infinity, ease: "linear" }}
+      />
+      <div className="relative flex items-center justify-center gap-3">
+        {[0, 1, 2].map((i) => (
+          <motion.img
+            key={i}
+            src={CARD_BACK_URL}
+            alt=""
+            aria-hidden
+            className="h-14 w-auto rounded shadow-[0_6px_16px_rgba(0,0,0,0.4)] sm:h-16"
+            style={{ aspectRatio: "245 / 342" }}
+            animate={{ y: [0, -10, 0] }}
+            transition={{
+              duration: 1.1,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: i * 0.15,
+            }}
+          />
+        ))}
+      </div>
+      <p className="relative mt-5 text-sm font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.5)]">
+        Loading replay…
+      </p>
+    </div>
+  );
+}
+
 function PlayPauseIcon({ playing }: { playing: boolean }) {
   return playing ? (
     <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current" aria-hidden>
@@ -1376,9 +1426,13 @@ function Board({
           {error}
         </div>
       ) : !frame ? (
-        <div className="rounded-2xl border border-black/8 bg-white p-10 text-center text-sm text-text-secondary">
-          {loading ? "Loading replay…" : "Pick a battle below to begin."}
-        </div>
+        loading ? (
+          <ReplayLoadingView />
+        ) : (
+          <div className="rounded-2xl border border-black/8 bg-white p-10 text-center text-sm text-text-secondary">
+            Pick a battle below to begin.
+          </div>
+        )
       ) : (
         <>
         <div className="flex flex-col" style={{ gap: TAB_GAP_PX }}>
