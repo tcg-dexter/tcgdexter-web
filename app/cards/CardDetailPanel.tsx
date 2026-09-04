@@ -7,6 +7,17 @@ import { shade } from "@/lib/color";
 import { typeIconUrl } from "@/lib/typeIcon";
 import CardImage from "./CardImage";
 
+/**
+ * The Pokémon avatar circle, shared by the mobile and desktop copies of the
+ * title row so the two can't drift apart. The ink ring matches the trainer
+ * preview card's avatar (TrainerCard.tsx) — solid, at the same weight, and
+ * deliberately not the translucent `border-black/10` the profile
+ * EditAvatar uses. A ring rather than a border so the circle stays exactly
+ * 56px and the sprite keeps its margin instead of losing a pixel to it.
+ */
+const AVATAR_CLASS =
+  "w-14 h-14 rounded-full shrink-0 inline-flex items-center justify-center overflow-hidden shadow-md ring-2 ring-black dark:ring-white";
+
 interface Props {
   card: CardIndexEntry;
   raw: RawCard;
@@ -57,7 +68,7 @@ export default function CardDetailPanel({ card, raw, renderCardImage }: Props) {
         <div className="md:hidden flex items-center gap-3">
           {isPokemon && (
             <span
-              className="w-14 h-14 rounded-full shrink-0 inline-flex items-center justify-center overflow-hidden shadow-md"
+              className={AVATAR_CLASS}
               style={{ background: avatarBg }}
               aria-hidden
             >
@@ -81,7 +92,7 @@ export default function CardDetailPanel({ card, raw, renderCardImage }: Props) {
         <div className="hidden md:flex items-center gap-3">
           {isPokemon && (
             <span
-              className="w-14 h-14 rounded-full shrink-0 inline-flex items-center justify-center overflow-hidden shadow-md"
+              className={AVATAR_CLASS}
               style={{ background: avatarBg }}
               aria-hidden
             >

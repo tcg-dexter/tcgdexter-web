@@ -9,7 +9,8 @@
 //   result.diagnostics // log/rule mismatches surfaced during replay
 
 export { replay } from "./replay";
-export { applyAction } from "./reducer";
+export { solveEnergyAttribution } from "./energyAttribution";
+export { applyAction, type AmbiguityOracle } from "./reducer";
 export { buildInitialState } from "./initial";
 export {
   hasStandardVariant,

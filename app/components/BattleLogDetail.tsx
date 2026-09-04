@@ -457,7 +457,7 @@ interface SystemAccount {
 
 const SYSTEM_ACCOUNTS: Record<"setup" | "checkup" | "game", SystemAccount> = {
   setup: { displayName: "Setup", handle: "setup", glyph: "shuffle", bg: "#475569" },
-  checkup: { displayName: "Pokémon Checkup", handle: "checkup", glyph: "droplet", bg: "#7c3aed", label: "PC" },
+  checkup: { displayName: "Pokémon Checkup", handle: "checkup", glyph: "droplet", bg: "linear-gradient(135deg, #a855f7 0%, #7c3aed 52%, #6d28d9 100%)", label: "PC" },
   game: { displayName: "Game", handle: "game", glyph: "trophy", bg: "#0f172a" },
 };
 
@@ -505,12 +505,24 @@ interface Props {
   result?: "win" | "loss" | "draw" | null;
   playerColor?: string;
   opponentColor?: string;
+  /** Backgrounds for the two participants' monogram avatars. When set, the
+   *  player/opponent posts use these instead of the win/loss tint or the
+   *  name-hash fallback — the Replay viewer passes each side's mat gradient
+   *  so a monogram reads as cut from the same sleeve as its board mat. Any
+   *  CSS background value (a gradient string is fine). Other callers omit
+   *  these and keep the win/loss avatar colouring. */
+  playerAvatarBg?: string;
+  opponentAvatarBg?: string;
   /** When set, marks which post is "current" for the Replay tool's
    *  playhead — the last post with an action at or before this sequence.
    *  That post gets full opacity + auto-centering; every other post
    *  (including ones after it) is dimmed. The thread itself is always
    *  rendered in full — this drives the spotlight, not what's in the DOM. */
   maxSequence?: number | null;
+  /** Replay tool only: clicking a post's avatar jumps the playhead to that
+   *  post's first action (the beginning of its turn). Given the action
+   *  sequence to jump to; the viewer maps it to a frame. */
+  onJumpToSequence?: (sequence: number) => void;
   /** When true, the inline ScoreCards (initial board snapshot + each
    *  prize-taking moment) are omitted. Used by the Replay tool where the
    *  live board view already represents that state. */
@@ -518,6 +530,13 @@ interface Props {
   /** When true, post avatars render 25% smaller for tighter side-panel
    *  presentations (e.g. the Replay thread next to the board). */
   compactAvatars?: boolean;
+  /** When true, the thread collapses to a thin column of avatars + turn
+   *  chips + connecting thread lines — no action details. Used by the
+   *  Replay viewer's desktop "collapse thread" toggle to free horizontal
+   *  space beside the board for the transport controls. The dimming, the
+   *  auto-recenter, and the underlying playhead state stay put; only the
+   *  right column of each post drops out. */
+  collapsed?: boolean;
   /** The thread's own scrollable ancestor (Replay's `overflow-y-auto`
    *  aside). Playhead mode re-centers the current post by scrolling only
    *  this element directly — without it, native scrollIntoView would walk
@@ -526,7 +545,7 @@ interface Props {
   scrollContainerRef?: MutableRefObject<HTMLDivElement | null>;
 }
 
-export default function BattleLogDetail({ battleId, apiUrl, result, playerColor, opponentColor, maxSequence, hideScoreCards, compactAvatars, scrollContainerRef }: Props) {
+export default function BattleLogDetail({ battleId, apiUrl, result, playerColor, opponentColor, playerAvatarBg, opponentAvatarBg, maxSequence, onJumpToSequence, hideScoreCards, compactAvatars, collapsed, scrollContainerRef }: Props) {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -901,25 +920,38 @@ export default function BattleLogDetail({ battleId, apiUrl, result, playerColor,
     <div className="mt-3 flex flex-col rounded-lg bg-bg overflow-hidden">
       {pregamePosts.length > 0 && (
         <>
-          <CoinTossSegment
-            actions={allPregameActions}
-            playerHandle={playerHandle}
-            opponentHandle={opponentHandle}
-          />
-          <SectionDivider label="Setup" />
+          {/* CoinTossSegment / SectionDivider / ScoreCard are wide horizontal
+              chrome that doesn't fit the collapsed thin column and would
+              force the aside wider than the avatars need. In collapsed mode
+              the thread is just avatars + turn chips + connecting lines,
+              so drop the chrome and let the ThreadPost stack carry it. */}
+          {!collapsed && (
+            <>
+              <CoinTossSegment
+                actions={allPregameActions}
+                playerHandle={playerHandle}
+                opponentHandle={opponentHandle}
+              />
+              <SectionDivider label="Setup" />
+            </>
+          )}
           {filteredPregamePosts.map((post, i) => (
             <ThreadPost
               key={post.key}
               post={post}
               isLast={i === filteredPregamePosts.length - 1}
               compactAvatars={compactAvatars}
+              collapsed={collapsed}
               playerHandle={playerHandle}
               opponentHandle={opponentHandle}
+              playerAvatarBg={playerAvatarBg}
+              opponentAvatarBg={opponentAvatarBg}
+              onJumpToSequence={onJumpToSequence}
               dimmed={currentPostKey != null && post.key !== currentPostKey}
               rootRef={post.key === currentPostKey ? currentPostRef : undefined}
             />
           ))}
-          {!hideScoreCards && (
+          {!collapsed && !hideScoreCards && (
             <ScoreCard
               key="initial-score"
               playerPrizes={0}
@@ -936,7 +968,7 @@ export default function BattleLogDetail({ battleId, apiUrl, result, playerColor,
           )}
         </>
       )}
-      {gamePosts.length > 0 && <SectionDivider label="Start" />}
+      {gamePosts.length > 0 && !collapsed && <SectionDivider label="Start" />}
       {gamePosts.flatMap((post, i) => {
         const stats = statsFor(post.actions);
         const hasPrizes = stats.prizes > 0;
@@ -946,13 +978,17 @@ export default function BattleLogDetail({ battleId, apiUrl, result, playerColor,
             post={post}
             isLast={hasPrizes || i === gamePosts.length - 1}
             compactAvatars={compactAvatars}
+            collapsed={collapsed}
             playerHandle={playerHandle}
             opponentHandle={opponentHandle}
+            playerAvatarBg={playerAvatarBg}
+            opponentAvatarBg={opponentAvatarBg}
+            onJumpToSequence={onJumpToSequence}
             dimmed={currentPostKey != null && post.key !== currentPostKey}
             rootRef={post.key === currentPostKey ? currentPostRef : undefined}
           />,
         ];
-        if (hasPrizes && !hideScoreCards) {
+        if (hasPrizes && !collapsed && !hideScoreCards) {
           const cum = prizeCumulative[i];
           const snap = snapshotsAtEnd[i];
           items.push(
@@ -1067,16 +1103,31 @@ function ThreadPost({
   post,
   isLast,
   compactAvatars,
+  collapsed,
   playerHandle,
   opponentHandle,
+  playerAvatarBg,
+  opponentAvatarBg,
+  onJumpToSequence,
   dimmed,
   rootRef,
 }: {
   post: ThreadPostInput;
   isLast: boolean;
   compactAvatars?: boolean;
+  /** Collapsed thread mode — see BattleLogDetail's `collapsed` prop. Renders
+   *  only the avatar (with the turn chip beneath it, when the post opens a
+   *  new turn) and the connecting line, dropping the name row and action
+   *  list on the right entirely. */
+  collapsed?: boolean;
   playerHandle: string;
   opponentHandle: string;
+  /** Mat-gradient backgrounds for the two participants' monogram avatars,
+   *  when the caller wants monograms keyed to their board mat (Replay). */
+  playerAvatarBg?: string;
+  opponentAvatarBg?: string;
+  /** Replay tool only: jump the playhead to this post's first action. */
+  onJumpToSequence?: (sequence: number) => void;
   /** Playhead mode only — true once a later post has become current,
    *  fading this one out of the spotlight. */
   dimmed?: boolean;
@@ -1095,6 +1146,12 @@ function ThreadPost({
   const isResult = post.system?.handle === "game";
   const avatarStyle: CSSProperties = post.system
     ? { background: post.system.bg }
+    : // A participant monogram keyed to its board mat (Replay) — takes
+      // priority over the win/loss tint so each side reads as its own colour.
+      post.kind === "player" && playerAvatarBg
+    ? { background: playerAvatarBg }
+    : post.kind === "opponent" && opponentAvatarBg
+    ? { background: opponentAvatarBg }
     : post.outcome === "win"
     ? { background: WIN_GRADIENT }
     : post.outcome === "loss"
@@ -1102,6 +1159,80 @@ function ThreadPost({
     : { background: avatarBg(post.displayName) };
   const SystemGlyph = post.system ? ICONS[post.system.glyph] : null;
   const density = POST_DENSITY[compactAvatars ? "compact" : "regular"];
+  const isTurnPost = post.label.startsWith("Turn ");
+
+  // Clicking an avatar jumps the replay playhead to this post's first action
+  // — the beginning of its turn. Available for any post with actions when the
+  // caller wired onJumpToSequence (the Replay tool).
+  const jumpSequence = post.actions.length
+    ? Math.min(...post.actions.map((a) => a.sequence))
+    : null;
+  const canJump = onJumpToSequence != null && jumpSequence != null;
+  const avatarInner = (
+    <>
+      {post.system?.label ? (
+        <span className={`font-bold tracking-tight ${density.systemLabel}`}>
+          {post.system.label}
+        </span>
+      ) : SystemGlyph ? (
+        <SystemGlyph className={density.glyph} />
+      ) : (
+        avatarInitial(post.displayName)
+      )}
+      {isSystem && (
+        <span
+          className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#1d9bf0] ring-2 ring-bg"
+          aria-label="Verified"
+        >
+          <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" fill="none" stroke="white" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12l5 5 9-11" />
+          </svg>
+        </span>
+      )}
+    </>
+  );
+  const avatarBase = `relative flex shrink-0 items-center justify-center rounded-full font-bold text-white ${density.avatar}`;
+  const avatarBlock = canJump ? (
+    <button
+      type="button"
+      onClick={() => onJumpToSequence!(jumpSequence!)}
+      aria-label={`Jump to ${post.label || "this moment"}`}
+      className={`${avatarBase} cursor-pointer transition hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1`}
+      style={avatarStyle}
+    >
+      {avatarInner}
+    </button>
+  ) : (
+    <div className={avatarBase} style={avatarStyle}>
+      {avatarInner}
+    </div>
+  );
+
+  // Collapsed post: avatar + optional turn chip + connecting line, stacked
+  // vertically in a thin column. No name row, no action list. The turn chip
+  // sits under the avatar rather than opposite it since the right column is
+  // gone; padding matches the expanded post's pt-3/pb-3 so a mix of
+  // collapsed and expanded modes wouldn't jump the whole thread.
+  if (collapsed) {
+    return (
+      <div
+        ref={rootRef}
+        className={`flex flex-col items-center gap-1.5 pt-3 transition-opacity duration-500 ease-out ${dimmed ? "opacity-40" : "opacity-100"} ${isResult ? "bg-accent/[0.06]" : ""}`}
+      >
+        {avatarBlock}
+        {isTurnPost && (
+          <span className="shrink-0 whitespace-nowrap rounded-full bg-[#1a1a1a] px-2 py-0.5 text-[9px] font-bold text-white tabular-nums">
+            {post.label}
+          </span>
+        )}
+        {!isLast ? (
+          <div className="w-0.5 flex-1 min-h-[16px] bg-[#cbd5e1]" />
+        ) : (
+          <div className="h-3" />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -1109,30 +1240,7 @@ function ThreadPost({
       className={`flex gap-3 pt-3 transition-opacity duration-500 ease-out ${dimmed ? "opacity-40" : "opacity-100"} ${isResult ? "bg-accent/[0.06]" : ""}`}
     >
       <div className="flex flex-col items-center self-stretch">
-        <div
-          className={`relative flex shrink-0 items-center justify-center rounded-full font-bold text-white ${density.avatar}`}
-          style={avatarStyle}
-        >
-          {post.system?.label ? (
-            <span className={`font-bold tracking-tight ${density.systemLabel}`}>
-              {post.system.label}
-            </span>
-          ) : SystemGlyph ? (
-            <SystemGlyph className={density.glyph} />
-          ) : (
-            avatarInitial(post.displayName)
-          )}
-          {isSystem && (
-            <span
-              className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#1d9bf0] ring-2 ring-bg"
-              aria-label="Verified"
-            >
-              <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" fill="none" stroke="white" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12l5 5 9-11" />
-              </svg>
-            </span>
-          )}
-        </div>
+        {avatarBlock}
         {!isLast && (
           <div className="w-0.5 flex-1 min-h-[16px] bg-[#cbd5e1] mt-1.5" />
         )}

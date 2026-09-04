@@ -137,7 +137,7 @@ function CardViewerModal({
       className="fixed inset-y-0 left-0 right-0 xl:left-[230px] xl:right-[230px] z-50 flex flex-col items-center justify-center p-4"
       style={{
         background:
-          "linear-gradient(180deg, rgba(242, 242, 242, 1) 0%, rgba(242, 242, 242, 0.8) 100%)",
+          "linear-gradient(180deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 80%, transparent) 100%)",
       }}
       onClick={onClose}
     >

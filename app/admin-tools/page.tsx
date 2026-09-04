@@ -37,6 +37,12 @@ const TOOLS: Tool[] = [
       "Step a parsed battle log through the engine on a board view.",
   },
   {
+    href: "/admin-tools/replay2",
+    title: "Replay 2.0",
+    description:
+      "The replay rebuilt as a performance — beat-driven motion, FX and camera.",
+  },
+  {
     href: "/admin-tools/ml",
     title: "ML Pipeline",
     description: "Training runs, data exports, and the model registry.",

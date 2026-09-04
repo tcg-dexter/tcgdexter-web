@@ -51,11 +51,54 @@ describe("engine.replay (example-1)", () => {
     expect(oppDiscardNames).toContain("N's Zoroark ex");
   });
 
-  it("flags parser gaps via warn-level diagnostics rather than silently dropping state", () => {
-    const codes = new Set(result.diagnostics.map((d) => d.code));
-    // The Buddy-Buddy Poffin path means Froakie never reaches the bench,
-    // so the later "evolved Froakie to Frogadier" raises this code.
-    expect(codes.has("evolve_source_missing")).toBe(true);
+  it("replays the whole fixture without losing track of a Pokémon", () => {
+    // This used to assert the opposite: that "evolved Froakie to Frogadier"
+    // raised evolve_source_missing, because the Buddy-Buddy Poffin line that
+    // benched Froakie ("drew 2 cards and played them to the Bench", with the
+    // names on the bullet underneath) was dropped by the parser and the
+    // Pokémon never reached the board.
+    //
+    // The parser reads those lines now, and the whole cascade this fixture
+    // used to produce — evolve_source_missing, attach_target_missing,
+    // switch_target_missing, ko_target_missing — is gone with it. What is
+    // left is informational only. Keeping the assertion pointed at "no warn
+    // or error" rather than deleting it means a future parser change that
+    // re-loses a Pokémon fails here instead of quietly degrading the board.
+    const loud = result.diagnostics.filter((d) => d.severity !== "info");
+    expect(loud.map((d) => `${d.severity}:${d.code} ${d.message}`)).toEqual([]);
+  });
+
+  it("still surfaces a genuine rules conflict rather than swallowing it", () => {
+    // The counterpart to the assertion above: quiet diagnostics on example-1
+    // must mean "nothing went wrong", not "the machinery stopped reporting".
+    // A log that plays a sixth Pokémon onto a five-slot bench with nothing
+    // leaving is a genuine over-fill, and the engine must warn.
+    //
+    // (This used to point at example-3, whose apparent "seventh Pokémon" was
+    // actually a Dudunsparce shuffling itself back into the deck via Run Away
+    // Draw — a legal move the parser dropped, leaving a phantom on the bench.
+    // Now that self-return is modelled, that fixture is clean, so the positive
+    // control is a synthetic log that truly breaks the cap.)
+    const OVERFILL = `Setup
+alice chose heads for the opening coin flip.
+alice won the coin toss.
+alice decided to go first.
+alice drew 7 cards for the opening hand.
+bob drew 7 cards for the opening hand.
+alice played Pikachu to the Active Spot.
+bob played Bulbasaur to the Active Spot.
+
+alice's Turn
+alice played Voltorb to the Bench.
+alice played Voltorb to the Bench.
+alice played Voltorb to the Bench.
+alice played Voltorb to the Bench.
+alice played Voltorb to the Bench.
+alice played Voltorb to the Bench.
+alice ended their turn.
+`;
+    const other = replay(normalizePerspective(parseBattleLog(OVERFILL), "alice"));
+    expect(other.diagnostics.some((d) => d.code === "bench_full")).toBe(true);
   });
 
   it("tracks the active stadium card and its owner", () => {

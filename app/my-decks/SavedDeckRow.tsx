@@ -12,8 +12,9 @@ import { shade } from "@/lib/color";
 /** Compact three-segment composition bar — the List-view counterpart to
  *  CompositionRing, sharing the same color scheme: Pokémon takes a
  *  gradient keyed to the deck's hero Pokémon energy type (the same accent
- *  color the card's avatar circle uses), Trainer is solid ink, Energy is
- *  white with a black-ink border. */
+ *  color the card's avatar circle uses), Trainer is solid ink, and Energy
+ *  is an unfilled capsule outlined in --text-primary — the flat-bar
+ *  equivalent of the hole CompositionRing masks out of its Energy arc. */
 export function CompositionBar({
   counts,
   heroColor,
@@ -34,12 +35,18 @@ export function CompositionBar({
       <div className="flex h-[7px] gap-[2px] rounded-full overflow-hidden">
         <div
           className="h-full rounded-full"
-          style={{ width: pct(counts.pokemon), background: `linear-gradient(120deg, ${accentDeep} 0%, ${accentBg} 100%)` }}
+          style={{ width: pct(counts.pokemon), background: `linear-gradient(135deg, ${accentDeep} 0%, ${accentBg} 100%)` }}
         />
         <div className="h-full rounded-full" style={{ width: pct(counts.trainer), background: "var(--text-primary)" }} />
+        {/* Genuinely unfilled, not painted in the page colour: this segment
+            used to be a hardcoded #ffffff, which read as a white bar in dark
+            mode instead of an outline. A div's transparent background shows
+            whatever sits behind it, so unlike the ring's Energy arc (which
+            needs an SVG mask to punch a real hole through its stroke) it
+            needs nothing more than this. */}
         <div
           className="h-full rounded-full"
-          style={{ width: pct(counts.energy), background: "#ffffff", border: "1px solid var(--text-primary)", boxSizing: "border-box" }}
+          style={{ width: pct(counts.energy), background: "transparent", border: "1px solid var(--text-primary)", boxSizing: "border-box" }}
         />
       </div>
       <span className="text-[10.5px] font-semibold text-text-muted tabular-nums">

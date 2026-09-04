@@ -42,18 +42,60 @@ function sideOf(state: GameState, actor: Actor): PlayerSide | null {
   return null;
 }
 
+/**
+ * Every Pokémon in play, both sides, Active before Bench.
+ *
+ * Needed by the effects that reach across both mats — Freezing Shroud puts a
+ * counter on every Pokémon with an ability, Adrena-Brain moves damage from
+ * your own onto the opponent's. For those, the log's own owner attribution is
+ * actively wrong (TCG Live stamps one player's handle on every line of the
+ * group, opponent's Pokémon included), so the target cannot be looked up on
+ * "the actor's side" the way every other action can. Only the names are
+ * trustworthy, and they have to be matched against the whole board.
+ */
+function allInPlay(state: GameState): { mon: PokemonInPlay; owner: Actor }[] {
+  const out: { mon: PokemonInPlay; owner: Actor }[] = [];
+  for (const owner of ["player", "opponent"] as const) {
+    const side = state.sides[owner];
+    if (side.active) out.push({ mon: side.active, owner });
+    for (const b of side.bench) out.push({ mon: b, owner });
+  }
+  return out;
+}
+
+/**
+ * Send a Pokémon from the Active Spot to the Bench.
+ *
+ * Special Conditions are removed when a Pokémon leaves the Active Spot — by
+ * ANY means, not just a retreat. The retreat handler cleared them itself,
+ * which covered the obvious case and hid the rest: a promotion after a
+ * knockout, a Boss's Orders, a Pecharunt's Subjugating Chains all move the
+ * Active out with no retreat action in the log, and the outgoing Pokémon kept
+ * its badge on the bench for the remainder of the game.
+ */
+function benchOutgoingActive(side: PlayerSide): void {
+  if (!side.active) return;
+  side.active.conditions = [];
+  side.bench.push(side.active);
+  side.active = null;
+}
+
 function otherActor(actor: Actor): Actor {
   if (actor === "player") return "opponent";
   if (actor === "opponent") return "player";
   return "system";
 }
 
-function makeCard(name: string, opts: { revealed?: boolean } = {}): CardInstance {
+function makeCard(
+  name: string,
+  opts: { revealed?: boolean; printingId?: string } = {},
+): CardInstance {
   return {
     id: mintInstanceId("card"),
     name,
     catalog: null,
     ...(opts.revealed === false ? { unrevealed: true } : {}),
+    ...(opts.printingId ? { printingId: opts.printingId } : {}),
   };
 }
 
@@ -90,25 +132,74 @@ function makePokemon(card: CardInstance, turn: number, evolvedFromStack: CardIns
  * all (KO, conditions, damage counters — the parser gives them no zone to
  * prefer) keep exactly their previous active-first behavior.
  */
+type PokemonMatch = {
+  mon: PokemonInPlay;
+  where: "active" | "bench";
+  benchIndex: number;
+};
+
+/**
+ * Every in-play Pokémon a name (+ printing) reference could mean, in the
+ * order the resolver would consider them — active first (or bench first when
+ * `preferLocation` says so). When a printing id is given and any in-play card
+ * matches it exactly, only those are returned; otherwise it falls back to
+ * name-only matches. `findPokemon` takes the first of these; the ambiguity
+ * oracle (energy attribution) picks among them when there is more than one.
+ */
+function findPokemonCandidates(
+  side: PlayerSide,
+  name: string,
+  preferLocation?: "active" | "bench",
+  printingId?: string,
+): PokemonMatch[] {
+  const gather = (pred: (m: PokemonInPlay) => boolean): PokemonMatch[] => {
+    const active: PokemonMatch[] =
+      side.active && pred(side.active)
+        ? [{ mon: side.active, where: "active", benchIndex: -1 }]
+        : [];
+    const bench: PokemonMatch[] = [];
+    for (let i = 0; i < side.bench.length; i++) {
+      if (pred(side.bench[i])) {
+        bench.push({ mon: side.bench[i], where: "bench", benchIndex: i });
+      }
+    }
+    return preferLocation === "bench" ? [...bench, ...active] : [...active, ...bench];
+  };
+  const byName = (m: PokemonInPlay) => m.card.name === name;
+  // With a printing id from the verbose export, prefer an EXACT printing match
+  // so a same-named sibling of a different printing is never chosen while the
+  // right one is in play. Fall back to name-only (standard export, or a card
+  // whose id we never saw) — the original behaviour when no id is given.
+  if (printingId != null) {
+    const strict = gather((m) => byName(m) && m.card.printingId === printingId);
+    if (strict.length) return strict;
+  }
+  return gather(byName);
+}
+
 function findPokemon(
   side: PlayerSide,
   name: string,
   preferLocation?: "active" | "bench",
-): { mon: PokemonInPlay; where: "active" | "bench"; benchIndex: number } | null {
-  const active =
-    side.active && side.active.card.name === name
-      ? { mon: side.active, where: "active" as const, benchIndex: -1 }
-      : null;
-  const bench = () => {
-    for (let i = 0; i < side.bench.length; i++) {
-      if (side.bench[i].card.name === name) {
-        return { mon: side.bench[i], where: "bench" as const, benchIndex: i };
-      }
-    }
-    return null;
-  };
-  if (preferLocation === "bench") return bench() ?? active;
-  return active ?? bench();
+  printingId?: string,
+): PokemonMatch | null {
+  return findPokemonCandidates(side, name, preferLocation, printingId)[0] ?? null;
+}
+
+/** Pick one candidate, letting the ambiguity oracle decide when more than one
+ *  is possible; otherwise the default first candidate. */
+function pickCandidate(
+  candidates: PokemonMatch[],
+  kind: string,
+  ctx: ApplyContext,
+): PokemonMatch | null {
+  if (candidates.length <= 1 || !ctx.resolveAmbiguous) return candidates[0] ?? null;
+  const chosen = ctx.resolveAmbiguous({
+    actionIndex: ctx.actionIndex,
+    kind,
+    candidateIds: candidates.map((c) => c.mon.id),
+  });
+  return candidates.find((c) => c.mon.id === chosen) ?? candidates[0];
 }
 
 function indexOfCardInZone(zone: CardInstance[], name: string): number {
@@ -138,9 +229,28 @@ function isPokemonTool(name: string): boolean {
 
 /* ─── Reducer ───────────────────────────────────────────────────── */
 
+/**
+ * Chooses among several in-play Pokémon a name reference could equally mean —
+ * two same-printing "N's Zoroark ex" on the same bench, say. The energy-
+ * attribution solver drives the replay through this to test each assignment;
+ * it's given the ambiguous candidates (in resolution order) and returns the
+ * instance id it wants. Returning null/undefined (or omitting the oracle
+ * entirely) keeps the default first-candidate behaviour.
+ */
+export interface AmbiguityOracle {
+  (info: {
+    actionIndex: number;
+    kind: string;
+    /** In-play instance ids the reference could mean, resolution order. */
+    candidateIds: string[];
+  }): string | null | undefined;
+}
+
 interface ApplyContext {
   /** Index into the original ParsedAction[]. Used for diagnostics traceability. */
   actionIndex: number;
+  /** Optional tie-breaker for same-name/same-printing duplicates. */
+  resolveAmbiguous?: AmbiguityOracle;
 }
 
 interface ApplyResult {
@@ -248,8 +358,12 @@ export function applyAction(
       if (!side) break;
       const name = String(payload.card ?? "");
       if (!name) break;
+      const cardId = payload.card_id as string | undefined;
       const fromHand = popCardByName(side.hand, name);
-      const card = fromHand ?? makeCard(name);
+      const card = fromHand ?? makeCard(name, { printingId: cardId });
+      // Stamp the printing id onto a card that came from the tracked hand too,
+      // so its in-play identity carries the printing for later name resolution.
+      if (card.printingId == null && cardId) card.printingId = cardId;
       if (!fromHand) {
         diag("info", "card_not_in_hand", `${actor} played ${name} but it wasn't tracked in hand`, { name });
       }
@@ -426,7 +540,11 @@ export function applyAction(
       const targetName = String(payload.target ?? "");
       const viaEffect = Boolean(payload.via_effect);
       const location = payload.location as "active" | "bench" | undefined;
-      const found = findPokemon(side, targetName, location);
+      const found = pickCandidate(
+        findPokemonCandidates(side, targetName, location, payload.target_id as string | undefined),
+        "attach_energy",
+        ctx,
+      );
       if (!found) {
         diag("warn", "attach_target_missing", `Attached ${energyName} to ${targetName} but target not in play`, { targetName });
         break;
@@ -466,7 +584,8 @@ export function applyAction(
       const fromName = String(payload.from ?? "");
       const toName = String(payload.to ?? "");
       const location = payload.location as "active" | "bench" | undefined;
-      const found = findPokemon(side, fromName, location);
+      const toId = payload.to_id as string | undefined;
+      const found = findPokemon(side, fromName, location, payload.from_id as string | undefined);
       if (!found) {
         diag("warn", "evolve_source_missing", `Evolved ${fromName} → ${toName} but base not in play`, { fromName, toName });
         break;
@@ -474,7 +593,8 @@ export function applyAction(
       if (found.mon.enteredPlayOnTurn === state.turn.number && !found.mon.evolvedThisTurn) {
         diag("info", "evolve_lock_violation", `Evolved ${fromName} on the same turn it was played`, { fromName });
       }
-      const newTop = popCardByName(side.hand, toName) ?? makeCard(toName);
+      const newTop = popCardByName(side.hand, toName) ?? makeCard(toName, { printingId: toId });
+      if (newTop.printingId == null && toId) newTop.printingId = toId;
       found.mon.stack = [...found.mon.stack, found.mon.card];
       found.mon.card = newTop;
       found.mon.evolvedThisTurn = true;
@@ -501,8 +621,18 @@ export function applyAction(
           const [card] = side.active.attachedEnergy.splice(idx, 1);
           side.discard.push(card);
         } else {
-          // Energy attached as something not matching name, still add a
-          // placeholder discard so totals stay consistent.
+          // The retreating Active was asked to pay an energy it isn't holding.
+          // On the standard path this is a benign name mismatch, but for the
+          // energy-attribution solver it is the key feasibility signal: an
+          // ambiguous-attach assignment that starves the instance which later
+          // pays this cost is wrong. Surface it as a diagnostic the solver
+          // can score, and keep the placeholder so totals stay consistent.
+          diag(
+            "info",
+            "energy_discard_shortfall",
+            `Retreat discarded ${energyName} but the Active wasn't holding it`,
+            { energyName },
+          );
           side.discard.push(makeCard(energyName));
         }
       }
@@ -539,17 +669,25 @@ export function applyAction(
         // every frame after a knockout.
         diag("info", "switch_target_missing", `Promote ${targetName} but not on bench; conjured it`, { targetName });
         const conjured = makePokemon(makeCard(targetName), state.turn.number);
-        if (side.active) side.bench.push(side.active);
+        benchOutgoingActive(side);
         side.active = conjured;
         event.detail = { promoted: targetName, conjured: true };
         break;
       }
       const incoming = side.bench.splice(benchIdx, 1)[0];
-      if (side.active) {
-        side.bench.push(side.active);
-      }
+      benchOutgoingActive(side);
       side.active = incoming;
-      side.active.conditions = []; // conditions clear when leaving play; promotion treats it as fresh
+      // No wipe of the incoming's conditions — a bench Pokémon shouldn't
+      // have any to begin with, since conditions only ever apply to the
+      // Active (see benchOutgoingActive, which clears the OUTGOING side of
+      // the swap). The exception is exactly Pecharunt ex's Subjugating
+      // Chains, where the ability applies Poisoned to the incoming card in
+      // the same beat as the switch itself — the log names the poison
+      // BEFORE the top-level "is now in the Active Spot" that lands here,
+      // so wiping conditions here strips it off the moment it was applied.
+      // The rules-correct outcome is that the incoming Pokémon becomes
+      // Active WITH the condition; preserving whatever is on it delivers
+      // that without the parser having to reorder log lines.
       event.detail = { promoted: targetName };
       break;
     }
@@ -563,6 +701,23 @@ export function applyAction(
       if (!side) break;
       const cardName = String(payload.card ?? "");
       if (!cardName) break;
+      // A Pokémon ability that shuffles the Pokémon itself back into the deck
+      // (Dudunsparce's Run Away Draw) reaches us as a bare "played X.". The
+      // parser flags it, but a Supporter that shuffles a copy of itself from
+      // hand (Lillie's Determination) sets the same flag — so we only treat it
+      // as a board removal when the card is genuinely in play. That removes it
+      // and frees a bench slot; anything else falls through to the trainer path.
+      if (payload.self_returned_to_deck) {
+        const inPlay = findPokemon(side, cardName, undefined, payload.card_id as string | undefined);
+        if (inPlay) {
+          const mon = inPlay.mon;
+          side.deck.push(mon.card, ...mon.stack, ...mon.attachedEnergy, ...mon.attachedTools);
+          if (inPlay.where === "active") side.active = null;
+          else side.bench.splice(inPlay.benchIndex, 1);
+          event.detail = { returnedToDeck: cardName, where: inPlay.where };
+          break;
+        }
+      }
       const card = popCardByName(side.hand, cardName) ?? makeCard(cardName);
       // Catalog-aware classification: many "played X" lines from the parser
       // are coded as play_item, but a Supporter should bump the per-turn
@@ -662,7 +817,7 @@ export function applyAction(
       const source = String(payload.source ?? "");
       const abilityName = String(payload.ability_name ?? "");
       if (side) {
-        const found = findPokemon(side, source);
+        const found = findPokemon(side, source, undefined, payload.source_id as string | undefined);
         if (found) found.mon.abilitiesUsedThisTurn.push(abilityName);
       }
       event.detail = { source, ability: abilityName };
@@ -687,7 +842,7 @@ export function applyAction(
             ? state.sides.opponent
             : sideOf(state, actor);
       if (!ownerSide || !cardName) break;
-      const target = findPokemon(ownerSide, pokemonName);
+      const target = findPokemon(ownerSide, pokemonName, undefined, payload.pokemon_id as string | undefined);
       if (!target) {
         // The pokemon may have just been knocked out and removed; pop a
         // placeholder discard so totals balance.
@@ -723,7 +878,7 @@ export function applyAction(
       const ownerSide = sideOf(state, actor);
       if (!ownerSide) break;
       const targetName = String(payload.pokemon ?? "");
-      const found = findPokemon(ownerSide, targetName);
+      const found = findPokemon(ownerSide, targetName, undefined, payload.pokemon_id as string | undefined);
       if (!found) {
         diag("info", "ko_target_missing", `Knocked Out target ${targetName} not in play`, { targetName });
         break;
@@ -758,7 +913,7 @@ export function applyAction(
       if (!ownerSide) break;
       const targetName = String(payload.pokemon ?? "");
       const condition = payload.condition as SpecialCondition;
-      const found = findPokemon(ownerSide, targetName);
+      const found = findPokemon(ownerSide, targetName, undefined, payload.pokemon_id as string | undefined);
       if (!found) {
         diag("info", "condition_target_missing", `Condition target ${targetName} not in play`, { targetName });
         break;
@@ -770,12 +925,77 @@ export function applyAction(
       break;
     }
 
+    /* ── Effect-driven damage counters ────────────────────────── */
+
+    case "damage_counters_placed": {
+      // One activation, every Pokémon it hit. See the ActionType docs and
+      // parse.ts: this arrives as a single action listing all the targets
+      // precisely because they can only be resolved as a set.
+      const targets = (payload.targets as string[] | undefined) ?? [];
+      const counts = (payload.counters as number[] | undefined) ?? [];
+      const inPlay = allInPlay(state);
+      const claimed = new Set<PokemonInPlay>();
+      const applied: { pokemon: string; owner: Actor; counters: number }[] = [];
+      targets.forEach((name, i) => {
+        const counters = Number(counts[i] ?? 1);
+        // Each line is a DIFFERENT Pokémon: the effect hits each one once, so
+        // three "Munkidori" lines mean three Munkidori in play rather than one
+        // taking three counters. Claiming each match in turn is what keeps
+        // them apart, given the names are identical and the handles are junk.
+        const hit = inPlay.find(
+          (e) => !claimed.has(e.mon) && e.mon.card.name === name,
+        );
+        if (!hit) {
+          diag("info", "counter_target_missing", `No Pokémon named ${name} in play to take a damage counter`, { name });
+          return;
+        }
+        claimed.add(hit.mon);
+        hit.mon.damage += counters * 10;
+        applied.push({ pokemon: name, owner: hit.owner, counters });
+      });
+      event.detail = { applied, targets };
+      break;
+    }
+
+    case "damage_counters_moved": {
+      const counters = Number(payload.counters ?? 0);
+      const fromName = String(payload.from ?? "");
+      const toName = String(payload.to ?? "");
+      const inPlay = allInPlay(state);
+      // Prefer a source that actually has the damage to give: with two
+      // same-named Pokémon in play, the one carrying counters is the one the
+      // move came off, and the log gives nothing else to separate them.
+      const src =
+        inPlay.find((e) => e.mon.card.name === fromName && e.mon.damage >= counters * 10) ??
+        inPlay.find((e) => e.mon.card.name === fromName);
+      const dst = inPlay.find((e) => e.mon !== src?.mon && e.mon.card.name === toName);
+      if (!src || !dst) {
+        diag("info", "counter_move_unresolved", `Could not move counters from ${fromName} to ${toName}`, { fromName, toName });
+        event.detail = { from: fromName, to: toName, counters, resolved: false };
+        break;
+      }
+      // Never move more than is there — a mis-resolved source would
+      // otherwise drive a Pokémon's damage negative and inflate the target's.
+      const moved = Math.min(counters * 10, src.mon.damage);
+      src.mon.damage -= moved;
+      dst.mon.damage += moved;
+      event.detail = {
+        from: fromName,
+        to: toName,
+        counters: moved / 10,
+        fromOwner: src.owner,
+        toOwner: dst.owner,
+        resolved: true,
+      };
+      break;
+    }
+
     case "damage_counter_placed": {
       const ownerSide = sideOf(state, actor);
       if (!ownerSide) break;
       const targetName = String(payload.pokemon ?? "");
       const counters = Number(payload.counters ?? 0);
-      const found = findPokemon(ownerSide, targetName);
+      const found = findPokemon(ownerSide, targetName, undefined, payload.pokemon_id as string | undefined);
       if (!found) {
         diag("info", "counter_target_missing", `Counter target ${targetName} not in play`, { targetName });
         break;

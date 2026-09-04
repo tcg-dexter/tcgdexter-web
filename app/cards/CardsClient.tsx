@@ -57,8 +57,20 @@ interface Props {
   initialParams: Params;
 }
 
-function buildUrl(pathname: string, params: Params): string {
+/** Which of the three panels the Card Catalog page is showing. Lives in the
+ *  URL (rather than only in state) so it survives a reload and, crucially, a
+ *  history pop: the list-detail page's back button returns here, and without
+ *  the param that landed you on the catalog instead of the Lists panel you
+ *  came from. */
+type CatalogMode = "catalog" | "data" | "lists";
+
+function parseMode(value: string | null): CatalogMode {
+  return value === "data" || value === "lists" ? value : "catalog";
+}
+
+function buildUrl(pathname: string, params: Params, mode: CatalogMode): string {
   const sp = new URLSearchParams();
+  if (mode !== "catalog") sp.set("mode", mode);
   if (params.q) sp.set("q", params.q);
   if (params.supertype.length) sp.set("supertype", params.supertype.join(","));
   if (params.type.length) sp.set("type", params.type.join(","));
@@ -91,19 +103,21 @@ export default function CardsClient({ initialResult, facets, setStats, initialPa
   const [params, setParams] = useState<Params>(initialParams);
   const [searchInput, setSearchInput] = useState(initialParams.q);
   const [showFilters, setShowFilters] = useState(false);
-  const [mode, setMode] = useState<"catalog" | "data" | "lists">("catalog");
+  const [mode, setMode] = useState<CatalogMode>(() =>
+    parseMode(searchParams.get("mode")),
+  );
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstSync = useRef(true);
 
-  // Push to URL when params change (debounced for `q`).
+  // Push to URL when params or the visible panel change (debounced for `q`).
   useEffect(() => {
     if (isFirstSync.current) {
       isFirstSync.current = false;
       return;
     }
-    const url = buildUrl(pathname, params);
+    const url = buildUrl(pathname, params, mode);
     startTransition(() => router.replace(url, { scroll: false }));
-  }, [params, pathname, router]);
+  }, [params, mode, pathname, router]);
 
   // Re-derive params if URL changes externally (e.g. back/forward).
   useEffect(() => {

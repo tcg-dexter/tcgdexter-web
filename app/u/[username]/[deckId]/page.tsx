@@ -196,6 +196,7 @@ export default async function DeckPage({
 
   const creator: DeckCreator = {
     displayName: profile.display_name,
+    username: profile.username,
   };
 
   return (

@@ -489,8 +489,15 @@ export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: P
             onClick={() => setFavoritesOnly((v) => !v)}
             aria-pressed={favoritesOnly}
             title={favoritesOnly ? "Showing favorites only" : "Show favorites only"}
-            className={`${TOOLBAR_ITEM_HEIGHT} inline-flex items-center justify-center gap-1.5 px-3 rounded-full text-xs font-semibold transition-colors ${
-              favoritesOnly ? "bg-black dark:bg-white text-white dark:text-black" : "bg-white dark:bg-surface-2 text-text-secondary border border-black/8"
+            // `border border-transparent` on the active state, not no border:
+            // the inactive state is bordered, so dropping the border when
+            // pressed would shrink the button by 2px and shove everything
+            // after it in the row sideways on every toggle. Same reason the
+            // "+ New Deck" button beside it carries a transparent border.
+            className={`${TOOLBAR_ITEM_HEIGHT} inline-flex items-center justify-center gap-1.5 px-3 rounded-full text-xs font-semibold border transition-colors ${
+              favoritesOnly
+                ? "border-transparent bg-black dark:bg-white text-white dark:text-black"
+                : "border-black/8 bg-white dark:bg-surface-2 text-text-secondary"
             }`}
           >
             <svg

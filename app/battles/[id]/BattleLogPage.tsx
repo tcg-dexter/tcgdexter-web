@@ -1,8 +1,12 @@
 "use client";
 
-import ReplayViewer, {
-  REPLAY_TOP_MAT_ID,
-} from "@/app/components/replay/ReplayViewer";
+import { useState, type ReactNode } from "react";
+import ReplayViewer2, {
+  MatchupRow,
+  CopyBattleLogButton,
+  ThreadCollapseToggle,
+} from "@/app/admin-tools/replay2/ReplayViewer2";
+import type { ReplayPayload2 } from "@/lib/replay2/beats";
 import BackButton from "@/app/components/ui/BackButton";
 import {
   BattleStatChart,
@@ -59,31 +63,6 @@ const HERO_ROTATION_DEG = 5;
 // rotated card's bounding box is h·cos(θ) + w·sin(θ), ~5.9% taller than
 // the card at 5° — so 80% here occupies ~85% of the panel.
 const HERO_HEIGHT_PCT = 80;
-
-/**
- * Jump the page to the replay board, top mat flush with the top of the
- * window (bar the breathing room and toolbar clearance the mat carries as
- * its own scroll-margin — see REPLAY_TOP_MAT_SCROLL_MT, which is why there
- * is no pixel subtraction here).
- *
- * A no-op when the anchor is absent, which is the case whenever there's no
- * battle log to render — the button is withheld in that case anyway, so
- * this is belt-and-braces against the viewer failing to mount.
- */
-function scrollToReplay() {
-  const target = document.getElementById(REPLAY_TOP_MAT_ID);
-  if (!target) return;
-  // Honour the OS's reduced-motion setting: the same jump, just without
-  // the travel. matchMedia rather than a CSS-only approach because the
-  // behavior is chosen here, at the call, not by a scroll-behavior rule.
-  const reducedMotion = window.matchMedia(
-    "(prefers-reduced-motion: reduce)",
-  ).matches;
-  target.scrollIntoView({
-    behavior: reducedMotion ? "auto" : "smooth",
-    block: "start",
-  });
-}
 
 export default function BattleLogPage({
   battleId,
@@ -143,116 +122,178 @@ export default function BattleLogPage({
   // winner, so neither name takes it.
   const winnerLabelClass = "bg-gradient-brand bg-clip-text text-transparent";
 
-  return (
-    // Page shell copied from /my-decks and /battles so the hero below sits
-    // on the same rails as the deck collection and the matches feed.
-    <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
-      {/* Back button — it used to overlay a full-bleed banner, which no
-          longer exists, so the desktop (xl+) copy renders here above the
-          title. The wrapper is hidden below xl to avoid leaving its margin
-          behind as dead space: the sub-xl copy portals itself into the
-          sticky toolbar and isn't a descendant of this div, so hiding the
-          wrapper doesn't hide it. */}
-      <div className="mb-3 hidden xl:block">
-        <BackButton href="/" ariaLabel="Back" />
-      </div>
+  // Loaded replay payload + its derived mat gradients, lifted out of
+  // ReplayViewer2 (which owns the fetch) via onData so this page can render
+  // its own matchup row above the viewer and its own Copy Battle Log button
+  // on the stat card, instead of the viewer's built-in versions below the
+  // board (suppressed here via showMatchupFooter={false}).
+  const [replay, setReplay] = useState<{
+    data: ReplayPayload2 | null;
+    gradients: { player: string; opponent: string };
+  } | null>(null);
 
-      {/* Battle hero — built to read as a sibling of the deck collection's
-          pinned deck: a rounded card sitting on the page background, lit by
-          a gradient glow bleeding out from under it, with the artwork panel
-          on the left and the details on the right. The one substitution is
-          color — the pinned deck glows in the brand gradient, this glows in
-          the battle's own winner→loser gradient.
-          mt-6 stands in for the removed "Battle Log" header's own mb-6 —
-          on mobile the back-button block above is hidden entirely, so this
-          is the only thing keeping the hero off the safe-area padding. */}
-      <div className="relative mt-6">
-        <div
-          aria-hidden
-          className="absolute -inset-px rounded-2xl opacity-30 blur-md"
-          style={{ background: bannerGradient }}
-        />
-        <div
-          className="relative flex flex-col overflow-hidden rounded-2xl border border-black/8 bg-bg md:flex-row dark:border-white/10"
-          style={{
-            // The drop shadow tints to the winner's color the way the
-            // pinned deck's tints to the brand red. color-mix keeps this
-            // in CSS rather than needing a hex→rgba helper for what is
-            // only ever one alpha.
-            boxShadow: `0 20px 30px -15px color-mix(in srgb, ${winnerColor} 45%, transparent)`,
-          }}
-        >
-          <BattleBanner
-            gradient={bannerGradient}
-            ghostImageUrl={ghostImageUrl}
-            leftImageUrl={deckImageUrl}
-            leftAlt={playerLabel}
-            rightImageUrl={opponentImageUrl}
-            rightAlt={opponentLabel}
-            onWatchReplay={hasBattleLog ? scrollToReplay : undefined}
-          />
+  const copyButton = replay?.data ? (
+    <CopyBattleLogButton text={replay.data.battleLogRaw} />
+  ) : null;
 
-          <div className="flex-1 p-5 md:p-6">
-            {/* Archetype pair + date. Truncated rather than wrapped: these
-                sit in a fixed column now, so a second line on a long
-                archetype would push the stat table down instead of
-                overhanging the way it did on the full-bleed banner. */}
-            <p className="truncate text-xl md:text-2xl font-bold leading-tight text-text-primary">
-              <span className={result === "win" ? winnerLabelClass : undefined}>
-                {playerLabel}
-              </span>
-            </p>
-            <p className="truncate text-xl md:text-2xl font-bold leading-tight text-text-primary">
-              <span className="text-text-muted">vs </span>
-              <span className={result === "loss" ? winnerLabelClass : undefined}>
-                {opponentLabel}
-              </span>
-            </p>
-            <p className="mt-1.5 text-[11px] font-medium uppercase tracking-[0.2em] text-text-muted">
-              {formatPlayedAt(playedAt)}
-            </p>
+  // The thread collapse/expand toggle's live state, lifted out of
+  // ReplayViewer2 the same way — its only implementation lives here in the
+  // desktop header now, anchored right, instead of above the thread aside.
+  const [threadToggle, setThreadToggle] = useState<{
+    collapsed: boolean;
+    toggle: () => void;
+  } | null>(null);
 
-            {/* Two rows only — the headline exchange (damage) and the one
-                that decides the game (prizes). The full six-row table
-                still lives on the /battles Featured Battle drawer.
-
-                Butted straight against the date with no margin: the
-                chart's own header row carries `pb-2`, so the two still
-                read as separate lines rather than colliding. */}
-            <BattleStatChart
-              playerName={playerSideName}
-              opponentName={opponentSideName}
-              winnerSide={
-                result === "win" ? "left" : result === "loss" ? "right" : null
-              }
-              rows={buildBattleStatRows(playerStats, opponentStats, [
-                "damage",
-                "prizes",
-              ])}
-            />
+  // The stat header that used to lead the page — the winner-tinted hero with
+  // the two decks' art, the archetype matchup, the date and the two-row stat
+  // chart. Replay 2.0 is now the page's lead content, and this sits below it:
+  // handed to the viewer as belowMatchupSlot so the page reads viewer →
+  // controls → matchup → copy → this → thread. No "Watch Replay" button now
+  // that the replay is what's above it.
+  const statHeader = (
+    <div className="relative mt-6">
+      <div
+        aria-hidden
+        className="absolute -inset-px rounded-2xl opacity-30 blur-md"
+        style={{ background: bannerGradient }}
+      />
+      <div
+        className="relative flex flex-col overflow-hidden rounded-2xl border border-black/8 bg-bg md:flex-row dark:border-white/10"
+        style={{
+          // The drop shadow tints to the winner's color the way the
+          // pinned deck's tints to the brand red. color-mix keeps this
+          // in CSS rather than needing a hex→rgba helper for what is
+          // only ever one alpha.
+          boxShadow: `0 20px 30px -15px color-mix(in srgb, ${winnerColor} 45%, transparent)`,
+        }}
+      >
+        {/* Desktop: Copy Battle Log pill floats at the stat card's top-right
+            corner. Below md the card stacks (banner on top, full width) and
+            this would collide with the banner, so it moves into the banner
+            itself instead — see BattleBanner's mobileCopyButton. */}
+        {copyButton && (
+          <div className="absolute right-3 top-3 z-20 hidden md:block">
+            {copyButton}
           </div>
+        )}
+
+        <BattleBanner
+          gradient={bannerGradient}
+          ghostImageUrl={ghostImageUrl}
+          leftImageUrl={deckImageUrl}
+          leftAlt={playerLabel}
+          rightImageUrl={opponentImageUrl}
+          rightAlt={opponentLabel}
+          mobileCopyButton={copyButton}
+        />
+
+        <div className="flex-1 p-5 md:p-6">
+          {/* Archetype pair + date. Truncated rather than wrapped: these
+              sit in a fixed column now, so a second line on a long
+              archetype would push the stat table down instead of
+              overhanging the way it did on the full-bleed banner. */}
+          <p className="truncate text-xl md:text-2xl font-bold leading-tight text-text-primary">
+            <span className={result === "win" ? winnerLabelClass : undefined}>
+              {playerLabel}
+            </span>
+          </p>
+          <p className="truncate text-xl md:text-2xl font-bold leading-tight text-text-primary">
+            <span className="text-text-muted">vs </span>
+            <span className={result === "loss" ? winnerLabelClass : undefined}>
+              {opponentLabel}
+            </span>
+          </p>
+          <p className="mt-1.5 text-[11px] font-medium uppercase tracking-[0.2em] text-text-muted">
+            {formatPlayedAt(playedAt)}
+          </p>
+
+          {/* Two rows only — the headline exchange (damage) and the one
+              that decides the game (prizes). The full six-row table
+              still lives on the /battles Featured Battle drawer. */}
+          <BattleStatChart
+            playerName={playerSideName}
+            opponentName={opponentSideName}
+            winnerSide={
+              result === "win" ? "left" : result === "loss" ? "right" : null
+            }
+            rows={buildBattleStatRows(playerStats, opponentStats, [
+              "damage",
+              "prizes",
+            ])}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    // Page shell copied from /my-decks and /battles so the content below sits
+    // on the same rails as the deck collection and the matches feed.
+    <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_0.84rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
+      {/* Toolbar row — desktop (xl+) only. The back button, the matchup row,
+          and the thread collapse/expand toggle all share this one row rather
+          than each costing the board its own — that's the whole point of
+          moving them here instead of leaving them above/below the viewer.
+          A 3-column grid (not a flex row) is what lets the matchup row centre
+          on the PAGE rather than just in the space next to the back button:
+          the two flanking columns are equal-width (1fr each), so the middle
+          column's centre is the row's centre regardless of what either side
+          holds. Below xl the back button portals itself into the sticky
+          toolbar (see BackButton), the matchup row and toggle don't render at
+          all, and the replay viewer is the very top of the mobile page. */}
+      <div className="mb-3 hidden xl:grid xl:grid-cols-[1fr_auto_1fr] xl:items-center">
+        <BackButton href="/" ariaLabel="Back" />
+        <div className="justify-self-center">
+          {replay?.data && (
+            <MatchupRow
+              playerName={replay.data.playerPrimaryName}
+              opponentName={replay.data.opponentPrimaryName}
+              playerGradient={replay.gradients.player}
+              opponentGradient={replay.gradients.opponent}
+              scale={1.25}
+            />
+          )}
+        </div>
+        <div className="justify-self-end">
+          {threadToggle && (
+            <ThreadCollapseToggle
+              collapsed={threadToggle.collapsed}
+              onToggle={threadToggle.toggle}
+            />
+          )}
         </div>
       </div>
 
-      {/* The playback viewer follows the hero directly — with the stat
-          table moved into the hero it's the only thing left below, so
-          there's nothing for a section heading to separate it from. */}
-      <div className="mt-6">
-        {hasBattleLog ? (
-          <ReplayViewer
+      {hasBattleLog ? (
+        // Replay 2.0 leads the page; the matchup row and thread toggle live
+        // in the toolbar above (desktop only — see that comment), not here.
+        // The stat header rides below the viewer, injected between its
+        // matchup/copy block — suppressed via showMatchupFooter, since this
+        // page renders its own matchup row + Copy button — and its thread.
+        <div className="mt-6">
+          <ReplayViewer2
             battleId={battleId}
             replayUrl={`/api/battles/${battleId}/replay`}
             logUrl={`/api/battles/${battleId}/log`}
             result={result}
             playerColor={playerColor}
             opponentColor={opponentColor}
+            showMatchupFooter={false}
+            onData={(data, gradients) => setReplay({ data, gradients })}
+            showThreadToggle={false}
+            onThreadToggleState={setThreadToggle}
+            belowMatchupSlot={statHeader}
           />
-        ) : (
-          <div className="rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5 text-sm text-text-muted text-center dark:bg-surface-elevated dark:border-white/10">
+        </div>
+      ) : (
+        // No battle log: fall back to the stat header alone plus a notice.
+        <>
+          {statHeader}
+          <div className="mt-6 rounded-2xl border border-black/8 bg-white/90 shadow-sm p-5 text-sm text-text-muted text-center dark:bg-surface-elevated dark:border-white/10">
             No battle log available for this battle.
           </div>
-        )}
-      </div>
+        </>
+      )}
     </main>
   );
 }
@@ -277,7 +318,7 @@ function BattleBanner({
   leftAlt,
   rightImageUrl,
   rightAlt,
-  onWatchReplay,
+  mobileCopyButton,
 }: {
   gradient: string;
   ghostImageUrl: string | null;
@@ -285,11 +326,11 @@ function BattleBanner({
   leftAlt: string;
   rightImageUrl: string | null;
   rightAlt: string;
-  /** Jumps the page to the replay board. Omitted when this battle has no
-   *  log — there's nothing to view, and the page shows the "No battle log
-   *  available" card in the viewer's place — and the pill drops with it
-   *  rather than rendering a button that scrolls to nothing. */
-  onWatchReplay?: () => void;
+  /** The Copy Battle Log pill, shown only below md — floated over the hero
+   *  cards near the banner's bottom edge (the desktop placement is the stat
+   *  card's top-right corner instead; see the caller). Null/undefined when
+   *  there's no battle log to copy. */
+  mobileCopyButton?: ReactNode;
 }) {
   return (
     <div
@@ -335,23 +376,16 @@ function BattleBanner({
         />
       )}
 
-      {onWatchReplay && (
+      {mobileCopyButton && (
         // Bottom-centre, on the panel's one axis of symmetry: the hero pair
         // is centred, so this is the only anchor that meets both cards the
-        // same way at every panel size — a corner would tuck under one card
-        // and float free of the other as the panel grows from its 190px
-        // mobile height to the details column's on md. It does sit over the
-        // cards' bottom edges — HERO_HEIGHT_PCT leaves ~7% of the panel
-        // clear below them, which is less than a tap target — so z-20 puts
-        // it above both cards and the ghost, and the fill and shadow carry
-        // it against the artwork.
-        <button
-          type="button"
-          onClick={onWatchReplay}
-          className="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 md:bottom-4 inline-flex items-center justify-center rounded-full bg-white px-5 py-2 text-[11px] font-semibold tracking-[0.15em] text-black shadow-md hover:shadow-lg transition"
-        >
-          WATCH REPLAY
-        </button>
+        // same way at every panel size. 10% up from the banner's bottom edge,
+        // floating over the hero cards' feet — z-20 puts it above both cards
+        // and the ghost. Hidden at md+, where the pill moves to the stat
+        // card's top-right corner instead (see the caller).
+        <div className="absolute inset-x-0 bottom-[10%] z-20 flex justify-center md:hidden">
+          {mobileCopyButton}
+        </div>
       )}
     </div>
   );

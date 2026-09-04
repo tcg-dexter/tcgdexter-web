@@ -58,6 +58,10 @@ export const CARD_NAME_ARRAY_FIELDS = [
   // Legacy alias of discarded_cards on ability_used. Listed so the verbose
   // export's id prefixes get stripped from it too — they never were.
   "discards",
+  // Pokémon hit by one effect-driven damage-counter placement
+  // (damage_counters_placed) — every one carries an id prefix in the
+  // verbose export.
+  "targets",
 ] as const;
 
 /** Payload fields holding an array of { cards: string[] } groups — one

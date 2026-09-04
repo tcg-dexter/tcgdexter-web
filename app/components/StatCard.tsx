@@ -48,7 +48,14 @@ export function StatCard({
       return (
         <AnimatedGradient
           gradient={gradientCss}
-          className="relative rounded-2xl overflow-hidden shadow-sm px-4 py-3 text-center text-white"
+          // No overflow-hidden, deliberately: the gradient layers clip
+          // themselves via rounded-[inherit] (see AnimatedGradient). These
+          // tiles are narrow — four across at 390px leaves ~45px of content
+          // box — so most values overflow it, and the other tones let that
+          // spill harmlessly into the padding. An overflow container instead
+          // pins the text to its start edge and clips the end, which cut the
+          // last digit off "$5,255" while "3,933" beside it rendered fine.
+          className="relative rounded-2xl shadow-sm px-4 py-3 text-center text-white"
         >
           <p className="text-lg font-bold tabular-nums">
             <RollingNumber value={value} />

@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import BackButton from "@/app/components/ui/BackButton";
 import PillSelect from "@/app/components/ui/PillSelect";
 import GridListToggle from "@/app/components/ui/GridListToggle";
-import GridDensityMenu, { type GridColumns } from "@/app/components/ui/GridDensityMenu";
 import InventoryProvider, { useInventory } from "@/app/cards/InventoryContext";
 import {
   OwnershipRadios,
@@ -94,12 +93,6 @@ function ListDetailBody({
   const [sort, setSort] = useState<SortKey>("released");
   const [dir, setDir] = useState<SortDir>("desc");
   const [view, setView] = useState<"grid" | "list">("grid");
-  // Cards-per-row for the grid. `undefined` = GridView's responsive default,
-  // which is also the server-rendered state: the stored preference is read in
-  // an effect after mount so the first client render matches the HTML and
-  // hydration stays clean.
-  const [columns, setColumns] = useState<GridColumns | undefined>(undefined);
-
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [searchInput, setSearchInput] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -139,31 +132,6 @@ function ListDetailBody({
       window.removeEventListener("resize", compute);
     };
   }, [menuOpen]);
-
-  // Grid density is remembered per list (not per user, not in the DB) — a
-  // 60-card binder list and a 400-card wishlist want different densities.
-  // Storage can throw in private-browsing modes, so both sides are guarded.
-  const columnsStorageKey = `dx_list_cols_${listId}`;
-
-  useEffect(() => {
-    try {
-      const stored = Number(window.localStorage.getItem(columnsStorageKey));
-      if (Number.isInteger(stored) && stored >= 2 && stored <= 6) {
-        setColumns(stored as GridColumns);
-      }
-    } catch {
-      /* storage unavailable — fall back to the responsive default */
-    }
-  }, [columnsStorageKey]);
-
-  function chooseColumns(next: GridColumns) {
-    setColumns(next);
-    try {
-      window.localStorage.setItem(columnsStorageKey, String(next));
-    } catch {
-      /* preference just won't survive a reload */
-    }
-  }
 
   // Variant facet options come from the collection itself (same convention
   // as CardsClient.tsx's CatalogBody) — the printing grammar is open-ended,
@@ -401,7 +369,13 @@ function ListDetailBody({
   return (
       <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] xl:pt-[calc(env(safe-area-inset-top)_+_0.75rem)] pb-24">
         <div className="hidden xl:block mb-6">
-          <BackButton href={`/u/${username}`} ariaLabel={`Back to @${username}'s lists`} />
+          {/* Back to the Lists panel on the catalog page, which is where
+              lists are browsed from — not the catalog itself. The ?mode=
+              param is what makes that land on Lists (see CardsClient), and
+              it also fixes the history-pop path: the panel used to be local
+              state, so popping back to a bare /cards reset it to the
+              catalog. */}
+          <BackButton href="/cards?mode=lists" ariaLabel="Back to your lists" />
         </div>
 
         <div className="mb-6 flex items-end justify-between gap-3">
@@ -712,9 +686,6 @@ function ListDetailBody({
                   {activeFilterCount > 0 ? "Filtered" : "Filters"}
                 </button>
                 <GridListToggle value={view} onChange={setView} />
-                {view === "grid" && (
-                  <GridDensityMenu value={columns} onChange={chooseColumns} />
-                )}
               </div>
             </div>
 
@@ -852,7 +823,6 @@ function ListDetailBody({
               cards={sortedCards}
               variantFilter={filters.ownership === "owned" ? filters.variant : []}
               view={view}
-              columns={columns}
               selectMode={selectMode}
               selectedOrder={selectedOrder}
               onToggleSelect={toggleSelect}

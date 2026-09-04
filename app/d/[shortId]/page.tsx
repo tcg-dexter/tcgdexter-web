@@ -50,12 +50,13 @@ async function fetchCreator(userId: string | null): Promise<DeckCreator | null> 
     const admin = createAdminClient();
     const { data } = await admin
       .from("profiles")
-      .select("display_name")
+      .select("display_name, username")
       .eq("id", userId)
       .maybeSingle();
-    if (!data) return null;
+    if (!data || !data.username) return null;
     return {
       displayName: data.display_name ?? "Trainer",
+      username: data.username,
     };
   } catch {
     return null;

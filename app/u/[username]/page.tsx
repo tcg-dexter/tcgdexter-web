@@ -638,6 +638,7 @@ export default async function ProfilePage({
           )}
         </div>
       )}
+
       </FollowPanelBody>
       </FollowPanelProvider>
     </main>

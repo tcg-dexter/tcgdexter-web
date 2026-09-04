@@ -68,7 +68,15 @@ export default function AnimatedGradient({ gradient, className, style, children 
         <div
           key={l.id}
           aria-hidden="true"
-          className="absolute inset-0 transition-opacity duration-500 ease-in-out"
+          // rounded-[inherit] so a caller can round its corners WITHOUT also
+          // setting overflow-hidden to keep the gradient inside them. That
+          // matters because overflow-hidden changes how overflowing centred
+          // text behaves: normally it spills into the padding and stays
+          // readable, but inside an overflow container it's pinned to the
+          // start edge and clipped at the end — which silently truncated the
+          // profile's Total Value tile on narrow screens while its unclipped
+          // neighbours were fine.
+          className="absolute inset-0 rounded-[inherit] transition-opacity duration-500 ease-in-out"
           style={{ background: l.gradient, opacity: i === layers.length - 1 ? (topVisible ? 1 : 0) : 1 }}
         />
       ))}

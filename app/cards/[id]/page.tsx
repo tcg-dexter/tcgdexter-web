@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import {
   getCardById,
@@ -12,6 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 import CardImage from "../CardImage";
 import CardDetailPanel from "../CardDetailPanel";
 import AddToListButton from "../AddToListButton";
+import ShareCardButton from "../ShareCardButton";
 import { findCardAppearances } from "@/lib/cardAppearances";
 import { hydrateListPreviews, type ListRow, type ListSummary } from "@/lib/lists";
 import AppearsInCarousel from "./AppearsInCarousel";
@@ -86,6 +88,14 @@ export default async function CardDetailPage({ params }: Props) {
     listsWithCard = hydrated.filter((l) => l.containsCard);
   }
 
+  // Card pages are public, so the canonical URL is shareable as-is — no
+  // visibility flip or short-link minting first (see ShareCardButton).
+  const headersList = await headers();
+  const host =
+    headersList.get("x-forwarded-host") ?? headersList.get("host") ?? "tcgdexter.com";
+  const proto = headersList.get("x-forwarded-proto") ?? "https";
+  const cardShareUrl = `${proto}://${host}/cards/${encodeURIComponent(card.id)}`;
+
   const otherPrintings = getCardsByName(card.name).filter((c) => c.id !== card.id);
   // Pull other cards illustrated by the same artist. Cap to ~3 rows at lg
   // (8 cols) so a prolific illustrator's catalog doesn't take over the
@@ -115,6 +125,7 @@ export default async function CardDetailPage({ params }: Props) {
             number={card.number}
             isAuthenticated={Boolean(user)}
             image={image}
+            action={<ShareCardButton shareUrl={cardShareUrl} />}
           />
         )}
       />

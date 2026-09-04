@@ -367,17 +367,22 @@ describe("replay frames: full discard pile", () => {
 
   it("orders the pile most-recently-discarded first", () => {
     // MoonSheikah's Budew is Knocked Out, then — in the same block, right
-    // after — their (second, Buddy-Buddy Poffin-fetched) Froakie is too.
-    // Once both have landed in the discard pile, the more recent KO
-    // (Froakie) should read before the earlier one (Budew), not in the
-    // order they actually happened.
-    const afterBothKOs = asExporter.frames.find(
-      (f) =>
-        f.opponent.discard.some((c) => c.name === "Budew") &&
-        f.opponent.discard.some((c) => c.name === "Froakie"),
+    // after — their (second, Buddy-Buddy Poffin-fetched) Froakie is too. The
+    // more recent KO (Froakie) should read before the earlier one (Budew),
+    // not in the order they actually happened.
+    //
+    // Anchored on the knockout itself rather than on "the first frame where
+    // both names appear". That shortcut was only ever accidentally correct:
+    // this deck runs two Froakie, and once the parser started reading the
+    // Buddy-Buddy Poffin bench fetches, the other one reaches the discard
+    // well before either knockout — so the shortcut started selecting a
+    // frame from the middle of the game and comparing the wrong Froakie.
+    const afterBothKOs = asExporter.frames.find((f) =>
+      /Froakie was Knocked Out/.test(f.summary),
     );
     expect(afterBothKOs).toBeDefined();
     const names = afterBothKOs!.opponent.discard.map((c) => c.name);
+    expect(names).toContain("Budew");
     expect(names.indexOf("Froakie")).toBeLessThan(names.indexOf("Budew"));
   });
 

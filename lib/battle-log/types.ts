@@ -10,7 +10,11 @@
 // or "all attacks that triggered Powerful Rage". When in doubt, prefer
 // adding a new type over overloading an existing one.
 
-export const PARSER_VERSION = 1;
+/** Bumped to 2: the parser now reads effect-driven damage-counter lines
+ *  ("put a damage counter on", "moved N damage counters from ... to ...")
+ *  that were previously dropped on the floor. Rows stamped with version 1
+ *  were parsed without them and are missing those actions. */
+export const PARSER_VERSION = 2;
 
 export type Actor = "player" | "opponent" | "system";
 
@@ -66,6 +70,15 @@ export type ActionType =
   // Conditions
   | "condition_applied"
   | "damage_counter_placed"
+  /** An effect placing one damage counter on each of several Pokémon at
+   *  once — Froslass's Freezing Shroud during Pokémon Checkup. One action
+   *  per activation, listing every Pokémon hit, rather than one action per
+   *  line: the log's own per-line owner attribution is unreliable (see
+   *  parse.ts), so the targets can only be resolved as a set. */
+  | "damage_counters_placed"
+  /** Damage counters moved from one Pokémon to another — Munkidori's
+   *  Adrena-Brain. */
+  | "damage_counters_moved"
   // End
   | "game_end"
   // Catch-all

@@ -74,6 +74,11 @@ export interface CardInstance {
   name: string;
   /** Catalog row if the name resolved, else null (still tracked positionally). */
   catalog: EngineCard | null;
+  /** The card's TCG Live printing id ("sv9_175") when the verbose export
+   *  carried it. Distinguishes two same-named cards of different printings so
+   *  a name-only reference can be resolved to the right instance; null on the
+   *  standard export, where every reference is name-only anyway. */
+  printingId?: string;
   /** Set when the instance was created from an unrevealed source (deck top,
    *  prize, opponent hand pre-reveal) so the UI can dim it. */
   unrevealed?: boolean;

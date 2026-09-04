@@ -35,12 +35,28 @@ import {
  * capture the id together with the name (they use `.+?`), so this runs once
  * per action after matching rather than complicating every regex.
  */
+// Fields naming a Pokémon INSTANCE (not an energy/trainer). For these we keep
+// the stripped printing id on a companion `${field}_id` so the reducer can tell
+// two same-named-but-different-printing Pokémon apart when resolving a target —
+// the global name→id map is lossy (first id wins), so per-occurrence is needed.
+const POKEMON_ID_FIELDS = new Set<string>([
+  "card",
+  "target",
+  "from",
+  "to",
+  "pokemon",
+  "source",
+  "attacker",
+  "defender",
+]);
+
 function stripActionCardIds(a: ParsedAction, ids: Record<string, string>): void {
   for (const f of CARD_NAME_FIELDS) {
     const v = a.payload[f];
     if (typeof v === "string") {
       const { name, id } = splitCardId(v);
       a.payload[f] = name;
+      if (id && POKEMON_ID_FIELDS.has(f)) a.payload[`${f}_id`] = id;
       if (id && !(name in ids)) ids[name] = id;
     }
   }
@@ -182,6 +198,45 @@ function extractDiscardDraw(block: Block): DiscardDraw {
   }
 
   return { discarded, drawn, drawnCount, drawCounts };
+}
+
+/**
+ * Detect a Pokémon ability that shuffles the Pokémon itself back into its
+ * owner's deck — Dudunsparce's "Run Away Draw" and the like. TCG Live writes
+ * the activation as a bare "X played (id) Name." (no board location), with the
+ * self-return hidden in a child "shuffled N cards into their deck." line whose
+ * bullet list includes that same Pokémon (its whole evolution stack).
+ *
+ * Without modelling it, the benched Pokémon never leaves play and the bench
+ * over-counts (it can even exceed the 5-card cap). We only fire when the played
+ * Pokémon names *itself* in a shuffle-into-deck list, which no other draw/shuffle
+ * ability does, so this can't mistake a hand-shuffling effect for a board move.
+ *
+ * `playedValue` is the raw "(id) Name" as matched (id not yet stripped).
+ */
+function returnsSelfToDeck(block: Block, playedValue: string): boolean {
+  const playedName = splitCardId(playedValue).name;
+  let pendingShuffle = false;
+  for (const child of block.children) {
+    if (child.kind === "bullet") {
+      if (pendingShuffle) {
+        const names = splitCardList(child.text).map((c) => splitCardId(c).name);
+        if (names.includes(playedName)) return true;
+      }
+      continue;
+    }
+    const t = normalizeQuotes(child.text);
+    pendingShuffle = false;
+    // Multi-card form: names arrive on the bullet underneath.
+    if (/^(.+?) shuffled (\d+) cards? into their deck\.$/.test(t)) {
+      pendingShuffle = true;
+      continue;
+    }
+    // Single-card inline form: the name is on the dash itself.
+    const one = t.match(/^(.+?) shuffled (.+?) into their deck\.$/);
+    if (one && splitCardId(one[2]).name === playedName) return true;
+  }
+  return false;
 }
 
 export interface MulliganReveal {
@@ -608,6 +663,12 @@ const PATTERNS: Pattern[] = [
         drawn_cards: dd.drawn,
         drawn_count: dd.drawnCount,
         forced_switches: switches,
+        // Signals a Pokémon ability that shuffles the Pokémon itself back into
+        // the deck (Dudunsparce's Run Away Draw), written as a bare "played X."
+        // The reducer confirms with an in-play check before removing it — a
+        // Supporter that shuffles a copy of itself from hand (Lillie's
+        // Determination) also names itself here but is never in play.
+        self_returned_to_deck: returnsSelfToDeck(b, m[2]),
       });
     },
   },
@@ -669,9 +730,47 @@ const PATTERNS: Pattern[] = [
  */
 function extractChildActions(block: Block): ParsedAction[] {
   const out: ParsedAction[] = [];
+  // Nearest "drew ... and played them to the Bench" dash above, waiting for
+  // the bullet that names the cards. Same document-order pairing as
+  // extractDiscardDraw — bullets carry no marker saying which dash owns them.
+  let pendingBench: { actor: string; raw: string } | null = null;
+
   for (const child of block.children) {
-    if (child.kind !== "dash") continue;
+    if (child.kind === "bullet") {
+      if (pendingBench) {
+        for (const name of splitCardList(child.text)) {
+          out.push(action("play_to_bench", pendingBench.actor, pendingBench.raw, { card: name }));
+        }
+        pendingBench = null;
+      }
+      continue;
+    }
     const t = normalizeQuotes(child.text);
+    // Any other dash ends the previous one's bullet run, so an unrelated
+    // later list can't be misattributed to it.
+    pendingBench = null;
+
+    // Pokémon fetched from the deck straight onto the Bench — Buddy-Buddy
+    // Poffin, a Telepathic Psychic Energy trigger.
+    //
+    // These were dropped entirely, and the consequences showed up much later
+    // and looked like something else: the engine never put the Pokémon on the
+    // bench, so when one of them was promoted the switch_active handler
+    // conjured it out of nowhere, and a viewer saw a card appear in the
+    // Active Spot having never been anywhere. Every name is right there in
+    // the bullet underneath.
+    const benchMulti = t.match(
+      /^(.+?) drew (\d+) cards? and played them to the Bench\.$/,
+    );
+    if (benchMulti) {
+      pendingBench = { actor: benchMulti[1], raw: child.raw };
+      continue;
+    }
+    const benchOne = t.match(/^(.+?) drew (.+?) and played it to the Bench\.$/);
+    if (benchOne) {
+      out.push(action("play_to_bench", benchOne[1], child.raw, { card: benchOne[2] }));
+      continue;
+    }
 
     const cond = t.match(
       /^(.+?)'s (.+?) is now (Poisoned|Burned|Asleep|Confused|Paralyzed)\.$/,
@@ -727,7 +826,62 @@ function extractChildActions(block: Block): ParsedAction[] {
           from_condition: counter[4],
         }),
       );
+      continue;
     }
+
+    // Damage counters moved between Pokémon — Munkidori's Adrena-Brain.
+    //
+    // Both possessives are unreliable, exactly as for the placement lines
+    // below: Adrena-Brain moves damage from your own Pokémon onto the
+    // opponent's, and the log stamps both ends with the same handle. Only
+    // the names are trustworthy, so they are all the payload carries.
+    const moved = t.match(
+      /^(.+?) moved (\d+) damage counters? from (.+?)'s (.+?) to (.+?)'s (.+?)\.$/,
+    );
+    if (moved) {
+      out.push(
+        action("damage_counters_moved", moved[1], child.raw, {
+          counters: Number(moved[2]),
+          from: moved[4],
+          to: moved[6],
+        }),
+      );
+      continue;
+    }
+  }
+
+  // Effect-driven damage counters, gathered across the whole block into ONE
+  // action rather than one per line.
+  //
+  // Froslass's Freezing Shroud puts a counter on every Pokémon in play with
+  // an ability — both players' — and TCG Live writes one child line each:
+  //
+  //   Qjiaaap's Froslass used Freezing Shroud.
+  //   - a11father put a damage counter on Qjiaaap's N's Zoroark ex.
+  //
+  // Neither handle on those lines can be trusted. The leading actor flips
+  // between checkups for the same Froslass, and the possessive is stamped
+  // with one player's name for every target including the opponent's — the
+  // N's Zoroark ex above is a11father's. What IS reliable is the set of
+  // names, so the whole activation becomes a single action listing them and
+  // the engine resolves them together against both boards. That also stops
+  // the replay from treating one ability as six separate events.
+  const placements = block.children.flatMap((child) => {
+    if (child.kind !== "dash") return [];
+    const m = normalizeQuotes(child.text).match(
+      /^(.+?) put (?:a|(\d+)) damage counters? on (.+?)'s (.+?)\.$/,
+    );
+    return m ? [{ actor: m[1], count: Number(m[2] ?? 1), name: m[4], raw: child.raw }] : [];
+  });
+  if (placements.length > 0) {
+    out.push(
+      action("damage_counters_placed", placements[0].actor, block.text, {
+        // One entry per line, duplicates included: three "Munkidori" lines
+        // mean three different Munkidori in play, not one hit three times.
+        targets: placements.map((p) => p.name),
+        counters: placements.map((p) => p.count),
+      }),
+    );
   }
   return out;
 }

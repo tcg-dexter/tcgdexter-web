@@ -20,8 +20,10 @@
 //   npm run ml:selfplay -- [--games N] [--seed S] [--decks M]
 //                          [--skills 0.35,0.65,1] [--max-turns T]
 //                          [--store PATH]
-//                          [--matchup meta|meta-vs-community|community]
+//                          [--matchup meta|meta-vs-community|community
+//                                    |meta-vs-generated|generated]
 //                          [--community-decks N] [--decks-file PATH]
+//                          [--generated-decks N] [--generated-run HASH]
 //
 // --decks-file swaps the live meta-archetype slice for a frozen benchmark
 // fixture (data/ml/benchmark-decks.json) so training decks match the duel
@@ -34,6 +36,13 @@
 // user-saved decks, not the curated meta list. Community decks are content-
 // addressed (id = community:<hash>); no user_id/name ever reaches this
 // script's params/logs/store.
+//
+// meta-vs-generated and generated draw on SYNTHESIZED decks (scripts/ml/
+// gen_decks.ts), also content-addressed (id = gen:<hash>). Their provenance
+// — parent deck, generator, the exact edits — lives in generated_decks, so
+// a policy_games row can be joined back to what the deck actually IS. That
+// join is the whole point: a corpus of outcomes with no record of what was
+// changed teaches nothing.
 
 import path from "node:path";
 import { createHash } from "node:crypto";
@@ -50,6 +59,7 @@ import {
 } from "@/lib/ml/features";
 import { DEFAULT_SKILLS, generateSelfPlayGames } from "@/lib/ml/selfplay";
 import { loadCommunityDecks } from "@/lib/ml/communityDecks";
+import { loadGeneratedDecks } from "@/lib/ml/generatedDecks";
 import { loadBenchmarkDecks } from "@/lib/ml/benchmarkDecks";
 import { readWinProbArtifact } from "@/lib/ml/winprob";
 import { readValueArtifact } from "@/lib/ml/botEvaluator";
@@ -80,14 +90,29 @@ const skills = skillsArg
       .filter((n) => Number.isFinite(n) && n >= 0 && n <= 1)
   : [];
 
-type Matchup = "meta" | "meta-vs-community" | "community";
-const MATCHUPS: Matchup[] = ["meta", "meta-vs-community", "community"];
+type Matchup =
+  | "meta"
+  | "meta-vs-community"
+  | "community"
+  | "meta-vs-generated"
+  | "generated";
+const MATCHUPS: Matchup[] = [
+  "meta",
+  "meta-vs-community",
+  "community",
+  "meta-vs-generated",
+  "generated",
+];
 const matchupArg = argValue("--matchup") ?? "meta";
 if (!MATCHUPS.includes(matchupArg as Matchup)) {
   throw new Error(`--matchup must be one of ${MATCHUPS.join("/")}, got "${matchupArg}"`);
 }
 const matchup = matchupArg as Matchup;
 const communityDeckCount = numOrNull(argValue("--community-decks")) ?? 30;
+const generatedDeckCount = numOrNull(argValue("--generated-decks")) ?? 30;
+// Pin a specific generation run, so a training corpus stays reproducible
+// even after gen_decks.ts has added newer decks to the store.
+const generatedRun = argValue("--generated-run");
 const decksFile = argValue("--decks-file");
 
 /* ─── Sparse encoding ───────────────────────────────────────────── */
@@ -175,7 +200,8 @@ function main(): void {
         }))
         .filter((d) => d.list.length > 0);
 
-  const needsCommunity = matchup !== "meta";
+  const needsCommunity = matchup === "meta-vs-community" || matchup === "community";
+  const needsGenerated = matchup === "meta-vs-generated" || matchup === "generated";
   const communityDecks = needsCommunity
     ? loadCommunityDecks(storePath).slice(0, communityDeckCount)
     : [];
@@ -187,13 +213,38 @@ function main(): void {
     );
   }
 
-  // poolA/poolB: which deck pool plays which side, per matchup mode. "meta"
-  // and "community" use the SAME pool both sides (so schedule()'s built-in
-  // anti-mirror trick applies); "meta-vs-community" uses two distinct pools.
-  const poolA = matchup === "community" ? communityDecks : metaDecks;
-  const poolB = matchup === "meta-vs-community" ? communityDecks : poolA;
-  const sourceOf = (id: string): "meta" | "community" =>
-    id.startsWith("community:") ? "community" : "meta";
+  // Generated decks: synthesized from the real corpus with full provenance
+  // in the store (scripts/ml/gen_decks.ts). The pilot only ever meeting 30
+  // deck shapes is the distribution problem W5 left open; this is the pool
+  // that widens it.
+  const generatedDecks = needsGenerated
+    ? loadGeneratedDecks(storePath, {
+        limit: generatedDeckCount,
+        ...(generatedRun ? { runHash: generatedRun } : {}),
+      }).map((d) => ({ id: d.id, list: d.list }))
+    : [];
+  if (needsGenerated && generatedDecks.length === 0) {
+    throw new Error(
+      `[selfplay] --matchup ${matchup} needs generated decks, but none are in ${storePath}. ` +
+        `Run: npx tsx scripts/ml/gen_decks.ts --count 200 --seed 1`,
+    );
+  }
+
+  // poolA/poolB: which deck pool plays which side, per matchup mode. "meta",
+  // "community" and "generated" use the SAME pool both sides (so schedule()'s
+  // built-in anti-mirror trick applies); the "-vs-" modes use two distinct
+  // pools, with the META side as pool A so a generated deck is always
+  // measured against a real one.
+  const poolA =
+    matchup === "community" ? communityDecks : matchup === "generated" ? generatedDecks : metaDecks;
+  const poolB =
+    matchup === "meta-vs-community"
+      ? communityDecks
+      : matchup === "meta-vs-generated"
+        ? generatedDecks
+        : poolA;
+  const sourceOf = (id: string): "meta" | "community" | "generated" =>
+    id.startsWith("community:") ? "community" : id.startsWith("gen:") ? "generated" : "meta";
 
   const effectiveSkills = skills.length ? skills : DEFAULT_SKILLS;
   const artifact = readWinProbArtifact();
@@ -217,7 +268,15 @@ function main(): void {
     ...(matchup !== "meta"
       ? {
           matchup,
-          community_decks: communityDecks.map((d) => ({ id: d.id, list_hash: listHash(d.list) })),
+          ...(needsCommunity
+            ? { community_decks: communityDecks.map((d) => ({ id: d.id, list_hash: listHash(d.list) })) }
+            : {}),
+          // Generated decks are content-addressed, so their ids ARE their
+          // list hashes — but the pairing is recorded the same way so the
+          // run identity names exactly which decks played.
+          ...(needsGenerated
+            ? { generated_decks: generatedDecks.map((d) => ({ id: d.id, list_hash: listHash(d.list) })) }
+            : {}),
         }
       : {}),
     value_model: artifact ? artifact.model_version : null,
@@ -261,7 +320,8 @@ function main(): void {
   console.log(
     `[selfplay] schema v${POLICY_SCHEMA_VERSION} engine v${ENGINE_VERSION} sim v${SIM_VERSION} ` +
       `matchup=${matchup} seed=${seed} games=${games} meta_decks=${metaDecks.length} ` +
-      `community_decks=${communityDecks.length} skills=${effectiveSkills.join("/")} ` +
+      `community_decks=${communityDecks.length} generated_decks=${generatedDecks.length} ` +
+      `skills=${effectiveSkills.join("/")} ` +
       `evaluator=${valueArtifact ? valueArtifact.model_version : params.value_model ?? "heuristic-only"}`,
   );
   const startedAt = Date.now();
