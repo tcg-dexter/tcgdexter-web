@@ -27,12 +27,12 @@ const config: Config = {
         mono: ["var(--font-geist-mono)"],
       },
       backgroundImage: {
-        "gradient-brand":         "linear-gradient(90deg, #F2A20C 0%, #D91E0D 50%, #A60D0D 100%)",
-        "gradient-brand-reverse": "linear-gradient(90deg, #A60D0D 0%, #D91E0D 50%, #F2A20C 100%)",
+        "gradient-brand":         "linear-gradient(90deg, #D99B29 0%, #8C2711 100%)",
+        "gradient-brand-reverse": "linear-gradient(90deg, #8C2711 0%, #D99B29 100%)",
       },
       boxShadow: {
-        "brand":    "0 4px 20px -4px rgba(217,30,13,0.35)",
-        "brand-lg": "0 20px 60px -15px rgba(217,30,13,0.25)",
+        "brand":    "0 4px 20px -4px rgba(140,39,17,0.35)",
+        "brand-lg": "0 20px 60px -15px rgba(140,39,17,0.25)",
       },
     },
   },

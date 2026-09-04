@@ -10,10 +10,10 @@ const TEXT = "#1a1a1a";
 const SECONDARY = "#4a4a4a";
 const MUTED = "#888888";
 const BG = "#f2f2f2";
-// Brand gradient (amber → red → dark red), matching --gradient-brand in
+// Brand gradient (gold → deep red), matching --gradient-brand in
 // globals.css. Paired with a solid background-color so Outlook — which
 // ignores background-image — still fills with the accent.
-const GRADIENT = "linear-gradient(90deg,#F2A20C 0%,#D91E0D 50%,#A60D0D 100%)";
+const GRADIENT = "linear-gradient(90deg,#D99B29 0%,#8C2711 100%)";
 const FONT =
   "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 

@@ -23,8 +23,8 @@ export default function CertifiedTrainerBadge({
     >
       <defs>
         <radialGradient id="ct-fill" cx="50%" cy="40%" r="65%">
-          <stop offset="0%" stopColor="#F2A20C" />
-          <stop offset="55%" stopColor="#D91E0D" />
+          <stop offset="0%" stopColor="#D99B29" />
+          <stop offset="55%" stopColor="#8C2711" />
           <stop offset="100%" stopColor="#7A0808" />
         </radialGradient>
         <linearGradient id="ct-ring" x1="0%" y1="0%" x2="0%" y2="100%">

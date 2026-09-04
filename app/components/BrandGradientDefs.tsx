@@ -27,9 +27,8 @@ export default function BrandGradientDefs() {
           y2="29"
           gradientTransform="rotate(90 29 29)"
         >
-          <stop offset="0%" stopColor="#F2A20C" />
-          <stop offset="50%" stopColor="#D91E0D" />
-          <stop offset="100%" stopColor="#A60D0D" />
+          <stop offset="0%" stopColor="#D99B29" />
+          <stop offset="100%" stopColor="#8C2711" />
         </linearGradient>
       </defs>
     </svg>

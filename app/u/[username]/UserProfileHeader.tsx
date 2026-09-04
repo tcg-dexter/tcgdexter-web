@@ -30,12 +30,12 @@ export type BannerAccent = (typeof BANNER_ACCENT_KEYS)[number];
  *  Tailwind token is still used for stat tiles (Wins) — that one stays
  *  90deg by design. */
 export const BRAND_BANNER_GRADIENT =
-  "linear-gradient(180deg, #F2A20C 0%, #D91E0D 50%, #A60D0D 100%)";
+  "linear-gradient(180deg, #D99B29 0%, #8C2711 100%)";
 
 /** Top stop (0%) of the brand gradient — drives the mobile browser
  *  chrome via <ThemeColor> so the gradient appears to extend up to the
  *  status bar / notch on iOS Safari, Android Chrome, etc. */
-export const BRAND_BANNER_TOP_HEX = "#F2A20C";
+export const BRAND_BANNER_TOP_HEX = "#D99B29";
 
 /**
  * Compute the CSS gradient string for a stored `banner_accent`. NULL or

@@ -5,18 +5,18 @@
  * consume them via inline style / `bg-[...]` arbitrary classes.
  */
 
-/** 3-stop warm gradient used on the headline accent, primary CTAs, and the
- *  glow ring around the deck input. Amber → red → crimson. */
+/** 2-stop warm gradient used on the headline accent, primary CTAs, and the
+ *  glow ring around the deck input. Gold → deep red. */
 export const BRAND_GRADIENT =
-  "linear-gradient(90deg,#F2A20C_0%,#D91E0D_50%,#A60D0D_100%)";
+  "linear-gradient(90deg,#D99B29_0%,#8C2711_100%)";
 
 /** Same gradient expressed without underscores (for inline style consumption). */
 export const BRAND_GRADIENT_CSS =
-  "linear-gradient(90deg,#F2A20C 0%,#D91E0D 50%,#A60D0D 100%)";
+  "linear-gradient(90deg,#D99B29 0%,#8C2711 100%)";
 
 /** Warm, coral-red tinted shadow used under the hero input card and the
  *  final-CTA panel. */
-export const WARM_SHADOW = "0 20px 60px -15px rgba(217,30,13,0.25)";
+export const WARM_SHADOW = "0 20px 60px -15px rgba(140,39,17,0.25)";
 
 /** Eyebrow accent color (section intros). Matches the project accent. */
 export const EYEBROW_COLOR = "#D91E0D";

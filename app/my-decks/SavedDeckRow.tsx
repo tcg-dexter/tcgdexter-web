@@ -78,7 +78,7 @@ export function FormPips({ recentForm }: { recentForm?: ("W" | "L" | "D")[] }) {
           key={i}
           className={`w-[17px] h-[17px] rounded-full text-[9px] font-extrabold flex items-center justify-center ${
             r === "W"
-              ? "bg-[linear-gradient(135deg,#F2A20C_0%,#D91E0D_50%,#A60D0D_100%)] text-white"
+              ? "bg-[linear-gradient(135deg,#D99B29_0%,#8C2711_100%)] text-white"
               : r === "L"
               ? "bg-black dark:bg-white text-white dark:text-black"
               : "bg-black/5 text-text-muted"
