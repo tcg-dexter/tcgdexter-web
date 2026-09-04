@@ -1065,6 +1065,20 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                 </div>
               )}
               </div>
+
+              {/* Loading indicator — shown while /resolve is in flight for the
+                  selected deck. Overlaid rather than swapped in for `tiles`
+                  so switching decks doesn't blank the mat while stale piles
+                  are still visible underneath. */}
+              {loading && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center">
+                  <div
+                    className={`h-6 w-6 animate-spin rounded-full border-2 border-t-transparent ${
+                      hasDarkBg ? "border-white/70" : "border-text-muted"
+                    }`}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
