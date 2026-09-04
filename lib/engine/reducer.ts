@@ -933,7 +933,25 @@ export function applyAction(
       // precisely because they can only be resolved as a set.
       const targets = (payload.targets as string[] | undefined) ?? [];
       const counts = (payload.counters as number[] | undefined) ?? [];
-      const inPlay = allInPlay(state);
+      // Bench before Active: this is also how an attack's own "put N damage
+      // counters on <name>" secondary/spread line arrives (extractChildActions
+      // runs on every block, attacks included, and folds it in here rather
+      // than into the attack's own splash_damage — see parse.ts). Almost every
+      // real "does N damage to 1 of your opponent's Benched Pokémon"-style
+      // effect targets the bench specifically, and the Active with that name
+      // was very often the attack's OWN primary defender (already accounted
+      // for by its printed damage this same beat) — searching Active first
+      // re-hit that same Pokémon instead of a benched duplicate (Dragapult
+      // ex's Phantom Dive: 200 to the opponent's Active plus 60 to a bench
+      // Pokémon sharing that Active's name showed 260 on the Active and
+      // nothing on the bench). A symmetric multi-target effect (Froslass's
+      // Freezing Shroud hitting every Pokémon with an ability, Active
+      // included) is unaffected either way — each of its lines still claims a
+      // distinct instance regardless of which order they're found in.
+      const inPlay = allInPlay(state).sort((a, b) =>
+        Number(a.mon === sideOf(state, a.owner)?.active) -
+        Number(b.mon === sideOf(state, b.owner)?.active),
+      );
       const claimed = new Set<PokemonInPlay>();
       const applied: { pokemon: string; owner: Actor; counters: number }[] = [];
       targets.forEach((name, i) => {

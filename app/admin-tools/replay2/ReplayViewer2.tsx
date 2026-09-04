@@ -91,6 +91,108 @@ export function matGradientForPrimary(name: string | null): string {
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
+/** A side with nothing in play yet — the generic pre-load board state. */
+const EMPTY_SIDE_FRAME: SideFrame = {
+  handle: null,
+  active: null,
+  bench: [],
+  hand: [],
+  handCount: 0,
+  deckCount: 60,
+  discardCount: 0,
+  discardTop: null,
+  discardTopImageUrl: null,
+  discard: [],
+  prizesRemaining: 6,
+};
+
+/**
+ * Stand-in board state shown the instant the viewer mounts, before the real
+ * first frame has loaded: two empty mats, full decks, six prizes apiece,
+ * nothing active or benched. Rendered through the exact same Board/PlayerMat
+ * path a real frame takes — turn 0 / phase "setup" reads as "before the game
+ * has started" everywhere else that already checks it (duringSetup, the
+ * camera), so the board sits calm and un-zoomed rather than needing its own
+ * special case. Once the real first frame arrives, swapping frame → real data
+ * lets each mat's own AnimatePresence carry the Pokémon in — that transition
+ * IS the "dissolve" from this generic state into actual gameplay, achieved
+ * for free by reusing machinery the board already has for a card appearing.
+ */
+const EMPTY_FRAME: ReplayFrame = {
+  actionIndex: -1,
+  turn: 0,
+  playerTurnNumber: 0,
+  phase: "setup",
+  actor: "system",
+  summary: "",
+  player: EMPTY_SIDE_FRAME,
+  opponent: EMPTY_SIDE_FRAME,
+  stadium: null,
+  prizesTaken: { player: 0, opponent: 0 },
+  winner: null,
+  lastPlayedTrainer: null,
+  discardDraw: null,
+  mulligan: null,
+  locks: {
+    player: { item: false, retreat: false },
+    opponent: { item: false, retreat: false },
+  },
+};
+
+/** An opening hand's worth (7) of face-down cards, gently overlapped into a
+ *  fan and bobbing like they're still being considered — centered on one
+ *  mat. `topPct` places it at that mat's own vertical center within the
+ *  board (25%/75% — the board is two equal-height mats stacked). */
+function MatLoadingHand({ topPct }: { topPct: string }) {
+  return (
+    <div
+      className="absolute left-1/2 flex -translate-x-1/2 -translate-y-1/2"
+      style={{ top: topPct }}
+    >
+      {Array.from({ length: 7 }, (_, i) => (
+        <motion.img
+          key={i}
+          src={CARD_BACK_URL}
+          alt=""
+          aria-hidden
+          className={`h-10 w-auto rounded shadow-[0_6px_16px_rgba(0,0,0,0.4)] sm:h-12 ${
+            i === 0 ? "" : "-ml-4 sm:-ml-5"
+          }`}
+          style={{ aspectRatio: "245 / 342" }}
+          animate={{ y: [0, -8, 0] }}
+          transition={{
+            duration: 1.1,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: i * 0.1,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Sits over the board while the real first frame is still loading — an
+ * opening hand's worth of face-down cards centered on each mat, bobbing,
+ * with no "Loading" label; the empty mats themselves already say that
+ * plainly enough. Fades out the instant real data lands (see its caller).
+ */
+function BoardLoadingCue() {
+  return (
+    <motion.div
+      className="pointer-events-none absolute inset-0 z-30"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      <MatLoadingHand topPct="25%" />
+      <MatLoadingHand topPct="75%" />
+    </motion.div>
+  );
+}
+
 function PlayPauseIcon({ playing }: { playing: boolean }) {
   return playing ? (
     <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current" aria-hidden>
@@ -1074,7 +1176,11 @@ function HandStrip({
     >
       <AttachedRowChevron
         direction="left"
-        visible={overflow.left}
+        // A normal opening hand (7 cards or fewer) never needs the affordance
+        // even if a narrow viewport happens to compute some scroll overflow
+        // for it — the chevron is for a hand swollen past that (multiple
+        // draws in a turn), not routine size.
+        visible={cards.length > 7 && overflow.left}
         onClick={() => scrollByCard(-1)}
         label="hand"
       />
@@ -1215,7 +1321,7 @@ function HandStrip({
       </div>
       <AttachedRowChevron
         direction="right"
-        visible={overflow.right}
+        visible={cards.length > 7 && overflow.right}
         onClick={() => scrollByCard(1)}
         label="hand"
       />
@@ -1920,17 +2026,25 @@ function Board({
     const released = landed.action === beat.actionIndex ? landed.count : 0;
     return Math.max(0, flight.count - released);
   })();
-  const visibleHand = frame
-    ? frame.player.hand.slice(0, Math.max(0, frame.player.hand.length - drawnInFlight))
-    : [];
+  // The board always has SOMETHING to render — the generic empty state before
+  // the real first frame loads, see EMPTY_FRAME — so every downstream read
+  // below uses this rather than the raw (possibly null) `frame`. Swapping
+  // from EMPTY_FRAME to real data is what lets each mat's own AnimatePresence
+  // carry Pokémon in, rather than needing a bespoke loading branch.
+  const displayFrame: ReplayFrame = frame ?? EMPTY_FRAME;
+
+  const visibleHand = displayFrame.player.hand.slice(
+    0,
+    Math.max(0, displayFrame.player.hand.length - drawnInFlight),
+  );
 
   const opponentDiscard = discardExcludingFloatingTrainer(
-    frame?.opponent ?? null,
-    frame?.lastPlayedTrainer?.actor === "opponent" ? frame.lastPlayedTrainer : null,
+    displayFrame.opponent,
+    displayFrame.lastPlayedTrainer?.actor === "opponent" ? displayFrame.lastPlayedTrainer : null,
   );
   const playerDiscard = discardExcludingFloatingTrainer(
-    frame?.player ?? null,
-    frame?.lastPlayedTrainer?.actor === "player" ? frame.lastPlayedTrainer : null,
+    displayFrame.player,
+    displayFrame.lastPlayedTrainer?.actor === "player" ? displayFrame.lastPlayedTrainer : null,
   );
 
   const matWidth =
@@ -1963,12 +2077,17 @@ function Board({
         <div className="rounded-2xl border border-accent/40 bg-white p-6 text-sm text-accent">
           {error}
         </div>
-      ) : !frame ? (
+      ) : !frame && !loading ? (
         <div className="rounded-2xl border border-black/8 bg-white p-10 text-center text-sm text-text-secondary">
-          {loading ? "Loading replay…" : "Pick a battle below to begin."}
+          Pick a battle below to begin.
         </div>
       ) : (
         <>
+        {/* While the real first frame is still loading, the board underneath
+            is already showing EMPTY_FRAME's generic empty mats (see
+            displayFrame) — this just adds the bobbing card-back cue on top.
+            AnimatePresence fades it out the instant real data lands. */}
+        <AnimatePresence>{!frame && <BoardLoadingCue />}</AnimatePresence>
         {/* Camera stage. The transform lives on a wrapper around the mats so
             the mats' own layout — which every geometry calculation in
             BoardKit depends on — is untouched by it. The FX canvas sits
@@ -2094,21 +2213,21 @@ function Board({
                 plate all sit ON this mat and nothing else. See
                 SetupMatCeremony — watches the beat and only lights up when
                 a setup ceremony concerns this mat's actor. */}
-            <SetupMatCeremony actor="opponent" handle={frame.opponent.handle ?? null} />
+            <SetupMatCeremony actor="opponent" handle={displayFrame.opponent.handle ?? null} />
             <PlayerMat
               side="player"
-              bench={frame.opponent.bench}
-              active={frame.opponent.active}
+              bench={displayFrame.opponent.bench}
+              active={displayFrame.opponent.active}
               discardCount={opponentDiscard.count}
               discardTop={opponentDiscard.top}
               discardTopImageUrl={opponentDiscard.topImageUrl}
-              deckCount={frame.opponent.deckCount}
-              handCount={frame.opponent.handCount}
-              prizesRemaining={frame.opponent.prizesRemaining}
-              stadium={frame.stadium?.owner === "opponent" ? frame.stadium : null}
+              deckCount={displayFrame.opponent.deckCount}
+              handCount={displayFrame.opponent.handCount}
+              prizesRemaining={displayFrame.opponent.prizesRemaining}
+              stadium={displayFrame.stadium?.owner === "opponent" ? displayFrame.stadium : null}
               lastPlayedTrainer={
-                frame.lastPlayedTrainer?.actor === "opponent"
-                  ? frame.lastPlayedTrainer
+                displayFrame.lastPlayedTrainer?.actor === "opponent"
+                  ? displayFrame.lastPlayedTrainer
                   : null
               }
               cardWidth={cardWidth}
@@ -2117,23 +2236,23 @@ function Board({
               actor="opponent"
               matGradient={opponentMatGradient}
               onDiscardClick={() => onOpenDiscardInspect("opponent")}
-              locks={frame.locks.opponent}
+              locks={displayFrame.locks.opponent}
             />
             <AnimatePresence>
-              {frame.discardDraw?.actor === "opponent" && (
+              {displayFrame.discardDraw?.actor === "opponent" && (
                 <DiscardDrawOverlay
-                  key={frame.actionIndex}
-                  detail={frame.discardDraw}
+                  key={displayFrame.actionIndex}
+                  detail={displayFrame.discardDraw}
                   cardWidth={cardWidth}
                   matWidth={matWidth}
                 />
               )}
             </AnimatePresence>
             <AnimatePresence>
-              {frame.mulligan?.actor === "opponent" && (
+              {displayFrame.mulligan?.actor === "opponent" && (
                 <MulliganOverlay
                   key="mulligan-opponent"
-                  detail={frame.mulligan}
+                  detail={displayFrame.mulligan}
                   cardWidth={cardWidth}
                   matWidth={matWidth}
                 />
@@ -2163,15 +2282,15 @@ function Board({
           </InspectContext.Provider>
           <MatTab
             edge="bottom"
-            name={frame.opponent.handle ?? "Opponent"}
+            name={displayFrame.opponent.handle ?? "Opponent"}
             profileUsername={opponentProfileUsername}
-            prizesRemaining={frame.opponent.prizesRemaining}
+            prizesRemaining={displayFrame.opponent.prizesRemaining}
           />
           <MatTab
             edge="top"
-            name={frame.player.handle ?? "Player"}
+            name={displayFrame.player.handle ?? "Player"}
             profileUsername={playerProfileUsername}
-            prizesRemaining={frame.player.prizesRemaining}
+            prizesRemaining={displayFrame.player.prizesRemaining}
           />
           <InspectContext.Provider
             value={(target) => onOpenMatInspect("player", target)}
@@ -2179,21 +2298,21 @@ function Board({
           <div className="relative z-10">
             {/* Setup ceremony overlay for the bottom mat — see its twin on
                 the top mat above and SetupMatCeremony itself. */}
-            <SetupMatCeremony actor="player" handle={frame.player.handle ?? null} />
+            <SetupMatCeremony actor="player" handle={displayFrame.player.handle ?? null} />
             <PlayerMat
               side="opponent"
-              bench={frame.player.bench}
-              active={frame.player.active}
+              bench={displayFrame.player.bench}
+              active={displayFrame.player.active}
               discardCount={playerDiscard.count}
               discardTop={playerDiscard.top}
               discardTopImageUrl={playerDiscard.topImageUrl}
-              deckCount={frame.player.deckCount}
-              handCount={frame.player.handCount}
-              prizesRemaining={frame.player.prizesRemaining}
-              stadium={frame.stadium?.owner === "player" ? frame.stadium : null}
+              deckCount={displayFrame.player.deckCount}
+              handCount={displayFrame.player.handCount}
+              prizesRemaining={displayFrame.player.prizesRemaining}
+              stadium={displayFrame.stadium?.owner === "player" ? displayFrame.stadium : null}
               lastPlayedTrainer={
-                frame.lastPlayedTrainer?.actor === "player"
-                  ? frame.lastPlayedTrainer
+                displayFrame.lastPlayedTrainer?.actor === "player"
+                  ? displayFrame.lastPlayedTrainer
                   : null
               }
               cardWidth={cardWidth}
@@ -2202,23 +2321,23 @@ function Board({
               actor="player"
               matGradient={playerMatGradient}
               onDiscardClick={() => onOpenDiscardInspect("player")}
-              locks={frame.locks.player}
+              locks={displayFrame.locks.player}
             />
             <AnimatePresence>
-              {frame.discardDraw?.actor === "player" && (
+              {displayFrame.discardDraw?.actor === "player" && (
                 <DiscardDrawOverlay
-                  key={frame.actionIndex}
-                  detail={frame.discardDraw}
+                  key={displayFrame.actionIndex}
+                  detail={displayFrame.discardDraw}
                   cardWidth={cardWidth}
                   matWidth={matWidth}
                 />
               )}
             </AnimatePresence>
             <AnimatePresence>
-              {frame.mulligan?.actor === "player" && (
+              {displayFrame.mulligan?.actor === "player" && (
                 <MulliganOverlay
                   key="mulligan-player"
-                  detail={frame.mulligan}
+                  detail={displayFrame.mulligan}
                   cardWidth={cardWidth}
                   matWidth={matWidth}
                 />
@@ -2313,8 +2432,6 @@ function PlaybackModule({
   frameIndex,
   frameCount,
   turnStartIndices,
-  currentTurn,
-  totalTurns,
   canStepBack,
   canStepForward,
   canTurnBack,
@@ -2334,9 +2451,6 @@ function PlaybackModule({
   frameIndex: number;
   frameCount: number;
   turnStartIndices: number[];
-  /** state.turn.number for the current frame — 0 during setup, then 1, 2… */
-  currentTurn: number | null;
-  totalTurns: number;
   canStepBack: boolean;
   canStepForward: boolean;
   canTurnBack: boolean;
@@ -2363,12 +2477,6 @@ function PlaybackModule({
   onTurnForward: () => void;
   onScrub: (frameIndex: number) => void;
 }) {
-  const turnLabel =
-    frameCount === 0
-      ? "—"
-      : currentTurn === 0
-        ? "Setup"
-        : `Turn ${currentTurn} / ${totalTurns}`;
   const playButton = (
     <button
       type="button"
@@ -2440,26 +2548,6 @@ function PlaybackModule({
         onScrub={onScrub}
       />
 
-      {/* Three centred lines. The readout and the speed picker each get
-          their own, rather than stacking inside the control row's middle
-          column: both change width in use — the readout between "Setup"
-          and "Turn 13 / 13", the picker every time it expands to its
-          options — and while they shared a column with the play button,
-          that width fed the row and shoved the capsules in and out. On
-          their own lines their width is nobody else's business, so the
-          steppers hold a fixed spread.
-
-          sm:hidden rather than a desktop-only condition: mobile is the
-          narrow viewport where the turn stepper's own label is easy to
-          lose track of one-handed, and this line is the cheap reminder;
-          from sm: up there's more room to actually watch the scrubber and
-          the readout stops earning its keep. Matches this component's own
-          sm: breakpoint (the control row below switches its spacing at
-          the same point) rather than the site chrome's xl:. */}
-      <div className="mt-4 sm:hidden text-center text-[10px] tabular-nums text-text-muted">
-        {turnLabel}
-      </div>
-
       {/* Control row: capsules flank the play button and nothing else lives
           here, so items-center puts them on its midline by construction.
           Padding and the gap both step up at sm: — below that, the two
@@ -2468,14 +2556,12 @@ function PlaybackModule({
           than wrap, since nothing here is allowed to shrink onto a second
           line.
 
-          mt-1.5 sm:mt-8: the turn-label line above is display:none from
-          sm: up, which takes its own mt-4 and its line's height of
-          spacing with it — measured at ~33px total (mt-4 + a 10px line +
-          mt-1.5), so sm:mt-8 (32px, the closest step on the scale) stands
-          in for that gap directly on this row, and the scrubber and the
-          control row don't end up crowded together once the label
-          between them disappears. */}
-      <div className="mt-1.5 sm:mt-8 flex items-center justify-center gap-1.5 sm:gap-3">
+          mt-4 sm:mt-8: the mobile-only turn-readout line that used to sit
+          between the scrubber and this row (a "Turn 7 / 13" reminder) is
+          gone, so the gap no longer has to hold that line's own height —
+          halved again from the desktop value per feedback, down from the
+          uniform mt-8 this briefly was right after the label's removal. */}
+      <div className="mt-4 sm:mt-8 flex items-center justify-center gap-1.5 sm:gap-3">
         <StepCapsule
           label="Action"
           canBack={canStepBack}
@@ -3096,10 +3182,6 @@ export default function ReplayViewer({
   );
 
   const frameCount = data?.frames.length ?? 0;
-  // Turn numbers are monotonic (0 = setup, then 1, 2, 3… per lib/engine/sim's
-  // state.turn.number), so the last frame's is the battle's turn total.
-  const totalTurns =
-    data && data.frames.length > 0 ? data.frames[data.frames.length - 1].turn : 0;
 
   // Beats for the loaded battle, keyed by actionIndex. Frames and beats join
   // on that index rather than zipping: a discard-then-draw exchange and a
@@ -3496,8 +3578,6 @@ export default function ReplayViewer({
       frameIndex={frameIndex}
       frameCount={frameCount}
       turnStartIndices={turnStartIndices}
-      currentTurn={frame?.turn ?? null}
-      totalTurns={totalTurns}
       canStepBack={canStepBack}
       canStepForward={canStepForward}
       canTurnBack={canTurnBack}
