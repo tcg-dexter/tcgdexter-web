@@ -991,10 +991,12 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
         {/* Right on desktop: Mat + controls */}
         <div ref={matColumnRef} className="flex flex-col gap-3 md:order-last">
           <div ref={exportRef} className="flex flex-col gap-3">
-            {/* Mat header: deck name */}
+            {/* Mat header: deck name. Falls back to a non-breaking space
+                (not "") so the span's line box — and the mat's position
+                below it — doesn't collapse before a deck is selected. */}
             <div className="flex items-center gap-4">
               <span className="text-lg sm:text-xl font-semibold text-text-primary truncate">
-                {decks.find((d) => d.id === selectedDeckId)?.name ?? ""}
+                {decks.find((d) => d.id === selectedDeckId)?.name ?? " "}
               </span>
             </div>
 
@@ -1063,6 +1065,20 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                 </div>
               )}
               </div>
+
+              {/* Loading indicator — shown while /resolve is in flight for the
+                  selected deck. Overlaid rather than swapped in for `tiles`
+                  so switching decks doesn't blank the mat while stale piles
+                  are still visible underneath. */}
+              {loading && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center">
+                  <div
+                    className={`h-6 w-6 animate-spin rounded-full border-2 border-t-transparent ${
+                      hasDarkBg ? "border-white/70" : "border-text-muted"
+                    }`}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
