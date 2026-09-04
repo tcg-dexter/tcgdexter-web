@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import ReplayViewer2, {
   MatchupRow,
   CopyBattleLogButton,
+  ThreadCollapseToggle,
 } from "@/app/admin-tools/replay2/ReplayViewer2";
 import type { ReplayPayload2 } from "@/lib/replay2/beats";
 import BackButton from "@/app/components/ui/BackButton";
@@ -135,6 +136,14 @@ export default function BattleLogPage({
     <CopyBattleLogButton text={replay.data.battleLogRaw} />
   ) : null;
 
+  // The thread collapse/expand toggle's live state, lifted out of
+  // ReplayViewer2 the same way — its only implementation lives here in the
+  // desktop header now, anchored right, instead of above the thread aside.
+  const [threadToggle, setThreadToggle] = useState<{
+    collapsed: boolean;
+    toggle: () => void;
+  } | null>(null);
+
   // The stat header that used to lead the page — the winner-tinted hero with
   // the two decks' art, the archetype matchup, the date and the two-row stat
   // chart. Replay 2.0 is now the page's lead content, and this sits below it:
@@ -220,33 +229,47 @@ export default function BattleLogPage({
   return (
     // Page shell copied from /my-decks and /battles so the content below sits
     // on the same rails as the deck collection and the matches feed.
-    <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
-      {/* Toolbar row — desktop (xl+) only. The back button renders here
-          inline with the matchup row, rather than the matchup row getting
-          its own space above the viewer: the two share one row's worth of
-          height instead of costing the board an extra one. Below xl the back
-          button portals itself into the sticky toolbar (see BackButton) and
-          the matchup row doesn't render at all — the replay viewer is the
-          very top of the mobile page. */}
-      <div className="mb-3 hidden items-center gap-5 xl:flex">
+    <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_0.84rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
+      {/* Toolbar row — desktop (xl+) only. The back button, the matchup row,
+          and the thread collapse/expand toggle all share this one row rather
+          than each costing the board its own — that's the whole point of
+          moving them here instead of leaving them above/below the viewer.
+          A 3-column grid (not a flex row) is what lets the matchup row centre
+          on the PAGE rather than just in the space next to the back button:
+          the two flanking columns are equal-width (1fr each), so the middle
+          column's centre is the row's centre regardless of what either side
+          holds. Below xl the back button portals itself into the sticky
+          toolbar (see BackButton), the matchup row and toggle don't render at
+          all, and the replay viewer is the very top of the mobile page. */}
+      <div className="mb-3 hidden xl:grid xl:grid-cols-[1fr_auto_1fr] xl:items-center">
         <BackButton href="/" ariaLabel="Back" />
-        {replay?.data && (
-          <MatchupRow
-            playerName={replay.data.playerPrimaryName}
-            opponentName={replay.data.opponentPrimaryName}
-            playerGradient={replay.gradients.player}
-            opponentGradient={replay.gradients.opponent}
-            scale={1.25}
-          />
-        )}
+        <div className="justify-self-center">
+          {replay?.data && (
+            <MatchupRow
+              playerName={replay.data.playerPrimaryName}
+              opponentName={replay.data.opponentPrimaryName}
+              playerGradient={replay.gradients.player}
+              opponentGradient={replay.gradients.opponent}
+              scale={1.25}
+            />
+          )}
+        </div>
+        <div className="justify-self-end">
+          {threadToggle && (
+            <ThreadCollapseToggle
+              collapsed={threadToggle.collapsed}
+              onToggle={threadToggle.toggle}
+            />
+          )}
+        </div>
       </div>
 
       {hasBattleLog ? (
-        // Replay 2.0 leads the page; the matchup row lives in the toolbar
-        // above (desktop only — see that comment), not here. The stat header
-        // rides below the viewer, injected between its matchup/copy block —
-        // suppressed via showMatchupFooter, since this page renders its own
-        // matchup row + Copy button — and its thread.
+        // Replay 2.0 leads the page; the matchup row and thread toggle live
+        // in the toolbar above (desktop only — see that comment), not here.
+        // The stat header rides below the viewer, injected between its
+        // matchup/copy block — suppressed via showMatchupFooter, since this
+        // page renders its own matchup row + Copy button — and its thread.
         <div className="mt-6">
           <ReplayViewer2
             battleId={battleId}
@@ -257,6 +280,8 @@ export default function BattleLogPage({
             opponentColor={opponentColor}
             showMatchupFooter={false}
             onData={(data, gradients) => setReplay({ data, gradients })}
+            showThreadToggle={false}
+            onThreadToggleState={setThreadToggle}
             belowMatchupSlot={statHeader}
           />
         </div>

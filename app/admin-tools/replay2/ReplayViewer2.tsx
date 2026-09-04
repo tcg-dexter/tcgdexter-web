@@ -2892,6 +2892,19 @@ interface ReplayViewerProps {
     data: ReplayPayload2 | null,
     gradients: { player: string; opponent: string },
   ) => void;
+  /** When false, suppresses the desktop thread collapse/expand toggle at its
+   *  usual spot (above the thread aside). Pairs with onThreadToggleState so a
+   *  caller can render the same control itself elsewhere on the page (the
+   *  battle page anchors it in its header, inline with the back button and
+   *  matchup row). */
+  showThreadToggle?: boolean;
+  /** Fires whenever the toggle's relevant state changes: null when the
+   *  toggle doesn't apply (not desktop), otherwise its current collapsed
+   *  state and a function to flip it. Lets a caller that suppresses
+   *  showThreadToggle still render a working control elsewhere. */
+  onThreadToggleState?: (
+    state: { collapsed: boolean; toggle: () => void } | null,
+  ) => void;
 }
 
 export default function ReplayViewer({
@@ -2907,12 +2920,22 @@ export default function ReplayViewer({
   belowMatchupSlot,
   showMatchupFooter = true,
   onData,
+  showThreadToggle = true,
+  onThreadToggleState,
 }: ReplayViewerProps) {
   const [data, setData] = useState<ReplayPayload2 | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [frameIndex, setFrameIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
+  // The big "click to start" play cue over the board — see its render below.
+  // Dismissed for good the first time playback starts, from either the cue
+  // itself or the toolbar's play button (both funnel through togglePlay,
+  // which is what flips `playing`), so it never reappears on a later pause.
+  const [boardPlayCueDismissed, setBoardPlayCueDismissed] = useState(false);
+  useEffect(() => {
+    if (playing) setBoardPlayCueDismissed(true);
+  }, [playing]);
   const [speed, setSpeed] = useState<0.5 | 1 | 2 | 4>(initialSpeed);
   // Read inside the load effect via ref rather than listed as a dependency:
   // autoPlay isn't a reason to re-fetch replayUrl, just data the effect
@@ -3261,6 +3284,23 @@ export default function ReplayViewer({
   // full rail. (Mobile ignores this — threadCollapsedActive gates on isDesktop.)
   const [threadCollapsed, setThreadCollapsed] = useState(true);
   const threadCollapsedActive = isDesktop === true && threadCollapsed;
+  const toggleThreadCollapsed = useCallback(
+    () => setThreadCollapsed((v) => !v),
+    [],
+  );
+
+  // Hand the toggle's live state to a caller that renders it itself
+  // elsewhere (showThreadToggle={false}) — see onThreadToggleState. null
+  // outside desktop, where the control doesn't apply.
+  const onThreadToggleStateRef = useRef(onThreadToggleState);
+  onThreadToggleStateRef.current = onThreadToggleState;
+  useEffect(() => {
+    onThreadToggleStateRef.current?.(
+      isDesktop === true
+        ? { collapsed: threadCollapsedActive, toggle: toggleThreadCollapsed }
+        : null,
+    );
+  }, [isDesktop, threadCollapsedActive, toggleThreadCollapsed]);
 
   // Mobile landscape gets the same widescreen layout a collapsed-thread
   // desktop does — wide short mats, a thin thread column, vertical controls —
@@ -3507,44 +3547,22 @@ export default function ReplayViewer({
                 : undefined
             }
           >
-            {/* Toggle: a dashed-list glyph (the same one the card-catalog card
-                footer uses for its list button) in a circle sized to the thread
-                avatars and aligned with their column — centered in the thin
-                collapsed column, left-aligned with the avatar rail when
-                expanded. Sits above the scroll container so it stays put as the
-                thread scrolls. Desktop only — mobile landscape is always the
-                thin collapsed column, so a toggle there would do nothing. */}
-            {isDesktop === true && (
+            {/* Toggle — see ThreadCollapseToggle. Sits above the scroll
+                container so it stays put as the thread scrolls. Desktop only
+                — mobile landscape is always the thin collapsed column, so a
+                toggle there would do nothing. Suppressed via
+                showThreadToggle when a caller (the battle page) renders this
+                same control itself elsewhere — see onThreadToggleState. */}
+            {showThreadToggle && isDesktop === true && (
             <div
               className={`flex items-center pb-1 ${
                 threadCollapsedActive ? "justify-center" : "justify-start"
               }`}
             >
-              <button
-                type="button"
-                onClick={() => setThreadCollapsed((v) => !v)}
-                aria-label={threadCollapsedActive ? "Expand details thread" : "Collapse details thread"}
-                title={threadCollapsedActive ? "Expand details" : "Collapse details"}
-                className="flex h-[27px] w-[27px] items-center justify-center rounded-full border border-black/10 dark:border-white/10 text-text-secondary hover:bg-surface"
-              >
-                <svg
-                  aria-hidden="true"
-                  viewBox="0 0 20 20"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1.75}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M7 5.5h9" />
-                  <path d="M7 10h9" />
-                  <path d="M7 14.5h9" />
-                  <path d="M4 5.5h.01" />
-                  <path d="M4 10h.01" />
-                  <path d="M4 14.5h.01" />
-                </svg>
-              </button>
+              <ThreadCollapseToggle
+                collapsed={threadCollapsedActive}
+                onToggle={toggleThreadCollapsed}
+              />
             </div>
             )}
             <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-12 bg-gradient-to-b from-[var(--bg)] to-transparent" />
@@ -3572,7 +3590,36 @@ export default function ReplayViewer({
             <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-12 bg-gradient-to-t from-[var(--bg)] to-transparent" />
           </aside>
         )}
-        <div ref={boardRef} className={wideLayout ? "shrink-0" : "lg:shrink-0"}>
+        <div ref={boardRef} className={`relative ${wideLayout ? "shrink-0" : "lg:shrink-0"}`}>
+          {/* The "click to start" play cue: a large glassy circle centered on
+              the board, straddling the seam between the two mats so it reads
+              as an invitation to press play rather than belonging to either
+              side. Frosted-glass treatment (translucent white + backdrop
+              blur) makes it pop against every mat gradient without needing a
+              per-battle color. Gone for good the instant playback starts,
+              whether from here or the toolbar's own play button — see
+              boardPlayCueDismissed — and hidden while a card inspector is
+              open so it doesn't float over inspected art. */}
+          {!boardPlayCueDismissed && !anyInspectorOpen && !loading && !error && frameCount > 0 && (
+            <button
+              type="button"
+              onClick={togglePlay}
+              aria-label="Play replay"
+              title="Play replay"
+              className="absolute left-1/2 top-1/2 z-30 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-white/15 shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl transition hover:scale-105 hover:bg-white/25 active:scale-95"
+              style={{ width: "clamp(72px, 30%, 168px)", aspectRatio: "1 / 1" }}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="h-1/2 w-1/2 translate-x-[6%] text-white"
+                style={{ filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.45))" }}
+                fill="currentColor"
+                aria-hidden
+              >
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </button>
+          )}
           <Board
             frame={frame}
             loading={loading}
@@ -3724,6 +3771,49 @@ function VersusBadge() {
         <span className="inline-block skew-x-12">VS</span>
       </span>
     </span>
+  );
+}
+
+/**
+ * Thread collapse/expand toggle: a dashed-list glyph (the same one the
+ * card-catalog card footer uses for its list button) in a circle sized to
+ * the thread avatars. Exported so a caller can render it outside the viewer
+ * (the battle page anchors it in its header) — see showThreadToggle and
+ * onThreadToggleState.
+ */
+export function ThreadCollapseToggle({
+  collapsed,
+  onToggle,
+}: {
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={collapsed ? "Expand details thread" : "Collapse details thread"}
+      title={collapsed ? "Expand details" : "Collapse details"}
+      className="flex h-[27px] w-[27px] shrink-0 items-center justify-center rounded-full border border-black/10 dark:border-white/10 text-text-secondary hover:bg-surface"
+    >
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 20 20"
+        className="h-4 w-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.75}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M7 5.5h9" />
+        <path d="M7 10h9" />
+        <path d="M7 14.5h9" />
+        <path d="M4 5.5h.01" />
+        <path d="M4 10h.01" />
+        <path d="M4 14.5h.01" />
+      </svg>
+    </button>
   );
 }
 
