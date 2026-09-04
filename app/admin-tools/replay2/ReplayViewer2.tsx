@@ -2556,12 +2556,12 @@ function PlaybackModule({
           than wrap, since nothing here is allowed to shrink onto a second
           line.
 
-          mt-8 uniformly: the mobile-only turn-readout line that used to sit
+          mt-4 sm:mt-8: the mobile-only turn-readout line that used to sit
           between the scrubber and this row (a "Turn 7 / 13" reminder) is
-          gone — this is now the same gap the desktop breakpoint always used
-          once that line went display:none at sm:, just applied at every
-          width instead of only from sm: up. */}
-      <div className="mt-8 flex items-center justify-center gap-1.5 sm:gap-3">
+          gone, so the gap no longer has to hold that line's own height —
+          halved again from the desktop value per feedback, down from the
+          uniform mt-8 this briefly was right after the label's removal. */}
+      <div className="mt-4 sm:mt-8 flex items-center justify-center gap-1.5 sm:gap-3">
         <StepCapsule
           label="Action"
           canBack={canStepBack}
