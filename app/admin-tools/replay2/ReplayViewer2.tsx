@@ -1176,7 +1176,11 @@ function HandStrip({
     >
       <AttachedRowChevron
         direction="left"
-        visible={overflow.left}
+        // A normal opening hand (7 cards or fewer) never needs the affordance
+        // even if a narrow viewport happens to compute some scroll overflow
+        // for it — the chevron is for a hand swollen past that (multiple
+        // draws in a turn), not routine size.
+        visible={cards.length > 7 && overflow.left}
         onClick={() => scrollByCard(-1)}
         label="hand"
       />
@@ -1317,7 +1321,7 @@ function HandStrip({
       </div>
       <AttachedRowChevron
         direction="right"
-        visible={overflow.right}
+        visible={cards.length > 7 && overflow.right}
         onClick={() => scrollByCard(1)}
         label="hand"
       />

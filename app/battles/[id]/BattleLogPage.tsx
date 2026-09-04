@@ -229,7 +229,7 @@ export default function BattleLogPage({
   return (
     // Page shell copied from /my-decks and /battles so the content below sits
     // on the same rails as the deck collection and the matches feed.
-    <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_0.42rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
+    <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_0.21rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
       {/* Toolbar row — desktop (xl+) only. The back button, the matchup row,
           and the thread collapse/expand toggle all share this one row rather
           than each costing the board its own — that's the whole point of
