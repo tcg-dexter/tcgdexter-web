@@ -397,7 +397,7 @@ export default function DesignLibraryClient() {
                 --gradient-brand
               </div>
               <div className="font-mono text-[11px] text-text-muted">
-                linear-gradient(90deg, #F2A20C 0%, #D91E0D 50%, #A60D0D 100%) — unchanged in dark mode; brand identity doesn&apos;t shift with theme.
+                linear-gradient(90deg, #D99B29 0%, #8C2711 100%) — unchanged in dark mode; brand identity doesn&apos;t shift with theme.
               </div>
             </div>
           </div>

@@ -122,7 +122,7 @@ export default function MetaVariantCard({
         className="text-xs font-semibold truncate bg-clip-text text-transparent"
         style={{
           backgroundImage:
-            "linear-gradient(135deg, #F2A20C 0%, #D91E0D 50%, #A60D0D 100%)",
+            "linear-gradient(135deg, #D99B29 0%, #8C2711 100%)",
         }}
       >
         {displayCreator}&apos;s

@@ -237,7 +237,7 @@ function PinnedDeckHero({
                 <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Record</div>
               </div>
               <div className="text-center">
-                <div className="text-[24px] font-extrabold tabular-nums bg-[linear-gradient(135deg,#F2A20C_0%,#D91E0D_50%,#A60D0D_100%)] bg-clip-text text-transparent">{wl!.winRatePct}%</div>
+                <div className="text-[24px] font-extrabold tabular-nums bg-[linear-gradient(135deg,#D99B29_0%,#8C2711_100%)] bg-clip-text text-transparent">{wl!.winRatePct}%</div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">Win rate</div>
               </div>
               {streak && (

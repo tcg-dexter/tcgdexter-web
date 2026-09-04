@@ -24,8 +24,8 @@ export default function StreakFlame({
       <svg viewBox="0 0 24 24" className={flame} aria-hidden="true">
         <defs>
           <linearGradient id="streakFlameGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#F2A20C" />
-            <stop offset="1" stopColor="#D91E0D" />
+            <stop offset="0" stopColor="#D99B29" />
+            <stop offset="1" stopColor="#8C2711" />
           </linearGradient>
         </defs>
         <path

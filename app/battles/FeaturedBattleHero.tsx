@@ -243,7 +243,7 @@ export default function FeaturedBattleHero({
           <div className="flex flex-wrap justify-between gap-y-3 mt-4">
             {battle.totalDamage != null && (
               <div className="text-center">
-                <div className="text-[24px] font-extrabold tabular-nums bg-[linear-gradient(135deg,#F2A20C_0%,#D91E0D_50%,#A60D0D_100%)] bg-clip-text text-transparent">
+                <div className="text-[24px] font-extrabold tabular-nums bg-[linear-gradient(135deg,#D99B29_0%,#8C2711_100%)] bg-clip-text text-transparent">
                   {battle.totalDamage.toLocaleString()}
                 </div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.09em] text-text-muted">
