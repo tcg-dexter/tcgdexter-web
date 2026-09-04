@@ -1605,26 +1605,64 @@ function LockGlyph() {
 }
 
 /**
- * Centered lock badges for a mat: a black capsule per active lock, reading
- * "Item 🔒" / "Retreat 🔒", stacked horizontally when both are present. Purely
- * an overlay — pointer-events off, floated above the board but below the card
- * inspector. Lock state is derived (the log never states it) — see
- * lib/replay/locks.ts.
+ * Lock badges for a mat: one angular name plate per active lock — the same
+ * skewed-gradient silhouette the move name plates use (see fx/MoveNamePlate),
+ * in a dark slate so it reads as a persistent status rather than a blow —
+ * labelled "Item"/"Retreat" with a padlock. Stacked horizontally when both are
+ * present. Anchored in the gap between the stadium slot and the prize pile,
+ * vertically centered on the stadium card (centerX/centerY). Purely an overlay:
+ * pointer-events off, above the board but below the card inspector. Lock state
+ * is derived (the log never states it) — see lib/replay/locks.ts.
  */
-function LockBadges({ locks }: { locks?: { item: boolean; retreat: boolean } }) {
+function LockBadges({
+  locks,
+  centerX,
+  centerY,
+  plateHeight,
+}: {
+  locks?: { item: boolean; retreat: boolean };
+  centerX: number;
+  centerY: number;
+  /** Text size, scaled off the card height so the plate tracks the board. */
+  plateHeight: number;
+}) {
   if (!locks || (!locks.item && !locks.retreat)) return null;
   const badges: string[] = [];
   if (locks.item) badges.push("Item");
   if (locks.retreat) badges.push("Retreat");
+  const fontSize = plateHeight;
   return (
-    <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center gap-2">
+    <div
+      className="pointer-events-none absolute z-10 flex items-center gap-1.5"
+      style={{ left: centerX, top: centerY, transform: "translate(-50%, -50%)" }}
+    >
       {badges.map((label) => (
         <span
           key={label}
-          className="inline-flex items-center gap-1 rounded-full bg-black px-2.5 py-1 text-xs font-semibold text-white shadow-md ring-1 ring-white/15"
+          className="relative inline-flex select-none items-center gap-1 font-black uppercase leading-none text-white"
+          style={{
+            fontSize,
+            // Skewed gradient plate — MoveNamePlate's slate treatment, drawn as
+            // a static ::before-style backing via an inset element below.
+            padding: `${fontSize * 0.42}px ${fontSize * 0.7}px`,
+            letterSpacing: "0.05em",
+            textShadow: "0 1px 3px rgba(0,0,0,0.55)",
+          }}
         >
-          {label}
-          <LockGlyph />
+          <span
+            aria-hidden
+            className="absolute inset-y-0 -inset-x-1"
+            style={{
+              background: "linear-gradient(100deg, #1f2937, #3f4b5c)",
+              transform: "skewX(-13deg)",
+              boxShadow: "0 3px 12px rgba(15,23,42,0.5)",
+              borderRadius: 3,
+            }}
+          />
+          <span className="relative">{label}</span>
+          <span className="relative inline-flex" style={{ fontSize: fontSize * 0.92 }}>
+            <LockGlyph />
+          </span>
         </span>
       ))}
     </div>
@@ -1795,6 +1833,15 @@ export function PlayerMat({
     ? MAT_PADDING + innerW / 2 + activeHalf + FLOAT_GAP  // P1: right of active
     : MAT_PADDING + innerW / 2 - activeHalf - FLOAT_GAP - cardWidth; // P2: left of active
 
+  // Lock badges (Item / Retreat) sit in the gap between the stadium slot and
+  // the prize pile — both live on the active's outer side — vertically centered
+  // on the stadium card. Anchored off the stadium SLOT so the position is
+  // stable whether or not a stadium is actually in play.
+  const lockOuterEdge = isPlayer ? MAT_PADDING + innerW : MAT_PADDING;
+  const lockStadiumEdge = isPlayer ? stadiumLeft + cardWidth : stadiumLeft;
+  const lockCenterX = (lockStadiumEdge + lockOuterEdge) / 2;
+  const lockCenterY = overlayTop + cardH / 2;
+
   // Played trainer floats where the stadium used to be: left of active (P1),
   // right of active (P2), vertically centered on the active row.
   const playedTrainerTop = overlayTop;
@@ -1876,7 +1923,7 @@ export function PlayerMat({
             backgroundSize: `${BOARD_TEXTURE.w * texScale}px ${BOARD_TEXTURE.h * texScale}px, auto`,
           }}
         />
-        <LockBadges locks={locks} />
+        <LockBadges locks={locks} centerX={lockCenterX} centerY={lockCenterY} plateHeight={Math.max(16, Math.round(cardH * 0.13))} />
         {/* ── 3-column grid: left-rail | center | right-rail. Rails are sized
             to the rotated (landscape) pile holders. ──
 
