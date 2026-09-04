@@ -59,6 +59,7 @@ import { FxCanvas } from "./fx/FxCanvas";
 import { drawFlightFor } from "./fx/fxBus";
 import { GameEndFlourish } from "./fx/GameEndFlourish";
 import { SetupMatCeremony } from "./fx/SetupCeremony";
+import { pokemonSpriteUrl } from "@/lib/pokemonSprite";
 import { MoveNamePlate } from "./fx/MoveNamePlate";
 import { DrawFlight } from "./fx/DrawFlight";
 import { useCamera } from "./fx/useCamera";
@@ -3202,7 +3203,10 @@ export default function ReplayViewer({
   // heightBudget is derived from the whole row's width, which doesn't
   // change when the aside within it does. Ignored on mobile (thread lives
   // below the controls there and the toggle wouldn't earn its keep).
-  const [threadCollapsed, setThreadCollapsed] = useState(false);
+  // Defaults collapsed: widescreen is the intended desktop viewing experience,
+  // so a desktop viewer lands in it and can expand the thread if they want the
+  // full rail. (Mobile ignores this — threadCollapsedActive gates on isDesktop.)
+  const [threadCollapsed, setThreadCollapsed] = useState(true);
   const threadCollapsedActive = isDesktop === true && threadCollapsed;
 
   // Mobile landscape gets the same widescreen layout a collapsed-thread
@@ -3450,30 +3454,42 @@ export default function ReplayViewer({
                 : undefined
             }
           >
-            {/* Toggle: chevron that flips direction to say which way the
-                thread is about to go. Desktop only — mobile landscape is
-                always the thin collapsed column, so a toggle there would do
-                nothing. */}
+            {/* Toggle: a dashed-list glyph (the same one the card-catalog card
+                footer uses for its list button) in a circle sized to the thread
+                avatars and aligned with their column — centered in the thin
+                collapsed column, left-aligned with the avatar rail when
+                expanded. Sits above the scroll container so it stays put as the
+                thread scrolls. Desktop only — mobile landscape is always the
+                thin collapsed column, so a toggle there would do nothing. */}
             {isDesktop === true && (
-            <div className="flex items-center justify-end pb-1">
+            <div
+              className={`flex items-center pb-1 ${
+                threadCollapsedActive ? "justify-center" : "justify-start"
+              }`}
+            >
               <button
                 type="button"
                 onClick={() => setThreadCollapsed((v) => !v)}
                 aria-label={threadCollapsedActive ? "Expand details thread" : "Collapse details thread"}
                 title={threadCollapsedActive ? "Expand details" : "Collapse details"}
-                className="flex h-6 w-6 items-center justify-center rounded-full border border-black/10 dark:border-white/10 text-text-secondary hover:bg-surface"
+                className="flex h-[27px] w-[27px] items-center justify-center rounded-full border border-black/10 dark:border-white/10 text-text-secondary hover:bg-surface"
               >
                 <svg
-                  viewBox="0 0 24 24"
-                  className="h-3.5 w-3.5"
+                  aria-hidden="true"
+                  viewBox="0 0 20 20"
+                  className="h-4 w-4"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth={2.25}
+                  strokeWidth={1.75}
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  aria-hidden
                 >
-                  <path d={threadCollapsedActive ? "M9 6l6 6-6 6" : "M15 6l-6 6 6 6"} />
+                  <path d="M7 5.5h9" />
+                  <path d="M7 10h9" />
+                  <path d="M7 14.5h9" />
+                  <path d="M4 5.5h.01" />
+                  <path d="M4 10h.01" />
+                  <path d="M4 14.5h.01" />
                 </svg>
               </button>
             </div>
@@ -3587,15 +3603,62 @@ export default function ReplayViewer({
           where the removed header's matchup line now lives. */}
       {data && (
         <div className="mt-6 flex flex-col items-center gap-3">
-          <div className="flex items-baseline gap-2 text-lg font-semibold text-text-primary">
-            <span className="truncate">{data.playerPrimaryName ?? "?"}</span>
-            <span className="text-sm font-normal text-text-muted">vs</span>
-            <span className="truncate">{data.opponentPrimaryName ?? "?"}</span>
+          <div className="flex items-center gap-2.5 text-lg font-semibold text-text-primary">
+            <MatchupAvatar name={data.playerPrimaryName} bg={playerMatGradient} />
+            <span className="max-w-[38vw] truncate sm:max-w-none">
+              {data.playerPrimaryName ?? "?"}
+            </span>
+            <VersusBadge />
+            <span className="max-w-[38vw] truncate sm:max-w-none">
+              {data.opponentPrimaryName ?? "?"}
+            </span>
+            <MatchupAvatar name={data.opponentPrimaryName} bg={opponentMatGradient} />
           </div>
           <CopyBattleLogButton text={data.battleLogRaw} />
         </div>
       )}
     </>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────── */
+/* Matchup line — hero avatars + a gameplay-flavoured VS             */
+/* ──────────────────────────────────────────────────────────────── */
+
+/** A hero-Pokémon avatar flanking the matchup name: the trainer-avatar
+ *  treatment (round, ring-2 ring-black/dark:white), sized to the matchup row's
+ *  height, its disc tinted with that side's mat gradient so it echoes the
+ *  board, and the primary Pokémon's sprite inside. */
+function MatchupAvatar({ name, bg }: { name: string | null; bg: string }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <span
+      className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full ring-2 ring-black dark:ring-white"
+      style={{ backgroundImage: bg }}
+      aria-hidden={!name}
+    >
+      {name && !failed && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={pokemonSpriteUrl(name)}
+          alt={name}
+          className="h-full w-full scale-110 object-contain"
+          onError={() => setFailed(true)}
+        />
+      )}
+    </span>
+  );
+}
+
+/** The matchup separator, styled to feel like the gameplay views rather than a
+ *  quiet "vs": an angular accent chip with upright bold-italic text. */
+function VersusBadge() {
+  return (
+    <span className="relative mx-0.5 inline-flex select-none items-center justify-center" aria-label="versus">
+      <span className="inline-block -skew-x-12 rounded-[4px] bg-accent px-1.5 py-0.5 text-[11px] font-black italic leading-none tracking-tight text-white shadow-sm">
+        <span className="inline-block skew-x-12">VS</span>
+      </span>
+    </span>
   );
 }
 
@@ -3618,7 +3681,7 @@ function CopyBattleLogButton({ text }: { text: string }) {
           // permission); nothing useful to do but leave the label unchanged.
         }
       }}
-      className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-4 py-1.5 text-xs font-semibold text-text-primary transition hover:bg-surface dark:border-white/10"
+      className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-surface-elevated px-4 py-1.5 text-xs font-semibold text-text-primary transition hover:bg-surface dark:border-white/10"
     >
       <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         {copied ? (
