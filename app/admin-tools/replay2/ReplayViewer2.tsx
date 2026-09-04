@@ -3720,7 +3720,7 @@ function MatchupAvatar({
 function VersusBadge() {
   return (
     <span className="relative mx-0.5 inline-flex select-none items-center justify-center" aria-label="versus">
-      <span className="inline-block -skew-x-12 rounded-[4px] bg-accent px-1.5 py-0.5 text-[11px] font-black italic leading-none tracking-tight text-white shadow-sm">
+      <span className="inline-block -skew-x-12 rounded-[4px] bg-gradient-brand px-1.5 py-0.5 text-[11px] font-black italic leading-none tracking-tight text-white shadow-sm">
         <span className="inline-block skew-x-12">VS</span>
       </span>
     </span>

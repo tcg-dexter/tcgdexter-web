@@ -221,48 +221,45 @@ export default function BattleLogPage({
     // Page shell copied from /my-decks and /battles so the content below sits
     // on the same rails as the deck collection and the matches feed.
     <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
-      {/* Back button — the desktop (xl+) copy renders here above the content.
-          The wrapper is hidden below xl to avoid leaving its margin behind as
-          dead space: the sub-xl copy portals itself into the sticky toolbar
-          and isn't a descendant of this div, so hiding the wrapper doesn't
-          hide it. */}
-      <div className="mb-3 hidden xl:block">
+      {/* Toolbar row — desktop (xl+) only. The back button renders here
+          inline with the matchup row, rather than the matchup row getting
+          its own space above the viewer: the two share one row's worth of
+          height instead of costing the board an extra one. Below xl the back
+          button portals itself into the sticky toolbar (see BackButton) and
+          the matchup row doesn't render at all — the replay viewer is the
+          very top of the mobile page. */}
+      <div className="mb-3 hidden items-center gap-5 xl:flex">
         <BackButton href="/" ariaLabel="Back" />
+        {replay?.data && (
+          <MatchupRow
+            playerName={replay.data.playerPrimaryName}
+            opponentName={replay.data.opponentPrimaryName}
+            playerGradient={replay.gradients.player}
+            opponentGradient={replay.gradients.opponent}
+            scale={1.25}
+          />
+        )}
       </div>
 
       {hasBattleLog ? (
-        // Replay 2.0 leads the page. The matchup row sits in a header just
-        // above it (bigger than the viewer's own — 1.25× — since it's the
-        // page's headline here rather than a footnote below the board); the
-        // stat header rides below the viewer, injected between its
-        // matchup/copy block — suppressed via showMatchupFooter, since this
-        // page renders its own matchup row + Copy button — and its thread.
-        <>
-          {replay?.data && (
-            <div className="mt-6 flex justify-center">
-              <MatchupRow
-                playerName={replay.data.playerPrimaryName}
-                opponentName={replay.data.opponentPrimaryName}
-                playerGradient={replay.gradients.player}
-                opponentGradient={replay.gradients.opponent}
-                scale={1.25}
-              />
-            </div>
-          )}
-          <div className="mt-6">
-            <ReplayViewer2
-              battleId={battleId}
-              replayUrl={`/api/battles/${battleId}/replay`}
-              logUrl={`/api/battles/${battleId}/log`}
-              result={result}
-              playerColor={playerColor}
-              opponentColor={opponentColor}
-              showMatchupFooter={false}
-              onData={(data, gradients) => setReplay({ data, gradients })}
-              belowMatchupSlot={statHeader}
-            />
-          </div>
-        </>
+        // Replay 2.0 leads the page; the matchup row lives in the toolbar
+        // above (desktop only — see that comment), not here. The stat header
+        // rides below the viewer, injected between its matchup/copy block —
+        // suppressed via showMatchupFooter, since this page renders its own
+        // matchup row + Copy button — and its thread.
+        <div className="mt-6">
+          <ReplayViewer2
+            battleId={battleId}
+            replayUrl={`/api/battles/${battleId}/replay`}
+            logUrl={`/api/battles/${battleId}/log`}
+            result={result}
+            playerColor={playerColor}
+            opponentColor={opponentColor}
+            showMatchupFooter={false}
+            onData={(data, gradients) => setReplay({ data, gradients })}
+            belowMatchupSlot={statHeader}
+          />
+        </div>
       ) : (
         // No battle log: fall back to the stat header alone plus a notice.
         <>
