@@ -80,7 +80,7 @@ import { lookupCard } from "@/lib/engine";
  * `types`), so this is a straight name → type → gradient lookup with the
  * old default as the fallback for a catalog miss or a colorless hero.
  */
-function matGradientForPrimary(name: string | null): string {
+export function matGradientForPrimary(name: string | null): string {
   const type = name ? lookupCard(name)?.types?.[0] : null;
   return (type && MAT_STYLES.find((s) => s.key === type)?.gradient) || BOARD_GRADIENT;
 }
@@ -2878,6 +2878,20 @@ interface ReplayViewerProps {
    *  mobile thread — the battle page passes its stat header here so the page
    *  reads viewer → controls → matchup → copy → stats → thread. */
   belowMatchupSlot?: ReactNode;
+  /** When false, suppresses the viewer's own matchup-avatars/VS/Copy-Battle-Log
+   *  block (the one normally rendered just above belowMatchupSlot). The battle
+   *  page sets this false when it renders that content itself elsewhere (a
+   *  header above the viewer, a button on its own stat card) — see onData. */
+  showMatchupFooter?: boolean;
+  /** Fires whenever the loaded replay payload changes (including to null, on
+   *  error or before load). Lets a caller that suppresses showMatchupFooter
+   *  still get at playerPrimaryName/opponentPrimaryName/battleLogRaw and the
+   *  per-side mat gradients to render its own matchup UI elsewhere on the
+   *  page. */
+  onData?: (
+    data: ReplayPayload2 | null,
+    gradients: { player: string; opponent: string },
+  ) => void;
 }
 
 export default function ReplayViewer({
@@ -2891,6 +2905,8 @@ export default function ReplayViewer({
   autoPlay = false,
   initialSpeed = 1,
   belowMatchupSlot,
+  showMatchupFooter = true,
+  onData,
 }: ReplayViewerProps) {
   const [data, setData] = useState<ReplayPayload2 | null>(null);
   const [loading, setLoading] = useState(false);
@@ -3032,6 +3048,15 @@ export default function ReplayViewer({
     () => matGradientForPrimary(data?.opponentPrimaryName ?? null),
     [data?.opponentPrimaryName],
   );
+
+  // Hand the loaded payload (and its derived gradients) to a caller that
+  // wants to render its own matchup UI elsewhere on the page — see onData
+  // and showMatchupFooter.
+  const onDataRef = useRef(onData);
+  onDataRef.current = onData;
+  useEffect(() => {
+    onDataRef.current?.(data, { player: playerMatGradient, opponent: opponentMatGradient });
+  }, [data, playerMatGradient, opponentMatGradient]);
 
   // Jump the playhead to a thread post's first action (an avatar click). The
   // thread and the board join on actionIndex === the log's sequence, so land
@@ -3608,19 +3633,14 @@ export default function ReplayViewer({
           where the removed header's matchup line now lives. Sits above the
           mobile thread so the page reads viewer → controls → matchup → copy →
           (stat header) → thread. */}
-      {data && (
+      {showMatchupFooter && data && (
         <div className="mt-6 flex flex-col items-center gap-3">
-          <div className="flex items-center gap-2.5 text-lg font-semibold text-text-primary">
-            <MatchupAvatar name={data.playerPrimaryName} bg={playerMatGradient} />
-            <span className="max-w-[38vw] truncate sm:max-w-none">
-              {data.playerPrimaryName ?? "?"}
-            </span>
-            <VersusBadge />
-            <span className="max-w-[38vw] truncate sm:max-w-none">
-              {data.opponentPrimaryName ?? "?"}
-            </span>
-            <MatchupAvatar name={data.opponentPrimaryName} bg={opponentMatGradient} />
-          </div>
+          <MatchupRow
+            playerName={data.playerPrimaryName}
+            opponentName={data.opponentPrimaryName}
+            playerGradient={playerMatGradient}
+            opponentGradient={opponentMatGradient}
+          />
           <CopyBattleLogButton text={data.battleLogRaw} />
         </div>
       )}
@@ -3664,13 +3684,22 @@ export default function ReplayViewer({
 /** A hero-Pokémon avatar flanking the matchup name: the trainer-avatar
  *  treatment (round, ring-2 ring-black/dark:white), sized to the matchup row's
  *  height, its disc tinted with that side's mat gradient so it echoes the
- *  board, and the primary Pokémon's sprite inside. */
-function MatchupAvatar({ name, bg }: { name: string | null; bg: string }) {
+ *  board, and the primary Pokémon's sprite inside. `sizeRem` sets the diameter
+ *  so the avatar tracks the surrounding text size (see MatchupRow's scale). */
+function MatchupAvatar({
+  name,
+  bg,
+  sizeRem,
+}: {
+  name: string | null;
+  bg: string;
+  sizeRem: number;
+}) {
   const [failed, setFailed] = useState(false);
   return (
     <span
-      className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full ring-2 ring-black dark:ring-white"
-      style={{ backgroundImage: bg }}
+      className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-full ring-2 ring-black dark:ring-white"
+      style={{ backgroundImage: bg, width: `${sizeRem}rem`, height: `${sizeRem}rem` }}
       aria-hidden={!name}
     >
       {name && !failed && (
@@ -3698,11 +3727,45 @@ function VersusBadge() {
   );
 }
 
+/**
+ * The full matchup line: hero avatar — name — VS — name — hero avatar.
+ * Exported so a caller can render it outside the viewer (e.g. the battle
+ * page's own header above the board) while still matching the viewer's own
+ * treatment. `scale` multiplies the base text/avatar size — the battle page
+ * asks for 1.25 to read larger in its header slot.
+ */
+export function MatchupRow({
+  playerName,
+  opponentName,
+  playerGradient,
+  opponentGradient,
+  scale = 1,
+}: {
+  playerName: string | null;
+  opponentName: string | null;
+  playerGradient: string;
+  opponentGradient: string;
+  scale?: number;
+}) {
+  return (
+    <div
+      className="flex items-center gap-2.5 font-semibold text-text-primary"
+      style={{ fontSize: `${1.125 * scale}rem` }}
+    >
+      <MatchupAvatar name={playerName} bg={playerGradient} sizeRem={1.75 * scale} />
+      <span className="max-w-[38vw] truncate sm:max-w-none">{playerName ?? "?"}</span>
+      <VersusBadge />
+      <span className="max-w-[38vw] truncate sm:max-w-none">{opponentName ?? "?"}</span>
+      <MatchupAvatar name={opponentName} bg={opponentGradient} sizeRem={1.75 * scale} />
+    </div>
+  );
+}
+
 /* ──────────────────────────────────────────────────────────────── */
 /* Copy battle log                                                  */
 /* ──────────────────────────────────────────────────────────────── */
 
-function CopyBattleLogButton({ text }: { text: string }) {
+export function CopyBattleLogButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button

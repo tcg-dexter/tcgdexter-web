@@ -1,6 +1,11 @@
 "use client";
 
-import ReplayViewer2 from "@/app/admin-tools/replay2/ReplayViewer2";
+import { useState, type ReactNode } from "react";
+import ReplayViewer2, {
+  MatchupRow,
+  CopyBattleLogButton,
+} from "@/app/admin-tools/replay2/ReplayViewer2";
+import type { ReplayPayload2 } from "@/lib/replay2/beats";
 import BackButton from "@/app/components/ui/BackButton";
 import {
   BattleStatChart,
@@ -116,6 +121,20 @@ export default function BattleLogPage({
   // winner, so neither name takes it.
   const winnerLabelClass = "bg-gradient-brand bg-clip-text text-transparent";
 
+  // Loaded replay payload + its derived mat gradients, lifted out of
+  // ReplayViewer2 (which owns the fetch) via onData so this page can render
+  // its own matchup row above the viewer and its own Copy Battle Log button
+  // on the stat card, instead of the viewer's built-in versions below the
+  // board (suppressed here via showMatchupFooter={false}).
+  const [replay, setReplay] = useState<{
+    data: ReplayPayload2 | null;
+    gradients: { player: string; opponent: string };
+  } | null>(null);
+
+  const copyButton = replay?.data ? (
+    <CopyBattleLogButton text={replay.data.battleLogRaw} />
+  ) : null;
+
   // The stat header that used to lead the page — the winner-tinted hero with
   // the two decks' art, the archetype matchup, the date and the two-row stat
   // chart. Replay 2.0 is now the page's lead content, and this sits below it:
@@ -139,6 +158,16 @@ export default function BattleLogPage({
           boxShadow: `0 20px 30px -15px color-mix(in srgb, ${winnerColor} 45%, transparent)`,
         }}
       >
+        {/* Desktop: Copy Battle Log pill floats at the stat card's top-right
+            corner. Below md the card stacks (banner on top, full width) and
+            this would collide with the banner, so it moves into the banner
+            itself instead — see BattleBanner's mobileCopyButton. */}
+        {copyButton && (
+          <div className="absolute right-3 top-3 z-20 hidden md:block">
+            {copyButton}
+          </div>
+        )}
+
         <BattleBanner
           gradient={bannerGradient}
           ghostImageUrl={ghostImageUrl}
@@ -146,6 +175,7 @@ export default function BattleLogPage({
           leftAlt={playerLabel}
           rightImageUrl={opponentImageUrl}
           rightAlt={opponentLabel}
+          mobileCopyButton={copyButton}
         />
 
         <div className="flex-1 p-5 md:p-6">
@@ -201,19 +231,38 @@ export default function BattleLogPage({
       </div>
 
       {hasBattleLog ? (
-        // Replay 2.0 leads the page; the stat header rides below it, injected
-        // between the viewer's matchup/copy block and its thread.
-        <div className="mt-6">
-          <ReplayViewer2
-            battleId={battleId}
-            replayUrl={`/api/battles/${battleId}/replay`}
-            logUrl={`/api/battles/${battleId}/log`}
-            result={result}
-            playerColor={playerColor}
-            opponentColor={opponentColor}
-            belowMatchupSlot={statHeader}
-          />
-        </div>
+        // Replay 2.0 leads the page. The matchup row sits in a header just
+        // above it (bigger than the viewer's own — 1.25× — since it's the
+        // page's headline here rather than a footnote below the board); the
+        // stat header rides below the viewer, injected between its
+        // matchup/copy block — suppressed via showMatchupFooter, since this
+        // page renders its own matchup row + Copy button — and its thread.
+        <>
+          {replay?.data && (
+            <div className="mt-6 flex justify-center">
+              <MatchupRow
+                playerName={replay.data.playerPrimaryName}
+                opponentName={replay.data.opponentPrimaryName}
+                playerGradient={replay.gradients.player}
+                opponentGradient={replay.gradients.opponent}
+                scale={1.25}
+              />
+            </div>
+          )}
+          <div className="mt-6">
+            <ReplayViewer2
+              battleId={battleId}
+              replayUrl={`/api/battles/${battleId}/replay`}
+              logUrl={`/api/battles/${battleId}/log`}
+              result={result}
+              playerColor={playerColor}
+              opponentColor={opponentColor}
+              showMatchupFooter={false}
+              onData={(data, gradients) => setReplay({ data, gradients })}
+              belowMatchupSlot={statHeader}
+            />
+          </div>
+        </>
       ) : (
         // No battle log: fall back to the stat header alone plus a notice.
         <>
@@ -247,7 +296,7 @@ function BattleBanner({
   leftAlt,
   rightImageUrl,
   rightAlt,
-  onWatchReplay,
+  mobileCopyButton,
 }: {
   gradient: string;
   ghostImageUrl: string | null;
@@ -255,11 +304,11 @@ function BattleBanner({
   leftAlt: string;
   rightImageUrl: string | null;
   rightAlt: string;
-  /** Jumps the page to the replay board. Omitted when this battle has no
-   *  log — there's nothing to view, and the page shows the "No battle log
-   *  available" card in the viewer's place — and the pill drops with it
-   *  rather than rendering a button that scrolls to nothing. */
-  onWatchReplay?: () => void;
+  /** The Copy Battle Log pill, shown only below md — floated over the hero
+   *  cards near the banner's bottom edge (the desktop placement is the stat
+   *  card's top-right corner instead; see the caller). Null/undefined when
+   *  there's no battle log to copy. */
+  mobileCopyButton?: ReactNode;
 }) {
   return (
     <div
@@ -305,23 +354,16 @@ function BattleBanner({
         />
       )}
 
-      {onWatchReplay && (
+      {mobileCopyButton && (
         // Bottom-centre, on the panel's one axis of symmetry: the hero pair
         // is centred, so this is the only anchor that meets both cards the
-        // same way at every panel size — a corner would tuck under one card
-        // and float free of the other as the panel grows from its 190px
-        // mobile height to the details column's on md. It does sit over the
-        // cards' bottom edges — HERO_HEIGHT_PCT leaves ~7% of the panel
-        // clear below them, which is less than a tap target — so z-20 puts
-        // it above both cards and the ghost, and the fill and shadow carry
-        // it against the artwork.
-        <button
-          type="button"
-          onClick={onWatchReplay}
-          className="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 md:bottom-4 inline-flex items-center justify-center rounded-full bg-white px-5 py-2 text-[11px] font-semibold tracking-[0.15em] text-black shadow-md hover:shadow-lg transition"
-        >
-          WATCH REPLAY
-        </button>
+        // same way at every panel size. 10% up from the banner's bottom edge,
+        // floating over the hero cards' feet — z-20 puts it above both cards
+        // and the ghost. Hidden at md+, where the pill moves to the stat
+        // card's top-right corner instead (see the caller).
+        <div className="absolute inset-x-0 bottom-[10%] z-20 flex justify-center md:hidden">
+          {mobileCopyButton}
+        </div>
       )}
     </div>
   );
