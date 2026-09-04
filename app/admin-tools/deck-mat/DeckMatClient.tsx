@@ -991,10 +991,12 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
         {/* Right on desktop: Mat + controls */}
         <div ref={matColumnRef} className="flex flex-col gap-3 md:order-last">
           <div ref={exportRef} className="flex flex-col gap-3">
-            {/* Mat header: deck name */}
+            {/* Mat header: deck name. Falls back to a non-breaking space
+                (not "") so the span's line box — and the mat's position
+                below it — doesn't collapse before a deck is selected. */}
             <div className="flex items-center gap-4">
               <span className="text-lg sm:text-xl font-semibold text-text-primary truncate">
-                {decks.find((d) => d.id === selectedDeckId)?.name ?? ""}
+                {decks.find((d) => d.id === selectedDeckId)?.name ?? " "}
               </span>
             </div>
 
