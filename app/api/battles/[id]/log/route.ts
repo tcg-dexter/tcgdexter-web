@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { supporterNames } from "@/lib/supporterNames";
 import { idColumn } from "@/lib/shortId";
 
@@ -18,6 +19,14 @@ export async function GET(
   const { id } = await params;
   const admin = createAdminClient();
 
+  // The signed-in viewer, if any — mirrors the owner bypass in the battle
+  // page itself (app/battles/[id]/page.tsx): the owner can always load
+  // their own battle log, even when the deck or profile is still private.
+  const supabase = await createClient();
+  const {
+    data: { user: viewer },
+  } = await supabase.auth.getUser();
+
   const { data: battle } = await admin
     .from("matches")
     .select("id, short_id, player_handle, opponent_handle, parser_version, source, saved_deck_id")
@@ -35,7 +44,13 @@ export async function GET(
     .eq("id", battle.saved_deck_id as string)
     .maybeSingle();
 
-  if (!deck?.is_public) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  if (!deck) return NextResponse.json({ error: "Not found." }, { status: 404 });
+
+  const isOwner = !!viewer && viewer.id === (deck.user_id as string);
+
+  if (!isOwner && !deck.is_public) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
 
   const { data: profile } = await admin
     .from("profiles")
@@ -43,7 +58,9 @@ export async function GET(
     .eq("id", deck.user_id as string)
     .maybeSingle();
 
-  if (!profile?.is_public) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  if (!isOwner && !profile?.is_public) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
 
   if ((battle.source as string) !== "tcg_live_log") {
     return NextResponse.json({ error: "This battle has no battle log." }, { status: 400 });
