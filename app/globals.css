@@ -147,6 +147,15 @@
     animation: fadeInTab 0.2s ease;
   }
 
+  /* Tab TITLE fade/slide-in on switch — top-down, the opposite direction
+     from .animate-tab-fade. A title sitting above other content that slid
+     up from below (translateY positive → 0) reads as pushing that content
+     down for the length of the animation even though transforms never
+     touch layout; entering from above avoids that impression entirely. */
+  .animate-tab-fade-down {
+    animation: fadeInTabDown 0.2s ease;
+  }
+
   /* Subtle upward fade on surface cells */
   .cell-gradient {
     background: linear-gradient(
@@ -184,6 +193,11 @@ body.card-viewer-open [data-back-button] {
 
 @keyframes fadeInTab {
   0%   { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInTabDown {
+  0%   { opacity: 0; transform: translateY(-4px); }
   100% { opacity: 1; transform: translateY(0); }
 }
 

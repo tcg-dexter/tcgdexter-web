@@ -237,7 +237,7 @@ export default function CardsClient({ initialResult, facets, setStats, initialPa
       <div className="mb-6 flex items-end justify-between gap-3">
         <h2
           key={mode}
-          className="text-3xl md:text-4xl font-semibold tracking-tight text-text-primary animate-tab-fade"
+          className="text-3xl md:text-4xl font-semibold tracking-tight text-text-primary animate-tab-fade-down"
         >
           {TAB_LABEL[mode]}
         </h2>
@@ -251,7 +251,7 @@ export default function CardsClient({ initialResult, facets, setStats, initialPa
                 onClick={() => setMode(tabKey)}
                 aria-label={`Switch to ${TAB_LABEL[tabKey]}`}
                 title={`Switch to ${TAB_LABEL[tabKey]}`}
-                className="inline-flex items-center justify-center gap-1.5 h-[38px] px-4 rounded-full border border-black/10 bg-white dark:bg-surface-2 text-text-primary hover:bg-surface transition-colors"
+                className="inline-flex w-28 items-center justify-center gap-1.5 h-[38px] rounded-full border border-black/10 bg-white dark:bg-surface-2 text-text-primary hover:bg-surface transition-colors"
               >
                 <TabIcon mode={tabKey} className="w-4 h-4 shrink-0" />
                 <span className="text-xs font-semibold">{TAB_LABEL[tabKey]}</span>
