@@ -53,11 +53,11 @@ function page(heading: string, message: string, ok: boolean): Response {
   </head>
   <body style="margin:0;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1a1a1a;">
     <div style="max-width:440px;margin:64px auto;padding:0 20px;text-align:center;">
-      <p style="font-size:13px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#D91E0D;">TCG Dexter</p>
+      <p style="font-size:13px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#8C2711;">TCG Dexter</p>
       <h1 style="font-size:22px;margin:12px 0;">${heading}</h1>
       <p style="font-size:15px;line-height:1.6;color:#4a4a4a;">${message}</p>
       <p style="margin-top:24px;">
-        <a href="${baseUrl()}/settings" style="color:#D91E0D;font-weight:600;text-decoration:none;">Manage email settings</a>
+        <a href="${baseUrl()}/settings" style="color:#8C2711;font-weight:600;text-decoration:none;">Manage email settings</a>
       </p>
     </div>
   </body>

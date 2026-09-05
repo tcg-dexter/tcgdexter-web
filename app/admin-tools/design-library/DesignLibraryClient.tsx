@@ -145,9 +145,9 @@ const COLOR_TOKENS: { name: string; light: string; dark?: string }[] = [
   { name: "--text-primary", light: "#1a1a1a", dark: "#ffffff" },
   { name: "--text-secondary", light: "#4a4a4a", dark: "#b8b8b8" },
   { name: "--text-muted", light: "#888888", dark: "#808080" },
-  { name: "--accent", light: "#D91E0D" },
-  { name: "--accent-light", light: "#e74c3c" },
-  { name: "--accent-dark", light: "#A60D0D" },
+  { name: "--accent", light: "#8C2711" },
+  { name: "--accent-light", light: "#BA553F" },
+  { name: "--accent-dark", light: "#5E0000" },
 ];
 
 function ColorSwatch({ name, light, dark }: { name: string; light: string; dark?: string }) {

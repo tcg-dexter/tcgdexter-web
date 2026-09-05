@@ -67,9 +67,9 @@
   --text-primary:     #1a1a1a;
   --text-secondary:   #4a4a4a;
   --text-muted:       #888888;
-  --accent:           #D91E0D;
-  --accent-light:     #e74c3c;
-  --accent-dark:      #A60D0D;
+  --accent:           #8C2711;
+  --accent-light:     #BA553F;
+  --accent-dark:      #5E0000;
   --gradient-brand:   linear-gradient(90deg, #D99B29 0%, #8C2711 100%);
   --ring-energy-fill: #ffffff;
 }

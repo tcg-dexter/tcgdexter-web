@@ -19,4 +19,4 @@ export const BRAND_GRADIENT_CSS =
 export const WARM_SHADOW = "0 20px 60px -15px rgba(140,39,17,0.25)";
 
 /** Eyebrow accent color (section intros). Matches the project accent. */
-export const EYEBROW_COLOR = "#D91E0D";
+export const EYEBROW_COLOR = "#8C2711";
