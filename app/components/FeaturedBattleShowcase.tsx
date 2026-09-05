@@ -53,6 +53,8 @@ export default function FeaturedBattleShowcase({
             hideThreadOnMobile
             autoPlay
             initialSpeed={2}
+            mobileMatchupAboveMat
+            hideCopyBattleLog
           />
         </div>
       )}

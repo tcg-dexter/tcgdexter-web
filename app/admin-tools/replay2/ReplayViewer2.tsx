@@ -2991,6 +2991,17 @@ interface ReplayViewerProps {
   onThreadToggleState?: (
     state: { collapsed: boolean; toggle: () => void } | null,
   ) => void;
+  /** When true, renders the matchup avatars/names/VS line a second time,
+   *  above the thread+board row and hidden past the md breakpoint — so on
+   *  mobile the title reads before the mat instead of after it. The
+   *  standard copy in the footer block stays mounted (hidden on mobile via
+   *  CSS) so desktop is unaffected. The home page sets this. */
+  mobileMatchupAboveMat?: boolean;
+  /** When true, never renders the Copy Battle Log capsule in the footer
+   *  block, on any breakpoint. The home page sets this — copying the raw
+   *  log there isn't a supported action; that lives on the dedicated
+   *  battle page. */
+  hideCopyBattleLog?: boolean;
 }
 
 export default function ReplayViewer({
@@ -3008,6 +3019,8 @@ export default function ReplayViewer({
   onData,
   showThreadToggle = true,
   onThreadToggleState,
+  mobileMatchupAboveMat = false,
+  hideCopyBattleLog = false,
 }: ReplayViewerProps) {
   const [data, setData] = useState<ReplayPayload2 | null>(null);
   const [loading, setLoading] = useState(false);
@@ -3598,6 +3611,19 @@ export default function ReplayViewer({
 
   return (
     <>
+      {/* Mobile-only duplicate of the matchup line, shown above the row
+          instead of after it. Hidden past md — desktop keeps the single
+          copy in the footer block below. */}
+      {mobileMatchupAboveMat && data && (
+        <div className="mb-4 flex justify-center md:hidden">
+          <MatchupRow
+            playerName={data.playerPrimaryName}
+            opponentName={data.opponentPrimaryName}
+            playerGradient={playerMatGradient}
+            opponentGradient={opponentMatGradient}
+          />
+        </div>
+      )}
       {/* Desktop: thread + board side by side, together forming a 16:9
           rect (rowWidth x rowWidth*9/16). The aside is pinned to the
           board's measured height so its inner scroll container has
@@ -3786,14 +3812,22 @@ export default function ReplayViewer({
           mobile thread so the page reads viewer → controls → matchup → copy →
           (stat header) → thread. */}
       {showMatchupFooter && data && (
-        <div className="mt-6 flex flex-col items-center gap-3">
-          <MatchupRow
-            playerName={data.playerPrimaryName}
-            opponentName={data.opponentPrimaryName}
-            playerGradient={playerMatGradient}
-            opponentGradient={opponentMatGradient}
-          />
-          <CopyBattleLogButton text={data.battleLogRaw} />
+        <div
+          className={
+            mobileMatchupAboveMat && hideCopyBattleLog
+              ? "mt-6 hidden flex-col items-center gap-3 md:flex"
+              : "mt-6 flex flex-col items-center gap-3"
+          }
+        >
+          <div className={mobileMatchupAboveMat ? "hidden md:block" : undefined}>
+            <MatchupRow
+              playerName={data.playerPrimaryName}
+              opponentName={data.opponentPrimaryName}
+              playerGradient={playerMatGradient}
+              opponentGradient={opponentMatGradient}
+            />
+          </div>
+          {!hideCopyBattleLog && <CopyBattleLogButton text={data.battleLogRaw} />}
         </div>
       )}
 

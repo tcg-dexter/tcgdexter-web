@@ -193,7 +193,13 @@ export default async function DeckProfilerPage() {
     loadRecentBattles(FEATURED_BATTLE_POOL),
     loadCurrentSpotlight(),
   ]);
-  const recentBattles = battlePool.slice(0, HOME_RECENT_BATTLES);
+  // Recent Battles is a replay-first showcase — a manually-logged result
+  // with no parsed battle log has nothing to show there, so it's filtered
+  // out here rather than upstream: pickFeaturedBattle below still needs the
+  // full, unfiltered pool to rank against.
+  const recentBattles = battlePool
+    .filter((m) => m.hasBattleLog)
+    .slice(0, HOME_RECENT_BATTLES);
   const featuredBattle = pickFeaturedBattle(battlePool);
   // Backs the hero's Details drawer, same as on /battles.
   const featuredBattleStats = featuredBattle

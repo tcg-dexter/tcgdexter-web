@@ -8,6 +8,7 @@ import { variantDisplayLabel } from "@/lib/inventory";
 import DataView from "./DataView";
 import ListsView from "./ListsView";
 import InventoryProvider, { useInventory } from "./InventoryContext";
+import { CardsIcon } from "@/app/components/ui/nav-icons";
 import PillSelect from "@/app/components/ui/PillSelect";
 import GridListToggle from "@/app/components/ui/GridListToggle";
 import Pagination from "@/app/components/ui/Pagination";
@@ -57,12 +58,69 @@ interface Props {
   initialParams: Params;
 }
 
-/** Which of the three panels the Card Catalog page is showing. Lives in the
+/** Which of the three panels the Cards page is showing. Lives in the
  *  URL (rather than only in state) so it survives a reload and, crucially, a
  *  history pop: the list-detail page's back button returns here, and without
  *  the param that landed you on the catalog instead of the Lists panel you
  *  came from. */
 type CatalogMode = "catalog" | "data" | "lists";
+
+/** Display name for each panel, doubling as the page's dynamic h2 title —
+ *  whichever tab is active names the page. Key order also drives which
+ *  order the two inactive tabs' buttons render in. */
+const TAB_LABEL: Record<CatalogMode, string> = {
+  catalog: "Cards",
+  data: "Sets",
+  lists: "Lists",
+};
+
+function SetsTabIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M3 16.5h14" />
+      <path d="M6 16.5V11" />
+      <path d="M10 16.5V6" />
+      <path d="M14 16.5v-7.5" />
+    </svg>
+  );
+}
+
+function ListsTabIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M7 5.5h9" />
+      <path d="M7 10h9" />
+      <path d="M7 14.5h9" />
+      <path d="M4 5.5h.01" />
+      <path d="M4 10h.01" />
+      <path d="M4 14.5h.01" />
+    </svg>
+  );
+}
+
+function TabIcon({ mode, className }: { mode: CatalogMode; className?: string }) {
+  if (mode === "data") return <SetsTabIcon className={className} />;
+  if (mode === "lists") return <ListsTabIcon className={className} />;
+  return <CardsIcon className={className} />;
+}
 
 function parseMode(value: string | null): CatalogMode {
   return value === "data" || value === "lists" ? value : "catalog";
@@ -177,99 +235,59 @@ export default function CardsClient({ initialResult, facets, setStats, initialPa
     <InventoryProvider>
     <main className="mx-auto max-w-[1400px] px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
       <div className="mb-6 flex items-end justify-between gap-3">
-        <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-text-primary">
-          Card Catalog
+        <h2
+          key={mode}
+          className="text-3xl md:text-4xl font-semibold tracking-tight text-text-primary animate-tab-fade"
+        >
+          {TAB_LABEL[mode]}
         </h2>
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => setMode((m) => (m === "data" ? "catalog" : "data"))}
-            aria-pressed={mode === "data"}
-            aria-label={mode === "data" ? "Switch to catalog view" : "Switch to set progress view"}
-            title={mode === "data" ? "Switch to catalog view" : "Switch to set progress view"}
-            className={`inline-flex items-center justify-center gap-1.5 h-[38px] px-4 rounded-full border transition-colors ${
-              mode === "data"
-                ? "border-transparent bg-black dark:bg-white text-white dark:text-black"
-                : "border-black/10 bg-white dark:bg-surface-2 text-text-primary hover:bg-surface"
-            }`}
-          >
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.75"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-4 h-4 shrink-0"
-            >
-              <path d="M3 16.5h14" />
-              <path d="M6 16.5V11" />
-              <path d="M10 16.5V6" />
-              <path d="M14 16.5v-7.5" />
-            </svg>
-            <span className="text-xs font-semibold">Sets</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode((m) => (m === "lists" ? "catalog" : "lists"))}
-            aria-pressed={mode === "lists"}
-            aria-label={mode === "lists" ? "Switch to catalog view" : "Switch to your lists"}
-            title={mode === "lists" ? "Switch to catalog view" : "Switch to your lists"}
-            className={`inline-flex items-center justify-center gap-1.5 h-[38px] px-4 rounded-full border transition-colors ${
-              mode === "lists"
-                ? "border-transparent bg-black dark:bg-white text-white dark:text-black"
-                : "border-black/10 bg-white dark:bg-surface-2 text-text-primary hover:bg-surface"
-            }`}
-          >
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.75"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-4 h-4 shrink-0"
-            >
-              <path d="M7 5.5h9" />
-              <path d="M7 10h9" />
-              <path d="M7 14.5h9" />
-              <path d="M4 5.5h.01" />
-              <path d="M4 10h.01" />
-              <path d="M4 14.5h.01" />
-            </svg>
-            <span className="text-xs font-semibold">Lists</span>
-          </button>
+          {(Object.keys(TAB_LABEL) as CatalogMode[])
+            .filter((tabKey) => tabKey !== mode)
+            .map((tabKey) => (
+              <button
+                key={tabKey}
+                type="button"
+                onClick={() => setMode(tabKey)}
+                aria-label={`Switch to ${TAB_LABEL[tabKey]}`}
+                title={`Switch to ${TAB_LABEL[tabKey]}`}
+                className="inline-flex items-center justify-center gap-1.5 h-[38px] px-4 rounded-full border border-black/10 bg-white dark:bg-surface-2 text-text-primary hover:bg-surface transition-colors"
+              >
+                <TabIcon mode={tabKey} className="w-4 h-4 shrink-0" />
+                <span className="text-xs font-semibold">{TAB_LABEL[tabKey]}</span>
+              </button>
+            ))}
         </div>
       </div>
 
-      {mode === "data" ? (
-        <DataView
-          setStats={setStats}
-          onSelectSet={(setId) => {
-            setParams((p) => ({ ...p, setId: [setId], page: 1 }));
-            setMode("catalog");
-          }}
-        />
-      ) : mode === "lists" ? (
-        <ListsView />
-      ) : (
-        <CatalogBody
-          initialResult={initialResult}
-          facets={facets}
-          params={params}
-          setParams={setParams}
-          searchInput={searchInput}
-          handleSearchInput={handleSearchInput}
-          showFilters={showFilters}
-          setShowFilters={setShowFilters}
-          updateParams={updateParams}
-          toggleArrayValue={toggleArrayValue}
-          clearFilters={clearFilters}
-          activeFilterCount={activeFilterCount}
-        />
-      )}
+      <div key={mode} className="animate-tab-fade">
+        {mode === "data" ? (
+          <DataView
+            setStats={setStats}
+            onSelectSet={(setId) => {
+              setParams((p) => ({ ...p, setId: [setId], page: 1 }));
+              setMode("catalog");
+            }}
+          />
+        ) : mode === "lists" ? (
+          <ListsView />
+        ) : (
+          <CatalogBody
+            initialResult={initialResult}
+            facets={facets}
+            params={params}
+            setParams={setParams}
+            searchInput={searchInput}
+            handleSearchInput={handleSearchInput}
+            showFilters={showFilters}
+            setShowFilters={setShowFilters}
+            updateParams={updateParams}
+            toggleArrayValue={toggleArrayValue}
+            clearFilters={clearFilters}
+            activeFilterCount={activeFilterCount}
+          />
+        )}
+      </div>
     </main>
     </InventoryProvider>
   );

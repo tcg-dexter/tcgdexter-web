@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { computeCollectionDataViewStats } from "@/lib/collection-stats";
+import { computeUniqueOwnedBySet } from "@/lib/collection-stats";
 
 export async function GET() {
   const supabase = await createClient();
@@ -12,6 +12,6 @@ export async function GET() {
     return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   }
 
-  const stats = await computeCollectionDataViewStats(supabase, user.id);
-  return NextResponse.json(stats);
+  const uniqueOwnedBySet = await computeUniqueOwnedBySet(supabase, user.id);
+  return NextResponse.json({ uniqueOwnedBySet });
 }

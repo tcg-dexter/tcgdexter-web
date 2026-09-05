@@ -621,7 +621,7 @@ export default async function ProfilePage({
                   <>
                     No lists yet.{" "}
                     <Link href="/cards" className="text-accent hover:underline">
-                      Start one from Card Catalog →
+                      Start one from Cards →
                     </Link>
                   </>
                 ) : (

@@ -70,7 +70,7 @@ export default function SiteSidebar({
     badge?: number;
   }> = [
     { href: "/battles", label: "Battles", Icon: VersusIcon },
-    { href: "/cards", label: "Card Catalog", Icon: CardsIcon },
+    { href: "/cards", label: "Cards", Icon: CardsIcon },
     { href: "/my-decks", label: "Deck Collection", Icon: BookmarkIcon },
     { href: "/meta-archetypes", label: "Meta Archetypes", Icon: ChartBarIcon },
     // Notifications — authed only; badge shows unread count.

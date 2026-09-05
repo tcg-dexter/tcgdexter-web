@@ -245,9 +245,9 @@ export default function DeckOwnershipModule({ cards }: Props) {
         </div>
         <p className="text-sm text-text-secondary leading-relaxed mb-4">
           Track your card collection to see how much of any deck you already
-          own. Build your collection in the Card Catalog and we&apos;ll show
-          exactly how many of this deck&apos;s {neededCount} cards you can
-          already put together.
+          own. Build your collection in Cards and we&apos;ll show exactly how
+          many of this deck&apos;s {neededCount} cards you can already put
+          together.
         </p>
         <Link
           href="/cards"
@@ -256,7 +256,7 @@ export default function DeckOwnershipModule({ cards }: Props) {
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z" />
           </svg>
-          Open Card Catalog
+          Open Cards
         </Link>
       </div>
     );

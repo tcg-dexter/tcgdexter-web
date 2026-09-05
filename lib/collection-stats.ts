@@ -46,12 +46,6 @@ export interface CollectionStats {
   marketValue: number;
 }
 
-export interface CollectionDataViewStats extends CollectionStats {
-  /** Distinct (set_id, number) cards owned in each set. Keyed by set_id;
-   *  variant rows for the same printing collapse to a single entry. */
-  uniqueOwnedBySet: Record<string, number>;
-}
-
 const PAGE = 1000;
 
 export async function computeCollectionStats(
@@ -81,27 +75,27 @@ export async function computeCollectionStats(
   return { cardCount, marketValue: Math.round(marketValue * 100) / 100 };
 }
 
-export async function computeCollectionDataViewStats(
+/**
+ * Per-set ownership breakdown for the Sets tab's completion bars. Unlike
+ * computeCollectionStats, this never touches the price index or sums
+ * quantities — the Sets view dropped its headline stat cards (cards owned /
+ * market value), so there's nothing there that needs either.
+ */
+export async function computeUniqueOwnedBySet(
   supabase: SupabaseClient,
   userId: string,
-): Promise<CollectionDataViewStats> {
-  const prices = priceIndex();
-  let cardCount = 0;
-  let marketValue = 0;
+): Promise<Record<string, number>> {
   const uniquePerSet = new Map<string, Set<string>>();
   let from = 0;
   for (;;) {
     const { data, error } = await supabase
       .from("user_card_collection")
-      .select("set_id, number, quantity")
+      .select("set_id, number")
       .eq("user_id", userId)
       .gt("quantity", 0)
       .range(from, from + PAGE - 1);
     if (error || !data) break;
-    for (const row of data as Array<{ set_id: string; number: string; quantity: number }>) {
-      cardCount += row.quantity;
-      const price = prices.get(`${row.set_id}|${row.number}`);
-      if (price) marketValue += price * row.quantity;
+    for (const row of data as Array<{ set_id: string; number: string }>) {
       let bucket = uniquePerSet.get(row.set_id);
       if (!bucket) {
         bucket = new Set<string>();
@@ -116,9 +110,5 @@ export async function computeCollectionDataViewStats(
   uniquePerSet.forEach((nums, setId) => {
     uniqueOwnedBySet[setId] = nums.size;
   });
-  return {
-    cardCount,
-    marketValue: Math.round(marketValue * 100) / 100,
-    uniqueOwnedBySet,
-  };
+  return uniqueOwnedBySet;
 }

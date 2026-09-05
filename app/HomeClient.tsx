@@ -543,12 +543,12 @@ export default function HomeClient({
             </section>
           )}
 
-          {/* Card Catalog preview */}
+          {/* Cards preview */}
           {cardCatalogTopCards.length > 0 && (
             <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
               <InventoryProvider>
                 <div className="mb-4">
-                  <h2 className="text-3xl font-semibold tracking-tight">Card Catalog</h2>
+                  <h2 className="text-3xl font-semibold tracking-tight">Cards</h2>
                 </div>
                 <CatalogSignInBanner />
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

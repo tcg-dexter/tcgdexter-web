@@ -7,8 +7,6 @@ import { useInventory } from "./InventoryContext";
 import SetLogo from "./SetLogo";
 
 interface DataViewStats {
-  cardCount: number;
-  marketValue: number;
   uniqueOwnedBySet: Record<string, number>;
 }
 
@@ -24,10 +22,7 @@ export default function DataView({
   onSelectSet: (setId: string) => void;
 }) {
   const { signedIn } = useInventory();
-  const [stats, setStatsState] = useState<StatsState>({
-    loading: false,
-    data: null,
-  });
+  const [stats, setStatsState] = useState<DataViewStats | null>(null);
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState<SetFilter>("all");
 
@@ -43,20 +38,19 @@ export default function DataView({
 
   useEffect(() => {
     if (signedIn !== true) {
-      setStatsState({ loading: false, data: null });
+      setStatsState(null);
       return;
     }
     let cancelled = false;
-    setStatsState({ loading: true, data: null });
     fetch("/api/collection/data-view")
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("Failed to load stats"))))
       .then((data: DataViewStats) => {
         if (cancelled) return;
-        setStatsState({ loading: false, data });
+        setStatsState(data);
       })
       .catch(() => {
         if (cancelled) return;
-        setStatsState({ loading: false, data: null });
+        setStatsState(null);
       });
     return () => {
       cancelled = true;
@@ -65,12 +59,12 @@ export default function DataView({
 
   const filteredSets = useMemo(() => {
     if (filter === "all") return setStats;
-    const owned = stats.data?.uniqueOwnedBySet ?? {};
+    const owned = stats?.uniqueOwnedBySet ?? {};
     if (filter === "owned") {
       return setStats.filter((s) => (owned[s.id] ?? 0) > 0);
     }
     return setStats.filter((s) => (owned[s.id] ?? 0) === 0);
-  }, [setStats, filter, stats.data]);
+  }, [setStats, filter, stats]);
 
   const totalPages = Math.max(1, Math.ceil(filteredSets.length / PAGE_SIZE));
   const pageSets = useMemo(() => {
@@ -80,13 +74,6 @@ export default function DataView({
 
   return (
     <div className="flex flex-col gap-6">
-      <StatRow
-        cardCount={stats.data?.cardCount ?? 0}
-        marketValue={stats.data?.marketValue ?? 0}
-        loading={stats.loading}
-        signedIn={signedIn}
-      />
-
       {signedIn === false && (
         <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated p-6 text-center">
           <p className="text-sm text-text-secondary">
@@ -108,7 +95,7 @@ export default function DataView({
         ) : (
           <ul>
             {pageSets.map((s, i) => {
-              const owned = stats.data?.uniqueOwnedBySet[s.id] ?? 0;
+              const owned = stats?.uniqueOwnedBySet[s.id] ?? 0;
               return (
                 <SetCompletionRow
                   key={s.id}
@@ -183,45 +170,6 @@ function SetFilterRadios({
           </label>
         );
       })}
-    </div>
-  );
-}
-
-function StatRow({
-  cardCount,
-  marketValue,
-  loading,
-  signedIn,
-}: {
-  cardCount: number;
-  marketValue: number;
-  loading: boolean;
-  signedIn: boolean | null;
-}) {
-  const showValues = signedIn === true && !loading;
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      <StatCard
-        label="Cards in Collection"
-        value={showValues ? cardCount.toLocaleString() : "—"}
-      />
-      <StatCard
-        label="Total Market Value"
-        value={showValues ? formatCurrency(marketValue) : "—"}
-      />
-    </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated p-4">
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
-        {label}
-      </div>
-      <div className="mt-1 text-2xl font-semibold tracking-tight text-text-primary tabular-nums text-right">
-        {value}
-      </div>
     </div>
   );
 }
@@ -356,11 +304,6 @@ function SetPagination({
   );
 }
 
-function formatCurrency(n: number): string {
-  if (n >= 1000) return `$${Math.round(n).toLocaleString()}`;
-  return `$${n.toFixed(2)}`;
-}
-
 function formatReleaseDate(d: string | null): string {
   if (!d) return "";
   const parsed = new Date(d);
@@ -370,9 +313,4 @@ function formatReleaseDate(d: string | null): string {
     month: "short",
     day: "numeric",
   });
-}
-
-interface StatsState {
-  loading: boolean;
-  data: DataViewStats | null;
 }
