@@ -10,7 +10,7 @@
 import type { RecentBattle } from "@/app/components/BattleCard";
 import type { UserRecap, NewPublicDeck, NewSet } from "@/lib/email/digest-data";
 
-const ACCENT = "#D91E0D";
+const ACCENT = "#8C2711";
 const TEXT = "#1a1a1a";
 const SECONDARY = "#4a4a4a";
 const MUTED = "#888888";
