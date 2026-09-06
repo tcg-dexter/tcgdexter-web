@@ -347,8 +347,12 @@ export default function HomeClient({
             <div
               className="rounded-[38px] border-2 border-transparent p-2"
               style={{
+                // "to bottom right" (not var(--gradient-brand)'s 90deg) so
+                // the gradient runs top-left to bottom-right around this
+                // card specifically, rather than the sitewide left-to-right
+                // direction.
                 background:
-                  "linear-gradient(var(--surface-elevated), var(--surface-elevated)) padding-box, var(--gradient-brand) border-box",
+                  "linear-gradient(var(--surface-elevated), var(--surface-elevated)) padding-box, linear-gradient(to bottom right, #D99B29, #8C2711) border-box",
               }}
             >
               {/* px-2 (not px-3) so this row's horizontal inset matches the
