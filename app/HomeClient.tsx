@@ -333,9 +333,19 @@ export default function HomeClient({
                 border-color can't paint a gradient. No separate glow layer
                 behind it either — that existed to color the old
                 box-shadow, and the border now carries the gradient
-                directly. */}
+                directly.
+
+                rounded-[38px]: chosen so this corner is concentric with
+                the "Profile this deck" pill nested in it, not just a
+                bigger rounded-2xl. That button is 40px tall (py-2.5 +
+                text-sm's 20px line box), so rounded-full gives it a 20px
+                radius; the gap from its edge to this div's own outer edge
+                is border-2 (2px) + this div's p-2 (8px) + the footer
+                row's px-2/pb-2 (8px) = 18px on both the right and bottom.
+                Two same-center arcs need outer radius = inner radius +
+                gap: 20 + 18 = 38. */}
             <div
-              className="rounded-2xl border-2 border-transparent p-2"
+              className="rounded-[38px] border-2 border-transparent p-2"
               style={{
                 background:
                   "linear-gradient(var(--surface-elevated), var(--surface-elevated)) padding-box, var(--gradient-brand) border-box",
