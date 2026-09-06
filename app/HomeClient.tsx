@@ -351,11 +351,22 @@ export default function HomeClient({
                   "linear-gradient(var(--surface-elevated), var(--surface-elevated)) padding-box, var(--gradient-brand) border-box",
               }}
             >
-              <div className="flex items-center justify-between px-3 pt-2 pb-1.5">
-                <span className="text-xs font-semibold text-text-primary">Deck List</span>
+              {/* px-2 (not px-3) so this row's horizontal inset matches the
+                  footer row's — the top corners share the same rounded-[38px]
+                  as the bottom ones, and that only reads as concentric if the
+                  gap to the card's edge is equal in both dimensions. The
+                  label and "Load example" each sit in their own invisible
+                  h-10 rounded-full capsule — same size and shape as the
+                  "Profile this deck" pill below, just with no visible fill —
+                  so the content nested in these corners is a 40px pill here
+                  too, not a bare text baseline. */}
+              <div className="flex items-center justify-between px-2 pt-2 pb-1.5">
+                <span className="inline-flex h-10 items-center rounded-full px-5 text-xs font-semibold text-text-primary">
+                  Deck List
+                </span>
                 <button
                   onClick={() => setDeckList(EXAMPLE_DECK)}
-                  className="text-xs text-text-muted hover:text-text-primary transition"
+                  className="inline-flex h-10 items-center rounded-full px-5 text-xs text-text-muted transition hover:text-text-primary"
                 >
                   Load example
                 </button>
