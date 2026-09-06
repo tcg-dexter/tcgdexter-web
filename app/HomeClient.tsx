@@ -355,18 +355,21 @@ export default function HomeClient({
                   footer row's — the top corners share the same rounded-[38px]
                   as the bottom ones, and that only reads as concentric if the
                   gap to the card's edge is equal in both dimensions. The
-                  label and "Load example" each sit in their own invisible
-                  h-10 rounded-full capsule — same size and shape as the
-                  "Profile this deck" pill below, just with no visible fill —
-                  so the content nested in these corners is a 40px pill here
-                  too, not a bare text baseline. */}
+                  label and "Load example" each sit in their own h-10
+                  rounded-full capsule — same size and shape as the
+                  "Profile this deck" pill below — so the content nested in
+                  these corners is a 40px pill here too, not a bare text
+                  baseline. "Deck List" drops its own leading padding (pr-5,
+                  no pl) so the label's text lines up with the placeholder
+                  text in the textarea below rather than the row's corner
+                  inset. */}
               <div className="flex items-center justify-between px-2 pt-2 pb-1.5">
-                <span className="inline-flex h-10 items-center rounded-full px-5 text-xs font-semibold text-text-primary">
+                <span className="inline-flex h-10 items-center rounded-full pr-5 text-xs font-semibold text-text-primary">
                   Deck List
                 </span>
                 <button
                   onClick={() => setDeckList(EXAMPLE_DECK)}
-                  className="inline-flex h-10 items-center rounded-full px-5 text-xs text-text-muted transition hover:text-text-primary"
+                  className="inline-flex h-10 items-center rounded-full border border-black/10 px-5 text-xs text-text-muted transition hover:text-text-primary dark:border-white/10"
                 >
                   Load example
                 </button>
