@@ -314,100 +314,99 @@ export default function HomeClient({
             )}
           </div>
 
-          {/* Deck input card — soft elevated glass on light bg. mx-auto is
+          {/* Deck input card — gradient-bordered card on light bg. mx-auto is
               cancelled at lg: (via lg:mx-0) because auto margins on a
               flex item's cross axis opt it out of the default stretch
               behavior, which was leaving this narrower than the left
               column instead of filling it edge-to-edge. */}
           <div className="mt-12 lg:mt-0 max-w-3xl mx-auto lg:max-w-none lg:mx-0 lg:w-full lg:flex lg:flex-col lg:justify-start">
-            <div className="relative group">
-              {/* Gradient glow */}
-              <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 group-focus-within:opacity-70 blur-xl transition-opacity" />
-              {/* Gradient border, not a box-shadow — a shadow paints past
-                  its own box and iOS Safari can clip that bleed into
-                  visible artifacts around a scroll/viewport change (the
-                  keyboard opening or closing); a border never leaves its
-                  own box, so it isn't exposed to that class of bug at all.
-                  The repo's standing trick for a gradient border (see
-                  .focus-gradient-border above, and TrainerCard): the fill
-                  is painted to the padding box, the brand gradient to the
-                  border box, and the border itself is transparent so the
-                  gradient is all that shows through it — a plain
-                  border-color can't paint a gradient. */}
-              <div
-                className="relative rounded-2xl border-2 border-transparent p-2"
-                style={{
-                  background:
-                    "linear-gradient(var(--surface-elevated), var(--surface-elevated)) padding-box, var(--gradient-brand) border-box",
-                }}
-              >
-                <div className="flex items-center justify-between px-3 pt-2 pb-1.5">
-                  <span className="text-xs font-semibold text-text-primary">Deck List</span>
+            {/* Gradient border, not a box-shadow — a shadow paints past its
+                own box and iOS Safari can clip that bleed into visible
+                artifacts around a scroll/viewport change (the keyboard
+                opening or closing); a border never leaves its own box, so
+                it isn't exposed to that class of bug at all. The repo's
+                standing trick for a gradient border (see
+                .focus-gradient-border above, and TrainerCard): the fill is
+                painted to the padding box, the brand gradient to the
+                border box, and the border itself is transparent so the
+                gradient is all that shows through it — a plain
+                border-color can't paint a gradient. No separate glow layer
+                behind it either — that existed to color the old
+                box-shadow, and the border now carries the gradient
+                directly. */}
+            <div
+              className="rounded-2xl border-2 border-transparent p-2"
+              style={{
+                background:
+                  "linear-gradient(var(--surface-elevated), var(--surface-elevated)) padding-box, var(--gradient-brand) border-box",
+              }}
+            >
+              <div className="flex items-center justify-between px-3 pt-2 pb-1.5">
+                <span className="text-xs font-semibold text-text-primary">Deck List</span>
+                <button
+                  onClick={() => setDeckList(EXAMPLE_DECK)}
+                  className="text-xs text-text-muted hover:text-text-primary transition"
+                >
+                  Load example
+                </button>
+              </div>
+              <textarea
+                value={deckList}
+                onChange={(e) => setDeckList(e.target.value)}
+                // Six lines of a real Standard list (drawn from
+                // EXAMPLE_DECK above) plus a trailing ellipsis, so the
+                // placeholder demonstrates the section headers and the
+                // "<qty> <name> <set> <number>" shape the analyzer parses
+                // instead of just hinting at it. The cut falls at the end
+                // of the Pokémon section rather than mid-list, and the
+                // quantities shown add up to the 11 its header claims, so
+                // the sample stays internally honest; the ellipsis stands
+                // in for Trainer + Energy.
+                placeholder={
+                  "Pokémon: 11\n" +
+                  "3 N's Zoroark ex JTG 175\n" +
+                  "3 N's Zorua ASC 136\n" +
+                  "2 N's Reshiram ASC 154\n" +
+                  "2 N's Zekrom ASC 155\n" +
+                  "1 Fezandipiti ex ASC 142\n" +
+                  "..."
+                }
+                // h-44 fits all 7 placeholder lines without scrolling:
+                // a 20px line box (6 sample lines + the ellipsis = 140px)
+                // plus py-2's 16px = 156px, under 176px. One height at
+                // both breakpoints — the hero's own pb-24 is unchanged, so
+                // the mobile StatsStrip's -mt-16 counterweight below still
+                // lands. text-[16px] leading-5 pins that same 20px line
+                // box below sm: below 16px, iOS Safari auto-zooms the
+                // whole page on focus — text-sm's 14px was doing that
+                // here. sm:text-sm reverts to the smaller size once the
+                // viewport is wide enough that zoom-on-focus doesn't apply.
+                className="w-full h-44 bg-transparent resize-none px-3 py-2 font-mono text-[16px] leading-5 sm:text-sm text-text-primary placeholder:text-text-muted/60 outline-none"
+                spellCheck={false}
+              />
+              <div className="flex items-center justify-end gap-3 px-2 pb-2">
+                {deckList.length > 0 && (
                   <button
-                    onClick={() => setDeckList(EXAMPLE_DECK)}
+                    type="button"
+                    onClick={() => setDeckList("")}
                     className="text-xs text-text-muted hover:text-text-primary transition"
                   >
-                    Load example
+                    Clear
                   </button>
-                </div>
-                <textarea
-                  value={deckList}
-                  onChange={(e) => setDeckList(e.target.value)}
-                  // Six lines of a real Standard list (drawn from
-                  // EXAMPLE_DECK above) plus a trailing ellipsis, so the
-                  // placeholder demonstrates the section headers and the
-                  // "<qty> <name> <set> <number>" shape the analyzer parses
-                  // instead of just hinting at it. The cut falls at the end
-                  // of the Pokémon section rather than mid-list, and the
-                  // quantities shown add up to the 11 its header claims, so
-                  // the sample stays internally honest; the ellipsis stands
-                  // in for Trainer + Energy.
-                  placeholder={
-                    "Pokémon: 11\n" +
-                    "3 N's Zoroark ex JTG 175\n" +
-                    "3 N's Zorua ASC 136\n" +
-                    "2 N's Reshiram ASC 154\n" +
-                    "2 N's Zekrom ASC 155\n" +
-                    "1 Fezandipiti ex ASC 142\n" +
-                    "..."
-                  }
-                  // h-44 fits all 7 placeholder lines without scrolling:
-                  // a 20px line box (6 sample lines + the ellipsis = 140px)
-                  // plus py-2's 16px = 156px, under 176px. One height at
-                  // both breakpoints — the hero's own pb-24 is unchanged, so
-                  // the mobile StatsStrip's -mt-16 counterweight below still
-                  // lands. text-[16px] leading-5 pins that same 20px line
-                  // box below sm: below 16px, iOS Safari auto-zooms the
-                  // whole page on focus — text-sm's 14px was doing that
-                  // here. sm:text-sm reverts to the smaller size once the
-                  // viewport is wide enough that zoom-on-focus doesn't apply.
-                  className="w-full h-44 bg-transparent resize-none px-3 py-2 font-mono text-[16px] leading-5 sm:text-sm text-text-primary placeholder:text-text-muted/60 outline-none"
-                  spellCheck={false}
-                />
-                <div className="flex items-center justify-end gap-3 px-2 pb-2">
-                  {deckList.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setDeckList("")}
-                      className="text-xs text-text-muted hover:text-text-primary transition"
-                    >
-                      Clear
-                    </button>
+                )}
+                <GradientButton onClick={handleAnalyze} disabled={loading}>
+                  {loading ? (
+                    <>
+                      <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Profiling…
+                    </>
+                  ) : (
+                    "Profile this deck"
                   )}
-                  <GradientButton onClick={handleAnalyze} disabled={loading}>
-                    {loading ? (
-                      <>
-                        <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                        </svg>
-                        Profiling…
-                      </>
-                    ) : (
-                      "Profile this deck"
-                    )}
-                  </GradientButton>
-                </div>
+                </GradientButton>
               </div>
             </div>
 
