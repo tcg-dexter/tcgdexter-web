@@ -355,12 +355,16 @@ export default function HomeClient({
                     "..."
                   }
                   // h-44 fits all 7 placeholder lines without scrolling:
-                  // font-mono text-sm is a 20px line box (6 sample lines +
-                  // the ellipsis = 140px) plus py-2's 16px = 156px, under
-                  // 176px. One height at both breakpoints — the hero's own
-                  // pb-24 is unchanged, so the mobile StatsStrip's -mt-16
-                  // counterweight below still lands.
-                  className="w-full h-44 bg-transparent resize-none px-3 py-2 font-mono text-sm text-text-primary placeholder:text-text-muted/60 outline-none"
+                  // a 20px line box (6 sample lines + the ellipsis = 140px)
+                  // plus py-2's 16px = 156px, under 176px. One height at
+                  // both breakpoints — the hero's own pb-24 is unchanged, so
+                  // the mobile StatsStrip's -mt-16 counterweight below still
+                  // lands. text-[16px] leading-5 pins that same 20px line
+                  // box below sm: below 16px, iOS Safari auto-zooms the
+                  // whole page on focus — text-sm's 14px was doing that
+                  // here. sm:text-sm reverts to the smaller size once the
+                  // viewport is wide enough that zoom-on-focus doesn't apply.
+                  className="w-full h-44 bg-transparent resize-none px-3 py-2 font-mono text-[16px] leading-5 sm:text-sm text-text-primary placeholder:text-text-muted/60 outline-none"
                   spellCheck={false}
                 />
                 <div className="flex items-center justify-end gap-3 px-2 pb-2">
