@@ -323,14 +323,18 @@ export default function HomeClient({
             <div className="relative group">
               {/* Gradient glow */}
               <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 group-focus-within:opacity-70 blur-xl transition-opacity" />
-              {/* transform-gpu: this card combines backdrop-blur with a
-                  soft box-shadow that extends well past its own edges —
-                  on iOS Safari, focusing the textarea below scrolls it
-                  into view, and the partial repaint that follows clips
-                  the shadow into visible rectangular artifacts. Forcing
-                  a dedicated compositing layer up front makes Safari
-                  always repaint the whole layer instead of a stale rect. */}
-              <div className="relative rounded-2xl bg-white/90 backdrop-blur-xl border border-black/5 p-2 shadow-brand-lg dark:bg-surface-elevated dark:border-white/10 transform-gpu">
+              {/* The shadow lives on its own plain wrapper, separate from
+                  the backdrop-blur card inside it. iOS Safari's compositor
+                  handles a box-shadow and a backdrop-filter badly when
+                  they're painted by the same element — focusing the
+                  textarea scrolls it into view, and the repaint that
+                  follows clips the shadow into visible rectangular
+                  artifacts. Giving each its own layer (this one has no
+                  filter, so nothing here forces a backdrop-filter
+                  render pass) avoids that combination entirely rather
+                  than just discouraging it. */}
+              <div className="relative rounded-2xl shadow-brand-lg transform-gpu">
+                <div className="relative rounded-2xl bg-white/90 backdrop-blur-xl border border-black/5 p-2 dark:bg-surface-elevated dark:border-white/10">
                 <div className="flex items-center justify-between px-3 pt-2 pb-1.5">
                   <span className="text-xs font-semibold text-text-primary">Deck List</span>
                   <button
@@ -397,6 +401,7 @@ export default function HomeClient({
                       "Profile this deck"
                     )}
                   </GradientButton>
+                </div>
                 </div>
               </div>
             </div>
