@@ -364,7 +364,7 @@ export default function HomeClient({
                   text in the textarea below rather than the row's corner
                   inset. */}
               <div className="flex items-center justify-between px-2 pt-2 pb-1.5">
-                <span className="inline-flex h-10 items-center rounded-full pr-5 text-xs font-semibold text-text-primary">
+                <span className="inline-flex h-10 items-center rounded-full pr-5 text-[15px] font-semibold text-text-primary">
                   Deck List
                 </span>
                 <button
