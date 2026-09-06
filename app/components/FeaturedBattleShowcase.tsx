@@ -42,7 +42,10 @@ export default function FeaturedBattleShowcase({
           always hold — but a manual battle reaching here would otherwise
           mount a viewer whose replay endpoint has nothing to return. */}
       {battle.hasBattleLog && (
-        <div className="mt-6">
+        // mt-12: half the home page's standard section padding (pb-24), for
+        // breathing room before the replay module's matchup title (mobile,
+        // via mobileMatchupAboveMat below) or board (desktop).
+        <div className="mt-12">
           <ReplayViewer
             battleId={battle.shortId}
             replayUrl={`/api/battles/${battle.shortId}/replay`}
