@@ -323,7 +323,24 @@ export default function HomeClient({
             <div className="relative group">
               {/* Gradient glow */}
               <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 group-focus-within:opacity-70 blur-xl transition-opacity" />
-              <div className="relative rounded-2xl bg-white/90 backdrop-blur-xl border border-black/5 p-2 shadow-brand-lg dark:bg-surface-elevated dark:border-white/10">
+              {/* Gradient border, not a box-shadow — a shadow paints past
+                  its own box and iOS Safari can clip that bleed into
+                  visible artifacts around a scroll/viewport change (the
+                  keyboard opening or closing); a border never leaves its
+                  own box, so it isn't exposed to that class of bug at all.
+                  The repo's standing trick for a gradient border (see
+                  .focus-gradient-border above, and TrainerCard): the fill
+                  is painted to the padding box, the brand gradient to the
+                  border box, and the border itself is transparent so the
+                  gradient is all that shows through it — a plain
+                  border-color can't paint a gradient. */}
+              <div
+                className="relative rounded-2xl border-2 border-transparent p-2"
+                style={{
+                  background:
+                    "linear-gradient(var(--surface-elevated), var(--surface-elevated)) padding-box, var(--gradient-brand) border-box",
+                }}
+              >
                 <div className="flex items-center justify-between px-3 pt-2 pb-1.5">
                   <span className="text-xs font-semibold text-text-primary">Deck List</span>
                   <button
