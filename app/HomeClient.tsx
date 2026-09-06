@@ -323,7 +323,14 @@ export default function HomeClient({
             <div className="relative group">
               {/* Gradient glow */}
               <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 group-focus-within:opacity-70 blur-xl transition-opacity" />
-              <div className="relative rounded-2xl bg-white/90 backdrop-blur-xl border border-black/5 p-2 shadow-brand-lg dark:bg-surface-elevated dark:border-white/10">
+              {/* transform-gpu: this card combines backdrop-blur with a
+                  soft box-shadow that extends well past its own edges —
+                  on iOS Safari, focusing the textarea below scrolls it
+                  into view, and the partial repaint that follows clips
+                  the shadow into visible rectangular artifacts. Forcing
+                  a dedicated compositing layer up front makes Safari
+                  always repaint the whole layer instead of a stale rect. */}
+              <div className="relative rounded-2xl bg-white/90 backdrop-blur-xl border border-black/5 p-2 shadow-brand-lg dark:bg-surface-elevated dark:border-white/10 transform-gpu">
                 <div className="flex items-center justify-between px-3 pt-2 pb-1.5">
                   <span className="text-xs font-semibold text-text-primary">Deck List</span>
                   <button
