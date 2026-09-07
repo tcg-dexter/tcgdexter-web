@@ -87,13 +87,29 @@ function energyTintForName(
   return { from: shade(hex, -30), to: hex, glow: `${hex}99` };
 }
 
-// A poisoned Pokémon's black card holder wears this instead of flat black —
-// the same from→to the poison damage badge uses (conditionColor("Poisoned"),
-// darkened one end), so the frame agrees with the between-turns poison plate.
-const POISON_PLATE_GRADIENT = `linear-gradient(100deg, ${shade(
-  conditionColor("Poisoned"),
-  -30,
-)}, ${conditionColor("Poisoned")})`;
+// Conditions that colour the card holder itself instead of flat black, using
+// the same from→to their damage badge uses (conditionColor, darkened one end)
+// so the frame agrees with the between-turns damage plate. A plated condition
+// deliberately gets NO corner pill — the holder already says it, louder.
+//
+// The rest (Confused, Asleep, Paralyzed) do no per-checkup damage, have no
+// plate to inherit, and keep their pills.
+const PLATE_CONDITIONS = ["Poisoned", "Burned"] as const;
+
+/** The holder background for a Pokémon's conditions, or null to leave it
+ *  flat black. Poisoned + Burned at once runs purple into red rather than
+ *  letting one silently win. */
+function conditionPlate(conditions: string[]): string | null {
+  const active = PLATE_CONDITIONS.filter((c) => conditions.includes(c));
+  if (active.length === 0) return null;
+  if (active.length === 1) {
+    const hex = conditionColor(active[0]);
+    return `linear-gradient(100deg, ${shade(hex, -30)}, ${hex})`;
+  }
+  return `linear-gradient(100deg, ${active
+    .map((c) => conditionColor(c))
+    .join(", ")})`;
+}
 
 export interface PokemonFrame {
   /** Engine instance id — stable across turns, unique per Pokémon in play.
@@ -978,9 +994,14 @@ export function PokemonCardImage({
       ? perf.beat.fromCondition
       : null;
 
-  // A poisoned Pokémon's holder wears the poison gradient rather than flat
-  // black, so the frame carries the condition even between the damage ticks.
-  const isPoisoned = mon.conditions.includes("Poisoned");
+  // A poisoned or burned Pokémon's holder wears that condition's gradient
+  // rather than flat black, so the frame carries the condition even between
+  // the damage ticks — and stands in for the corner pill entirely.
+  const plate = conditionPlate(mon.conditions);
+  // Conditions the holder can't express, which still need a corner pill.
+  const pillConditions = mon.conditions.filter(
+    (c) => !(PLATE_CONDITIONS as readonly string[]).includes(c),
+  );
 
   // The Pokémon whose attack or ability is dealing this beat's damage, so the
   // badge can wear its energy-type colour. Attacks name the attacker directly;
@@ -1081,8 +1102,8 @@ export function PokemonCardImage({
         width: m.containerW,
         borderRadius: m.radius,
         padding: m.pad,
-        // Overrides bg-black when poisoned.
-        ...(isPoisoned ? { background: POISON_PLATE_GRADIENT } : {}),
+        // Overrides bg-black when poisoned and/or burned.
+        ...(plate ? { background: plate } : {}),
       }}
       title={mon.name}
       role={clickable ? "button" : undefined}
@@ -1275,10 +1296,12 @@ export function PokemonCardImage({
             </motion.div>
           </AnimatePresence>
         )}
-        {mon.conditions.length > 0 && (
+        {pillConditions.length > 0 && (
           // Status pills stay on the card, stacked up from the bottom-right.
+          // Plated conditions are excluded — the coloured holder is the same
+          // statement, and running both reads as a duplicate.
           <div className="pointer-events-none absolute bottom-1 right-1 z-10 flex flex-col-reverse items-end gap-0.5">
-            {mon.conditions.map((c) => (
+            {pillConditions.map((c) => (
               <ConditionPill key={c} condition={c} />
             ))}
           </div>
