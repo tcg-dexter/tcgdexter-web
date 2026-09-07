@@ -680,13 +680,13 @@ export default function DesignLibraryClient() {
           id="modals"
           eyebrow="Global"
           title="Modals & dialogs"
-          description="Shared overlay recipe: fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm, portaled to <body>. Shown here without `fixed` positioning so it sits inline in the reference page instead of covering it."
+          description="Shared overlay recipe: fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm, portaled to <body>. Panels use rounded-card, the same concentric radius the preview cards do. The standard p-6 panel needs no other change to satisfy it: a px-4 py-1.5 text-xs footer pill is 28px tall (r=14), and 24px of padding plus that radius is exactly the card's 38px. Shown here without `fixed` positioning so it sits inline in the reference page instead of covering it."
         >
           <Demo
             label="Confirmation dialog shell (pattern shared by NewListDialog, DeleteAccountButton, DeckOwnershipModule)"
             className="border-solid bg-black/40 backdrop-blur-sm p-8 flex items-center justify-center"
           >
-            <div className="w-full max-w-sm rounded-2xl bg-white/95 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]">
+            <div className="w-full max-w-sm rounded-card bg-white/95 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]">
               <h2 className="text-base font-semibold text-text-primary">
                 Are you sure you want to add all cards?
               </h2>

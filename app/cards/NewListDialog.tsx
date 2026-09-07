@@ -90,8 +90,8 @@ export default function NewListDialog({ open, onClose, onCreated, cardToAdd }: P
     >
       <div className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
         <div className="relative group">
-          <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-40 group-focus-within:opacity-70 blur-xl transition-opacity" />
-          <div className="relative rounded-2xl bg-white/95 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 shadow-brand-lg">
+          <div className="absolute -inset-px rounded-card bg-gradient-brand opacity-40 group-focus-within:opacity-70 blur-xl transition-opacity" />
+          <div className="relative rounded-card bg-white/95 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 shadow-brand-lg">
             <div className="flex items-center justify-between px-5 pt-5 pb-3">
               <h2 id="new-list-title" className="text-lg font-semibold tracking-tight">
                 <span className="bg-gradient-brand bg-clip-text text-transparent">New list</span>
@@ -101,7 +101,7 @@ export default function NewListDialog({ open, onClose, onCreated, cardToAdd }: P
                 onClick={onClose}
                 disabled={busy}
                 aria-label="Close"
-                className="rounded-full p-1.5 text-text-muted hover:bg-black/5 hover:text-text-primary transition disabled:opacity-50"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-text-muted hover:bg-black/5 hover:text-text-primary transition disabled:opacity-50"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

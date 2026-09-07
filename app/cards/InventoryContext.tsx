@@ -253,7 +253,7 @@ function SignInPrompt({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-2xl bg-white dark:bg-surface-elevated p-6 shadow-xl"
+        className="w-full max-w-sm rounded-card bg-white dark:bg-surface-elevated p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-lg font-semibold text-text-primary">Sign in to track your collection</h2>

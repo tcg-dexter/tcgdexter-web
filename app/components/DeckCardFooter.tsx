@@ -363,7 +363,7 @@ export default function DeckCardFooter({
           onClick={() => setPrompt(null)}
         >
           <div
-            className="w-full max-w-sm rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl p-6 shadow-2xl"
+            className="w-full max-w-sm rounded-card border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between mb-4">
@@ -417,7 +417,7 @@ export default function DeckCardFooter({
           onClick={() => setShareOpen(false)}
         >
           <div
-            className="w-full max-w-sm rounded-2xl bg-white/90 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 shadow-brand-lg"
+            className="w-full max-w-sm rounded-card bg-white/90 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 shadow-brand-lg"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-1">

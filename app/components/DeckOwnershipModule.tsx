@@ -475,7 +475,7 @@ export default function DeckOwnershipModule({ cards }: Props) {
             onClick={() => !adding && setConfirm(null)}
           >
             <div
-              className="w-full max-w-sm rounded-2xl bg-white/95 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]"
+              className="w-full max-w-sm rounded-card bg-white/95 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]"
               onClick={(e) => e.stopPropagation()}
             >
               <h2 className="text-base font-semibold text-text-primary">

@@ -59,7 +59,7 @@ export default function ShareQRModal({ open, onClose, url, title = "Share Deck" 
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-2xl bg-white/90 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 shadow-brand-lg"
+        className="w-full max-w-sm rounded-card bg-white/90 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 shadow-brand-lg"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
