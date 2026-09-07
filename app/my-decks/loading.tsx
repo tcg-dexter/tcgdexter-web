@@ -10,8 +10,11 @@ import { SkeletonBlock, SkeletonCircle, SkeletonLine } from "@/app/components/sk
 export default function MyDecksLoading() {
   return (
     <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
-      <div className="mb-6">
+      {/* Mirrors the real header's title row, New deck circle included, so
+          neither the heading nor the button shifts on swap-in. */}
+      <div className="mb-6 flex items-center justify-between gap-3">
         <SectionHeader title="Deck Collection" />
+        <div className="h-9 w-9 md:h-10 md:w-10 shrink-0 rounded-full bg-black/5 dark:bg-white/10 animate-pulse" />
       </div>
 
       <div className="rounded-card border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden mb-4 h-[170px] md:h-[220px]">

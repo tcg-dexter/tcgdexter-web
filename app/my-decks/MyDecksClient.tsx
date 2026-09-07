@@ -405,8 +405,32 @@ export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: P
 
   return (
     <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-[calc(env(safe-area-inset-top)_+_1.68rem)] md:pt-[calc(env(safe-area-inset-top)_+_3rem)] pb-24">
-      <div className="mb-6">
+      {/* New deck is anchored to the title row rather than sitting in the
+          toolbar: it's the page's one creative action, and pairing it with
+          the heading keeps it from reading as another filter. Sized to the
+          heading's own line box (36px, 40px from md) so the circle and the
+          title cap out at the same height. */}
+      <div className="mb-6 flex items-center justify-between gap-3">
         <SectionHeader title="Deck Collection" />
+        <button
+          type="button"
+          onClick={() => setNewDeckOpen(true)}
+          aria-label="New deck"
+          title="New deck"
+          className="shrink-0 inline-flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-full border border-transparent bg-gradient-brand bg-origin-border text-white shadow-brand hover:shadow-brand-lg transition"
+        >
+          <svg
+            aria-hidden="true"
+            className="w-4 h-4 md:w-5 md:h-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.25}
+            strokeLinecap="round"
+          >
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
       </div>
 
       {atRiskStreak > 0 && (
@@ -459,7 +483,10 @@ export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: P
             className="w-full pl-10 pr-4 py-2 rounded-full border border-black/10 bg-white dark:bg-surface-2 text-[16px] sm:text-sm focus:outline-none focus-gradient-border transition-colors"
           />
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+        {/* One row rather than the old 2-col mobile grid: with New deck moved
+            to the header and Favorites down to an icon, the sort pill and the
+            two square controls fit a phone width on a single line. */}
+        <div className="flex items-center gap-2">
           <PillSelect
             value={`${sort}:${dir}`}
             onChange={(e) => {
@@ -488,13 +515,13 @@ export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: P
             type="button"
             onClick={() => setFavoritesOnly((v) => !v)}
             aria-pressed={favoritesOnly}
+            aria-label={favoritesOnly ? "Showing favorites only" : "Show favorites only"}
             title={favoritesOnly ? "Showing favorites only" : "Show favorites only"}
             // `border border-transparent` on the active state, not no border:
             // the inactive state is bordered, so dropping the border when
             // pressed would shrink the button by 2px and shove everything
-            // after it in the row sideways on every toggle. Same reason the
-            // "+ New Deck" button beside it carries a transparent border.
-            className={`${TOOLBAR_ITEM_HEIGHT} inline-flex items-center justify-center gap-1.5 px-3 rounded-full text-xs font-semibold border transition-colors ${
+            // after it in the row sideways on every toggle.
+            className={`${TOOLBAR_ITEM_HEIGHT} w-[38px] inline-flex items-center justify-center rounded-full border transition-colors ${
               favoritesOnly
                 ? "border-transparent bg-black dark:bg-white text-white dark:text-black"
                 : "border-black/8 bg-white dark:bg-surface-2 text-text-secondary"
@@ -511,14 +538,6 @@ export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: P
             >
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
             </svg>
-            Favorites
-          </button>
-          <button
-            type="button"
-            onClick={() => setNewDeckOpen(true)}
-            className="text-xs font-semibold h-[38px] inline-flex items-center justify-center px-3 rounded-full border border-transparent bg-gradient-brand bg-origin-border text-white shadow-brand hover:shadow-brand-lg transition"
-          >
-            + New Deck
           </button>
         </div>
       </div>
