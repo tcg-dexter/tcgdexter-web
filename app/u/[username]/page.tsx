@@ -632,7 +632,7 @@ export default async function ProfilePage({
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {lists.map((l) => (
-                <ListPreviewCard key={l.id} list={l} />
+                <ListPreviewCard key={l.id} list={l} canManage={isOwner} />
               ))}
             </div>
           )}

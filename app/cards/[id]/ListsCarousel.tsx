@@ -63,7 +63,7 @@ export default function ListsCarousel({ lists }: { lists: ListSummary[] }) {
               className="shrink-0 basis-[calc((100%-0.75rem)/2)] sm:basis-[calc((100%-1.5rem)/3)] md:basis-[calc((100%-2.25rem)/4)] snap-start flex"
             >
               <div className="w-full">
-                <ListPreviewCard list={l} />
+                <ListPreviewCard list={l} canManage />
               </div>
             </li>
           ))}
