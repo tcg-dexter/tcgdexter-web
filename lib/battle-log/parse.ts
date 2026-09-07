@@ -772,6 +772,30 @@ function extractChildActions(block: Block): ParsedAction[] {
       continue;
     }
 
+    // Evolutions performed BY a trainer card — Rare Candy, Grand Tree — which
+    // the log nests under the card's own play line rather than stating at the
+    // top level. Same wording as the standalone lines, so the payload is
+    // identical and every downstream consumer treats them the same.
+    //
+    // Dropping these was quietly catastrophic for the board: the base Pokémon
+    // was never consumed and the evolution never entered play, so a bench
+    // could grow past 5 as the same Froakie was "evolved" twice over, and the
+    // later "<evolution> was Knocked Out!" found nothing to remove — leaving
+    // a KO'd line still sitting on the bench too.
+    const evo = t.match(
+      /^(.+?) evolved (.+?) to (.+?) (in the Active Spot|on the Bench)\.$/,
+    );
+    if (evo) {
+      out.push(
+        action("evolve", evo[1], child.raw, {
+          from: evo[2],
+          to: evo[3],
+          location: evo[4] === "in the Active Spot" ? "active" : "bench",
+        }),
+      );
+      continue;
+    }
+
     const cond = t.match(
       /^(.+?)'s (.+?) is now (Poisoned|Burned|Asleep|Confused|Paralyzed)\.$/,
     );
