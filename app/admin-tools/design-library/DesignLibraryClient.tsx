@@ -134,6 +134,24 @@ function CodeNote({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * The corner treatments the preview cards actually ship, as worked examples
+ * of the concentric rule: inset = rounded-card (38px) − the element's own
+ * radius. `wide` draws the sample as a capsule rather than a circle — the
+ * inset is driven by height either way, since that's what fixes a capsule's
+ * radius.
+ */
+const CONCENTRIC_EXAMPLES: {
+  label: string;
+  size: number;
+  inset: number;
+  wide?: boolean;
+}[] = [
+  { label: "28px badge", size: 28, inset: 24, wide: true },
+  { label: "28px circle", size: 28, inset: 24 },
+  { label: "48px avatar", size: 48, inset: 14 },
+];
+
 /* ── Global: color tokens ─────────────────────────────────────────────── */
 
 const COLOR_TOKENS: { name: string; light: string; dark?: string }[] = [
@@ -543,15 +561,52 @@ export default function DesignLibraryClient() {
           id="cards"
           eyebrow="Global"
           title="Cards & surfaces"
-          description="The standard elevated card chrome used across DeckProfileView, profile pages, and the leaderboard — codified in SkeletonCard so loading and loaded states share one shape."
+          description="Two radius families. Modules and panels keep rounded-2xl — the standard elevated chrome codified in SkeletonCard so loading and loaded states share one shape. Preview cards (battle, deck, archetype, trainer, featured battle) and the home page's deck-list input use rounded-card, whose corners are built to be concentric with whatever sits in them."
         >
-          <Demo label="SkeletonCard chrome (app/components/skeletons/Skeleton.tsx)">
+          <Demo label="SkeletonCard chrome (app/components/skeletons/Skeleton.tsx) — modules and panels">
             <SkeletonCard>
               <p className="text-sm text-text-secondary">
                 rounded-2xl · border-black/8 (dark: white/10) · bg-white/90 (dark:
                 bg-surface-elevated) · backdrop-blur-xl · shadow-sm
               </p>
             </SkeletonCard>
+          </Demo>
+          <Demo label="rounded-card (38px) + concentric corners — preview cards">
+            <div className="flex flex-col gap-4">
+              <p className="text-sm text-text-secondary">
+                A circle or capsule sitting in a preview card&apos;s corner is
+                inset by <strong>the card&apos;s radius minus its own</strong>, so
+                the two arcs share a center instead of the inner shape floating
+                at an arbitrary depth. With rounded-card at 38px:
+              </p>
+              <div className="flex flex-wrap gap-4">
+                {CONCENTRIC_EXAMPLES.map((ex) => (
+                  <div key={ex.label} className="flex flex-col gap-2">
+                    <div
+                      className="relative h-[104px] w-[168px] rounded-card border border-black/8 dark:border-white/10 bg-surface"
+                      aria-hidden
+                    >
+                      <div
+                        className="absolute rounded-full bg-gradient-brand"
+                        style={{
+                          top: ex.inset,
+                          left: ex.inset,
+                          height: ex.size,
+                          width: ex.wide ? ex.size * 2 : ex.size,
+                        }}
+                      />
+                    </div>
+                    <CodeNote>
+                      {ex.label}: r={ex.size / 2} → inset {ex.inset}
+                    </CodeNote>
+                  </div>
+                ))}
+              </div>
+              <CodeNote>
+                inset = 38 − (element height ÷ 2) · token: theme.borderRadius.card
+                in tailwind.config.ts
+              </CodeNote>
+            </div>
           </Demo>
           <Demo label=".card-lift hover utility (globals.css) — hover to see it">
             <div className="card-lift inline-block rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated shadow-sm px-6 py-4 text-sm text-text-secondary">

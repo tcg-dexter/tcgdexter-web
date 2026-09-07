@@ -99,8 +99,8 @@ export default function FeaturedBattleHero({
   return (
     <div className="relative mb-4">
       {/* Gradient glow — matches PinnedDeckHero's treatment exactly. */}
-      <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 blur-md" />
-      <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-[0_20px_30px_-15px_rgba(217,30,13,0.3)] overflow-hidden flex flex-col md:flex-row dark:bg-surface-elevated dark:border-white/10">
+      <div className="absolute -inset-px rounded-card bg-gradient-brand opacity-30 blur-md" />
+      <div className="relative rounded-card border border-black/8 bg-white/90 backdrop-blur-xl shadow-[0_20px_30px_-15px_rgba(217,30,13,0.3)] overflow-hidden flex flex-col md:flex-row dark:bg-surface-elevated dark:border-white/10">
         {/* Banner column — the BattleCard versus imagery, sized for hero. */}
         <div className="md:w-[360px] shrink-0">
           <div className="relative h-[220px] md:h-full overflow-hidden">

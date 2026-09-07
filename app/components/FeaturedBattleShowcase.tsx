@@ -43,8 +43,8 @@ export default function FeaturedBattleShowcase({
           mount a viewer whose replay endpoint has nothing to return. */}
       {battle.hasBattleLog && (
         // mt-12: half the home page's standard section padding (pb-24), for
-        // breathing room before the replay module's matchup title (mobile,
-        // via mobileMatchupAboveMat below) or board (desktop).
+        // breathing room before the replay module's matchup title (see
+        // matchupAboveMat below).
         <div className="mt-12">
           <ReplayViewer
             battleId={battle.shortId}
@@ -56,7 +56,7 @@ export default function FeaturedBattleShowcase({
             hideThreadOnMobile
             autoPlay
             initialSpeed={2}
-            mobileMatchupAboveMat
+            matchupAboveMat
             hideCopyBattleLog
           />
         </div>

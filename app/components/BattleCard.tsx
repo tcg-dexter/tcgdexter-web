@@ -44,7 +44,7 @@ export function relativeTime(iso: string): string {
 }
 
 const CARD_CLS =
-  "rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow";
+  "rounded-card border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow";
 
 /**
  * Wraps a card's contents in whatever makes the whole thing tappable.
@@ -86,9 +86,12 @@ function BattleCardShell({
       <Link
         href={href}
         aria-label={ariaLabel}
-        className="absolute inset-0 z-[1] rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-0"
+        className="absolute inset-0 z-[1] rounded-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-0"
       />
-      <div className="absolute top-1.5 right-1.5 z-20">{actions}</div>
+      {/* Inset 24px, not the old 6px: the menu trigger is a 28px circle
+          (r=14) and the card's corner is rounded-card (38px), so 38-14=24
+          puts the two arcs on the same center. */}
+      <div className="absolute top-6 right-6 z-20">{actions}</div>
     </div>
   );
 }

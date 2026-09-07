@@ -244,7 +244,7 @@ export function TrainerCard({
   return (
     <Link
       href={`/u/${trainer.username}`}
-      className="block rounded-2xl border-2 border-transparent shadow-sm hover:shadow-md transition-shadow"
+      className="block rounded-card border-2 border-transparent shadow-sm hover:shadow-md transition-shadow"
       style={{
         ...useFadeIn(index, skipEntranceAnimation),
         // The trainer's accent is the card's outline, and the face is the
@@ -263,7 +263,12 @@ export function TrainerCard({
         )} border-box`,
       }}
     >
-      <div className="px-4 pt-4 pb-3">
+      {/* 12px padding, not 16: with border-2 that puts the avatar's edge
+          14px from the card's outer edge, and the avatar is AVATAR_PX (48)
+          across, so its 24px radius plus that 14px gap equals the card's own
+          rounded-card (38px) — the two arcs share a center rather than the
+          avatar sitting at an arbitrary depth inside the corner. */}
+      <div className="px-3 pt-3 pb-3">
         {/* Identity row: avatar, then who they are, then their activity in
             the top-right corner. The grid is fixed-width and shrink-0
             rather than a flex item — it can't shrink to fit without giving

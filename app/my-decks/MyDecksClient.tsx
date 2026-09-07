@@ -191,8 +191,8 @@ function PinnedDeckHero({
       {/* Gradient glow — same treatment as the homepage deck-list input card,
           with half the blur and half the shadow's blur-radius so it reads
           softer/tighter against the hero's larger footprint. */}
-      <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 blur-md" />
-      <div className="relative rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-[0_20px_30px_-15px_rgba(217,30,13,0.3)] overflow-hidden flex flex-col md:flex-row">
+      <div className="absolute -inset-px rounded-card bg-gradient-brand opacity-30 blur-md" />
+      <div className="relative rounded-card border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-[0_20px_30px_-15px_rgba(217,30,13,0.3)] overflow-hidden flex flex-col md:flex-row">
         <div ref={bannerColRef} className="md:w-[360px] shrink-0">
           <DeckBanner
             imageUrl={deck.imageUrl ?? null}

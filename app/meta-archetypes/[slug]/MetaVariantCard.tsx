@@ -175,7 +175,7 @@ export default function MetaVariantCard({
 
   return (
     <div
-      className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow dark:bg-surface-elevated dark:border-white/10"
+      className="relative rounded-card border border-black/8 bg-white/90 backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow dark:bg-surface-elevated dark:border-white/10"
       style={useFadeIn(index)}
     >
       {/* Banner — same treatment as the main meta-archetype preview cards'

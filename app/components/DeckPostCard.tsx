@@ -96,7 +96,7 @@ export function MetaDeckCard({
   const accentDeep = shade(accentBg, -35);
   return (
     <div
-      className="relative rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+      className="relative rounded-card border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       style={useFadeIn(index)}
     >
       {/* Banner — same treatment as the deck collection preview cards'
@@ -125,7 +125,11 @@ export function MetaDeckCard({
             <img src={image_url} alt="" className="w-full h-full object-cover" />
           ) : null}
         </div>
-        <span className="absolute top-2.5 right-2.5 z-10 rounded-full bg-black px-3 py-[5px] text-[12px] font-bold text-white tabular-nums">
+        {/* h-7 + inset-6: an explicit 28px height fixes the capsule's radius
+            at 14, and the card's rounded-card (38px) corner then wants it
+            24px in for the two arcs to share a center. Same geometry as the
+            banner's favourite circle on the opposite corner. */}
+        <span className="absolute top-6 right-6 z-10 inline-flex h-7 items-center rounded-full bg-black px-3 text-[12px] font-bold text-white tabular-nums">
           {(representation_pct * 100).toFixed(1)}%
         </span>
         <div
@@ -335,7 +339,7 @@ export function DeckBanner({
             onClick={onToggleFavorite}
             aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
             aria-pressed={isFavorite}
-            className={`absolute top-2.5 left-2.5 z-10 w-7 h-7 rounded-full bg-white/65 flex items-center justify-center text-[13px] transition-colors ${
+            className={`absolute top-6 left-6 z-10 w-7 h-7 rounded-full bg-white/65 flex items-center justify-center text-[13px] transition-colors ${
               isFavorite ? "text-accent" : "text-black/25 hover:text-black/40"
             }`}
           >
@@ -357,7 +361,7 @@ export function DeckBanner({
           </button>
         )}
         {hasRecord && (
-          <span className="absolute top-2.5 right-2.5 z-10 rounded-full bg-black px-3 py-[5px] text-[12px] font-bold text-white tabular-nums">
+          <span className="absolute top-6 right-6 z-10 inline-flex h-7 items-center rounded-full bg-black px-3 text-[12px] font-bold text-white tabular-nums">
             {wl!.w}–{wl!.l}
           </span>
         )}
@@ -541,7 +545,7 @@ export function UserDeckCard({
   return (
     <div
       ref={cardRef}
-      className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+      className="rounded-card border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       style={useFadeIn(index, skipEntranceAnimation)}
     >
       <DeckBanner
