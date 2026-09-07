@@ -560,7 +560,7 @@ export default function HomeClient({
               </div>
               <Link
                 href={`/spotlight/${currentSpotlight.slug}`}
-                className="block rounded-2xl overflow-hidden border border-black/8 shadow-sm hover:shadow-md transition-shadow dark:border-white/10"
+                className="block rounded-card overflow-hidden border border-black/8 shadow-sm hover:shadow-md transition-shadow dark:border-white/10"
               >
                 <SpotlightBanner
                   accentColors={currentSpotlight.accentColors}

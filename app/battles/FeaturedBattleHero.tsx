@@ -137,13 +137,13 @@ export default function FeaturedBattleHero({
                 treatment as BattleCard. */}
             <span
               aria-label={`${leftSide.handleLabel} prizes taken`}
-              className="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-white text-[2.64rem] font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 text-white text-[2.64rem] font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
             >
               {leftSide.prizes}
             </span>
             <span
               aria-label={`${rightSide.handleLabel} prizes taken`}
-              className="absolute right-3 top-1/2 -translate-y-1/2 z-10 text-white text-[2.64rem] font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 text-white text-[2.64rem] font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
             >
               {rightSide.prizes}
             </span>
@@ -191,15 +191,23 @@ export default function FeaturedBattleHero({
             </div>
             {/* Player names anchored to each side's hero-card / prize-count
                 pair. Matched typography with the prize digits (white +
-                drop-shadow) so they read as part of the same score-strip. */}
-            <span className="absolute left-3 bottom-2 z-10 max-w-[45%] truncate text-white text-[13px] font-bold leading-none drop-shadow-sm pointer-events-none">
+                drop-shadow) so they read as part of the same score-strip.
+                Inset 16px/12px rather than the 12px/8px the digits used to
+                sit at: on md+ the banner is the card's left column, so its
+                bottom-left corner is the card's own 38px corner, and the
+                overflow-hidden root clips anything inside the arc. At 12px
+                up from the edge that arc is still 10px in (38 - sqrt(38^2 -
+                26^2)), so 16px clears it with room to spare. Applied to
+                both sides, and matched by the prize digits above, so the
+                score strip stays a single aligned column on each flank. */}
+            <span className="absolute left-4 bottom-3 z-10 max-w-[45%] truncate text-white text-[13px] font-bold leading-none drop-shadow-sm pointer-events-none">
               {leftSide.handleLabel}
             </span>
-            <span className="absolute right-3 bottom-2 z-10 max-w-[45%] truncate text-white text-[13px] font-bold leading-none drop-shadow-sm pointer-events-none">
+            <span className="absolute right-4 bottom-3 z-10 max-w-[45%] truncate text-white text-[13px] font-bold leading-none drop-shadow-sm pointer-events-none">
               {rightSide.handleLabel}
             </span>
             {battle.isBestOf3 && (
-              <div className="absolute inset-x-0 bottom-2 z-10 flex justify-center pointer-events-none">
+              <div className="absolute inset-x-0 bottom-3 z-10 flex justify-center pointer-events-none">
                 <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold text-black">
                   Best of 3
                 </span>
