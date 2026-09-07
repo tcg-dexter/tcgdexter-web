@@ -561,7 +561,7 @@ export default function DesignLibraryClient() {
           id="cards"
           eyebrow="Global"
           title="Cards & surfaces"
-          description="Two radius families. Modules and panels keep rounded-2xl — the standard elevated chrome codified in SkeletonCard so loading and loaded states share one shape. Preview cards (battle, deck, archetype, trainer, featured battle) and the home page's deck-list input use rounded-card, whose corners are built to be concentric with whatever sits in them."
+          description="Two radius families, split by what the surface holds rather than by component type. rounded-card is for containers with a composition of their own — preview cards (battle, deck, archetype, trainer, featured battle), deck profile modules, list cards, dialog panels, and the home page's deck-list input — and its corners are built to be concentric with whatever sits in them. rounded-2xl stays on secondary chrome that just frames other things: filter panels, empty states, toolbars, and the list containers rows sit inside. SkeletonCard still codifies the rounded-2xl chrome so loading and loaded states of those surfaces share one shape."
         >
           <Demo label="SkeletonCard chrome (app/components/skeletons/Skeleton.tsx) — modules and panels">
             <SkeletonCard>
@@ -953,7 +953,7 @@ export default function DesignLibraryClient() {
             <DeckOwnershipModule cards={OWNERSHIP_CARDS} />
           </Demo>
           <Demo label="Standard Format legality warning (DeckProfileView.tsx pattern) + info modal (StandardFormatInfo.tsx)">
-            <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm px-5 py-4">
+            <div className="rounded-card border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm px-5 py-4">
               <div className="flex items-center gap-3">
                 <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />

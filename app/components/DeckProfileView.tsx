@@ -235,7 +235,7 @@ export default function DeckProfileView({
     ).values(),
   );
 
-  const CARD_CLS = "rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm";
+  const CARD_CLS = "rounded-card border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm";
   const TRACK_CLS = "bg-black/5";
   const dateStr = new Date(profiledAt).toLocaleDateString("en-US", {
     month: "long",
@@ -491,10 +491,10 @@ export default function DeckProfileView({
           {/* Shop Matches */}
           {result.shopMatches.length > 0 && (
             <div
-              className="rounded-2xl p-[1.5px] bg-gradient-brand shadow-sm"
+              className="rounded-card p-[1.5px] bg-gradient-brand shadow-sm"
             >
             <details
-              className="rounded-[14.5px] bg-white/95 dark:bg-surface-elevated backdrop-blur-xl p-5 group"
+              className="rounded-[36.5px] bg-white/95 dark:bg-surface-elevated backdrop-blur-xl p-5 group"
             >
               <summary className="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden">
                 <div>

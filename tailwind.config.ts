@@ -36,8 +36,10 @@ const config: Config = {
       },
       borderRadius: {
         // The outer radius of the concentric-corner system: preview cards
-        // (battle, deck, archetype, trainer, featured battle), modal and
-        // dialog panels, and the home page's deck-list input. Anything
+        // (battle, deck, archetype, trainer, featured battle), deck profile
+        // modules, list cards, modal and dialog panels, and the home page's
+        // deck-list input — containers with a composition of their own, as
+        // opposed to chrome that just frames other things. Anything
         // circular or capsule-shaped that sits in one of these corners is
         // inset by `card - its own radius` so the two arcs share a center —
         // a 28px badge (r=14) sits 24px in, a 36px capsule (r=18) 20px in,

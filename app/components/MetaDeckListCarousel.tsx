@@ -124,7 +124,7 @@ export default function MetaDeckListCarousel({
   if (lists.length === 1) {
     // Single variant — render the same card chrome without carousel affordances.
     return (
-      <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-5">
+      <div className="rounded-card border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-5">
         <div className="flex items-start justify-between mb-3">
           <div>
             <h2 className="text-sm font-semibold text-text-primary">Deck List</h2>
@@ -138,7 +138,7 @@ export default function MetaDeckListCarousel({
   }
 
   return (
-    <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-5">
+    <div className="rounded-card border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-5">
       <div className="flex items-start justify-between mb-3">
         <div>
           <div className="flex items-baseline gap-2">

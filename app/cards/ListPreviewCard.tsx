@@ -13,7 +13,11 @@ import type { ListSummary } from "@/lib/lists";
 export default function ListPreviewCard({ list }: { list: ListSummary }) {
   const body = (
     <>
-      <div className="grid grid-cols-2 gap-0.5 rounded-lg overflow-hidden bg-surface aspect-square">
+      {/* rounded-[26px], not rounded-lg: the card around this is rounded-card
+          (38px) with p-3, so the mosaic sits 12px in and 38-12=26 makes its
+          corners concentric with the card's rather than a tighter arc inside
+          a much rounder one. */}
+      <div className="grid grid-cols-2 gap-0.5 rounded-[26px] overflow-hidden bg-surface aspect-square">
         {list.previewCards.length === 0 ? (
           <div className="col-span-2 row-span-2 flex items-center justify-center text-text-muted">
             <svg
@@ -62,7 +66,7 @@ export default function ListPreviewCard({ list }: { list: ListSummary }) {
 
   if (!list.href) {
     return (
-      <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated p-3 opacity-60">
+      <div className="rounded-card border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated p-3 opacity-60">
         {body}
       </div>
     );
@@ -71,7 +75,7 @@ export default function ListPreviewCard({ list }: { list: ListSummary }) {
   return (
     <Link
       href={list.href}
-      className="block rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated p-3 hover:bg-surface/70 transition-colors"
+      className="block rounded-card border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated p-3 hover:bg-surface/70 transition-colors"
     >
       {body}
     </Link>

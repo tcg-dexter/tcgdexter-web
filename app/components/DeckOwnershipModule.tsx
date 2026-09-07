@@ -33,7 +33,7 @@ interface Props {
 }
 
 const CARD_CLS =
-  "rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-5";
+  "rounded-card border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm p-5";
 
 type State = "loading" | "signedOut" | "empty" | "owned";
 type AddMode = "off" | "options" | "manual";
