@@ -32,7 +32,7 @@ import { metaDeckToList, type MetaDeckEntry } from "@/lib/metaDeckList";
 import { ENGINE_VERSION } from "@/lib/engine/types";
 import { SIM_VERSION, PlannerPolicy, plannerParamsForSkill } from "@/lib/engine/sim";
 import { simulateMatchup } from "@/lib/engine/sim/rollout";
-import { createBotEvaluator } from "@/lib/ml/botEvaluator";
+import { createBotEvaluator, readValueArtifact } from "@/lib/ml/botEvaluator";
 import { loadGeneratedDecks } from "@/lib/ml/generatedDecks";
 import { buildCorpus, loadMetaCorpus } from "@/lib/ml/deckGen/corpus";
 import { renderDeck } from "@/lib/ml/deckGen/rules";
@@ -215,11 +215,22 @@ async function main(): Promise<void> {
   }
 
   const totalGames = pairs.length * GAMES;
+  // The EVALUATOR is part of a study's identity. It is what pilots every game
+  // here, so two studies that differ only in which value model was loaded are
+  // different studies — and without this they would share a study_id and the
+  // idempotency check would hand back the first one's results while claiming
+  // to have run the second. selfplay.ts documents the same hazard for its own
+  // run hash; this is the same bug in a different harness.
+  const valueArtifact = readValueArtifact();
+  const evaluatorId = valueArtifact
+    ? `${valueArtifact.model_version}:${String(valueArtifact.trained_at).slice(0, 19)}`
+    : "heuristic-only";
   const studyId = createHash("sha256")
     .update(
       JSON.stringify({
         mode: MODE, seed: SEED, games: GAMES, skill: SKILL, pool: POOL,
         sim_version: SIM_VERSION, engine_version: ENGINE_VERSION,
+        evaluator: evaluatorId,
         deck_ids: pairs.length > 0 ? [pairs[0].a.id, pairs[pairs.length - 1].b.id] : [],
         pairs: pairs.length,
       }),
@@ -307,7 +318,10 @@ async function main(): Promise<void> {
     ).run(
       studyId, new Date().toISOString(), MODE, SIM_VERSION, ENGINE_VERSION, SEED, GAMES,
       SKILL, SHARDS,
-      JSON.stringify({ pool: POOL, subjects, panel, generated_run: GENERATED_RUN, with_parents: WITH_PARENTS }),
+      JSON.stringify({
+        pool: POOL, subjects, panel, generated_run: GENERATED_RUN,
+        with_parents: WITH_PARENTS, evaluator: evaluatorId,
+      }),
     );
   }
 
