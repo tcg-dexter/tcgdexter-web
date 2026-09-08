@@ -235,6 +235,12 @@ export const TEXTURES: ReadonlyArray<{ key: string; w: number; h: number; svg: s
   },
 ] as const;
 
+// Row counts for the swatch panel's two grids (3-col colors, 2-col
+// textures) — used to weight each grid's flex-grow so they share the same
+// row height, and therefore the same circle size, once stacked.
+const COLOR_GRID_ROWS = Math.ceil(MAT_STYLES.length / 3);
+const TEXTURE_GRID_ROWS = Math.ceil(TEXTURES.length / 2);
+
 function proxied(url: string): string {
   if (!url || url.startsWith("/") || url.startsWith("data:")) return url;
   return `/api/admin/social-studio/proxy-image?url=${encodeURIComponent(url)}`;
@@ -1089,13 +1095,18 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             align-items: stretch, so this column fills it with no JS
             measurement needed). */}
         <div className="flex flex-col gap-3">
-          {/* Color + pattern swatches, a single 3-column grid so the circles
-              scale to fill whatever vertical space is left once the
-              fixed-height buttons below take theirs. Covered by a safeguard
-              overlay while an image is placed (until the user taps
-              "Use Color"). */}
-          <div className="relative flex-1 min-h-0">
-            <div className="h-full grid grid-cols-3 gap-1.5" style={{ gridAutoRows: "1fr" }}>
+          {/* Color swatches (3 columns) + texture swatches (2 columns),
+              stacked. Each grid's flex-grow is proportional to its own row
+              count, so both end up with the same row height — and thus the
+              same circle size — once they fill the flex-1 area left over
+              after the fixed-height buttons below take theirs. Covered by a
+              safeguard overlay while an image is placed (until the user
+              taps "Use Color"). */}
+          <div className="relative flex-1 min-h-0 flex flex-col gap-1.5">
+            <div
+              className="min-h-0 grid grid-cols-3 gap-1.5"
+              style={{ gridAutoRows: "1fr", flexGrow: COLOR_GRID_ROWS }}
+            >
               {MAT_STYLES.map(({ key, gradient }) => (
                 <div key={key} className="flex items-center justify-center">
                   <button
@@ -1111,6 +1122,12 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                   />
                 </div>
               ))}
+            </div>
+
+            <div
+              className="min-h-0 grid grid-cols-2 gap-1.5"
+              style={{ gridAutoRows: "1fr", flexGrow: TEXTURE_GRID_ROWS }}
+            >
               {TEXTURES.map((t) => (
                 <div key={t.key} className="flex items-center justify-center">
                   <button
