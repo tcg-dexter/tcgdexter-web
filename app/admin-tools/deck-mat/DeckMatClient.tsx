@@ -801,22 +801,30 @@ async function rasterizeMat({
       // string, or null for no sleeve. See the sleeveColor state comment.
       const sleeveBg = sleeveColor;
       const sleeveBorder = sleeveBg ? SLEEVE_BORDER_PX : 0;
-      // Sleeved cards are square-cornered rectangles; unsleeved ones keep
-      // the usual rounded card corners.
+      // Sleeved cards get a square-cornered sleeve frame; the card art
+      // itself keeps its usual rounded corners either way.
       const outerR = sleeveBg ? 0 : cardR;
-      const innerR = sleeveBg ? 0 : Math.max(1, cardR - sleeveBorder);
       for (let i = 0; i < count; i++) {
         const cx = pileX + i * cardWidth * FAN_OVERLAP;
+        // The sleeve frame is drawn outward around the card's true (cx, ry,
+        // cardWidth, cardH) box, by sleeveBorder on every edge, rather than
+        // shrinking the card art inward to make room for it — so the card
+        // itself never scales down when a sleeve is equipped. A no-op box
+        // (sleeveBorder 0) with no sleeve.
+        const sx = cx - sleeveBorder;
+        const sy = ry - sleeveBorder;
+        const sw = cardWidth + sleeveBorder * 2;
+        const sh = cardH + sleeveBorder * 2;
         // canvas fillStyle can't take a raw "linear-gradient(...)" string —
         // convert it to a CanvasGradient first (cssGradToCanvas is also
         // what the mat background itself uses).
         const fillStyle = !sleeveBg
           ? "#e8e8e8"
           : sleeveBg.startsWith("linear-gradient")
-          ? cssGradToCanvas(ctx, sleeveBg, cx, ry, cardWidth, cardH) ?? "#e8e8e8"
+          ? cssGradToCanvas(ctx, sleeveBg, sx, sy, sw, sh) ?? "#e8e8e8"
           : sleeveBg;
 
-        // Card slot background — the sleeve color/gradient when one's
+        // Sleeve/slot background — the sleeve color/gradient when one's
         // equipped, otherwise the plain placeholder fill. Every card gets a
         // base drop shadow so it reads as sitting on the mat on its own;
         // stacked duplicates get a second pass layering an extra shadow
@@ -828,7 +836,7 @@ async function rasterizeMat({
         ctx.shadowBlur = 3;
         ctx.shadowColor = "rgba(0,0,0,0.35)";
         ctx.beginPath();
-        ctx.roundRect(cx, ry, cardWidth, cardH, outerR);
+        ctx.roundRect(sx, sy, sw, sh, outerR);
         ctx.closePath();
         ctx.fillStyle = fillStyle;
         ctx.fill();
@@ -841,26 +849,22 @@ async function rasterizeMat({
           ctx.shadowBlur = 2;
           ctx.shadowColor = "rgba(0,0,0,0.33)";
           ctx.beginPath();
-          ctx.roundRect(cx, ry, cardWidth, cardH, outerR);
+          ctx.roundRect(sx, sy, sw, sh, outerR);
           ctx.closePath();
           ctx.fillStyle = fillStyle;
           ctx.fill();
           ctx.restore();
         }
 
-        // Card image clipped to slot, inset by the sleeve border when one's
-        // equipped so the sleeve color shows all around the art.
+        // Card image, clipped to its own true size and corner radius —
+        // unaffected by the sleeve frame drawn around it above.
         if (cardImg) {
-          const ix = cx + sleeveBorder;
-          const iy = ry + sleeveBorder;
-          const iw = cardWidth - sleeveBorder * 2;
-          const ih = cardH - sleeveBorder * 2;
           ctx.save();
           ctx.beginPath();
-          ctx.roundRect(ix, iy, iw, ih, innerR);
+          ctx.roundRect(cx, ry, cardWidth, cardH, cardR);
           ctx.closePath();
           ctx.clip();
-          drawContain(ctx, cardImg, ix, iy, iw, ih);
+          drawContain(ctx, cardImg, cx, ry, cardWidth, cardH);
           ctx.restore();
         }
       }
@@ -1306,16 +1310,10 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                 aria-selected={sleevePanelOpen}
                 aria-label="Sleeve customization"
                 onClick={() => setSleevePanelOpen(true)}
-                className={`relative z-10 h-full flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 rounded-full text-xs font-bold transition-colors ${
+                className={`relative z-10 h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${
                   sleevePanelOpen ? "text-white dark:text-black" : "text-text-muted"
                 }`}
               >
-                {sleeveColor && (
-                  <span
-                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                    style={{ background: sleeveColor }}
-                  />
-                )}
                 Sleeve
               </button>
             </div>
@@ -1656,10 +1654,9 @@ export function CardPile({
   // string, or null for no sleeve. See the sleeveColor state comment.
   const sleeveBg = sleeveColor;
   const sleeveBorder = sleeveBg ? SLEEVE_BORDER_PX : 0;
-  // Sleeved cards are square-cornered rectangles; unsleeved ones keep the
-  // usual rounded card corners.
+  // Sleeved cards get a square-cornered sleeve frame; the card art itself
+  // keeps its usual rounded corners either way.
   const outerR = sleeveBg ? 0 : cardR;
-  const innerR = sleeveBg ? 0 : Math.max(1, cardR - sleeveBorder);
 
   return (
     <div
@@ -1668,30 +1665,33 @@ export function CardPile({
       aria-label={`${tile.name} ×${count}`}
     >
       {Array.from({ length: count }).map((_, i) => (
+        // Sized and positioned at the card's true (unsleeved) scale — a
+        // sleeve is a frame drawn around this box, not a margin eaten out
+        // of it, so the card itself never shrinks to make room for one.
         <div
           key={i}
-          className="absolute top-0 overflow-hidden bg-surface"
-          style={{
-            left: i * cardWidth * FAN_OVERLAP,
-            width: cardWidth,
-            height: cardHeight,
-            borderRadius: outerR,
-            zIndex: i,
-            // Every card gets a base drop shadow so it reads as sitting on
-            // the mat even on its own; stacked duplicates layer an extra
-            // shadow between them for depth.
-            boxShadow: i > 0 ? `${CARD_DROP_SHADOW}, -2px 0 2px rgba(0,0,0,0.33)` : CARD_DROP_SHADOW,
-            // `background`, not `backgroundColor` — sleeveBg can be a
-            // gradient string, which backgroundColor can't render.
-            background: sleeveBg ?? undefined,
-          }}
+          className="absolute top-0"
+          style={{ left: i * cardWidth * FAN_OVERLAP, width: cardWidth, height: cardHeight, zIndex: i }}
         >
-          {/* Inset by the sleeve border so its color shows all around the
-              art — inset is 0 with no sleeve, so this is a no-op then. */}
+          {/* Sleeve/background layer. Extends outward by the sleeve border
+              on every edge (inset: -0 is a no-op with no sleeve, so this is
+              flush with the card box then) rather than shrinking inward,
+              so it never scales the card down. Also carries the drop
+              shadow every card gets, sleeved or not. */}
           <div
-            className="absolute overflow-hidden"
-            style={{ inset: sleeveBorder, borderRadius: innerR }}
-          >
+            className="absolute overflow-hidden bg-surface"
+            style={{
+              inset: -sleeveBorder,
+              borderRadius: outerR,
+              boxShadow: i > 0 ? `${CARD_DROP_SHADOW}, -2px 0 2px rgba(0,0,0,0.33)` : CARD_DROP_SHADOW,
+              // `background`, not `backgroundColor` — sleeveBg can be a
+              // gradient string, which backgroundColor can't render.
+              background: sleeveBg ?? undefined,
+            }}
+          />
+          {/* Card art — always exactly cardWidth × cardHeight with its own
+              rounded corners, regardless of whether a sleeve is equipped. */}
+          <div className="absolute inset-0 overflow-hidden" style={{ borderRadius: cardR }}>
             <CardImage
               src={tile.smallImageUrl}
               alt={alt}
