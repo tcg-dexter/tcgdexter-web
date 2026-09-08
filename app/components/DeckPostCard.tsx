@@ -137,7 +137,7 @@ export function MetaDeckCard({
           style={{
             width: "var(--hero-card-w, 166px)",
             height: "var(--hero-card-h, 229px)",
-            left: "var(--hero-card-x, 39%)",
+            left: "var(--hero-card-x, 44%)",
             bottom: 0,
             transform: "translate(-50%, 40%) rotate(-4deg)",
           }}
@@ -278,6 +278,7 @@ export function DeckBanner({
   onToggleFavorite,
   showFavorite,
   avatarItems,
+  showAvatars = true,
   className = "",
   artworkAreaHeightPx,
 }: {
@@ -289,6 +290,11 @@ export function DeckBanner({
   onToggleFavorite: (e: React.MouseEvent) => void;
   showFavorite: boolean;
   avatarItems: AvatarStackItem[];
+  /** Render the Pokémon avatar stack in the banner's bottom-right. The
+   *  pinned hero keeps it there, where the banner is a full-height column
+   *  of its own; the grid card sets this false and renders the same stack
+   *  in its body instead, beside the composition ring. */
+  showAvatars?: boolean;
   /** Extra classes merged onto the root — lets callers override the default
    *  fixed height (e.g. stretch full-height in a desktop side-by-side
    *  layout) without affecting the grid card's own fixed-height use. */
@@ -370,7 +376,7 @@ export function DeckBanner({
           style={{
             width: "var(--hero-card-w, 166px)",
             height: "var(--hero-card-h, 229px)",
-            left: "var(--hero-card-x, 39%)",
+            left: "var(--hero-card-x, 44%)",
             bottom: 0,
             transform: "translate(-50%, 40%) rotate(-4deg)",
           }}
@@ -380,9 +386,16 @@ export function DeckBanner({
             <img src={imageUrl} alt={name} className="w-full h-full object-cover" />
           ) : null}
         </div>
-        <div className="absolute right-3 bottom-2.5 z-10 flex">
-          <AvatarStack items={avatarItems} count={3} />
-        </div>
+        {showAvatars && (
+          // Bottom offset tracks the hero layout's body column padding
+          // (p-5 / md:p-6) less the avatar's 2px white ring, so the ring's
+          // outer edge — what actually reads as the avatar's bottom — sits
+          // the same distance off the card as the Log battle / View deck
+          // capsules do in the column beside it.
+          <div className="absolute right-3 bottom-[18px] md:bottom-[22px] z-10 flex">
+            <AvatarStack items={avatarItems} count={3} />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -557,7 +570,8 @@ export function UserDeckCard({
         onToggleFavorite={toggleFavorite}
         showFavorite={canManage}
         avatarItems={avatarItems}
-        className="md:[--hero-card-x:42%]"
+        showAvatars={false}
+        className="md:[--hero-card-x:47%]"
       />
 
       {/* Body — deck name + (owner) manage menu, then composition ring. */}
@@ -583,13 +597,24 @@ export function UserDeckCard({
         )}
       </div>
 
+      {/* Composition ring + legend on the left, Pokémon avatars anchored to
+          the body's bottom-right. The avatars used to sit in the banner;
+          down here they're clear of the hero card art and read as part of
+          the deck's summary line. items-end bottom-aligns them with the
+          ring, which is the taller of the two and so sets the row height —
+          and keeps them anchored even when `counts` is absent. */}
       <Link href={href} className="block">
-        {counts && (
-          <div className="flex items-center gap-3.5 px-3.5 py-1">
-            <CompositionRing counts={counts} heroColor={iconBg} />
-            <CompositionLegend counts={counts} heroColor={iconBg} />
+        <div className="flex items-end gap-3.5 px-3.5 py-1">
+          {counts && (
+            <div className="flex min-w-0 items-center gap-3.5">
+              <CompositionRing counts={counts} heroColor={iconBg} />
+              <CompositionLegend counts={counts} heroColor={iconBg} />
+            </div>
+          )}
+          <div className="ml-auto flex shrink-0">
+            <AvatarStack items={avatarItems} count={3} />
           </div>
-        )}
+        </div>
       </Link>
 
       <div className="flex items-stretch border-t border-black/5 dark:border-white/10">

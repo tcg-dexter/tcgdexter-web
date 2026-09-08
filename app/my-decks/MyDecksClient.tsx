@@ -542,9 +542,9 @@ export default function MyDecksClient({ decks, atRiskStreak = 0, onboarding }: P
         </div>
       </div>
 
-      {pinnedDeck && (
+      {pinnedDeck && !favoritesOnly && (
         <div className="mb-2">
-          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-text-muted">
+          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-text-muted">
             <svg
               aria-hidden="true"
               viewBox="0 0 24 24"
