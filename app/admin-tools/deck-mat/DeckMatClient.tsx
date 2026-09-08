@@ -1566,7 +1566,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                     <button
                       type="button"
                       onClick={() => !isLoading && handleSelectDeck(deck)}
-                      className={`w-36 flex flex-col gap-2 p-3 rounded-card border backdrop-blur-xl bg-white/90 dark:bg-surface-elevated shadow-sm hover:shadow-md text-left transition ${
+                      className={`w-[180px] flex flex-col gap-2 p-3 rounded-card border backdrop-blur-xl bg-white/90 dark:bg-surface-elevated shadow-sm hover:shadow-md text-left transition ${
                         isSelected ? "border-accent ring-1 ring-accent" : "border-black/8 dark:border-white/10"
                       }`}
                     >
