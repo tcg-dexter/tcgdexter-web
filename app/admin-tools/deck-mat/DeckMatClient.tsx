@@ -96,7 +96,7 @@ const DUO_GRADIENTS: Record<(typeof DUO_STYLE_KEYS)[number], string> = {
 // Angles are restricted to 135deg / 180deg on purpose — those are the only
 // two cssGradToCanvas() maps to canvas endpoints, so any other angle would
 // look right on the live mat and wrong in the exported PNG.
-const SCENE_STYLE_KEYS = ["midnight", "nebula", "sunset", "ember", "aurora"] as const;
+const SCENE_STYLE_KEYS = ["midnight", "nebula", "sunset", "ember", "aurora", "dawn", "storm"] as const;
 
 const SCENE_GRADIENTS: Record<(typeof SCENE_STYLE_KEYS)[number], string> = {
   // Deep navy fading to near-black — the "playing under the tournament
@@ -110,6 +110,10 @@ const SCENE_GRADIENTS: Record<(typeof SCENE_STYLE_KEYS)[number], string> = {
   ember:    `linear-gradient(135deg, #f5a623 0%, ${ed("Fire")} 55%, ${shade(ENERGY_HEX.Fire, -46)} 100%)`,
   // Northern-lights teal over a Darkness base, lifting to a soft Psychic.
   aurora:   `linear-gradient(135deg, ${shade(ENERGY_HEX.Darkness, -14)} 0%, #2fa88c 50%, ${shade(ENERGY_HEX.Psychic, 4)} 100%)`,
+  // Pale morning gold sinking into a Fairy-derived pink, then dusk plum.
+  dawn:     `linear-gradient(180deg, #ffe1a8 0%, ${shade(ENERGY_HEX.Fairy, 6)} 55%, #3a1f3d 100%)`,
+  // Dark storm cloud with an electric Lightning flash, settling into Metal grey.
+  storm:    `linear-gradient(135deg, #1e2a30 0%, ${shade(ENERGY_HEX.Lightning, -10)} 55%, ${shade(ENERGY_HEX.Metal, -30)} 100%)`,
 };
 
 export type MatStyle =
@@ -121,12 +125,10 @@ export type MatStyle =
 
 const BLACK_GRADIENT = "linear-gradient(180deg, #3a3a3a 0%, #141414 100%)";
 
-// 30 entries laid out on a 15-column grid = exactly two rows, and the order
-// is chosen so the row break lands on a real seam:
-//   row 1 — brand, the three dark neutrals, then the 11 energy singles
-//   row 2 — the 12 energy duos, then the three warm/cool scenes
-// midnight and nebula sit up with brand/black rather than with the other
-// scenes because they read as dark solids, which is what row 1 is.
+// 32 entries: brand, the three dark neutrals, the 11 energy singles, the 12
+// energy duos, then the five warm/cool scenes. midnight and nebula sit up
+// with brand/black rather than with the other scenes because they read as
+// dark solids, same as those neutrals.
 export const MAT_STYLES: { key: MatStyle; gradient: string }[] = [
   { key: "brand", gradient: BRAND_BANNER_GRADIENT },
   { key: "black", gradient: BLACK_GRADIENT },
@@ -137,6 +139,8 @@ export const MAT_STYLES: { key: MatStyle; gradient: string }[] = [
   { key: "sunset", gradient: SCENE_GRADIENTS.sunset },
   { key: "ember", gradient: SCENE_GRADIENTS.ember },
   { key: "aurora", gradient: SCENE_GRADIENTS.aurora },
+  { key: "dawn", gradient: SCENE_GRADIENTS.dawn },
+  { key: "storm", gradient: SCENE_GRADIENTS.storm },
 ];
 
 // Each texture is a small SVG tile that repeats seamlessly. Opacity is baked
@@ -233,6 +237,13 @@ export const TEXTURES: ReadonlyArray<{ key: string; w: number; h: number; svg: s
     key: "circuit",
     w: 24, h: 24,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="M0,6 H7 V15 H17 V6 H24 M20,0 V10 H12 V21 H20 V24" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.3"/><circle cx="7" cy="15" r="1.4" fill="white" fill-opacity="0.35"/><circle cx="20" cy="10" r="1.4" fill="white" fill-opacity="0.35"/></svg>`,
+  },
+  {
+    // Checkerboard: two diagonal squares per tile, the simplest pattern
+    // that still reads clearly at swatch size.
+    key: "checker",
+    w: 16, h: 16,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect x="0" y="0" width="8" height="8" fill="white" fill-opacity="0.28"/><rect x="8" y="8" width="8" height="8" fill="white" fill-opacity="0.28"/></svg>`,
   },
 ] as const;
 
@@ -477,6 +488,11 @@ function drawTextureTile(key: string): HTMLCanvasElement | null {
       c.beginPath();
       c.arc(20, 10, 1.4, 0, Math.PI * 2);
       c.fill();
+      break;
+    case "checker":
+      c.globalAlpha = 0.28;
+      c.fillRect(0, 0, 8, 8);
+      c.fillRect(8, 8, 8, 8);
       break;
     default:
       return null;
@@ -834,6 +850,12 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const [matWidth, setMatWidth] = useState(0);
   const swatchBoxRef = useRef<HTMLDivElement>(null);
   const [swatchBoxSize, setSwatchBoxSize] = useState({ w: 0, h: 0 });
+  // Below md, the customization panel isn't a CSS grid item next to the mat
+  // (that's what stretches it to the mat's height on desktop for free), so
+  // the swatch grid needs an explicit height instead — see isDesktop below.
+  const buttonsRef = useRef<HTMLDivElement>(null);
+  const [buttonsHeight, setButtonsHeight] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
 
   // Record a Playmat Studio open once per mount.
   useEffect(() => {
@@ -858,6 +880,22 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
     );
     ro.observe(el);
     return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const el = buttonsRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setButtonsHeight(entry.contentRect.height));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)"); // Tailwind's md
+    setIsDesktop(mq.matches);
+    const onChange = () => setIsDesktop(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
   }, []);
 
   async function handleSelectDeck(deck: DeckSummary) {
@@ -931,6 +969,16 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const activeTex = TEXTURES.find((t) => t.key === textureKey) ?? null;
   const texScale = matWidth > 0 ? matWidth / 600 : 1;
   const matHeightPx = matWidth > 0 ? matWidth * MAT_ASPECT : 0;
+  // Below md the customization panel sits under the mat instead of beside
+  // it, so it has no CSS grid row to stretch it to the mat's height — this
+  // gives the swatch grid an explicit height instead (mat height, minus the
+  // gap and the fixed-height buttons below it). PANEL_GAP_PX mirrors the
+  // panel's own gap-3.
+  const PANEL_GAP_PX = 12;
+  const mobileSwatchHeight =
+    !isDesktop && matHeightPx > 0 && buttonsHeight > 0
+      ? Math.max(0, matHeightPx - PANEL_GAP_PX - buttonsHeight)
+      : undefined;
   // A placed image replaces the gradient/pattern as the mat background.
   const imagePlacement =
     matImage && matWidth > 0
@@ -1102,17 +1150,22 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           </div>
         </div>
 
-        {/* Right on desktop: customization panel — one grouped element that
-            matches the mat's height via CSS grid stretch (the mat column's
-            natural height sets the row height; grid items default to
-            align-items: stretch, so this column fills it with no JS
-            measurement needed). */}
+        {/* Below the mat on mobile, beside it (to its right) from md up.
+            On desktop this panel matches the mat's height via CSS grid
+            stretch (the mat column's natural height sets the row height,
+            and grid items default to align-items: stretch) with no JS
+            measurement needed. Below md there's no grid row to stretch
+            it, so the swatch grid instead gets an explicit height —
+            mobileSwatchHeight — computed from the mat's own height. */}
         <div className="flex flex-col gap-3">
-          {/* Invisible twin of the mat column's deck-name row, so this
-              panel's own content starts level with the mat box itself
-              rather than with the top of the mat column (which includes
-              that name row above the mat). */}
-          <div className="flex items-center gap-4 invisible" aria-hidden="true">
+          {/* Invisible twin of the mat column's deck-name row — only
+              needed on desktop, where this panel sits beside the mat and
+              needs its content to start level with the mat box rather
+              than with the top of the mat column (which includes that
+              name row above the mat). Hidden on mobile, where the panel
+              just stacks under the mat and this offset would only waste
+              space. */}
+          <div className="hidden md:flex items-center gap-4 invisible" aria-hidden="true">
             <span className="text-lg sm:text-xl font-semibold truncate">&nbsp;</span>
           </div>
 
@@ -1128,7 +1181,11 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
               fixed-height buttons below take theirs, so the circles scale
               with it. Covered by a safeguard overlay while an image is
               placed (until the user taps "Use Color"). */}
-          <div ref={swatchBoxRef} className="relative flex-1 min-h-0">
+          <div
+            ref={swatchBoxRef}
+            className="relative min-h-0 md:flex-1"
+            style={{ height: mobileSwatchHeight }}
+          >
             <div
               className="h-full grid gap-1.5"
               style={{ gridTemplateColumns: `repeat(${swatchCols.cols}, 1fr)`, gridAutoRows: "1fr" }}
@@ -1198,7 +1255,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
 
           {/* Add Image + Export — fixed height, independent of how much
               room the swatch grid above ends up with. */}
-          <div className="flex flex-col gap-2 flex-none">
+          <div ref={buttonsRef} className="flex flex-col gap-2 flex-none">
             <input
               ref={imageInputRef}
               type="file"
