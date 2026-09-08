@@ -97,7 +97,12 @@ export default function FeaturedBattleHero({
     : "absolute inset-0";
 
   return (
-    <div className="relative mb-4">
+    // mb-8 matches the gap-8 rhythm the Today / This Week / This Month
+    // sections keep between each other on /battles. At mb-4 the hero's own
+    // shadow (0 20px 30px -15px, so ~15px of spread below the card) ate
+    // nearly the whole gap. On the home page the following module's mt-12
+    // is larger and collapses with this, so that spacing is unchanged.
+    <div className="relative mb-8">
       {/* Gradient glow — matches PinnedDeckHero's treatment exactly. */}
       <div className="absolute -inset-px rounded-card bg-gradient-brand opacity-30 blur-md" />
       <div className="relative rounded-card border border-black/8 bg-white/90 backdrop-blur-xl shadow-[0_20px_30px_-15px_rgba(217,30,13,0.3)] overflow-hidden flex flex-col md:flex-row dark:bg-surface-elevated dark:border-white/10">
