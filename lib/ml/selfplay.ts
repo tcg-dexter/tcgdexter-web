@@ -80,6 +80,19 @@ export interface SelfPlayOptions {
   maxTurns?: number;
   /** Injected for tests; defaults to the live winprob artifact (or null). */
   evaluator?: StateEvaluator | null;
+  /** Record every legal candidate's action features, not just the chosen
+   *  move. The policy RANKER needs them; the value model does not, and they
+   *  are 853 rows a game against 99 — ~131 KB vs ~38 KB, plus the CPU to
+   *  encode each one. Default true, for byte-identical behaviour with every
+   *  run recorded before this existed. */
+  recordCandidates?: boolean;
+  /** Generate only the games where `gameIndex % count === index`.
+   *
+   *  Every game's seed is `hashSeed("selfplay:<seed>:<gameIndex>")`, a pure
+   *  function of the index, so a shard's games are identical to the ones a
+   *  single process would have produced at those indices. Worker count is a
+   *  performance knob, never a variable in the data. */
+  shard?: { index: number; count: number };
 }
 
 export const DEFAULT_SKILLS = [0.35, 0.65, 1];
@@ -105,21 +118,27 @@ class RecordingPolicy implements DecisionPolicy {
     private readonly skill: number,
     private readonly game: SelfPlayGameRecord,
     private readonly evaluator: StateEvaluator | null,
+    private readonly recordCandidates = true,
   ) {}
 
   chooseMove(view: PlayerView, legal: SimMove[], ctx: TurnContext): SimMove {
     const move = this.inner.chooseMove(view, legal, ctx);
-    const candidates = legal.map((m) => ({
-      kind: m.kind,
-      features: encodeActionFeatures(view, m),
-    }));
-    const chosenJson = JSON.stringify(move);
-    let chosenIndex = legal.findIndex((m) => JSON.stringify(m) === chosenJson);
-    if (chosenIndex === -1) {
-      // Planner decorated the move (e.g. auto-picked discard cost) — the
-      // chosen action still gets a candidate row so the pair is complete.
-      candidates.push({ kind: move.kind, features: encodeActionFeatures(view, move) });
-      chosenIndex = candidates.length - 1;
+    // Encoding every candidate is the expensive half of recording — skipped
+    // outright when only the value model will read this corpus, which saves
+    // the CPU as well as the rows.
+    const candidates = this.recordCandidates
+      ? legal.map((m) => ({ kind: m.kind, features: encodeActionFeatures(view, m) }))
+      : [];
+    let chosenIndex = -1;
+    if (this.recordCandidates) {
+      const chosenJson = JSON.stringify(move);
+      chosenIndex = legal.findIndex((m) => JSON.stringify(m) === chosenJson);
+      if (chosenIndex === -1) {
+        // Planner decorated the move (e.g. auto-picked discard cost) — the
+        // chosen action still gets a candidate row so the pair is complete.
+        candidates.push({ kind: move.kind, features: encodeActionFeatures(view, move) });
+        chosenIndex = candidates.length - 1;
+      }
     }
     this.game.decisions.push({
       actor: this.actor,
@@ -186,7 +205,10 @@ export function generateSelfPlayGames(options: SelfPlayOptions): SelfPlayGameRec
     throw new Error("selfplay: opponentDecks provided but empty");
   }
 
+  const shard = options.shard;
+  const recordCandidates = options.recordCandidates !== false;
   for (let g = 0; g < options.games; g++) {
+    if (shard && shard.count > 1 && g % shard.count !== shard.index) continue;
     const plan = schedule(
       { decks: options.decks, skills, opponentDecks: options.opponentDecks },
       g,
@@ -216,6 +238,7 @@ export function generateSelfPlayGames(options: SelfPlayOptions): SelfPlayGameRec
         skill,
         record,
         evaluator,
+        recordCandidates,
       );
 
     const outcome = playGame(

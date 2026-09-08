@@ -24,6 +24,8 @@
 //                                    |meta-vs-generated|generated]
 //                          [--community-decks N] [--decks-file PATH]
 //                          [--generated-decks N] [--generated-run HASH]
+//                          [--record candidates|decisions]
+//                          [--shards N --shard-index K]
 //
 // --decks-file swaps the live meta-archetype slice for a frozen benchmark
 // fixture (data/ml/benchmark-decks.json) so training decks match the duel
@@ -45,6 +47,7 @@
 // changed teaches nothing.
 
 import path from "node:path";
+import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 
@@ -57,9 +60,10 @@ import {
   STATE_FEATURE_NAMES,
   ACTION_FEATURE_NAMES,
 } from "@/lib/ml/features";
-import { DEFAULT_SKILLS, generateSelfPlayGames } from "@/lib/ml/selfplay";
+import { DEFAULT_SKILLS, generateSelfPlayGames, type SelfPlayGameRecord } from "@/lib/ml/selfplay";
 import { loadCommunityDecks } from "@/lib/ml/communityDecks";
 import { loadGeneratedDecks } from "@/lib/ml/generatedDecks";
+import { defaultCorpusPath, openCorpus } from "@/lib/ml/corpusStore";
 import { loadBenchmarkDecks } from "@/lib/ml/benchmarkDecks";
 import { readWinProbArtifact } from "@/lib/ml/winprob";
 import { readValueArtifact } from "@/lib/ml/botEvaluator";
@@ -68,7 +72,10 @@ import { numOrNull } from "@/lib/ml/features";
 /* ─── CLI args ──────────────────────────────────────────────────── */
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
-const DEFAULT_STORE = path.resolve(REPO_ROOT, "..", "dexter-ml", "feature_store.sqlite");
+// Self-play data is generated data — it lives in the corpus store, not in
+// the Supabase snapshot ml_export.py rewrites weekly. --store still points
+// wherever you like; the default just stopped being the wrong file.
+const DEFAULT_STORE = defaultCorpusPath(REPO_ROOT);
 
 function argValue(flag: string): string | null {
   const idx = process.argv.indexOf(flag);
@@ -95,13 +102,15 @@ type Matchup =
   | "meta-vs-community"
   | "community"
   | "meta-vs-generated"
-  | "generated";
+  | "generated"
+  | "mixed";
 const MATCHUPS: Matchup[] = [
   "meta",
   "meta-vs-community",
   "community",
   "meta-vs-generated",
   "generated",
+  "mixed",
 ];
 const matchupArg = argValue("--matchup") ?? "meta";
 if (!MATCHUPS.includes(matchupArg as Matchup)) {
@@ -114,6 +123,15 @@ const generatedDeckCount = numOrNull(argValue("--generated-decks")) ?? 30;
 // even after gen_decks.ts has added newer decks to the store.
 const generatedRun = argValue("--generated-run");
 const decksFile = argValue("--decks-file");
+// Candidate rows are 853 a game against 99 decisions (~131 KB vs ~38 KB) and
+// cost CPU to encode. Only the policy RANKER reads them; the value model
+// does not. Default stays "candidates" so existing run hashes reproduce.
+const record = (argValue("--record") ?? "candidates") as "candidates" | "decisions";
+if (record !== "candidates" && record !== "decisions") {
+  throw new Error(`--record must be candidates|decisions, got "${record}"`);
+}
+const shards = numOrNull(argValue("--shards")) ?? 1;
+const shardIndex = numOrNull(argValue("--shard-index"));
 
 /* ─── Sparse encoding ───────────────────────────────────────────── */
 
@@ -184,7 +202,48 @@ CREATE TABLE IF NOT EXISTS policy_candidates (
 
 /* ─── Main ──────────────────────────────────────────────────────── */
 
-function main(): void {
+/** Spawn one worker per shard, handing each streamed game record to `sink`.
+ *
+ *  Streamed, not collected: 20,000 games of decision records is ~760 MB on
+ *  disk and several GB as live JS objects, which a 16 GB machine does not
+ *  have to spare next to eight simulator processes. The sink writes each game
+ *  as it lands, so peak memory is one game.
+ *
+ *  Games therefore arrive in worker-completion order rather than index order.
+ *  That is fine — every row carries its game_index, and nothing downstream
+ *  reads insertion order — but it is why the caller must not assume it. */
+async function fanOut(sink: (g: SelfPlayGameRecord) => void): Promise<void> {
+  await Promise.all(
+    Array.from({ length: shards }, (_, k) =>
+      new Promise<void>((resolve, reject) => {
+        const child = spawn(
+          process.execPath,
+          [
+            ...process.execArgv,
+            __filename,
+            ...process.argv.slice(2).filter((a) => a !== "--shard-index"),
+            "--shard-index", String(k),
+          ],
+          { stdio: ["ignore", "pipe", "inherit"] },
+        );
+        let buf = "";
+        child.stdout.on("data", (chunk: Buffer) => {
+          buf += chunk.toString();
+          let nl: number;
+          while ((nl = buf.indexOf("\n")) >= 0) {
+            const line = buf.slice(0, nl).trim();
+            buf = buf.slice(nl + 1);
+            if (line) sink(JSON.parse(line) as SelfPlayGameRecord);
+          }
+        });
+        child.on("error", reject);
+        child.on("exit", (c) => (c === 0 ? resolve() : reject(new Error(`shard ${k} exited ${c}`))));
+      }),
+    ),
+  );
+}
+
+async function main(): Promise<void> {
   // The "meta" pool: a frozen benchmark fixture when --decks-file is given
   // (drift-free, matches the duel gauntlet), else the top --decks live meta
   // archetypes (which the daily refresh reorders).
@@ -201,7 +260,8 @@ function main(): void {
         .filter((d) => d.list.length > 0);
 
   const needsCommunity = matchup === "meta-vs-community" || matchup === "community";
-  const needsGenerated = matchup === "meta-vs-generated" || matchup === "generated";
+  const needsGenerated =
+    matchup === "meta-vs-generated" || matchup === "generated" || matchup === "mixed";
   const communityDecks = needsCommunity
     ? loadCommunityDecks(storePath).slice(0, communityDeckCount)
     : [];
@@ -235,8 +295,20 @@ function main(): void {
   // built-in anti-mirror trick applies); the "-vs-" modes use two distinct
   // pools, with the META side as pool A so a generated deck is always
   // measured against a real one.
+  // "mixed" is the ablation arm: meta UNION generated on BOTH sides. It is
+  // deliberately not "meta-vs-generated" — that changes the matchup
+  // STRUCTURE as well as the deck pool, so a difference in the trained model
+  // could not be attributed to diversity. Here the only thing that changes
+  // between arms is which decks are in the hat.
+  const mixedPool = matchup === "mixed" ? [...metaDecks, ...generatedDecks] : [];
   const poolA =
-    matchup === "community" ? communityDecks : matchup === "generated" ? generatedDecks : metaDecks;
+    matchup === "community"
+      ? communityDecks
+      : matchup === "generated"
+        ? generatedDecks
+        : matchup === "mixed"
+          ? mixedPool
+          : metaDecks;
   const poolB =
     matchup === "meta-vs-community"
       ? communityDecks
@@ -261,6 +333,10 @@ function main(): void {
     games,
     skills: effectiveSkills,
     max_turns: maxTurns ?? null,
+    // Part of the run identity: a decisions-only corpus is not the same
+    // dataset as a full one, and reusing the hash would hand a policy
+    // trainer a corpus with no candidates in it.
+    ...(record !== "candidates" ? { record } : {}),
     decks: metaDecks.map((d) => ({ id: d.id, list_hash: listHash(d.list) })),
     // Only present for non-default matchups — keeps run_hash byte-identical
     // to before this flag existed for the default `meta` mode, so old
@@ -293,7 +369,26 @@ function main(): void {
     )
     .digest("hex");
 
-  const db = new DatabaseSync(storePath);
+  // Worker: generate this shard's games, stream them to the parent, and open
+  // no database at all. One writer keeps sqlite out of lock contention, and
+  // keeps the run row a single atomic fact rather than N partial ones.
+  if (shardIndex != null) {
+    for (const game of generateSelfPlayGames({
+      decks: poolA,
+      opponentDecks: poolB === poolA ? undefined : poolB,
+      games,
+      seed,
+      skills: effectiveSkills,
+      maxTurns,
+      recordCandidates: record === "candidates",
+      shard: { index: shardIndex, count: shards },
+    })) {
+      process.stdout.write(JSON.stringify(game) + "\n");
+    }
+    return;
+  }
+
+  const db = openCorpus(storePath);
   db.exec(SCHEMA);
   // policy_games predates deck_a_source/deck_b_source; CREATE TABLE IF NOT
   // EXISTS won't add columns to an already-existing table, so add them here,
@@ -325,15 +420,10 @@ function main(): void {
       `evaluator=${valueArtifact ? valueArtifact.model_version : params.value_model ?? "heuristic-only"}`,
   );
   const startedAt = Date.now();
-  const records = generateSelfPlayGames({
-    decks: poolA,
-    opponentDecks: poolB === poolA ? undefined : poolB,
-    games,
-    seed,
-    skills: effectiveSkills,
-    maxTurns,
-  });
-
+  // Every game's seed is hashSeed("selfplay:<seed>:<gameIndex>") — a pure
+  // function of the index — so splitting the index range across processes
+  // produces exactly the games one process would have produced. Worker count
+  // is a performance knob, never a variable in the data.
   const insertGame = db.prepare(
     `INSERT INTO policy_games (run_hash, game_index, seed, deck_a, deck_b, deck_a_source, deck_b_source, skill_a, skill_b, winner, end_reason, turns, decisions)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -349,9 +439,10 @@ function main(): void {
 
   let decisions = 0;
   let candidates = 0;
-  db.exec("BEGIN");
-  try {
-    for (const game of records) {
+  let gameCount = 0;
+  const writeGame = (game: SelfPlayGameRecord): void => {
+    {
+      gameCount += 1;
       insertGame.run(
         runHash,
         game.gameIndex,
@@ -397,6 +488,25 @@ function main(): void {
         }
       }
     }
+  };
+
+  db.exec("BEGIN");
+  try {
+    if (shards > 1) {
+      await fanOut(writeGame);
+    } else {
+      for (const game of generateSelfPlayGames({
+        decks: poolA,
+        opponentDecks: poolB === poolA ? undefined : poolB,
+        games,
+        seed,
+        skills: effectiveSkills,
+        maxTurns,
+        recordCandidates: record === "candidates",
+      })) {
+        writeGame(game);
+      }
+    }
     db.prepare(
       `INSERT INTO policy_runs (run_hash, created_at, policy_schema_version, engine_version, sim_version, seed, games, params_json, state_feature_names, action_feature_names, decisions)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -422,9 +532,9 @@ function main(): void {
 
   const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
   console.log(
-    `[selfplay] run ${runHash.slice(0, 12)}: ${records.length} games, ${decisions} decisions, ` +
+    `[selfplay] run ${runHash.slice(0, 12)}: ${gameCount} games, ${decisions} decisions, ` +
       `${candidates} candidates in ${elapsed}s → ${storePath}`,
   );
 }
 
-main();
+void main();

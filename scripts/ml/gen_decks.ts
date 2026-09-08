@@ -25,17 +25,19 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
-import { DatabaseSync } from "node:sqlite";
 
 import { ENGINE_VERSION } from "@/lib/engine/types";
 import { SIM_VERSION } from "@/lib/engine/sim";
 import { buildCorpus, loadMetaCorpus } from "@/lib/ml/deckGen/corpus";
+import { parseDeck } from "@/lib/ml/deckGen/rules";
 import { DECK_GEN_VERSION, generateDecks } from "@/lib/ml/deckGen/generate";
-import { GENERATED_DECKS_SCHEMA } from "@/lib/ml/generatedDecks";
+import { defaultCorpusPath, openCorpus } from "@/lib/ml/corpusStore";
 import { numOrNull } from "@/lib/ml/features";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
-const DEFAULT_STORE = path.resolve(REPO_ROOT, "..", "dexter-ml", "feature_store.sqlite");
+// Generated decks are generated data: they belong in the corpus store, not
+// in the snapshot ml_export.py rewrites every week.
+const DEFAULT_STORE = defaultCorpusPath(REPO_ROOT);
 
 function argValue(flag: string): string | null {
   const i = process.argv.indexOf(flag);
@@ -46,7 +48,16 @@ const storePath = argValue("--store") ?? DEFAULT_STORE;
 const count = numOrNull(argValue("--count")) ?? 200;
 const seed = numOrNull(argValue("--seed")) ?? 1;
 const skeletonShare = numOrNull(argValue("--skeleton-share")) ?? 0.25;
-const edits = numOrNull(argValue("--edits")) ?? 3;
+// Graduated pool: --edits fixes the distance, --edits-min/--edits-max span a
+// range sampled per deck so "how much diversity helps" comes back as a curve
+// rather than a single point.
+const editsFixed = numOrNull(argValue("--edits"));
+const editsMin = numOrNull(argValue("--edits-min"));
+const editsMax = numOrNull(argValue("--edits-max"));
+const edits: number | { min: number; max: number } =
+  editsMin != null || editsMax != null
+    ? { min: editsMin ?? 1, max: editsMax ?? editsMin ?? 3 }
+    : editsFixed ?? 3;
 const dryRun = process.argv.includes("--dry-run");
 const outFile = argValue("--out");
 
@@ -84,7 +95,8 @@ function main(): void {
   console.log(
     `[gen_decks] gen v${DECK_GEN_VERSION} sim v${SIM_VERSION} engine v${ENGINE_VERSION} ` +
       `corpus=${corpus.decks.length} variants/${corpus.variantsOf.size} archetypes ` +
-      `seed=${seed} count=${count} skeleton_share=${skeletonShare} edits=${edits}`,
+      `seed=${seed} count=${count} skeleton_share=${skeletonShare} ` +
+      `edits=${typeof edits === "number" ? edits : `${edits.min}-${edits.max}`}`,
   );
 
   const started = Date.now();
@@ -108,6 +120,42 @@ function main(): void {
   }
   console.log(`[gen_decks] archetypes covered: ${Object.keys(byArchetype).length}`);
 
+  // Diversity report. A pool of 2,000 near-duplicates would train exactly as
+  // narrowly as the 30 archetypes it came from, and nothing downstream would
+  // reveal that — the win rates would simply not move. Measure it here,
+  // before spending simulation time.
+  const parents = new Map(corpus.decks.map((d) => [d.id, d]));
+  const nameSet = (entries: { name: string; qty: number }[]) =>
+    new Set(entries.filter((e) => e.qty > 0).map((e) => e.name));
+  const jaccards: number[] = [];
+  const distances: Record<number, number> = {};
+  for (const d of result.decks) {
+    distances[d.editDistance] = (distances[d.editDistance] ?? 0) + 1;
+    const parent = d.parentId ? parents.get(d.parentId) : undefined;
+    if (!parent) continue;
+    const a = nameSet(parseDeck(d.list));
+    const b = nameSet(parent.entries);
+    const inter = Array.from(a).filter((n) => b.has(n)).length;
+    const union = new Set([...Array.from(a), ...Array.from(b)]).size;
+    if (union > 0) jaccards.push(inter / union);
+  }
+  const distinctCards = new Set(result.decks.flatMap((d) => Array.from(nameSet(parseDeck(d.list)))));
+  console.log("[gen_decks] diversity:");
+  console.log(
+    `  edit distance: ${Object.entries(distances)
+      .sort((a, b) => Number(a[0]) - Number(b[0]))
+      .map(([k, v]) => `${k}:${v}`)
+      .join(" ")}`,
+  );
+  if (jaccards.length > 0) {
+    const sorted = [...jaccards].sort((a, b) => a - b);
+    const q = (p: number) => sorted[Math.floor(p * (sorted.length - 1))].toFixed(3);
+    console.log(`  card overlap with parent (Jaccard): min ${q(0)} median ${q(0.5)} max ${q(1)}`);
+  }
+  console.log(
+    `  distinct cards across pool: ${distinctCards.size} (corpus holds ${corpus.cards.size})`,
+  );
+
   if (outFile) {
     fs.writeFileSync(path.resolve(outFile), JSON.stringify(result.decks, null, 2) + "\n");
     console.log(`[gen_decks] wrote ${outFile}`);
@@ -117,8 +165,7 @@ function main(): void {
     return;
   }
 
-  const db = new DatabaseSync(storePath);
-  db.exec(GENERATED_DECKS_SCHEMA);
+  const db = openCorpus(storePath);
   const existing = db
     .prepare("SELECT produced FROM generated_deck_runs WHERE run_hash = ?")
     .get(runHash) as { produced: number } | undefined;
@@ -133,8 +180,8 @@ function main(): void {
   const now = new Date().toISOString();
   const insertDeck = db.prepare(
     `INSERT OR IGNORE INTO generated_decks
-       (id, run_hash, created_at, generator, parent_id, archetype, seed, list, ops_json, stats_json)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, run_hash, created_at, generator, parent_id, archetype, seed, edit_distance, list, ops_json, stats_json)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   db.exec("BEGIN");
   try {
@@ -144,7 +191,7 @@ function main(): void {
       // over it. The deck is identical either way.
       insertDeck.run(
         d.id, runHash, now, d.generator, d.parentId, d.archetype, d.seed,
-        d.list, JSON.stringify(d.ops), JSON.stringify(d.stats),
+        d.editDistance, d.list, JSON.stringify(d.ops), JSON.stringify(d.stats),
       );
     }
     db.prepare(
