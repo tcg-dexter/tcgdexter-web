@@ -336,12 +336,15 @@ function SetCompletionTile({
         />
       </div>
       <div className="px-3 pb-3">
-        <div className="flex items-baseline justify-between gap-2 mb-2">
-          <span className="min-w-0 truncate text-[13px] font-semibold text-text-primary">
+        {/* Name over date, centred under the logo. On one row the date ate
+            enough width to truncate most set names; stacked, the name gets
+            the full tile. */}
+        <div className="flex flex-col items-center text-center mb-2">
+          <span className="max-w-full truncate text-[13px] font-semibold text-text-primary">
             {set.name}
           </span>
           {released && (
-            <span className="shrink-0 text-[11px] text-text-muted tabular-nums">
+            <span className="text-[11px] text-text-muted tabular-nums">
               {released}
             </span>
           )}
