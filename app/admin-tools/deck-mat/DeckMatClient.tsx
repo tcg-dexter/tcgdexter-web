@@ -52,10 +52,11 @@ export {
   computeCardWidth,
 };
 const EXPORT_PADDING = 15;      // px, outer padding added around the exported image
-// Sleeve border as a fraction of card width — how much of the sleeve color
-// shows around the card art. Shared by the live CardPile render and the
-// canvas export so both draw the same proportions.
-const SLEEVE_BORDER_RATIO = 0.015;
+// Sleeve border — how much of the sleeve color shows around the card art.
+// A flat pixel value (not scaled by card width) for a consistently tight
+// fit regardless of mat size. Shared by the live CardPile render and the
+// canvas export.
+const SLEEVE_BORDER_PX = 1;
 // Base drop shadow every card slot gets, sleeved or not, single or
 // stacked — without it a lone card reads as pasted flat onto the mat.
 const CARD_DROP_SHADOW = "0 2px 3px rgba(0,0,0,0.35)";
@@ -779,7 +780,7 @@ async function rasterizeMat({
 
       const cardR = Math.max(2, Math.round(cardWidth * 0.05));
       const sleeveHex = sleeveColor ? ENERGY_HEX[sleeveColor] : null;
-      const sleeveBorder = sleeveHex ? Math.max(1, Math.round(cardWidth * SLEEVE_BORDER_RATIO)) : 0;
+      const sleeveBorder = sleeveHex ? SLEEVE_BORDER_PX : 0;
       // Sleeved cards are square-cornered rectangles; unsleeved ones keep
       // the usual rounded card corners.
       const outerR = sleeveHex ? 0 : cardR;
@@ -1437,33 +1438,35 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                     <button
                       type="button"
                       onClick={() => !isLoading && handleSelectDeck(deck)}
-                      className={`w-[104px] flex flex-col gap-1.5 p-2 rounded-xl text-left transition ${
-                        isSelected ? "bg-black/5" : "hover:bg-black/4"
+                      className={`w-36 flex flex-col gap-2 p-3 rounded-card border backdrop-blur-xl bg-white/90 dark:bg-surface-elevated shadow-sm hover:shadow-md text-left transition ${
+                        isSelected ? "border-accent ring-1 ring-accent" : "border-black/8 dark:border-white/10"
                       }`}
                     >
-                      <div className="w-full aspect-[245/342] rounded-lg overflow-hidden bg-surface">
-                        {deck.avatarUrl ? (
-                          <img src={deck.avatarUrl} alt="" className="w-full h-full object-contain" loading="lazy" />
-                        ) : (
-                          <div className="w-full h-full bg-surface" />
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="w-14 flex-shrink-0 aspect-[245/342] rounded-lg overflow-hidden bg-surface">
+                          {deck.avatarUrl ? (
+                            <img src={deck.avatarUrl} alt="" className="w-full h-full object-contain" loading="lazy" />
+                          ) : (
+                            <div className="w-full h-full bg-surface" />
+                          )}
+                        </div>
+                        {total > 0 && (
+                          <span className="flex-shrink-0 inline-flex items-baseline tabular-nums font-bold text-[10px] leading-none bg-black rounded-full px-2 py-[3px] text-white">
+                            <span>{deck.wins}</span>
+                            <span className="mx-[3px]">-</span>
+                            <span>{deck.losses}</span>
+                            {deck.draws > 0 && (
+                              <>
+                                <span className="mx-[3px]">-</span>
+                                <span>{deck.draws}</span>
+                              </>
+                            )}
+                          </span>
                         )}
                       </div>
                       <span className="text-sm font-semibold text-text-primary truncate">
                         {deck.name}
                       </span>
-                      {total > 0 && (
-                        <span className="w-fit inline-flex items-baseline tabular-nums font-bold text-[10px] leading-none bg-black rounded-full px-2 py-[3px] text-white">
-                          <span>{deck.wins}</span>
-                          <span className="mx-[3px]">-</span>
-                          <span>{deck.losses}</span>
-                          {deck.draws > 0 && (
-                            <>
-                              <span className="mx-[3px]">-</span>
-                              <span>{deck.draws}</span>
-                            </>
-                          )}
-                        </span>
-                      )}
                     </button>
                   </li>
                 );
@@ -1522,7 +1525,7 @@ export function CardPile({
     : `${tile.name} ${tile.number}`;
   const cardR = Math.max(2, Math.round(cardWidth * 0.05));
   const sleeveHex = sleeveColor ? ENERGY_HEX[sleeveColor] : null;
-  const sleeveBorder = sleeveHex ? Math.max(1, Math.round(cardWidth * SLEEVE_BORDER_RATIO)) : 0;
+  const sleeveBorder = sleeveHex ? SLEEVE_BORDER_PX : 0;
   // Sleeved cards are square-cornered rectangles; unsleeved ones keep the
   // usual rounded card corners.
   const outerR = sleeveHex ? 0 : cardR;
