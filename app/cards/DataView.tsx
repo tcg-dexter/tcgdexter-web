@@ -369,25 +369,48 @@ function SetCompletionTile({
       {/* flex-1 lets the logo well absorb the extra height when a taller
           tile in the same grid row stretches this one, so every footer in
           the row still lines up along the bottom. */}
-      <div className="relative flex flex-1 items-center justify-center px-4 py-5">
-        <SetLogo
-          src={set.logo}
-          ptcgoCode={set.ptcgoCode}
-          setName={set.name}
-          className="h-16 w-full"
-        />
-        {sheen && (
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-0 overflow-hidden"
-            style={{ mixBlendMode: "overlay" }}
-          >
+      <div className="flex flex-1 items-center justify-center px-4 py-5">
+        <div className="relative h-16 w-full">
+          <SetLogo
+            src={set.logo}
+            ptcgoCode={set.ptcgoCode}
+            setName={set.name}
+            className="h-16 w-full"
+          />
+          {/* The band is masked by the logo itself, so the light only
+              lands on the artwork's opaque pixels rather than sweeping
+              the whole well — most visibly in dark mode, where the well
+              around the logo would otherwise brighten with it. contain /
+              center matches the img's own object-contain, so mask and
+              art land on the same pixels at any tile width.
+
+              Only when there's a logo to mask by: the PTCGO-code fallback
+              has no image, and a mask that resolves to nothing paints
+              nothing. A logo that 404s at runtime degrades the same way —
+              the badge shows and the shimmer simply doesn't play. */}
+          {sheen && set.logo && (
             <span
-              className="dx-foil-sweep absolute inset-y-0"
-              onAnimationEnd={() => setSheen(false)}
-            />
-          </span>
-        )}
+              aria-hidden
+              className="pointer-events-none absolute inset-0 overflow-hidden"
+              style={{
+                mixBlendMode: "overlay",
+                WebkitMaskImage: `url("${set.logo}")`,
+                maskImage: `url("${set.logo}")`,
+                WebkitMaskSize: "contain",
+                maskSize: "contain",
+                WebkitMaskPosition: "center",
+                maskPosition: "center",
+                WebkitMaskRepeat: "no-repeat",
+                maskRepeat: "no-repeat",
+              }}
+            >
+              <span
+                className="dx-foil-sweep absolute inset-y-0"
+                onAnimationEnd={() => setSheen(false)}
+              />
+            </span>
+          )}
+        </div>
       </div>
       <div className="px-3 pb-3">
         {/* Name over date, centred under the logo. On one row the date ate
