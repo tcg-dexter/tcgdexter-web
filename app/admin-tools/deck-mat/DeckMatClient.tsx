@@ -61,6 +61,10 @@ const SLEEVE_BORDER_PX = 2;
 // Base drop shadow every card slot gets, sleeved or not, single or
 // stacked — without it a lone card reads as pasted flat onto the mat.
 const CARD_DROP_SHADOW = "0 2px 3px rgba(0,0,0,0.35)";
+// Faint shadow the card art casts onto the sleeve beneath it — only drawn
+// when a sleeve is equipped, since with no sleeve the art IS the top layer
+// (CARD_DROP_SHADOW above already covers that case).
+const CARD_ON_SLEEVE_SHADOW = "0 1px 1.5px rgba(0,0,0,0.3)";
 
 // The "dark" stop used at the bottom of each energy gradient (shade -22%).
 function ed(key: string): string {
@@ -857,6 +861,24 @@ async function rasterizeMat({
           ctx.restore();
         }
 
+        // Faint shadow the card art casts onto the sleeve beneath it — only
+        // when one's equipped (matches CardPile); fill color is irrelevant,
+        // since the card image below fully covers this shape and only the
+        // shadow cast by it remains visible.
+        if (sleeveBg) {
+          ctx.save();
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 1;
+          ctx.shadowBlur = 1.5;
+          ctx.shadowColor = "rgba(0,0,0,0.3)";
+          ctx.beginPath();
+          ctx.roundRect(cx, ry, cardWidth, cardH, cardR);
+          ctx.closePath();
+          ctx.fillStyle = "#000";
+          ctx.fill();
+          ctx.restore();
+        }
+
         // Card image, clipped to its own true size and corner radius —
         // unaffected by the sleeve frame drawn around it above.
         if (cardImg) {
@@ -1276,31 +1298,33 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
               in height to this one, and any slack is absorbed by the
               swatch grid's flex-1 below.
 
-              Same sliding-capsule design as GridListToggle (the card
-              catalog's grid/list switch) — an absolutely-positioned
-              slider driven by CSS transform, text color flipping per
-              side — reimplemented locally rather than generalizing that
-              component, since its value type is pinned to "grid"|"list"
-              and used by two other surfaces. */}
+              Loosely modeled on GridListToggle (the card catalog's
+              grid/list switch), but tabs size to their own content
+              instead of splitting the track into forced-equal halves:
+              "Mat" and "Sleeve" are different lengths, and equal-width
+              halves left "Mat" floating in extra space while "Sleeve"
+              filled its half edge to edge — the same px-3.5 on both now
+              gives each label matching, evenly-sitting padding instead.
+              That tradeoff drops the sliding-overlay transform GridListToggle
+              uses (which assumes exactly two equal halves) for a plain
+              per-tab background swap; reimplemented locally rather than
+              generalizing that shared component, since its value type is
+              pinned to "grid"|"list" and it's used by two other surfaces. */}
           <div ref={panelHeaderRef} className="flex items-center justify-end">
             <div
-              className="relative flex items-center h-[30px] rounded-full bg-black/5 dark:bg-white/5 p-[3px]"
+              className="inline-flex items-center h-[30px] rounded-full bg-black/5 dark:bg-white/5 p-[3px] gap-[3px]"
               role="tablist"
             >
-              <div
-                aria-hidden
-                className={`absolute inset-y-[3px] left-[3px] w-[calc(50%-3px)] rounded-full shadow-sm transition-all duration-300 ease-in-out ${
-                  !sleevePanelOpen ? "translate-x-0 bg-white dark:bg-surface-2" : "translate-x-full bg-black dark:bg-white"
-                }`}
-              />
               <button
                 type="button"
                 role="tab"
                 aria-selected={!sleevePanelOpen}
                 aria-label="Mat customization"
                 onClick={() => setSleevePanelOpen(false)}
-                className={`relative z-10 h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${
-                  !sleevePanelOpen ? "text-text-primary" : "text-text-muted"
+                className={`h-full flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${
+                  !sleevePanelOpen
+                    ? "bg-white dark:bg-surface-2 text-text-primary shadow-sm"
+                    : "text-text-muted"
                 }`}
               >
                 Mat
@@ -1311,8 +1335,10 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                 aria-selected={sleevePanelOpen}
                 aria-label="Sleeve customization"
                 onClick={() => setSleevePanelOpen(true)}
-                className={`relative z-10 h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${
-                  sleevePanelOpen ? "text-white dark:text-black" : "text-text-muted"
+                className={`h-full flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${
+                  sleevePanelOpen
+                    ? "bg-black dark:bg-white text-white dark:text-black shadow-sm"
+                    : "text-text-muted"
                 }`}
               >
                 Sleeve
@@ -1691,16 +1717,26 @@ export function CardPile({
             }}
           />
           {/* Card art — always exactly cardWidth × cardHeight with its own
-              rounded corners, regardless of whether a sleeve is equipped. */}
-          <div className="absolute inset-0 overflow-hidden" style={{ borderRadius: cardR }}>
-            <CardImage
-              src={tile.smallImageUrl}
-              alt={alt}
-              name={tile.name}
-              setName={tile.setName}
-              number={tile.number}
-              className="w-full h-full object-contain"
-            />
+              rounded corners, regardless of whether a sleeve is equipped.
+              The shadow lives on this outer (non-clipping) layer — put on
+              the same element as overflow-hidden, it'd be clipped away
+              before it could show past the card's own edge. Only drawn
+              when sleeved: with no sleeve this layer IS the top surface,
+              already covered by CARD_DROP_SHADOW above. */}
+          <div
+            className="absolute inset-0"
+            style={{ borderRadius: cardR, boxShadow: sleeveBg ? CARD_ON_SLEEVE_SHADOW : undefined }}
+          >
+            <div className="w-full h-full overflow-hidden" style={{ borderRadius: cardR }}>
+              <CardImage
+                src={tile.smallImageUrl}
+                alt={alt}
+                name={tile.name}
+                setName={tile.setName}
+                number={tile.number}
+                className="w-full h-full object-contain"
+              />
+            </div>
           </div>
         </div>
       ))}
