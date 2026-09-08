@@ -146,6 +146,15 @@ function sleeveGradientFor(key: string): string {
   const next = SLEEVE_COLOR_KEYS[(i + 1) % SLEEVE_COLOR_KEYS.length];
   return `linear-gradient(135deg, ${ENERGY_HEX[key]} 0%, ${ENERGY_HEX[next]} 100%)`;
 }
+// Page 1's top-left cell (was "no sleeve" — deselecting is now done by
+// tapping the active swatch again, see chooseSleeve) and its bottom-right
+// override — Colorless's actual hex is a light gray that reads poorly as a
+// sleeve option, so that one cell renders pure white instead.
+const SLEEVE_BLACK = "#000000";
+const SLEEVE_WHITE = "#ffffff";
+// Page 2's 12th cell — reuses the mat's own brand gradient rather than a
+// custom color picker, so both pages stay a plain, uniform 4x3 grid.
+const SLEEVE_BRAND_GRADIENT = BRAND_BANNER_GRADIENT;
 
 // 32 entries: brand, the three dark neutrals, the 11 energy singles, the 12
 // energy duos, then the five warm/cool scenes. midnight and nebula sit up
@@ -901,11 +910,10 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   // cases identically.
   const [sleeveColor, setSleeveColor] = useState<string | null>(null);
   // Which grid the customization panel shows: mat styles/textures, or the
-  // sleeve color picker. Toggled by the header's Sleeve capsule.
+  // sleeve color picker. Toggled by the Mat / Sleeve panel-header switch.
   const [sleevePanelOpen, setSleevePanelOpen] = useState(false);
-  // Sleeve picker page: 0 = solid colors, 1 = gradients + custom picker.
+  // Sleeve picker page: 0 = solid colors, 1 = gradients.
   const [sleevePage, setSleevePage] = useState<0 | 1>(0);
-  const customSleeveInputRef = useRef<HTMLInputElement>(null);
   const [matImage, setMatImage] = useState<MatImage | null>(null);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   // Image the dialog seeds from — a fresh upload draft or the placed image.
@@ -1055,11 +1063,6 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   );
   const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
   const activeTex = TEXTURES.find((t) => t.key === textureKey) ?? null;
-  // True when the equipped sleeve is neither a predefined solid nor a
-  // predefined gradient — i.e. it came from the custom color picker.
-  const isCustomSleeveColor =
-    !!sleeveColor &&
-    !SLEEVE_COLOR_KEYS.some((k) => ENERGY_HEX[k] === sleeveColor || sleeveGradientFor(k) === sleeveColor);
   const texScale = matWidth > 0 ? matWidth / 600 : 1;
   const matHeightPx = matWidth > 0 ? matWidth * MAT_ASPECT : 0;
   // Below md the customization panel sits under the mat instead of beside
@@ -1102,9 +1105,11 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   // Sleeve color is independent of the mat pickers above — it colors the
   // cards, not the mat, so it never touches matImage/matStyle/textureKey.
   // Takes the resolved CSS background (a hex color or a gradient string),
-  // not a lookup key — see the sleeveColor state comment.
-  function chooseSleeve(background: string | null) {
-    setSleeveColor(background);
+  // not a lookup key — see the sleeveColor state comment. Tapping the
+  // already-equipped swatch again clears the sleeve — there's no separate
+  // "no sleeve" cell to tap instead.
+  function chooseSleeve(background: string) {
+    setSleeveColor((prev) => (prev === background ? null : background));
   }
 
   // First tap on "Add Image" opens the file picker straight away; the
@@ -1259,31 +1264,61 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             it, so the swatch grid instead gets an explicit height —
             mobileSwatchHeight — computed from the mat's own height. */}
         <div className="flex flex-col gap-3">
-          {/* Panel header: just the Sleeve toggle, right-aligned above the
+          {/* Panel header: the Mat / Sleeve toggle, right-aligned above the
               swatch grid. Its measured height (panelHeaderHeight) is also
               what keeps this panel's content roughly level with the mat
               box on desktop — the mat's own title row above it is close
               in height to this one, and any slack is absorbed by the
-              swatch grid's flex-1 below. */}
+              swatch grid's flex-1 below.
+
+              Same sliding-capsule design as GridListToggle (the card
+              catalog's grid/list switch) — an absolutely-positioned
+              slider driven by CSS transform, text color flipping per
+              side — reimplemented locally rather than generalizing that
+              component, since its value type is pinned to "grid"|"list"
+              and used by two other surfaces. */}
           <div ref={panelHeaderRef} className="flex items-center justify-end">
-            <button
-              type="button"
-              onClick={() => setSleevePanelOpen((v) => !v)}
-              aria-pressed={sleevePanelOpen}
-              className={`flex-shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                sleevePanelOpen
-                  ? "border-transparent bg-black dark:bg-white text-white dark:text-black"
-                  : "border-black/15 dark:border-white/15 text-text-secondary hover:bg-black/5 dark:hover:bg-white/10"
-              }`}
+            <div
+              className="relative flex items-center h-[30px] rounded-full bg-black/5 dark:bg-white/5 p-[3px]"
+              role="tablist"
             >
-              {sleeveColor && (
-                <span
-                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                  style={{ background: sleeveColor }}
-                />
-              )}
-              Sleeve
-            </button>
+              <div
+                aria-hidden
+                className={`absolute inset-y-[3px] left-[3px] w-[calc(50%-3px)] rounded-full shadow-sm transition-all duration-300 ease-in-out ${
+                  !sleevePanelOpen ? "translate-x-0 bg-white dark:bg-surface-2" : "translate-x-full bg-black dark:bg-white"
+                }`}
+              />
+              <button
+                type="button"
+                role="tab"
+                aria-selected={!sleevePanelOpen}
+                aria-label="Mat customization"
+                onClick={() => setSleevePanelOpen(false)}
+                className={`relative z-10 h-full flex-1 flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${
+                  !sleevePanelOpen ? "text-text-primary" : "text-text-muted"
+                }`}
+              >
+                Mat
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={sleevePanelOpen}
+                aria-label="Sleeve customization"
+                onClick={() => setSleevePanelOpen(true)}
+                className={`relative z-10 h-full flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 rounded-full text-xs font-bold transition-colors ${
+                  sleevePanelOpen ? "text-white dark:text-black" : "text-text-muted"
+                }`}
+              >
+                {sleeveColor && (
+                  <span
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ background: sleeveColor }}
+                  />
+                )}
+                Sleeve
+              </button>
+            </div>
           </div>
 
           {/* A grid — 6 columns by default (4 colors + 2 textures), each
@@ -1306,10 +1341,12 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             {sleevePanelOpen ? (
               /* Sleeve picker: fixed 4x3 grid, card-shaped (2.5:3.5) swatches
                  instead of circles, across two pages (dots below). Page 1 —
-                 top-left is always "no sleeve" (the default), the remaining
-                 11 cells are solid energy colors. Page 2 — 11 gradients (each
-                 energy color blending into the next), with a custom color
-                 picker in the last (bottom-right) cell. */
+                 solid black, then the 11 energy colors (Colorless renders as
+                 white — its actual hex is a light gray that reads poorly as
+                 a sleeve). Page 2 — the same 11 colors as two-tone gradients
+                 (each blending into the next), plus the mat's own brand
+                 gradient as a 12th. There's no separate "no sleeve" cell —
+                 tapping the already-equipped swatch again clears it. */
               <div className="h-full flex flex-col gap-1.5">
                 <div className="flex-1 min-h-0 grid grid-cols-4 gap-1.5" style={{ gridAutoRows: "1fr" }}>
                   {sleevePage === 0 ? (
@@ -1317,28 +1354,24 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                       <div className="flex items-center justify-center">
                         <button
                           type="button"
-                          onClick={() => chooseSleeve(null)}
-                          aria-label="No sleeve"
-                          className={`aspect-[2.5/3.5] h-[85%] bg-surface flex items-center justify-center transition-all ${
-                            sleeveColor === null
+                          onClick={() => chooseSleeve(SLEEVE_BLACK)}
+                          aria-label="Black"
+                          className={`aspect-[2.5/3.5] h-[85%] transition-all ${
+                            sleeveColor === SLEEVE_BLACK
                               ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
                               : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
                           }`}
-                        >
-                          <svg viewBox="0 0 24 24" className="w-1/2 h-1/2 text-text-muted" fill="none" stroke="currentColor" strokeWidth={2}>
-                            <circle cx="12" cy="12" r="9" />
-                            <line x1="5.5" y1="18.5" x2="18.5" y2="5.5" />
-                          </svg>
-                        </button>
+                          style={{ background: SLEEVE_BLACK }}
+                        />
                       </div>
                       {SLEEVE_COLOR_KEYS.map((key) => {
-                        const bg = ENERGY_HEX[key];
+                        const bg = key === "Colorless" ? SLEEVE_WHITE : ENERGY_HEX[key];
                         return (
                           <div key={key} className="flex items-center justify-center">
                             <button
                               type="button"
                               onClick={() => chooseSleeve(bg)}
-                              aria-label={key}
+                              aria-label={key === "Colorless" ? "White" : key}
                               className={`aspect-[2.5/3.5] h-[85%] transition-all ${
                                 sleeveColor === bg
                                   ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
@@ -1370,36 +1403,17 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                           </div>
                         );
                       })}
-                      {/* Bottom-right cell: opens the browser's native color
-                          picker via a hidden <input type="color">, same
-                          trigger pattern as the Add Image button below. */}
                       <div className="flex items-center justify-center">
                         <button
                           type="button"
-                          onClick={() => customSleeveInputRef.current?.click()}
-                          aria-label="Custom sleeve color"
-                          className={`aspect-[2.5/3.5] h-[85%] flex items-center justify-center transition-all ${
-                            isCustomSleeveColor
+                          onClick={() => chooseSleeve(SLEEVE_BRAND_GRADIENT)}
+                          aria-label="Brand gradient"
+                          className={`aspect-[2.5/3.5] h-[85%] transition-all ${
+                            sleeveColor === SLEEVE_BRAND_GRADIENT
                               ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
                               : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
                           }`}
-                          style={{ background: isCustomSleeveColor ? sleeveColor! : "#3a3a3a" }}
-                        >
-                          {!isCustomSleeveColor && (
-                            <svg viewBox="0 0 24 24" className="w-1/2 h-1/2 text-white/70" fill="currentColor">
-                              <circle cx="9" cy="9" r="1.6" />
-                              <circle cx="15" cy="9" r="1.6" />
-                              <circle cx="9" cy="15" r="1.6" />
-                              <circle cx="15" cy="15" r="1.6" />
-                            </svg>
-                          )}
-                        </button>
-                        <input
-                          ref={customSleeveInputRef}
-                          type="color"
-                          className="hidden"
-                          value={isCustomSleeveColor ? sleeveColor! : "#000000"}
-                          onChange={(e) => chooseSleeve(e.target.value)}
+                          style={{ background: SLEEVE_BRAND_GRADIENT }}
                         />
                       </div>
                     </>
