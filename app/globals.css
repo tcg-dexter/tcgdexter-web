@@ -293,3 +293,45 @@ body.card-viewer-open [data-back-button] {
     animation: none;
   }
 }
+
+/* ─── Foil sheen ───────────────────────────────────────────────
+   A band of light sweeping across a surface — the way a foil catches the
+   overhead light when someone tilts it toward you. The gradient stops,
+   the 60%-wide band, the -70% -> 110% travel and the 0.62s ease-in-out
+   are lifted from the replay viewer's <FoilSheen> (card3d/Card3D.tsx),
+   so a shimmer reads the same wherever it appears.
+
+   Reimplemented in CSS rather than imported: FoilSheen is a framer-motion
+   component in a module that also pulls in the replay's BeatContext, and
+   neither belongs in the Cards page bundle for a hover flourish. It is
+   also driven differently — that one enters and exits with a beat, this
+   one is a single pass fired on hover.
+
+   The caller owns mount/unmount, so the sweep runs once per mount; pair
+   it with mix-blend-mode: overlay, which brightens the artwork's own
+   colours and leaves a white surface untouched (nothing to catch). */
+@keyframes dx-foil-sweep {
+  from { left: -70%; }
+  to   { left: 110%; }
+}
+
+.dx-foil-sweep {
+  width: 60%;
+  left: 110%;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 35%,
+    rgba(255, 255, 255, 0.75) 50%,
+    rgba(255, 255, 255, 0.15) 65%,
+    transparent 100%
+  );
+  animation: dx-foil-sweep 0.62s ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dx-foil-sweep {
+    animation: none;
+    display: none;
+  }
+}

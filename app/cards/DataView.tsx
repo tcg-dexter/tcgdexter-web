@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { SetStats } from "@/lib/cardsIndex";
 import { normalizeForSearch } from "@/lib/searchNormalize";
@@ -299,6 +299,9 @@ function SetProgressBar({ set, pct }: { set: SetStats; pct: number }) {
   );
 }
 
+/** How long the pointer has to rest on a tile before its logo shimmers. */
+const SHEEN_DWELL_MS = 1000;
+
 /**
  * Hover lifts the tile a touch and firms up its border. `relative` +
  * hover:z-10 keeps the growing tile above its later siblings, which would
@@ -331,10 +334,34 @@ function SetCompletionTile({
 }) {
   const pct = completionPct(set, owned);
   const released = formatReleaseDate(set.releaseDate, "short");
+
+  // The sheen is a reward for dwelling, not a response to the pointer
+  // crossing the tile — at a second in, a passing sweep of the grid never
+  // sets one off. Cleared on leave so an interrupted dwell doesn't fire
+  // late, and unmounted when the sweep ends so the next hover re-arms it.
+  const [sheen, setSheen] = useState(false);
+  const dwellTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function cancelDwell() {
+    if (dwellTimer.current) clearTimeout(dwellTimer.current);
+    dwellTimer.current = null;
+  }
+  useEffect(() => cancelDwell, []);
+
   return (
     <button
       type="button"
       onClick={() => onSelect(set.id)}
+      onPointerEnter={(e) => {
+        // Touch fires enter on tap and never leaves, which would strand a
+        // sheen on the tile after navigating away.
+        if (e.pointerType === "touch") return;
+        cancelDwell();
+        dwellTimer.current = setTimeout(() => setSheen(true), SHEEN_DWELL_MS);
+      }}
+      onPointerLeave={() => {
+        cancelDwell();
+        setSheen(false);
+      }}
       aria-label={`Filter catalog by ${set.name}`}
       title={`${set.name} — ${owned} / ${set.size}`}
       className={TILE_CLS}
@@ -342,13 +369,25 @@ function SetCompletionTile({
       {/* flex-1 lets the logo well absorb the extra height when a taller
           tile in the same grid row stretches this one, so every footer in
           the row still lines up along the bottom. */}
-      <div className="flex flex-1 items-center justify-center px-4 py-5">
+      <div className="relative flex flex-1 items-center justify-center px-4 py-5">
         <SetLogo
           src={set.logo}
           ptcgoCode={set.ptcgoCode}
           setName={set.name}
           className="h-16 w-full"
         />
+        {sheen && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 overflow-hidden"
+            style={{ mixBlendMode: "overlay" }}
+          >
+            <span
+              className="dx-foil-sweep absolute inset-y-0"
+              onAnimationEnd={() => setSheen(false)}
+            />
+          </span>
+        )}
       </div>
       <div className="px-3 pb-3">
         {/* Name over date, centred under the logo. On one row the date ate
