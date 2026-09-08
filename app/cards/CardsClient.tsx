@@ -11,6 +11,7 @@ import InventoryProvider, { useInventory } from "./InventoryContext";
 import { CardsIcon } from "@/app/components/ui/nav-icons";
 import PillSelect from "@/app/components/ui/PillSelect";
 import GridListToggle from "@/app/components/ui/GridListToggle";
+import SearchField from "@/app/components/ui/SearchField";
 import Pagination from "@/app/components/ui/Pagination";
 import {
   OwnershipRadios,
@@ -264,6 +265,8 @@ export default function CardsClient({ initialResult, facets, setStats, initialPa
         {mode === "data" ? (
           <DataView
             setStats={setStats}
+            view={params.view}
+            onViewChange={(v) => updateParams({ view: v })}
             onSelectSet={(setId) => {
               setParams((p) => ({ ...p, setId: [setId], page: 1 }));
               setMode("catalog");
@@ -362,32 +365,11 @@ function CatalogBody({
     <>
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
-        <div className="flex-1 relative">
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.75"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted"
-          >
-            <circle cx="9" cy="9" r="6" />
-            <path d="m17 17-3.5-3.5" />
-          </svg>
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => handleSearchInput(e.target.value)}
-            placeholder="Search cards"
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
-            className="w-full pl-10 pr-4 py-2 rounded-full border border-black/10 bg-white dark:bg-surface-2 text-[16px] sm:text-sm focus:outline-none focus-gradient-border transition-colors"
-          />
-        </div>
+        <SearchField
+          value={searchInput}
+          onChange={handleSearchInput}
+          placeholder="Search cards"
+        />
         <div className="flex items-center gap-2">
           <PillSelect
             value={`${params.sort}:${params.dir}`}

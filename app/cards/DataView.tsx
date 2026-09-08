@@ -3,28 +3,56 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { SetStats } from "@/lib/cardsIndex";
+import { normalizeForSearch } from "@/lib/searchNormalize";
 import { useInventory } from "./InventoryContext";
 import SetLogo from "./SetLogo";
+import PillSelect from "@/app/components/ui/PillSelect";
+import GridListToggle from "@/app/components/ui/GridListToggle";
+import SearchField from "@/app/components/ui/SearchField";
 
 interface DataViewStats {
   uniqueOwnedBySet: Record<string, number>;
 }
 
-const PAGE_SIZE = 20;
+// Grid pages divide evenly by every column count the layout uses (2/3/4/5/6
+// — 5 aside), so the last row doesn't come up short; the list is a single
+// column and reads better a little shorter.
+const GRID_PAGE_SIZE = 24;
+const LIST_PAGE_SIZE = 20;
+
+/** Same column ramp as the card grid, so the two tabs share a rhythm:
+ *  2 across on phones, stepping up to 6 on a wide desktop. */
+const RESPONSIVE_COLUMNS =
+  "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6";
 
 type SetFilter = "all" | "owned" | "unowned";
+type SetSortKey = "released" | "name" | "completion";
+type SortDir = "asc" | "desc";
 
 export default function DataView({
   setStats,
   onSelectSet,
+  view,
+  onViewChange,
 }: {
   setStats: SetStats[];
   onSelectSet: (setId: string) => void;
+  /** Shared with the Cards tab so grid/list is one preference across the
+   *  page (and stays in the URL, which is where the catalog keeps it). */
+  view: "grid" | "list";
+  onViewChange: (view: "grid" | "list") => void;
 }) {
   const { signedIn } = useInventory();
   const [stats, setStatsState] = useState<DataViewStats | null>(null);
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState<SetFilter>("all");
+  // Search and sort are local rather than routed through the page's URL
+  // params: every set is already in memory here, so filtering needs no
+  // round trip — and `q`/`sort` in the URL mean "card search", so reusing
+  // them would leave the Cards tab filtered by whatever you typed here.
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<SetSortKey>("released");
+  const [dir, setDir] = useState<SortDir>("desc");
 
   useEffect(() => {
     // Reset to the first page whenever the auth state flips so a fresh
@@ -32,9 +60,11 @@ export default function DataView({
     setPage(1);
   }, [signedIn]);
 
+  // Any narrowing or reordering — and a view swap, which changes the page
+  // size — can strand `page` past the new last page.
   useEffect(() => {
     setPage(1);
-  }, [filter]);
+  }, [filter, query, sort, dir, view]);
 
   useEffect(() => {
     if (signedIn !== true) {
@@ -57,20 +87,45 @@ export default function DataView({
     };
   }, [signedIn]);
 
-  const filteredSets = useMemo(() => {
-    if (filter === "all") return setStats;
-    const owned = stats?.uniqueOwnedBySet ?? {};
-    if (filter === "owned") {
-      return setStats.filter((s) => (owned[s.id] ?? 0) > 0);
-    }
-    return setStats.filter((s) => (owned[s.id] ?? 0) === 0);
-  }, [setStats, filter, stats]);
+  const ownedBySet = stats?.uniqueOwnedBySet ?? {};
 
-  const totalPages = Math.max(1, Math.ceil(filteredSets.length / PAGE_SIZE));
+  const visibleSets = useMemo(() => {
+    const owned = stats?.uniqueOwnedBySet ?? {};
+
+    let out = setStats;
+    if (filter === "owned") out = out.filter((s) => (owned[s.id] ?? 0) > 0);
+    else if (filter === "unowned") out = out.filter((s) => (owned[s.id] ?? 0) === 0);
+
+    const q = normalizeForSearch(query.trim());
+    if (q) {
+      out = out.filter(
+        (s) =>
+          normalizeForSearch(s.name).includes(q) ||
+          normalizeForSearch(s.ptcgoCode ?? "").includes(q),
+      );
+    }
+
+    const completion = (s: SetStats) =>
+      s.size > 0 ? (owned[s.id] ?? 0) / s.size : 0;
+    const sign = dir === "asc" ? 1 : -1;
+    return [...out].sort((a, b) => {
+      let cmp: number;
+      if (sort === "name") cmp = a.name.localeCompare(b.name);
+      else if (sort === "completion") cmp = completion(a) - completion(b);
+      else cmp = (a.releaseDate ?? "").localeCompare(b.releaseDate ?? "");
+      // Ties fall back to name so the order is stable rather than
+      // whatever the previous sort happened to leave behind — which
+      // matters most for completion, where signed-out is all zeroes.
+      return cmp !== 0 ? cmp * sign : a.name.localeCompare(b.name);
+    });
+  }, [setStats, filter, stats, query, sort, dir]);
+
+  const pageSize = view === "grid" ? GRID_PAGE_SIZE : LIST_PAGE_SIZE;
+  const totalPages = Math.max(1, Math.ceil(visibleSets.length / pageSize));
   const pageSets = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return filteredSets.slice(start, start + PAGE_SIZE);
-  }, [filteredSets, page]);
+    const start = (page - 1) * pageSize;
+    return visibleSets.slice(start, start + pageSize);
+  }, [visibleSets, page, pageSize]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -86,26 +141,58 @@ export default function DataView({
       )}
 
       <div>
-        <h3 className="text-xl font-semibold tracking-tight text-text-primary mb-3">
-          Sets
-        </h3>
+        {/* Toolbar — mirrors the Cards tab's search / sort / view row. */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
+          <SearchField
+            value={query}
+            onChange={setQuery}
+            placeholder="Search sets"
+          />
+          <div className="flex items-center gap-2">
+            <PillSelect
+              value={`${sort}:${dir}`}
+              onChange={(e) => {
+                const [s, d] = e.target.value.split(":") as [SetSortKey, SortDir];
+                setSort(s);
+                setDir(d);
+              }}
+            >
+              <option value="released:desc">Released ↓</option>
+              <option value="released:asc">Released ↑</option>
+              <option value="name:asc">Set Name ↑</option>
+              <option value="name:desc">Set Name ↓</option>
+              <option value="completion:desc">Completion ↓</option>
+              <option value="completion:asc">Completion ↑</option>
+            </PillSelect>
+            <GridListToggle value={view} onChange={onViewChange} />
+          </div>
+        </div>
+
         <SetFilterRadios value={filter} onChange={setFilter} disabled={signedIn !== true} />
         {pageSets.length === 0 ? (
           <p className="text-sm text-text-secondary py-4">No sets match this filter.</p>
+        ) : view === "grid" ? (
+          <div className={`grid ${RESPONSIVE_COLUMNS} gap-3`}>
+            {pageSets.map((s) => (
+              <SetCompletionTile
+                key={s.id}
+                set={s}
+                owned={ownedBySet[s.id] ?? 0}
+                onSelect={onSelectSet}
+              />
+            ))}
+          </div>
         ) : (
           <ul>
-            {pageSets.map((s, i) => {
-              const owned = stats?.uniqueOwnedBySet[s.id] ?? 0;
-              return (
-                <SetCompletionRow
-                  key={s.id}
-                  set={s}
-                  owned={owned}
-                  isFirst={i === 0}
-                  onSelect={onSelectSet}
-                />
-              );
-            })}
+            {pageSets.map((s, i) => (
+              <SetCompletionRow
+                key={s.id}
+                set={s}
+                owned={ownedBySet[s.id] ?? 0}
+                isFirst={i === 0}
+                onSelect={onSelectSet}
+              />
+            ))}
           </ul>
         )}
       </div>
@@ -174,6 +261,97 @@ function SetFilterRadios({
   );
 }
 
+/** Completion percentage for a set, clamped so an over-held set (catalog
+ *  ahead of the totals file) can't run the bar past its track. */
+function completionPct(set: SetStats, owned: number): number {
+  return set.size > 0 ? Math.min(100, (owned / set.size) * 100) : 0;
+}
+
+/**
+ * The completion bar, shared by the list row and the grid tile so the
+ * gradient trick below only lives in one place.
+ */
+function SetProgressBar({ set, pct }: { set: SetStats; pct: number }) {
+  return (
+    <div
+      className="h-2 rounded-full bg-surface"
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(pct)}
+      aria-label={`${set.name} completion ${pct.toFixed(0)}%`}
+    >
+      <div
+        className="h-full rounded-full bg-gradient-brand transition-[width] duration-500"
+        style={{
+          width: `${pct}%`,
+          // Stretch the gradient so its full extent always spans the
+          // entire track. The fill div only paints the leftmost
+          // `pct%` of it, so the colour at the leading edge
+          // progresses smoothly from orange toward dark red as the
+          // bar grows — the visible gradient is the proportional
+          // metaphor, not a uniformly-coloured chunk.
+          backgroundSize: pct > 0 ? `${10000 / pct}% 100%` : "100% 100%",
+          backgroundPosition: "left center",
+        }}
+      />
+    </div>
+  );
+}
+
+/**
+ * Grid presentation of a set: the logo front and centre, then a footer of
+ * two rows — name and release date, then the completion bar. The exact
+ * counts stay on the list view, which has the width for them; here the
+ * numbers live in the bar's aria-label and the tile's title.
+ */
+function SetCompletionTile({
+  set,
+  owned,
+  onSelect,
+}: {
+  set: SetStats;
+  owned: number;
+  onSelect: (setId: string) => void;
+}) {
+  const pct = completionPct(set, owned);
+  const released = formatReleaseDate(set.releaseDate, "short");
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(set.id)}
+      aria-label={`Filter catalog by ${set.name}`}
+      title={`${set.name} — ${owned} / ${set.size}`}
+      className="flex flex-col text-left rounded-xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated overflow-hidden hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-shadow"
+    >
+      {/* flex-1 lets the logo well absorb the extra height when a taller
+          tile in the same grid row stretches this one, so every footer in
+          the row still lines up along the bottom. */}
+      <div className="flex flex-1 items-center justify-center px-4 py-5">
+        <SetLogo
+          src={set.logo}
+          ptcgoCode={set.ptcgoCode}
+          setName={set.name}
+          className="h-16 w-full"
+        />
+      </div>
+      <div className="px-3 pb-3">
+        <div className="flex items-baseline justify-between gap-2 mb-2">
+          <span className="min-w-0 truncate text-[13px] font-semibold text-text-primary">
+            {set.name}
+          </span>
+          {released && (
+            <span className="shrink-0 text-[11px] text-text-muted tabular-nums">
+              {released}
+            </span>
+          )}
+        </div>
+        <SetProgressBar set={set} pct={pct} />
+      </div>
+    </button>
+  );
+}
+
 function SetCompletionRow({
   set,
   owned,
@@ -185,7 +363,7 @@ function SetCompletionRow({
   isFirst: boolean;
   onSelect: (setId: string) => void;
 }) {
-  const pct = set.size > 0 ? Math.min(100, (owned / set.size) * 100) : 0;
+  const pct = completionPct(set, owned);
   const released = formatReleaseDate(set.releaseDate);
   const missing = Math.max(0, set.size - set.held);
   return (
@@ -241,29 +419,7 @@ function SetCompletionRow({
               </span>
             </div>
           </div>
-          <div
-            className="h-2 rounded-full bg-surface"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(pct)}
-            aria-label={`${set.name} completion ${pct.toFixed(0)}%`}
-          >
-            <div
-              className="h-full rounded-full bg-gradient-brand transition-[width] duration-500"
-              style={{
-                width: `${pct}%`,
-                // Stretch the gradient so its full extent always spans the
-                // entire track. The fill div only paints the leftmost
-                // `pct%` of it, so the colour at the leading edge
-                // progresses smoothly from orange toward dark red as the
-                // bar grows — the visible gradient is the proportional
-                // metaphor, not a uniformly-coloured chunk.
-                backgroundSize: pct > 0 ? `${10000 / pct}% 100%` : "100% 100%",
-                backgroundPosition: "left center",
-              }}
-            />
-          </div>
+          <SetProgressBar set={set} pct={pct} />
         </div>
       </button>
     </li>
@@ -304,13 +460,17 @@ function SetPagination({
   );
 }
 
-function formatReleaseDate(d: string | null): string {
+function formatReleaseDate(
+  d: string | null,
+  style: "long" | "short" = "long",
+): string {
   if (!d) return "";
   const parsed = new Date(d);
   if (Number.isNaN(parsed.getTime())) return "";
-  return parsed.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return parsed.toLocaleDateString(
+    "en-US",
+    style === "short"
+      ? { year: "numeric", month: "short" }
+      : { year: "numeric", month: "short", day: "numeric" },
+  );
 }
