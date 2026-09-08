@@ -227,6 +227,22 @@ async function main(): Promise<void> {
     .digest("hex")
     .slice(0, 16);
 
+  // An unpinned generated pool is a moving target: loadGeneratedDecks returns
+  // NEWEST first, so generating more decks silently changes which ones a
+  // rerun picks — a different subject set, a different study_id, and the
+  // banked pairs of an interrupted run abandoned rather than resumed.
+  // Measured the hard way: 332 subjects unpinned vs the original 328.
+  if (POOL !== "meta" && !GENERATED_RUN) {
+    console.warn(
+      `[matchups] WARNING: no --generated-run. The generated pool is ordered
+` +
+        `  newest-first, so this study is not reproducible once more decks are
+` +
+        `  generated, and an interrupted run will not resume into it. Pin it:
+` +
+        `    --generated-run <hash from gen_decks>`,
+    );
+  }
   console.log(
     `[matchups] ${MODE} sim v${SIM_VERSION} — ${subjects} subjects` +
       (panel ? ` x ${panel} panel` : "") +
