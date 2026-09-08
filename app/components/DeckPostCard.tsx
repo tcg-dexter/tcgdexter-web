@@ -274,9 +274,9 @@ export function DeckBanner({
   name,
   iconBg,
   wl,
-  isFavorite,
+  isFavorite = false,
   onToggleFavorite,
-  showFavorite,
+  showFavorite = false,
   avatarItems,
   showAvatars = true,
   className = "",
@@ -286,9 +286,12 @@ export function DeckBanner({
   name: string;
   iconBg: string | null;
   wl?: DeckRecordLike | null;
-  isFavorite: boolean;
-  onToggleFavorite: (e: React.MouseEvent) => void;
-  showFavorite: boolean;
+  /** Favourite toggle state + handler. Optional together with
+   *  `showFavorite`: the pinned hero renders no toggle at all, so it has
+   *  no favourite state to thread through. */
+  isFavorite?: boolean;
+  onToggleFavorite?: (e: React.MouseEvent) => void;
+  showFavorite?: boolean;
   avatarItems: AvatarStackItem[];
   /** Render the Pokémon avatar stack in the banner's bottom-right. The
    *  pinned hero keeps it there, where the banner is a full-height column
@@ -339,7 +342,7 @@ export function DeckBanner({
             <img src={imageUrl} alt="" className="w-full h-full object-cover" />
           ) : null}
         </div>
-        {showFavorite && (
+        {showFavorite && onToggleFavorite && (
           <button
             type="button"
             onClick={onToggleFavorite}

@@ -101,7 +101,6 @@ function PinnedDeckHero({
   // otherwise survive close/reopen and leak the previous battle's inputs
   // into the next one.
   const [logKey, setLogKey] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(!!deck.isFavorite);
   const wl = deck.wl;
   const hasRecord = !!wl && wl.w + wl.l + wl.d > 0;
   const streak = currentStreak(wl?.recentForm);
@@ -157,19 +156,6 @@ function PinnedDeckHero({
     window.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
   }, [logOpen]);
 
-  async function toggleFavorite(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    const next = !isFavorite;
-    setIsFavorite(next);
-    const res = await fetch(`/api/saved-decks/${deck.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_favorite: next }),
-    });
-    if (!res.ok) setIsFavorite(!next);
-  }
-
   async function handleQuickLog(data: BattleFormData) {
     const res = await fetch("/api/matches", {
       method: "POST",
@@ -199,9 +185,6 @@ function PinnedDeckHero({
             name={deck.name}
             iconBg={deck.iconBg ?? null}
             wl={deck.wl}
-            isFavorite={isFavorite}
-            onToggleFavorite={toggleFavorite}
-            showFavorite={!!deck.canManage}
             avatarItems={avatarItems}
             className="md:h-full [--hero-card-w:182.6px] [--hero-card-h:251.9px] [--hero-card-x:46%] md:[--hero-card-w:228.25px] md:[--hero-card-h:314.875px]"
             artworkAreaHeightPx={artworkH}
