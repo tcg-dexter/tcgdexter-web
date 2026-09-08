@@ -300,6 +300,21 @@ function SetProgressBar({ set, pct }: { set: SetStats; pct: number }) {
 }
 
 /**
+ * Hover lifts the tile a touch and firms up its border. `relative` +
+ * hover:z-10 keeps the growing tile above its later siblings, which would
+ * otherwise paint over the 2px it gains on each side. The transition names
+ * its properties rather than using transition-all, so the progress bar's
+ * own width animation isn't swept into it.
+ */
+const TILE_CLS =
+  "relative flex flex-col text-left rounded-xl border border-black/8 " +
+  "dark:border-white/10 bg-white dark:bg-surface-elevated overflow-hidden " +
+  "hover:z-10 hover:scale-[1.02] hover:border-black/20 " +
+  "dark:hover:border-white/25 hover:shadow-md motion-reduce:hover:scale-100 " +
+  "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent " +
+  "transition-[transform,border-color,box-shadow] duration-200 ease-out";
+
+/**
  * Grid presentation of a set: the logo front and centre, then a footer of
  * two rows — name and release date, then the completion bar. The exact
  * counts stay on the list view, which has the width for them; here the
@@ -322,7 +337,7 @@ function SetCompletionTile({
       onClick={() => onSelect(set.id)}
       aria-label={`Filter catalog by ${set.name}`}
       title={`${set.name} — ${owned} / ${set.size}`}
-      className="flex flex-col text-left rounded-xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated overflow-hidden hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-shadow"
+      className={TILE_CLS}
     >
       {/* flex-1 lets the logo well absorb the extra height when a taller
           tile in the same grid row stretches this one, so every footer in
