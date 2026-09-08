@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import CardImage from "@/app/cards/CardImage";
 import type { ResolvedDeckTile } from "@/lib/deckTiles";
 import {
@@ -16,6 +16,7 @@ import PlaymatImageDialog from "./PlaymatImageDialog";
 import { trackClient } from "@/lib/analytics/trackClient";
 import SectionHeader from "@/app/components/ui/SectionHeader";
 import CarouselChevron from "@/app/cards/[id]/CarouselChevron";
+import { useCarousel } from "@/app/cards/[id]/useCarousel";
 import { DeckBanner, WLCircles } from "@/app/components/DeckPostCard";
 
 export interface DeckSummary {
@@ -974,6 +975,18 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const panelHeaderRef = useRef<HTMLDivElement>(null);
   const [panelHeaderHeight, setPanelHeaderHeight] = useState(0);
   const [isDesktop, setIsDesktop] = useState(false);
+  // Deck picker rail — same scroll mechanics as the deck profile's Battle
+  // History carousel (one tile per chevron press here, rather than that
+  // rail's viewport-relative count, since these tiles are a fixed size).
+  const decksTilesPerView = useCallback(() => 1, []);
+  const {
+    scrollerRef: deckScrollerRef,
+    listRef: deckListRef,
+    itemRef: deckItemRef,
+    atStart: deckAtStart,
+    atEnd: deckAtEnd,
+    step: deckStep,
+  } = useCarousel({ tilesPerView: decksTilesPerView, itemCount: decks.length });
 
   // Record a Playmat Studio open once per mount.
   useEffect(() => {
@@ -1577,20 +1590,41 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
       {/* Deck picker — horizontal scroll of mini deck preview cards, below
           the mat + customization row. */}
       <div className="flex flex-col gap-2 mt-6">
-        <label className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-          Your decks
-        </label>
+        <div className="flex items-center justify-between gap-3">
+          <label className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+            Your decks
+          </label>
+          {decks.length > 1 && (
+            <div className="flex items-center gap-1.5">
+              <CarouselChevron
+                direction="left"
+                noun="decks"
+                disabled={deckAtStart}
+                onClick={() => deckStep(-1)}
+              />
+              <CarouselChevron
+                direction="right"
+                noun="decks"
+                disabled={deckAtEnd}
+                onClick={() => deckStep(1)}
+              />
+            </div>
+          )}
+        </div>
 
         {decks.length === 0 ? (
           <p className="text-sm text-text-muted py-4">No saved decks yet.</p>
         ) : (
-          <div className="overflow-x-auto overscroll-x-contain no-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6">
-            <ul className="flex gap-3">
-              {decks.map((deck) => {
+          <div
+            ref={deckScrollerRef}
+            className="overflow-x-auto overscroll-x-contain no-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6"
+          >
+            <ul ref={deckListRef} className="flex gap-3">
+              {decks.map((deck, i) => {
                 const isSelected = deck.id === selectedDeckId;
                 const isLoading = isSelected && loading;
                 return (
-                  <li key={deck.id} className="shrink-0">
+                  <li key={deck.id} ref={i === 0 ? deckItemRef : undefined} className="shrink-0">
                     <button
                       type="button"
                       onClick={() => !isLoading && handleSelectDeck(deck)}
