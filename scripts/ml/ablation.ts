@@ -157,13 +157,25 @@ function main(): void {
     console.log(
       `  (cd ${mlRoot} && scripts/.venv/bin/python3 scripts/ml_train_value_gbm.py \\\n` +
         `      --db ${DB} --sim-version 24 --runs ${h.slice(0, 16)} \\\n` +
-        `      --out artifacts/value/value-gbm-${arm.name}.json --no-publish)`,
+        // No --publish: promotion is earned by the duel, not by training.
+        `      --out artifacts/value/value-gbm-${arm.name}.json)`,
     );
   }
-  console.log(`\n[ablation] then score BOTH on decks they were not trained to death on:`);
-  console.log(`  npx tsx scripts/ml/pilot_competence.ts --n 12 --decks 12`);
+  // Both scorers read the PROMOTED artifact by default. DEXTER_VALUE_ARTIFACT
+  // (see readValueArtifact) points them at a candidate instead — the seam that
+  // makes it possible to score a model without promoting it first.
+  const cand = (arm: string) =>
+    path.resolve(mlRoot, `artifacts/value/value-gbm-${arm}.json`);
+  console.log(`\n[ablation] then score BOTH on the REAL archetypes:`);
+  for (const arm of ARMS) {
+    console.log(
+      `  DEXTER_VALUE_ARTIFACT="${cand(arm.name)}" \\\n` +
+        `    npx tsx scripts/ml/pilot_competence.ts --n 12 --decks 12 --json ${arm.name}-competence.json`,
+    );
+  }
   console.log(
-    `  npx tsx scripts/ml/value_duel.ts --a <treatment.json> --b <control.json> --games 240 --seed d1`,
+    `  npx tsx scripts/ml/value_duel.ts --a "${cand("treatment")}" --b "${cand("control")}" ` +
+      `--games 240 --seed d1`,
   );
   console.log(
     `\n[ablation] gate: treatment must not regress pilotCompetence on the REAL\n` +

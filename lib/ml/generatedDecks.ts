@@ -37,8 +37,10 @@ export function loadGeneratedDecks(
     return [];
   }
   try {
-    const where = options.runHash ? "WHERE run_hash = ?" : "";
-    const params = options.runHash ? [options.runHash] : [];
+    // Prefix match: every tool here prints a 12-char hash and a full one is
+    // 64, so exact-match meant the id the CLI just handed you was rejected.
+    const where = options.runHash ? "WHERE run_hash LIKE ?" : "";
+    const params = options.runHash ? [`${options.runHash}%`] : [];
     const rows = db
       .prepare(
         `SELECT id, list, generator, parent_id, archetype, edit_distance, ops_json, stats_json
