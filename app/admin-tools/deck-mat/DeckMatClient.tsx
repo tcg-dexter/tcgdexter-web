@@ -56,6 +56,9 @@ const EXPORT_PADDING = 15;      // px, outer padding added around the exported i
 // shows around the card art. Shared by the live CardPile render and the
 // canvas export so both draw the same proportions.
 const SLEEVE_BORDER_RATIO = 0.03;
+// Base drop shadow every card slot gets, sleeved or not, single or
+// stacked — without it a lone card reads as pasted flat onto the mat.
+const CARD_DROP_SHADOW = "0 2px 3px rgba(0,0,0,0.35)";
 
 // The "dark" stop used at the bottom of each energy gradient (shade -22%).
 function ed(key: string): string {
@@ -777,24 +780,44 @@ async function rasterizeMat({
       const cardR = Math.max(2, Math.round(cardWidth * 0.05));
       const sleeveHex = sleeveColor ? ENERGY_HEX[sleeveColor] : null;
       const sleeveBorder = sleeveHex ? Math.max(1, Math.round(cardWidth * SLEEVE_BORDER_RATIO)) : 0;
+      // Sleeved cards are square-cornered rectangles; unsleeved ones keep
+      // the usual rounded card corners.
+      const outerR = sleeveHex ? 0 : cardR;
+      const innerR = sleeveHex ? 0 : Math.max(1, cardR - sleeveBorder);
       for (let i = 0; i < count; i++) {
         const cx = pileX + i * cardWidth * FAN_OVERLAP;
 
         // Card slot background — the sleeve color when one's equipped,
-        // otherwise the plain placeholder fill.
+        // otherwise the plain placeholder fill. Every card gets a base
+        // drop shadow so it reads as sitting on the mat on its own;
+        // stacked duplicates get a second pass layering an extra shadow
+        // between them for depth (canvas only supports one shadow config
+        // per fill, hence the two passes).
         ctx.save();
-        if (i > 0) {
-          ctx.shadowOffsetX = -2;
-          ctx.shadowOffsetY = 0;
-          ctx.shadowBlur = 2;
-          ctx.shadowColor = "rgba(0,0,0,0.33)";
-        }
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 2;
+        ctx.shadowBlur = 3;
+        ctx.shadowColor = "rgba(0,0,0,0.35)";
         ctx.beginPath();
-        ctx.roundRect(cx, ry, cardWidth, cardH, cardR);
+        ctx.roundRect(cx, ry, cardWidth, cardH, outerR);
         ctx.closePath();
         ctx.fillStyle = sleeveHex ?? "#e8e8e8";
         ctx.fill();
         ctx.restore();
+
+        if (i > 0) {
+          ctx.save();
+          ctx.shadowOffsetX = -2;
+          ctx.shadowOffsetY = 0;
+          ctx.shadowBlur = 2;
+          ctx.shadowColor = "rgba(0,0,0,0.33)";
+          ctx.beginPath();
+          ctx.roundRect(cx, ry, cardWidth, cardH, outerR);
+          ctx.closePath();
+          ctx.fillStyle = sleeveHex ?? "#e8e8e8";
+          ctx.fill();
+          ctx.restore();
+        }
 
         // Card image clipped to slot, inset by the sleeve border when one's
         // equipped so the sleeve color shows all around the art.
@@ -803,10 +826,9 @@ async function rasterizeMat({
           const iy = ry + sleeveBorder;
           const iw = cardWidth - sleeveBorder * 2;
           const ih = cardH - sleeveBorder * 2;
-          const ir = Math.max(1, cardR - sleeveBorder);
           ctx.save();
           ctx.beginPath();
-          ctx.roundRect(ix, iy, iw, ih, ir);
+          ctx.roundRect(ix, iy, iw, ih, innerR);
           ctx.closePath();
           ctx.clip();
           drawContain(ctx, cardImg, ix, iy, iw, ih);
@@ -882,6 +904,10 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   // the swatch grid needs an explicit height instead — see isDesktop below.
   const buttonsRef = useRef<HTMLDivElement>(null);
   const [buttonsHeight, setButtonsHeight] = useState(0);
+  // The panel's own header row (the Sleeve toggle, right-aligned above the
+  // swatch grid) — measured for the same reason as buttonsHeight below.
+  const panelHeaderRef = useRef<HTMLDivElement>(null);
+  const [panelHeaderHeight, setPanelHeaderHeight] = useState(0);
   const [isDesktop, setIsDesktop] = useState(false);
 
   // Record a Playmat Studio open once per mount.
@@ -913,6 +939,14 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
     const el = buttonsRef.current;
     if (!el) return;
     const ro = new ResizeObserver(([entry]) => setButtonsHeight(entry.contentRect.height));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const el = panelHeaderRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setPanelHeaderHeight(entry.contentRect.height));
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -999,13 +1033,14 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const matHeightPx = matWidth > 0 ? matWidth * MAT_ASPECT : 0;
   // Below md the customization panel sits under the mat instead of beside
   // it, so it has no CSS grid row to stretch it to the mat's height — this
-  // gives the swatch grid an explicit height instead (mat height, minus the
-  // gap and the fixed-height buttons below it). PANEL_GAP_PX mirrors the
+  // gives the swatch grid an explicit height instead: mat height, minus the
+  // panel header row (Sleeve toggle), the fixed-height buttons, and the two
+  // gaps between those three and the swatch grid. PANEL_GAP_PX mirrors the
   // panel's own gap-3.
   const PANEL_GAP_PX = 12;
   const mobileSwatchHeight =
-    !isDesktop && matHeightPx > 0 && buttonsHeight > 0
-      ? Math.max(0, matHeightPx - PANEL_GAP_PX - buttonsHeight)
+    !isDesktop && matHeightPx > 0 && buttonsHeight > 0 && panelHeaderHeight > 0
+      ? Math.max(0, matHeightPx - panelHeaderHeight - PANEL_GAP_PX * 2 - buttonsHeight)
       : undefined;
   // A placed image replaces the gradient/pattern as the mat background.
   const imagePlacement =
@@ -1091,32 +1126,13 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
         {/* Left on desktop: the mat itself */}
         <div ref={matColumnRef} className="flex flex-col gap-3">
           <div ref={exportRef} className="flex flex-col gap-3">
-            {/* Mat header: deck name + Sleeve toggle. The name falls back
-                to a non-breaking space (not "") so the span's line box —
-                and the mat's position below it — doesn't collapse before
-                a deck is selected. */}
-            <div className="flex items-center justify-between gap-4">
+            {/* Mat header: deck name. Falls back to a non-breaking space
+                (not "") so the span's line box — and the mat's position
+                below it — doesn't collapse before a deck is selected. */}
+            <div className="flex items-center gap-4">
               <span className="text-lg sm:text-xl font-semibold text-text-primary truncate">
                 {decks.find((d) => d.id === selectedDeckId)?.name ?? " "}
               </span>
-              <button
-                type="button"
-                onClick={() => setSleevePanelOpen((v) => !v)}
-                aria-pressed={sleevePanelOpen}
-                className={`flex-shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                  sleevePanelOpen
-                    ? "border-transparent bg-black dark:bg-white text-white dark:text-black"
-                    : "border-black/15 dark:border-white/15 text-text-secondary hover:bg-black/5 dark:hover:bg-white/10"
-                }`}
-              >
-                {sleeveColor && (
-                  <span
-                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                    style={{ background: ENERGY_HEX[sleeveColor] }}
-                  />
-                )}
-                Sleeve
-              </button>
             </div>
 
             <div
@@ -1210,18 +1226,31 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             it, so the swatch grid instead gets an explicit height —
             mobileSwatchHeight — computed from the mat's own height. */}
         <div className="flex flex-col gap-3">
-          {/* Invisible twin of the mat column's deck-name row — only
-              needed on desktop, where this panel sits beside the mat and
-              needs its content to start level with the mat box rather
-              than with the top of the mat column (which includes that
-              name row above the mat). Hidden on mobile, where the panel
-              just stacks under the mat and this offset would only waste
-              space. */}
-          <div className="hidden md:flex items-center justify-between gap-4 invisible" aria-hidden="true">
-            <span className="text-lg sm:text-xl font-semibold truncate">&nbsp;</span>
-            <span className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold">
+          {/* Panel header: just the Sleeve toggle, right-aligned above the
+              swatch grid. Its measured height (panelHeaderHeight) is also
+              what keeps this panel's content roughly level with the mat
+              box on desktop — the mat's own title row above it is close
+              in height to this one, and any slack is absorbed by the
+              swatch grid's flex-1 below. */}
+          <div ref={panelHeaderRef} className="flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => setSleevePanelOpen((v) => !v)}
+              aria-pressed={sleevePanelOpen}
+              className={`flex-shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                sleevePanelOpen
+                  ? "border-transparent bg-black dark:bg-white text-white dark:text-black"
+                  : "border-black/15 dark:border-white/15 text-text-secondary hover:bg-black/5 dark:hover:bg-white/10"
+              }`}
+            >
+              {sleeveColor && (
+                <span
+                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                  style={{ background: ENERGY_HEX[sleeveColor] }}
+                />
+              )}
               Sleeve
-            </span>
+            </button>
           </div>
 
           {/* A grid — 6 columns by default (4 colors + 2 textures), each
@@ -1494,6 +1523,10 @@ export function CardPile({
   const cardR = Math.max(2, Math.round(cardWidth * 0.05));
   const sleeveHex = sleeveColor ? ENERGY_HEX[sleeveColor] : null;
   const sleeveBorder = sleeveHex ? Math.max(1, Math.round(cardWidth * SLEEVE_BORDER_RATIO)) : 0;
+  // Sleeved cards are square-cornered rectangles; unsleeved ones keep the
+  // usual rounded card corners.
+  const outerR = sleeveHex ? 0 : cardR;
+  const innerR = sleeveHex ? 0 : Math.max(1, cardR - sleeveBorder);
 
   return (
     <div
@@ -1509,9 +1542,12 @@ export function CardPile({
             left: i * cardWidth * FAN_OVERLAP,
             width: cardWidth,
             height: cardHeight,
-            borderRadius: cardR,
+            borderRadius: outerR,
             zIndex: i,
-            boxShadow: i > 0 ? "-2px 0 2px rgba(0,0,0,0.33)" : undefined,
+            // Every card gets a base drop shadow so it reads as sitting on
+            // the mat even on its own; stacked duplicates layer an extra
+            // shadow between them for depth.
+            boxShadow: i > 0 ? `${CARD_DROP_SHADOW}, -2px 0 2px rgba(0,0,0,0.33)` : CARD_DROP_SHADOW,
             backgroundColor: sleeveHex ?? undefined,
           }}
         >
@@ -1519,7 +1555,7 @@ export function CardPile({
               art — inset is 0 with no sleeve, so this is a no-op then. */}
           <div
             className="absolute overflow-hidden"
-            style={{ inset: sleeveBorder, borderRadius: Math.max(1, cardR - sleeveBorder) }}
+            style={{ inset: sleeveBorder, borderRadius: innerR }}
           >
             <CardImage
               src={tile.smallImageUrl}
