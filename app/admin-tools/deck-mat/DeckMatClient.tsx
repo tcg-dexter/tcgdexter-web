@@ -52,11 +52,12 @@ export {
   computeCardWidth,
 };
 const EXPORT_PADDING = 15;      // px, outer padding added around the exported image
-// Sleeve border — how much of the sleeve color shows around the card art.
-// A flat pixel value (not scaled by card width) for a consistently tight
-// fit regardless of mat size. Shared by the live CardPile render and the
+// Sleeve border — how much of the sleeve color shows around the card art
+// on each edge (so the sleeve is 2x this wider/taller than the card). A
+// flat pixel value (not scaled by card width) for a consistently tight fit
+// regardless of mat size. Shared by the live CardPile render and the
 // canvas export.
-const SLEEVE_BORDER_PX = 1;
+const SLEEVE_BORDER_PX = 2;
 // Base drop shadow every card slot gets, sleeved or not, single or
 // stacked — without it a lone card reads as pasted flat onto the mat.
 const CARD_DROP_SHADOW = "0 2px 3px rgba(0,0,0,0.35)";
