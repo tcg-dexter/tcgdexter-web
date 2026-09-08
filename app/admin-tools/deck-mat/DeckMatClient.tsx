@@ -16,12 +16,16 @@ import PlaymatImageDialog from "./PlaymatImageDialog";
 import { trackClient } from "@/lib/analytics/trackClient";
 import SectionHeader from "@/app/components/ui/SectionHeader";
 import CarouselChevron from "@/app/cards/[id]/CarouselChevron";
+import { DeckBanner } from "@/app/components/DeckPostCard";
 
 export interface DeckSummary {
   id: string;
   name: string;
   deckList: string;
   avatarUrl: string | null;
+  /** Hero-Pokémon accent color for the deck picker's DeckBanner — same
+   *  field as UserDeckCardProps.iconBg. */
+  iconBg: string | null;
   wins: number;
   losses: number;
   draws: number;
@@ -1583,7 +1587,6 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           <div className="overflow-x-auto overscroll-x-contain no-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6">
             <ul className="flex gap-3">
               {decks.map((deck) => {
-                const total = deck.wins + deck.losses + deck.draws;
                 const isSelected = deck.id === selectedDeckId;
                 const isLoading = isSelected && loading;
                 return (
@@ -1591,35 +1594,28 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                     <button
                       type="button"
                       onClick={() => !isLoading && handleSelectDeck(deck)}
-                      className={`w-[180px] flex flex-col gap-2 p-3 rounded-card border backdrop-blur-xl bg-white/90 dark:bg-surface-elevated shadow-sm hover:shadow-md text-left transition ${
+                      className={`w-64 rounded-card border overflow-hidden backdrop-blur-xl bg-white/90 dark:bg-surface-elevated shadow-sm hover:shadow-md text-left transition ${
                         isSelected ? "border-accent ring-1 ring-accent" : "border-black/8 dark:border-white/10"
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="w-14 flex-shrink-0 aspect-[245/342] rounded-lg overflow-hidden bg-surface">
-                          {deck.avatarUrl ? (
-                            <img src={deck.avatarUrl} alt="" className="w-full h-full object-contain" loading="lazy" />
-                          ) : (
-                            <div className="w-full h-full bg-surface" />
-                          )}
-                        </div>
-                        {total > 0 && (
-                          <span className="flex-shrink-0 inline-flex items-baseline tabular-nums font-bold text-[10px] leading-none bg-black rounded-full px-2 py-[3px] text-white">
-                            <span>{deck.wins}</span>
-                            <span className="mx-[3px]">-</span>
-                            <span>{deck.losses}</span>
-                            {deck.draws > 0 && (
-                              <>
-                                <span className="mx-[3px]">-</span>
-                                <span>{deck.draws}</span>
-                              </>
-                            )}
-                          </span>
-                        )}
+                      {/* Simplified DeckBanner — same hero-art treatment as
+                          the deck profile preview card (UserDeckCard), just
+                          without the composition-ring breakdown, edit menu,
+                          footer buttons, or favorite toggle that card also
+                          carries; this is a picker, not a management view. */}
+                      <DeckBanner
+                        imageUrl={deck.avatarUrl}
+                        name={deck.name}
+                        iconBg={deck.iconBg}
+                        wl={{ w: deck.wins, l: deck.losses, d: deck.draws }}
+                        avatarItems={[]}
+                        showAvatars={false}
+                      />
+                      <div className="px-3.5 py-3">
+                        <span className="text-sm font-semibold text-text-primary truncate block">
+                          {deck.name}
+                        </span>
                       </div>
-                      <span className="text-sm font-semibold text-text-primary truncate">
-                        {deck.name}
-                      </span>
                     </button>
                   </li>
                 );
