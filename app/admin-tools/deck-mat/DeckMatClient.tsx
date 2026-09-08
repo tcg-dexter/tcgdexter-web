@@ -55,7 +55,7 @@ const EXPORT_PADDING = 15;      // px, outer padding added around the exported i
 // Sleeve border as a fraction of card width — how much of the sleeve color
 // shows around the card art. Shared by the live CardPile render and the
 // canvas export so both draw the same proportions.
-const SLEEVE_BORDER_RATIO = 0.06;
+const SLEEVE_BORDER_RATIO = 0.03;
 
 // The "dark" stop used at the bottom of each energy gradient (shade -22%).
 function ed(key: string): string {
@@ -1084,24 +1084,6 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             disabled={selectedIndex >= decks.length - 1}
             onClick={() => rotateDeck(1)}
           />
-          <button
-            type="button"
-            onClick={() => setSleevePanelOpen((v) => !v)}
-            aria-pressed={sleevePanelOpen}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-              sleevePanelOpen
-                ? "border-transparent bg-black dark:bg-white text-white dark:text-black"
-                : "border-black/15 dark:border-white/15 text-text-secondary hover:bg-black/5 dark:hover:bg-white/10"
-            }`}
-          >
-            {sleeveColor && (
-              <span
-                className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                style={{ background: ENERGY_HEX[sleeveColor] }}
-              />
-            )}
-            Sleeve
-          </button>
         </div>
       </div>
 
@@ -1109,13 +1091,32 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
         {/* Left on desktop: the mat itself */}
         <div ref={matColumnRef} className="flex flex-col gap-3">
           <div ref={exportRef} className="flex flex-col gap-3">
-            {/* Mat header: deck name. Falls back to a non-breaking space
-                (not "") so the span's line box — and the mat's position
-                below it — doesn't collapse before a deck is selected. */}
-            <div className="flex items-center gap-4">
+            {/* Mat header: deck name + Sleeve toggle. The name falls back
+                to a non-breaking space (not "") so the span's line box —
+                and the mat's position below it — doesn't collapse before
+                a deck is selected. */}
+            <div className="flex items-center justify-between gap-4">
               <span className="text-lg sm:text-xl font-semibold text-text-primary truncate">
                 {decks.find((d) => d.id === selectedDeckId)?.name ?? " "}
               </span>
+              <button
+                type="button"
+                onClick={() => setSleevePanelOpen((v) => !v)}
+                aria-pressed={sleevePanelOpen}
+                className={`flex-shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                  sleevePanelOpen
+                    ? "border-transparent bg-black dark:bg-white text-white dark:text-black"
+                    : "border-black/15 dark:border-white/15 text-text-secondary hover:bg-black/5 dark:hover:bg-white/10"
+                }`}
+              >
+                {sleeveColor && (
+                  <span
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ background: ENERGY_HEX[sleeveColor] }}
+                  />
+                )}
+                Sleeve
+              </button>
             </div>
 
             <div
@@ -1216,8 +1217,11 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
               name row above the mat). Hidden on mobile, where the panel
               just stacks under the mat and this offset would only waste
               space. */}
-          <div className="hidden md:flex items-center gap-4 invisible" aria-hidden="true">
+          <div className="hidden md:flex items-center justify-between gap-4 invisible" aria-hidden="true">
             <span className="text-lg sm:text-xl font-semibold truncate">&nbsp;</span>
+            <span className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold">
+              Sleeve
+            </span>
           </div>
 
           {/* A grid — 6 columns by default (4 colors + 2 textures), each
@@ -1247,7 +1251,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                     type="button"
                     onClick={() => chooseSleeve(null)}
                     aria-label="No sleeve"
-                    className={`aspect-[2.5/3.5] h-[85%] rounded-md bg-surface flex items-center justify-center transition-all ${
+                    className={`aspect-[2.5/3.5] h-[85%] bg-surface flex items-center justify-center transition-all ${
                       sleeveColor === null
                         ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
                         : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
@@ -1265,7 +1269,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                       type="button"
                       onClick={() => chooseSleeve(key)}
                       aria-label={key}
-                      className={`aspect-[2.5/3.5] h-[85%] rounded-md transition-all ${
+                      className={`aspect-[2.5/3.5] h-[85%] transition-all ${
                         sleeveColor === key
                           ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
                           : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
