@@ -295,11 +295,11 @@ body.card-viewer-open [data-back-button] {
 }
 
 /* ─── Foil sheen ───────────────────────────────────────────────
-   A band of light sweeping across a surface — the way a foil catches the
-   overhead light when someone tilts it toward you. The gradient stops,
-   the 60%-wide band, the -70% -> 110% travel and the 0.62s ease-in-out
-   are lifted from the replay viewer's <FoilSheen> (card3d/Card3D.tsx),
-   so a shimmer reads the same wherever it appears.
+   A band of light travelling diagonally across a surface, bottom-left to
+   top-right — the way a foil catches the overhead light when someone
+   tilts it toward you. The gradient stops and the 0.62s ease-in-out are
+   lifted from the replay viewer's <FoilSheen> (card3d/Card3D.tsx), so a
+   shimmer reads the same wherever it appears.
 
    Reimplemented in CSS rather than imported: FoilSheen is a framer-motion
    component in a module that also pulls in the replay's BeatContext, and
@@ -307,25 +307,39 @@ body.card-viewer-open [data-back-button] {
    also driven differently — that one enters and exits with a beat, this
    one is a single pass fired on hover.
 
+   Painted as an oversized background slid across the element rather than
+   a child element translated inside it, because the travel is diagonal:
+   one background-position tween moves along both axes at once, with no
+   rotated band to size against the box's own aspect. At 300% the gradient
+   is three times the element on each axis, so the window sees a third of
+   the gradient line and the bright core sits outside it at both ends —
+   the band enters and leaves cleanly instead of starting mid-sweep.
+
    The caller owns mount/unmount, so the sweep runs once per mount; pair
    it with mix-blend-mode: overlay, which brightens the artwork's own
-   colours and leaves a white surface untouched (nothing to catch). */
+   colours and leaves a white surface untouched — there is nothing on
+   plain white for a light to catch. */
 @keyframes dx-foil-sweep {
-  from { left: -70%; }
-  to   { left: 110%; }
+  /* The window slides across an oversized gradient, so the band appears
+     to travel the opposite way: starting the window at the gradient's
+     top-right end is what walks the light from the tile's bottom-left
+     corner up to its top-right. */
+  from { background-position: 100% 0%; }
+  to   { background-position: 0% 100%; }
 }
 
 .dx-foil-sweep {
-  width: 60%;
-  left: 110%;
-  background: linear-gradient(
-    105deg,
+  background-image: linear-gradient(
+    45deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.15) 35%,
+    rgba(255, 255, 255, 0.15) 44%,
     rgba(255, 255, 255, 0.75) 50%,
-    rgba(255, 255, 255, 0.15) 65%,
+    rgba(255, 255, 255, 0.15) 56%,
     transparent 100%
   );
+  background-size: 300% 300%;
+  background-repeat: no-repeat;
+  background-position: 100% 0%;
   animation: dx-foil-sweep 0.62s ease-in-out;
 }
 
@@ -335,3 +349,4 @@ body.card-viewer-open [data-back-button] {
     display: none;
   }
 }
+

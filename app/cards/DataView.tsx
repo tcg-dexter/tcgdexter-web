@@ -310,7 +310,7 @@ const SHEEN_DWELL_MS = 1000;
  * own width animation isn't swept into it.
  */
 const TILE_CLS =
-  "relative flex flex-col text-left rounded-xl border border-black/8 " +
+  "relative isolate flex flex-col text-left rounded-xl border border-black/8 " +
   "dark:border-white/10 bg-white dark:bg-surface-elevated overflow-hidden " +
   "hover:z-10 hover:scale-[1.02] hover:border-black/20 " +
   "dark:hover:border-white/25 hover:shadow-md motion-reduce:hover:scale-100 " +
@@ -370,47 +370,12 @@ function SetCompletionTile({
           tile in the same grid row stretches this one, so every footer in
           the row still lines up along the bottom. */}
       <div className="flex flex-1 items-center justify-center px-4 py-5">
-        <div className="relative h-16 w-full">
-          <SetLogo
-            src={set.logo}
-            ptcgoCode={set.ptcgoCode}
-            setName={set.name}
-            className="h-16 w-full"
-          />
-          {/* The band is masked by the logo itself, so the light only
-              lands on the artwork's opaque pixels rather than sweeping
-              the whole well — most visibly in dark mode, where the well
-              around the logo would otherwise brighten with it. contain /
-              center matches the img's own object-contain, so mask and
-              art land on the same pixels at any tile width.
-
-              Only when there's a logo to mask by: the PTCGO-code fallback
-              has no image, and a mask that resolves to nothing paints
-              nothing. A logo that 404s at runtime degrades the same way —
-              the badge shows and the shimmer simply doesn't play. */}
-          {sheen && set.logo && (
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-0 overflow-hidden"
-              style={{
-                mixBlendMode: "overlay",
-                WebkitMaskImage: `url("${set.logo}")`,
-                maskImage: `url("${set.logo}")`,
-                WebkitMaskSize: "contain",
-                maskSize: "contain",
-                WebkitMaskPosition: "center",
-                maskPosition: "center",
-                WebkitMaskRepeat: "no-repeat",
-                maskRepeat: "no-repeat",
-              }}
-            >
-              <span
-                className="dx-foil-sweep absolute inset-y-0"
-                onAnimationEnd={() => setSheen(false)}
-              />
-            </span>
-          )}
-        </div>
+        <SetLogo
+          src={set.logo}
+          ptcgoCode={set.ptcgoCode}
+          setName={set.name}
+          className="h-16 w-full"
+        />
       </div>
       <div className="px-3 pb-3">
         {/* Name over date, centred under the logo. On one row the date ate
@@ -428,6 +393,17 @@ function SetCompletionTile({
         </div>
         <SetProgressBar set={set} pct={pct} />
       </div>
+      {/* Last child, so the band paints over the logo and the footer
+          alike as it crosses. The tile's own overflow-hidden clips it to
+          the rounded corners. */}
+      {sheen && (
+        <span
+          aria-hidden
+          className="dx-foil-sweep pointer-events-none absolute inset-0"
+          style={{ mixBlendMode: "overlay" }}
+          onAnimationEnd={() => setSheen(false)}
+        />
+      )}
     </button>
   );
 }
