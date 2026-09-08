@@ -299,8 +299,8 @@ function SetProgressBar({ set, pct }: { set: SetStats; pct: number }) {
   );
 }
 
-/** How long the pointer has to rest on a tile before its logo shimmers. */
-const SHEEN_DWELL_MS = 1000;
+/** How long the pointer has to rest on a tile before it shimmers. */
+const SHEEN_DWELL_MS = 600;
 
 /**
  * Hover lifts the tile a touch and firms up its border. `relative` +
