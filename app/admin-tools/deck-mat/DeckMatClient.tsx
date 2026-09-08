@@ -1089,6 +1089,14 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             align-items: stretch, so this column fills it with no JS
             measurement needed). */}
         <div className="flex flex-col gap-3">
+          {/* Invisible twin of the mat column's deck-name row, so this
+              panel's own content starts level with the mat box itself
+              rather than with the top of the mat column (which includes
+              that name row above the mat). */}
+          <div className="flex items-center gap-4 invisible" aria-hidden="true">
+            <span className="text-lg sm:text-xl font-semibold truncate">&nbsp;</span>
+          </div>
+
           {/* One 5-column grid: colors occupy the first 3 columns, textures
               the last 2, each swatch explicitly placed by column/row so the
               two sets interleave row-by-row rather than sitting in separate
