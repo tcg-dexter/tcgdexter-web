@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import CardImage from "@/app/cards/CardImage";
 import type { ResolvedDeckTile } from "@/lib/deckTiles";
 import {
@@ -1339,11 +1340,13 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
               instead of splitting the track into forced-equal halves:
               "Mat" and "Sleeve" are different lengths, and equal-width
               halves left "Mat" floating in extra space while "Sleeve"
-              filled its half edge to edge — the same px-3.5 on both now
+              filled its half edge to edge — the same px-3.5 on both
               gives each label matching, evenly-sitting padding instead.
-              That tradeoff drops the sliding-overlay transform GridListToggle
-              uses (which assumes exactly two equal halves) for a plain
-              per-tab background swap; reimplemented locally rather than
+              The active pill is a framer-motion layoutId shared between
+              the two tabs — only one is ever mounted, so toggling moves
+              it and animates its (differently-sized) box, the "magic
+              move" GridListToggle's fixed 50/50 transform can't do for
+              unequal-width tabs. Reimplemented locally rather than
               generalizing that shared component, since its value type is
               pinned to "grid"|"list" and it's used by two other surfaces. */}
           <div ref={panelHeaderRef} className="flex items-center justify-end">
@@ -1357,13 +1360,18 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                 aria-selected={!sleevePanelOpen}
                 aria-label="Mat customization"
                 onClick={() => setSleevePanelOpen(false)}
-                className={`h-full flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${
-                  !sleevePanelOpen
-                    ? "bg-white dark:bg-surface-2 text-text-primary shadow-sm"
-                    : "text-text-muted"
-                }`}
+                className="relative h-full flex items-center justify-center px-3.5 rounded-full text-xs font-bold"
               >
-                Mat
+                {!sleevePanelOpen && (
+                  <motion.div
+                    layoutId="mat-sleeve-pill"
+                    className="absolute inset-0 rounded-full bg-white dark:bg-surface-2 shadow-sm"
+                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                  />
+                )}
+                <span className={`relative z-10 transition-colors ${!sleevePanelOpen ? "text-text-primary" : "text-text-muted"}`}>
+                  Mat
+                </span>
               </button>
               <button
                 type="button"
@@ -1371,13 +1379,18 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                 aria-selected={sleevePanelOpen}
                 aria-label="Sleeve customization"
                 onClick={() => setSleevePanelOpen(true)}
-                className={`h-full flex items-center justify-center px-3.5 rounded-full text-xs font-bold transition-colors ${
-                  sleevePanelOpen
-                    ? "bg-black dark:bg-white text-white dark:text-black shadow-sm"
-                    : "text-text-muted"
-                }`}
+                className="relative h-full flex items-center justify-center px-3.5 rounded-full text-xs font-bold"
               >
-                Sleeve
+                {sleevePanelOpen && (
+                  <motion.div
+                    layoutId="mat-sleeve-pill"
+                    className="absolute inset-0 rounded-full bg-black dark:bg-white shadow-sm"
+                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                  />
+                )}
+                <span className={`relative z-10 transition-colors ${sleevePanelOpen ? "text-white dark:text-black" : "text-text-muted"}`}>
+                  Sleeve
+                </span>
               </button>
             </div>
           </div>
@@ -1399,6 +1412,11 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             className="relative min-h-0 md:flex-1"
             style={{ height: mobileSwatchHeight }}
           >
+            {/* Crossfade between the mat and sleeve grids on toggle, rather
+                than an instant swap — mode="wait" fades the outgoing grid
+                out before the incoming one fades in, avoiding an overlap
+                jump since the two have different structures/heights. */}
+            <AnimatePresence mode="wait">
             {sleevePanelOpen ? (
               /* Sleeve picker: fixed 4x3 grid, card-shaped (2.5:3.5) swatches
                  instead of circles, across two pages (dots below). Page 1 —
@@ -1408,7 +1426,14 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                  (each blending into the next), plus the mat's own brand
                  gradient as a 12th. There's no separate "no sleeve" cell —
                  tapping the already-equipped swatch again clears it. */
-              <div className="h-full flex flex-col gap-1.5">
+              <motion.div
+                key="sleeve"
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={{ duration: 0.18 }}
+                className="h-full flex flex-col gap-1.5"
+              >
                 <div className="flex-1 min-h-0 grid grid-cols-4 gap-1.5" style={{ gridAutoRows: "1fr" }}>
                   {sleevePage === 0 ? (
                     <>
@@ -1497,9 +1522,14 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                     />
                   ))}
                 </div>
-              </div>
+              </motion.div>
             ) : (
-              <div
+              <motion.div
+                key="mat"
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={{ duration: 0.18 }}
                 className="h-full grid gap-1.5"
                 style={{ gridTemplateColumns: `repeat(${swatchCols.cols}, 1fr)`, gridAutoRows: "1fr" }}
               >
@@ -1551,8 +1581,9 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                     />
                   </div>
                 ))}
-              </div>
+              </motion.div>
             )}
+            </AnimatePresence>
 
             {!sleevePanelOpen && matImage && !pickersUnlocked && (
               <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-[#f2f2f2]/80 dark:bg-[#242424]/80">
