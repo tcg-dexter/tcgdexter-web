@@ -976,9 +976,28 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const [panelHeaderHeight, setPanelHeaderHeight] = useState(0);
   const [isDesktop, setIsDesktop] = useState(false);
   // Deck picker rail — same scroll mechanics as the deck profile's Battle
-  // History carousel (one tile per chevron press here, rather than that
-  // rail's viewport-relative count, since these tiles are a fixed size).
-  const decksTilesPerView = useCallback(() => 1, []);
+  // History carousel (useCarousel + CarouselChevron), but tilesPerView
+  // here is however many cards are actually fully visible right now
+  // (measured off these elements, not a hardcoded per-breakpoint guess),
+  // so a chevron press always advances a full "page" of cards on any
+  // viewport — e.g. 4 visible cards means the 5th becomes the new first.
+  // useCarousel creates its own scrollerRef/listRef/itemRef, so this needs
+  // its own copies of the same three DOM nodes (assigned alongside the
+  // hook's refs in the JSX below) to measure from — decksTilesPerView is
+  // handed to the hook before the hook exists to hand its refs back.
+  const deckScrollerElRef = useRef<HTMLDivElement | null>(null);
+  const deckListElRef = useRef<HTMLUListElement | null>(null);
+  const deckItemElRef = useRef<HTMLLIElement | null>(null);
+  const decksTilesPerView = useCallback(() => {
+    const scroller = deckScrollerElRef.current;
+    const item = deckItemElRef.current;
+    const list = deckListElRef.current;
+    if (!scroller || !item || !list) return 1;
+    const gap = parseFloat(getComputedStyle(list).columnGap || "0") || 0;
+    const pitch = item.getBoundingClientRect().width + gap;
+    if (!pitch) return 1;
+    return Math.max(1, Math.floor(scroller.clientWidth / pitch));
+  }, []);
   const {
     scrollerRef: deckScrollerRef,
     listRef: deckListRef,
@@ -1616,15 +1635,35 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
           <p className="text-sm text-text-muted py-4">No saved decks yet.</p>
         ) : (
           <div
-            ref={deckScrollerRef}
+            ref={(el) => {
+              deckScrollerRef.current = el;
+              deckScrollerElRef.current = el;
+            }}
             className="overflow-x-auto overscroll-x-contain no-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6"
           >
-            <ul ref={deckListRef} className="flex gap-3">
+            <ul
+              ref={(el) => {
+                deckListRef.current = el;
+                deckListElRef.current = el;
+              }}
+              className="flex gap-3"
+            >
               {decks.map((deck, i) => {
                 const isSelected = deck.id === selectedDeckId;
                 const isLoading = isSelected && loading;
                 return (
-                  <li key={deck.id} ref={i === 0 ? deckItemRef : undefined} className="shrink-0">
+                  <li
+                    key={deck.id}
+                    ref={
+                      i === 0
+                        ? (el) => {
+                            deckItemRef.current = el;
+                            deckItemElRef.current = el;
+                          }
+                        : undefined
+                    }
+                    className="shrink-0"
+                  >
                     <button
                       type="button"
                       onClick={() => !isLoading && handleSelectDeck(deck)}
