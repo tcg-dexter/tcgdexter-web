@@ -55,7 +55,7 @@ const EXPORT_PADDING = 15;      // px, outer padding added around the exported i
 // Sleeve border as a fraction of card width — how much of the sleeve color
 // shows around the card art. Shared by the live CardPile render and the
 // canvas export so both draw the same proportions.
-const SLEEVE_BORDER_RATIO = 0.03;
+const SLEEVE_BORDER_RATIO = 0.015;
 // Base drop shadow every card slot gets, sleeved or not, single or
 // stacked — without it a lone card reads as pasted flat onto the mat.
 const CARD_DROP_SHADOW = "0 2px 3px rgba(0,0,0,0.35)";

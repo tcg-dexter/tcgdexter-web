@@ -16,10 +16,12 @@ export const MAT_ASPECT = 14 / 24;
 // Real card (2.5in) as a proportion of the real mat (24in) — the card width
 // this yields is the true-to-scale size, independent of how many piles are
 // on the mat. computeCardWidth() only shrinks below this to keep a crowded
-// mat from overflowing; it never grows cards past it.
+// mat from overflowing; it never grows cards past it. CARD_SCALE_BUMP nudges
+// that baseline up 5% past strict true-to-scale.
 const CARD_WIDTH_IN = 2.5;
 const MAT_WIDTH_IN = 24;
-export const TRUE_SCALE_CARD_RATIO = CARD_WIDTH_IN / MAT_WIDTH_IN;
+const CARD_SCALE_BUMP = 1.05;
+export const TRUE_SCALE_CARD_RATIO = (CARD_WIDTH_IN / MAT_WIDTH_IN) * CARD_SCALE_BUMP;
 
 /** Chunk tiles into rows of at most MAX_PILES_PER_ROW, capped at MAX_ROWS. */
 export function computeRows(tiles: ResolvedDeckTile[]): ResolvedDeckTile[][] {
