@@ -987,9 +987,9 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-6 md:grid md:grid-cols-[272px_1fr]">
-        {/* Right on desktop: Mat + controls */}
-        <div ref={matColumnRef} className="flex flex-col gap-3 md:order-last">
+      <div className="flex flex-col gap-6 md:grid md:grid-cols-[1fr_272px]">
+        {/* Left on desktop: the mat itself */}
+        <div ref={matColumnRef} className="flex flex-col gap-3">
           <div ref={exportRef} className="flex flex-col gap-3">
             {/* Mat header: deck name. Falls back to a non-breaking space
                 (not "") so the span's line box — and the mat's position
@@ -1081,74 +1081,73 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
               )}
             </div>
           </div>
+        </div>
 
-          {/* Color + pattern pickers — covered by a safeguard overlay while
-              an image is placed (until the user taps "Use Color"). */}
-          <div className="relative flex flex-col gap-3">
-          {/* Color picker — 30 styles across 15 columns = 2 rows.
-              Row width arithmetic (keep this in step with the Add Image /
-              Export max-widths below, which are deliberately the same):
-                mobile   15 × 20px swatch + 14 × 4px gap = 356px
-                desktop  15 × 24px swatch + 14 × 6px gap = 444px
-              Going from 11 to 15 columns meant shrinking the swatches
-              (28→20 / 35→24) rather than adding a third row — the totals
-              land at or just under the old 368/445, so the control block
-              is no wider on a phone than it was at 11 columns. */}
-          <div className="grid gap-1 md:gap-1.5 pt-1 mx-auto [grid-template-columns:repeat(15,1.25rem)] md:[grid-template-columns:repeat(15,1.5rem)]">
-            {MAT_STYLES.map(({ key, gradient }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => chooseStyle(key)}
-                aria-label={key}
-                className={`w-5 h-5 md:w-6 md:h-6 rounded-full transition-all ${
-                  matStyle === key && !matImage
-                    ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
-                    : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
-                }`}
-                style={{ background: gradient }}
-              />
-            ))}
-          </div>
-
-          {/* Texture picker — 15 patterns, same 15 columns = 1 row. */}
-          <div className="grid gap-1 md:gap-1.5 mx-auto [grid-template-columns:repeat(15,1.25rem)] md:[grid-template-columns:repeat(15,1.5rem)]">
-            {TEXTURES.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => chooseTexture(t.key)}
-                aria-label={t.key}
-                className={`w-5 h-5 md:w-6 md:h-6 rounded-full transition-all ${
-                  textureKey === t.key && !matImage
-                    ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
-                    : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
-                }`}
-                style={{
-                  backgroundColor: "#3a3a3a",
-                  backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(t.svg)}")`,
-                  backgroundSize: `${t.w}px ${t.h}px`,
-                }}
-              />
-            ))}
-          </div>
-
-          {matImage && !pickersUnlocked && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-[#f2f2f2]/80">
-              <button
-                type="button"
-                onClick={() => setPickersUnlocked(true)}
-                className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-text-primary shadow-md border border-black/10 hover:bg-black/[0.03] transition-colors"
-              >
-                Use Color
-              </button>
+        {/* Right on desktop: customization panel — one grouped element that
+            matches the mat's height via CSS grid stretch (the mat column's
+            natural height sets the row height; grid items default to
+            align-items: stretch, so this column fills it with no JS
+            measurement needed). */}
+        <div className="flex flex-col gap-3">
+          {/* Color + pattern swatches, a single 3-column grid so the circles
+              scale to fill whatever vertical space is left once the
+              fixed-height buttons below take theirs. Covered by a safeguard
+              overlay while an image is placed (until the user taps
+              "Use Color"). */}
+          <div className="relative flex-1 min-h-0">
+            <div className="h-full grid grid-cols-3 gap-1.5" style={{ gridAutoRows: "1fr" }}>
+              {MAT_STYLES.map(({ key, gradient }) => (
+                <div key={key} className="flex items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={() => chooseStyle(key)}
+                    aria-label={key}
+                    className={`aspect-square h-[78%] rounded-full transition-all ${
+                      matStyle === key && !matImage
+                        ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
+                        : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                    }`}
+                    style={{ background: gradient }}
+                  />
+                </div>
+              ))}
+              {TEXTURES.map((t) => (
+                <div key={t.key} className="flex items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={() => chooseTexture(t.key)}
+                    aria-label={t.key}
+                    className={`aspect-square h-[78%] rounded-full transition-all ${
+                      textureKey === t.key && !matImage
+                        ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
+                        : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                    }`}
+                    style={{
+                      backgroundColor: "#3a3a3a",
+                      backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(t.svg)}")`,
+                      backgroundSize: `${t.w}px ${t.h}px`,
+                    }}
+                  />
+                </div>
+              ))}
             </div>
-          )}
+
+            {matImage && !pickersUnlocked && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-[#f2f2f2]/80 dark:bg-[#242424]/80">
+                <button
+                  type="button"
+                  onClick={() => setPickersUnlocked(true)}
+                  className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-text-primary shadow-md border border-black/10 hover:bg-black/[0.03] transition-colors"
+                >
+                  Use Color
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Add Image + Export — max-width matches the 15-swatch picker row
-              above (356px mobile / 444px desktop; see that row for the math). */}
-          <div className="flex flex-col items-center gap-2">
+          {/* Add Image + Export — fixed height, independent of how much
+              room the swatch grid above ends up with. */}
+          <div className="flex flex-col gap-2 flex-none">
             <input
               ref={imageInputRef}
               type="file"
@@ -1163,7 +1162,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             <button
               type="button"
               onClick={handleImageButton}
-              className="w-full max-w-[356px] md:max-w-[444px] py-2.5 rounded-full border border-black/15 bg-white text-sm font-semibold text-text-primary dark:text-black hover:bg-black/[0.03] transition-colors inline-flex items-center justify-center gap-2"
+              className="w-full py-2.5 rounded-full border border-black/15 bg-white text-sm font-semibold text-text-primary dark:text-black hover:bg-black/[0.03] dark:hover:bg-white/90 transition-colors inline-flex items-center justify-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                 <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -1176,74 +1175,75 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
               type="button"
               onClick={handleExport}
               disabled={!tiles?.length || isExporting}
-              className="w-full max-w-[356px] md:max-w-[444px] py-2.5 rounded-full text-sm font-semibold text-white disabled:opacity-40 transition-opacity"
+              className="w-full py-2.5 rounded-full text-sm font-semibold text-white disabled:opacity-40 transition-opacity"
               style={{ background: "var(--gradient-brand)" }}
             >
               {isExporting ? "Exporting…" : "Export"}
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Left on desktop: Deck list — sticky sidebar */}
-        <div className="flex flex-col gap-2 md:gap-0 md:order-first md:sticky md:top-16 xl:top-12 md:self-start">
-          <label className="text-xs font-semibold uppercase tracking-wider text-text-muted md:h-[30px] md:flex md:items-end">
-            Your decks
-          </label>
+      {/* Deck picker — horizontal scroll of mini deck preview cards, below
+          the mat + customization row. */}
+      <div className="flex flex-col gap-2 mt-6">
+        <label className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+          Your decks
+        </label>
 
-          {decks.length === 0 ? (
-            <p className="text-sm text-text-muted py-4">No saved decks yet.</p>
-          ) : (
-            <div className="relative md:mt-3">
-              <div className="overflow-y-auto overscroll-y-contain max-h-[176px] md:max-h-[calc(100dvh-8rem)]">
-                <ul className="flex flex-col gap-1">
-                {decks.map((deck) => {
-                  const total = deck.wins + deck.losses + deck.draws;
-                  const isSelected = deck.id === selectedDeckId;
-                  const isLoading = isSelected && loading;
-                  return (
-                    <li key={deck.id}>
-                      <button
-                        type="button"
-                        onClick={() => !isLoading && handleSelectDeck(deck)}
-                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left transition ${
-                          isSelected ? "bg-black/5" : "hover:bg-black/4"
-                        }`}
-                      >
-                        <div className="w-[30px] h-[40px] flex-shrink-0 rounded overflow-hidden bg-surface">
-                          {deck.avatarUrl ? (
-                            <img src={deck.avatarUrl} alt="" className="w-full h-full object-contain" loading="lazy" />
-                          ) : (
-                            <div className="w-full h-full bg-surface" />
-                          )}
-                        </div>
-                        <span className="flex-1 min-w-0 text-sm font-semibold text-text-primary truncate">
-                          {deck.name}
-                        </span>
-                        {total > 0 && (
-                          <span className="flex-shrink-0 inline-flex items-baseline tabular-nums font-bold text-[10px] leading-none bg-black rounded-full px-2 py-[3px] text-white">
-                            <span>{deck.wins}</span>
-                            <span className="mx-[3px]">-</span>
-                            <span>{deck.losses}</span>
-                            {deck.draws > 0 && (
-                              <>
-                                <span className="mx-[3px]">-</span>
-                                <span>{deck.draws}</span>
-                              </>
-                            )}
-                          </span>
+        {decks.length === 0 ? (
+          <p className="text-sm text-text-muted py-4">No saved decks yet.</p>
+        ) : (
+          <div className="relative">
+            <div className="overflow-x-auto overscroll-x-contain no-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6">
+              <ul className="flex gap-3">
+              {decks.map((deck) => {
+                const total = deck.wins + deck.losses + deck.draws;
+                const isSelected = deck.id === selectedDeckId;
+                const isLoading = isSelected && loading;
+                return (
+                  <li key={deck.id} className="shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => !isLoading && handleSelectDeck(deck)}
+                      className={`w-[104px] flex flex-col gap-1.5 p-2 rounded-xl text-left transition ${
+                        isSelected ? "bg-black/5" : "hover:bg-black/4"
+                      }`}
+                    >
+                      <div className="w-full aspect-[245/342] rounded-lg overflow-hidden bg-surface">
+                        {deck.avatarUrl ? (
+                          <img src={deck.avatarUrl} alt="" className="w-full h-full object-contain" loading="lazy" />
+                        ) : (
+                          <div className="w-full h-full bg-surface" />
                         )}
-                      </button>
-                    </li>
-                  );
-                })}
-                </ul>
-              </div>
-              <div className="pointer-events-none absolute bottom-0 inset-x-0 h-12 bg-gradient-to-b from-[#f2f2f2]/0 to-[#f2f2f2] dark:from-[#242424]/0 dark:to-[#242424]" />
+                      </div>
+                      <span className="text-sm font-semibold text-text-primary truncate">
+                        {deck.name}
+                      </span>
+                      {total > 0 && (
+                        <span className="w-fit inline-flex items-baseline tabular-nums font-bold text-[10px] leading-none bg-black rounded-full px-2 py-[3px] text-white">
+                          <span>{deck.wins}</span>
+                          <span className="mx-[3px]">-</span>
+                          <span>{deck.losses}</span>
+                          {deck.draws > 0 && (
+                            <>
+                              <span className="mx-[3px]">-</span>
+                              <span>{deck.draws}</span>
+                            </>
+                          )}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+              </ul>
             </div>
-          )}
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-[#f2f2f2] to-[#f2f2f2]/0 dark:from-[#242424] dark:to-[#242424]/0" />
+          </div>
+        )}
 
-          {error && <p className="text-xs text-accent">{error}</p>}
-        </div>
+        {error && <p className="text-xs text-accent">{error}</p>}
       </div>
 
       <PlaymatImageDialog
