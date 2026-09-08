@@ -335,6 +335,11 @@ function SetCompletionTile({
   const pct = completionPct(set, owned);
   const released = formatReleaseDate(set.releaseDate, "short");
 
+  // Deliberately no `title` on the tile: the native tooltip it renders is
+  // unstyled browser chrome that parks itself over the artwork on every
+  // hover. The owned/size counts it used to carry stay reachable through
+  // the progress bar's aria-label, and the list view shows them outright.
+
   // The sheen is a reward for dwelling, not a response to the pointer
   // crossing the tile — at a second in, a passing sweep of the grid never
   // sets one off. Cleared on leave so an interrupted dwell doesn't fire
@@ -363,7 +368,6 @@ function SetCompletionTile({
         setSheen(false);
       }}
       aria-label={`Filter catalog by ${set.name}`}
-      title={`${set.name} — ${owned} / ${set.size}`}
       className={TILE_CLS}
     >
       {/* flex-1 lets the logo well absorb the extra height when a taller
