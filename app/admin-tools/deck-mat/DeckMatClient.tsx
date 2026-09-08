@@ -235,12 +235,6 @@ export const TEXTURES: ReadonlyArray<{ key: string; w: number; h: number; svg: s
   },
 ] as const;
 
-// Row counts for the swatch panel's two grids (3-col colors, 2-col
-// textures) — used to weight each grid's flex-grow so they share the same
-// row height, and therefore the same circle size, once stacked.
-const COLOR_GRID_ROWS = Math.ceil(MAT_STYLES.length / 3);
-const TEXTURE_GRID_ROWS = Math.ceil(TEXTURES.length / 2);
-
 function proxied(url: string): string {
   if (!url || url.startsWith("/") || url.startsWith("data:")) return url;
   return `/api/admin/social-studio/proxy-image?url=${encodeURIComponent(url)}`;
@@ -1095,20 +1089,21 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             align-items: stretch, so this column fills it with no JS
             measurement needed). */}
         <div className="flex flex-col gap-3">
-          {/* Color swatches (3 columns) + texture swatches (2 columns),
-              stacked. Each grid's flex-grow is proportional to its own row
-              count, so both end up with the same row height — and thus the
-              same circle size — once they fill the flex-1 area left over
-              after the fixed-height buttons below take theirs. Covered by a
-              safeguard overlay while an image is placed (until the user
-              taps "Use Color"). */}
-          <div className="relative flex-1 min-h-0 flex flex-col gap-1.5">
-            <div
-              className="min-h-0 grid grid-cols-3 gap-1.5"
-              style={{ gridAutoRows: "1fr", flexGrow: COLOR_GRID_ROWS }}
-            >
-              {MAT_STYLES.map(({ key, gradient }) => (
-                <div key={key} className="flex items-center justify-center">
+          {/* One 5-column grid: colors occupy the first 3 columns, textures
+              the last 2, each swatch explicitly placed by column/row so the
+              two sets interleave row-by-row rather than sitting in separate
+              grids. gridAutoRows: "1fr" fills whatever vertical space is
+              left after the fixed-height buttons below take theirs, so the
+              circles scale with it. Covered by a safeguard overlay while an
+              image is placed (until the user taps "Use Color"). */}
+          <div className="relative flex-1 min-h-0">
+            <div className="h-full grid grid-cols-5 gap-1.5" style={{ gridAutoRows: "1fr" }}>
+              {MAT_STYLES.map(({ key, gradient }, i) => (
+                <div
+                  key={key}
+                  className="flex items-center justify-center"
+                  style={{ gridColumn: (i % 3) + 1, gridRow: Math.floor(i / 3) + 1 }}
+                >
                   <button
                     type="button"
                     onClick={() => chooseStyle(key)}
@@ -1122,14 +1117,12 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                   />
                 </div>
               ))}
-            </div>
-
-            <div
-              className="min-h-0 grid grid-cols-2 gap-1.5"
-              style={{ gridAutoRows: "1fr", flexGrow: TEXTURE_GRID_ROWS }}
-            >
-              {TEXTURES.map((t) => (
-                <div key={t.key} className="flex items-center justify-center">
+              {TEXTURES.map((t, i) => (
+                <div
+                  key={t.key}
+                  className="flex items-center justify-center"
+                  style={{ gridColumn: (i % 2) + 4, gridRow: Math.floor(i / 2) + 1 }}
+                >
                   <button
                     type="button"
                     onClick={() => chooseTexture(t.key)}
@@ -1211,9 +1204,8 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
         {decks.length === 0 ? (
           <p className="text-sm text-text-muted py-4">No saved decks yet.</p>
         ) : (
-          <div className="relative">
-            <div className="overflow-x-auto overscroll-x-contain no-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6">
-              <ul className="flex gap-3">
+          <div className="overflow-x-auto overscroll-x-contain no-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6">
+            <ul className="flex gap-3">
               {decks.map((deck) => {
                 const total = deck.wins + deck.losses + deck.draws;
                 const isSelected = deck.id === selectedDeckId;
@@ -1254,9 +1246,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                   </li>
                 );
               })}
-              </ul>
-            </div>
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-[#f2f2f2] to-[#f2f2f2]/0 dark:from-[#242424] dark:to-[#242424]/0" />
+            </ul>
           </div>
         )}
 
