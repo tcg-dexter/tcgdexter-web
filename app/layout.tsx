@@ -88,15 +88,29 @@ export default function RootLayout({
         <BrandGradientDefs />
         <ThemeProvider initialTheme={theme}>
           {isDashboard ? (
-            <div className="min-h-dvh bg-bg text-text-primary antialiased overflow-x-hidden">
+            // overflow-y-visible is deliberate, not a default left in place:
+            // per the CSS overflow spec, setting only overflow-x to
+            // something other than visible computes the unset overflow-y to
+            // auto, not visible — silently turning this full-page div into
+            // its own scroll/clip container instead of leaving scrolling to
+            // the document. iOS Safari then clips box-shadow/blur content
+            // inside it into visible artifacts around scroll-position
+            // changes (e.g. the viewport resize when a keyboard opens or
+            // closes). Pinning overflow-y keeps overflow-x's actual job —
+            // stopping horizontal scroll — without that side effect.
+            <div className="min-h-dvh bg-bg text-text-primary antialiased overflow-x-hidden overflow-y-visible">
               {children}
             </div>
           ) : (
             /* `xl:pl-[230px] xl:pr-[230px]` reserves space for the two fixed
                 desktop sidebars rendered inside <SiteNav /> (each at 230 px,
                 kicking in at 1280 px). Mobile, portrait tablet, and landscape
-                iPad / smaller laptops keep the original mobile-nav layout. */
-            <div className="min-h-dvh flex flex-col bg-bg text-text-primary antialiased overflow-x-hidden xl:pl-[230px] xl:pr-[230px]">
+                iPad / smaller laptops keep the original mobile-nav layout.
+                overflow-y-visible: see the comment on the dashboard branch
+                above — overflow-x-hidden alone implicitly computes
+                overflow-y to auto, which is what was clipping the deck-list
+                card's shadow on focus/blur. */
+            <div className="min-h-dvh flex flex-col bg-bg text-text-primary antialiased overflow-x-hidden overflow-y-visible xl:pl-[230px] xl:pr-[230px]">
               <NavigationTracker />
               <SiteNav />
               <div className="flex-1">{children}</div>

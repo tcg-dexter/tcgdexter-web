@@ -1,0 +1,278 @@
+Setup
+ChallengedLazer chose tails for the opening coin flip.
+ChallengedLazer won the coin toss.
+ChallengedLazer decided to go first.
+ChallengedLazer drew 7 cards for the opening hand.
+- 7 drawn cards.
+   • Boss's Orders, Applin, Seaking, Applin, Psyduck, Gladion's Final Battle, Dipplin
+SirDiguinho drew 7 cards for the opening hand.
+- 7 drawn cards.
+ChallengedLazer played Applin to the Active Spot.
+SirDiguinho played Latias ex to the Active Spot.
+
+ChallengedLazer's Turn
+ChallengedLazer drew Ultra Ball.
+ChallengedLazer played Applin to the Bench.
+ChallengedLazer played Ultra Ball.
+- ChallengedLazer discarded 2 cards.
+   • Psyduck, Seaking
+- ChallengedLazer drew Grookey.
+- ChallengedLazer shuffled their deck.
+ChallengedLazer played Grookey to the Bench.
+ChallengedLazer ended their turn.
+
+SirDiguinho's Turn
+SirDiguinho drew a card.
+SirDiguinho played Buddy-Buddy Poffin.
+- SirDiguinho drew 2 cards and played them to the Bench.
+   • Budew, Froakie
+- SirDiguinho shuffled their deck.
+SirDiguinho played Lillie's Determination.
+- SirDiguinho shuffled 5 cards into their deck.
+- SirDiguinho drew 8 cards.
+SirDiguinho played Buddy-Buddy Poffin.
+- SirDiguinho drew 2 cards and played them to the Bench.
+   • Froakie, Duskull
+- SirDiguinho shuffled their deck.
+SirDiguinho attached Basic Water Energy to Froakie on the Bench.
+SirDiguinho retreated Latias ex to the Bench.
+SirDiguinho's Budew is now in the Active Spot.
+SirDiguinho's Budew used Itchy Pollen on ChallengedLazer’s Applin for 10 damage.
+
+ChallengedLazer's Turn
+ChallengedLazer drew Lillie's Determination.
+ChallengedLazer evolved Applin to Dipplin in the Active Spot.
+ChallengedLazer played Lillie's Determination.
+- ChallengedLazer shuffled 2 cards into their deck.
+   • Boss's Orders, Gladion's Final Battle
+- ChallengedLazer drew 8 cards.
+   • Grookey, Thwackey, Basic Grass Energy, Gladion's Final Battle, Festival Grounds, Buddy-Buddy Poffin, Applin, Secret Box
+ChallengedLazer played Grookey to the Bench.
+ChallengedLazer evolved Grookey to Thwackey on the Bench.
+ChallengedLazer played Festival Grounds to the Stadium spot.
+ChallengedLazer attached Basic Grass Energy to Dipplin in the Active Spot.
+ChallengedLazer played Applin to the Bench.
+ChallengedLazer's Thwackey used Boom Boom Groove.
+- ChallengedLazer drew Air Balloon.
+- ChallengedLazer shuffled their deck.
+ChallengedLazer's Dipplin used Do the Wave on SirDiguinho’s Budew for 80 damage.
+- Damage breakdown:
+   • 4 Benched Pokémon: 80 damage
+
+SirDiguinho's Budew was Knocked Out!
+ChallengedLazer took a Prize card.
+Ultra Ball was added to ChallengedLazer's hand.
+SirDiguinho's Latias ex is now in the Active Spot.
+ChallengedLazer's Dipplin used Festival Lead.
+- Damage breakdown:
+   • 4 Benched Pokémon: 80 damage
+
+- ChallengedLazer's Dipplin used Do the Wave on SirDiguinho’s Latias ex for 80 damage.
+- ChallengedLazer chose Do the Wave
+
+SirDiguinho's Turn
+SirDiguinho drew a card.
+SirDiguinho played Grand Tree to the Stadium spot.
+- ChallengedLazer discarded Festival Grounds.
+SirDiguinho played Grand Tree.
+- SirDiguinho evolved Froakie to Frogadier on the Bench.
+- SirDiguinho evolved Frogadier to Greninja ex on the Bench.
+- SirDiguinho shuffled their deck.
+SirDiguinho played Hilda.
+- SirDiguinho drew 2 cards.
+   • Dusknoir, Ignition Energy
+- SirDiguinho shuffled their deck.
+SirDiguinho attached Ignition Energy to Greninja ex on the Bench.
+SirDiguinho retreated Latias ex to the Bench.
+SirDiguinho's Greninja ex is now in the Active Spot.
+SirDiguinho played Rare Candy.
+- SirDiguinho evolved Duskull to Dusknoir on the Bench.
+SirDiguinho's Dusknoir used Cursed Blast.
+- SirDiguinho put 13 damage counters on SirDiguinho's Dipplin.
+ChallengedLazer's Dipplin was Knocked Out!
+- 2 cards were discarded from ChallengedLazer's Dipplin.
+   • Basic Grass Energy, Applin
+SirDiguinho's Dusknoir was Knocked Out!
+Duskull was discarded from SirDiguinho's Dusknoir.
+ChallengedLazer took a Prize card.
+Dipplin was added to ChallengedLazer's hand.
+SirDiguinho took a Prize card.
+A card was added to SirDiguinho's hand.
+ChallengedLazer's Applin is now in the Active Spot.
+SirDiguinho played Buddy-Buddy Poffin.
+- SirDiguinho drew Froakie and played it to the Bench.
+- SirDiguinho shuffled their deck.
+SirDiguinho's Greninja ex used Mirage Barrage on ChallengedLazer’s Applin for 120 damage.
+- ChallengedLazer's Applin took 120 damage.
+- Ignition Energy was discarded from SirDiguinho's Greninja ex.
+ChallengedLazer's Applin was Knocked Out!
+ChallengedLazer's Applin was Knocked Out!
+SirDiguinho took 2 Prize cards.
+A card was added to SirDiguinho's hand.
+A card was added to SirDiguinho's hand.
+ChallengedLazer's Grookey is now in the Active Spot.
+
+ChallengedLazer's Turn
+ChallengedLazer drew Buddy-Buddy Poffin.
+ChallengedLazer played Buddy-Buddy Poffin.
+- ChallengedLazer drew 2 cards and played them to the Bench.
+   • Applin, Goldeen
+- ChallengedLazer shuffled their deck.
+ChallengedLazer attached Air Balloon to Grookey in the Active Spot.
+ChallengedLazer played Grand Tree.
+- ChallengedLazer evolved Grookey to Thwackey in the Active Spot.
+- ChallengedLazer shuffled their deck.
+ChallengedLazer retreated Thwackey to the Bench.
+ChallengedLazer's Goldeen is now in the Active Spot.
+ChallengedLazer's Thwackey used Boom Boom Groove.
+- ChallengedLazer drew Shaymin.
+- ChallengedLazer shuffled their deck.
+ChallengedLazer played Shaymin to the Bench.
+ChallengedLazer's Thwackey used Boom Boom Groove.
+- ChallengedLazer drew Night Stretcher.
+- ChallengedLazer shuffled their deck.
+ChallengedLazer played Night Stretcher.
+- ChallengedLazer moved ChallengedLazer's Applin to their hand.
+ChallengedLazer played Applin to the Bench.
+ChallengedLazer ended their turn.
+
+SirDiguinho's Turn
+SirDiguinho drew a card.
+SirDiguinho played Grand Tree.
+- SirDiguinho evolved Froakie to Frogadier on the Bench.
+- SirDiguinho evolved Frogadier to Greninja ex on the Bench.
+- SirDiguinho shuffled their deck.
+SirDiguinho attached Basic Water Energy to Greninja ex on the Bench.
+SirDiguinho's Greninja ex used Shinobi Blade on ChallengedLazer’s Goldeen for 170 damage.
+- SirDiguinho drew a card.
+- SirDiguinho shuffled their deck.
+ChallengedLazer's Goldeen was Knocked Out!
+SirDiguinho took a Prize card.
+A card was added to SirDiguinho's hand.
+ChallengedLazer's Applin is now in the Active Spot.
+
+ChallengedLazer's Turn
+ChallengedLazer drew Poké Pad.
+ChallengedLazer evolved Applin to Dipplin in the Active Spot.
+ChallengedLazer played Secret Box.
+- ChallengedLazer discarded 3 cards.
+   • Buddy-Buddy Poffin, Ultra Ball, Poké Pad
+- ChallengedLazer drew 4 cards.
+   • Poké Pad, Brave Bangle, Kieran, Festival Grounds
+- ChallengedLazer shuffled their deck.
+ChallengedLazer played Grand Tree.
+- ChallengedLazer evolved Applin to Dipplin on the Bench.
+- ChallengedLazer shuffled their deck.
+ChallengedLazer played Festival Grounds to the Stadium spot.
+- SirDiguinho discarded Grand Tree.
+ChallengedLazer attached Brave Bangle to Dipplin in the Active Spot.
+ChallengedLazer's Thwackey used Boom Boom Groove.
+- ChallengedLazer drew Grookey.
+- ChallengedLazer shuffled their deck.
+ChallengedLazer played Grookey to the Bench.
+ChallengedLazer's Thwackey used Boom Boom Groove.
+- ChallengedLazer drew Basic Grass Energy.
+- ChallengedLazer shuffled their deck.
+ChallengedLazer attached Basic Grass Energy to Dipplin in the Active Spot.
+ChallengedLazer played Kieran.
+- ChallengedLazer chose During this turn, attacks used by your Pokémon do 30 more damage to your opponent's Active Pokémon <sprite name="ex_lower_atk" tint=1> and Active Pokémon <sprite name="v_atk" tint=1>.
+ChallengedLazer's Dipplin used Do the Wave on SirDiguinho’s Greninja ex for 160 damage.
+- Damage breakdown:
+   • (Pokémon Tool) Brave Bangle: 30 damage
+   • (Supporter) Kieran: 30 damage
+   • 5 Benched Pokémon: 100 damage
+
+ChallengedLazer's Dipplin used Festival Lead.
+- Damage breakdown:
+   • (Pokémon Tool) Brave Bangle: 30 damage
+   • (Supporter) Kieran: 30 damage
+   • 5 Benched Pokémon: 100 damage
+
+- ChallengedLazer's Dipplin used Do the Wave on SirDiguinho’s Greninja ex for 160 damage.
+- ChallengedLazer chose Do the Wave
+SirDiguinho's Greninja ex was Knocked Out!
+- 3 cards were discarded from SirDiguinho's Greninja ex.
+   • Basic Water Energy, Frogadier, Froakie
+ChallengedLazer took 2 Prize cards.
+Poké Pad was added to ChallengedLazer's hand.
+Festival Grounds was added to ChallengedLazer's hand.
+SirDiguinho's Froakie is now in the Active Spot.
+
+SirDiguinho's Turn
+SirDiguinho drew a card.
+SirDiguinho played Night Stretcher.
+- SirDiguinho moved SirDiguinho's Duskull to their hand.
+SirDiguinho played Duskull to the Bench.
+SirDiguinho played Ultra Ball.
+- SirDiguinho discarded 2 cards.
+   • Ultra Ball, Rare Candy
+- SirDiguinho drew Fezandipiti ex.
+- SirDiguinho shuffled their deck.
+SirDiguinho played Fezandipiti ex to the Bench.
+SirDiguinho played Ultra Ball.
+- SirDiguinho discarded 2 cards.
+   • Poké Pad, Ignition Energy
+- SirDiguinho drew Meowth ex.
+- SirDiguinho shuffled their deck.
+SirDiguinho played Meowth ex to the Bench.
+SirDiguinho's Meowth ex used Last-Ditch Catch.
+- SirDiguinho drew Colress's Tenacity.
+- SirDiguinho shuffled their deck.
+SirDiguinho played Colress's Tenacity.
+- SirDiguinho drew 2 cards.
+   • Jamming Tower, Basic Water Energy
+- SirDiguinho shuffled their deck.
+SirDiguinho retreated Froakie to the Bench.
+SirDiguinho's Greninja ex is now in the Active Spot.
+SirDiguinho played Jamming Tower to the Stadium spot.
+- ChallengedLazer discarded Festival Grounds.
+SirDiguinho's Fezandipiti ex used Flip the Script.
+- SirDiguinho drew 3 cards.
+SirDiguinho attached Basic Water Energy to Froakie on the Bench.
+SirDiguinho's Greninja ex used Shinobi Blade on ChallengedLazer’s Dipplin for 170 damage.
+- SirDiguinho drew a card.
+- SirDiguinho shuffled their deck.
+ChallengedLazer's Dipplin was Knocked Out!
+- 3 cards were discarded from ChallengedLazer's Dipplin.
+   • Basic Grass Energy, Applin, Brave Bangle
+SirDiguinho took a Prize card.
+A card was added to SirDiguinho's hand.
+ChallengedLazer's Dipplin is now in the Active Spot.
+
+ChallengedLazer's Turn
+ChallengedLazer drew Lillie's Determination.
+ChallengedLazer played Poké Pad.
+- ChallengedLazer drew Thwackey.
+- ChallengedLazer shuffled their deck.
+ChallengedLazer evolved Grookey to Thwackey on the Bench.
+ChallengedLazer played Festival Grounds to the Stadium spot.
+- SirDiguinho discarded Jamming Tower.
+ChallengedLazer's Thwackey used Boom Boom Groove.
+- ChallengedLazer drew Growing Grass Energy.
+- ChallengedLazer shuffled their deck.
+ChallengedLazer attached Growing Grass Energy to Dipplin in the Active Spot.
+ChallengedLazer's Thwackey used Boom Boom Groove.
+- ChallengedLazer drew Boss's Orders.
+- ChallengedLazer shuffled their deck.
+ChallengedLazer played Poké Pad.
+- ChallengedLazer drew Grookey.
+- ChallengedLazer shuffled their deck.
+ChallengedLazer played Grookey to the Bench.
+ChallengedLazer played Boss's Orders.
+- SirDiguinho's Latias ex was switched with SirDiguinho's Greninja ex to become the Active Pokémon.
+SirDiguinho's Latias ex is now in the Active Spot.
+ChallengedLazer's Dipplin used Do the Wave on SirDiguinho’s Latias ex for 100 damage.
+- Damage breakdown:
+   • 5 Benched Pokémon: 100 damage
+
+ChallengedLazer's Dipplin used Festival Lead.
+- Damage breakdown:
+   • 5 Benched Pokémon: 100 damage
+
+- ChallengedLazer's Dipplin used Do the Wave on SirDiguinho’s Latias ex for 100 damage.
+- ChallengedLazer chose Do the Wave
+SirDiguinho's Latias ex was Knocked Out!
+ChallengedLazer took 2 Prize cards.
+Rabsca was added to ChallengedLazer's hand.
+Buddy-Buddy Poffin was added to ChallengedLazer's hand.
+All Prize cards taken. ChallengedLazer wins.

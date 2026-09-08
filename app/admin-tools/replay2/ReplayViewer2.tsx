@@ -2991,6 +2991,16 @@ interface ReplayViewerProps {
   onThreadToggleState?: (
     state: { collapsed: boolean; toggle: () => void } | null,
   ) => void;
+  /** When true, the matchup avatars/names/VS line renders above the
+   *  thread+board row rather than in the footer block below it, at every
+   *  breakpoint — the title reads before the mat instead of after it. The
+   *  home page sets this. */
+  matchupAboveMat?: boolean;
+  /** When true, never renders the Copy Battle Log capsule in the footer
+   *  block, on any breakpoint. The home page sets this — copying the raw
+   *  log there isn't a supported action; that lives on the dedicated
+   *  battle page. */
+  hideCopyBattleLog?: boolean;
 }
 
 export default function ReplayViewer({
@@ -3008,6 +3018,8 @@ export default function ReplayViewer({
   onData,
   showThreadToggle = true,
   onThreadToggleState,
+  matchupAboveMat = false,
+  hideCopyBattleLog = false,
 }: ReplayViewerProps) {
   const [data, setData] = useState<ReplayPayload2 | null>(null);
   const [loading, setLoading] = useState(false);
@@ -3475,11 +3487,23 @@ export default function ReplayViewer({
       // No header above the board any more — the page leads with the viewer.
       const BELOW_ROW_BREATHING_PX = 16; // between row and whatever follows
       const HORIZONTAL_PLAYBACK_PX = 24 + 20 + 32 + 44 + 12 + 24; // mt-6 + scrubber + mt-8 + control row + mt-1.5 + speed
-      // The matchup + Copy Battle Log capsule now sit BELOW the whole module,
-      // so they count against the vertical budget: mt-6 + matchup line + gap +
-      // capsule. Keeps the footer above the fold at load.
-      const FOOTER_PX = 24 + 28 + 12 + 32;
-      const chromeAbove = SITE_NAV_PX + PAGE_TOP_PADDING_PX;
+      const MATCHUP_LINE_PX = 28;
+      const COPY_CAPSULE_PX = 32;
+      // Whatever the module renders outside the row counts against the
+      // budget, so the whole thing still lands above the fold at load. Which
+      // pieces exist depends on the props: matchupAboveMat moves the matchup
+      // line from the footer (mt-6 + line) to above the row (line + mb-4),
+      // and hideCopyBattleLog drops the capsule (gap + capsule) — with both
+      // set the footer isn't rendered at all.
+      const FOOTER_PX = matchupAboveMat
+        ? hideCopyBattleLog
+          ? 0
+          : 24 + COPY_CAPSULE_PX // mt-6 + capsule
+        : 24 + MATCHUP_LINE_PX + (hideCopyBattleLog ? 0 : 12 + COPY_CAPSULE_PX);
+      const chromeAbove =
+        SITE_NAV_PX +
+        PAGE_TOP_PADDING_PX +
+        (matchupAboveMat ? MATCHUP_LINE_PX + 16 : 0); // + mb-4
       // Widescreen (collapsed desktop or mobile landscape) keeps the transport
       // in a side column, so nothing but breathing room sits below the row —
       // then the footer under the module in both layouts.
@@ -3497,7 +3521,7 @@ export default function ReplayViewer({
     measure();
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
-  }, [isDesktop, mobileLandscape, wideLayout]);
+  }, [isDesktop, mobileLandscape, wideLayout, matchupAboveMat, hideCopyBattleLog]);
 
   // The board's own horizontal budget in widescreen: whatever the row has,
   // less the two flanking thin columns (thread aside on the left, playback
@@ -3598,6 +3622,19 @@ export default function ReplayViewer({
 
   return (
     <>
+      {/* The matchup line, relocated above the row instead of sitting in the
+          footer block below it. The footer's own copy is suppressed when
+          this renders, so there's exactly one either way. */}
+      {matchupAboveMat && data && (
+        <div className="mb-4 flex justify-center">
+          <MatchupRow
+            playerName={data.playerPrimaryName}
+            opponentName={data.opponentPrimaryName}
+            playerGradient={playerMatGradient}
+            opponentGradient={opponentMatGradient}
+          />
+        </div>
+      )}
       {/* Desktop: thread + board side by side, together forming a 16:9
           rect (rowWidth x rowWidth*9/16). The aside is pinned to the
           board's measured height so its inner scroll container has
@@ -3785,15 +3822,17 @@ export default function ReplayViewer({
           where the removed header's matchup line now lives. Sits above the
           mobile thread so the page reads viewer → controls → matchup → copy →
           (stat header) → thread. */}
-      {showMatchupFooter && data && (
+      {showMatchupFooter && data && !(matchupAboveMat && hideCopyBattleLog) && (
         <div className="mt-6 flex flex-col items-center gap-3">
-          <MatchupRow
-            playerName={data.playerPrimaryName}
-            opponentName={data.opponentPrimaryName}
-            playerGradient={playerMatGradient}
-            opponentGradient={opponentMatGradient}
-          />
-          <CopyBattleLogButton text={data.battleLogRaw} />
+          {!matchupAboveMat && (
+            <MatchupRow
+              playerName={data.playerPrimaryName}
+              opponentName={data.opponentPrimaryName}
+              playerGradient={playerMatGradient}
+              opponentGradient={opponentMatGradient}
+            />
+          )}
+          {!hideCopyBattleLog && <CopyBattleLogButton text={data.battleLogRaw} />}
         </div>
       )}
 

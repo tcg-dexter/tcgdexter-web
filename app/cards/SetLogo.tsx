@@ -21,10 +21,12 @@ export default function SetLogo({ src, ptcgoCode, setName, className }: Props) {
   const [failed, setFailed] = useState(false);
 
   if (!src || failed) {
+    // No `title` on the badge: every caller renders the set name alongside
+    // it, so the native tooltip added nothing but unstyled browser chrome
+    // parked over the layout on hover. aria-label still names it.
     return (
       <div
         className={`${className ?? ""} flex items-center justify-center rounded-md border border-black/10 dark:border-white/10 bg-surface text-[10px] font-bold tracking-wide text-text-secondary uppercase`}
-        title={setName}
         aria-label={setName}
       >
         {ptcgoCode ?? "—"}

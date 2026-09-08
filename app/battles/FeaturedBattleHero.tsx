@@ -97,10 +97,15 @@ export default function FeaturedBattleHero({
     : "absolute inset-0";
 
   return (
-    <div className="relative mb-4">
+    // mb-8 matches the gap-8 rhythm the Today / This Week / This Month
+    // sections keep between each other on /battles. At mb-4 the hero's own
+    // shadow (0 20px 30px -15px, so ~15px of spread below the card) ate
+    // nearly the whole gap. On the home page the following module's mt-12
+    // is larger and collapses with this, so that spacing is unchanged.
+    <div className="relative mb-8">
       {/* Gradient glow — matches PinnedDeckHero's treatment exactly. */}
-      <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 blur-md" />
-      <div className="relative rounded-2xl border border-black/8 bg-white/90 backdrop-blur-xl shadow-[0_20px_30px_-15px_rgba(217,30,13,0.3)] overflow-hidden flex flex-col md:flex-row dark:bg-surface-elevated dark:border-white/10">
+      <div className="absolute -inset-px rounded-card bg-gradient-brand opacity-30 blur-md" />
+      <div className="relative rounded-card border border-black/8 bg-white/90 backdrop-blur-xl shadow-[0_20px_30px_-15px_rgba(217,30,13,0.3)] overflow-hidden flex flex-col md:flex-row dark:bg-surface-elevated dark:border-white/10">
         {/* Banner column — the BattleCard versus imagery, sized for hero. */}
         <div className="md:w-[360px] shrink-0">
           <div className="relative h-[220px] md:h-full overflow-hidden">
@@ -137,13 +142,13 @@ export default function FeaturedBattleHero({
                 treatment as BattleCard. */}
             <span
               aria-label={`${leftSide.handleLabel} prizes taken`}
-              className="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-white text-[2.64rem] font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 text-white text-[2.64rem] font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
             >
               {leftSide.prizes}
             </span>
             <span
               aria-label={`${rightSide.handleLabel} prizes taken`}
-              className="absolute right-3 top-1/2 -translate-y-1/2 z-10 text-white text-[2.64rem] font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 text-white text-[2.64rem] font-black tabular-nums leading-none drop-shadow-sm pointer-events-none"
             >
               {rightSide.prizes}
             </span>
@@ -191,15 +196,23 @@ export default function FeaturedBattleHero({
             </div>
             {/* Player names anchored to each side's hero-card / prize-count
                 pair. Matched typography with the prize digits (white +
-                drop-shadow) so they read as part of the same score-strip. */}
-            <span className="absolute left-3 bottom-2 z-10 max-w-[45%] truncate text-white text-[13px] font-bold leading-none drop-shadow-sm pointer-events-none">
+                drop-shadow) so they read as part of the same score-strip.
+                Inset 16px/12px rather than the 12px/8px the digits used to
+                sit at: on md+ the banner is the card's left column, so its
+                bottom-left corner is the card's own 38px corner, and the
+                overflow-hidden root clips anything inside the arc. At 12px
+                up from the edge that arc is still 10px in (38 - sqrt(38^2 -
+                26^2)), so 16px clears it with room to spare. Applied to
+                both sides, and matched by the prize digits above, so the
+                score strip stays a single aligned column on each flank. */}
+            <span className="absolute left-4 bottom-3 z-10 max-w-[45%] truncate text-white text-[13px] font-bold leading-none drop-shadow-sm pointer-events-none">
               {leftSide.handleLabel}
             </span>
-            <span className="absolute right-3 bottom-2 z-10 max-w-[45%] truncate text-white text-[13px] font-bold leading-none drop-shadow-sm pointer-events-none">
+            <span className="absolute right-4 bottom-3 z-10 max-w-[45%] truncate text-white text-[13px] font-bold leading-none drop-shadow-sm pointer-events-none">
               {rightSide.handleLabel}
             </span>
             {battle.isBestOf3 && (
-              <div className="absolute inset-x-0 bottom-2 z-10 flex justify-center pointer-events-none">
+              <div className="absolute inset-x-0 bottom-3 z-10 flex justify-center pointer-events-none">
                 <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold text-black">
                   Best of 3
                 </span>

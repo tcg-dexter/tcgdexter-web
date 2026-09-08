@@ -2,7 +2,8 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import SectionHeader from "@/app/components/ui/SectionHeader";
-import { primaryCardImageUrl } from "@/lib/primaryCardImage";
+import { primaryCardImageUrl, deckAvatarInfo } from "@/lib/primaryCardImage";
+import { typeColor } from "@/lib/metaPrimaryCard";
 import DeckMatClient, { type DeckSummary } from "./DeckMatClient";
 
 export const metadata: Metadata = {
@@ -122,12 +123,14 @@ export default async function DeckMatPage() {
   const deckSummaries: DeckSummary[] = decks.map((deck) => {
     const cards = deck.analysis?.cards ?? [];
     const avatarUrl = deck.cover_image_url ?? primaryCardImageUrl(cards);
+    const avatar = deckAvatarInfo(cards, deck.cover_image_url);
     const wl = deckWL.get(deck.id) ?? { w: 0, l: 0, d: 0 };
     return {
       id: deck.id,
       name: deck.name,
       deckList: deck.deck_list,
       avatarUrl,
+      iconBg: avatar ? typeColor(avatar.types) : null,
       wins: wl.w,
       losses: wl.l,
       draws: wl.d,

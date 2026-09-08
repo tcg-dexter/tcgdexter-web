@@ -54,6 +54,12 @@ export interface GeneratedDeck {
   archetype: string | null;
   /** Human-readable edit log: "-1 Iono", "+1 Arven". */
   ops: string[];
+  /** Cards swapped out of the parent — the study's main independent
+   *  variable, and the axis the pool is deliberately graduated along. 0 for
+   *  skeleton decks, which have no parent to be a distance FROM. Recorded
+   *  explicitly rather than inferred from ops.length: line completion and
+   *  flex fills also write ops, so the two are not the same number. */
+  editDistance: number;
   seed: number;
   stats: DeckStats;
 }
@@ -181,11 +187,14 @@ export function mutateDeck(
   }
 
   if (ops.length === 0) return { ok: false, issues: ["no edit was possible"] };
+  // ops holds a -1/+1 pair per swap, and a swap can be skipped when a role
+  // has no alternative — so the achieved distance is counted, not assumed.
   return finalize(entries, {
     generator: "mutate",
     parentId: parent.id,
     archetype: parent.archetype,
     ops,
+    editDistance: ops.filter((o) => o.startsWith("-")).length,
     seed,
   });
 }
@@ -254,6 +263,7 @@ export function skeletonDeck(
     parentId: null,
     archetype,
     ops,
+    editDistance: 0, // no parent to be a distance from
     seed,
   });
 }
@@ -328,8 +338,13 @@ export interface GenerateOptions {
   seed: number;
   /** Share of output from the skeleton generator (the rest are mutations). */
   skeletonShare?: number;
-  /** Edits per mutation. More edits wander further from the parent. */
-  edits?: number;
+  /** Edits per mutation — a fixed number, or a RANGE sampled per deck.
+   *
+   *  A range is the point of the graduated pool: "how much diversity helps"
+   *  is the question, and a pool at one fixed distance can only answer it at
+   *  one point. Spanning 1..8 turns the answer into a curve, so a null
+   *  result is informative instead of ambiguous. */
+  edits?: number | { min: number; max: number };
 }
 
 export interface GenerateResult {
@@ -344,7 +359,11 @@ export interface GenerateResult {
 export function generateDecks(options: GenerateOptions): GenerateResult {
   const { corpus, count, seed } = options;
   const skeletonShare = options.skeletonShare ?? 0.25;
-  const edits = options.edits ?? 3;
+  const editSpec = options.edits ?? 3;
+  const editRange =
+    typeof editSpec === "number"
+      ? { min: editSpec, max: editSpec }
+      : { min: Math.max(1, editSpec.min), max: Math.max(1, editSpec.max) };
   const rng = mulberry32(seed >>> 0);
   const archetypes = Array.from(corpus.variantsOf.keys()).sort();
   const parents = corpus.decks.filter((d) => d.archetype !== null);
@@ -364,7 +383,13 @@ export function generateDecks(options: GenerateOptions): GenerateResult {
     const made: FinalizeResult = useSkeleton
       ? skeletonDeck(corpus, archetypes[Math.floor(rng() * archetypes.length)], childSeed)
       : parents.length > 0
-        ? mutateDeck(parents[Math.floor(rng() * parents.length)], corpus, childSeed, edits)
+        ? mutateDeck(
+            parents[Math.floor(rng() * parents.length)],
+            corpus,
+            childSeed,
+            editRange.min +
+              Math.floor(rng() * (editRange.max - editRange.min + 1)),
+          )
         : { ok: false, issues: ["no parent decks in corpus"] };
     if (!made.ok) {
       const gen = useSkeleton ? "skeleton" : "mutate";

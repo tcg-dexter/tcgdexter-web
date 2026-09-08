@@ -453,14 +453,32 @@ export default async function ProfilePage({
           {sideModule ? (
             <div className="grid gap-4 lg:grid-cols-5">
               <div className="lg:col-span-3 space-y-6">
-                <div className="grid grid-cols-4 gap-3">{stats}</div>
+                {/* The 8 cells sit in a frame rather than each carrying rounded-card:
+                    at ~72px tall a 38px radius would clamp to half their height and
+                    render them as ovals. The frame takes the standard radius, p-3
+                    puts the cells 12px in, and 38-12=26 makes their corners
+                    concentric with it — matching gap-3 so the rhythm stays even out
+                    to the edge. The override is scoped here rather than changed on
+                    StatCard, which the meta archetype header also uses unframed. */}
+                <div className="rounded-card border border-black/8 dark:border-white/10 p-3">
+                  <div className="grid grid-cols-4 gap-3 [&>*]:!rounded-[26px]">{stats}</div>
+                </div>
                 {belowStats}
               </div>
               <div className="lg:col-span-2">{sideModule}</div>
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-4 gap-3">{stats}</div>
+              {/* The 8 cells sit in a frame rather than each carrying rounded-card:
+                    at ~72px tall a 38px radius would clamp to half their height and
+                    render them as ovals. The frame takes the standard radius, p-3
+                    puts the cells 12px in, and 38-12=26 makes their corners
+                    concentric with it — matching gap-3 so the rhythm stays even out
+                    to the edge. The override is scoped here rather than changed on
+                    StatCard, which the meta archetype header also uses unframed. */}
+                <div className="rounded-card border border-black/8 dark:border-white/10 p-3">
+                  <div className="grid grid-cols-4 gap-3 [&>*]:!rounded-[26px]">{stats}</div>
+                </div>
               {belowStats && <div className="mt-6 space-y-6">{belowStats}</div>}
             </>
           )}
@@ -621,7 +639,7 @@ export default async function ProfilePage({
                   <>
                     No lists yet.{" "}
                     <Link href="/cards" className="text-accent hover:underline">
-                      Start one from Card Catalog →
+                      Start one from Cards →
                     </Link>
                   </>
                 ) : (
@@ -632,7 +650,7 @@ export default async function ProfilePage({
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {lists.map((l) => (
-                <ListPreviewCard key={l.id} list={l} />
+                <ListPreviewCard key={l.id} list={l} canManage={isOwner} />
               ))}
             </div>
           )}

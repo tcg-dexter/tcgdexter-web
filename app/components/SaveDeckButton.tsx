@@ -161,7 +161,7 @@ export default function SaveDeckButton({
           onClick={() => setSignInPrompt(false)}
         >
           <div
-            className="w-full max-w-sm rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl p-6 shadow-2xl"
+            className="w-full max-w-sm rounded-card border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between mb-4">
@@ -171,7 +171,7 @@ export default function SaveDeckButton({
               <button
                 onClick={() => setSignInPrompt(false)}
                 aria-label="Close"
-                className="text-text-muted hover:text-text-primary transition-colors -mt-1 -mr-1 p-1"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full text-text-muted hover:bg-black/5 hover:text-text-primary transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

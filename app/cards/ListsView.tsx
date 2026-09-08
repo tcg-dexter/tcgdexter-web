@@ -96,7 +96,7 @@ export default function ListsView() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {state.lists.map((l) => (
-            <ListPreviewCard key={l.id} list={l} />
+            <ListPreviewCard key={l.id} list={l} canManage />
           ))}
         </div>
       )}

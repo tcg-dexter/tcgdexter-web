@@ -134,6 +134,24 @@ function CodeNote({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * The corner treatments the preview cards actually ship, as worked examples
+ * of the concentric rule: inset = rounded-card (38px) − the element's own
+ * radius. `wide` draws the sample as a capsule rather than a circle — the
+ * inset is driven by height either way, since that's what fixes a capsule's
+ * radius.
+ */
+const CONCENTRIC_EXAMPLES: {
+  label: string;
+  size: number;
+  inset: number;
+  wide?: boolean;
+}[] = [
+  { label: "28px badge", size: 28, inset: 24, wide: true },
+  { label: "28px circle", size: 28, inset: 24 },
+  { label: "48px avatar", size: 48, inset: 14 },
+];
+
 /* ── Global: color tokens ─────────────────────────────────────────────── */
 
 const COLOR_TOKENS: { name: string; light: string; dark?: string }[] = [
@@ -543,15 +561,52 @@ export default function DesignLibraryClient() {
           id="cards"
           eyebrow="Global"
           title="Cards & surfaces"
-          description="The standard elevated card chrome used across DeckProfileView, profile pages, and the leaderboard — codified in SkeletonCard so loading and loaded states share one shape."
+          description="Two radius families, split by what the surface holds rather than by component type. rounded-card is for containers with a composition of their own — preview cards (battle, deck, archetype, trainer, featured battle), deck profile modules, list cards, dialog panels, and the home page's deck-list input — and its corners are built to be concentric with whatever sits in them. rounded-2xl stays on secondary chrome that just frames other things: filter panels, empty states, toolbars, and the list containers rows sit inside. SkeletonCard still codifies the rounded-2xl chrome so loading and loaded states of those surfaces share one shape."
         >
-          <Demo label="SkeletonCard chrome (app/components/skeletons/Skeleton.tsx)">
+          <Demo label="SkeletonCard chrome (app/components/skeletons/Skeleton.tsx) — modules and panels">
             <SkeletonCard>
               <p className="text-sm text-text-secondary">
                 rounded-2xl · border-black/8 (dark: white/10) · bg-white/90 (dark:
                 bg-surface-elevated) · backdrop-blur-xl · shadow-sm
               </p>
             </SkeletonCard>
+          </Demo>
+          <Demo label="rounded-card (38px) + concentric corners — preview cards">
+            <div className="flex flex-col gap-4">
+              <p className="text-sm text-text-secondary">
+                A circle or capsule sitting in a preview card&apos;s corner is
+                inset by <strong>the card&apos;s radius minus its own</strong>, so
+                the two arcs share a center instead of the inner shape floating
+                at an arbitrary depth. With rounded-card at 38px:
+              </p>
+              <div className="flex flex-wrap gap-4">
+                {CONCENTRIC_EXAMPLES.map((ex) => (
+                  <div key={ex.label} className="flex flex-col gap-2">
+                    <div
+                      className="relative h-[104px] w-[168px] rounded-card border border-black/8 dark:border-white/10 bg-surface"
+                      aria-hidden
+                    >
+                      <div
+                        className="absolute rounded-full bg-gradient-brand"
+                        style={{
+                          top: ex.inset,
+                          left: ex.inset,
+                          height: ex.size,
+                          width: ex.wide ? ex.size * 2 : ex.size,
+                        }}
+                      />
+                    </div>
+                    <CodeNote>
+                      {ex.label}: r={ex.size / 2} → inset {ex.inset}
+                    </CodeNote>
+                  </div>
+                ))}
+              </div>
+              <CodeNote>
+                inset = 38 − (element height ÷ 2) · token: theme.borderRadius.card
+                in tailwind.config.ts
+              </CodeNote>
+            </div>
           </Demo>
           <Demo label=".card-lift hover utility (globals.css) — hover to see it">
             <div className="card-lift inline-block rounded-2xl border border-black/8 dark:border-white/10 bg-white dark:bg-surface-elevated shadow-sm px-6 py-4 text-sm text-text-secondary">
@@ -625,13 +680,13 @@ export default function DesignLibraryClient() {
           id="modals"
           eyebrow="Global"
           title="Modals & dialogs"
-          description="Shared overlay recipe: fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm, portaled to <body>. Shown here without `fixed` positioning so it sits inline in the reference page instead of covering it."
+          description="Shared overlay recipe: fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm, portaled to <body>. Panels use rounded-card, the same concentric radius the preview cards do. The standard p-6 panel needs no other change to satisfy it: a px-4 py-1.5 text-xs footer pill is 28px tall (r=14), and 24px of padding plus that radius is exactly the card's 38px. Shown here without `fixed` positioning so it sits inline in the reference page instead of covering it."
         >
           <Demo
             label="Confirmation dialog shell (pattern shared by NewListDialog, DeleteAccountButton, DeckOwnershipModule)"
             className="border-solid bg-black/40 backdrop-blur-sm p-8 flex items-center justify-center"
           >
-            <div className="w-full max-w-sm rounded-2xl bg-white/95 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]">
+            <div className="w-full max-w-sm rounded-card bg-white/95 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]">
               <h2 className="text-base font-semibold text-text-primary">
                 Are you sure you want to add all cards?
               </h2>
@@ -898,7 +953,7 @@ export default function DesignLibraryClient() {
             <DeckOwnershipModule cards={OWNERSHIP_CARDS} />
           </Demo>
           <Demo label="Standard Format legality warning (DeckProfileView.tsx pattern) + info modal (StandardFormatInfo.tsx)">
-            <div className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm px-5 py-4">
+            <div className="rounded-card border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm px-5 py-4">
               <div className="flex items-center gap-3">
                 <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />

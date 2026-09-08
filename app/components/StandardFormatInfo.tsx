@@ -54,7 +54,7 @@ export default function StandardFormatInfo({ className }: Props) {
           onClick={() => setOpen(false)}
         >
           <div
-            className="w-full max-w-sm rounded-2xl border border-border bg-surface p-6 shadow-2xl"
+            className="w-full max-w-sm rounded-card border border-border bg-surface p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between mb-4">
@@ -64,7 +64,7 @@ export default function StandardFormatInfo({ className }: Props) {
               <button
                 onClick={() => setOpen(false)}
                 aria-label="Close"
-                className="text-text-muted hover:text-text-primary transition-colors -mt-1 -mr-1 p-1"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full text-text-muted hover:bg-black/5 hover:text-text-primary transition-colors"
               >
                 <svg
                   className="w-5 h-5"

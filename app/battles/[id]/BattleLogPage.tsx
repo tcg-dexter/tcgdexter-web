@@ -154,11 +154,11 @@ export default function BattleLogPage({
     <div className="relative mt-6">
       <div
         aria-hidden
-        className="absolute -inset-px rounded-2xl opacity-30 blur-md"
+        className="absolute -inset-px rounded-card opacity-30 blur-md"
         style={{ background: bannerGradient }}
       />
       <div
-        className="relative flex flex-col overflow-hidden rounded-2xl border border-black/8 bg-bg md:flex-row dark:border-white/10"
+        className="relative flex flex-col overflow-hidden rounded-card border border-black/8 bg-bg md:flex-row dark:border-white/10"
         style={{
           // The drop shadow tints to the winner's color the way the
           // pinned deck's tints to the brand red. color-mix keeps this
@@ -170,9 +170,15 @@ export default function BattleLogPage({
         {/* Desktop: Copy Battle Log pill floats at the stat card's top-right
             corner. Below md the card stacks (banner on top, full width) and
             this would collide with the banner, so it moves into the banner
-            itself instead — see BattleBanner's mobileCopyButton. */}
+            itself instead — see BattleBanner's mobileCopyButton.
+
+            Inset 23px, not the scale's 24: the pill is 30px tall (a 16px
+            text-xs line box, py-1.5, and a 1px border), so its capsule
+            radius is 15 and the card's 38 wants it 38-15 = 23 in for the
+            two arcs to share a centre. Same rule as the 28px badges that
+            sit 24 in elsewhere, just a different pill. */}
         {copyButton && (
-          <div className="absolute right-3 top-3 z-20 hidden md:block">
+          <div className="absolute right-[23px] top-[23px] z-20 hidden md:block">
             {copyButton}
           </div>
         )}

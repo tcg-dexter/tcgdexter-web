@@ -34,6 +34,21 @@ const config: Config = {
         "brand":    "0 4px 20px -4px rgba(140,39,17,0.35)",
         "brand-lg": "0 20px 60px -15px rgba(140,39,17,0.25)",
       },
+      borderRadius: {
+        // The outer radius of the concentric-corner system: preview cards
+        // (battle, deck, archetype, trainer, featured battle), deck profile
+        // modules, list cards, modal and dialog panels, and the home page's
+        // deck-list input — containers with a composition of their own, as
+        // opposed to chrome that just frames other things. Anything
+        // circular or capsule-shaped that sits in one of these corners is
+        // inset by `card - its own radius` so the two arcs share a center —
+        // a 28px badge (r=14) sits 24px in, a 36px capsule (r=18) 20px in,
+        // a 40px pill (r=20) 18px in, a 48px avatar (r=24) 14px in. The
+        // standard p-6 dialog satisfies this for free: its footer pills are
+        // 28px tall and its padding is exactly the 24px they want. See the
+        // design library's "Cards & surfaces" and "Modals & dialogs".
+        card: "38px",
+      },
     },
   },
   plugins: [],

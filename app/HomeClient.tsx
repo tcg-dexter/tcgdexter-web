@@ -314,79 +314,128 @@ export default function HomeClient({
             )}
           </div>
 
-          {/* Deck input card — soft elevated glass on light bg. mx-auto is
+          {/* Deck input card — gradient-bordered card on light bg. mx-auto is
               cancelled at lg: (via lg:mx-0) because auto margins on a
               flex item's cross axis opt it out of the default stretch
               behavior, which was leaving this narrower than the left
               column instead of filling it edge-to-edge. */}
           <div className="mt-12 lg:mt-0 max-w-3xl mx-auto lg:max-w-none lg:mx-0 lg:w-full lg:flex lg:flex-col lg:justify-start">
-            <div className="relative group">
-              {/* Gradient glow */}
-              <div className="absolute -inset-px rounded-2xl bg-gradient-brand opacity-30 group-focus-within:opacity-70 blur-xl transition-opacity" />
-              <div className="relative rounded-2xl bg-white/90 backdrop-blur-xl border border-black/5 p-2 shadow-brand-lg dark:bg-surface-elevated dark:border-white/10">
-                <div className="flex items-center justify-between px-3 pt-2 pb-1.5">
-                  <span className="text-xs font-semibold text-text-primary">Deck List</span>
+            {/* Gradient border, not a box-shadow — a shadow paints past its
+                own box and iOS Safari can clip that bleed into visible
+                artifacts around a scroll/viewport change (the keyboard
+                opening or closing); a border never leaves its own box, so
+                it isn't exposed to that class of bug at all. The repo's
+                standing trick for a gradient border (see
+                .focus-gradient-border above, and TrainerCard): the fill is
+                painted to the padding box, the brand gradient to the
+                border box, and the border itself is transparent so the
+                gradient is all that shows through it — a plain
+                border-color can't paint a gradient. No separate glow layer
+                behind it either — that existed to color the old
+                box-shadow, and the border now carries the gradient
+                directly.
+
+                rounded-card (38px, tailwind.config.ts): chosen so this
+                corner is concentric with the "Profile this deck" pill
+                nested in it, not just a bigger rounded-2xl. That button is
+                40px tall (py-2.5 + text-sm's 20px line box), so
+                rounded-full gives it a 20px radius; the gap from its edge
+                to this div's own outer edge is border-2 (2px) + this div's
+                p-2 (8px) + the footer row's px-2/pb-2 (8px) = 18px on both
+                the right and bottom. Two same-center arcs need outer
+                radius = inner radius + gap: 20 + 18 = 38. The preview
+                cards share the token. */}
+            <div
+              className="rounded-card border-2 border-transparent p-2"
+              style={{
+                // "to bottom right" (not var(--gradient-brand)'s 90deg) so
+                // the gradient runs top-left to bottom-right around this
+                // card specifically, rather than the sitewide left-to-right
+                // direction.
+                background:
+                  "linear-gradient(var(--surface-elevated), var(--surface-elevated)) padding-box, linear-gradient(to bottom right, #D99B29, #8C2711) border-box",
+              }}
+            >
+              {/* px-2 (not px-3) so this row's horizontal inset matches the
+                  footer row's — the top corners share the same rounded-[38px]
+                  as the bottom ones, and that only reads as concentric if the
+                  gap to the card's edge is equal in both dimensions. The
+                  label and "Load example" each sit in their own h-10
+                  rounded-full capsule — same size and shape as the
+                  "Profile this deck" pill below — so the content nested in
+                  these corners is a 40px pill here too, not a bare text
+                  baseline. "Deck List" drops its own leading padding (pr-5,
+                  no pl) so the label's text lines up with the placeholder
+                  text in the textarea below rather than the row's corner
+                  inset. */}
+              <div className="flex items-center justify-between px-2 pt-2 pb-1.5">
+                <span className="inline-flex h-10 items-center rounded-full pr-5 text-[15px] font-semibold text-text-primary">
+                  Deck List
+                </span>
+                <button
+                  onClick={() => setDeckList(EXAMPLE_DECK)}
+                  className="inline-flex h-10 items-center rounded-full border border-black/10 px-5 text-xs text-text-muted transition hover:text-text-primary dark:border-white/10"
+                >
+                  Load example
+                </button>
+              </div>
+              <textarea
+                value={deckList}
+                onChange={(e) => setDeckList(e.target.value)}
+                // Six lines of a real Standard list (drawn from
+                // EXAMPLE_DECK above) plus a trailing ellipsis, so the
+                // placeholder demonstrates the section headers and the
+                // "<qty> <name> <set> <number>" shape the analyzer parses
+                // instead of just hinting at it. The cut falls at the end
+                // of the Pokémon section rather than mid-list, and the
+                // quantities shown add up to the 11 its header claims, so
+                // the sample stays internally honest; the ellipsis stands
+                // in for Trainer + Energy.
+                placeholder={
+                  "Pokémon: 11\n" +
+                  "3 N's Zoroark ex JTG 175\n" +
+                  "3 N's Zorua ASC 136\n" +
+                  "2 N's Reshiram ASC 154\n" +
+                  "2 N's Zekrom ASC 155\n" +
+                  "1 Fezandipiti ex ASC 142\n" +
+                  "..."
+                }
+                // h-44 fits all 7 placeholder lines without scrolling:
+                // a 20px line box (6 sample lines + the ellipsis = 140px)
+                // plus py-2's 16px = 156px, under 176px. One height at
+                // both breakpoints — the hero's own pb-24 is unchanged, so
+                // the mobile StatsStrip's -mt-16 counterweight below still
+                // lands. text-[16px] leading-5 pins that same 20px line
+                // box below sm: below 16px, iOS Safari auto-zooms the
+                // whole page on focus — text-sm's 14px was doing that
+                // here. sm:text-sm reverts to the smaller size once the
+                // viewport is wide enough that zoom-on-focus doesn't apply.
+                className="w-full h-44 bg-transparent resize-none px-3 py-2 font-mono text-[16px] leading-5 sm:text-sm text-text-primary placeholder:text-text-muted/60 outline-none"
+                spellCheck={false}
+              />
+              <div className="flex items-center justify-end gap-3 px-2 pb-2">
+                {deckList.length > 0 && (
                   <button
-                    onClick={() => setDeckList(EXAMPLE_DECK)}
+                    type="button"
+                    onClick={() => setDeckList("")}
                     className="text-xs text-text-muted hover:text-text-primary transition"
                   >
-                    Load example
+                    Clear
                   </button>
-                </div>
-                <textarea
-                  value={deckList}
-                  onChange={(e) => setDeckList(e.target.value)}
-                  // Six lines of a real Standard list (drawn from
-                  // EXAMPLE_DECK above) plus a trailing ellipsis, so the
-                  // placeholder demonstrates the section headers and the
-                  // "<qty> <name> <set> <number>" shape the analyzer parses
-                  // instead of just hinting at it. The cut falls at the end
-                  // of the Pokémon section rather than mid-list, and the
-                  // quantities shown add up to the 11 its header claims, so
-                  // the sample stays internally honest; the ellipsis stands
-                  // in for Trainer + Energy.
-                  placeholder={
-                    "Pokémon: 11\n" +
-                    "3 N's Zoroark ex JTG 175\n" +
-                    "3 N's Zorua ASC 136\n" +
-                    "2 N's Reshiram ASC 154\n" +
-                    "2 N's Zekrom ASC 155\n" +
-                    "1 Fezandipiti ex ASC 142\n" +
-                    "..."
-                  }
-                  // h-44 fits all 7 placeholder lines without scrolling:
-                  // font-mono text-sm is a 20px line box (6 sample lines +
-                  // the ellipsis = 140px) plus py-2's 16px = 156px, under
-                  // 176px. One height at both breakpoints — the hero's own
-                  // pb-24 is unchanged, so the mobile StatsStrip's -mt-16
-                  // counterweight below still lands.
-                  className="w-full h-44 bg-transparent resize-none px-3 py-2 font-mono text-sm text-text-primary placeholder:text-text-muted/60 outline-none"
-                  spellCheck={false}
-                />
-                <div className="flex items-center justify-end gap-3 px-2 pb-2">
-                  {deckList.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setDeckList("")}
-                      className="text-xs text-text-muted hover:text-text-primary transition"
-                    >
-                      Clear
-                    </button>
+                )}
+                <GradientButton onClick={handleAnalyze} disabled={loading}>
+                  {loading ? (
+                    <>
+                      <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Profiling…
+                    </>
+                  ) : (
+                    "Profile this deck"
                   )}
-                  <GradientButton onClick={handleAnalyze} disabled={loading}>
-                    {loading ? (
-                      <>
-                        <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                        </svg>
-                        Profiling…
-                      </>
-                    ) : (
-                      "Profile this deck"
-                    )}
-                  </GradientButton>
-                </div>
+                </GradientButton>
               </div>
             </div>
 
@@ -511,7 +560,7 @@ export default function HomeClient({
               </div>
               <Link
                 href={`/spotlight/${currentSpotlight.slug}`}
-                className="block rounded-2xl overflow-hidden border border-black/8 shadow-sm hover:shadow-md transition-shadow dark:border-white/10"
+                className="block rounded-card overflow-hidden border border-black/8 shadow-sm hover:shadow-md transition-shadow dark:border-white/10"
               >
                 <SpotlightBanner
                   accentColors={currentSpotlight.accentColors}
@@ -543,12 +592,12 @@ export default function HomeClient({
             </section>
           )}
 
-          {/* Card Catalog preview */}
+          {/* Cards preview */}
           {cardCatalogTopCards.length > 0 && (
             <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-24">
               <InventoryProvider>
                 <div className="mb-4">
-                  <h2 className="text-3xl font-semibold tracking-tight">Card Catalog</h2>
+                  <h2 className="text-3xl font-semibold tracking-tight">Cards</h2>
                 </div>
                 <CatalogSignInBanner />
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

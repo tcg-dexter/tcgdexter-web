@@ -185,7 +185,7 @@ export default function PlaymatImageDialog({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl bg-white/95 backdrop-blur-xl border border-black/5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]"
+        className="w-full max-w-lg max-h-[90vh] flex flex-col rounded-card bg-white/95 backdrop-blur-xl border border-black/5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -200,7 +200,7 @@ export default function PlaymatImageDialog({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-full p-1.5 text-text-muted hover:bg-black/5 hover:text-text-primary transition"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-text-muted hover:bg-black/5 hover:text-text-primary transition"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -286,9 +286,11 @@ export default function PlaymatImageDialog({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-black/5 flex items-center gap-2">
+        {/* pb-5 + h-9 controls: a 36px capsule (r=18) 20px in from the panel edge
+            matches its rounded-card (38px) corner. */}
+        <div className="px-5 pt-3 pb-5 border-t border-black/5 flex items-center gap-2">
           {src && (
-            <label className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-4 py-1.5 text-xs font-semibold text-text-secondary hover:bg-black/5 transition cursor-pointer">
+            <label className="inline-flex items-center justify-center h-9 rounded-full border border-black/10 bg-white px-4 text-xs font-semibold text-text-secondary hover:bg-black/5 transition cursor-pointer">
               Replace
               <input
                 type="file"
@@ -306,7 +308,7 @@ export default function PlaymatImageDialog({
             <button
               type="button"
               onClick={onRemove}
-              className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-4 py-1.5 text-xs font-semibold text-accent hover:bg-black/5 transition"
+              className="inline-flex items-center justify-center h-9 rounded-full border border-black/10 bg-white px-4 text-xs font-semibold text-accent hover:bg-black/5 transition"
             >
               Remove
             </button>
@@ -315,7 +317,7 @@ export default function PlaymatImageDialog({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white px-4 py-1.5 text-xs font-semibold text-text-secondary hover:bg-black/5 transition"
+              className="inline-flex items-center justify-center h-9 rounded-full border border-black/10 bg-white px-4 text-xs font-semibold text-text-secondary hover:bg-black/5 transition"
             >
               Cancel
             </button>
@@ -323,7 +325,7 @@ export default function PlaymatImageDialog({
               type="button"
               onClick={handleSave}
               disabled={!src}
-              className="inline-flex items-center justify-center rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-white hover:bg-accent-light transition disabled:opacity-50"
+              className="inline-flex items-center justify-center h-9 rounded-full bg-accent px-4 text-xs font-semibold text-white hover:bg-accent-light transition disabled:opacity-50"
             >
               Save
             </button>

@@ -155,7 +155,7 @@ export default function EditDeckDialog({
       onClick={() => !busy && onClose()}
     >
       <div
-        className="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl bg-white/95 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]"
+        className="w-full max-w-2xl max-h-[85vh] flex flex-col rounded-card bg-white/95 dark:bg-surface-elevated backdrop-blur-xl border border-black/5 dark:border-white/10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -171,7 +171,7 @@ export default function EditDeckDialog({
             onClick={onClose}
             disabled={busy}
             aria-label="Close"
-            className="rounded-full p-1.5 text-text-muted hover:bg-black/5 hover:text-text-primary transition disabled:opacity-50"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-text-muted hover:bg-black/5 hover:text-text-primary transition disabled:opacity-50"
           >
             <svg
               className="w-5 h-5"
@@ -392,7 +392,9 @@ export default function EditDeckDialog({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-black/5 dark:border-white/10 flex items-center justify-end gap-2">
+        {/* pb-5 + h-9 buttons: a 36px capsule (r=18) 20px in from the panel edge
+            matches its rounded-card (38px) corner. */}
+        <div className="px-5 pt-3 pb-5 border-t border-black/5 dark:border-white/10 flex items-center justify-end gap-2">
           {error && (
             <p className="mr-auto text-xs text-accent">{error}</p>
           )}
@@ -400,7 +402,7 @@ export default function EditDeckDialog({
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="inline-flex items-center justify-center rounded-full border border-black/10 bg-white dark:bg-surface-2 px-4 py-1.5 text-xs font-semibold text-text-secondary hover:bg-black/5 transition disabled:opacity-50 touch-manipulation"
+            className="inline-flex items-center justify-center h-9 rounded-full border border-black/10 bg-white dark:bg-surface-2 px-4 text-xs font-semibold text-text-secondary hover:bg-black/5 transition disabled:opacity-50 touch-manipulation"
           >
             Cancel
           </button>
@@ -408,7 +410,7 @@ export default function EditDeckDialog({
             type="button"
             onClick={handleSave}
             disabled={!canSave}
-            className="inline-flex items-center justify-center rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-white hover:bg-accent-light transition disabled:opacity-50 touch-manipulation"
+            className="inline-flex items-center justify-center h-9 rounded-full bg-accent px-4 text-xs font-semibold text-white hover:bg-accent-light transition disabled:opacity-50 touch-manipulation"
           >
             {busy ? "Saving…" : mode === "save" ? "Save to collection" : "Save"}
           </button>

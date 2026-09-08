@@ -96,7 +96,7 @@ export function MetaDeckCard({
   const accentDeep = shade(accentBg, -35);
   return (
     <div
-      className="relative rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+      className="relative rounded-card border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       style={useFadeIn(index)}
     >
       {/* Banner — same treatment as the deck collection preview cards'
@@ -125,7 +125,11 @@ export function MetaDeckCard({
             <img src={image_url} alt="" className="w-full h-full object-cover" />
           ) : null}
         </div>
-        <span className="absolute top-2.5 right-2.5 z-10 rounded-full bg-black px-3 py-[5px] text-[12px] font-bold text-white tabular-nums">
+        {/* h-7 + inset-6: an explicit 28px height fixes the capsule's radius
+            at 14, and the card's rounded-card (38px) corner then wants it
+            24px in for the two arcs to share a center. Same geometry as the
+            banner's favourite circle on the opposite corner. */}
+        <span className="absolute top-6 right-6 z-10 inline-flex h-7 items-center rounded-full bg-black px-3 text-[12px] font-bold text-white tabular-nums">
           {(representation_pct * 100).toFixed(1)}%
         </span>
         <div
@@ -270,10 +274,11 @@ export function DeckBanner({
   name,
   iconBg,
   wl,
-  isFavorite,
+  isFavorite = false,
   onToggleFavorite,
-  showFavorite,
+  showFavorite = false,
   avatarItems,
+  showAvatars = true,
   className = "",
   artworkAreaHeightPx,
 }: {
@@ -281,10 +286,18 @@ export function DeckBanner({
   name: string;
   iconBg: string | null;
   wl?: DeckRecordLike | null;
-  isFavorite: boolean;
-  onToggleFavorite: (e: React.MouseEvent) => void;
-  showFavorite: boolean;
+  /** Favourite toggle state + handler. Optional together with
+   *  `showFavorite`: the pinned hero renders no toggle at all, so it has
+   *  no favourite state to thread through. */
+  isFavorite?: boolean;
+  onToggleFavorite?: (e: React.MouseEvent) => void;
+  showFavorite?: boolean;
   avatarItems: AvatarStackItem[];
+  /** Render the Pokémon avatar stack in the banner's bottom-right. The
+   *  pinned hero keeps it there, where the banner is a full-height column
+   *  of its own; the grid card sets this false and renders the same stack
+   *  in its body instead, beside the composition ring. */
+  showAvatars?: boolean;
   /** Extra classes merged onto the root — lets callers override the default
    *  fixed height (e.g. stretch full-height in a desktop side-by-side
    *  layout) without affecting the grid card's own fixed-height use. */
@@ -329,13 +342,13 @@ export function DeckBanner({
             <img src={imageUrl} alt="" className="w-full h-full object-cover" />
           ) : null}
         </div>
-        {showFavorite && (
+        {showFavorite && onToggleFavorite && (
           <button
             type="button"
             onClick={onToggleFavorite}
             aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
             aria-pressed={isFavorite}
-            className={`absolute top-2.5 left-2.5 z-10 w-7 h-7 rounded-full bg-white/65 flex items-center justify-center text-[13px] transition-colors ${
+            className={`absolute top-6 left-6 z-10 w-7 h-7 rounded-full bg-white/65 flex items-center justify-center text-[13px] transition-colors ${
               isFavorite ? "text-accent" : "text-black/25 hover:text-black/40"
             }`}
           >
@@ -357,7 +370,7 @@ export function DeckBanner({
           </button>
         )}
         {hasRecord && (
-          <span className="absolute top-2.5 right-2.5 z-10 rounded-full bg-black px-3 py-[5px] text-[12px] font-bold text-white tabular-nums">
+          <span className="absolute top-6 right-6 z-10 inline-flex h-7 items-center rounded-full bg-black px-3 text-[12px] font-bold text-white tabular-nums">
             {wl!.w}–{wl!.l}
           </span>
         )}
@@ -366,7 +379,7 @@ export function DeckBanner({
           style={{
             width: "var(--hero-card-w, 166px)",
             height: "var(--hero-card-h, 229px)",
-            left: "var(--hero-card-x, 39%)",
+            left: "var(--hero-card-x, 44%)",
             bottom: 0,
             transform: "translate(-50%, 40%) rotate(-4deg)",
           }}
@@ -376,9 +389,16 @@ export function DeckBanner({
             <img src={imageUrl} alt={name} className="w-full h-full object-cover" />
           ) : null}
         </div>
-        <div className="absolute right-3 bottom-2.5 z-10 flex">
-          <AvatarStack items={avatarItems} count={3} />
-        </div>
+        {showAvatars && (
+          // Bottom offset tracks the hero layout's body column padding
+          // (p-5 / md:p-6) less the avatar's 2px white ring, so the ring's
+          // outer edge — what actually reads as the avatar's bottom — sits
+          // the same distance off the card as the Log battle / View deck
+          // capsules do in the column beside it.
+          <div className="absolute right-3 bottom-[18px] md:bottom-[22px] z-10 flex">
+            <AvatarStack items={avatarItems} count={3} />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -541,7 +561,7 @@ export function UserDeckCard({
   return (
     <div
       ref={cardRef}
-      className="rounded-2xl border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+      className="rounded-card border border-black/8 dark:border-white/10 bg-white/90 dark:bg-surface-elevated backdrop-blur-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
       style={useFadeIn(index, skipEntranceAnimation)}
     >
       <DeckBanner
@@ -553,7 +573,8 @@ export function UserDeckCard({
         onToggleFavorite={toggleFavorite}
         showFavorite={canManage}
         avatarItems={avatarItems}
-        className="md:[--hero-card-x:42%]"
+        showAvatars={false}
+        className="md:[--hero-card-x:47%]"
       />
 
       {/* Body — deck name + (owner) manage menu, then composition ring. */}
@@ -579,13 +600,27 @@ export function UserDeckCard({
         )}
       </div>
 
+      {/* Composition ring + legend on the left, Pokémon avatars anchored to
+          the body's bottom-right. The avatars used to sit in the banner;
+          down here they're clear of the hero card art and read as part of
+          the deck's summary line. items-end bottom-aligns them with the
+          ring, which is the taller of the two and so sets the row height —
+          and keeps them anchored even when `counts` is absent. */}
       <Link href={href} className="block">
-        {counts && (
-          <div className="flex items-center gap-3.5 px-3.5 py-1">
-            <CompositionRing counts={counts} heroColor={iconBg} />
-            <CompositionLegend counts={counts} heroColor={iconBg} />
+        <div className="flex items-end gap-3.5 px-3.5 py-1">
+          {counts && (
+            <div className="flex min-w-0 items-center gap-3.5">
+              <CompositionRing counts={counts} heroColor={iconBg} />
+              <CompositionLegend counts={counts} heroColor={iconBg} />
+            </div>
+          )}
+          {/* pb-2 lifts the stack off the footer divider: items-end would
+              otherwise leave it on the row's 4px padding, and the avatar's
+              2px white ring eats half of even that. */}
+          <div className="ml-auto flex shrink-0 pb-2">
+            <AvatarStack items={avatarItems} count={3} />
           </div>
-        )}
+        </div>
       </Link>
 
       <div className="flex items-stretch border-t border-black/5 dark:border-white/10">

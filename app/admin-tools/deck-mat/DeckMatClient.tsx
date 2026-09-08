@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import CardImage from "@/app/cards/CardImage";
 import type { ResolvedDeckTile } from "@/lib/deckTiles";
 import {
@@ -16,12 +17,17 @@ import PlaymatImageDialog from "./PlaymatImageDialog";
 import { trackClient } from "@/lib/analytics/trackClient";
 import SectionHeader from "@/app/components/ui/SectionHeader";
 import CarouselChevron from "@/app/cards/[id]/CarouselChevron";
+import { useCarousel } from "@/app/cards/[id]/useCarousel";
+import { DeckBanner, WLCircles } from "@/app/components/DeckPostCard";
 
 export interface DeckSummary {
   id: string;
   name: string;
   deckList: string;
   avatarUrl: string | null;
+  /** Hero-Pokémon accent color for the deck picker's DeckBanner — same
+   *  field as UserDeckCardProps.iconBg. */
+  iconBg: string | null;
   wins: number;
   losses: number;
   draws: number;
@@ -39,6 +45,7 @@ import {
   MAT_ASPECT,
   computeRows,
   computeCardWidth,
+  computeSwatchColumns,
 } from "@/lib/playmat-layout";
 export {
   FAN_OVERLAP,
@@ -51,6 +58,19 @@ export {
   computeCardWidth,
 };
 const EXPORT_PADDING = 15;      // px, outer padding added around the exported image
+// Sleeve border — how much of the sleeve color shows around the card art
+// on each edge (so the sleeve is 2x this wider/taller than the card). A
+// flat pixel value (not scaled by card width) for a consistently tight fit
+// regardless of mat size. Shared by the live CardPile render and the
+// canvas export.
+const SLEEVE_BORDER_PX = 2;
+// Base drop shadow every card slot gets, sleeved or not, single or
+// stacked — without it a lone card reads as pasted flat onto the mat.
+const CARD_DROP_SHADOW = "0 2px 3px rgba(0,0,0,0.35)";
+// Faint shadow the card art casts onto the sleeve beneath it — only drawn
+// when a sleeve is equipped, since with no sleeve the art IS the top layer
+// (CARD_DROP_SHADOW above already covers that case).
+const CARD_ON_SLEEVE_SHADOW = "0 1px 1.5px rgba(0,0,0,0.3)";
 
 // The "dark" stop used at the bottom of each energy gradient (shade -22%).
 function ed(key: string): string {
@@ -95,7 +115,7 @@ const DUO_GRADIENTS: Record<(typeof DUO_STYLE_KEYS)[number], string> = {
 // Angles are restricted to 135deg / 180deg on purpose — those are the only
 // two cssGradToCanvas() maps to canvas endpoints, so any other angle would
 // look right on the live mat and wrong in the exported PNG.
-const SCENE_STYLE_KEYS = ["midnight", "nebula", "sunset", "ember", "aurora"] as const;
+const SCENE_STYLE_KEYS = ["midnight", "nebula", "sunset", "ember", "aurora", "dawn", "storm"] as const;
 
 const SCENE_GRADIENTS: Record<(typeof SCENE_STYLE_KEYS)[number], string> = {
   // Deep navy fading to near-black — the "playing under the tournament
@@ -109,6 +129,10 @@ const SCENE_GRADIENTS: Record<(typeof SCENE_STYLE_KEYS)[number], string> = {
   ember:    `linear-gradient(135deg, #f5a623 0%, ${ed("Fire")} 55%, ${shade(ENERGY_HEX.Fire, -46)} 100%)`,
   // Northern-lights teal over a Darkness base, lifting to a soft Psychic.
   aurora:   `linear-gradient(135deg, ${shade(ENERGY_HEX.Darkness, -14)} 0%, #2fa88c 50%, ${shade(ENERGY_HEX.Psychic, 4)} 100%)`,
+  // Pale morning gold sinking into a Fairy-derived pink, then dusk plum.
+  dawn:     `linear-gradient(180deg, #ffe1a8 0%, ${shade(ENERGY_HEX.Fairy, 6)} 55%, #3a1f3d 100%)`,
+  // Dark storm cloud with an electric Lightning flash, settling into Metal grey.
+  storm:    `linear-gradient(135deg, #1e2a30 0%, ${shade(ENERGY_HEX.Lightning, -10)} 55%, ${shade(ENERGY_HEX.Metal, -30)} 100%)`,
 };
 
 export type MatStyle =
@@ -120,12 +144,33 @@ export type MatStyle =
 
 const BLACK_GRADIENT = "linear-gradient(180deg, #3a3a3a 0%, #141414 100%)";
 
-// 30 entries laid out on a 15-column grid = exactly two rows, and the order
-// is chosen so the row break lands on a real seam:
-//   row 1 — brand, the three dark neutrals, then the 11 energy singles
-//   row 2 — the 12 energy duos, then the three warm/cool scenes
-// midnight and nebula sit up with brand/black rather than with the other
-// scenes because they read as dark solids, which is what row 1 is.
+// Sleeve colors reuse the 11 energy colors — same family already on the
+// mat picker, no separate palette to maintain. Object.keys preserves
+// ENERGY_HEX's declared order.
+const SLEEVE_COLOR_KEYS = Object.keys(ENERGY_HEX);
+
+// Page 2 of the sleeve picker: each energy color gradients into the next
+// one in the list (wrapping around), so 11 keys yield 11 distinct two-tone
+// gradients without a second palette to maintain.
+function sleeveGradientFor(key: string): string {
+  const i = SLEEVE_COLOR_KEYS.indexOf(key);
+  const next = SLEEVE_COLOR_KEYS[(i + 1) % SLEEVE_COLOR_KEYS.length];
+  return `linear-gradient(135deg, ${ENERGY_HEX[key]} 0%, ${ENERGY_HEX[next]} 100%)`;
+}
+// Page 1's top-left cell (was "no sleeve" — deselecting is now done by
+// tapping the active swatch again, see chooseSleeve) and its bottom-right
+// override — Colorless's actual hex is a light gray that reads poorly as a
+// sleeve option, so that one cell renders pure white instead.
+const SLEEVE_BLACK = "#000000";
+const SLEEVE_WHITE = "#ffffff";
+// Page 2's 12th cell — reuses the mat's own brand gradient rather than a
+// custom color picker, so both pages stay a plain, uniform 4x3 grid.
+const SLEEVE_BRAND_GRADIENT = BRAND_BANNER_GRADIENT;
+
+// 32 entries: brand, the three dark neutrals, the 11 energy singles, the 12
+// energy duos, then the five warm/cool scenes. midnight and nebula sit up
+// with brand/black rather than with the other scenes because they read as
+// dark solids, same as those neutrals.
 export const MAT_STYLES: { key: MatStyle; gradient: string }[] = [
   { key: "brand", gradient: BRAND_BANNER_GRADIENT },
   { key: "black", gradient: BLACK_GRADIENT },
@@ -136,6 +181,8 @@ export const MAT_STYLES: { key: MatStyle; gradient: string }[] = [
   { key: "sunset", gradient: SCENE_GRADIENTS.sunset },
   { key: "ember", gradient: SCENE_GRADIENTS.ember },
   { key: "aurora", gradient: SCENE_GRADIENTS.aurora },
+  { key: "dawn", gradient: SCENE_GRADIENTS.dawn },
+  { key: "storm", gradient: SCENE_GRADIENTS.storm },
 ];
 
 // Each texture is a small SVG tile that repeats seamlessly. Opacity is baked
@@ -232,6 +279,13 @@ export const TEXTURES: ReadonlyArray<{ key: string; w: number; h: number; svg: s
     key: "circuit",
     w: 24, h: 24,
     svg: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="M0,6 H7 V15 H17 V6 H24 M20,0 V10 H12 V21 H20 V24" fill="none" stroke="white" stroke-width="0.75" stroke-opacity="0.3"/><circle cx="7" cy="15" r="1.4" fill="white" fill-opacity="0.35"/><circle cx="20" cy="10" r="1.4" fill="white" fill-opacity="0.35"/></svg>`,
+  },
+  {
+    // Checkerboard: two diagonal squares per tile, the simplest pattern
+    // that still reads clearly at swatch size.
+    key: "checker",
+    w: 16, h: 16,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect x="0" y="0" width="8" height="8" fill="white" fill-opacity="0.28"/><rect x="8" y="8" width="8" height="8" fill="white" fill-opacity="0.28"/></svg>`,
   },
 ] as const;
 
@@ -477,6 +531,11 @@ function drawTextureTile(key: string): HTMLCanvasElement | null {
       c.arc(20, 10, 1.4, 0, Math.PI * 2);
       c.fill();
       break;
+    case "checker":
+      c.globalAlpha = 0.28;
+      c.fillRect(0, 0, 8, 8);
+      c.fillRect(8, 8, 8, 8);
+      break;
     default:
       return null;
   }
@@ -547,6 +606,7 @@ async function rasterizeMat({
   matImage,
   deckName,
   matWidth,
+  sleeveColor,
 }: {
   rows: ResolvedDeckTile[][];
   cardWidth: number;
@@ -555,6 +615,7 @@ async function rasterizeMat({
   matImage: MatImage | null;
   deckName: string;
   matWidth: number;
+  sleeveColor: string | null;
 }): Promise<Blob | null> {
   // ── 1. Pre-fetch all images as data URLs ──────────────────────────────────
   const uniqueCardUrls = Array.from(
@@ -747,25 +808,85 @@ async function rasterizeMat({
       const cardImg = imageMap.get(t.smallImageUrl);
 
       const cardR = Math.max(2, Math.round(cardWidth * 0.05));
+      // Resolved CSS background for the sleeve — a solid hex or a gradient
+      // string, or null for no sleeve. See the sleeveColor state comment.
+      const sleeveBg = sleeveColor;
+      const sleeveBorder = sleeveBg ? SLEEVE_BORDER_PX : 0;
+      // Sleeved cards get a square-cornered sleeve frame; the card art
+      // itself keeps its usual rounded corners either way.
+      const outerR = sleeveBg ? 0 : cardR;
       for (let i = 0; i < count; i++) {
         const cx = pileX + i * cardWidth * FAN_OVERLAP;
+        // The sleeve frame is drawn outward around the card's true (cx, ry,
+        // cardWidth, cardH) box, by sleeveBorder on every edge, rather than
+        // shrinking the card art inward to make room for it — so the card
+        // itself never scales down when a sleeve is equipped. A no-op box
+        // (sleeveBorder 0) with no sleeve.
+        const sx = cx - sleeveBorder;
+        const sy = ry - sleeveBorder;
+        const sw = cardWidth + sleeveBorder * 2;
+        const sh = cardH + sleeveBorder * 2;
+        // canvas fillStyle can't take a raw "linear-gradient(...)" string —
+        // convert it to a CanvasGradient first (cssGradToCanvas is also
+        // what the mat background itself uses).
+        const fillStyle = !sleeveBg
+          ? "#e8e8e8"
+          : sleeveBg.startsWith("linear-gradient")
+          ? cssGradToCanvas(ctx, sleeveBg, sx, sy, sw, sh) ?? "#e8e8e8"
+          : sleeveBg;
 
-        // Card slot background
+        // Sleeve/slot background — the sleeve color/gradient when one's
+        // equipped, otherwise the plain placeholder fill. Every card gets a
+        // base drop shadow so it reads as sitting on the mat on its own;
+        // stacked duplicates get a second pass layering an extra shadow
+        // between them for depth (canvas only supports one shadow config
+        // per fill, hence the two passes).
         ctx.save();
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 2;
+        ctx.shadowBlur = 3;
+        ctx.shadowColor = "rgba(0,0,0,0.35)";
+        ctx.beginPath();
+        ctx.roundRect(sx, sy, sw, sh, outerR);
+        ctx.closePath();
+        ctx.fillStyle = fillStyle;
+        ctx.fill();
+        ctx.restore();
+
         if (i > 0) {
+          ctx.save();
           ctx.shadowOffsetX = -2;
           ctx.shadowOffsetY = 0;
           ctx.shadowBlur = 2;
           ctx.shadowColor = "rgba(0,0,0,0.33)";
+          ctx.beginPath();
+          ctx.roundRect(sx, sy, sw, sh, outerR);
+          ctx.closePath();
+          ctx.fillStyle = fillStyle;
+          ctx.fill();
+          ctx.restore();
         }
-        ctx.beginPath();
-        ctx.roundRect(cx, ry, cardWidth, cardH, cardR);
-        ctx.closePath();
-        ctx.fillStyle = "#e8e8e8";
-        ctx.fill();
-        ctx.restore();
 
-        // Card image clipped to slot
+        // Faint shadow the card art casts onto the sleeve beneath it — only
+        // when one's equipped (matches CardPile); fill color is irrelevant,
+        // since the card image below fully covers this shape and only the
+        // shadow cast by it remains visible.
+        if (sleeveBg) {
+          ctx.save();
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 1;
+          ctx.shadowBlur = 1.5;
+          ctx.shadowColor = "rgba(0,0,0,0.3)";
+          ctx.beginPath();
+          ctx.roundRect(cx, ry, cardWidth, cardH, cardR);
+          ctx.closePath();
+          ctx.fillStyle = "#000";
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Card image, clipped to its own true size and corner radius —
+        // unaffected by the sleeve frame drawn around it above.
         if (cardImg) {
           ctx.save();
           ctx.beginPath();
@@ -814,6 +935,18 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const [error, setError] = useState<string | null>(null);
   const [matStyle, setMatStyle] = useState<MatStyle>("brand");
   const [textureKey, setTextureKey] = useState<string | null>(null);
+  // Resolved CSS background for the sleeve — a solid hex, a gradient string,
+  // or null for no sleeve (default). Independent of mat style/texture/image —
+  // sleeves color the cards, not the mat, so picking one never touches
+  // those other pickers. Storing the resolved value (rather than a key)
+  // means one code path handles the solid, gradient, and custom-picker
+  // cases identically.
+  const [sleeveColor, setSleeveColor] = useState<string | null>(null);
+  // Which grid the customization panel shows: mat styles/textures, or the
+  // sleeve color picker. Toggled by the Mat / Sleeve panel-header switch.
+  const [sleevePanelOpen, setSleevePanelOpen] = useState(false);
+  // Sleeve picker page: 0 = solid colors, 1 = gradients.
+  const [sleevePage, setSleevePage] = useState<0 | 1>(0);
   const [matImage, setMatImage] = useState<MatImage | null>(null);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   // Image the dialog seeds from — a fresh upload draft or the placed image.
@@ -831,6 +964,49 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const matColumnRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
   const [matWidth, setMatWidth] = useState(0);
+  const swatchBoxRef = useRef<HTMLDivElement>(null);
+  const [swatchBoxSize, setSwatchBoxSize] = useState({ w: 0, h: 0 });
+  // Below md, the customization panel isn't a CSS grid item next to the mat
+  // (that's what stretches it to the mat's height on desktop for free), so
+  // the swatch grid needs an explicit height instead — see isDesktop below.
+  const buttonsRef = useRef<HTMLDivElement>(null);
+  const [buttonsHeight, setButtonsHeight] = useState(0);
+  // The panel's own header row (the Sleeve toggle, right-aligned above the
+  // swatch grid) — measured for the same reason as buttonsHeight below.
+  const panelHeaderRef = useRef<HTMLDivElement>(null);
+  const [panelHeaderHeight, setPanelHeaderHeight] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
+  // Deck picker rail — same scroll mechanics as the deck profile's Battle
+  // History carousel (useCarousel + CarouselChevron), but tilesPerView
+  // here is however many cards are actually fully visible right now
+  // (measured off these elements, not a hardcoded per-breakpoint guess),
+  // so a chevron press always advances a full "page" of cards on any
+  // viewport — e.g. 4 visible cards means the 5th becomes the new first.
+  // useCarousel creates its own scrollerRef/listRef/itemRef, so this needs
+  // its own copies of the same three DOM nodes (assigned alongside the
+  // hook's refs in the JSX below) to measure from — decksTilesPerView is
+  // handed to the hook before the hook exists to hand its refs back.
+  const deckScrollerElRef = useRef<HTMLDivElement | null>(null);
+  const deckListElRef = useRef<HTMLUListElement | null>(null);
+  const deckItemElRef = useRef<HTMLLIElement | null>(null);
+  const decksTilesPerView = useCallback(() => {
+    const scroller = deckScrollerElRef.current;
+    const item = deckItemElRef.current;
+    const list = deckListElRef.current;
+    if (!scroller || !item || !list) return 1;
+    const gap = parseFloat(getComputedStyle(list).columnGap || "0") || 0;
+    const pitch = item.getBoundingClientRect().width + gap;
+    if (!pitch) return 1;
+    return Math.max(1, Math.floor(scroller.clientWidth / pitch));
+  }, []);
+  const {
+    scrollerRef: deckScrollerRef,
+    listRef: deckListRef,
+    itemRef: deckItemRef,
+    atStart: deckAtStart,
+    atEnd: deckAtEnd,
+    step: deckStep,
+  } = useCarousel({ tilesPerView: decksTilesPerView, itemCount: decks.length });
 
   // Record a Playmat Studio open once per mount.
   useEffect(() => {
@@ -845,6 +1021,40 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
     const ro = new ResizeObserver(([entry]) => setMatWidth(entry.contentRect.width));
     ro.observe(el);
     return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const el = swatchBoxRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) =>
+      setSwatchBoxSize({ w: entry.contentRect.width, h: entry.contentRect.height }),
+    );
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const el = buttonsRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setButtonsHeight(entry.contentRect.height));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const el = panelHeaderRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setPanelHeaderHeight(entry.contentRect.height));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)"); // Tailwind's md
+    setIsDesktop(mq.matches);
+    const onChange = () => setIsDesktop(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
   }, []);
 
   async function handleSelectDeck(deck: DeckSummary) {
@@ -891,13 +1101,14 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
       const deckName = decks.find((d) => d.id === selectedDeckId)?.name ?? "";
       const fileName = `${deckName.replace(/[^a-z0-9]/gi, "-").toLowerCase() || "deck-mat"}.png`;
       const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
-      const blob = await rasterizeMat({ rows, cardWidth, activeGradient, textureKey, matImage, deckName, matWidth });
+      const blob = await rasterizeMat({ rows, cardWidth, activeGradient, textureKey, matImage, deckName, matWidth, sleeveColor });
       if (!blob) throw new Error("Couldn't generate the image.");
       downloadBlob(blob, fileName);
       trackClient("playmat.exported", {
         style: matStyle,
         texture: textureKey ?? null,
         has_image: !!matImage,
+        sleeve: sleeveColor ?? null,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Export failed.");
@@ -908,10 +1119,27 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
 
   const rows = tiles ? computeRows(tiles) : [];
   const cardWidth = computeCardWidth(rows, matWidth);
+  const swatchCols = computeSwatchColumns(
+    swatchBoxSize.w,
+    swatchBoxSize.h,
+    MAT_STYLES.length,
+    TEXTURES.length,
+  );
   const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
   const activeTex = TEXTURES.find((t) => t.key === textureKey) ?? null;
   const texScale = matWidth > 0 ? matWidth / 600 : 1;
   const matHeightPx = matWidth > 0 ? matWidth * MAT_ASPECT : 0;
+  // Below md the customization panel sits under the mat instead of beside
+  // it, so it has no CSS grid row to stretch it to the mat's height — this
+  // gives the swatch grid an explicit height instead: mat height, minus the
+  // panel header row (Sleeve toggle), the fixed-height buttons, and the two
+  // gaps between those three and the swatch grid. PANEL_GAP_PX mirrors the
+  // panel's own gap-3.
+  const PANEL_GAP_PX = 12;
+  const mobileSwatchHeight =
+    !isDesktop && matHeightPx > 0 && buttonsHeight > 0 && panelHeaderHeight > 0
+      ? Math.max(0, matHeightPx - panelHeaderHeight - PANEL_GAP_PX * 2 - buttonsHeight)
+      : undefined;
   // A placed image replaces the gradient/pattern as the mat background.
   const imagePlacement =
     matImage && matWidth > 0
@@ -937,6 +1165,15 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   function chooseTexture(key: string) {
     setTextureKey((prev) => (prev === key ? null : key));
     setMatImage(null);
+  }
+  // Sleeve color is independent of the mat pickers above — it colors the
+  // cards, not the mat, so it never touches matImage/matStyle/textureKey.
+  // Takes the resolved CSS background (a hex color or a gradient string),
+  // not a lookup key — see the sleeveColor state comment. Tapping the
+  // already-equipped swatch again clears the sleeve — there's no separate
+  // "no sleeve" cell to tap instead.
+  function chooseSleeve(background: string) {
+    setSleeveColor((prev) => (prev === background ? null : background));
   }
 
   // First tap on "Add Image" opens the file picker straight away; the
@@ -987,9 +1224,9 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-6 md:grid md:grid-cols-[272px_1fr]">
-        {/* Right on desktop: Mat + controls */}
-        <div ref={matColumnRef} className="flex flex-col gap-3 md:order-last">
+      <div className="flex flex-col gap-6 md:grid md:grid-cols-[1fr_272px]">
+        {/* Left on desktop: the mat itself */}
+        <div ref={matColumnRef} className="flex flex-col gap-3">
           <div ref={exportRef} className="flex flex-col gap-3">
             {/* Mat header: deck name. Falls back to a non-breaking space
                 (not "") so the span's line box — and the mat's position
@@ -1058,7 +1295,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                       style={{ gap: ROW_GAP_X, justifyContent: rowIdx < rows.length - 1 ? "space-between" : "flex-start" }}
                     >
                       {row.map((t, colIdx) => (
-                        <CardPile key={t.key} tile={t} cardWidth={cardWidth} index={rowIdx * MAX_PILES_PER_ROW + colIdx} />
+                        <CardPile key={t.key} tile={t} cardWidth={cardWidth} index={rowIdx * MAX_PILES_PER_ROW + colIdx} sleeveColor={sleeveColor} />
                       ))}
                     </div>
                   ))}
@@ -1081,74 +1318,289 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
               )}
             </div>
           </div>
+        </div>
 
-          {/* Color + pattern pickers — covered by a safeguard overlay while
-              an image is placed (until the user taps "Use Color"). */}
-          <div className="relative flex flex-col gap-3">
-          {/* Color picker — 30 styles across 15 columns = 2 rows.
-              Row width arithmetic (keep this in step with the Add Image /
-              Export max-widths below, which are deliberately the same):
-                mobile   15 × 20px swatch + 14 × 4px gap = 356px
-                desktop  15 × 24px swatch + 14 × 6px gap = 444px
-              Going from 11 to 15 columns meant shrinking the swatches
-              (28→20 / 35→24) rather than adding a third row — the totals
-              land at or just under the old 368/445, so the control block
-              is no wider on a phone than it was at 11 columns. */}
-          <div className="grid gap-1 md:gap-1.5 pt-1 mx-auto [grid-template-columns:repeat(15,1.25rem)] md:[grid-template-columns:repeat(15,1.5rem)]">
-            {MAT_STYLES.map(({ key, gradient }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => chooseStyle(key)}
-                aria-label={key}
-                className={`w-5 h-5 md:w-6 md:h-6 rounded-full transition-all ${
-                  matStyle === key && !matImage
-                    ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
-                    : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
-                }`}
-                style={{ background: gradient }}
-              />
-            ))}
-          </div>
+        {/* Below the mat on mobile, beside it (to its right) from md up.
+            On desktop this panel matches the mat's height via CSS grid
+            stretch (the mat column's natural height sets the row height,
+            and grid items default to align-items: stretch) with no JS
+            measurement needed. Below md there's no grid row to stretch
+            it, so the swatch grid instead gets an explicit height —
+            mobileSwatchHeight — computed from the mat's own height. */}
+        <div className="flex flex-col gap-3">
+          {/* Panel header: the Mat / Sleeve toggle, right-aligned above the
+              swatch grid. Its measured height (panelHeaderHeight) is also
+              what keeps this panel's content roughly level with the mat
+              box on desktop — the mat's own title row above it is close
+              in height to this one, and any slack is absorbed by the
+              swatch grid's flex-1 below.
 
-          {/* Texture picker — 15 patterns, same 15 columns = 1 row. */}
-          <div className="grid gap-1 md:gap-1.5 mx-auto [grid-template-columns:repeat(15,1.25rem)] md:[grid-template-columns:repeat(15,1.5rem)]">
-            {TEXTURES.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => chooseTexture(t.key)}
-                aria-label={t.key}
-                className={`w-5 h-5 md:w-6 md:h-6 rounded-full transition-all ${
-                  textureKey === t.key && !matImage
-                    ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
-                    : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
-                }`}
-                style={{
-                  backgroundColor: "#3a3a3a",
-                  backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(t.svg)}")`,
-                  backgroundSize: `${t.w}px ${t.h}px`,
-                }}
-              />
-            ))}
-          </div>
-
-          {matImage && !pickersUnlocked && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-[#f2f2f2]/80">
+              Loosely modeled on GridListToggle (the card catalog's
+              grid/list switch), but tabs size to their own content
+              instead of splitting the track into forced-equal halves:
+              "Mat" and "Sleeve" are different lengths, and equal-width
+              halves left "Mat" floating in extra space while "Sleeve"
+              filled its half edge to edge — the same px-3.5 on both
+              gives each label matching, evenly-sitting padding instead.
+              The active pill is a framer-motion layoutId shared between
+              the two tabs — only one is ever mounted, so toggling moves
+              it and animates its (differently-sized) box, the "magic
+              move" GridListToggle's fixed 50/50 transform can't do for
+              unequal-width tabs. Reimplemented locally rather than
+              generalizing that shared component, since its value type is
+              pinned to "grid"|"list" and it's used by two other surfaces. */}
+          <div ref={panelHeaderRef} className="flex items-center justify-end">
+            <div
+              className="inline-flex items-center h-[30px] rounded-full bg-black/5 dark:bg-white/5 p-[3px] gap-[3px]"
+              role="tablist"
+            >
               <button
                 type="button"
-                onClick={() => setPickersUnlocked(true)}
-                className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-text-primary shadow-md border border-black/10 hover:bg-black/[0.03] transition-colors"
+                role="tab"
+                aria-selected={!sleevePanelOpen}
+                aria-label="Mat customization"
+                onClick={() => setSleevePanelOpen(false)}
+                className="relative h-full flex items-center justify-center px-3.5 rounded-full text-xs font-bold"
               >
-                Use Color
+                {!sleevePanelOpen && (
+                  <motion.div
+                    layoutId="mat-sleeve-pill"
+                    className="absolute inset-0 rounded-full bg-white dark:bg-surface-2 shadow-sm"
+                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                  />
+                )}
+                <span className={`relative z-10 transition-colors ${!sleevePanelOpen ? "text-text-primary" : "text-text-muted"}`}>
+                  Mat
+                </span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={sleevePanelOpen}
+                aria-label="Sleeve customization"
+                onClick={() => setSleevePanelOpen(true)}
+                className="relative h-full flex items-center justify-center px-3.5 rounded-full text-xs font-bold"
+              >
+                {sleevePanelOpen && (
+                  <motion.div
+                    layoutId="mat-sleeve-pill"
+                    className="absolute inset-0 rounded-full bg-black dark:bg-white shadow-sm"
+                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                  />
+                )}
+                <span className={`relative z-10 transition-colors ${sleevePanelOpen ? "text-white dark:text-black" : "text-text-muted"}`}>
+                  Sleeve
+                </span>
               </button>
             </div>
-          )}
           </div>
 
-          {/* Add Image + Export — max-width matches the 15-swatch picker row
-              above (356px mobile / 444px desktop; see that row for the math). */}
-          <div className="flex flex-col items-center gap-2">
+          {/* A grid — 6 columns by default (4 colors + 2 textures), each
+              swatch explicitly placed by column/row so the two sets
+              interleave row-by-row rather than sitting in separate grids.
+              computeSwatchColumns grows the column count (in 4:2 steps)
+              when the measured box is short relative to its width — e.g.
+              a squat mat on a narrow mobile viewport — so the swatches
+              stay square-ish instead of getting squashed flat; it stays
+              at 6 whenever that's already the best fit. gridAutoRows:
+              "1fr" then fills whatever vertical space is left after the
+              fixed-height buttons below take theirs, so the circles scale
+              with it. Covered by a safeguard overlay while an image is
+              placed (until the user taps "Use Color"). */}
+          <div
+            ref={swatchBoxRef}
+            className="relative min-h-0 md:flex-1"
+            style={{ height: mobileSwatchHeight }}
+          >
+            {/* Crossfade between the mat and sleeve grids on toggle, rather
+                than an instant swap — mode="wait" fades the outgoing grid
+                out before the incoming one fades in, avoiding an overlap
+                jump since the two have different structures/heights. */}
+            <AnimatePresence mode="wait">
+            {sleevePanelOpen ? (
+              /* Sleeve picker: fixed 4x3 grid, card-shaped (2.5:3.5) swatches
+                 instead of circles, across two pages (dots below). Page 1 —
+                 solid black, then the 11 energy colors (Colorless renders as
+                 white — its actual hex is a light gray that reads poorly as
+                 a sleeve). Page 2 — the same 11 colors as two-tone gradients
+                 (each blending into the next), plus the mat's own brand
+                 gradient as a 12th. There's no separate "no sleeve" cell —
+                 tapping the already-equipped swatch again clears it. */
+              <motion.div
+                key="sleeve"
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={{ duration: 0.18 }}
+                className="h-full flex flex-col gap-1.5"
+              >
+                <div className="flex-1 min-h-0 grid grid-cols-4 gap-1.5" style={{ gridAutoRows: "1fr" }}>
+                  {sleevePage === 0 ? (
+                    <>
+                      <div className="flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={() => chooseSleeve(SLEEVE_BLACK)}
+                          aria-label="Black"
+                          className={`aspect-[2.5/3.5] h-[85%] transition-all ${
+                            sleeveColor === SLEEVE_BLACK
+                              ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
+                              : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                          }`}
+                          style={{ background: SLEEVE_BLACK }}
+                        />
+                      </div>
+                      {SLEEVE_COLOR_KEYS.map((key) => {
+                        const bg = key === "Colorless" ? SLEEVE_WHITE : ENERGY_HEX[key];
+                        return (
+                          <div key={key} className="flex items-center justify-center">
+                            <button
+                              type="button"
+                              onClick={() => chooseSleeve(bg)}
+                              aria-label={key === "Colorless" ? "White" : key}
+                              className={`aspect-[2.5/3.5] h-[85%] transition-all ${
+                                sleeveColor === bg
+                                  ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
+                                  : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                              }`}
+                              style={{ background: bg }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </>
+                  ) : (
+                    <>
+                      {SLEEVE_COLOR_KEYS.map((key) => {
+                        const bg = sleeveGradientFor(key);
+                        return (
+                          <div key={key} className="flex items-center justify-center">
+                            <button
+                              type="button"
+                              onClick={() => chooseSleeve(bg)}
+                              aria-label={`${key} gradient`}
+                              className={`aspect-[2.5/3.5] h-[85%] transition-all ${
+                                sleeveColor === bg
+                                  ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
+                                  : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                              }`}
+                              style={{ background: bg }}
+                            />
+                          </div>
+                        );
+                      })}
+                      <div className="flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={() => chooseSleeve(SLEEVE_BRAND_GRADIENT)}
+                          aria-label="Brand gradient"
+                          className={`aspect-[2.5/3.5] h-[85%] transition-all ${
+                            sleeveColor === SLEEVE_BRAND_GRADIENT
+                              ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
+                              : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                          }`}
+                          style={{ background: SLEEVE_BRAND_GRADIENT }}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Page dots — same treatment as the meta-deck-list carousel's. */}
+                <div className="flex-none flex items-center justify-center gap-1.5">
+                  {[0, 1].map((page) => (
+                    <button
+                      key={page}
+                      type="button"
+                      onClick={() => setSleevePage(page as 0 | 1)}
+                      aria-label={`Sleeve page ${page + 1}`}
+                      className={`h-1.5 rounded-full transition-all ${
+                        page === sleevePage
+                          ? "w-1.5 bg-black dark:bg-white"
+                          : "w-6 bg-black/70 dark:bg-white/70 hover:bg-black/85 dark:hover:bg-white/85"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="mat"
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={{ duration: 0.18 }}
+                className="h-full grid gap-1.5"
+                style={{ gridTemplateColumns: `repeat(${swatchCols.cols}, 1fr)`, gridAutoRows: "1fr" }}
+              >
+                {MAT_STYLES.map(({ key, gradient }, i) => (
+                  <div
+                    key={key}
+                    className="flex items-center justify-center"
+                    style={{
+                      gridColumn: (i % swatchCols.colorCols) + 1,
+                      gridRow: Math.floor(i / swatchCols.colorCols) + 1,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => chooseStyle(key)}
+                      aria-label={key}
+                      className={`aspect-square h-[78%] rounded-full transition-all ${
+                        matStyle === key && !matImage
+                          ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
+                          : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                      }`}
+                      style={{ background: gradient }}
+                    />
+                  </div>
+                ))}
+                {TEXTURES.map((t, i) => (
+                  <div
+                    key={t.key}
+                    className="flex items-center justify-center"
+                    style={{
+                      gridColumn: (i % swatchCols.textureCols) + swatchCols.colorCols + 1,
+                      gridRow: Math.floor(i / swatchCols.textureCols) + 1,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => chooseTexture(t.key)}
+                      aria-label={t.key}
+                      className={`aspect-square h-[78%] rounded-full transition-all ${
+                        textureKey === t.key && !matImage
+                          ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
+                          : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                      }`}
+                      style={{
+                        backgroundColor: "#3a3a3a",
+                        backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(t.svg)}")`,
+                        backgroundSize: `${t.w}px ${t.h}px`,
+                      }}
+                    />
+                  </div>
+                ))}
+              </motion.div>
+            )}
+            </AnimatePresence>
+
+            {!sleevePanelOpen && matImage && !pickersUnlocked && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-[#f2f2f2]/80 dark:bg-[#242424]/80">
+                <button
+                  type="button"
+                  onClick={() => setPickersUnlocked(true)}
+                  className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-text-primary shadow-md border border-black/10 hover:bg-black/[0.03] transition-colors"
+                >
+                  Use Color
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Add Image + Export — fixed height, independent of how much
+              room the swatch grid above ends up with. */}
+          <div ref={buttonsRef} className="flex flex-col gap-2 flex-none">
             <input
               ref={imageInputRef}
               type="file"
@@ -1163,7 +1615,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             <button
               type="button"
               onClick={handleImageButton}
-              className="w-full max-w-[356px] md:max-w-[444px] py-2.5 rounded-full border border-black/15 bg-white text-sm font-semibold text-text-primary dark:text-black hover:bg-black/[0.03] transition-colors inline-flex items-center justify-center gap-2"
+              className="w-full py-2.5 rounded-full border border-black/15 bg-white text-sm font-semibold text-text-primary dark:text-black hover:bg-black/[0.03] dark:hover:bg-white/90 transition-colors inline-flex items-center justify-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                 <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -1176,74 +1628,123 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
               type="button"
               onClick={handleExport}
               disabled={!tiles?.length || isExporting}
-              className="w-full max-w-[356px] md:max-w-[444px] py-2.5 rounded-full text-sm font-semibold text-white disabled:opacity-40 transition-opacity"
+              className="w-full py-2.5 rounded-full text-sm font-semibold text-white disabled:opacity-40 transition-opacity"
               style={{ background: "var(--gradient-brand)" }}
             >
               {isExporting ? "Exporting…" : "Export"}
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Left on desktop: Deck list — sticky sidebar */}
-        <div className="flex flex-col gap-2 md:gap-0 md:order-first md:sticky md:top-16 xl:top-12 md:self-start">
-          <label className="text-xs font-semibold uppercase tracking-wider text-text-muted md:h-[30px] md:flex md:items-end">
+      {/* Deck picker — horizontal scroll of mini deck preview cards, below
+          the mat + customization row. */}
+      <div className="flex flex-col gap-2 mt-6">
+        <div className="flex items-center justify-between gap-3">
+          <label className="text-xs font-semibold uppercase tracking-wider text-text-muted">
             Your decks
           </label>
-
-          {decks.length === 0 ? (
-            <p className="text-sm text-text-muted py-4">No saved decks yet.</p>
-          ) : (
-            <div className="relative md:mt-3">
-              <div className="overflow-y-auto overscroll-y-contain max-h-[176px] md:max-h-[calc(100dvh-8rem)]">
-                <ul className="flex flex-col gap-1">
-                {decks.map((deck) => {
-                  const total = deck.wins + deck.losses + deck.draws;
-                  const isSelected = deck.id === selectedDeckId;
-                  const isLoading = isSelected && loading;
-                  return (
-                    <li key={deck.id}>
-                      <button
-                        type="button"
-                        onClick={() => !isLoading && handleSelectDeck(deck)}
-                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left transition ${
-                          isSelected ? "bg-black/5" : "hover:bg-black/4"
-                        }`}
-                      >
-                        <div className="w-[30px] h-[40px] flex-shrink-0 rounded overflow-hidden bg-surface">
-                          {deck.avatarUrl ? (
-                            <img src={deck.avatarUrl} alt="" className="w-full h-full object-contain" loading="lazy" />
-                          ) : (
-                            <div className="w-full h-full bg-surface" />
-                          )}
-                        </div>
-                        <span className="flex-1 min-w-0 text-sm font-semibold text-text-primary truncate">
-                          {deck.name}
-                        </span>
-                        {total > 0 && (
-                          <span className="flex-shrink-0 inline-flex items-baseline tabular-nums font-bold text-[10px] leading-none bg-black rounded-full px-2 py-[3px] text-white">
-                            <span>{deck.wins}</span>
-                            <span className="mx-[3px]">-</span>
-                            <span>{deck.losses}</span>
-                            {deck.draws > 0 && (
-                              <>
-                                <span className="mx-[3px]">-</span>
-                                <span>{deck.draws}</span>
-                              </>
-                            )}
-                          </span>
-                        )}
-                      </button>
-                    </li>
-                  );
-                })}
-                </ul>
-              </div>
-              <div className="pointer-events-none absolute bottom-0 inset-x-0 h-12 bg-gradient-to-b from-[#f2f2f2]/0 to-[#f2f2f2] dark:from-[#242424]/0 dark:to-[#242424]" />
+          {decks.length > 1 && (
+            <div className="flex items-center gap-1.5">
+              <CarouselChevron
+                direction="left"
+                noun="decks"
+                disabled={deckAtStart}
+                onClick={() => deckStep(-1)}
+              />
+              <CarouselChevron
+                direction="right"
+                noun="decks"
+                disabled={deckAtEnd}
+                onClick={() => deckStep(1)}
+              />
             </div>
           )}
-
-          {error && <p className="text-xs text-accent">{error}</p>}
         </div>
+
+        {decks.length === 0 ? (
+          <p className="text-sm text-text-muted py-4">No saved decks yet.</p>
+        ) : (
+          <div
+            ref={(el) => {
+              deckScrollerRef.current = el;
+              deckScrollerElRef.current = el;
+            }}
+            className="overflow-x-auto overscroll-x-contain no-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6"
+          >
+            <ul
+              ref={(el) => {
+                deckListRef.current = el;
+                deckListElRef.current = el;
+              }}
+              className="flex gap-3"
+            >
+              {decks.map((deck, i) => {
+                const isSelected = deck.id === selectedDeckId;
+                const isLoading = isSelected && loading;
+                return (
+                  <li
+                    key={deck.id}
+                    ref={
+                      i === 0
+                        ? (el) => {
+                            deckItemRef.current = el;
+                            deckItemElRef.current = el;
+                          }
+                        : undefined
+                    }
+                    className="shrink-0"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => !isLoading && handleSelectDeck(deck)}
+                      className={`w-64 rounded-card overflow-hidden backdrop-blur-xl bg-white/90 dark:bg-surface-elevated shadow-sm hover:shadow-md text-left transition ${
+                        isSelected
+                          ? "border-2 border-text-primary"
+                          : "border border-black/8 dark:border-white/10"
+                      }`}
+                    >
+                      {/* Simplified DeckBanner — same hero-art treatment as
+                          the deck profile preview card (UserDeckCard), just
+                          without the composition-ring breakdown, edit menu,
+                          footer buttons, or favorite toggle that card also
+                          carries; this is a picker, not a management view.
+                          DeckBanner's own height is a hardcoded h-[150px]
+                          (not exposed as a prop), so it's cropped to 75% of
+                          that — 113px — via this wrapper rather than fought
+                          with a conflicting height utility; DeckBanner still
+                          renders at its natural 150px internally, so its
+                          percentage-based hero/ghost-art positioning is
+                          unaffected, just cut off at the new, shorter edge.
+                          Its own WL pill is suppressed (no wl prop) — the
+                          record moves to the footer row's right edge below
+                          instead. */}
+                      <div className="h-[113px] overflow-hidden">
+                        <DeckBanner
+                          imageUrl={deck.avatarUrl}
+                          name={deck.name}
+                          iconBg={deck.iconBg}
+                          avatarItems={[]}
+                          showAvatars={false}
+                        />
+                      </div>
+                      <div className="px-3.5 py-3 flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold text-text-primary truncate">
+                          {deck.name}
+                        </span>
+                        <div className="flex-shrink-0">
+                          <WLCircles wl={{ w: deck.wins, l: deck.losses, d: deck.draws }} />
+                        </div>
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
+        {error && <p className="text-xs text-accent">{error}</p>}
       </div>
 
       <PlaymatImageDialog
@@ -1276,10 +1777,13 @@ export function CardPile({
   tile,
   cardWidth,
   index,
+  sleeveColor,
 }: {
   tile: ResolvedDeckTile;
   cardWidth: number;
   index: number;
+  /** Energy key from ENERGY_HEX, or null/omitted for no sleeve (default). */
+  sleeveColor?: string | null;
 }) {
   const fadeStyle = useFadeIn(index);
   const cardHeight = Math.round((cardWidth * 342) / 245);
@@ -1288,6 +1792,14 @@ export function CardPile({
   const alt = tile.setName
     ? `${tile.name} — ${tile.setName} ${tile.number}`
     : `${tile.name} ${tile.number}`;
+  const cardR = Math.max(2, Math.round(cardWidth * 0.05));
+  // Resolved CSS background for the sleeve — a solid hex or a gradient
+  // string, or null for no sleeve. See the sleeveColor state comment.
+  const sleeveBg = sleeveColor;
+  const sleeveBorder = sleeveBg ? SLEEVE_BORDER_PX : 0;
+  // Sleeved cards get a square-cornered sleeve frame; the card art itself
+  // keeps its usual rounded corners either way.
+  const outerR = sleeveBg ? 0 : cardR;
 
   return (
     <div
@@ -1296,26 +1808,52 @@ export function CardPile({
       aria-label={`${tile.name} ×${count}`}
     >
       {Array.from({ length: count }).map((_, i) => (
+        // Sized and positioned at the card's true (unsleeved) scale — a
+        // sleeve is a frame drawn around this box, not a margin eaten out
+        // of it, so the card itself never shrinks to make room for one.
         <div
           key={i}
-          className="absolute top-0 overflow-hidden bg-surface"
-          style={{
-            left: i * cardWidth * FAN_OVERLAP,
-            width: cardWidth,
-            height: cardHeight,
-            borderRadius: Math.max(2, Math.round(cardWidth * 0.05)),
-            zIndex: i,
-            boxShadow: i > 0 ? "-2px 0 2px rgba(0,0,0,0.33)" : undefined,
-          }}
+          className="absolute top-0"
+          style={{ left: i * cardWidth * FAN_OVERLAP, width: cardWidth, height: cardHeight, zIndex: i }}
         >
-          <CardImage
-            src={tile.smallImageUrl}
-            alt={alt}
-            name={tile.name}
-            setName={tile.setName}
-            number={tile.number}
-            className="w-full h-full object-contain"
+          {/* Sleeve/background layer. Extends outward by the sleeve border
+              on every edge (inset: -0 is a no-op with no sleeve, so this is
+              flush with the card box then) rather than shrinking inward,
+              so it never scales the card down. Also carries the drop
+              shadow every card gets, sleeved or not. */}
+          <div
+            className="absolute overflow-hidden bg-surface"
+            style={{
+              inset: -sleeveBorder,
+              borderRadius: outerR,
+              boxShadow: i > 0 ? `${CARD_DROP_SHADOW}, -2px 0 2px rgba(0,0,0,0.33)` : CARD_DROP_SHADOW,
+              // `background`, not `backgroundColor` — sleeveBg can be a
+              // gradient string, which backgroundColor can't render.
+              background: sleeveBg ?? undefined,
+            }}
           />
+          {/* Card art — always exactly cardWidth × cardHeight with its own
+              rounded corners, regardless of whether a sleeve is equipped.
+              The shadow lives on this outer (non-clipping) layer — put on
+              the same element as overflow-hidden, it'd be clipped away
+              before it could show past the card's own edge. Only drawn
+              when sleeved: with no sleeve this layer IS the top surface,
+              already covered by CARD_DROP_SHADOW above. */}
+          <div
+            className="absolute inset-0"
+            style={{ borderRadius: cardR, boxShadow: sleeveBg ? CARD_ON_SLEEVE_SHADOW : undefined }}
+          >
+            <div className="w-full h-full overflow-hidden" style={{ borderRadius: cardR }}>
+              <CardImage
+                src={tile.smallImageUrl}
+                alt={alt}
+                name={tile.name}
+                setName={tile.setName}
+                number={tile.number}
+                className="w-full h-full object-contain"
+              />
+            </div>
+          </div>
         </div>
       ))}
     </div>

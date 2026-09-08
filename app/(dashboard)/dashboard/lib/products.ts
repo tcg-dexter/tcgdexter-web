@@ -28,7 +28,7 @@ export type ProductMeta = {
 export const PRODUCTS: ProductMeta[] = [
   {
     key: "card_catalog",
-    label: "Card Catalog",
+    label: "Cards",
     description: "Browse and look up individual cards",
     prefixes: [],
   },

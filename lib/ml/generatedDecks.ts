@@ -9,45 +9,20 @@
 import { DatabaseSync } from "node:sqlite";
 import type { DeckStats } from "./deckGen/rules";
 
+// The schema moved to corpusStore.ts, which owns every table in the
+// self-play corpus — one place to read when asking what the store holds.
+
 export interface StoredGeneratedDeck {
   id: string;
   list: string;
   generator: string;
   parentId: string | null;
   archetype: string | null;
+  /** Cards swapped out of the parent (0 for skeleton decks). */
+  editDistance: number;
   ops: string[];
   stats: DeckStats | null;
 }
-
-export const GENERATED_DECKS_SCHEMA = `
-CREATE TABLE IF NOT EXISTS generated_deck_runs (
-  run_hash TEXT PRIMARY KEY,
-  created_at TEXT NOT NULL,
-  gen_version INTEGER NOT NULL,
-  sim_version INTEGER NOT NULL,
-  engine_version INTEGER NOT NULL,
-  seed INTEGER NOT NULL,
-  requested INTEGER NOT NULL,
-  produced INTEGER NOT NULL,
-  attempts INTEGER NOT NULL,
-  params_json TEXT NOT NULL,
-  rejected_json TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS generated_decks (
-  id TEXT PRIMARY KEY,
-  run_hash TEXT NOT NULL,
-  created_at TEXT NOT NULL,
-  generator TEXT NOT NULL,
-  parent_id TEXT,
-  archetype TEXT,
-  seed INTEGER NOT NULL,
-  list TEXT NOT NULL,
-  ops_json TEXT NOT NULL,
-  stats_json TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_generated_decks_run ON generated_decks(run_hash);
-CREATE INDEX IF NOT EXISTS idx_generated_decks_archetype ON generated_decks(archetype);
-`;
 
 /** The generated pool, newest run first. `limit` caps how many come back;
  *  `runHash` pins a specific generation run (reproducible training inputs). */
@@ -62,11 +37,13 @@ export function loadGeneratedDecks(
     return [];
   }
   try {
-    const where = options.runHash ? "WHERE run_hash = ?" : "";
-    const params = options.runHash ? [options.runHash] : [];
+    // Prefix match: every tool here prints a 12-char hash and a full one is
+    // 64, so exact-match meant the id the CLI just handed you was rejected.
+    const where = options.runHash ? "WHERE run_hash LIKE ?" : "";
+    const params = options.runHash ? [`${options.runHash}%`] : [];
     const rows = db
       .prepare(
-        `SELECT id, list, generator, parent_id, archetype, ops_json, stats_json
+        `SELECT id, list, generator, parent_id, archetype, edit_distance, ops_json, stats_json
          FROM generated_decks ${where} ORDER BY created_at DESC, id ASC`,
       )
       .all(...params) as Record<string, unknown>[];
@@ -79,6 +56,7 @@ export function loadGeneratedDecks(
         generator: String(r.generator),
         parentId: r.parent_id == null ? null : String(r.parent_id),
         archetype: r.archetype == null ? null : String(r.archetype),
+        editDistance: Number(r.edit_distance ?? 0),
         ops: safeJson<string[]>(r.ops_json, []),
         stats: safeJson<DeckStats | null>(r.stats_json, null),
       });

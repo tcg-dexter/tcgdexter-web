@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import CardsClient from "./CardsClient";
 
 export const metadata = {
-  title: "Card Catalog — TCG Dexter",
+  title: "Cards — TCG Dexter",
 };
 
 function asArray(v: string | string[] | undefined): string[] | undefined {

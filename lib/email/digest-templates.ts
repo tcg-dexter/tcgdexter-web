@@ -107,7 +107,7 @@ function setModule(set: NewSet, siteUrl: string): string {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:8px;">${logo}</td></tr></table>
     <div style="font-size:14px;font-weight:700;color:${TEXT};text-align:center;margin-top:8px;">${escapeHtml(set.name)}</div>
     ${dateLabel ? `<div style="font-size:12px;color:${MUTED};text-align:center;">Released ${escapeHtml(dateLabel)}</div>` : ""}
-    <div style="margin-top:16px;text-align:center;">${cta("Browse the Card Catalog", `${siteUrl}/cards`)}</div>`);
+    <div style="margin-top:16px;text-align:center;">${cta("Browse Cards", `${siteUrl}/cards`)}</div>`);
 }
 
 export interface WeeklyDigestInput {

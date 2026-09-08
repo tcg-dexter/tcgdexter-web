@@ -216,15 +216,19 @@ export default function TeamCardsModal({ initial, onClose }: Props) {
       <div
         role="dialog"
         aria-label="Select banner cards"
-        className="relative z-10 flex w-full max-w-lg max-h-[85vh] flex-col overflow-hidden rounded-2xl bg-white dark:bg-surface-elevated shadow-xl"
+        className="relative z-10 flex w-full max-w-lg max-h-[85vh] flex-col overflow-hidden rounded-card bg-white dark:bg-surface-elevated shadow-xl"
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-black/8 dark:border-white/10 shrink-0">
+        {/* py-4 (not py-3) and an 11-wide close button: this header keeps the
+            body's 16px gutter, so the button has to be 44px across for its
+            22px radius plus that 16px gap to equal the panel's rounded-card
+            (38px) corner. */}
+        <div className="flex items-center justify-between px-4 py-4 border-b border-black/8 dark:border-white/10 shrink-0">
           <h2 className="text-sm font-semibold text-text-primary">Select Banner Cards</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="flex items-center justify-center w-7 h-7 rounded-full text-text-muted hover:bg-bg hover:text-text-primary transition-colors"
+            className="flex items-center justify-center w-11 h-11 rounded-full text-text-muted hover:bg-bg hover:text-text-primary transition-colors"
           >
             ✕
           </button>

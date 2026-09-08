@@ -147,6 +147,15 @@
     animation: fadeInTab 0.2s ease;
   }
 
+  /* Tab TITLE fade/slide-in on switch — top-down, the opposite direction
+     from .animate-tab-fade. A title sitting above other content that slid
+     up from below (translateY positive → 0) reads as pushing that content
+     down for the length of the animation even though transforms never
+     touch layout; entering from above avoids that impression entirely. */
+  .animate-tab-fade-down {
+    animation: fadeInTabDown 0.2s ease;
+  }
+
   /* Subtle upward fade on surface cells */
   .cell-gradient {
     background: linear-gradient(
@@ -184,6 +193,11 @@ body.card-viewer-open [data-back-button] {
 
 @keyframes fadeInTab {
   0%   { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInTabDown {
+  0%   { opacity: 0; transform: translateY(-4px); }
   100% { opacity: 1; transform: translateY(0); }
 }
 
@@ -279,3 +293,60 @@ body.card-viewer-open [data-back-button] {
     animation: none;
   }
 }
+
+/* ─── Foil sheen ───────────────────────────────────────────────
+   A band of light travelling diagonally across a surface, bottom-left to
+   top-right — the way a foil catches the overhead light when someone
+   tilts it toward you. The gradient stops and the 0.62s ease-in-out are
+   lifted from the replay viewer's <FoilSheen> (card3d/Card3D.tsx), so a
+   shimmer reads the same wherever it appears.
+
+   Reimplemented in CSS rather than imported: FoilSheen is a framer-motion
+   component in a module that also pulls in the replay's BeatContext, and
+   neither belongs in the Cards page bundle for a hover flourish. It is
+   also driven differently — that one enters and exits with a beat, this
+   one is a single pass fired on hover.
+
+   Painted as an oversized background slid across the element rather than
+   a child element translated inside it, because the travel is diagonal:
+   one background-position tween moves along both axes at once, with no
+   rotated band to size against the box's own aspect. At 300% the gradient
+   is three times the element on each axis, so the window sees a third of
+   the gradient line and the bright core sits outside it at both ends —
+   the band enters and leaves cleanly instead of starting mid-sweep.
+
+   The caller owns mount/unmount, so the sweep runs once per mount; pair
+   it with mix-blend-mode: overlay, which brightens the artwork's own
+   colours and leaves a white surface untouched — there is nothing on
+   plain white for a light to catch. */
+@keyframes dx-foil-sweep {
+  /* The window slides across an oversized gradient, so the band appears
+     to travel the opposite way: starting the window at the gradient's
+     top-right end is what walks the light from the tile's bottom-left
+     corner up to its top-right. */
+  from { background-position: 100% 0%; }
+  to   { background-position: 0% 100%; }
+}
+
+.dx-foil-sweep {
+  background-image: linear-gradient(
+    45deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 44%,
+    rgba(255, 255, 255, 0.75) 50%,
+    rgba(255, 255, 255, 0.15) 56%,
+    transparent 100%
+  );
+  background-size: 300% 300%;
+  background-repeat: no-repeat;
+  background-position: 100% 0%;
+  animation: dx-foil-sweep 0.62s ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dx-foil-sweep {
+    animation: none;
+    display: none;
+  }
+}
+
