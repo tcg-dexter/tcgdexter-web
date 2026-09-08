@@ -39,6 +39,7 @@ import {
   MAT_ASPECT,
   computeRows,
   computeCardWidth,
+  computeSwatchColumns,
 } from "@/lib/playmat-layout";
 export {
   FAN_OVERLAP,
@@ -831,6 +832,8 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const matColumnRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
   const [matWidth, setMatWidth] = useState(0);
+  const swatchBoxRef = useRef<HTMLDivElement>(null);
+  const [swatchBoxSize, setSwatchBoxSize] = useState({ w: 0, h: 0 });
 
   // Record a Playmat Studio open once per mount.
   useEffect(() => {
@@ -843,6 +846,16 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
     // Observe the column, not the mat — avoids a feedback loop where
     // rendering cards inside the mat changes the mat's measured size.
     const ro = new ResizeObserver(([entry]) => setMatWidth(entry.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const el = swatchBoxRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) =>
+      setSwatchBoxSize({ w: entry.contentRect.width, h: entry.contentRect.height }),
+    );
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -908,6 +921,12 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
 
   const rows = tiles ? computeRows(tiles) : [];
   const cardWidth = computeCardWidth(rows, matWidth);
+  const swatchCols = computeSwatchColumns(
+    swatchBoxSize.w,
+    swatchBoxSize.h,
+    MAT_STYLES.length,
+    TEXTURES.length,
+  );
   const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
   const activeTex = TEXTURES.find((t) => t.key === textureKey) ?? null;
   const texScale = matWidth > 0 ? matWidth / 600 : 1;
@@ -1097,20 +1116,31 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             <span className="text-lg sm:text-xl font-semibold truncate">&nbsp;</span>
           </div>
 
-          {/* One 5-column grid: colors occupy the first 3 columns, textures
-              the last 2, each swatch explicitly placed by column/row so the
-              two sets interleave row-by-row rather than sitting in separate
-              grids. gridAutoRows: "1fr" fills whatever vertical space is
-              left after the fixed-height buttons below take theirs, so the
-              circles scale with it. Covered by a safeguard overlay while an
-              image is placed (until the user taps "Use Color"). */}
-          <div className="relative flex-1 min-h-0">
-            <div className="h-full grid grid-cols-5 gap-1.5" style={{ gridAutoRows: "1fr" }}>
+          {/* A grid — 6 columns by default (4 colors + 2 textures), each
+              swatch explicitly placed by column/row so the two sets
+              interleave row-by-row rather than sitting in separate grids.
+              computeSwatchColumns grows the column count (in 4:2 steps)
+              when the measured box is short relative to its width — e.g.
+              a squat mat on a narrow mobile viewport — so the swatches
+              stay square-ish instead of getting squashed flat; it stays
+              at 6 whenever that's already the best fit. gridAutoRows:
+              "1fr" then fills whatever vertical space is left after the
+              fixed-height buttons below take theirs, so the circles scale
+              with it. Covered by a safeguard overlay while an image is
+              placed (until the user taps "Use Color"). */}
+          <div ref={swatchBoxRef} className="relative flex-1 min-h-0">
+            <div
+              className="h-full grid gap-1.5"
+              style={{ gridTemplateColumns: `repeat(${swatchCols.cols}, 1fr)`, gridAutoRows: "1fr" }}
+            >
               {MAT_STYLES.map(({ key, gradient }, i) => (
                 <div
                   key={key}
                   className="flex items-center justify-center"
-                  style={{ gridColumn: (i % 3) + 1, gridRow: Math.floor(i / 3) + 1 }}
+                  style={{
+                    gridColumn: (i % swatchCols.colorCols) + 1,
+                    gridRow: Math.floor(i / swatchCols.colorCols) + 1,
+                  }}
                 >
                   <button
                     type="button"
@@ -1129,7 +1159,10 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                 <div
                   key={t.key}
                   className="flex items-center justify-center"
-                  style={{ gridColumn: (i % 2) + 4, gridRow: Math.floor(i / 2) + 1 }}
+                  style={{
+                    gridColumn: (i % swatchCols.textureCols) + swatchCols.colorCols + 1,
+                    gridRow: Math.floor(i / swatchCols.textureCols) + 1,
+                  }}
                 >
                   <button
                     type="button"

@@ -63,3 +63,49 @@ export function computeCardWidth(
   // would otherwise overflow.
   return Math.floor(Math.min(trueScaleWidth, minCardWidth));
 }
+
+// The swatch picker's color:texture column split — 4 columns of colors for
+// every 2 of textures. Column count is always a multiple of this pair so
+// the split stays exact at any size.
+const SWATCH_COLOR_COL_UNITS = 4;
+const SWATCH_TEXTURE_COL_UNITS = 2;
+const SWATCH_DEFAULT = { cols: 6, colorCols: 4, textureCols: 2 };
+
+/**
+ * Picks how many columns the swatch grid should use, given the box it has
+ * to fill and how many color/texture swatches it holds. 6 columns (4 + 2)
+ * is the baseline; when the box is short relative to its width — e.g. the
+ * mat (and so this panel) is short on a narrow mobile viewport — more
+ * columns means fewer rows, which means taller, better-proportioned
+ * swatches instead of a wide grid of squashed-flat ones. Tries multiples
+ * of the 4:2 split and keeps whichever produces the largest square-ish
+ * cell, so it only grows past 6 columns when doing so actually makes the
+ * swatches bigger.
+ */
+export function computeSwatchColumns(
+  containerW: number,
+  containerH: number,
+  colorCount: number,
+  textureCount: number,
+): { cols: number; colorCols: number; textureCols: number } {
+  if (containerW <= 0 || containerH <= 0) return SWATCH_DEFAULT;
+
+  let best = SWATCH_DEFAULT;
+  let bestScore = -Infinity;
+  for (let k = 1; k <= 10; k++) {
+    const colorCols = SWATCH_COLOR_COL_UNITS * k;
+    const textureCols = SWATCH_TEXTURE_COL_UNITS * k;
+    const rows = Math.max(
+      Math.ceil(colorCount / colorCols),
+      Math.ceil(textureCount / textureCols),
+    );
+    const cellW = containerW / (colorCols + textureCols);
+    const cellH = containerH / rows;
+    const score = Math.min(cellW, cellH);
+    if (score > bestScore) {
+      bestScore = score;
+      best = { cols: colorCols + textureCols, colorCols, textureCols };
+    }
+  }
+  return best;
+}
