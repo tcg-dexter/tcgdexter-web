@@ -137,7 +137,7 @@ export function MetaDeckCard({
           style={{
             width: "var(--hero-card-w, 166px)",
             height: "var(--hero-card-h, 229px)",
-            left: "var(--hero-card-x, 44%)",
+            left: "var(--hero-card-x, 39%)",
             bottom: 0,
             transform: "translate(-50%, 40%) rotate(-4deg)",
           }}
@@ -611,7 +611,10 @@ export function UserDeckCard({
               <CompositionLegend counts={counts} heroColor={iconBg} />
             </div>
           )}
-          <div className="ml-auto flex shrink-0">
+          {/* pb-2 lifts the stack off the footer divider: items-end would
+              otherwise leave it on the row's 4px padding, and the avatar's
+              2px white ring eats half of even that. */}
+          <div className="ml-auto flex shrink-0 pb-2">
             <AvatarStack items={avatarItems} count={3} />
           </div>
         </div>
