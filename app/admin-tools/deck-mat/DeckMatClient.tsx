@@ -1698,8 +1698,10 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                     <button
                       type="button"
                       onClick={() => !isLoading && handleSelectDeck(deck)}
-                      className={`w-64 rounded-card border overflow-hidden backdrop-blur-xl bg-white/90 dark:bg-surface-elevated shadow-sm hover:shadow-md text-left transition ${
-                        isSelected ? "border-accent ring-1 ring-accent" : "border-black/8 dark:border-white/10"
+                      className={`w-64 rounded-card overflow-hidden backdrop-blur-xl bg-white/90 dark:bg-surface-elevated shadow-sm hover:shadow-md text-left transition ${
+                        isSelected
+                          ? "border-2 border-text-primary"
+                          : "border border-black/8 dark:border-white/10"
                       }`}
                     >
                       {/* Simplified DeckBanner — same hero-art treatment as
