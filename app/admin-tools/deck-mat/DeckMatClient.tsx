@@ -16,7 +16,7 @@ import PlaymatImageDialog from "./PlaymatImageDialog";
 import { trackClient } from "@/lib/analytics/trackClient";
 import SectionHeader from "@/app/components/ui/SectionHeader";
 import CarouselChevron from "@/app/cards/[id]/CarouselChevron";
-import { DeckBanner } from "@/app/components/DeckPostCard";
+import { DeckBanner, WLCircles } from "@/app/components/DeckPostCard";
 
 export interface DeckSummary {
   id: string;
@@ -1602,19 +1602,33 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                           the deck profile preview card (UserDeckCard), just
                           without the composition-ring breakdown, edit menu,
                           footer buttons, or favorite toggle that card also
-                          carries; this is a picker, not a management view. */}
-                      <DeckBanner
-                        imageUrl={deck.avatarUrl}
-                        name={deck.name}
-                        iconBg={deck.iconBg}
-                        wl={{ w: deck.wins, l: deck.losses, d: deck.draws }}
-                        avatarItems={[]}
-                        showAvatars={false}
-                      />
-                      <div className="px-3.5 py-3">
-                        <span className="text-sm font-semibold text-text-primary truncate block">
+                          carries; this is a picker, not a management view.
+                          DeckBanner's own height is a hardcoded h-[150px]
+                          (not exposed as a prop), so it's cropped to 75% of
+                          that — 113px — via this wrapper rather than fought
+                          with a conflicting height utility; DeckBanner still
+                          renders at its natural 150px internally, so its
+                          percentage-based hero/ghost-art positioning is
+                          unaffected, just cut off at the new, shorter edge.
+                          Its own WL pill is suppressed (no wl prop) — the
+                          record moves to the footer row's right edge below
+                          instead. */}
+                      <div className="h-[113px] overflow-hidden">
+                        <DeckBanner
+                          imageUrl={deck.avatarUrl}
+                          name={deck.name}
+                          iconBg={deck.iconBg}
+                          avatarItems={[]}
+                          showAvatars={false}
+                        />
+                      </div>
+                      <div className="px-3.5 py-3 flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold text-text-primary truncate">
                           {deck.name}
                         </span>
+                        <div className="flex-shrink-0">
+                          <WLCircles wl={{ w: deck.wins, l: deck.losses, d: deck.draws }} />
+                        </div>
                       </div>
                     </button>
                   </li>
