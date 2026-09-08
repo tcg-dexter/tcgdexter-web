@@ -52,6 +52,10 @@ export {
   computeCardWidth,
 };
 const EXPORT_PADDING = 15;      // px, outer padding added around the exported image
+// Sleeve border as a fraction of card width — how much of the sleeve color
+// shows around the card art. Shared by the live CardPile render and the
+// canvas export so both draw the same proportions.
+const SLEEVE_BORDER_RATIO = 0.06;
 
 // The "dark" stop used at the bottom of each energy gradient (shade -22%).
 function ed(key: string): string {
@@ -124,6 +128,11 @@ export type MatStyle =
   | (typeof SCENE_STYLE_KEYS)[number];
 
 const BLACK_GRADIENT = "linear-gradient(180deg, #3a3a3a 0%, #141414 100%)";
+
+// Sleeve colors reuse the 11 energy colors — same family already on the
+// mat picker, no separate palette to maintain. Object.keys preserves
+// ENERGY_HEX's declared order.
+const SLEEVE_COLOR_KEYS = Object.keys(ENERGY_HEX);
 
 // 32 entries: brand, the three dark neutrals, the 11 energy singles, the 12
 // energy duos, then the five warm/cool scenes. midnight and nebula sit up
@@ -564,6 +573,7 @@ async function rasterizeMat({
   matImage,
   deckName,
   matWidth,
+  sleeveColor,
 }: {
   rows: ResolvedDeckTile[][];
   cardWidth: number;
@@ -572,6 +582,7 @@ async function rasterizeMat({
   matImage: MatImage | null;
   deckName: string;
   matWidth: number;
+  sleeveColor: string | null;
 }): Promise<Blob | null> {
   // ── 1. Pre-fetch all images as data URLs ──────────────────────────────────
   const uniqueCardUrls = Array.from(
@@ -764,10 +775,13 @@ async function rasterizeMat({
       const cardImg = imageMap.get(t.smallImageUrl);
 
       const cardR = Math.max(2, Math.round(cardWidth * 0.05));
+      const sleeveHex = sleeveColor ? ENERGY_HEX[sleeveColor] : null;
+      const sleeveBorder = sleeveHex ? Math.max(1, Math.round(cardWidth * SLEEVE_BORDER_RATIO)) : 0;
       for (let i = 0; i < count; i++) {
         const cx = pileX + i * cardWidth * FAN_OVERLAP;
 
-        // Card slot background
+        // Card slot background — the sleeve color when one's equipped,
+        // otherwise the plain placeholder fill.
         ctx.save();
         if (i > 0) {
           ctx.shadowOffsetX = -2;
@@ -778,18 +792,24 @@ async function rasterizeMat({
         ctx.beginPath();
         ctx.roundRect(cx, ry, cardWidth, cardH, cardR);
         ctx.closePath();
-        ctx.fillStyle = "#e8e8e8";
+        ctx.fillStyle = sleeveHex ?? "#e8e8e8";
         ctx.fill();
         ctx.restore();
 
-        // Card image clipped to slot
+        // Card image clipped to slot, inset by the sleeve border when one's
+        // equipped so the sleeve color shows all around the art.
         if (cardImg) {
+          const ix = cx + sleeveBorder;
+          const iy = ry + sleeveBorder;
+          const iw = cardWidth - sleeveBorder * 2;
+          const ih = cardH - sleeveBorder * 2;
+          const ir = Math.max(1, cardR - sleeveBorder);
           ctx.save();
           ctx.beginPath();
-          ctx.roundRect(cx, ry, cardWidth, cardH, cardR);
+          ctx.roundRect(ix, iy, iw, ih, ir);
           ctx.closePath();
           ctx.clip();
-          drawContain(ctx, cardImg, cx, ry, cardWidth, cardH);
+          drawContain(ctx, cardImg, ix, iy, iw, ih);
           ctx.restore();
         }
       }
@@ -831,6 +851,13 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const [error, setError] = useState<string | null>(null);
   const [matStyle, setMatStyle] = useState<MatStyle>("brand");
   const [textureKey, setTextureKey] = useState<string | null>(null);
+  // null = no sleeve (default). Independent of mat style/texture/image —
+  // sleeves color the cards, not the mat, so picking one never touches
+  // those other pickers.
+  const [sleeveColor, setSleeveColor] = useState<string | null>(null);
+  // Which grid the customization panel shows: mat styles/textures, or the
+  // sleeve color picker. Toggled by the header's Sleeve capsule.
+  const [sleevePanelOpen, setSleevePanelOpen] = useState(false);
   const [matImage, setMatImage] = useState<MatImage | null>(null);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   // Image the dialog seeds from — a fresh upload draft or the placed image.
@@ -942,13 +969,14 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
       const deckName = decks.find((d) => d.id === selectedDeckId)?.name ?? "";
       const fileName = `${deckName.replace(/[^a-z0-9]/gi, "-").toLowerCase() || "deck-mat"}.png`;
       const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
-      const blob = await rasterizeMat({ rows, cardWidth, activeGradient, textureKey, matImage, deckName, matWidth });
+      const blob = await rasterizeMat({ rows, cardWidth, activeGradient, textureKey, matImage, deckName, matWidth, sleeveColor });
       if (!blob) throw new Error("Couldn't generate the image.");
       downloadBlob(blob, fileName);
       trackClient("playmat.exported", {
         style: matStyle,
         texture: textureKey ?? null,
         has_image: !!matImage,
+        sleeve: sleeveColor ?? null,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Export failed.");
@@ -1005,6 +1033,11 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
     setTextureKey((prev) => (prev === key ? null : key));
     setMatImage(null);
   }
+  // Sleeve color is independent of the mat pickers above — it colors the
+  // cards, not the mat, so it never touches matImage/matStyle/textureKey.
+  function chooseSleeve(key: string | null) {
+    setSleeveColor(key);
+  }
 
   // First tap on "Add Image" opens the file picker straight away; the
   // placement dialog only appears once a file is chosen. "Edit Image"
@@ -1051,6 +1084,24 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             disabled={selectedIndex >= decks.length - 1}
             onClick={() => rotateDeck(1)}
           />
+          <button
+            type="button"
+            onClick={() => setSleevePanelOpen((v) => !v)}
+            aria-pressed={sleevePanelOpen}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+              sleevePanelOpen
+                ? "border-transparent bg-black dark:bg-white text-white dark:text-black"
+                : "border-black/15 dark:border-white/15 text-text-secondary hover:bg-black/5 dark:hover:bg-white/10"
+            }`}
+          >
+            {sleeveColor && (
+              <span
+                className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                style={{ background: ENERGY_HEX[sleeveColor] }}
+              />
+            )}
+            Sleeve
+          </button>
         </div>
       </div>
 
@@ -1125,7 +1176,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                       style={{ gap: ROW_GAP_X, justifyContent: rowIdx < rows.length - 1 ? "space-between" : "flex-start" }}
                     >
                       {row.map((t, colIdx) => (
-                        <CardPile key={t.key} tile={t} cardWidth={cardWidth} index={rowIdx * MAX_PILES_PER_ROW + colIdx} />
+                        <CardPile key={t.key} tile={t} cardWidth={cardWidth} index={rowIdx * MAX_PILES_PER_ROW + colIdx} sleeveColor={sleeveColor} />
                       ))}
                     </div>
                   ))}
@@ -1186,61 +1237,101 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
             className="relative min-h-0 md:flex-1"
             style={{ height: mobileSwatchHeight }}
           >
-            <div
-              className="h-full grid gap-1.5"
-              style={{ gridTemplateColumns: `repeat(${swatchCols.cols}, 1fr)`, gridAutoRows: "1fr" }}
-            >
-              {MAT_STYLES.map(({ key, gradient }, i) => (
-                <div
-                  key={key}
-                  className="flex items-center justify-center"
-                  style={{
-                    gridColumn: (i % swatchCols.colorCols) + 1,
-                    gridRow: Math.floor(i / swatchCols.colorCols) + 1,
-                  }}
-                >
+            {sleevePanelOpen ? (
+              /* Sleeve picker: fixed 4x3 grid, card-shaped (2.5:3.5) swatches
+                 instead of circles — top-left is always "no sleeve" (the
+                 default), the remaining 11 cells are the energy colors. */
+              <div className="h-full grid grid-cols-4 gap-1.5" style={{ gridAutoRows: "1fr" }}>
+                <div className="flex items-center justify-center">
                   <button
                     type="button"
-                    onClick={() => chooseStyle(key)}
-                    aria-label={key}
-                    className={`aspect-square h-[78%] rounded-full transition-all ${
-                      matStyle === key && !matImage
-                        ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
+                    onClick={() => chooseSleeve(null)}
+                    aria-label="No sleeve"
+                    className={`aspect-[2.5/3.5] h-[85%] rounded-md bg-surface flex items-center justify-center transition-all ${
+                      sleeveColor === null
+                        ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
                         : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
                     }`}
-                    style={{ background: gradient }}
-                  />
+                  >
+                    <svg viewBox="0 0 24 24" className="w-1/2 h-1/2 text-text-muted" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <circle cx="12" cy="12" r="9" />
+                      <line x1="5.5" y1="18.5" x2="18.5" y2="5.5" />
+                    </svg>
+                  </button>
                 </div>
-              ))}
-              {TEXTURES.map((t, i) => (
-                <div
-                  key={t.key}
-                  className="flex items-center justify-center"
-                  style={{
-                    gridColumn: (i % swatchCols.textureCols) + swatchCols.colorCols + 1,
-                    gridRow: Math.floor(i / swatchCols.textureCols) + 1,
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => chooseTexture(t.key)}
-                    aria-label={t.key}
-                    className={`aspect-square h-[78%] rounded-full transition-all ${
-                      textureKey === t.key && !matImage
-                        ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
-                        : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
-                    }`}
+                {SLEEVE_COLOR_KEYS.map((key) => (
+                  <div key={key} className="flex items-center justify-center">
+                    <button
+                      type="button"
+                      onClick={() => chooseSleeve(key)}
+                      aria-label={key}
+                      className={`aspect-[2.5/3.5] h-[85%] rounded-md transition-all ${
+                        sleeveColor === key
+                          ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
+                          : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                      }`}
+                      style={{ background: ENERGY_HEX[key] }}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div
+                className="h-full grid gap-1.5"
+                style={{ gridTemplateColumns: `repeat(${swatchCols.cols}, 1fr)`, gridAutoRows: "1fr" }}
+              >
+                {MAT_STYLES.map(({ key, gradient }, i) => (
+                  <div
+                    key={key}
+                    className="flex items-center justify-center"
                     style={{
-                      backgroundColor: "#3a3a3a",
-                      backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(t.svg)}")`,
-                      backgroundSize: `${t.w}px ${t.h}px`,
+                      gridColumn: (i % swatchCols.colorCols) + 1,
+                      gridRow: Math.floor(i / swatchCols.colorCols) + 1,
                     }}
-                  />
-                </div>
-              ))}
-            </div>
+                  >
+                    <button
+                      type="button"
+                      onClick={() => chooseStyle(key)}
+                      aria-label={key}
+                      className={`aspect-square h-[78%] rounded-full transition-all ${
+                        matStyle === key && !matImage
+                          ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
+                          : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                      }`}
+                      style={{ background: gradient }}
+                    />
+                  </div>
+                ))}
+                {TEXTURES.map((t, i) => (
+                  <div
+                    key={t.key}
+                    className="flex items-center justify-center"
+                    style={{
+                      gridColumn: (i % swatchCols.textureCols) + swatchCols.colorCols + 1,
+                      gridRow: Math.floor(i / swatchCols.textureCols) + 1,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => chooseTexture(t.key)}
+                      aria-label={t.key}
+                      className={`aspect-square h-[78%] rounded-full transition-all ${
+                        textureKey === t.key && !matImage
+                          ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110"
+                          : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                      }`}
+                      style={{
+                        backgroundColor: "#3a3a3a",
+                        backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(t.svg)}")`,
+                        backgroundSize: `${t.w}px ${t.h}px`,
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
 
-            {matImage && !pickersUnlocked && (
+            {!sleevePanelOpen && matImage && !pickersUnlocked && (
               <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-[#f2f2f2]/80 dark:bg-[#242424]/80">
                 <button
                   type="button"
@@ -1381,10 +1472,13 @@ export function CardPile({
   tile,
   cardWidth,
   index,
+  sleeveColor,
 }: {
   tile: ResolvedDeckTile;
   cardWidth: number;
   index: number;
+  /** Energy key from ENERGY_HEX, or null/omitted for no sleeve (default). */
+  sleeveColor?: string | null;
 }) {
   const fadeStyle = useFadeIn(index);
   const cardHeight = Math.round((cardWidth * 342) / 245);
@@ -1393,6 +1487,9 @@ export function CardPile({
   const alt = tile.setName
     ? `${tile.name} — ${tile.setName} ${tile.number}`
     : `${tile.name} ${tile.number}`;
+  const cardR = Math.max(2, Math.round(cardWidth * 0.05));
+  const sleeveHex = sleeveColor ? ENERGY_HEX[sleeveColor] : null;
+  const sleeveBorder = sleeveHex ? Math.max(1, Math.round(cardWidth * SLEEVE_BORDER_RATIO)) : 0;
 
   return (
     <div
@@ -1408,19 +1505,27 @@ export function CardPile({
             left: i * cardWidth * FAN_OVERLAP,
             width: cardWidth,
             height: cardHeight,
-            borderRadius: Math.max(2, Math.round(cardWidth * 0.05)),
+            borderRadius: cardR,
             zIndex: i,
             boxShadow: i > 0 ? "-2px 0 2px rgba(0,0,0,0.33)" : undefined,
+            backgroundColor: sleeveHex ?? undefined,
           }}
         >
-          <CardImage
-            src={tile.smallImageUrl}
-            alt={alt}
-            name={tile.name}
-            setName={tile.setName}
-            number={tile.number}
-            className="w-full h-full object-contain"
-          />
+          {/* Inset by the sleeve border so its color shows all around the
+              art — inset is 0 with no sleeve, so this is a no-op then. */}
+          <div
+            className="absolute overflow-hidden"
+            style={{ inset: sleeveBorder, borderRadius: Math.max(1, cardR - sleeveBorder) }}
+          >
+            <CardImage
+              src={tile.smallImageUrl}
+              alt={alt}
+              name={tile.name}
+              setName={tile.setName}
+              number={tile.number}
+              className="w-full h-full object-contain"
+            />
+          </div>
         </div>
       ))}
     </div>
