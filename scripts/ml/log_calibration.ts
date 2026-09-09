@@ -14,8 +14,8 @@
 // Usage: npx tsx scripts/ml/log_calibration.ts <matches.json>
 
 import { readFileSync } from "node:fs";
-import { normalizePerspective, parseBattleLog } from "@/lib/battle-log";
-import { replay } from "@/lib/engine";
+import { normalizePerspective } from "@/lib/battle-log";
+import { parseBattleLogWithCatalog, replay } from "@/lib/engine";
 import { replayTurnViews } from "@/lib/ml/features/replayView";
 import { cachedValueArtifact, valueCurve } from "@/lib/ml/valueCurve";
 
@@ -46,7 +46,7 @@ function main(): void {
       continue;
     }
     try {
-      const normalized = normalizePerspective(parseBattleLog(m.battle_log_raw), m.player_handle);
+      const normalized = normalizePerspective(parseBattleLogWithCatalog(m.battle_log_raw), m.player_handle);
       const replayResult = replay(normalized);
       const { views, cardCoverage } = replayTurnViews(normalized, replayResult, m.deck_list);
       const curve = valueCurve(artifact, views);

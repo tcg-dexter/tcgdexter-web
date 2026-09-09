@@ -1,5 +1,5 @@
-import { normalizePerspective, parseBattleLog } from "@/lib/battle-log";
-import { replay } from "@/lib/engine";
+import { normalizePerspective } from "@/lib/battle-log";
+import { parseBattleLogWithCatalog, replay } from "@/lib/engine";
 import type { EngineEvent } from "@/lib/engine";
 import type { ParsedAction } from "@/lib/battle-log";
 import type { DiscardDrawCard, ReplayPayload } from "@/lib/replay/frames";
@@ -684,7 +684,7 @@ function toBeat(ev: EngineEvent, action: ParsedAction | undefined): Beat {
  * actionIndex, so the viewer joins on actionIndex rather than zipping.
  */
 export function buildBeats(battleLogRaw: string, playerHandle: string): Beat[] {
-  const parsed = parseBattleLog(battleLogRaw);
+  const parsed = parseBattleLogWithCatalog(battleLogRaw);
   const normalized = normalizePerspective(parsed, playerHandle);
   const result = replay(normalized);
   // EngineEvent.actionIndex indexes the normalized action stream, which is

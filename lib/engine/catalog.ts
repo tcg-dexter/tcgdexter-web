@@ -194,3 +194,86 @@ export function isTrainerSubtype(name: string, subtype: string): boolean {
   if (!c || c.supertype !== "Trainer") return false;
   return c.subtypes.includes(subtype);
 }
+
+/* ─── Printing disambiguation from gameplay ───────────────────── */
+//
+// `pickPrinting` above resolves a bare name by "newest regulation mark
+// wins". That is the only thing available when the log is the STANDARD
+// TCG Live export, which names cards by name alone — but for a Pokémon
+// with several Standard-legal printings it is a coin flip, and it loses:
+// Bronzong's newest print (me5-64, "Gentle Slap") is not the one anybody
+// is playing (sv5-69, "Evolution Jammer"), so the board rendered the wrong
+// art and listed attacks the card in play does not have.
+//
+// The log does tell us which card it was, just not by id: it names every
+// attack and ability as it is used, and those names are close to unique
+// across a species' printings. Scoring printings against the moves the log
+// actually saw recovers the exact card from the standard export — no
+// verbose-export setting required on the player's end.
+
+/** Case/whitespace-insensitive key for a move name, so "Evolution Jammer"
+ *  from the log matches the catalog's spelling regardless of casing. */
+function moveKey(move: string): string {
+  return move.trim().toLowerCase();
+}
+
+function attackKeys(p: PrintingRaw): Set<string> {
+  return new Set((p.attacks ?? []).map((a) => moveKey(a.name)));
+}
+
+function abilityKeys(p: PrintingRaw): Set<string> {
+  return new Set((p.abilities ?? []).map((a) => moveKey(a.name)));
+}
+
+/**
+ * True when `move` is an ATTACK on this Pokémon and never an Ability, across
+ * every printing of the name.
+ *
+ * The battle log writes a targetless attack and an ability with the exact
+ * same shape — "<handle>'s <Pokémon> used <move>." — so the parser cannot
+ * tell them apart from the text alone. The catalog can. Requiring that NO
+ * printing calls the move an Ability keeps the answer conservative: a name
+ * that is an attack on one print and an ability on another stays
+ * unclassified and the parser leaves it as an ability, exactly as before.
+ */
+export function isAttackName(pokemon: string, move: string): boolean {
+  const prints = RAW[pokemon];
+  if (!prints || prints.length === 0) return false;
+  const key = moveKey(move);
+  let seenAsAttack = false;
+  for (const p of prints) {
+    if (abilityKeys(p).has(key)) return false;
+    if (attackKeys(p).has(key)) seenAsAttack = true;
+  }
+  return seenAsAttack;
+}
+
+/**
+ * Resolve the exact printing of `name` whose attacks + abilities account for
+ * every move the log saw it use.
+ *
+ * Full cover is required rather than best-effort overlap: a partial match
+ * means we are looking at the wrong card, and a wrong card confidently
+ * rendered is worse than the name-only fallback the caller already has.
+ * Among printings that do cover everything (same card, reprinted), the
+ * existing newest-regulation-mark preference breaks the tie.
+ *
+ * Returns null when there is no signal (no moves seen) or no printing
+ * covers them, so callers fall back to `lookupCard`.
+ */
+export function lookupPrintingByMoves(
+  name: string,
+  moves: readonly string[],
+): EngineCard | null {
+  const prints = RAW[name];
+  if (!prints || prints.length === 0) return null;
+  const wanted = Array.from(new Set(moves.map(moveKey))).filter(Boolean);
+  if (wanted.length === 0) return null;
+  const covering = prints.filter((p) => {
+    const known = attackKeys(p);
+    abilityKeys(p).forEach((k) => known.add(k));
+    return wanted.every((w) => known.has(w));
+  });
+  if (covering.length === 0) return null;
+  return normalize(pickPrinting(covering));
+}

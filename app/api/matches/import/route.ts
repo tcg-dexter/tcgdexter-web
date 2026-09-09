@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
-  parseBattleLog,
   normalizePerspective,
   summarize,
   PARSER_VERSION,
 } from "@/lib/battle-log";
+import { parseBattleLogWithCatalog } from "@/lib/engine";
 import { bumpBattleStreak, localDateInTz } from "@/lib/streak";
 import { reconcileAchievements } from "@/lib/learn/achievements";
 import { notifyBadgesUnlocked } from "@/lib/notifications/notify";
@@ -97,7 +97,7 @@ export async function POST(req: Request) {
   }
 
   // Parse + normalize + summarize.
-  const parsed = parseBattleLog(battle_log_raw);
+  const parsed = parseBattleLogWithCatalog(battle_log_raw);
   if (!parsed.handles.includes(player_handle)) {
     return NextResponse.json(
       { error: "player_handle not found in the log." },

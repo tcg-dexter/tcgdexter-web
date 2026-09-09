@@ -22,8 +22,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-import { parseBattleLog, normalizePerspective, summarize, PARSER_VERSION } from "@/lib/battle-log";
-import { replay } from "@/lib/engine";
+import { normalizePerspective, summarize, PARSER_VERSION } from "@/lib/battle-log";
+import { parseBattleLogWithCatalog, replay } from "@/lib/engine";
 import { ENGINE_VERSION } from "@/lib/engine/types";
 import {
   FEATURE_SCHEMA_VERSION,
@@ -266,7 +266,7 @@ function main(): void {
 
     if (battleLog && playerHandle) {
       try {
-        const normalized = normalizePerspective(parseBattleLog(battleLog), playerHandle);
+        const normalized = normalizePerspective(parseBattleLogWithCatalog(battleLog), playerHandle);
         const replayResult = replay(normalized);
         const extraction = extractBattleFeatures(normalized, replayResult);
         logFeatures = extraction.battle;

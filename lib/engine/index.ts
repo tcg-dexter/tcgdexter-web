@@ -19,9 +19,11 @@ export {
   isTrainerSubtype,
   lookupCard,
   lookupPrintingByLiveId,
+  lookupPrintingByMoves,
   standardPrintingsOf,
   supertypeOf,
 } from "./catalog";
+export { parseBattleLogWithCatalog } from "./parseWithCatalog";
 export { ENGINE_VERSION } from "./types";
 
 export type {
