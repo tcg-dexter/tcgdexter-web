@@ -10,7 +10,14 @@
 // or "all attacks that triggered Powerful Rage". When in doubt, prefer
 // adding a new type over overloading an existing one.
 
-/** Bumped to 3: the parser now reads evolutions nested under the trainer
+/** Bumped to 4: a targetless attack ("<handle>'s Fezandipiti ex used Cruel
+ *  Arrow.", damage on the following bullets) used to parse as `ability_used`
+ *  because it is written exactly like an ability. The parser now asks the
+ *  catalog and emits `attack` for moves that are attacks and never
+ *  abilities. Rows stamped with version 3 or lower carry those attacks as
+ *  abilities, so their damage and attacker attribution are missing.
+ *
+ *  Bumped to 3: the parser now reads evolutions nested under the trainer
  *  card that caused them ("played Rare Candy." → "- evolved Duskull to
  *  Dusknoir on the Bench."), which were previously dropped. Rows stamped
  *  with version 2 or lower are missing those evolve actions.
@@ -19,7 +26,7 @@
  *  ("put a damage counter on", "moved N damage counters from ... to ...")
  *  that were previously dropped on the floor. Rows stamped with version 1
  *  were parsed without them and are missing those actions. */
-export const PARSER_VERSION = 3;
+export const PARSER_VERSION = 4;
 
 export type Actor = "player" | "opponent" | "system";
 

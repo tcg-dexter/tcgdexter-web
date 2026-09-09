@@ -7,6 +7,7 @@ import { resolveOpponentHero } from "@/lib/opponentHeroCard";
 import { stripCardIds } from "@/lib/battle-log";
 import { idColumn } from "@/lib/shortId";
 import BattleLogPage from "./BattleLogPage";
+import type { Metadata } from "next";
 
 type AnalysisCard = {
   qty: number;
@@ -15,6 +16,70 @@ type AnalysisCard = {
   setCode: string;
   section: "pokemon" | "trainer" | "energy";
 };
+
+/**
+ * The route had no metadata at all, so every battle shared the root layout's
+ * generic title — a shared link read as the site name with no hint of whose
+ * battle it was. Titles the matchup from the two decks' archetypes, which is
+ * exactly what the page's own header shows.
+ *
+ * Runs its own small query rather than reusing the page's: Next dedupes
+ * identical fetches, and the page needs far more columns than a title does.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const admin = createAdminClient();
+  const { data: battle } = await admin
+    .from("matches")
+    .select("result, opponent_archetype, saved_deck_id, played_at, created_at")
+    .eq(idColumn(id), id)
+    .maybeSingle();
+  if (!battle) return { title: "Battle Not Found — TCG Dexter" };
+
+  const { data: deck } = await admin
+    .from("saved_decks")
+    .select("name, is_public")
+    .eq("id", battle.saved_deck_id as string)
+    .maybeSingle();
+
+  // A private deck's battle is owner-only, and metadata has no viewer to
+  // check against — so name neither side rather than leaking the deck name
+  // into a link preview or a search result.
+  if (!deck || !(deck.is_public as boolean)) return { title: "Battle — TCG Dexter" };
+
+  const playerName = (deck.name as string) || "Deck";
+  const opponentName = (battle.opponent_archetype as string | null) || "Opponent";
+  const title = `${playerName} vs ${opponentName} — TCG Dexter`;
+
+  const result = battle.result as string | null;
+  const outcome =
+    result === "win" ? "Win" : result === "loss" ? "Loss" : result === "draw" ? "Draw" : null;
+  const playedAt = (battle.played_at as string | null) ?? (battle.created_at as string | null);
+  const description = [
+    outcome,
+    `${playerName} vs ${opponentName}`,
+    playedAt
+      ? new Date(playedAt).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  return {
+    title,
+    description,
+    openGraph: { title, description },
+    twitter: { card: "summary_large_image", title, description },
+  };
+}
 
 export default async function BattleRoute({
   params,

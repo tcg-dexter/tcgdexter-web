@@ -28,9 +28,9 @@ import { createClient } from "@supabase/supabase-js";
 import {
   PARSER_VERSION,
   normalizePerspective,
-  parseBattleLog,
   summarize,
 } from "../lib/battle-log";
+import { parseBattleLogWithCatalog } from "../lib/engine";
 
 const args = process.argv.slice(2);
 const APPLY = args.includes("--apply");
@@ -137,7 +137,7 @@ async function main() {
     let derived: Record<string, unknown>;
     let actionCount: number;
     try {
-      const parsed = parseBattleLog(m.battle_log_raw);
+      const parsed = parseBattleLogWithCatalog(m.battle_log_raw);
       if (!parsed.handles.includes(handle)) {
         console.warn(
           `skip ${m.id}: stored handle "${handle}" not found in the log (handles: ${parsed.handles.join(", ")})`,

@@ -779,13 +779,20 @@ export function applyAction(
       const attackerName = String(payload.attacker ?? "");
       const defenderName = String(payload.defender ?? "");
       const damage = Number(payload.damage ?? 0);
+      // A targetless attack (Cruel Arrow and friends) reports each hit as a
+      // splash entry instead of a headline defender, precisely because the
+      // target may be on the Bench. Its `damage` is the total, already
+      // accounted for below — applying it here too would double it.
+      const targetless = payload.targetless === true;
       if (attackerSide?.active && attackerSide.active.card.name !== attackerName) {
         diag("info", "attacker_not_active", `Attacker ${attackerName} is not in active slot`, { attackerName });
       }
-      if (defenderSide?.active && defenderSide.active.card.name === defenderName) {
-        defenderSide.active.damage += damage;
-      } else {
-        diag("info", "attack_defender_mismatch", `Defender ${defenderName} is not opposing active`, { defenderName });
+      if (!targetless) {
+        if (defenderSide?.active && defenderSide.active.card.name === defenderName) {
+          defenderSide.active.damage += damage;
+        } else {
+          diag("info", "attack_defender_mismatch", `Defender ${defenderName} is not opposing active`, { defenderName });
+        }
       }
       // Splash damage to e.g. bench targets.
       const splash = (payload.splash_damage as Array<{ handle: string; pokemon: string; damage: number }> | undefined) ?? [];

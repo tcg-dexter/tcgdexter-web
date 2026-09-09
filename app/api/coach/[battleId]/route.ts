@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { normalizePerspective, parseBattleLog } from "@/lib/battle-log";
-import { replay } from "@/lib/engine";
+import { normalizePerspective } from "@/lib/battle-log";
+import { parseBattleLogWithCatalog, replay } from "@/lib/engine";
 import { extractBattleFeatures, turnQualityFlags } from "@/lib/ml/features";
 import type { BattleLogFeatures } from "@/lib/ml/features";
 import { buildCoachReport } from "@/lib/ml/coach";
@@ -70,7 +70,7 @@ export async function POST(
   let extraction;
   let normalized;
   try {
-    normalized = normalizePerspective(parseBattleLog(battle.battle_log_raw), battle.player_handle);
+    normalized = normalizePerspective(parseBattleLogWithCatalog(battle.battle_log_raw), battle.player_handle);
     extraction = extractBattleFeatures(normalized, replay(normalized));
   } catch (e) {
     return NextResponse.json(

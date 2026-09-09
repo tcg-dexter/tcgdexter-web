@@ -281,15 +281,85 @@ function action(
   return { action_type, actor: null, actor_handle, raw_text, payload };
 }
 
+/**
+ * Build an `attack` action for the targetless form, whose damage lives on
+ * the block's "<handle>'s <Pokémon> took N damage." children rather than in
+ * the headline.
+ *
+ * Every hit goes into `splash_damage`, including the first: the reducer
+ * resolves splash entries by handle + name, so it lands correctly on a
+ * BENCHED target — which is the whole point of an attack that chooses its
+ * own target — where the headline `defender` path only ever damages the
+ * opposing Active. `targetless: true` tells the reducer to skip that
+ * headline path so the damage is applied exactly once. `damage` carries the
+ * total for stats and attacker attribution.
+ */
+function targetlessAttack(
+  actorHandle: string,
+  attacker: string,
+  attackName: string,
+  b: Block,
+): ParsedAction {
+  const hits: Array<{ pokemon: string; damage: number; handle: string }> = [];
+  for (const c of b.children) {
+    const hit = c.text.match(/^(.+?)'s (.+?) took (\d+) damage\.$/);
+    if (hit) {
+      hits.push({ handle: hit[1], pokemon: hit[2], damage: Number(hit[3]) });
+    }
+  }
+  const dd = extractDiscardDraw(b);
+  return action("attack", actorHandle, b.text, {
+    attacker,
+    attack_name: attackName,
+    targetless: true,
+    defender_handle: hits[0]?.handle ?? null,
+    defender: hits[0]?.pokemon ?? null,
+    damage: hits.reduce((sum, h) => sum + h.damage, 0),
+    weakness_bonus: null,
+    weakness_target: null,
+    weakness_type: null,
+    damage_breakdown_raw: [],
+    choices: [],
+    splash_damage: hits,
+    discards_from_attacker_summary: [],
+    revealed_cards_in_block: collectRevealedCards(b),
+    discarded_cards: dd.discarded,
+    drawn_cards: dd.drawn,
+    drawn_count: dd.drawnCount,
+  });
+}
+
 /* ─── Pattern table ───────────────────────────────────────────── */
 //
 // Patterns are listed roughly in order of specificity. More specific
 // patterns must come before more general ones (e.g., "drew N cards for
 // the opening hand" before "drew N cards").
 
+/**
+ * Optional capabilities a caller can lend the parser.
+ *
+ * The parser is deliberately catalog-free: it also runs in the BROWSER, in
+ * the battle-log import preview, and `data/cards-standard.json` is 15 MB —
+ * importing the engine catalog here would ship all of it to every client
+ * bundle that can open that tab. So the one decision that genuinely needs
+ * card knowledge is lent in by server callers instead, via
+ * `parseBattleLogWithCatalog` (lib/engine/parseWithCatalog.ts).
+ *
+ * Omitting it is safe, not silently wrong: the parser falls back to the
+ * behavior it had before the option existed, and the import preview's
+ * `summarize` reads none of the action types this affects.
+ */
+export interface ParseOptions {
+  /** True when `move` is an attack on `pokemon` and never an ability — the
+   *  only way to tell a targetless attack from an ability, since the log
+   *  writes them identically. See the "Ability used" pattern below. */
+  isAttackName?: (pokemon: string, move: string) => boolean;
+}
+
 type PatternHandler = (
   match: RegExpMatchArray,
   block: Block,
+  opts: ParseOptions,
 ) => ParsedAction | ParsedAction[] | null;
 
 interface Pattern {
@@ -501,9 +571,20 @@ const PATTERNS: Pattern[] = [
   },
 
   // ── Ability used (no target / no damage) ─────────────────────
+  //
+  // A TARGETLESS ATTACK is written exactly like an ability — "<handle>'s
+  // <Pokémon> used <move>." — with its damage on the following bullet lines
+  // instead ("- <handle>'s <Pokémon> took 100 damage."). Fezandipiti ex's
+  // Cruel Arrow, which picks its own target, is the common case. The text
+  // alone cannot separate the two, so the catalog decides: a move that is an
+  // attack on this Pokémon and never an ability is parsed as one. Anything
+  // ambiguous or unknown stays an ability, as it always was.
   {
     re: /^(.+?)'s (.+?) used (.+?)\.$/,
-    handle: (m, b) => {
+    handle: (m, b, opts) => {
+      if (opts.isAttackName?.(splitCardId(m[2]).name, m[3])) {
+        return targetlessAttack(m[1], m[2], m[3], b);
+      }
       const revealed = collectRevealedCards(b);
       const dd = extractDiscardDraw(b);
       return action("ability_used", m[1], b.text, {
@@ -910,12 +991,15 @@ function extractChildActions(block: Block): ParsedAction[] {
   return out;
 }
 
-function parseBlock(block: Block): { actions: ParsedAction[]; unmatched: boolean } {
+function parseBlock(
+  block: Block,
+  opts: ParseOptions,
+): { actions: ParsedAction[]; unmatched: boolean } {
   const text = normalizeQuotes(block.text);
   for (const p of PATTERNS) {
     const m = text.match(p.re);
     if (m) {
-      const result = p.handle(m, { ...block, text });
+      const result = p.handle(m, { ...block, text }, opts);
       if (!result) continue;
       const primary = Array.isArray(result) ? result : [result];
       return {
@@ -935,7 +1019,10 @@ function parseBlock(block: Block): { actions: ParsedAction[]; unmatched: boolean
 
 /* ─── Main entry ──────────────────────────────────────────────── */
 
-export function parseBattleLog(raw: string): BattleLogParseResult {
+export function parseBattleLog(
+  raw: string,
+  opts: ParseOptions = {},
+): BattleLogParseResult {
   const sections: Section[] = tokenize(raw);
 
   const actions: ParsedAction[] = [];
@@ -989,7 +1076,7 @@ export function parseBattleLog(raw: string): BattleLogParseResult {
     }
 
     for (const block of section.blocks) {
-      const result = parseBlock(block);
+      const result = parseBlock(block, opts);
       for (const a of result.actions) {
         stripActionCardIds(a, cardIds);
         actions.push(a);

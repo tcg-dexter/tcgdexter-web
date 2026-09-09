@@ -1,5 +1,14 @@
-import { normalizePerspective, parseBattleLog } from "@/lib/battle-log";
-import { lookupCard, lookupPrintingByLiveId, replay, solveEnergyAttribution } from "@/lib/engine";
+import { normalizePerspective } from "@/lib/battle-log";
+import type { BattleLogParseResult } from "@/lib/battle-log";
+import {
+  parseBattleLogWithCatalog,
+  lookupCard,
+  lookupPrintingByLiveId,
+  lookupPrintingByMoves,
+  replay,
+  solveEnergyAttribution,
+} from "@/lib/engine";
+import type { EngineCard } from "@/lib/engine";
 import type { GameState, PokemonInPlay } from "@/lib/engine";
 import { cardImageUrlForAnyName, cardImageUrlForName } from "@/lib/primaryCardImage";
 import { cardImageSmall } from "@/lib/cardImages";
@@ -296,18 +305,65 @@ export function groupAttachments(
     .map((x) => x.c);
 }
 
+/**
+ * Pin every Pokémon in the battle to an exact printing, once, up front.
+ *
+ * Two signals, in order of confidence:
+ *   1. The verbose export's card id, when the player had that setting on —
+ *      unambiguous (e.g. N's Reshiram me2pt5_154 over its sv9 printings).
+ *   2. The moves the log saw the Pokémon use. The standard export names no
+ *      ids, so without this the catalog falls back to "newest regulation
+ *      mark wins", which is a guess and regularly a wrong one: Bronzong's
+ *      newest print is me5-64 ("Gentle Slap"), while the card being played
+ *      is sv5-69 ("Evolution Jammer") — the board showed the wrong art and
+ *      attacks the card does not have.
+ *
+ * Names with neither signal are simply absent; callers fall back to
+ * `lookupCard`.
+ */
+function resolvePrintings(
+  normalized: BattleLogParseResult,
+): Record<string, EngineCard> {
+  // Pokémon name → every move name the log saw it use, attacks and
+  // abilities alike (the parser can now tell them apart, but a printing has
+  // to cover both to be the right card).
+  const movesByName = new Map<string, string[]>();
+  const note = (name: unknown, move: unknown) => {
+    if (typeof name !== "string" || typeof move !== "string") return;
+    const list = movesByName.get(name);
+    if (list) list.push(move);
+    else movesByName.set(name, [move]);
+  };
+  for (const a of normalized.actions) {
+    const payload = a.payload as Record<string, unknown>;
+    if (a.action_type === "attack") note(payload.attacker, payload.attack_name);
+    else if (a.action_type === "ability_used") note(payload.source, payload.ability_name);
+  }
+
+  const out: Record<string, EngineCard> = {};
+  const names = new Set<string>([
+    ...Object.keys(normalized.cardIds),
+    ...Array.from(movesByName.keys()),
+  ]);
+  names.forEach((name) => {
+    const liveId = normalized.cardIds[name];
+    const hit =
+      (liveId ? lookupPrintingByLiveId(name, liveId) : null) ??
+      lookupPrintingByMoves(name, movesByName.get(name) ?? []);
+    if (hit) out[name] = hit;
+  });
+  return out;
+}
+
 function mapPokemon(
   mon: PokemonInPlay,
-  cardIds: Record<string, string>,
+  printings: Record<string, EngineCard>,
 ): PokemonFrame {
-  // Prefer the EXACT printing the player used when the verbose export gave us
-  // its id (disambiguates same-name cards the regulation-mark heuristic can't,
-  // e.g. picking N's Reshiram me2pt5_154 over its sv9 printings). Fall back to
-  // the name-only catalog lookup for the standard export.
-  const liveId = cardIds[mon.card.name];
-  const catalog =
-    (liveId ? lookupPrintingByLiveId(mon.card.name, liveId) : null) ??
-    lookupCard(mon.card.name);
+  // Resolved once for the whole battle by `resolvePrintings` — the verbose
+  // export's card id when there is one, otherwise the printing whose moves
+  // match what the log saw this Pokémon do. Falls back to the name-only
+  // lookup when neither signal pinned it down.
+  const catalog = printings[mon.card.name] ?? lookupCard(mon.card.name);
   // Show the *exact* card in play. cardImageUrlForName escalates a name to
   // its highest evolution (great for the battle banner, wrong here) — e.g.
   // an N's Zorua basic would render as N's Zoroark ex. The engine catalog
@@ -361,7 +417,7 @@ function cardsInPlay(mon: GameState["sides"]["player"]["bench"][number]): number
 
 function mapSide(
   side: GameState["sides"]["player"],
-  cardIds: Record<string, string>,
+  printings: Record<string, EngineCard>,
   ownedStadium = 0,
 ): SideFrame {
   const outOfDeck =
@@ -375,8 +431,8 @@ function mapSide(
 
   return {
     handle: side.handle,
-    active: side.active ? mapPokemon(side.active, cardIds) : null,
-    bench: side.bench.map((mon) => mapPokemon(mon, cardIds)),
+    active: side.active ? mapPokemon(side.active, printings) : null,
+    bench: side.bench.map((mon) => mapPokemon(mon, printings)),
     hand: side.hand.map((c) => ({
       id: c.id,
       name: c.name,
@@ -415,7 +471,7 @@ function frameFromState(
   actionIndex: number,
   summary: string,
   actor: "player" | "opponent" | "system",
-  cardIds: Record<string, string>,
+  printings: Record<string, EngineCard>,
   lastPlayedTrainer: LastPlayedTrainerFrame | null = null,
   discardDraw: DiscardDrawFrame | null = null,
   mulligan: MulliganFrame | null = null,
@@ -433,12 +489,12 @@ function frameFromState(
     summary,
     player: mapSide(
       state.sides.player,
-      cardIds,
+      printings,
       state.stadium?.owner === "player" ? 1 : 0,
     ),
     opponent: mapSide(
       state.sides.opponent,
-      cardIds,
+      printings,
       state.stadium?.owner === "opponent" ? 1 : 0,
     ),
     stadium: state.stadium
@@ -543,7 +599,7 @@ export function buildReplayPayload(
   battleLogRaw: string,
   playerHandle: string,
 ): ReplayPayload {
-  const parsed = parseBattleLog(battleLogRaw);
+  const parsed = parseBattleLogWithCatalog(battleLogRaw);
   const normalized = normalizePerspective(parsed, playerHandle);
   // Resolve which same-printing duplicate each ambiguous energy attach belongs
   // to before building the board, so the rendered per-Pokémon energy reflects
@@ -581,7 +637,7 @@ export function buildReplayPayload(
   };
 
   // Frame 0 = initial state, before any action. Then one frame per action.
-  const cardIds = normalized.cardIds;
+  const printings = resolvePrintings(normalized);
   const frames: ReplayFrame[] = [];
   frames.push(
     frameFromState(
@@ -589,7 +645,7 @@ export function buildReplayPayload(
       -1,
       "Setup",
       "system",
-      cardIds,
+      printings,
       null,
       null,
       null,
@@ -651,7 +707,7 @@ export function buildReplayPayload(
           idx,
           action.raw_text,
           actor,
-          cardIds,
+          printings,
           lastPlayedTrainer,
           i < stages.length ? stages[i] : null,
           i < mulliganBeats.length ? mulliganBeats[i] : null,
