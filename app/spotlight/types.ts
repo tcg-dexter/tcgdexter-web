@@ -69,6 +69,71 @@ export const INTERACTIVE_BANNER_KEYS: SpotlightBannerItemKey[] = [
   "user_image",
 ];
 
+/** Participant-facing lifecycle for a spotlight, independent of
+ *  `is_published`. An approved spotlight is still a draft until an admin
+ *  presses Publish.
+ *
+ *  not_invited → invited → submitted → in_review → approved */
+export type SpotlightSubmissionStatus =
+  | "not_invited"
+  | "invited"
+  | "submitted"
+  | "in_review"
+  | "approved";
+
+/** Raw content the featured trainer submits via /spotlight/onboarding.
+ *  Mirrors the Trainer Spotlight prep PDF section for section.
+ *
+ *  Stored in its own jsonb column and never written directly to the
+ *  published fields — the admin copies each block across in the editor, so
+ *  the trainer's original words survive the editorial pass. Field types are
+ *  reused from the published shapes above so that copy is a straight
+ *  assignment rather than a transform. */
+export interface SpotlightSubmission {
+  /** Optional per the PDF — a slogan / tagline, if they have one. */
+  headline: string;
+  /** Freeform "take the mic" intro. Maps to the published `bio`. */
+  intro: string;
+  favorite_pokemon: SpotlightPokemonRef | null;
+  /** Max 3 each. `caption` carries the backstory the PDF asks for. */
+  collection_cards: SpotlightCardRef[];
+  play_cards: SpotlightCardRef[];
+  /** 5–8 answered questions drawn from the bank in ./questions. */
+  answers: SpotlightQA[];
+  /** Up to 3, from the trainer's own saved decks. */
+  deck_ids: string[];
+  /** Optional, from the trainer's own card lists. Captured for the admin's
+   *  reference — the published spotlight page does not render lists. */
+  list_short_ids: string[];
+  /** Raw TCG Live screenshot. Kept apart from `avatar_image_url`: the admin
+   *  cuts out the subject and uploads the processed version separately. */
+  avatar_upload_url: string | null;
+  /** Anything else they want to pass along. */
+  notes: string;
+}
+
+export const EMPTY_SPOTLIGHT_SUBMISSION: SpotlightSubmission = {
+  headline: "",
+  intro: "",
+  favorite_pokemon: null,
+  collection_cards: [],
+  play_cards: [],
+  answers: [],
+  deck_ids: [],
+  list_short_ids: [],
+  avatar_upload_url: null,
+  notes: "",
+};
+
+/** Fills in any field missing from a stored `submission` jsonb. Rows created
+ *  before this column existed default to `{}`, and a submission saved by an
+ *  older client may lack newer keys. */
+export function normalizeSubmission(
+  raw: Partial<SpotlightSubmission> | null | undefined,
+): SpotlightSubmission {
+  return { ...EMPTY_SPOTLIGHT_SUBMISSION, ...(raw ?? {}) };
+}
+
 export interface TrainerSpotlightRow {
   id: string;
   profile_id: string;
@@ -98,6 +163,15 @@ export interface TrainerSpotlightRow {
   banner_layout: SpotlightBannerLayout;
   is_published: boolean;
   published_at: string | null;
+  /** Raw participant submission — see SpotlightSubmission. `{}` until they
+   *  save anything; run it through normalizeSubmission before reading. */
+  submission: Partial<SpotlightSubmission>;
+  submission_status: SpotlightSubmissionStatus;
+  invited_at: string | null;
+  submitted_at: string | null;
+  approved_at: string | null;
+  /** Optional note the trainer left when approving the edited version. */
+  approval_note: string | null;
   created_at: string;
   updated_at: string;
 }

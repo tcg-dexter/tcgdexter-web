@@ -124,6 +124,15 @@ describe("formatNotificationMessage", () => {
     ).toBe("Someone started following you");
   });
 
+  it("renders a spotlight_invited message", () => {
+    expect(
+      formatNotificationMessage({
+        type: "spotlight_invited",
+        data: { spotlight_slug: "misty" },
+      }),
+    ).toBe("You've been invited into the Trainer Spotlight");
+  });
+
   it("has a generic fallback for unknown types", () => {
     expect(formatNotificationMessage({ type: "future_type", data: {} })).toBe(
       "You have a new notification",

@@ -49,7 +49,11 @@ function deckHeroSprite(
  * top of each notify* function; v1 is always-on (low volume).
  */
 
-export type NotificationType = "deck_liked" | "badge_unlocked" | "new_follower";
+export type NotificationType =
+  | "deck_liked"
+  | "badge_unlocked"
+  | "new_follower"
+  | "spotlight_invited";
 
 /** Shape of the `data` jsonb, discriminated by notification type. Snapshotted
  *  at write time so the feed renders without joins. */
@@ -74,6 +78,13 @@ export interface NewFollowerData {
   actor_display_name: string | null;
   actor_username: string | null;
   actor_avatar_url: string | null;
+}
+
+export interface SpotlightInvitedData {
+  /** The spotlight's slug. Not currently used for routing — the invite always
+   *  points at the onboarding form — but snapshotted so the feed could link
+   *  to the page later without a join. */
+  spotlight_slug: string;
 }
 
 export interface NotificationRow {
@@ -271,6 +282,43 @@ export async function notifyNewFollower(args: {
 }
 
 /**
+ * An admin invited a trainer to be featured in a Trainer Spotlight → notify
+ * that trainer. Actor is null: the invite comes from TCG Dexter, not from a
+ * particular person, so the feed shows a spotlight mark rather than an avatar.
+ *
+ * Fired only on the FIRST invite (the caller checks that invited_at was
+ * previously null), which is what keeps this dedup-free. The notifications
+ * dedup index treats NULLs as distinct, so an actor-less, deck-less row can't
+ * dedup on (recipient, actor, deck, type) — and making the index partial to
+ * cover this case would walk straight back into the 42P10 trap that silently
+ * broke deck_liked. Gating on "never invited before" avoids needing one at all:
+ * re-inviting after a reopen doesn't re-notify.
+ */
+export async function notifySpotlightInvited(args: {
+  recipientId: string;
+  spotlightSlug: string;
+}): Promise<void> {
+  try {
+    const admin = createAdminClient();
+
+    const data: SpotlightInvitedData = { spotlight_slug: args.spotlightSlug };
+
+    const { error } = await admin.from("notifications").insert({
+      recipient_user_id: args.recipientId,
+      actor_user_id: null,
+      type: "spotlight_invited" satisfies NotificationType,
+      saved_deck_id: null,
+      data,
+    });
+    if (error) {
+      console.error("[notify] spotlight_invited insert failed:", error);
+    }
+  } catch (err) {
+    console.error("[notify] notifySpotlightInvited threw:", err);
+  }
+}
+
+/**
  * Human-readable one-line message for a notification. Pure (no DB) so it's
  * shared by the list UI and unit tests. Renders from the snapshotted `data`.
  */
@@ -291,6 +339,9 @@ export function formatNotificationMessage(n: {
     const d = n.data as unknown as NewFollowerData;
     const who = d.actor_display_name || d.actor_username || "Someone";
     return `${who} started following you`;
+  }
+  if (n.type === "spotlight_invited") {
+    return "You've been invited into the Trainer Spotlight";
   }
   return "You have a new notification";
 }

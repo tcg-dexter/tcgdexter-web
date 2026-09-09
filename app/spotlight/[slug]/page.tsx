@@ -14,6 +14,7 @@ import { typeColor } from "@/lib/metaPrimaryCard";
 import ThemeColor from "@/app/components/ThemeColor";
 import TrackView from "@/app/components/TrackView";
 import SpotlightAdminBar from "../components/SpotlightAdminBar";
+import SpotlightApprovalBar from "../components/SpotlightApprovalBar";
 import SpotlightQAThread from "../components/SpotlightQAThread";
 import SpotlightHeader from "../components/SpotlightHeader";
 import SpotlightFavoriteCards from "../components/SpotlightFavoriteCards";
@@ -118,9 +119,10 @@ export default async function SpotlightPage({
 
   // Is the viewer an admin? Drives the floating admin action bar
   // (Edit + Publish). Anon visitors never see drafts at all — RLS on
-  // trainer_spotlights blocks the select unless is_published = true or
-  // the viewer is admin — so reaching this branch with an unpublished
-  // row implies the viewer is admin.
+  // trainer_spotlights blocks the select unless is_published = true, the
+  // viewer is admin, or the viewer is the featured trainer themselves
+  // (trainer_spotlights_subject_read), so an unpublished row here means one
+  // of the latter two.
   const supabase = await createClient();
   const {
     data: { user: viewer },
@@ -134,6 +136,16 @@ export default async function SpotlightPage({
       .maybeSingle<{ is_admin: boolean }>();
     isAdmin = !!me?.is_admin;
   }
+
+  // The featured trainer viewing their own draft. They get the approval bar
+  // instead of the admin bar — this is where they read the edited version
+  // and sign off on it.
+  const isSubject = !!viewer && viewer.id === spotlight.profile_id;
+  const showApproval =
+    isSubject &&
+    !spotlight.is_published &&
+    (spotlight.submission_status === "in_review" ||
+      spotlight.submission_status === "approved");
 
   // Banner accent colors — one per favorite slot, ordered Pokémon →
   // collection (first card) → play (first card). Resolved from the
@@ -211,7 +223,15 @@ export default async function SpotlightPage({
         // happen from the /admin/spotlight UI instead. The pill stays
         // on drafts where Reset / Edit / Publish are still relevant.
         headerAction={
-          isAdmin && !spotlight.is_published ? (
+          showApproval ? (
+            <SpotlightApprovalBar
+              status={
+                spotlight.submission_status === "approved"
+                  ? "approved"
+                  : "in_review"
+              }
+            />
+          ) : isAdmin && !spotlight.is_published ? (
             <SpotlightAdminBar
               spotlightId={spotlight.id}
               slug={spotlight.slug}

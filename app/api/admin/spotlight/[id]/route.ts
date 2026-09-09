@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { cleanCardRefs, cleanQA } from "@/lib/spotlight/validate";
+import type { SpotlightSubmissionStatus } from "@/app/spotlight/types";
+import { notifySpotlightInvited } from "@/lib/notifications/notify";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -70,28 +73,8 @@ export async function PATCH(
           { status: 400 },
         );
       }
-      // Whitelist shape — defends against an admin pasting an unrelated
-      // object into one of these slots. Each entry must look like
-      // SpotlightCardRef. Caption is optional and trimmed; empty string
-      // collapses to null so the page's "render only when present"
-      // check stays simple.
-      const cleaned = (arr as unknown[]).map((raw) => {
-        const r = raw as {
-          set_id?: unknown;
-          number?: unknown;
-          name?: unknown;
-          caption?: unknown;
-        };
-        const captionStr =
-          typeof r.caption === "string" ? r.caption.trim() : "";
-        return {
-          set_id: typeof r.set_id === "string" ? r.set_id : "",
-          number: typeof r.number === "string" ? r.number : "",
-          name: typeof r.name === "string" ? r.name : "",
-          caption: captionStr ? captionStr.slice(0, 280) : null,
-        };
-      });
-      update[key] = cleaned;
+      // Reduced to the known SpotlightCardRef keys — see cleanCardRefs.
+      update[key] = cleanCardRefs(arr as unknown[]);
     }
   }
   if (Array.isArray(body.featured_deck_ids)) {
@@ -121,10 +104,7 @@ export async function PATCH(
     update.featured_deck_ids = ids;
   }
   if (Array.isArray(body.qa)) {
-    update.qa = (body.qa as Array<{ q?: unknown; a?: unknown }>).map((item) => ({
-      q: typeof item.q === "string" ? item.q : "",
-      a: typeof item.a === "string" ? item.a : "",
-    }));
+    update.qa = cleanQA(body.qa as unknown[]);
   }
   if (body.banner_layout && typeof body.banner_layout === "object") {
     // Read current layout and merge so a partial update (one item at
@@ -193,6 +173,52 @@ export async function PATCH(
     };
     update.avatar_image_position = { x: clamp(pos.x), y: clamp(pos.y) };
   }
+  // Set when this PATCH is the trainer's first-ever invite, so the
+  // notification fires only after the row actually updates.
+  let notifyOnFirstInvite = false;
+
+  // Participant lifecycle. Admins drive every transition except the two the
+  // participant makes themselves (submitted, approved) via
+  // /api/spotlight/onboarding. Transitions are whitelisted rather than free
+  // assignment so a stale editor tab can't walk the state backwards past an
+  // approval the trainer already gave.
+  if (typeof body.submission_status === "string") {
+    const next = body.submission_status as SpotlightSubmissionStatus;
+    const { data: current } = await supabase
+      .from("trainer_spotlights")
+      .select("submission_status, invited_at")
+      .eq("id", id)
+      .maybeSingle<{
+        submission_status: SpotlightSubmissionStatus;
+        invited_at: string | null;
+      }>();
+    const from = current?.submission_status ?? "not_invited";
+    const ALLOWED: Record<SpotlightSubmissionStatus, SpotlightSubmissionStatus[]> = {
+      not_invited: ["invited"],
+      // Reopening from "invited" is a no-op but harmless; listing it keeps the
+      // admin's Reopen button idempotent.
+      invited: ["invited", "not_invited"],
+      submitted: ["in_review", "invited"],
+      in_review: ["approved", "invited"],
+      // An approved spotlight can still be reopened if it needs another round.
+      approved: ["invited", "in_review"],
+    };
+    if (!ALLOWED[from]?.includes(next)) {
+      return NextResponse.json(
+        { error: `Cannot move a spotlight from ${from} to ${next}` },
+        { status: 400 },
+      );
+    }
+    update.submission_status = next;
+    // First invite stamps invited_at; re-inviting preserves the original.
+    // That stamp is also what gates the invite notification below, so a
+    // reopen never re-notifies.
+    if (next === "invited" && !current?.invited_at) {
+      update.invited_at = new Date().toISOString();
+      notifyOnFirstInvite = true;
+    }
+  }
+
   if (typeof body.is_published === "boolean") {
     update.is_published = body.is_published;
     // First publish sets published_at; subsequent toggles preserve it.
@@ -208,13 +234,26 @@ export async function PATCH(
     }
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("trainer_spotlights")
     .update(update)
-    .eq("id", id);
+    .eq("id", id)
+    .select("profile_id, slug")
+    .maybeSingle<{ profile_id: string; slug: string }>();
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Fire-and-forget, after the write lands — an invite the trainer was never
+  // told about is the whole problem this solves, but a notification failure
+  // must not fail the admin's save.
+  if (notifyOnFirstInvite && updated) {
+    await notifySpotlightInvited({
+      recipientId: updated.profile_id,
+      spotlightSlug: updated.slug,
+    });
+  }
+
   return NextResponse.json({ ok: true });
 }
 

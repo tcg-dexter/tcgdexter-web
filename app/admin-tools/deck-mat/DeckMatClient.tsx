@@ -1418,14 +1418,18 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                 jump since the two have different structures/heights. */}
             <AnimatePresence mode="wait">
             {sleevePanelOpen ? (
-              /* Sleeve picker: fixed 4x3 grid, card-shaped (2.5:3.5) swatches
-                 instead of circles, across two pages (dots below). Page 1 —
-                 solid black, then the 11 energy colors (Colorless renders as
-                 white — its actual hex is a light gray that reads poorly as
-                 a sleeve). Page 2 — the same 11 colors as two-tone gradients
-                 (each blending into the next), plus the mat's own brand
-                 gradient as a 12th. There's no separate "no sleeve" cell —
-                 tapping the already-equipped swatch again clears it. */
+              /* Sleeve picker. Desktop: fixed 4x3 grid, card-shaped
+                 (2.5:3.5) swatches instead of circles, across two pages
+                 (dots below). Mobile: the same swatches (no pages) as one
+                 continuous horizontal scroll instead — the mat's short
+                 height on a narrow viewport left a 3-row grid with barely
+                 any room per swatch, where a single row can use the box's
+                 full height. Both: solid black, then the 11 energy colors
+                 (Colorless renders as white — its actual hex is a light
+                 gray that reads poorly as a sleeve), then the same 11 as
+                 two-tone gradients (each blending into the next) plus the
+                 mat's own brand gradient. There's no separate "no sleeve"
+                 cell — tapping the already-equipped swatch again clears it. */
               <motion.div
                 key="sleeve"
                 initial={{ opacity: 0, scale: 0.96 }}
@@ -1434,94 +1438,160 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                 transition={{ duration: 0.18 }}
                 className="h-full flex flex-col gap-1.5"
               >
-                <div className="flex-1 min-h-0 grid grid-cols-4 gap-1.5" style={{ gridAutoRows: "1fr" }}>
-                  {sleevePage === 0 ? (
-                    <>
-                      <div className="flex items-center justify-center">
+                {isDesktop ? (
+                  <>
+                    <div className="flex-1 min-h-0 grid grid-cols-4 gap-1.5" style={{ gridAutoRows: "1fr" }}>
+                      {sleevePage === 0 ? (
+                        <>
+                          <div className="flex items-center justify-center">
+                            <button
+                              type="button"
+                              onClick={() => chooseSleeve(SLEEVE_BLACK)}
+                              aria-label="Black"
+                              className={`aspect-[2.5/3.5] h-[85%] transition-all ${
+                                sleeveColor === SLEEVE_BLACK
+                                  ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
+                                  : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                              }`}
+                              style={{ background: SLEEVE_BLACK }}
+                            />
+                          </div>
+                          {SLEEVE_COLOR_KEYS.map((key) => {
+                            const bg = key === "Colorless" ? SLEEVE_WHITE : ENERGY_HEX[key];
+                            return (
+                              <div key={key} className="flex items-center justify-center">
+                                <button
+                                  type="button"
+                                  onClick={() => chooseSleeve(bg)}
+                                  aria-label={key === "Colorless" ? "White" : key}
+                                  className={`aspect-[2.5/3.5] h-[85%] transition-all ${
+                                    sleeveColor === bg
+                                      ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
+                                      : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                                  }`}
+                                  style={{ background: bg }}
+                                />
+                              </div>
+                            );
+                          })}
+                        </>
+                      ) : (
+                        <>
+                          {SLEEVE_COLOR_KEYS.map((key) => {
+                            const bg = sleeveGradientFor(key);
+                            return (
+                              <div key={key} className="flex items-center justify-center">
+                                <button
+                                  type="button"
+                                  onClick={() => chooseSleeve(bg)}
+                                  aria-label={`${key} gradient`}
+                                  className={`aspect-[2.5/3.5] h-[85%] transition-all ${
+                                    sleeveColor === bg
+                                      ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
+                                      : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                                  }`}
+                                  style={{ background: bg }}
+                                />
+                              </div>
+                            );
+                          })}
+                          <div className="flex items-center justify-center">
+                            <button
+                              type="button"
+                              onClick={() => chooseSleeve(SLEEVE_BRAND_GRADIENT)}
+                              aria-label="Brand gradient"
+                              className={`aspect-[2.5/3.5] h-[85%] transition-all ${
+                                sleeveColor === SLEEVE_BRAND_GRADIENT
+                                  ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
+                                  : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                              }`}
+                              style={{ background: SLEEVE_BRAND_GRADIENT }}
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Page dots — same treatment as the meta-deck-list carousel's. */}
+                    <div className="flex-none flex items-center justify-center gap-1.5">
+                      {[0, 1].map((page) => (
                         <button
+                          key={page}
                           type="button"
-                          onClick={() => chooseSleeve(SLEEVE_BLACK)}
-                          aria-label="Black"
-                          className={`aspect-[2.5/3.5] h-[85%] transition-all ${
-                            sleeveColor === SLEEVE_BLACK
-                              ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
-                              : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                          onClick={() => setSleevePage(page as 0 | 1)}
+                          aria-label={`Sleeve page ${page + 1}`}
+                          className={`h-1.5 rounded-full transition-all ${
+                            page === sleevePage
+                              ? "w-1.5 bg-black dark:bg-white"
+                              : "w-6 bg-black/70 dark:bg-white/70 hover:bg-black/85 dark:hover:bg-white/85"
                           }`}
-                          style={{ background: SLEEVE_BLACK }}
                         />
-                      </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="h-full overflow-x-auto overscroll-x-contain no-scrollbar">
+                    <div className="h-full flex items-stretch gap-1.5 w-fit">
+                      <button
+                        type="button"
+                        onClick={() => chooseSleeve(SLEEVE_BLACK)}
+                        aria-label="Black"
+                        className={`h-full aspect-[2.5/3.5] shrink-0 transition-all ${
+                          sleeveColor === SLEEVE_BLACK
+                            ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
+                            : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                        }`}
+                        style={{ background: SLEEVE_BLACK }}
+                      />
                       {SLEEVE_COLOR_KEYS.map((key) => {
                         const bg = key === "Colorless" ? SLEEVE_WHITE : ENERGY_HEX[key];
                         return (
-                          <div key={key} className="flex items-center justify-center">
-                            <button
-                              type="button"
-                              onClick={() => chooseSleeve(bg)}
-                              aria-label={key === "Colorless" ? "White" : key}
-                              className={`aspect-[2.5/3.5] h-[85%] transition-all ${
-                                sleeveColor === bg
-                                  ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
-                                  : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
-                              }`}
-                              style={{ background: bg }}
-                            />
-                          </div>
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => chooseSleeve(bg)}
+                            aria-label={key === "Colorless" ? "White" : key}
+                            className={`h-full aspect-[2.5/3.5] shrink-0 transition-all ${
+                              sleeveColor === bg
+                                ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
+                                : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                            }`}
+                            style={{ background: bg }}
+                          />
                         );
                       })}
-                    </>
-                  ) : (
-                    <>
+                      <div className="h-full w-px shrink-0 bg-black/10 dark:bg-white/10" aria-hidden />
                       {SLEEVE_COLOR_KEYS.map((key) => {
                         const bg = sleeveGradientFor(key);
                         return (
-                          <div key={key} className="flex items-center justify-center">
-                            <button
-                              type="button"
-                              onClick={() => chooseSleeve(bg)}
-                              aria-label={`${key} gradient`}
-                              className={`aspect-[2.5/3.5] h-[85%] transition-all ${
-                                sleeveColor === bg
-                                  ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
-                                  : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
-                              }`}
-                              style={{ background: bg }}
-                            />
-                          </div>
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => chooseSleeve(bg)}
+                            aria-label={`${key} gradient`}
+                            className={`h-full aspect-[2.5/3.5] shrink-0 transition-all ${
+                              sleeveColor === bg
+                                ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
+                                : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                            }`}
+                            style={{ background: bg }}
+                          />
                         );
                       })}
-                      <div className="flex items-center justify-center">
-                        <button
-                          type="button"
-                          onClick={() => chooseSleeve(SLEEVE_BRAND_GRADIENT)}
-                          aria-label="Brand gradient"
-                          className={`aspect-[2.5/3.5] h-[85%] transition-all ${
-                            sleeveColor === SLEEVE_BRAND_GRADIENT
-                              ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
-                              : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
-                          }`}
-                          style={{ background: SLEEVE_BRAND_GRADIENT }}
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Page dots — same treatment as the meta-deck-list carousel's. */}
-                <div className="flex-none flex items-center justify-center gap-1.5">
-                  {[0, 1].map((page) => (
-                    <button
-                      key={page}
-                      type="button"
-                      onClick={() => setSleevePage(page as 0 | 1)}
-                      aria-label={`Sleeve page ${page + 1}`}
-                      className={`h-1.5 rounded-full transition-all ${
-                        page === sleevePage
-                          ? "w-1.5 bg-black dark:bg-white"
-                          : "w-6 bg-black/70 dark:bg-white/70 hover:bg-black/85 dark:hover:bg-white/85"
-                      }`}
-                    />
-                  ))}
-                </div>
+                      <button
+                        type="button"
+                        onClick={() => chooseSleeve(SLEEVE_BRAND_GRADIENT)}
+                        aria-label="Brand gradient"
+                        className={`h-full aspect-[2.5/3.5] shrink-0 transition-all ${
+                          sleeveColor === SLEEVE_BRAND_GRADIENT
+                            ? "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-105"
+                            : "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]"
+                        }`}
+                        style={{ background: SLEEVE_BRAND_GRADIENT }}
+                      />
+                    </div>
+                  </div>
+                )}
               </motion.div>
             ) : (
               <motion.div
