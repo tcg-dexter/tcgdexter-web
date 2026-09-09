@@ -107,6 +107,22 @@ function NotificationIcon({ n }: { n: NotificationRow }) {
       </span>
     );
   }
+  if (n.type === "spotlight_invited") {
+    // No actor and no deck — the invite comes from TCG Dexter itself, so the
+    // mark is the site gradient rather than somebody's avatar.
+    return (
+      <span className="shrink-0 w-10 h-10 rounded-full gradient-brand inline-flex items-center justify-center">
+        <svg
+          viewBox="0 0 24 24"
+          className="w-5 h-5 text-white"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path d="M12 2l2.4 6.2L21 10l-5.2 4 1.6 7-5.4-3.6L6.6 21l1.6-7L3 10l6.6-1.8z" />
+        </svg>
+      </span>
+    );
+  }
   if (n.type === "badge_unlocked") {
     const d = n.data as unknown as BadgeUnlockedData;
     return (
@@ -161,6 +177,11 @@ function notificationHref(
   if (n.type === "new_follower") {
     const d = n.data as unknown as NewFollowerData;
     return d.actor_username ? `/u/${d.actor_username}` : null;
+  }
+  if (n.type === "spotlight_invited") {
+    // Always the form, not the spotlight page — at invite time there is
+    // nothing published to look at yet.
+    return "/spotlight/onboarding";
   }
   return null;
 }

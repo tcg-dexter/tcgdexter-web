@@ -63,6 +63,40 @@ export async function POST(req: Request) {
     }
   }
 
+  // Trainer Spotlight storage — the banner image the admin uploaded and the
+  // raw TCG Live screenshot the trainer submitted both live under
+  // `spotlights/{spotlight_id}/`, keyed by spotlight rather than by user, so
+  // the `{user_id}/` sweep above doesn't reach them. The row itself cascades
+  // on profiles delete and is also deleted explicitly below; these objects
+  // would otherwise be orphaned in the bucket. Best-effort, like the avatars.
+  const { data: ownSpotlight } = await admin
+    .from("trainer_spotlights")
+    .select("id")
+    .eq("profile_id", userId)
+    .maybeSingle<{ id: string }>();
+  if (ownSpotlight) {
+    const prefix = `spotlights/${ownSpotlight.id}`;
+    const { data: spotlightFiles, error: spotlightListError } =
+      await admin.storage.from("avatars").list(prefix);
+    if (spotlightListError) {
+      console.error(
+        "[account-delete] failed to list spotlight files:",
+        spotlightListError,
+      );
+    } else if (spotlightFiles && spotlightFiles.length > 0) {
+      const paths = spotlightFiles.map((f) => `${prefix}/${f.name}`);
+      const { error: removeSpotlightError } = await admin.storage
+        .from("avatars")
+        .remove(paths);
+      if (removeSpotlightError) {
+        console.error(
+          "[account-delete] failed to remove spotlight objects:",
+          removeSpotlightError,
+        );
+      }
+    }
+  }
+
   // Explicit row deletes, child-before-parent. Nothing irreversible has
   // happened yet at this point, so any failure here is safe to report and
   // let the user retry.
@@ -147,6 +181,17 @@ export async function POST(req: Request) {
     {
       label: "price_alerts",
       run: () => admin.from("price_alerts").delete().eq("user_id", userId),
+    },
+    // Trainer Spotlight: the published feature plus everything the trainer
+    // submitted through the onboarding form (their intro, interview answers,
+    // favorite cards and the link to their uploaded screenshot all live in
+    // this row's `submission` column). The FK to profiles does cascade, but
+    // this route deletes explicitly by policy — and this way the content is
+    // gone even if the profile delete below fails and the user retries.
+    {
+      label: "trainer_spotlights",
+      run: () =>
+        admin.from("trainer_spotlights").delete().eq("profile_id", userId),
     },
   ];
 

@@ -6,7 +6,7 @@ export const metadata = {
   description: "How TCG Dexter collects, uses, and protects your information.",
 };
 
-const LAST_UPDATED = "August 25, 2026";
+const LAST_UPDATED = "September 9, 2026";
 
 export default function PrivacyPolicyPage() {
   return (
@@ -53,12 +53,29 @@ export default function PrivacyPolicyPage() {
           the relationship.
         </p>
         <p>
+          <strong className="text-text-primary">
+            Trainer Spotlight submissions.
+          </strong>{" "}
+          Trainer Spotlight is an editorial feature in which we highlight a
+          community player. If we invite you and you choose to take part, we
+          collect what you fill in on the onboarding form: a short
+          introduction, an optional headline, your answers to the interview
+          questions you pick, your favorite cards and the stories you tell
+          about them, which of your saved decks and card lists you&rsquo;d
+          like featured, and a screenshot of your Pokémon TCG Live avatar
+          that you upload. Taking part is entirely voluntary, and this
+          content is collected specifically so it can be published on the
+          site — see &ldquo;Trainer Spotlight&rdquo; below for how it is
+          edited, published, and removed.
+        </p>
+        <p>
           <strong className="text-text-primary">In-app notifications.</strong>{" "}
           To power the notification bell, we record activity directed at you —
           for example when another signed-in user likes one of your public
-          decks (storing who liked it and which deck), follows you, or when you
-          earn a badge. These are visible only to you and are deleted when you
-          delete your account.
+          decks (storing who liked it and which deck), follows you, when you
+          earn a badge, or when we invite you into a Trainer Spotlight. These
+          are visible only to you and are deleted when you delete your
+          account.
         </p>
         <p>
           <strong className="text-text-primary">Usage and cookie data.</strong>{" "}
@@ -75,6 +92,7 @@ export default function PrivacyPolicyPage() {
           <li>Keep your account secure and let you sign back in.</li>
           <li>Send optional reminder emails — for example when your match-logging streak is about to lapse or you&rsquo;re close to earning a badge. You can turn these off anytime in Settings or via the unsubscribe link in any such email.</li>
           <li>Understand overall usage patterns so we can improve the site.</li>
+          <li>Edit and publish a Trainer Spotlight, if you accept an invitation to be featured in one.</li>
           <li>Respond to support requests sent to feedback@tcgdexter.com.</li>
         </ul>
         <p>We do not sell your personal information, and we do not use it for third-party advertising.</p>
@@ -117,6 +135,15 @@ export default function PrivacyPolicyPage() {
             <Link href="/settings">Settings</Link> removes it from those
             listings.
           </li>
+          <li>
+            <strong className="text-text-primary">
+              A published Trainer Spotlight.
+            </strong>{" "}
+            A spotlight is public by design once published, and we also use it
+            to promote the feature off-site — including graphics we generate
+            from it (your name, handle, headline, avatar image and featured
+            cards) and post to TCG Dexter&rsquo;s social channels. See below.
+          </li>
           <li>If required by law, or to protect the rights, safety, or property of TCG Dexter or our users.</li>
         </ul>
       </LegalSection>
@@ -156,6 +183,13 @@ export default function PrivacyPolicyPage() {
           information within a reasonable time, except where we need to
           keep limited records to comply with law or resolve disputes.
         </p>
+        <p>
+          A published Trainer Spotlight is removed along with everything else
+          when you delete your account, including the submission you filled in
+          and the images uploaded for it. See &ldquo;Trainer Spotlight&rdquo;
+          below for the one limit on that — copies already made by other
+          people are outside our reach.
+        </p>
       </LegalSection>
 
       <LegalSection heading="Your Rights & Choices">
@@ -188,6 +222,54 @@ export default function PrivacyPolicyPage() {
           perfect security, so please use a unique, secure email account
           and let us know right away if you suspect unauthorized access to
           your account.
+        </p>
+      </LegalSection>
+
+      <LegalSection heading="Trainer Spotlight">
+        <p>
+          If you accept an invitation to be featured, here is exactly how your
+          submission is handled.
+        </p>
+        <p>
+          <strong className="text-text-primary">Editing and approval.</strong>{" "}
+          What you submit is stored separately from the version we publish. We
+          write the published spotlight from your answers, and your original
+          submission is kept alongside it rather than overwritten. Before
+          anything goes live you get to read the edited version and approve
+          it, and you can ask for another pass instead. Nothing is published
+          without that approval, and being invited never obliges you to take
+          part — you can simply not fill the form in, or tell us you&rsquo;d
+          rather not be featured.
+        </p>
+        <p>
+          <strong className="text-text-primary">Who can see it.</strong>{" "}
+          While it is a draft, your submission is visible only to you and to
+          TCG Dexter administrators. Once published, the spotlight page is
+          public to anyone, whether or not your profile is set to public, and
+          search engines may index it. Your uploaded TCG Live screenshot is
+          stored in our file storage at an unguessable address; the processed
+          version of it appears on the published page.
+        </p>
+        <p>
+          <strong className="text-text-primary">Promotion.</strong>{" "}
+          We create promotional graphics from published spotlights — typically
+          your display name, handle, headline, avatar image and featured cards
+          — and post them to TCG Dexter&rsquo;s social media channels to point
+          people at the feature.
+        </p>
+        <p>
+          <strong className="text-text-primary">
+            Removal and account deletion.
+          </strong>{" "}
+          Deleting your account removes your spotlight — the published page,
+          your original submission, and the images uploaded for it — along
+          with the rest of your data. You can also ask us to unpublish or
+          delete a spotlight at any time without deleting your account, by
+          emailing{" "}
+          <a href="mailto:feedback@tcgdexter.com">feedback@tcgdexter.com</a>.
+          One honest limit: we can remove the page and our own social posts,
+          but we can&rsquo;t claw back copies other people have already made
+          — reposts, screenshots, or search-engine and archive caches.
         </p>
       </LegalSection>
 

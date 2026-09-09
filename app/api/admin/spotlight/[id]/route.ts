@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { cleanCardRefs, cleanQA } from "@/lib/spotlight/validate";
 import type { SpotlightSubmissionStatus } from "@/app/spotlight/types";
+import { notifySpotlightInvited } from "@/lib/notifications/notify";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -172,6 +173,10 @@ export async function PATCH(
     };
     update.avatar_image_position = { x: clamp(pos.x), y: clamp(pos.y) };
   }
+  // Set when this PATCH is the trainer's first-ever invite, so the
+  // notification fires only after the row actually updates.
+  let notifyOnFirstInvite = false;
+
   // Participant lifecycle. Admins drive every transition except the two the
   // participant makes themselves (submitted, approved) via
   // /api/spotlight/onboarding. Transitions are whitelisted rather than free
@@ -206,8 +211,11 @@ export async function PATCH(
     }
     update.submission_status = next;
     // First invite stamps invited_at; re-inviting preserves the original.
+    // That stamp is also what gates the invite notification below, so a
+    // reopen never re-notifies.
     if (next === "invited" && !current?.invited_at) {
       update.invited_at = new Date().toISOString();
+      notifyOnFirstInvite = true;
     }
   }
 
@@ -226,13 +234,26 @@ export async function PATCH(
     }
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("trainer_spotlights")
     .update(update)
-    .eq("id", id);
+    .eq("id", id)
+    .select("profile_id, slug")
+    .maybeSingle<{ profile_id: string; slug: string }>();
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Fire-and-forget, after the write lands — an invite the trainer was never
+  // told about is the whole problem this solves, but a notification failure
+  // must not fail the admin's save.
+  if (notifyOnFirstInvite && updated) {
+    await notifySpotlightInvited({
+      recipientId: updated.profile_id,
+      spotlightSlug: updated.slug,
+    });
+  }
+
   return NextResponse.json({ ok: true });
 }
 
