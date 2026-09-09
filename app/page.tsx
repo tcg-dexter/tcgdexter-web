@@ -180,6 +180,39 @@ async function loadCurrentSpotlight(): Promise<CurrentSpotlight | null> {
   }
 }
 
+/** An open Trainer Spotlight invitation for the signed-in viewer, surfaced
+ *  as a prompt at the top of the home page. Null for everyone else, which is
+ *  almost everyone — the query is a single indexed lookup by profile_id. */
+async function loadSpotlightInvite(): Promise<{
+  slug: string;
+  status: "invited" | "submitted" | "in_review";
+} | null> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
+    const { data } = await supabase
+      .from("trainer_spotlights")
+      .select("slug, submission_status")
+      .eq("profile_id", user.id)
+      .maybeSingle<{ slug: string; submission_status: string }>();
+    if (!data) return null;
+    if (
+      data.submission_status !== "invited" &&
+      data.submission_status !== "submitted" &&
+      data.submission_status !== "in_review"
+    ) {
+      return null;
+    }
+    return { slug: data.slug, status: data.submission_status };
+  } catch (err) {
+    console.error("[home/spotlight-invite] failed:", err);
+    return null;
+  }
+}
+
 /** Cards in the home page's Recent Battles grid. */
 const HOME_RECENT_BATTLES = 6;
 
@@ -188,11 +221,13 @@ export default async function DeckProfilerPage() {
   // all of it (FEATURED_BATTLE_POOL must match what /battles loads, or the
   // two pages would feature different battles), while the Recent Battles
   // grid below shows only the newest few.
-  const [stats, battlePool, currentSpotlight] = await Promise.all([
-    loadStats(),
-    loadRecentBattles(FEATURED_BATTLE_POOL),
-    loadCurrentSpotlight(),
-  ]);
+  const [stats, battlePool, currentSpotlight, spotlightInvite] =
+    await Promise.all([
+      loadStats(),
+      loadRecentBattles(FEATURED_BATTLE_POOL),
+      loadCurrentSpotlight(),
+      loadSpotlightInvite(),
+    ]);
   // Recent Battles is a replay-first showcase — a manually-logged result
   // with no parsed battle log has nothing to show there, so it's filtered
   // out here rather than upstream: pickFeaturedBattle below still needs the
@@ -214,6 +249,7 @@ export default async function DeckProfilerPage() {
       featuredBattle={featuredBattle}
       featuredBattleStats={featuredBattleStats}
       currentSpotlight={currentSpotlight}
+      spotlightInvite={spotlightInvite}
       showcaseTiles={showcaseTiles}
       cardCatalogTopCards={cardCatalogPreview.topCards}
       cardCatalogFeatured={cardCatalogPreview.featuredCard}

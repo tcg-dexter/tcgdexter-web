@@ -8,6 +8,8 @@ import type {
   SpotlightPokemonRef,
   SpotlightQA,
 } from "@/app/spotlight/types";
+import { normalizeSubmission } from "@/app/spotlight/types";
+import SubmissionPanel from "./SubmissionPanel";
 import PokemonNamePicker from "./PokemonNamePicker";
 import CardSearchPicker from "./CardSearchPicker";
 import AvatarImageUploader from "./AvatarImageUploader";
@@ -20,9 +22,16 @@ interface DeckOption {
 interface Props {
   spotlight: TrainerSpotlightRow;
   deckOptions: DeckOption[];
+  /** The featured trainer's handle — used to link their card lists and to
+   *  tell the admin who to send the onboarding link to. */
+  username: string | null;
 }
 
-export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
+export default function EditSpotlightForm({
+  spotlight,
+  deckOptions,
+  username,
+}: Props) {
   const router = useRouter();
   const [slug, setSlug] = useState(spotlight.slug);
   const [headline, setHeadline] = useState(spotlight.headline ?? "");
@@ -112,8 +121,45 @@ export default function EditSpotlightForm({ spotlight, deckOptions }: Props) {
     }
   }
 
+  const submission = normalizeSubmission(spotlight.submission);
+  const deckNames = Object.fromEntries(
+    deckOptions.map((d) => [d.id, d.name]),
+  ) as Record<string, string>;
+
+  /** Fill three deck <select>s from a list of ids, padding to length 3 the
+   *  same way the initial state does. */
+  function applyDeckIds(ids: string[]) {
+    const padded = [...ids];
+    while (padded.length < 3) padded.push("");
+    setDeckIds(padded.slice(0, 3));
+  }
+
   return (
     <div className="space-y-6">
+      {/* Trainer submission — what they filled in at /spotlight/onboarding,
+          plus the invite / approval controls. Sits above Basics because the
+          editorial pass starts from their words. */}
+      <SubmissionPanel
+        spotlightId={spotlight.id}
+        username={username}
+        status={spotlight.submission_status}
+        submission={submission}
+        submittedAt={spotlight.submitted_at}
+        approvedAt={spotlight.approved_at}
+        approvalNote={spotlight.approval_note}
+        deckNames={deckNames}
+        onStatusChange={() => setSavedAt(null)}
+        copy={{
+          setHeadline,
+          setBio,
+          setFavoritePokemon,
+          setCollectionCards: setFavoriteCollection,
+          setPlayCards: setFavoriteFormat,
+          setQa,
+          setDeckIds: applyDeckIds,
+        }}
+      />
+
       {/* Basics */}
       <section className="rounded-2xl bg-white dark:bg-surface-elevated border border-black/8 dark:border-white/10 shadow-sm p-5 space-y-4">
         <Field label="Slug">

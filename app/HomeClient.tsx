@@ -159,6 +159,7 @@ export default function HomeClient({
   featuredBattle = null,
   featuredBattleStats = null,
   currentSpotlight = null,
+  spotlightInvite = null,
   showcaseTiles = [],
   cardCatalogTopCards = [],
   cardCatalogFeatured = null,
@@ -170,6 +171,12 @@ export default function HomeClient({
   featuredBattle?: RecentBattle | null;
   featuredBattleStats?: BattleSideStatsPair | null;
   currentSpotlight?: CurrentSpotlight | null;
+  /** Set only for a trainer with an open Trainer Spotlight invitation —
+   *  their prompt to go fill in (or approve) their spotlight. */
+  spotlightInvite?: {
+    slug: string;
+    status: "invited" | "submitted" | "in_review";
+  } | null;
   showcaseTiles?: ResolvedDeckTile[];
   cardCatalogTopCards?: CardIndexEntry[];
   cardCatalogFeatured?: { card: CardIndexEntry; raw: RawCard } | null;
@@ -272,6 +279,46 @@ export default function HomeClient({
           <p className="text-sm font-semibold text-text-secondary">
             Adding your deck to your collection…
           </p>
+        </div>
+      )}
+
+      {/* Trainer Spotlight invitation — only ever rendered for the one
+          trainer being featured. Sits above the hero because it's a direct
+          ask of them, and it's easy to miss otherwise. */}
+      {spotlightInvite && (
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-4">
+          <div className="rounded-2xl border border-accent/30 bg-accent/5 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="text-left">
+              <p className="text-sm font-semibold text-text-primary">
+                {spotlightInvite.status === "in_review"
+                  ? "Your Trainer Spotlight is ready for your approval"
+                  : spotlightInvite.status === "submitted"
+                    ? "Thanks for your Trainer Spotlight submission"
+                    : "You've been invited to a Trainer Spotlight"}
+              </p>
+              <p className="text-xs text-text-secondary mt-0.5">
+                {spotlightInvite.status === "in_review"
+                  ? "Give the edited version a read and sign off on it."
+                  : spotlightInvite.status === "submitted"
+                    ? "You can still make changes until the editing pass starts."
+                    : "Tell us about yourself and your favorite cards."}
+              </p>
+            </div>
+            <Link
+              href={
+                spotlightInvite.status === "in_review"
+                  ? `/spotlight/${spotlightInvite.slug}`
+                  : "/spotlight/onboarding"
+              }
+              className="text-xs font-semibold px-3 py-1.5 rounded-full gradient-brand shadow-sm hover:opacity-95 shrink-0"
+            >
+              {spotlightInvite.status === "in_review"
+                ? "Review it"
+                : spotlightInvite.status === "submitted"
+                  ? "View your answers"
+                  : "Get started"}
+            </Link>
+          </div>
         </div>
       )}
 

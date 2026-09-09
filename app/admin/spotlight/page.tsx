@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { TrainerSpotlightRow } from "@/app/spotlight/types";
+import { SUBMISSION_STATUS_META } from "@/app/spotlight/statusMeta";
 import NewSpotlightForm from "./NewSpotlightForm";
 
 export const metadata: Metadata = {
@@ -90,6 +91,17 @@ export default async function AdminSpotlightList() {
                         <span className="text-text-muted">Draft</span>
                       )}
                     </div>
+                    {/* Where the trainer is in the onboarding flow — the
+                        pipeline at a glance, independent of publish state. */}
+                    {r.submission_status !== "not_invited" && (
+                      <span
+                        className={`mt-1.5 inline-block text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                          SUBMISSION_STATUS_META[r.submission_status].pill
+                        }`}
+                      >
+                        {SUBMISSION_STATUS_META[r.submission_status].label}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {r.is_published && (

@@ -25,6 +25,10 @@ interface SlotDef {
 
 interface Props {
   slots: SlotDef[];
+  /** Search endpoint. Defaults to the admin route; the participant-facing
+   *  onboarding form passes its own equivalent, which is gated on holding a
+   *  spotlight invitation rather than on is_admin. */
+  searchEndpoint?: string;
 }
 
 /**
@@ -34,7 +38,10 @@ interface Props {
  * that exact (set_id, number). Selected cards display above the search
  * as small chips with per-card remove.
  */
-export default function CardSearchPicker({ slots }: Props) {
+export default function CardSearchPicker({
+  slots,
+  searchEndpoint = "/api/admin/spotlight/card-search",
+}: Props) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<CardResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -54,7 +61,7 @@ export default function CardSearchPicker({ slots }: Props) {
     debounceRef.current = setTimeout(async () => {
       try {
         const res = await fetch(
-          `/api/admin/spotlight/card-search?q=${encodeURIComponent(val)}`,
+          `${searchEndpoint}?q=${encodeURIComponent(val)}`,
         );
         const json = await res.json();
         if (!res.ok) throw new Error(json.error ?? "Search failed");
@@ -70,7 +77,7 @@ export default function CardSearchPicker({ slots }: Props) {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query]);
+  }, [query, searchEndpoint]);
 
   function addToSlot(slot: SlotDef, card: CardResult) {
     if (slot.cards.length >= slot.max) return;

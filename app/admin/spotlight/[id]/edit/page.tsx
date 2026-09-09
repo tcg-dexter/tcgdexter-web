@@ -61,6 +61,7 @@ export default async function EditSpotlight({
         <EditSpotlightForm
           spotlight={spotlight}
           deckOptions={(decks ?? []) as DeckOption[]}
+          username={profile?.username ?? null}
         />
       </div>
     </main>
