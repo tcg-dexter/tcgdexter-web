@@ -333,9 +333,9 @@ const SET_LOGO_EXAMPLES: { src: string | null; ptcgoCode: string | null; setName
 // back to a clean "No image" placeholder card (name/set/number) when a src
 // is empty, so this needs no external image URLs.
 const PLAYMAT_TILES: ResolvedDeckTile[] = [
-  { key: "t1", name: "Dreepy", copyCount: 4, section: "pokemon", entryId: null, setName: "Twilight Masquerade", number: "96", smallImageUrl: "", largeImageUrl: "" },
-  { key: "t2", name: "Dragapult ex", copyCount: 3, section: "pokemon", entryId: null, setName: "Twilight Masquerade", number: "130", smallImageUrl: "", largeImageUrl: "" },
-  { key: "t3", name: "Iono", copyCount: 2, section: "trainer", entryId: null, setName: "Paldea Evolved", number: "185", smallImageUrl: "", largeImageUrl: "" },
+  { key: "t1", name: "Dreepy", copyCount: 4, section: "pokemon", family: "dreepy", subtype: null, entryId: null, setName: "Twilight Masquerade", number: "96", smallImageUrl: "", largeImageUrl: "" },
+  { key: "t2", name: "Dragapult ex", copyCount: 3, section: "pokemon", family: "dreepy", subtype: null, entryId: null, setName: "Twilight Masquerade", number: "130", smallImageUrl: "", largeImageUrl: "" },
+  { key: "t3", name: "Iono", copyCount: 2, section: "trainer", family: null, subtype: "Supporter", entryId: null, setName: "Paldea Evolved", number: "185", smallImageUrl: "", largeImageUrl: "" },
 ];
 const PLAYMAT_ROWS = computeRows(PLAYMAT_TILES);
 const PLAYMAT_GRADIENT = MAT_STYLES.find((s) => s.key === "brand")!.gradient;
