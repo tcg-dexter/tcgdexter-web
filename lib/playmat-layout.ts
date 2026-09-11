@@ -66,6 +66,73 @@ export function computeCardWidth(
   return Math.floor(Math.min(trueScaleWidth, minCardWidth));
 }
 
+/**
+ * Row-major grid that searches for the column count yielding the largest
+ * card, rather than Standard's fixed MAX_PILES_PER_ROW/MAX_ROWS cap — used
+ * by the "Grid" layout. Reuses computeCardWidth as the fitness function for
+ * each candidate column count, so the two stay in lockstep by construction.
+ */
+export function computeGridArrangement(
+  tiles: ResolvedDeckTile[],
+  containerWidth: number,
+): { rows: ResolvedDeckTile[][]; cardWidth: number } {
+  if (!tiles.length || containerWidth === 0) return { rows: [], cardWidth: 60 };
+
+  let best: { rows: ResolvedDeckTile[][]; cardWidth: number } = { rows: [tiles], cardWidth: 0 };
+  for (let cols = 1; cols <= tiles.length; cols++) {
+    const rows: ResolvedDeckTile[][] = [];
+    for (let i = 0; i < tiles.length; i += cols) rows.push(tiles.slice(i, i + cols));
+    const cardWidth = computeCardWidth(rows, containerWidth);
+    if (cardWidth > best.cardWidth) best = { rows, cardWidth };
+  }
+  return best;
+}
+
+/**
+ * Column-major arrangement — tiles fill top-to-bottom before wrapping to
+ * the next column, instead of Standard's left-to-right-then-down. Since
+ * resolveDeckTiles already orders tiles Pokémon lines → Trainers by
+ * subtype → Energy, filling down first clusters each category into its
+ * own column(s), echoing a hand-sorted playmat's grouped columns — used by
+ * the "Columns" layout.
+ *
+ * A column's width has to fit its widest pile (a multi-copy pile fans out
+ * wider than one card — see FAN_OVERLAP), not just one card width, or a
+ * tall pile would overlap the next column. So unlike computeGridArrangement
+ * this can't just delegate to computeCardWidth (which sums pile widths
+ * across a *row*); it sums each column's max pile-width instead.
+ */
+export function computeColumnsArrangement(
+  tiles: ResolvedDeckTile[],
+  containerWidth: number,
+): { columns: ResolvedDeckTile[][]; cardWidth: number } {
+  if (!tiles.length || containerWidth === 0) return { columns: [], cardWidth: 60 };
+  const innerW = containerWidth - MAT_PADDING * 2;
+  const innerH = containerWidth * MAT_ASPECT - MAT_PADDING * 2;
+  const trueScaleWidth = containerWidth * TRUE_SCALE_CARD_RATIO;
+
+  let best: { columns: ResolvedDeckTile[][]; cardWidth: number } = { columns: [tiles], cardWidth: 0 };
+  for (let rowsPerCol = 1; rowsPerCol <= tiles.length; rowsPerCol++) {
+    const columns: ResolvedDeckTile[][] = [];
+    for (let i = 0; i < tiles.length; i += rowsPerCol) columns.push(tiles.slice(i, i + rowsPerCol));
+
+    const maxCardH = (innerH - (rowsPerCol - 1) * ROW_GAP_X) / rowsPerCol;
+    if (maxCardH <= 0) continue;
+    const maxWidthFromHeight = maxCardH * (245 / 342);
+
+    const widthUnits = columns.reduce((sum, col) => {
+      const maxCopy = Math.max(1, ...col.map((t) => t.copyCount));
+      return sum + 1 + (maxCopy - 1) * FAN_OVERLAP;
+    }, 0);
+    const gaps = (columns.length - 1) * ROW_GAP_X;
+    const maxWidthFromWidth = (innerW - gaps) / widthUnits;
+
+    const cardWidth = Math.floor(Math.min(trueScaleWidth, maxWidthFromHeight, maxWidthFromWidth));
+    if (cardWidth > best.cardWidth) best = { columns, cardWidth };
+  }
+  return best;
+}
+
 // The swatch picker's color:texture column split — 4 columns of colors for
 // every 2 of textures. Column count is always a multiple of this pair so
 // the split stays exact at any size.
