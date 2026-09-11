@@ -134,59 +134,144 @@ export function computeColumnsArrangement(
 }
 
 // ── "Bouquet" layout ─────────────────────────────────────────────────────
-// Piles are batched into fans of at most BOUQUET_GROUP_SIZE (in tile order,
-// so e.g. a run of 6 energy becomes two fans of 4 and 2), each fan curving
-// its piles around a single shared pivot at every pile's own bottom-center
-// — CSS/canvas rotation around that point alone spreads the tops apart
-// while the bases stay together, like a hand of cards or a bouquet's
-// stems, with no manual per-pile offset math needed. Fans then wrap into
-// rows the same way Grid's piles do, searching for the fans-per-row that
-// yields the largest card.
+// Piles batch into fans of at most BOUQUET_GROUP_SIZE, restarting the batch
+// whenever the "kind" of card changes — a Pokémon's evolution family, a
+// trainer's subtype (tools with tools, supporters with supporters), or
+// energy — rather than cutting blindly every 4 tiles regardless of what
+// they are (see bouquetGroups). Each fan curves its piles by both rotating
+// them and spreading their pivots apart — pure shared-pivot rotation alone
+// left adjacent piles almost fully overlapped near the base. Fans then
+// wrap into rows the same way Grid's piles do, searching for the
+// fans-per-row that yields the largest card.
 export const BOUQUET_GROUP_SIZE = 4;
-export const BOUQUET_ANGLE_STEP_DEG = 12;
+export const BOUQUET_ANGLE_STEP_DEG = 10;
+// Pivot spacing between adjacent piles, as a fraction of cardWidth — the
+// main fix for the overlap the pure-rotation version had.
+const BOUQUET_SPREAD_RATIO = 0.55;
+// Parabolic pivot rise for the outer piles of a fan, as a fraction of
+// cardWidth at the extremes — a gentle "bouquet" arc rather than a flat
+// line of pivots.
+const BOUQUET_LIFT_RATIO = 0.15;
 const CARD_ASPECT = 342 / 245; // card height / width
 
-/** Rotation angles (degrees), symmetric around 0, for a fan of n piles. */
-export function bouquetAngles(n: number): number[] {
-  return Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * BOUQUET_ANGLE_STEP_DEG);
+/** Cluster key a tile batches by for the Bouquet layout: a Pokémon's whole
+ *  evolution family together, a trainer's own subtype together, or energy
+ *  (tiles already arrive grouped this way — resolveDeckTiles' orderTiles —
+ *  so this only needs to notice where the "kind" changes, not resort
+ *  anything). */
+function bouquetClusterKey(t: ResolvedDeckTile): string {
+  if (t.section === "pokemon") return `pokemon:${t.family ?? t.name.toLowerCase()}`;
+  if (t.section === "trainer") return `trainer:${t.subtype ?? "Other"}`;
+  return "energy";
+}
+
+/** Batches tiles into same-kind fans of at most BOUQUET_GROUP_SIZE — e.g.
+ *  a run of 6 energy becomes fans of 4 and 2, but a run of 3 supporters
+ *  followed by 5 items becomes fans of [3 supporters], [4 items], [1 item]
+ *  rather than a fan mixing supporters and items. */
+function bouquetGroups(tiles: ResolvedDeckTile[]): ResolvedDeckTile[][] {
+  const groups: ResolvedDeckTile[][] = [];
+  let key: string | null = null;
+  let current: ResolvedDeckTile[] = [];
+  for (const t of tiles) {
+    const k = bouquetClusterKey(t);
+    if (k !== key || current.length >= BOUQUET_GROUP_SIZE) {
+      if (current.length) groups.push(current);
+      current = [];
+      key = k;
+    }
+    current.push(t);
+  }
+  if (current.length) groups.push(current);
+  return groups;
+}
+
+interface BouquetPilePlacement {
+  /** Pile position within the fan's own box, in cardWidth units — multiply
+   *  by cardWidth for px. The pile's bottom-center sits at this point. */
+  x: number;
+  y: number;
+  angle: number; // degrees
 }
 
 /**
- * A fan's bounding box in cardWidth units — the union of every pile's
- * rotated corners, approximated with the fan's single widest pile (by
- * fan-out footprint, see FAN_OVERLAP) at its single widest angle. The
- * exact per-pile union would need a distinct trig term per pile for no
- * real visual benefit here, since this only feeds a "big enough box"
- * check, not a tight fit.
+ * A fan's full layout in cardWidth units: every pile's own pivot (where its
+ * bottom-center sits — see BouquetFan/rasterizeMat, both of which rotate a
+ * pile around exactly this point) and the fan's overall bounding box, which
+ * is the true union of every pile's rotated corners (not an approximation
+ * — with per-pile pivots now spread apart rather than sharing one point, a
+ * single "widest pile" stand-in could under-count the real footprint).
+ * Shared by computeBouquetArrangement's search and the live/canvas
+ * renderers so a fan's actual drawn footprint always matches what it was
+ * sized for.
  */
-function bouquetBoxUnits(group: ResolvedDeckTile[]): { wUnits: number; hUnits: number } {
-  const maxFootprintUnits = Math.max(
-    ...group.map((t) => 1 + (Math.max(t.copyCount, 1) - 1) * FAN_OVERLAP),
-  );
-  const maxA = maxFootprintUnits / 2;
-  const maxAngleRad = (Math.max(...bouquetAngles(group.length).map(Math.abs)) * Math.PI) / 180;
-  const s = Math.sin(maxAngleRad);
-  const c = Math.cos(maxAngleRad);
-  // A box of half-width a and height h, rotated by θ around its own
-  // bottom-center, has bounding width 2(a·cosθ + h·sinθ) and bounding
-  // height 2a·sinθ + h·cosθ (derived from rotating all four corners about
-  // that pivot). At θ=0 this correctly degenerates to the plain (2a, h)
-  // box — a group of one un-rotated pile.
+function bouquetLayout(group: ResolvedDeckTile[]): {
+  placements: BouquetPilePlacement[];
+  wUnits: number;
+  hUnits: number;
+} {
+  const n = group.length;
+  const center = (n - 1) / 2;
+  const piles = group.map((t, i) => {
+    const footprintUnits = 1 + (Math.max(t.copyCount, 1) - 1) * FAN_OVERLAP;
+    const angleDeg = (i - center) * BOUQUET_ANGLE_STEP_DEG;
+    const norm = center > 0 ? (i - center) / center : 0;
+    return {
+      a: footprintUnits / 2, // pile half-width, in cardWidth units
+      angleDeg,
+      angleRad: (angleDeg * Math.PI) / 180,
+      pivotX: (i - center) * BOUQUET_SPREAD_RATIO,
+      pivotY: -BOUQUET_LIFT_RATIO * norm * norm, // negative = risen above baseline
+    };
+  });
+
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const p of piles) {
+    // Corners of the pile's box (half-width a, height CARD_ASPECT) in its
+    // own pre-rotation frame, relative to its bottom-center pivot.
+    const corners: [number, number][] = [
+      [p.a, 0],
+      [-p.a, 0],
+      [p.a, -CARD_ASPECT],
+      [-p.a, -CARD_ASPECT],
+    ];
+    const s = Math.sin(p.angleRad);
+    const c = Math.cos(p.angleRad);
+    for (const [cx, cy] of corners) {
+      const x = p.pivotX + (cx * c - cy * s);
+      const y = p.pivotY + (cx * s + cy * c);
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  }
+
   return {
-    wUnits: 2 * (maxA * c + CARD_ASPECT * s),
-    hUnits: 2 * maxA * s + CARD_ASPECT * c,
+    placements: piles.map((p) => ({ x: p.pivotX - minX, y: p.pivotY - minY, angle: p.angleDeg })),
+    wUnits: maxX - minX,
+    hUnits: maxY - minY,
   };
 }
 
-/** A fan's rendered box size in pixels, for a given cardWidth. Shared by
- *  the live render and rasterizeMat so a fan's actual drawn footprint
- *  always matches what computeBouquetArrangement sized it for. */
-export function bouquetGroupBox(
+/** A fan's rendered layout in pixels, for a given cardWidth: its overall
+ *  box size, and every pile's pivot position (relative to that box's own
+ *  top-left) and rotation angle. Shared by the live render and
+ *  rasterizeMat so a fan's actual drawn footprint always matches what
+ *  computeBouquetArrangement sized it for. */
+export function bouquetGroupLayout(
   group: ResolvedDeckTile[],
   cardWidth: number,
-): { width: number; height: number } {
-  const { wUnits, hUnits } = bouquetBoxUnits(group);
-  return { width: wUnits * cardWidth, height: hUnits * cardWidth };
+): { width: number; height: number; placements: { left: number; top: number; angle: number }[] } {
+  const { placements, wUnits, hUnits } = bouquetLayout(group);
+  return {
+    width: wUnits * cardWidth,
+    height: hUnits * cardWidth,
+    placements: placements.map((p) => ({ left: p.x * cardWidth, top: p.y * cardWidth, angle: p.angle })),
+  };
 }
 
 export function computeBouquetArrangement(
@@ -198,11 +283,8 @@ export function computeBouquetArrangement(
   const innerH = containerWidth * MAT_ASPECT - MAT_PADDING * 2;
   const trueScaleWidth = containerWidth * TRUE_SCALE_CARD_RATIO;
 
-  const groups: ResolvedDeckTile[][] = [];
-  for (let i = 0; i < tiles.length; i += BOUQUET_GROUP_SIZE) {
-    groups.push(tiles.slice(i, i + BOUQUET_GROUP_SIZE));
-  }
-  const boxUnits = groups.map(bouquetBoxUnits);
+  const groups = bouquetGroups(tiles);
+  const boxUnits = groups.map((g) => bouquetLayout(g));
 
   let best: { rows: ResolvedDeckTile[][][]; cardWidth: number } = { rows: [groups], cardWidth: 0 };
   for (let perRow = 1; perRow <= groups.length; perRow++) {
