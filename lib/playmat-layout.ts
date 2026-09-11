@@ -133,6 +133,103 @@ export function computeColumnsArrangement(
   return best;
 }
 
+// ── "Bouquet" layout ─────────────────────────────────────────────────────
+// Piles are batched into fans of at most BOUQUET_GROUP_SIZE (in tile order,
+// so e.g. a run of 6 energy becomes two fans of 4 and 2), each fan curving
+// its piles around a single shared pivot at every pile's own bottom-center
+// — CSS/canvas rotation around that point alone spreads the tops apart
+// while the bases stay together, like a hand of cards or a bouquet's
+// stems, with no manual per-pile offset math needed. Fans then wrap into
+// rows the same way Grid's piles do, searching for the fans-per-row that
+// yields the largest card.
+export const BOUQUET_GROUP_SIZE = 4;
+export const BOUQUET_ANGLE_STEP_DEG = 12;
+const CARD_ASPECT = 342 / 245; // card height / width
+
+/** Rotation angles (degrees), symmetric around 0, for a fan of n piles. */
+export function bouquetAngles(n: number): number[] {
+  return Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * BOUQUET_ANGLE_STEP_DEG);
+}
+
+/**
+ * A fan's bounding box in cardWidth units — the union of every pile's
+ * rotated corners, approximated with the fan's single widest pile (by
+ * fan-out footprint, see FAN_OVERLAP) at its single widest angle. The
+ * exact per-pile union would need a distinct trig term per pile for no
+ * real visual benefit here, since this only feeds a "big enough box"
+ * check, not a tight fit.
+ */
+function bouquetBoxUnits(group: ResolvedDeckTile[]): { wUnits: number; hUnits: number } {
+  const maxFootprintUnits = Math.max(
+    ...group.map((t) => 1 + (Math.max(t.copyCount, 1) - 1) * FAN_OVERLAP),
+  );
+  const maxA = maxFootprintUnits / 2;
+  const maxAngleRad = (Math.max(...bouquetAngles(group.length).map(Math.abs)) * Math.PI) / 180;
+  const s = Math.sin(maxAngleRad);
+  const c = Math.cos(maxAngleRad);
+  // A box of half-width a and height h, rotated by θ around its own
+  // bottom-center, has bounding width 2(a·cosθ + h·sinθ) and bounding
+  // height 2a·sinθ + h·cosθ (derived from rotating all four corners about
+  // that pivot). At θ=0 this correctly degenerates to the plain (2a, h)
+  // box — a group of one un-rotated pile.
+  return {
+    wUnits: 2 * (maxA * c + CARD_ASPECT * s),
+    hUnits: 2 * maxA * s + CARD_ASPECT * c,
+  };
+}
+
+/** A fan's rendered box size in pixels, for a given cardWidth. Shared by
+ *  the live render and rasterizeMat so a fan's actual drawn footprint
+ *  always matches what computeBouquetArrangement sized it for. */
+export function bouquetGroupBox(
+  group: ResolvedDeckTile[],
+  cardWidth: number,
+): { width: number; height: number } {
+  const { wUnits, hUnits } = bouquetBoxUnits(group);
+  return { width: wUnits * cardWidth, height: hUnits * cardWidth };
+}
+
+export function computeBouquetArrangement(
+  tiles: ResolvedDeckTile[],
+  containerWidth: number,
+): { rows: ResolvedDeckTile[][][]; cardWidth: number } {
+  if (!tiles.length || containerWidth === 0) return { rows: [[tiles]], cardWidth: 60 };
+  const innerW = containerWidth - MAT_PADDING * 2;
+  const innerH = containerWidth * MAT_ASPECT - MAT_PADDING * 2;
+  const trueScaleWidth = containerWidth * TRUE_SCALE_CARD_RATIO;
+
+  const groups: ResolvedDeckTile[][] = [];
+  for (let i = 0; i < tiles.length; i += BOUQUET_GROUP_SIZE) {
+    groups.push(tiles.slice(i, i + BOUQUET_GROUP_SIZE));
+  }
+  const boxUnits = groups.map(bouquetBoxUnits);
+
+  let best: { rows: ResolvedDeckTile[][][]; cardWidth: number } = { rows: [groups], cardWidth: 0 };
+  for (let perRow = 1; perRow <= groups.length; perRow++) {
+    const rows: ResolvedDeckTile[][][] = [];
+    const rowBoxes: { wUnits: number; hUnits: number }[][] = [];
+    for (let i = 0; i < groups.length; i += perRow) {
+      rows.push(groups.slice(i, i + perRow));
+      rowBoxes.push(boxUnits.slice(i, i + perRow));
+    }
+
+    let widthConstraint = Infinity;
+    let totalHeightUnits = 0;
+    for (const rowBox of rowBoxes) {
+      const rowWidthUnits = rowBox.reduce((sum, b) => sum + b.wUnits, 0);
+      const gaps = (rowBox.length - 1) * ROW_GAP_X;
+      widthConstraint = Math.min(widthConstraint, (innerW - gaps) / rowWidthUnits);
+      totalHeightUnits += Math.max(...rowBox.map((b) => b.hUnits));
+    }
+    const gapsY = (rows.length - 1) * ROW_GAP_X;
+    const heightConstraint = (innerH - gapsY) / totalHeightUnits;
+
+    const cardWidth = Math.floor(Math.min(trueScaleWidth, widthConstraint, heightConstraint));
+    if (cardWidth > best.cardWidth) best = { rows, cardWidth };
+  }
+  return best;
+}
+
 // The swatch picker's color:texture column split — 4 columns of colors for
 // every 2 of textures. Column count is always a multiple of this pair so
 // the split stays exact at any size.
