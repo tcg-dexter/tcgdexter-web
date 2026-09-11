@@ -3001,6 +3001,24 @@ interface ReplayViewerProps {
    *  log there isn't a supported action; that lives on the dedicated
    *  battle page. */
   hideCopyBattleLog?: boolean;
+  /** DECK IDENTITY for each side, overriding the payload's own
+   *  playerPrimaryName/opponentPrimaryName for every name and colour this
+   *  viewer derives — the matchup row and both mat gradients.
+   *
+   *  The payload's primaries are the top-damage attacker IN THIS GAME, which
+   *  answers a different question than "which decks met". They disagree
+   *  routinely: a deck's headline card can be prized, discarded to an Ultra
+   *  Ball, or simply never needed, while some support Pokémon does all the
+   *  damage. On a page that also states the matchup from deck identity (the
+   *  battle page's stat card), two answers side by side read as a
+   *  contradiction rather than as two facts.
+   *
+   *  So callers that KNOW the decks — the battle page, from the saved deck's
+   *  analysis and the logged archetype — pass them here and the whole page
+   *  speaks with one voice. Callers that don't (the showcase, the admin
+   *  tool) omit them and keep the gameplay-inferred behaviour. */
+  playerHeroName?: string | null;
+  opponentHeroName?: string | null;
 }
 
 export default function ReplayViewer({
@@ -3020,6 +3038,8 @@ export default function ReplayViewer({
   onThreadToggleState,
   matchupAboveMat = false,
   hideCopyBattleLog = false,
+  playerHeroName,
+  opponentHeroName,
 }: ReplayViewerProps) {
   const [data, setData] = useState<ReplayPayload2 | null>(null);
   const [loading, setLoading] = useState(false);
@@ -3159,15 +3179,21 @@ export default function ReplayViewer({
     return data.frames[Math.min(frameIndex, data.frames.length - 1)] ?? null;
   }, [data, frameIndex]);
 
+  // The one name per side that this viewer's labels and colours key off.
+  // Deck identity when the caller supplied it, otherwise the payload's
+  // top-damage attacker — see playerHeroName.
+  const heroPlayerName = playerHeroName ?? data?.playerPrimaryName ?? null;
+  const heroOpponentName = opponentHeroName ?? data?.opponentPrimaryName ?? null;
+
   // One gradient per side, resolved once per battle (not per frame — the
   // hero Pokémon is fixed for the whole game).
   const playerMatGradient = useMemo(
-    () => matGradientForPrimary(data?.playerPrimaryName ?? null),
-    [data?.playerPrimaryName],
+    () => matGradientForPrimary(heroPlayerName),
+    [heroPlayerName],
   );
   const opponentMatGradient = useMemo(
-    () => matGradientForPrimary(data?.opponentPrimaryName ?? null),
-    [data?.opponentPrimaryName],
+    () => matGradientForPrimary(heroOpponentName),
+    [heroOpponentName],
   );
 
   // Hand the loaded payload (and its derived gradients) to a caller that
@@ -3628,8 +3654,8 @@ export default function ReplayViewer({
       {matchupAboveMat && data && (
         <div className="mb-4 flex justify-center">
           <MatchupRow
-            playerName={data.playerPrimaryName}
-            opponentName={data.opponentPrimaryName}
+            playerName={heroPlayerName}
+            opponentName={heroOpponentName}
             playerGradient={playerMatGradient}
             opponentGradient={opponentMatGradient}
           />
@@ -3826,8 +3852,8 @@ export default function ReplayViewer({
         <div className="mt-6 flex flex-col items-center gap-3">
           {!matchupAboveMat && (
             <MatchupRow
-              playerName={data.playerPrimaryName}
-              opponentName={data.opponentPrimaryName}
+              playerName={heroPlayerName}
+              opponentName={heroOpponentName}
               playerGradient={playerMatGradient}
               opponentGradient={opponentMatGradient}
             />
