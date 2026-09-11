@@ -136,6 +136,15 @@ export default function BattleLogPage({
     <CopyBattleLogButton text={replay.data.battleLogRaw} />
   ) : null;
 
+  // The matchup row's two names, running the same cascade ReplayViewer2 runs
+  // for its mat colours: deck identity first, this game's top-damage attacker
+  // only when the deck is unknown, the deck's own name last. Keeping the
+  // cascade identical is what stops the row and the mat from disagreeing.
+  const matchupPlayerName =
+    playerPokemonName ?? replay?.data?.playerPrimaryName ?? deckName;
+  const matchupOpponentName =
+    opponentAttackerName ?? replay?.data?.opponentPrimaryName ?? opponentLabel;
+
   // The thread collapse/expand toggle's live state, lifted out of
   // ReplayViewer2 the same way — its only implementation lives here in the
   // desktop header now, anchored right, instead of above the thread aside.
@@ -252,8 +261,8 @@ export default function BattleLogPage({
         <div className="justify-self-center">
           {replay?.data && (
             <MatchupRow
-              playerName={replay.data.playerPrimaryName}
-              opponentName={replay.data.opponentPrimaryName}
+              playerName={matchupPlayerName}
+              opponentName={matchupOpponentName}
               playerGradient={replay.gradients.player}
               opponentGradient={replay.gradients.opponent}
               scale={1.25}
@@ -285,6 +294,14 @@ export default function BattleLogPage({
             playerColor={playerColor}
             opponentColor={opponentColor}
             showMatchupFooter={false}
+            // Deck identity, not this game's top-damage attacker, so the mat
+            // colours agree with the matchup row and the stat card — see
+            // ReplayViewer2's playerHeroName. Passed as the resolved Pokemon
+            // names rather than the display labels: null lets the viewer fall
+            // back to gameplay inference, where a deck NAME would just miss
+            // the catalog and flatten the mat to the default gradient.
+            playerHeroName={playerPokemonName}
+            opponentHeroName={opponentAttackerName}
             onData={(data, gradients) => setReplay({ data, gradients })}
             showThreadToggle={false}
             onThreadToggleState={setThreadToggle}
