@@ -47,6 +47,12 @@ export const CARD_NAME_FIELDS = [
   "source",
   "attacker",
   "defender",
+  // The type-matchup clause names the same Pokemon a second time. `defender`
+  // was stripped and these were not, so a verbose export left the id prefix
+  // on them ("(sv9_111) Hop's Zacian ex") while the very next field had it
+  // removed. They are card-name fields like any other.
+  "weakness_target",
+  "resistance_target",
 ] as const;
 // Payload fields that hold a list of card names.
 export const CARD_NAME_ARRAY_FIELDS = [

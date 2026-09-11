@@ -510,9 +510,23 @@ const PATTERNS: Pattern[] = [
   },
 
   // ── Attacks ──────────────────────────────────────────────────
-  // Damage line may end with: "<Pokemon> took N more damage because of <Type> Weakness."
+  // The damage line may carry a trailing type-matchup clause:
+  //
+  //   "... took 60 more damage because of Darkness Weakness."
+  //   "... took -30 less damage because of Fighting Resistance."
+  //
+  // Both are informational — the headline "for N damage" is already the final
+  // number — but the clause has to be MATCHED or the whole line falls through
+  // to the "<handle>'s <Pokemon> used <move>." ability pattern, which swallows
+  // the rest of the line into the move name. That is exactly what happened to
+  // Resistance: only Weakness was handled, so 32 rows across 22 matches stored
+  // attacks as abilities named e.g. "Corkscrew Dive on X's Yveltal for 100
+  // damage. X's Yveltal took -30 less damage because of Fighting Resistance".
+  //
+  // Note TCG Live writes Resistance as a NEGATIVE number alongside the word
+  // "less" ("took -30 less damage"), so the amount group allows a sign.
   {
-    re: /^(.+?)'s (.+?) used (.+?) on (.+?)'s (.+?) for (\d+) damage\.(?:\s+(.+?)'s (.+?) took (\d+) more damage because of (.+?) Weakness\.)?$/,
+    re: /^(.+?)'s (.+?) used (.+?) on (.+?)'s (.+?) for (\d+) damage\.(?:\s+(.+?)'s (.+?) took (-?\d+) (?:more|less) damage because of (.+?) (Weakness|Resistance)\.)?$/,
     handle: (m, b) => {
       const damageBreakdown: string[] = [];
       const choices: string[] = [];
@@ -552,15 +566,25 @@ const PATTERNS: Pattern[] = [
 
       const revealed = collectRevealedCards(b);
 
+      // One clause, two kinds. Splitting them here keeps `weakness_bonus`
+      // meaning what it always meant rather than quietly carrying a
+      // resistance reduction.
+      const matchupKind = m[11] || null;
+      const matchupAmount = m[9] ? Number(m[9]) : null;
+      const isWeakness = matchupKind === "Weakness";
+
       return action("attack", m[1], b.text, {
         attacker: m[2],
         attack_name: m[3],
         defender_handle: m[4],
         defender: m[5],
         damage: Number(m[6]),
-        weakness_bonus: m[9] ? Number(m[9]) : null,
-        weakness_target: m[8] || null,
-        weakness_type: m[10] || null,
+        weakness_bonus: isWeakness ? matchupAmount : null,
+        weakness_target: isWeakness ? m[8] || null : null,
+        weakness_type: isWeakness ? m[10] || null : null,
+        resistance_penalty: matchupKind === "Resistance" ? matchupAmount : null,
+        resistance_target: matchupKind === "Resistance" ? m[8] || null : null,
+        resistance_type: matchupKind === "Resistance" ? m[10] || null : null,
         damage_breakdown_raw: damageBreakdown,
         choices,
         splash_damage: splashDamage,
