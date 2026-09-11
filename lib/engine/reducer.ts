@@ -215,6 +215,41 @@ function popCardByName(zone: CardInstance[], name: string): CardInstance | null 
 }
 
 /**
+ * Move the cards a trainer or ability shuffled from hand back into the deck.
+ *
+ * TCG Live writes this as a child line of the play ("- X shuffled 2 cards into
+ * their deck.") rather than its own event, so it never became a `shuffle`
+ * action and nothing took the cards out of hand. They lingered as ghosts, and
+ * a later legitimate redraw of the same card then showed two copies — for a
+ * one-per-deck ACE SPEC like Unfair Stamp, a board that cannot legally exist.
+ *
+ * A name we can't find in hand is skipped rather than synthesised: the card is
+ * going to the deck, which is only ever read as a count, so inventing an
+ * instance would inflate that count off the back of a name we never actually
+ * held. Returns the names genuinely moved, for the event detail.
+ */
+function shuffleHandCardsIntoDeck(
+  side: PlayerSide,
+  payload: Record<string, unknown>,
+): string[] {
+  const names = Array.isArray(payload.shuffled_into_deck)
+    ? (payload.shuffled_into_deck as unknown[]).filter(
+        (n): n is string => typeof n === "string",
+      )
+    : [];
+  if (names.length === 0) return [];
+  const moved: string[] = [];
+  for (const raw of names) {
+    const card = popCardByName(side.hand, raw);
+    if (!card) continue;
+    card.unrevealed = true;
+    side.deck.push(card);
+    moved.push(raw);
+  }
+  return moved;
+}
+
+/**
  * True for a Pokémon Tool, per the catalog.
  *
  * TCG Live logs a Tool's attachment with the same "attached X to Y" wording
@@ -719,6 +754,10 @@ export function applyAction(
         }
       }
       const card = popCardByName(side.hand, cardName) ?? makeCard(cardName);
+      // After the played card is out of hand, so a shuffle list naming a
+      // SECOND copy of it (Lillie's Determination does exactly that) takes the
+      // other copy rather than fighting over the one being played.
+      const shuffledIn = shuffleHandCardsIntoDeck(side, payload);
       // Catalog-aware classification: many "played X" lines from the parser
       // are coded as play_item, but a Supporter should bump the per-turn
       // flag. Look up the catalog row to decide.
@@ -748,7 +787,12 @@ export function applyAction(
         });
       }
       side.discard.push(card);
-      event.detail = { card: cardName, supporter: isSupporter, tool: isTool };
+      event.detail = {
+        card: cardName,
+        supporter: isSupporter,
+        tool: isTool,
+        ...(shuffledIn.length ? { shuffledIntoDeck: shuffledIn } : {}),
+      };
       break;
     }
 
@@ -823,11 +867,19 @@ export function applyAction(
       const side = sideOf(state, actor);
       const source = String(payload.source ?? "");
       const abilityName = String(payload.ability_name ?? "");
+      let shuffledIn: string[] = [];
       if (side) {
         const found = findPokemon(side, source, undefined, payload.source_id as string | undefined);
         if (found) found.mon.abilitiesUsedThisTurn.push(abilityName);
+        // N's Zoroark ex's Trade and friends shuffle from hand the same way a
+        // Supporter does — same parser field, same fix.
+        shuffledIn = shuffleHandCardsIntoDeck(side, payload);
       }
-      event.detail = { source, ability: abilityName };
+      event.detail = {
+        source,
+        ability: abilityName,
+        ...(shuffledIn.length ? { shuffledIntoDeck: shuffledIn } : {}),
+      };
       break;
     }
 

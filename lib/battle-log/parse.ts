@@ -132,6 +132,27 @@ interface DiscardDraw {
   /** Each "drew N cards" line's N, in order. Only kept to feed the legacy
    *  `draws` / `draws_caused` payload fields. */
   drawCounts: number[];
+  /** Cards this block moved from hand BACK INTO the deck — the "shuffled N
+   *  cards into their deck." half of Lillie's Determination and friends.
+   *
+   *  A standalone top-level shuffle line already became its own `shuffle`
+   *  action, which the reducer applies. Nested under a trainer play it had no
+   *  home at all: its bullet names were swept into `revealed_cards` and the
+   *  cards were never taken out of hand. They then sat there as ghosts, so a
+   *  later legitimate redraw of the same card showed TWO copies — which for a
+   *  one-per-deck ACE SPEC like Unfair Stamp is a visibly illegal board. */
+  shuffledIntoDeck: string[];
+  /** How MANY cards the log said went back into the deck, which is not always
+   *  `shuffledIntoDeck.length`: names appear only for the exporting player's
+   *  own cards, so an opponent's Lillie's Determination reads "- shuffled 4
+   *  cards into their deck." with no list at all.
+   *
+   *  Recorded rather than acted on. The engine removes only the cards it can
+   *  NAME (see shuffleHandCardsIntoDeck): a hand whose cards are all hidden
+   *  placeholders has no modelled inflow either — nested draws aren't applied
+   *  — so removing by count there would drain it toward empty. Anything that
+   *  models hidden hands properly will need this number. */
+  shuffledIntoDeckCount: number;
 }
 
 /**
@@ -149,14 +170,17 @@ interface DiscardDraw {
 function extractDiscardDraw(block: Block): DiscardDraw {
   const discarded: string[] = [];
   const drawn: string[] = [];
+  const shuffledIntoDeck: string[] = [];
+  let shuffledIntoDeckCount = 0;
   const drawCounts: number[] = [];
   let drawnCount = 0;
-  let pending: "discard" | "draw" | null = null;
+  let pending: "discard" | "draw" | "shuffle_in" | null = null;
 
   for (const child of block.children) {
     if (child.kind === "bullet") {
       if (pending === "discard") discarded.push(...splitCardList(child.text));
       else if (pending === "draw") drawn.push(...splitCardList(child.text));
+      else if (pending === "shuffle_in") shuffledIntoDeck.push(...splitCardList(child.text));
       continue;
     }
 
@@ -175,6 +199,25 @@ function extractDiscardDraw(block: Block): DiscardDraw {
     if (disc) {
       discarded.push(disc[2]);
       continue;
+    }
+
+    // Counted form first, or the single-card pattern below would take
+    // "2 cards" as the card's name.
+    const shufN = t.match(/^(.+?) shuffled (\d+) cards? into their deck\.$/);
+    if (shufN) {
+      shuffledIntoDeckCount += Number(shufN[2]);
+      pending = "shuffle_in";
+      continue;
+    }
+    // "shuffled their deck." is a reshuffle with no card movement — it must
+    // not fall into the single-card pattern as a card called "their deck".
+    if (!/^(.+?) shuffled their deck\.$/.test(t)) {
+      const shuf = t.match(/^(.+?) shuffled (.+?) into their deck\.$/);
+      if (shuf) {
+        shuffledIntoDeck.push(shuf[2]);
+        shuffledIntoDeckCount += 1;
+        continue;
+      }
     }
 
     const drewN = t.match(/^(.+?) drew (\d+) cards\.$/);
@@ -197,7 +240,14 @@ function extractDiscardDraw(block: Block): DiscardDraw {
     }
   }
 
-  return { discarded, drawn, drawnCount, drawCounts };
+  return {
+    discarded,
+    drawn,
+    drawnCount,
+    drawCounts,
+    shuffledIntoDeck,
+    shuffledIntoDeckCount,
+  };
 }
 
 /**
@@ -325,6 +375,8 @@ function targetlessAttack(
     revealed_cards_in_block: collectRevealedCards(b),
     discarded_cards: dd.discarded,
     drawn_cards: dd.drawn,
+    shuffled_into_deck: dd.shuffledIntoDeck,
+    shuffled_into_deck_count: dd.shuffledIntoDeckCount,
     drawn_count: dd.drawnCount,
   });
 }
@@ -623,6 +675,8 @@ const PATTERNS: Pattern[] = [
         draws: dd.drawCounts,
         discarded_cards: dd.discarded,
         drawn_cards: dd.drawn,
+        shuffled_into_deck: dd.shuffledIntoDeck,
+        shuffled_into_deck_count: dd.shuffledIntoDeckCount,
         drawn_count: dd.drawnCount,
       });
     },
@@ -766,6 +820,8 @@ const PATTERNS: Pattern[] = [
         draws_caused: dd.drawCounts,
         discarded_cards: dd.discarded,
         drawn_cards: dd.drawn,
+        shuffled_into_deck: dd.shuffledIntoDeck,
+        shuffled_into_deck_count: dd.shuffledIntoDeckCount,
         drawn_count: dd.drawnCount,
         forced_switches: switches,
         // Signals a Pokémon ability that shuffles the Pokémon itself back into

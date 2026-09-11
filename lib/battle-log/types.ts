@@ -10,7 +10,17 @@
 // or "all attacks that triggered Powerful Rage". When in doubt, prefer
 // adding a new type over overloading an existing one.
 
-/** Bumped to 5: the attack pattern only matched a trailing WEAKNESS clause,
+/** Bumped to 6: a "shuffled N cards into their deck." line nested under a
+ *  trainer play (Lillie's Determination and friends) had its bullet names
+ *  swept into `revealed_cards` and nowhere else, so the engine never took
+ *  those cards out of hand. Actions now carry `shuffled_into_deck` and
+ *  `shuffled_into_deck_count`; rows stamped 5 or lower have neither.
+ *
+ *  Nothing reads those fields off stored rows today — the board re-parses the
+ *  raw log per request, so the duplicate-card symptom is fixed on deploy — but
+ *  the stamp keeps the rows honest about what they contain.
+ *
+ *  Bumped to 5: the attack pattern only matched a trailing WEAKNESS clause,
  *  so a line ending in a Resistance clause ("... took -30 less damage because
  *  of Fighting Resistance.") failed the whole regex and fell through to the
  *  ability pattern, which swallowed the rest of the line into the move name.
@@ -33,7 +43,7 @@
  *  ("put a damage counter on", "moved N damage counters from ... to ...")
  *  that were previously dropped on the floor. Rows stamped with version 1
  *  were parsed without them and are missing those actions. */
-export const PARSER_VERSION = 5;
+export const PARSER_VERSION = 6;
 
 export type Actor = "player" | "opponent" | "system";
 
