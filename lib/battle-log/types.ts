@@ -10,7 +10,14 @@
 // or "all attacks that triggered Powerful Rage". When in doubt, prefer
 // adding a new type over overloading an existing one.
 
-/** Bumped to 4: a targetless attack ("<handle>'s Fezandipiti ex used Cruel
+/** Bumped to 5: the attack pattern only matched a trailing WEAKNESS clause,
+ *  so a line ending in a Resistance clause ("... took -30 less damage because
+ *  of Fighting Resistance.") failed the whole regex and fell through to the
+ *  ability pattern, which swallowed the rest of the line into the move name.
+ *  Rows stamped 4 or lower carry those attacks as `ability_used` with a
+ *  corrupted `ability_name`, and their damage uncounted.
+ *
+ *  Bumped to 4: a targetless attack ("<handle>'s Fezandipiti ex used Cruel
  *  Arrow.", damage on the following bullets) used to parse as `ability_used`
  *  because it is written exactly like an ability. The parser now asks the
  *  catalog and emits `attack` for moves that are attacks and never
@@ -26,7 +33,7 @@
  *  ("put a damage counter on", "moved N damage counters from ... to ...")
  *  that were previously dropped on the floor. Rows stamped with version 1
  *  were parsed without them and are missing those actions. */
-export const PARSER_VERSION = 4;
+export const PARSER_VERSION = 5;
 
 export type Actor = "player" | "opponent" | "system";
 
