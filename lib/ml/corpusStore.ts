@@ -64,6 +64,14 @@ CREATE TABLE IF NOT EXISTS matchup_results (
   avg_turns REAL NOT NULL,
   end_reasons_json TEXT NOT NULL,
   seed INTEGER NOT NULL,
+  -- Best-of-N columns. NULL for the single-game studies that predate them,
+  -- which is why they are nullable rather than defaulted: a 0 would read as
+  -- "ran zero matches" and silently pollute any match-level aggregate.
+  matches INTEGER,
+  match_wins_a INTEGER,
+  match_wins_b INTEGER,
+  match_draws INTEGER,
+  deciders INTEGER,
   PRIMARY KEY (study_id, pair_index)
 );
 CREATE INDEX IF NOT EXISTS idx_matchup_results_a ON matchup_results(study_id, deck_a);
@@ -96,6 +104,16 @@ CREATE TABLE IF NOT EXISTS policy_games (
   end_reason TEXT NOT NULL,
   turns INTEGER NOT NULL,
   decisions INTEGER NOT NULL,
+  -- Match context. NULL for single-game runs, so a match-aware query can
+  -- tell "not part of a match" from "game 0 of a match".
+  match_index INTEGER,
+  game_in_match INTEGER,
+  -- Match score BEFORE this game, from deck A's side: 0 = level, 1 = A is up.
+  -- A decider is played from a materially different position than a game one,
+  -- and this is what lets a route label know which it is looking at.
+  match_score_a INTEGER,
+  match_score_b INTEGER,
+  match_winner TEXT,
   PRIMARY KEY (run_hash, game_index)
 );
 CREATE TABLE IF NOT EXISTS policy_decisions (
@@ -168,6 +186,19 @@ export function openCorpus(dbPath: string): InstanceType<typeof DatabaseSync> {
   for (const alter of [
     "ALTER TABLE generated_decks ADD COLUMN edit_distance INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE matchup_studies ADD COLUMN completed_at TEXT",
+    // Best-of-N columns, added for the match-level studies. Nullable on
+    // purpose: existing single-game rows must read as "no match data", not
+    // as "zero matches".
+    "ALTER TABLE matchup_results ADD COLUMN matches INTEGER",
+    "ALTER TABLE matchup_results ADD COLUMN match_wins_a INTEGER",
+    "ALTER TABLE matchup_results ADD COLUMN match_wins_b INTEGER",
+    "ALTER TABLE matchup_results ADD COLUMN match_draws INTEGER",
+    "ALTER TABLE matchup_results ADD COLUMN deciders INTEGER",
+    "ALTER TABLE policy_games ADD COLUMN match_index INTEGER",
+    "ALTER TABLE policy_games ADD COLUMN game_in_match INTEGER",
+    "ALTER TABLE policy_games ADD COLUMN match_score_a INTEGER",
+    "ALTER TABLE policy_games ADD COLUMN match_score_b INTEGER",
+    "ALTER TABLE policy_games ADD COLUMN match_winner TEXT",
   ]) {
     try {
       db.exec(alter);

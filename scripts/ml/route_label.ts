@@ -31,8 +31,17 @@
 // away. The label keeps the same [0,1] meaning the planner already consumes,
 // so nothing downstream needs to know this happened.
 //
+// MATCH AWARENESS (--match-outcome). When the corpus was generated in
+// best-of-three mode, `policy_games.match_winner` records who took the MATCH,
+// not just the game. Bootstrapping onto the match result rather than the game
+// result changes what a flat window means: a game-one loss inside a 2-1 match
+// win stops being labelled a failure. That matters because a route is a claim
+// about how a MATCH is won — conceding an unwinnable game one to set up the
+// next two is a real line, and the game-level label calls it a blunder.
+//
 // Usage:
 //   npx tsx scripts/ml/route_label.ts --runs HASH [--db PATH] [--dry-run]
+//                                     [--match-outcome]
 
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -50,6 +59,7 @@ function arg(flag: string): string | null {
 const DB = arg("--db") ?? defaultCorpusPath(REPO_ROOT);
 const RUNS = (arg("--runs") ?? "").split(",").map((r) => r.trim()).filter(Boolean);
 const DRY = process.argv.includes("--dry-run");
+const MATCH_OUTCOME = process.argv.includes("--match-outcome");
 if (RUNS.length === 0) throw new Error("[route_label] --runs is required");
 
 const IDX = {
@@ -92,12 +102,19 @@ function main(): void {
     if (!(e instanceof Error) || !/duplicate column/i.test(e.message)) throw e;
   }
 
+  // In match mode the terminal value a flat window bootstraps onto is the
+  // MATCH result, joined in from policy_games. `match_winner` is an actor
+  // ("player"/"opponent"), so it is converted to this decision's perspective
+  // exactly the way the per-game outcome already is.
   const raw = db
     .prepare(
-      `SELECT run_hash, game_index, decision_index, actor, outcome, state_sparse
-         FROM policy_decisions
-        WHERE run_hash IN (${hashes.map(() => "?").join(",")})
-        ORDER BY run_hash, game_index, actor, decision_index`,
+      `SELECT d.run_hash, d.game_index, d.decision_index, d.actor, d.outcome,
+              d.state_sparse, g.match_winner, g.match_index
+         FROM policy_decisions d
+         JOIN policy_games g
+           ON g.run_hash = d.run_hash AND g.game_index = d.game_index
+        WHERE d.run_hash IN (${hashes.map(() => "?").join(",")})
+        ORDER BY d.run_hash, d.game_index, d.actor, d.decision_index`,
     )
     .all(...hashes) as {
     run_hash: string;
@@ -106,17 +123,41 @@ function main(): void {
     actor: string;
     outcome: number;
     state_sparse: string;
+    match_winner: string | null;
+    match_index: number | null;
   }[];
+  const matchRows = raw.filter((r) => r.match_winner != null).length;
+  if (MATCH_OUTCOME && matchRows === 0) {
+    // Refuse rather than silently fall back to game outcomes: the whole point
+    // of the flag is that the label differs, and a silent no-op would produce
+    // an "A/B" whose arms are identical.
+    throw new Error(
+      "[route_label] --match-outcome given but no decision has a match_winner. " +
+        "Generate the corpus with `selfplay.ts --best-of 2` first.",
+    );
+  }
   if (raw.length === 0) throw new Error("[route_label] no decisions in those runs");
 
   const rows: Row[] = raw.map((r) => {
     const s = JSON.parse(r.state_sparse) as Record<string, number>;
+    // A DRAWN match has match_winner NULL, and must be dropped exactly the
+    // way a drawn game is — scoring it 0 would label every decision in it a
+    // loss for both sides at once.
+    const terminal = MATCH_OUTCOME
+      ? r.match_index == null
+        ? r.outcome
+        : r.match_winner == null
+          ? 0.5
+          : r.match_winner === r.actor
+            ? 1
+            : 0
+      : r.outcome;
     return {
       runHash: r.run_hash,
       gameIndex: r.game_index,
       decisionIndex: r.decision_index,
       actor: r.actor,
-      outcome: r.outcome,
+      outcome: terminal,
       turn: s[IDX.turn] ?? 0,
       prizeDiff: (s[IDX.mine] ?? 0) - (s[IDX.theirs] ?? 0),
     };
@@ -183,6 +224,10 @@ function main(): void {
 
   const total = fromWindow + fromBootstrap;
   console.log(
+    `[route_label] terminal value = ${MATCH_OUTCOME ? "MATCH result" : "game result"}` +
+      ` (${matchRows.toLocaleString()} decisions carry a match_winner)`,
+  );
+  console.log(
     `[route_label] ${rows.length.toLocaleString()} decisions across ` +
       `${traj.size.toLocaleString()} side-trajectories`,
   );
@@ -192,7 +237,7 @@ function main(): void {
   console.log(
     `  bootstrapped on result: ${fromBootstrap.toLocaleString()} (${((100 * fromBootstrap) / total).toFixed(1)}%)`,
   );
-  console.log(`  dropped (drawn games) : ${dropped.toLocaleString()}`);
+  console.log(`  dropped (drawn ${MATCH_OUTCOME ? "matches" : "games"}): ${dropped.toLocaleString()}`);
   console.log(`  class balance by phase (pos/neg):`);
   for (const [name, [pos, neg]] of Object.entries(byPhase)) {
     const n = pos + neg;

@@ -41,3 +41,25 @@ export function findInvalidValues(row: Record<string, unknown>): string[] {
   }
   return bad;
 }
+
+/** Parse a CLI `--seed` that may be a NUMBER or a LABEL.
+ *
+ *  Every seeded harness here used `numOrNull(arg("--seed")) ?? <default>`,
+ *  which returns null for a non-numeric string and silently falls back to the
+ *  default. A sweep over "run-a", "run-b", … therefore ran the SAME games
+ *  every time and pooled them into a confident, TIGHTER-than-real interval —
+ *  no error, no warning, and the only symptom is byte-identical rows. That
+ *  produced a fake 10-seed result in this project before it was caught.
+ *
+ *  A label is hashed to a number, so `--seed bo3-main` is a real, distinct,
+ *  reproducible seed rather than a synonym for the default. `hash` is passed
+ *  in (rather than imported) to keep this module free of engine deps. */
+export function seedOrLabel(
+  raw: string | null | undefined,
+  fallback: number,
+  hash: (s: string) => number,
+): number {
+  if (raw === null || raw === undefined || raw.trim() === "") return fallback;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : hash(raw);
+}

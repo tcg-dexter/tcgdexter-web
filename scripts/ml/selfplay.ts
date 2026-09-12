@@ -54,11 +54,14 @@ import { DatabaseSync } from "node:sqlite";
 import metaDecksRaw from "@/data/meta-decks.json";
 import { metaDeckToList, type MetaDeckEntry } from "@/lib/metaDeckList";
 import { ENGINE_VERSION } from "@/lib/engine/types";
-import { SIM_VERSION } from "@/lib/engine/sim";
+import { SIM_VERSION,
+  hashSeed,
+} from "@/lib/engine/sim";
 import {
   POLICY_SCHEMA_VERSION,
   STATE_FEATURE_NAMES,
   ACTION_FEATURE_NAMES,
+  seedOrLabel,
 } from "@/lib/ml/features";
 import { DEFAULT_SKILLS, generateSelfPlayGames, type SelfPlayGameRecord } from "@/lib/ml/selfplay";
 import { loadCommunityDecks } from "@/lib/ml/communityDecks";
@@ -84,7 +87,7 @@ function argValue(flag: string): string | null {
 
 const storePath = argValue("--store") ?? DEFAULT_STORE;
 const games = numOrNull(argValue("--games")) ?? 50;
-const seed = numOrNull(argValue("--seed")) ?? 1;
+const seed = seedOrLabel(argValue("--seed"), 1, hashSeed);
 const deckCount = numOrNull(argValue("--decks")) ?? 8;
 const maxTurns = numOrNull(argValue("--max-turns")) ?? undefined;
 const skillsArg = argValue("--skills");
@@ -127,6 +130,17 @@ const decksFile = argValue("--decks-file");
 // cost CPU to encode. Only the policy RANKER reads them; the value model
 // does not. Default stays "candidates" so existing run hashes reproduce.
 const record = (argValue("--record") ?? "candidates") as "candidates" | "decisions";
+// Best-of-N. 0 keeps the historical single-game behaviour byte-identically.
+// With --best-of 2, --games counts MATCHES, and an odd count is refused: the
+// seat pattern mirrors between neighbouring matches, so only an even count
+// cancels the first-turn advantage.
+const bestOf = Number(argValue("--best-of") ?? 0) || 0;
+if (bestOf > 0 && Number(argValue("--games") ?? 0) % 2 !== 0) {
+  throw new Error(
+    `[selfplay] --best-of needs an EVEN --games (matches, not games). ` +
+      `An odd count leaves a residual first-turn bias.`,
+  );
+}
 if (record !== "candidates" && record !== "decisions") {
   throw new Error(`--record must be candidates|decisions, got "${record}"`);
 }
@@ -381,6 +395,7 @@ async function main(): Promise<void> {
       skills: effectiveSkills,
       maxTurns,
       recordCandidates: record === "candidates",
+      ...(bestOf > 0 ? { matchWins: bestOf } : {}),
       shard: { index: shardIndex, count: shards },
     })) {
       process.stdout.write(JSON.stringify(game) + "\n");
@@ -425,8 +440,8 @@ async function main(): Promise<void> {
   // produces exactly the games one process would have produced. Worker count
   // is a performance knob, never a variable in the data.
   const insertGame = db.prepare(
-    `INSERT INTO policy_games (run_hash, game_index, seed, deck_a, deck_b, deck_a_source, deck_b_source, skill_a, skill_b, winner, end_reason, turns, decisions)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO policy_games (run_hash, game_index, seed, deck_a, deck_b, deck_a_source, deck_b_source, skill_a, skill_b, winner, end_reason, turns, decisions, match_index, game_in_match, match_score_a, match_score_b, match_winner)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   const insertDecision = db.prepare(
     `INSERT INTO policy_decisions (run_hash, game_index, decision_index, actor, turn_number, player_turn_number, skill, chosen_index, chosen_kind, n_candidates, value_estimate, outcome, state_sparse)
@@ -457,6 +472,11 @@ async function main(): Promise<void> {
         game.endReason,
         game.turns,
         game.decisions.length,
+        game.matchIndex ?? null,
+        game.gameInMatch ?? null,
+        game.matchScoreA ?? null,
+        game.matchScoreB ?? null,
+        game.matchWinner ?? null,
       );
       for (const d of game.decisions) {
         insertDecision.run(
@@ -503,6 +523,7 @@ async function main(): Promise<void> {
         skills: effectiveSkills,
         maxTurns,
         recordCandidates: record === "candidates",
+        ...(bestOf > 0 ? { matchWins: bestOf } : {}),
       })) {
         writeGame(game);
       }
@@ -517,7 +538,10 @@ async function main(): Promise<void> {
       ENGINE_VERSION,
       SIM_VERSION,
       seed,
-      games,
+      // Actual GAMES played, not the unit count requested. In best-of-N mode
+      // --games counts matches, and a match averages ~2.4 games; recording
+      // the request would leave every downstream rate off by that factor.
+      gameCount,
       JSON.stringify(params),
       JSON.stringify(STATE_FEATURE_NAMES),
       JSON.stringify(ACTION_FEATURE_NAMES),

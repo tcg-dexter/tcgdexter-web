@@ -51,7 +51,19 @@ const artifactPath = path.resolve(
 );
 const skill = numOrNull(argValue("--skill")) ?? 1.0;
 const games = numOrNull(argValue("--games")) ?? 100;
-const seed = numOrNull(argValue("--seed")) ?? 1;
+// Seeds are used as `hashSeed("duel:<seed>:<gameIndex>")`, i.e. as TEXT, so
+// there is no reason to require a number — and requiring one was actively
+// dangerous. `numOrNull` returned null for a string seed and silently fell
+// back to 1, so a sweep over "run-a", "run-b", ... ran the SAME games every
+// time and pooled them into a confident, TIGHTER-than-real confidence
+// interval. It produced no error and no warning; the only symptom was
+// byte-identical rows. Take the raw string, and reject an empty one.
+const seedArg = argValue("--seed");
+if (seedArg !== undefined && seedArg !== null && seedArg.trim() === "") {
+  console.error("[duel] --seed was given but empty");
+  process.exit(1);
+}
+const seed = seedArg ?? "1";
 const deckCount = numOrNull(argValue("--decks")) ?? 8;
 const maxTurns = numOrNull(argValue("--max-turns")) ?? undefined;
 const temperature = numOrNull(argValue("--temperature")) ?? 0;

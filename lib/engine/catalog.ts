@@ -188,6 +188,37 @@ export function standardPrintingsOf(name: string): PrintingRaw[] {
   );
 }
 
+/** True if the name is legal in the CURRENT Standard format.
+ *
+ *  Two things make this different from `lookupCard(name) != null`, and both
+ *  have bitten us. First, cards-standard.json is not a Standard-legal pool —
+ *  it spans regulation marks D through J plus thousands of printings with no
+ *  mark at all, so catalog membership says a card EXISTS, never that it is
+ *  playable. Second, legality is a property of the NAME across all its
+ *  printings, not of the one printing `pickPrinting` happens to select: Judge
+ *  and Boss's Orders both have rotated originals and current reprints, and
+ *  reading a single printing would answer the question about the wrong piece
+ *  of cardboard.
+ *
+ *  Basic Energy never rotates and carries no mark, so it is legal by fiat —
+ *  without this every deck in the corpus would fail, which is exactly what a
+ *  first pass reported.
+ *
+ *  The mark floor itself lives in lib/cardPrinting's ROTATING_MARKS, the
+ *  app's single source of truth, so rotation is updated in one place. */
+export function isCurrentStandard(name: string): boolean {
+  const prints = RAW[name];
+  if (!prints || prints.length === 0) return false;
+  if (
+    prints.some(
+      (p) => p.supertype === "Energy" && (p.subtypes ?? []).includes("Basic"),
+    )
+  ) {
+    return true;
+  }
+  return prints.some((p) => isStandardMark(p.regulation_mark));
+}
+
 /** True if the named card is a Trainer of the given subtype. */
 export function isTrainerSubtype(name: string, subtype: string): boolean {
   const c = lookupCard(name);

@@ -39,6 +39,13 @@ import {
 import { isSupporter } from "@/lib/engine/sim/trainers";
 import { effectiveMaxHp, isTool } from "@/lib/engine/sim/tools";
 import { lookupCard } from "@/lib/engine/catalog";
+import {
+  MECHANICS_FIELDS,
+  mechanicsSum,
+  mechanicsVector,
+} from "./cardMechanics";
+import { META_PRIOR_FIELDS, metaPriorVector } from "./metaPrior";
+import { THREAT_FIELDS, threatVector } from "./threat";
 import { num } from "./guards";
 
 // v2: added the reposition_* action block (retreat/switch tactical value).
@@ -48,7 +55,37 @@ import { num } from "./guards";
 //     expressed them. Every v2 name survives with unchanged meaning
 //     (positions shift — all scorers map by NAME), so the promoted v2
 //     value artifact keeps scoring correctly across the bump.
-export const POLICY_SCHEMA_VERSION = 3;
+// v4: added the mechanics blocks — behavioural aggregates over the hand and
+//     both boards, plus the played card's own mechanics on the action vector.
+//     The 32 frozen name slots only fire for 32 of ~330 catalog cards, so
+//     every other card reached the model as an anonymous "trainer" and a
+//     route planner could not tell Ultra Ball from Pokégear. Mechanics are
+//     dense by construction: a card the name slots never heard of still
+//     reports its draw, search, gust and acceleration. STRICTLY ADDITIVE —
+//     every v3 name survives at unchanged meaning, so the promoted v3
+//     artifact keeps scoring correctly (all scorers map by NAME).
+// v5: the route-planning blocks. Two additions and one promotion.
+//     * threat_*    — what the opponent can do NEXT turn, including off a
+//                     board they do not have yet. Every prior feature
+//                     described the board as it IS, so an opponent showing
+//                     N's Zorua encoded as a harmless 70 HP Basic one turn
+//                     before it became N's Zoroark ex.
+//     * oppprior_*  — the archetype posterior over cards they have REVEALED,
+//                     and through it an expectation over the ~53 cards we
+//                     cannot see. This CLAIMS the eight oppmodel_* slots that
+//                     have been reserved (and zero) since v1 for exactly this
+//                     model; no promoted artifact references them, which is
+//                     what makes the promotion safe rather than a rename.
+//     The mechanics blocks from v4 and every earlier name survive unchanged.
+// v6: threat_* energy matching became TYPED. v5 compared an attack's cost
+//     LENGTH against an energy COUNT, which credits dead energy — two Psychic
+//     on a Darkness attacker read as able to pay [D,D] — and so overstated
+//     every off-type opponent's threat. Same bug `costProgress` fixed for the
+//     planner; the names are unchanged but the VALUES are not, and the schema
+//     contract counts a change of meaning exactly like a change of position.
+//     Without the bump the run hash (params + schema version) is identical,
+//     so a rebuilt corpus silently collides with the old one.
+export const POLICY_SCHEMA_VERSION = 6;
 
 /** Frozen top-of-meta card names (see header). Indicator slots below. */
 export const POLICY_TOP_CARDS: readonly string[] = [
@@ -104,7 +141,9 @@ const MOVE_KINDS = [
 
 const CONDITIONS = ["Asleep", "Paralyzed", "Confused", "Poisoned", "Burned"] as const;
 
-const OPPMODEL_RESERVED_SLOTS = 8;
+/** Reused zero block for board-only moves — allocating per candidate showed
+ *  up in the planner profile, and the planner runs this per legal move. */
+const ZERO_MECHANICS: number[] = MECHANICS_FIELDS.map(() => 0);
 
 /* ─── Vector builder ────────────────────────────────────────────── */
 
@@ -120,6 +159,39 @@ class Vec {
 }
 
 /* ─── Shared sub-blocks ─────────────────────────────────────────── */
+
+/** Push a card-mechanics block under `prefix`. Always pushes all
+ *  MECHANICS_FIELDS in order, so the name list is identical on every path —
+ *  the Vec contract. */
+function pushMechanics(v: Vec, prefix: string, values: number[]): void {
+  pushBlock(v, prefix, MECHANICS_FIELDS, values);
+}
+
+/** Push a fixed-width named block. Always pushes every field in order, so
+ *  the name list is identical on every path — the Vec contract. */
+function pushBlock(
+  v: Vec,
+  prefix: string,
+  fields: readonly (string | number | symbol)[],
+  values: number[],
+): void {
+  for (let i = 0; i < fields.length; i++) {
+    v.push(`${prefix}_${String(fields[i])}`, values[i] ?? 0);
+  }
+}
+
+/** Every card name a board shows, including the lower stages buried in an
+ *  evolution stack — a Charizard sitting on a Charmander still carries the
+ *  Charmander's line into what the board can do. */
+function boardNames(board: PlayerView["board"]): string[] {
+  const out: string[] = [];
+  for (const mon of inPlay(board)) {
+    out.push(mon.card.name, ...mon.stack.map((c) => c.name));
+    for (const t of mon.attachedTools) out.push(t.name);
+  }
+  return out;
+}
+
 
 function inPlay(board: PlayerView["board"]): PokemonInPlay[] {
   return [board.active, ...board.bench].filter((m): m is PokemonInPlay => m !== null);
@@ -328,8 +400,37 @@ function encodeState(view: PlayerView): Vec {
   for (const name of POLICY_TOP_CARDS) v.push(`hand:${name}`, handCounts.get(name) ?? 0);
   for (const name of POLICY_TOP_CARDS) v.push(`opp_board:${name}`, oppBoardCounts.get(name) ?? 0);
 
-  // Reserved for the archetype-posterior opponent model.
-  for (let i = 0; i < OPPMODEL_RESERVED_SLOTS; i++) v.push(`oppmodel_${i}`, 0);
+  // Mechanics aggregates — what each zone can actually DO, as counts.
+  //
+  // This is the block the frozen name slots above cannot be: they cover 32
+  // names, and a corpus of ~330 distinct cards therefore arrives at the model
+  // as 32 recognised cards and one large anonymous mass. Summing mechanics
+  // instead means an unrecognised Trainer still reports "1 search, 2 discard
+  // cost" — the properties a route depends on — so the model can reason about
+  // a card it has never seen by name.
+  //
+  // Counts rather than presence: two Boss's Orders in hand is a materially
+  // different position from one, and a route that needs two gusts can only
+  // see that here.
+  pushMechanics(v, "hand_mech", mechanicsSum(hand.map((c) => c.name)));
+  pushMechanics(v, "my_board_mech", mechanicsSum(boardNames(view.board)));
+  pushMechanics(v, "opp_board_mech", mechanicsSum(boardNames(view.opponent.board)));
+
+  // What the opponent can do to us NEXT turn — the projection a route has to
+  // be priced against. Exact, not probabilistic: it walks the format's
+  // evolution graph from the board actually in front of us, and resolves
+  // copy attacks (Night Joker prints no damage number, so a naive read scores
+  // the format's premier attacker as a blank).
+  pushBlock(v, "threat", THREAT_FIELDS, threatVector(view));
+
+  // What ELSE is likely in their deck, from everything they have revealed.
+  // This claims the reserved oppmodel_* slots. Board and discard both count —
+  // a Pokémon KO'd three turns ago still identifies the deck.
+  const revealed = [
+    ...boardNames(view.opponent.board),
+    ...view.opponent.discard.map((c) => c.name),
+  ];
+  pushBlock(v, "oppprior", META_PRIOR_FIELDS, metaPriorVector(revealed));
 
   return v;
 }
@@ -413,6 +514,12 @@ function encodeAction(view: PlayerView, move: SimMove): Vec {
   v.push("card_is_basic_energy", card ? isBasicEnergyCard(card) : false);
   v.push("card_prize_value", card?.catalog?.supertype === "Pokémon" ? prizeValue(card.name) : 0);
   for (const name of POLICY_TOP_CARDS) v.push(`card:${name}`, card?.name === name);
+
+  // The played card's own mechanics. The card_is_* flags above say what
+  // KIND of card this is; this says what it DOES. Without it every Item
+  // scored identically at the point of choosing between them, which is the
+  // exact decision a route planner is being asked to make.
+  pushMechanics(v, "card_mech", card ? mechanicsVector(card.name) : ZERO_MECHANICS);
 
   // The own in-play Pokémon the move touches (attach/evolve/tool target,
   // retreat destination, ability user, trainer mon target).

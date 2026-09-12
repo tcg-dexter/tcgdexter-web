@@ -65,6 +65,18 @@ export interface SelfPlayGameRecord {
   endReason: string;
   turns: number;
   decisions: SelfPlayDecision[];
+  /** Match context. Null for single-game runs. */
+  matchIndex?: number | null;
+  gameInMatch?: number | null;
+  /** Match score BEFORE this game was played, from deck A's side. A decider
+   *  is played from 1-1, which is a materially different population of
+   *  positions than a game one — and one no single-game corpus contains. */
+  matchScoreA?: number | null;
+  matchScoreB?: number | null;
+  /** Who took the MATCH. Written to every game of the match once it ends, so
+   *  a decision can be labelled by the match result rather than by the result
+   *  of the single game it happened to sit in. */
+  matchWinner?: "player" | "opponent" | null;
 }
 
 export interface SelfPlayOptions {
@@ -75,6 +87,11 @@ export interface SelfPlayOptions {
   opponentDecks?: { id: string; list: string }[];
   games: number;
   seed: number;
+  /** Games needed to take a match. When set (2 = best-of-three), `games` is
+   *  read as a number of MATCHES and each match plays its deck pairing until
+   *  one side has this many wins. Unset keeps the historical single-game
+   *  behaviour exactly, so existing runs reproduce byte-identically. */
+  matchWins?: number;
   /** Planner skill levels to cycle through (0..1). */
   skills?: number[];
   maxTurns?: number;
@@ -207,27 +224,55 @@ export function generateSelfPlayGames(options: SelfPlayOptions): SelfPlayGameRec
 
   const shard = options.shard;
   const recordCandidates = options.recordCandidates !== false;
-  for (let g = 0; g < options.games; g++) {
-    if (shard && shard.count > 1 && g % shard.count !== shard.index) continue;
+
+  // Match mode. `options.games` counts MATCHES; each plays its single deck
+  // pairing until one side reaches `matchWins`. Sharding is by MATCH, never
+  // by game: the games inside a match are sequentially dependent (game three
+  // only exists if the first two split), so splitting one across workers
+  // would change what gets played.
+  const matchWins = options.matchWins ?? 0;
+  const matchMode = matchWins > 0;
+  const gamesPerMatch = matchMode ? matchWins * 2 - 1 : 1;
+  const units = options.games;
+
+  for (let u = 0; u < units; u++) {
+    if (shard && shard.count > 1 && u % shard.count !== shard.index) continue;
     const plan = schedule(
       { decks: options.decks, skills, opponentDecks: options.opponentDecks },
-      g,
+      u,
     );
-    const gameSeed = hashSeed(`selfplay:${options.seed}:${g}`);
-    const record: SelfPlayGameRecord = {
-      gameIndex: g,
-      seed: gameSeed,
-      deckAId: plan.deckA.id,
-      deckBId: plan.deckB.id,
-      skillA: plan.skillA,
-      skillB: plan.skillB,
-      winner: null,
-      endReason: "turn_cap",
-      turns: 0,
-      decisions: [],
-    };
+    // One pairing per match. Every game inside it shares these decks and
+    // skills — that is what makes it a match rather than two unrelated games.
+    let scoreA = 0;
+    let scoreB = 0;
+    const matchGames: SelfPlayGameRecord[] = [];
 
-    const mkPolicy = (side: "player" | "opponent", skill: number, seedSalt: number) =>
+    for (let j = 0; j < gamesPerMatch; j++) {
+      if (matchMode && (scoreA >= matchWins || scoreB >= matchWins)) break;
+      // Global game index stays a pure function of (unit, gameInMatch), so a
+      // 2-0 match simply leaves a gap rather than renumbering anything after
+      // it. Gaps are free: the key is (run_hash, game_index), not a sequence.
+      const g = matchMode ? u * gamesPerMatch + j : u;
+      const gameSeed = hashSeed(`selfplay:${options.seed}:${g}`);
+      const record: SelfPlayGameRecord = {
+        gameIndex: g,
+        seed: gameSeed,
+        deckAId: plan.deckA.id,
+        deckBId: plan.deckB.id,
+        skillA: plan.skillA,
+        skillB: plan.skillB,
+        winner: null,
+        endReason: "turn_cap",
+        turns: 0,
+        decisions: [],
+        matchIndex: matchMode ? u : null,
+        gameInMatch: matchMode ? j : null,
+        matchScoreA: matchMode ? scoreA : null,
+        matchScoreB: matchMode ? scoreB : null,
+        matchWinner: null,
+      };
+
+      const mkPolicy = (side: "player" | "opponent", skill: number, seedSalt: number) =>
       new RecordingPolicy(
         new PlannerPolicy({
           params: plannerParamsForSkill(skill),
@@ -241,25 +286,41 @@ export function generateSelfPlayGames(options: SelfPlayOptions): SelfPlayGameRec
         recordCandidates,
       );
 
-    const outcome = playGame(
-      instantiateDeck(plan.deckA.list),
-      instantiateDeck(plan.deckB.list),
-      {
-        player: mkPolicy("player", plan.skillA, 0x9e3779b9),
-        opponent: mkPolicy("opponent", plan.skillB, 0x85ebca6b),
-      },
-      mulberry32(gameSeed),
-      plan.firstActor,
-      options.maxTurns ? { maxTurns: options.maxTurns } : {},
-    );
+      const outcome = playGame(
+        instantiateDeck(plan.deckA.list),
+        instantiateDeck(plan.deckB.list),
+        {
+          player: mkPolicy("player", plan.skillA, 0x9e3779b9),
+          opponent: mkPolicy("opponent", plan.skillB, 0x85ebca6b),
+        },
+        mulberry32(gameSeed),
+        // Alternate the opening seat within the match and mirror it between
+        // neighbouring matches, so the ~3-4 point first-turn advantage
+        // cancels inside the unit being scored instead of accumulating.
+        matchMode ? ((u + j) % 2 === 0 ? "player" : "opponent") : plan.firstActor,
+        options.maxTurns ? { maxTurns: options.maxTurns } : {},
+      );
 
-    record.winner = outcome.winner;
-    record.endReason = outcome.endReason;
-    record.turns = outcome.turns;
-    for (const d of record.decisions) {
-      d.outcome = outcome.winner === null ? 0.5 : outcome.winner === d.actor ? 1 : 0;
+      record.winner = outcome.winner;
+      record.endReason = outcome.endReason;
+      record.turns = outcome.turns;
+      for (const d of record.decisions) {
+        d.outcome = outcome.winner === null ? 0.5 : outcome.winner === d.actor ? 1 : 0;
+      }
+      if (outcome.winner === "player") scoreA += 1;
+      else if (outcome.winner === "opponent") scoreB += 1;
+      matchGames.push(record);
+      games.push(record);
     }
-    games.push(record);
+
+    if (matchMode) {
+      // The match result is only known once the match ends, so it is written
+      // back onto every game in it. This is what lets a route label score a
+      // decision by whether it won the MATCH rather than the single game it
+      // sat in — a game-one loss inside a 2-1 win is not a failure.
+      const winner = scoreA > scoreB ? "player" : scoreB > scoreA ? "opponent" : null;
+      for (const rec of matchGames) rec.matchWinner = winner;
+    }
   }
 
   return games;
