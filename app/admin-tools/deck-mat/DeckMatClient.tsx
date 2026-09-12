@@ -47,9 +47,6 @@ import {
   computeCardWidth,
   computeGridArrangement,
   computeColumnsArrangement,
-  computeBouquetArrangement,
-  bouquetAngles,
-  bouquetGroupBox,
   computeSwatchColumns,
 } from "@/lib/playmat-layout";
 export {
@@ -69,11 +66,10 @@ export {
  *  A shared `MatArrangement` shape lets the live render and rasterizeMat
  *  branch on `.kind` once instead of threading three parallel layouts
  *  through both. */
-export type MatLayout = "standard" | "grid" | "columns" | "bouquet";
+export type MatLayout = "standard" | "grid" | "columns";
 type MatArrangement =
   | { kind: "rows"; rows: ResolvedDeckTile[][]; cardWidth: number; stretch: boolean }
-  | { kind: "columns"; columns: ResolvedDeckTile[][]; cardWidth: number }
-  | { kind: "bouquet"; fanRows: ResolvedDeckTile[][][]; cardWidth: number };
+  | { kind: "columns"; columns: ResolvedDeckTile[][]; cardWidth: number };
 
 function computeArrangement(
   layout: MatLayout,
@@ -87,10 +83,6 @@ function computeArrangement(
   if (layout === "columns") {
     const { columns, cardWidth } = computeColumnsArrangement(tiles, containerWidth);
     return { kind: "columns", columns, cardWidth };
-  }
-  if (layout === "bouquet") {
-    const { rows, cardWidth } = computeBouquetArrangement(tiles, containerWidth);
-    return { kind: "bouquet", fanRows: rows, cardWidth };
   }
   const rows = computeRows(tiles);
   return { kind: "rows", rows, cardWidth: computeCardWidth(rows, containerWidth), stretch: true };
@@ -131,17 +123,6 @@ const LAYOUT_OPTIONS = [
         <rect x="4" y="4" width="4.5" height="16" rx="1.5" />
         <rect x="9.75" y="4" width="4.5" height="16" rx="1.5" />
         <rect x="15.5" y="4" width="4.5" height="16" rx="1.5" />
-      </svg>
-    ),
-  },
-  {
-    key: "bouquet" as const,
-    label: "Bouquet layout",
-    icon: (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-        <rect x="10.5" y="4" width="3" height="16" rx="1.5" transform="rotate(-16 12 20)" />
-        <rect x="10.5" y="4" width="3" height="16" rx="1.5" />
-        <rect x="10.5" y="4" width="3" height="16" rx="1.5" transform="rotate(16 12 20)" />
       </svg>
     ),
   },
@@ -704,12 +685,7 @@ async function rasterizeMat({
   matWidth: number;
   sleeveColor: string | null;
 }): Promise<Blob | null> {
-  const allTiles =
-    arrangement.kind === "rows"
-      ? arrangement.rows.flat()
-      : arrangement.kind === "columns"
-      ? arrangement.columns.flat()
-      : arrangement.fanRows.flat(2);
+  const allTiles = arrangement.kind === "rows" ? arrangement.rows.flat() : arrangement.columns.flat();
   const cardWidth = arrangement.cardWidth;
 
   // ── 1. Pre-fetch all images as data URLs ──────────────────────────────────
@@ -993,32 +969,6 @@ async function rasterizeMat({
         pileY += cardH + ROW_GAP_X;
       }
       colX += colWidth + ROW_GAP_X;
-    }
-  } else if (arrangement.kind === "bouquet") {
-    // Every pile in a fan rotates around the exact same pivot — its own
-    // bottom-center — so translating to that pivot and drawing the pile
-    // centered at (0, -cardH) before rotating reproduces the live CSS's
-    // `transform-origin: bottom center; rotate(...)` exactly.
-    let rowY = innerY;
-    for (const row of arrangement.fanRows) {
-      const boxes = row.map((group) => bouquetGroupBox(group, cardWidth));
-      const rowH = Math.max(...boxes.map((b) => b.height));
-      const pivotY = rowY + rowH;
-      let colX = innerX;
-      row.forEach((group, gi) => {
-        const pivotX = colX + boxes[gi].width / 2;
-        const angles = bouquetAngles(group.length);
-        group.forEach((t, i) => {
-          const footprint = pileFootprint(t);
-          ctx.save();
-          ctx.translate(pivotX, pivotY);
-          ctx.rotate((angles[i] * Math.PI) / 180);
-          drawPile(t, -footprint / 2, -cardH);
-          ctx.restore();
-        });
-        colX += boxes[gi].width + ROW_GAP_X;
-      });
-      rowY += rowH + ROW_GAP_X;
     }
   } else {
     const { rows, stretch } = arrangement;
@@ -1464,33 +1414,6 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
               ) : tiles.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-sm" style={emptyTextStyle}>
                   <span className={emptyTextClass}>No cards parsed from this list.</span>
-                </div>
-              ) : arrangement.kind === "bouquet" ? (
-                // Fans of at most BOUQUET_GROUP_SIZE piles, each curving
-                // around one shared pivot (see BouquetFan), wrapped into
-                // rows bottom-aligned so every fan's pivot sits on the
-                // same baseline within a row.
-                <div key={renderKey} className="flex flex-col h-full" style={{ gap: ROW_GAP_X }}>
-                  {(() => {
-                    let idx = 0;
-                    return arrangement.fanRows.map((row, rowIdx) => (
-                      <div key={rowIdx} className="flex items-end" style={{ gap: ROW_GAP_X }}>
-                        {row.map((group, groupIdx) => {
-                          const start = idx;
-                          idx += group.length;
-                          return (
-                            <BouquetFan
-                              key={groupIdx}
-                              group={group}
-                              cardWidth={arrangement.cardWidth}
-                              sleeveColor={sleeveColor}
-                              indexStart={start}
-                            />
-                          );
-                        })}
-                      </div>
-                    ));
-                  })()}
                 </div>
               ) : arrangement.kind === "columns" ? (
                 // Column-major: piles fill top-to-bottom, columns pack
@@ -2155,41 +2078,6 @@ export function CardPile({
               />
             </div>
           </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/** A "Bouquet" fan of at most BOUQUET_GROUP_SIZE piles. Every pile is
- *  centered on the same x (`left-1/2` + `translateX(-50%)`) and anchored
- *  to the same y (`bottom-0`), so with `transform-origin: bottom center`
- *  they all rotate around one shared pivot regardless of each pile's own
- *  width — rotation alone spreads the tops into a fan while the bases
- *  stay together, no per-pile offset math needed. CardPile itself is
- *  untouched; this only wraps it in a rotated positioner. */
-function BouquetFan({
-  group,
-  cardWidth,
-  sleeveColor,
-  indexStart,
-}: {
-  group: ResolvedDeckTile[];
-  cardWidth: number;
-  sleeveColor?: string | null;
-  indexStart: number;
-}) {
-  const angles = bouquetAngles(group.length);
-  const { width, height } = bouquetGroupBox(group, cardWidth);
-  return (
-    <div className="relative shrink-0" style={{ width, height }}>
-      {group.map((t, i) => (
-        <div
-          key={t.key}
-          className="absolute bottom-0 left-1/2"
-          style={{ transformOrigin: "bottom center", transform: `translateX(-50%) rotate(${angles[i]}deg)` }}
-        >
-          <CardPile tile={t} cardWidth={cardWidth} index={indexStart + i} sleeveColor={sleeveColor} />
         </div>
       ))}
     </div>
