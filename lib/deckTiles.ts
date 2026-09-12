@@ -16,14 +16,6 @@ export interface ResolvedDeckTile {
   name: string;
   copyCount: number;
   section: DeckTileCard["section"];
-  /** Evolution-line root name (lowercase) for pokemon-section tiles, e.g.
-   *  "dreepy" for Dreepy/Drakloak/Dragapult alike — null otherwise. Lets a
-   *  layout cluster a species' whole line together (see Playmat Studio's
-   *  "Bouquet" layout). */
-  family: string | null;
-  /** Trainer subtype ("Supporter" | "Item" | "Pokémon Tool" | "Stadium" |
-   *  "Other") for trainer-section tiles — null otherwise. */
-  subtype: string | null;
   entryId: string | null;
   setName: string;
   number: string;
@@ -102,10 +94,6 @@ interface Tile {
   fallbackSetCode: string;
   fallbackNumber: string;
   entry: CardIndexEntry | null;
-  /** Evolution-line root name (lowercase), set by orderPokemonByLine for
-   *  pokemon-section tiles — lets callers cluster a species' whole line
-   *  together (see ResolvedDeckTile.family). */
-  family?: string;
 }
 
 const TRAINER_SUBTYPE_ORDER = ["Supporter", "Item", "Pokémon Tool", "Stadium"] as const;
@@ -205,8 +193,6 @@ function orderPokemonByLine(tiles: Tile[]): Tile[] {
         b.copyCount - a.copyCount ||
         a.name.localeCompare(b.name),
     );
-    const family = line.root.name.toLowerCase();
-    for (const member of line.members) member.family = family;
   }
 
   return lines.flatMap((l) => l.members);
@@ -290,8 +276,6 @@ export function resolveDeckTiles(cards: DeckTileCard[]): ResolvedDeckTile[] {
       name: t.name,
       copyCount: t.copyCount,
       section: t.section,
-      family: t.section === "pokemon" ? (t.family ?? t.name.toLowerCase()) : null,
-      subtype: t.section === "trainer" ? trainerSubtypeOf(t) : null,
       entryId: entry?.id ?? null,
       setName,
       number,

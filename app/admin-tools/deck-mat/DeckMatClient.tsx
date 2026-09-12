@@ -48,7 +48,8 @@ import {
   computeGridArrangement,
   computeColumnsArrangement,
   computeBouquetArrangement,
-  bouquetGroupLayout,
+  bouquetAngles,
+  bouquetGroupBox,
   computeSwatchColumns,
 } from "@/lib/playmat-layout";
 export {
@@ -994,31 +995,28 @@ async function rasterizeMat({
       colX += colWidth + ROW_GAP_X;
     }
   } else if (arrangement.kind === "bouquet") {
-    // Each pile rotates around its own pivot (bouquetGroupLayout's
-    // per-pile left/top, relative to the fan's own top-left) — translating
-    // there and drawing the pile centered at (0, -cardH) before rotating
-    // reproduces the live CSS's `transform-origin: bottom center;
-    // translate(-50%,-100%) rotate(...)` exactly. Fans within a row
-    // bottom-align (matching the live render's `items-end`), so a
-    // shorter fan's top has to make up the row's height difference.
+    // Every pile in a fan rotates around the exact same pivot — its own
+    // bottom-center — so translating to that pivot and drawing the pile
+    // centered at (0, -cardH) before rotating reproduces the live CSS's
+    // `transform-origin: bottom center; rotate(...)` exactly.
     let rowY = innerY;
     for (const row of arrangement.fanRows) {
-      const layouts = row.map((group) => bouquetGroupLayout(group, cardWidth));
-      const rowH = Math.max(...layouts.map((l) => l.height));
-      const rowBottom = rowY + rowH;
+      const boxes = row.map((group) => bouquetGroupBox(group, cardWidth));
+      const rowH = Math.max(...boxes.map((b) => b.height));
+      const pivotY = rowY + rowH;
       let colX = innerX;
       row.forEach((group, gi) => {
-        const { width, height, placements } = layouts[gi];
-        const groupTop = rowBottom - height;
+        const pivotX = colX + boxes[gi].width / 2;
+        const angles = bouquetAngles(group.length);
         group.forEach((t, i) => {
           const footprint = pileFootprint(t);
           ctx.save();
-          ctx.translate(colX + placements[i].left, groupTop + placements[i].top);
-          ctx.rotate((placements[i].angle * Math.PI) / 180);
+          ctx.translate(pivotX, pivotY);
+          ctx.rotate((angles[i] * Math.PI) / 180);
           drawPile(t, -footprint / 2, -cardH);
           ctx.restore();
         });
-        colX += width + ROW_GAP_X;
+        colX += boxes[gi].width + ROW_GAP_X;
       });
       rowY += rowH + ROW_GAP_X;
     }
@@ -2163,17 +2161,13 @@ export function CardPile({
   );
 }
 
-/** A "Bouquet" fan of at most BOUQUET_GROUP_SIZE piles. Each pile is
- *  positioned at its own pivot (bouquetGroupLayout's per-pile left/top,
- *  computed in lockstep with rasterizeMat's canvas version) via an
- *  explicit pixel `left`/`top` rather than a percentage, since pivots are
- *  now spread apart rather than sharing one point. `transform:
- *  translate(-50%,-100%)` shifts the pile so that exact point becomes its
- *  bottom-center regardless of the pile's own width, then `rotate` turns
- *  it around that same point (transform-origin: bottom center) — no
- *  per-pile offset math needed beyond what bouquetGroupLayout already
- *  worked out. CardPile itself is untouched; this only wraps it in a
- *  rotated positioner. */
+/** A "Bouquet" fan of at most BOUQUET_GROUP_SIZE piles. Every pile is
+ *  centered on the same x (`left-1/2` + `translateX(-50%)`) and anchored
+ *  to the same y (`bottom-0`), so with `transform-origin: bottom center`
+ *  they all rotate around one shared pivot regardless of each pile's own
+ *  width — rotation alone spreads the tops into a fan while the bases
+ *  stay together, no per-pile offset math needed. CardPile itself is
+ *  untouched; this only wraps it in a rotated positioner. */
 function BouquetFan({
   group,
   cardWidth,
@@ -2185,19 +2179,15 @@ function BouquetFan({
   sleeveColor?: string | null;
   indexStart: number;
 }) {
-  const { width, height, placements } = bouquetGroupLayout(group, cardWidth);
+  const angles = bouquetAngles(group.length);
+  const { width, height } = bouquetGroupBox(group, cardWidth);
   return (
     <div className="relative shrink-0" style={{ width, height }}>
       {group.map((t, i) => (
         <div
           key={t.key}
-          className="absolute"
-          style={{
-            left: placements[i].left,
-            top: placements[i].top,
-            transformOrigin: "bottom center",
-            transform: `translate(-50%, -100%) rotate(${placements[i].angle}deg)`,
-          }}
+          className="absolute bottom-0 left-1/2"
+          style={{ transformOrigin: "bottom center", transform: `translateX(-50%) rotate(${angles[i]}deg)` }}
         >
           <CardPile tile={t} cardWidth={cardWidth} index={indexStart + i} sleeveColor={sleeveColor} />
         </div>
