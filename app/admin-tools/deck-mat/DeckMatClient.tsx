@@ -45,8 +45,6 @@ import {
   MAT_ASPECT,
   computeRows,
   computeCardWidth,
-  computeGridArrangement,
-  computeColumnsArrangement,
   computeSwatchColumns,
 } from "@/lib/playmat-layout";
 export {
@@ -59,74 +57,6 @@ export {
   computeRows,
   computeCardWidth,
 };
-
-/** How card piles are arranged on the mat. "standard" is the original
- *  fixed-cap, stretched-to-fill grid; "grid" and "columns" are computed via
- *  computeGridArrangement/computeColumnsArrangement (see lib/playmat-layout).
- *  A shared `MatArrangement` shape lets the live render and rasterizeMat
- *  branch on `.kind` once instead of threading three parallel layouts
- *  through both. */
-export type MatLayout = "standard" | "grid" | "columns";
-type MatArrangement =
-  | { kind: "rows"; rows: ResolvedDeckTile[][]; cardWidth: number; stretch: boolean }
-  | { kind: "columns"; columns: ResolvedDeckTile[][]; cardWidth: number };
-
-function computeArrangement(
-  layout: MatLayout,
-  tiles: ResolvedDeckTile[],
-  containerWidth: number,
-): MatArrangement {
-  if (layout === "grid") {
-    const { rows, cardWidth } = computeGridArrangement(tiles, containerWidth);
-    return { kind: "rows", rows, cardWidth, stretch: false };
-  }
-  if (layout === "columns") {
-    const { columns, cardWidth } = computeColumnsArrangement(tiles, containerWidth);
-    return { kind: "columns", columns, cardWidth };
-  }
-  const rows = computeRows(tiles);
-  return { kind: "rows", rows, cardWidth: computeCardWidth(rows, containerWidth), stretch: true };
-}
-
-// Icon-only options for the layout picker, anchored above the mat's right
-// edge inline with the deck name. Plain filled rects (not stroke icons like
-// CarouselChevron) read better at this small a size.
-const LAYOUT_OPTIONS = [
-  {
-    key: "standard" as const,
-    label: "Standard layout",
-    icon: (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-        <rect x="4" y="4.5" width="16" height="3.5" rx="1.5" />
-        <rect x="4" y="10.25" width="16" height="3.5" rx="1.5" />
-        <rect x="4" y="16" width="16" height="3.5" rx="1.5" />
-      </svg>
-    ),
-  },
-  {
-    key: "grid" as const,
-    label: "Grid layout",
-    icon: (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-        <rect x="4" y="4" width="7" height="7" rx="1.5" />
-        <rect x="13" y="4" width="7" height="7" rx="1.5" />
-        <rect x="4" y="13" width="7" height="7" rx="1.5" />
-        <rect x="13" y="13" width="7" height="7" rx="1.5" />
-      </svg>
-    ),
-  },
-  {
-    key: "columns" as const,
-    label: "Columns layout",
-    icon: (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-        <rect x="4" y="4" width="4.5" height="16" rx="1.5" />
-        <rect x="9.75" y="4" width="4.5" height="16" rx="1.5" />
-        <rect x="15.5" y="4" width="4.5" height="16" rx="1.5" />
-      </svg>
-    ),
-  },
-];
 const EXPORT_PADDING = 15;      // px, outer padding added around the exported image
 // Sleeve border — how much of the sleeve color shows around the card art
 // on each edge (so the sleeve is 2x this wider/taller than the card). A
@@ -669,7 +599,8 @@ function drawContain(
 }
 
 async function rasterizeMat({
-  arrangement,
+  rows,
+  cardWidth,
   activeGradient,
   textureKey,
   matImage,
@@ -677,7 +608,8 @@ async function rasterizeMat({
   matWidth,
   sleeveColor,
 }: {
-  arrangement: MatArrangement;
+  rows: ResolvedDeckTile[][];
+  cardWidth: number;
   activeGradient: string | null;
   textureKey: string | null;
   matImage: MatImage | null;
@@ -685,12 +617,9 @@ async function rasterizeMat({
   matWidth: number;
   sleeveColor: string | null;
 }): Promise<Blob | null> {
-  const allTiles = arrangement.kind === "rows" ? arrangement.rows.flat() : arrangement.columns.flat();
-  const cardWidth = arrangement.cardWidth;
-
   // ── 1. Pre-fetch all images as data URLs ──────────────────────────────────
   const uniqueCardUrls = Array.from(
-    new Set(allTiles.map((t) => t.smallImageUrl).filter(Boolean)),
+    new Set(rows.flat().map((t) => t.smallImageUrl).filter(Boolean)),
   );
   const urls = ["/logo-wordmark.png", ...uniqueCardUrls];
   const dataUrlMap = new Map<string, string>();
@@ -728,12 +657,8 @@ async function rasterizeMat({
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(totalW * PR);
   canvas.height = Math.round(totalH * PR);
-  const ctx2d = canvas.getContext("2d");
-  if (!ctx2d) throw new Error("Canvas 2D unavailable");
-  // Annotated (not just narrowed) so the nested drawPile() closure below
-  // — TS doesn't carry a `const`'s narrowed type into a nested function —
-  // sees ctx as definitely non-null too.
-  const ctx: CanvasRenderingContext2D = ctx2d;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas 2D unavailable");
   ctx.scale(PR, PR);
 
   // ── 4. Page background ────────────────────────────────────────────────────
@@ -851,155 +776,129 @@ async function rasterizeMat({
   const innerY = matY + MAT_PADDING;
   const innerW = matWidth - MAT_PADDING * 2;
   const innerH = matHeight - MAT_PADDING * 2;
+  const numRows = rows.length;
   const cardH = Math.round((cardWidth * 342) / 245);
-  const pileFootprint = (t: ResolvedDeckTile) =>
-    cardWidth + (Math.max(t.copyCount, 1) - 1) * cardWidth * FAN_OVERLAP;
 
-  // One fanned pile at (pileX, pileY) — the individual-stack rendering
-  // shared by every layout, mirroring CardPile's DOM structure exactly:
-  // an outward sleeve frame (never shrinking the card art), a base drop
-  // shadow on every card, an overlap shadow between stacked copies, and a
-  // faint card-on-sleeve shadow when one's equipped.
-  function drawPile(t: ResolvedDeckTile, pileX: number, pileY: number) {
-    const count = Math.max(t.copyCount, 1);
-    const cardImg = imageMap.get(t.smallImageUrl);
-    const cardR = Math.max(2, Math.round(cardWidth * 0.05));
-    // Resolved CSS background for the sleeve — a solid hex or a gradient
-    // string, or null for no sleeve. See the sleeveColor state comment.
-    const sleeveBg = sleeveColor;
-    const sleeveBorder = sleeveBg ? SLEEVE_BORDER_PX : 0;
-    // Sleeved cards get a square-cornered sleeve frame; the card art
-    // itself keeps its usual rounded corners either way.
-    const outerR = sleeveBg ? 0 : cardR;
-    for (let i = 0; i < count; i++) {
-      const cx = pileX + i * cardWidth * FAN_OVERLAP;
-      // The sleeve frame is drawn outward around the card's true (cx, ry,
-      // cardWidth, cardH) box, by sleeveBorder on every edge, rather than
-      // shrinking the card art inward to make room for it — so the card
-      // itself never scales down when a sleeve is equipped. A no-op box
-      // (sleeveBorder 0) with no sleeve.
-      const sx = cx - sleeveBorder;
-      const sy = pileY - sleeveBorder;
-      const sw = cardWidth + sleeveBorder * 2;
-      const sh = cardH + sleeveBorder * 2;
-      // canvas fillStyle can't take a raw "linear-gradient(...)" string —
-      // convert it to a CanvasGradient first (cssGradToCanvas is also
-      // what the mat background itself uses).
-      const fillStyle = !sleeveBg
-        ? "#e8e8e8"
-        : sleeveBg.startsWith("linear-gradient")
-        ? cssGradToCanvas(ctx, sleeveBg, sx, sy, sw, sh) ?? "#e8e8e8"
-        : sleeveBg;
+  for (let rowIdx = 0; rowIdx < numRows; rowIdx++) {
+    const row = rows[rowIdx];
+    const isLast = rowIdx === numRows - 1;
 
-      // Sleeve/slot background — the sleeve color/gradient when one's
-      // equipped, otherwise the plain placeholder fill. Every card gets a
-      // base drop shadow so it reads as sitting on the mat on its own;
-      // stacked duplicates get a second pass layering an extra shadow
-      // between them for depth (canvas only supports one shadow config
-      // per fill, hence the two passes).
-      ctx.save();
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 2;
-      ctx.shadowBlur = 3;
-      ctx.shadowColor = "rgba(0,0,0,0.35)";
-      ctx.beginPath();
-      ctx.roundRect(sx, sy, sw, sh, outerR);
-      ctx.closePath();
-      ctx.fillStyle = fillStyle;
-      ctx.fill();
-      ctx.restore();
+    // Row Y: flex column space-between
+    const ry =
+      numRows <= 1
+        ? innerY
+        : innerY + (rowIdx * (innerH - cardH)) / (numRows - 1);
 
-      if (i > 0) {
+    const pileWidths = row.map(
+      (t) => cardWidth + (Math.max(t.copyCount, 1) - 1) * cardWidth * FAN_OVERLAP,
+    );
+    const totalPileW = pileWidths.reduce((a, b) => a + b, 0);
+
+    // Pile X spacing: space-between for full rows, flex-start for last
+    const spaceBetween =
+      isLast || row.length <= 1
+        ? ROW_GAP_X
+        : Math.max(ROW_GAP_X, (innerW - totalPileW) / (row.length - 1));
+
+    let pileX = innerX;
+
+    for (let colIdx = 0; colIdx < row.length; colIdx++) {
+      const t = row[colIdx];
+      const count = Math.max(t.copyCount, 1);
+      const cardImg = imageMap.get(t.smallImageUrl);
+
+      const cardR = Math.max(2, Math.round(cardWidth * 0.05));
+      // Resolved CSS background for the sleeve — a solid hex or a gradient
+      // string, or null for no sleeve. See the sleeveColor state comment.
+      const sleeveBg = sleeveColor;
+      const sleeveBorder = sleeveBg ? SLEEVE_BORDER_PX : 0;
+      // Sleeved cards get a square-cornered sleeve frame; the card art
+      // itself keeps its usual rounded corners either way.
+      const outerR = sleeveBg ? 0 : cardR;
+      for (let i = 0; i < count; i++) {
+        const cx = pileX + i * cardWidth * FAN_OVERLAP;
+        // The sleeve frame is drawn outward around the card's true (cx, ry,
+        // cardWidth, cardH) box, by sleeveBorder on every edge, rather than
+        // shrinking the card art inward to make room for it — so the card
+        // itself never scales down when a sleeve is equipped. A no-op box
+        // (sleeveBorder 0) with no sleeve.
+        const sx = cx - sleeveBorder;
+        const sy = ry - sleeveBorder;
+        const sw = cardWidth + sleeveBorder * 2;
+        const sh = cardH + sleeveBorder * 2;
+        // canvas fillStyle can't take a raw "linear-gradient(...)" string —
+        // convert it to a CanvasGradient first (cssGradToCanvas is also
+        // what the mat background itself uses).
+        const fillStyle = !sleeveBg
+          ? "#e8e8e8"
+          : sleeveBg.startsWith("linear-gradient")
+          ? cssGradToCanvas(ctx, sleeveBg, sx, sy, sw, sh) ?? "#e8e8e8"
+          : sleeveBg;
+
+        // Sleeve/slot background — the sleeve color/gradient when one's
+        // equipped, otherwise the plain placeholder fill. Every card gets a
+        // base drop shadow so it reads as sitting on the mat on its own;
+        // stacked duplicates get a second pass layering an extra shadow
+        // between them for depth (canvas only supports one shadow config
+        // per fill, hence the two passes).
         ctx.save();
-        ctx.shadowOffsetX = -2;
-        ctx.shadowOffsetY = 0;
-        ctx.shadowBlur = 2;
-        ctx.shadowColor = "rgba(0,0,0,0.33)";
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 2;
+        ctx.shadowBlur = 3;
+        ctx.shadowColor = "rgba(0,0,0,0.35)";
         ctx.beginPath();
         ctx.roundRect(sx, sy, sw, sh, outerR);
         ctx.closePath();
         ctx.fillStyle = fillStyle;
         ctx.fill();
         ctx.restore();
+
+        if (i > 0) {
+          ctx.save();
+          ctx.shadowOffsetX = -2;
+          ctx.shadowOffsetY = 0;
+          ctx.shadowBlur = 2;
+          ctx.shadowColor = "rgba(0,0,0,0.33)";
+          ctx.beginPath();
+          ctx.roundRect(sx, sy, sw, sh, outerR);
+          ctx.closePath();
+          ctx.fillStyle = fillStyle;
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Faint shadow the card art casts onto the sleeve beneath it — only
+        // when one's equipped (matches CardPile); fill color is irrelevant,
+        // since the card image below fully covers this shape and only the
+        // shadow cast by it remains visible.
+        if (sleeveBg) {
+          ctx.save();
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 1;
+          ctx.shadowBlur = 1.5;
+          ctx.shadowColor = "rgba(0,0,0,0.3)";
+          ctx.beginPath();
+          ctx.roundRect(cx, ry, cardWidth, cardH, cardR);
+          ctx.closePath();
+          ctx.fillStyle = "#000";
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Card image, clipped to its own true size and corner radius —
+        // unaffected by the sleeve frame drawn around it above.
+        if (cardImg) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.roundRect(cx, ry, cardWidth, cardH, cardR);
+          ctx.closePath();
+          ctx.clip();
+          drawContain(ctx, cardImg, cx, ry, cardWidth, cardH);
+          ctx.restore();
+        }
       }
 
-      // Faint shadow the card art casts onto the sleeve beneath it — only
-      // when one's equipped (matches CardPile); fill color is irrelevant,
-      // since the card image below fully covers this shape and only the
-      // shadow cast by it remains visible.
-      if (sleeveBg) {
-        ctx.save();
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 1;
-        ctx.shadowBlur = 1.5;
-        ctx.shadowColor = "rgba(0,0,0,0.3)";
-        ctx.beginPath();
-        ctx.roundRect(cx, pileY, cardWidth, cardH, cardR);
-        ctx.closePath();
-        ctx.fillStyle = "#000";
-        ctx.fill();
-        ctx.restore();
-      }
-
-      // Card image, clipped to its own true size and corner radius —
-      // unaffected by the sleeve frame drawn around it above.
-      if (cardImg) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.roundRect(cx, pileY, cardWidth, cardH, cardR);
-        ctx.closePath();
-        ctx.clip();
-        drawContain(ctx, cardImg, cx, pileY, cardWidth, cardH);
-        ctx.restore();
-      }
-    }
-  }
-
-  if (arrangement.kind === "columns") {
-    // Column-major: piles fill top-to-bottom, columns pack left-to-right —
-    // each column's width is its own widest pile's footprint, so a tall
-    // multi-copy pile never overlaps the next column (matches the live
-    // flex-row-of-flex-columns render).
-    let colX = innerX;
-    for (const col of arrangement.columns) {
-      const colWidth = Math.max(...col.map(pileFootprint));
-      let pileY = innerY;
-      for (const t of col) {
-        drawPile(t, colX, pileY);
-        pileY += cardH + ROW_GAP_X;
-      }
-      colX += colWidth + ROW_GAP_X;
-    }
-  } else {
-    const { rows, stretch } = arrangement;
-    const numRows = rows.length;
-    for (let rowIdx = 0; rowIdx < numRows; rowIdx++) {
-      const row = rows[rowIdx];
-      const isLast = rowIdx === numRows - 1;
-
-      // Row Y: flex column space-between when stretched (Standard), packed
-      // from the top with a fixed gap otherwise (Grid).
-      const ry = !stretch
-        ? innerY + rowIdx * (cardH + ROW_GAP_X)
-        : numRows <= 1
-        ? innerY
-        : innerY + (rowIdx * (innerH - cardH)) / (numRows - 1);
-
-      const pileWidths = row.map(pileFootprint);
-      const totalPileW = pileWidths.reduce((a, b) => a + b, 0);
-
-      // Pile X spacing: space-between for full stretched rows, flex-start
-      // for the last row and for every row when not stretched.
-      const spaceBetween =
-        !stretch || isLast || row.length <= 1
-          ? ROW_GAP_X
-          : Math.max(ROW_GAP_X, (innerW - totalPileW) / (row.length - 1));
-
-      let pileX = innerX;
-      for (let colIdx = 0; colIdx < row.length; colIdx++) {
-        drawPile(row[colIdx], pileX, ry);
-        pileX += pileWidths[colIdx] + spaceBetween;
-      }
+      pileX += pileWidths[colIdx] + spaceBetween;
     }
   }
 
@@ -1036,8 +935,6 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
   const [error, setError] = useState<string | null>(null);
   const [matStyle, setMatStyle] = useState<MatStyle>("brand");
   const [textureKey, setTextureKey] = useState<string | null>(null);
-  // How piles are arranged on the mat — see the MatLayout comment above.
-  const [matLayout, setMatLayout] = useState<MatLayout>("standard");
   // Resolved CSS background for the sleeve — a solid hex, a gradient string,
   // or null for no sleeve (default). Independent of mat style/texture/image —
   // sleeves color the cards, not the mat, so picking one never touches
@@ -1204,7 +1101,7 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
       const deckName = decks.find((d) => d.id === selectedDeckId)?.name ?? "";
       const fileName = `${deckName.replace(/[^a-z0-9]/gi, "-").toLowerCase() || "deck-mat"}.png`;
       const activeGradient = MAT_STYLES.find((s) => s.key === matStyle)?.gradient ?? null;
-      const blob = await rasterizeMat({ arrangement, activeGradient, textureKey, matImage, deckName, matWidth, sleeveColor });
+      const blob = await rasterizeMat({ rows, cardWidth, activeGradient, textureKey, matImage, deckName, matWidth, sleeveColor });
       if (!blob) throw new Error("Couldn't generate the image.");
       downloadBlob(blob, fileName);
       trackClient("playmat.exported", {
@@ -1212,7 +1109,6 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
         texture: textureKey ?? null,
         has_image: !!matImage,
         sleeve: sleeveColor ?? null,
-        layout: matLayout,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Export failed.");
@@ -1221,9 +1117,8 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
     }
   }
 
-  const arrangement: MatArrangement = tiles
-    ? computeArrangement(matLayout, tiles, matWidth)
-    : { kind: "rows", rows: [], cardWidth: 0, stretch: true };
+  const rows = tiles ? computeRows(tiles) : [];
+  const cardWidth = computeCardWidth(rows, matWidth);
   const swatchCols = computeSwatchColumns(
     swatchBoxSize.w,
     swatchBoxSize.h,
@@ -1333,41 +1228,13 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
         {/* Left on desktop: the mat itself */}
         <div ref={matColumnRef} className="flex flex-col gap-3">
           <div ref={exportRef} className="flex flex-col gap-3">
-            {/* Mat header: deck name, and the layout picker anchored above
-                the mat's right edge. Falls back to a non-breaking space
+            {/* Mat header: deck name. Falls back to a non-breaking space
                 (not "") so the span's line box — and the mat's position
                 below it — doesn't collapse before a deck is selected. */}
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
               <span className="text-lg sm:text-xl font-semibold text-text-primary truncate">
                 {decks.find((d) => d.id === selectedDeckId)?.name ?? " "}
               </span>
-              <div
-                className="inline-flex items-center h-7 shrink-0 rounded-full bg-black/5 dark:bg-white/5 p-[3px] gap-[3px]"
-                role="tablist"
-              >
-                {LAYOUT_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    role="tab"
-                    aria-selected={matLayout === opt.key}
-                    aria-label={opt.label}
-                    onClick={() => setMatLayout(opt.key)}
-                    className="relative h-full w-7 flex items-center justify-center rounded-full"
-                  >
-                    {matLayout === opt.key && (
-                      <motion.div
-                        layoutId="mat-layout-pill"
-                        className="absolute inset-0 rounded-full bg-white dark:bg-surface-2 shadow-sm"
-                        transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                      />
-                    )}
-                    <span className={`relative z-10 ${matLayout === opt.key ? "text-text-primary" : "text-text-muted"}`}>
-                      {opt.icon}
-                    </span>
-                  </button>
-                ))}
-              </div>
             </div>
 
             <div
@@ -1415,44 +1282,23 @@ export default function DeckMatClient({ decks }: { decks: DeckSummary[] }) {
                 <div className="h-full flex items-center justify-center text-sm" style={emptyTextStyle}>
                   <span className={emptyTextClass}>No cards parsed from this list.</span>
                 </div>
-              ) : arrangement.kind === "columns" ? (
-                // Column-major: piles fill top-to-bottom, columns pack
-                // left-to-right — each column auto-sizes to its own
-                // widest pile, so a tall multi-copy pile never overlaps
-                // the next column.
-                <div key={renderKey} className="flex h-full items-start" style={{ gap: ROW_GAP_X }}>
-                  {(() => {
-                    let idx = 0;
-                    return arrangement.columns.map((col, colIdx) => (
-                      <div key={colIdx} className="flex flex-col items-start" style={{ gap: ROW_GAP_X }}>
-                        {col.map((t) => (
-                          <CardPile key={t.key} tile={t} cardWidth={arrangement.cardWidth} index={idx++} sleeveColor={sleeveColor} />
-                        ))}
-                      </div>
-                    ));
-                  })()}
-                </div>
               ) : (
                 <div
                   key={renderKey}
                   className="flex flex-col h-full"
-                  style={{ justifyContent: arrangement.stretch ? "space-between" : "flex-start", gap: arrangement.stretch ? undefined : ROW_GAP_X }}
+                  style={{ justifyContent: "space-between" }}
                 >
-                  {(() => {
-                    let idx = 0;
-                    const { rows, stretch } = arrangement;
-                    return rows.map((row, rowIdx) => (
-                      <div
-                        key={rowIdx}
-                        className="flex"
-                        style={{ gap: ROW_GAP_X, justifyContent: !stretch ? "flex-start" : rowIdx < rows.length - 1 ? "space-between" : "flex-start" }}
-                      >
-                        {row.map((t) => (
-                          <CardPile key={t.key} tile={t} cardWidth={arrangement.cardWidth} index={idx++} sleeveColor={sleeveColor} />
-                        ))}
-                      </div>
-                    ));
-                  })()}
+                  {rows.map((row, rowIdx) => (
+                    <div
+                      key={rowIdx}
+                      className="flex"
+                      style={{ gap: ROW_GAP_X, justifyContent: rowIdx < rows.length - 1 ? "space-between" : "flex-start" }}
+                    >
+                      {row.map((t, colIdx) => (
+                        <CardPile key={t.key} tile={t} cardWidth={cardWidth} index={rowIdx * MAX_PILES_PER_ROW + colIdx} sleeveColor={sleeveColor} />
+                      ))}
+                    </div>
+                  ))}
                 </div>
               )}
               </div>
