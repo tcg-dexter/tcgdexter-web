@@ -55,6 +55,7 @@ import {
 import { HeuristicPolicy, type DecisionPolicy } from "@/lib/engine/sim/policy";
 import { PlannerPolicy } from "@/lib/engine/sim/planner";
 import { RoutePlannerPolicy } from "@/lib/engine/sim/routePlanner";
+import { SearchPolicy } from "@/lib/ml/strategist/searchPolicy";
 import { plannerParamsForSkill } from "@/lib/engine/sim/difficulty";
 import { createBoardEvaluator } from "@/lib/ml/botEvaluator";
 import { numOrNull } from "@/lib/ml/features";
@@ -87,6 +88,8 @@ const ARTIFACT_B = arg("--vs");
 const PLANNER_A = arg("--planner-a") ?? "template";
 const PLANNER_B = arg("--planner-b") ?? "template";
 const BEAM = numOrNull(arg("--beam")) ?? 6;
+const ROLLOUTS = numOrNull(arg("--rollouts")) ?? 8;
+const SEARCH_HORIZON = numOrNull(arg("--search-horizon")) ?? 6;
 
 function makePolicy(
   spec: string | null,
@@ -97,6 +100,27 @@ function makePolicy(
     return { label: "HeuristicPolicy", policy: () => new HeuristicPolicy() };
   }
   const params = plannerParamsForSkill(SKILL);
+  // The rolled-out counterfactual search, measured against HUMAN choices on
+  // real logs — an instrument and a dataset entirely independent of the
+  // self-play duel it wins. Convergent evidence, or a warning.
+  if (planner === "search") {
+    const evaluate = createBoardEvaluator(
+      ARTIFACT && ARTIFACT !== "none" ? ARTIFACT : undefined,
+    );
+    if (!evaluate) throw new Error("[move_agreement] search needs a value artifact");
+    return {
+      label: `SearchPolicy (rollouts=${ROLLOUTS}, horizon=${SEARCH_HORIZON})`,
+      policy: () =>
+        new SearchPolicy({
+          rollouts: ROLLOUTS,
+          horizon: SEARCH_HORIZON,
+          evaluate,
+          seed: 1,
+          determinize: true,
+          maxCandidates: 24,
+        }),
+    };
+  }
   const kind = planner === "route" ? ` [route beam=${BEAM}]` : "";
   const build = (evaluate?: ReturnType<typeof createBoardEvaluator>) =>
     planner === "route"
