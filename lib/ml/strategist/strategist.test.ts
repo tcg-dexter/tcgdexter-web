@@ -24,6 +24,7 @@ import { analyzeDecision, moveKey, sameMove, semanticMoveKey } from "./regret";
 import { outcomeValue, snapshotFor, clampProb } from "./value";
 import { determinizeLogSide, revealedSideCards } from "./determinize";
 import { coachGame } from "./coachGame";
+import { emptyScanStats, scanLog } from "./logDecisions";
 import {
   calibrate,
   fitPlatt,
@@ -541,5 +542,31 @@ describe("coachGame", () => {
     });
     expect(game.decisions.every((d) => d.capture === null)).toBe(true);
     expect(game.meanCapture).toBeNull();
+  });
+});
+
+describe("candidate-set agreement between scanner and analyzer", () => {
+  it("analyzeDecision enumerates exactly the moves scanLog offered", () => {
+    // coachGame indexes the human's move as `d.legal[d.humanIndex]` from the
+    // scanner's enumeration, then hands the SAME state and ctx to
+    // analyzeDecision, which enumerates again. If those two sets ever
+    // diverged, the coach would grade the wrong move without erroring — the
+    // chosenIndex would simply land elsewhere.
+    const RAW = readFileSync(join(process.cwd(), "lib/battle-log/fixtures/example-1.txt"), "utf8");
+    const row = {
+      id: "fixture-1",
+      battle_log_raw: RAW,
+      player_handle: parseBattleLog(RAW).handles[0],
+      deck_list: null,
+    };
+    const stats = emptyScanStats();
+    let checked = 0;
+    scanLog(row, stats, (d) => {
+      if (checked >= 12) return;
+      const again = legalMoves(d.state, "player", d.ctx);
+      expect(again.map(moveKey)).toEqual(d.legal.map(moveKey));
+      checked += 1;
+    });
+    expect(checked).toBeGreaterThan(0);
   });
 });
