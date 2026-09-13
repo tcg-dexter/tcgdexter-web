@@ -1,4 +1,8 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { parseBattleLog } from "@/lib/battle-log";
 
 import {
   HeuristicPolicy,
@@ -19,6 +23,7 @@ import { loadBenchmarkDecks } from "@/lib/ml/benchmarkDecks";
 import { analyzeDecision, moveKey, sameMove, semanticMoveKey } from "./regret";
 import { outcomeValue, snapshotFor, clampProb } from "./value";
 import { determinizeLogSide, revealedSideCards } from "./determinize";
+import { coachGame } from "./coachGame";
 import {
   calibrate,
   fitPlatt,
@@ -470,5 +475,71 @@ describe("calibration", () => {
     expect(large.blunder).toBeGreaterThan(small.blunder);
     expect(severityOf(large.blunder, large)).toBe("blunder");
     expect(severityOf(0, large)).toBe("ok");
+  });
+});
+
+describe("coachGame", () => {
+  const RAW = readFileSync(join(process.cwd(), "lib/battle-log/fixtures/example-1.txt"), "utf8");
+  const row = {
+    id: "fixture-1",
+    battle_log_raw: RAW,
+    player_handle: parseBattleLog(RAW).handles[0],
+    deck_list: null,
+  };
+
+  it("grades a real log end to end", () => {
+    const game = coachGame(row, {
+      evaluate: heuristicEvaluator,
+      rollouts: 4,
+      horizon: 3,
+      seed: 3,
+    });
+    expect(game.logId).toBe("fixture-1");
+    expect(game.decisions.length).toBeGreaterThan(0);
+    for (const d of game.decisions) {
+      expect(d.legalCount).toBeGreaterThan(1);
+      expect(d.regret).toBeGreaterThanOrEqual(-1);
+      expect(d.stakes).toBeGreaterThanOrEqual(0);
+      if (d.capture !== null) {
+        expect(d.capture).toBeGreaterThanOrEqual(0);
+        expect(d.capture).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
+  it("only flags what is statistically separable", () => {
+    const game = coachGame(row, {
+      evaluate: heuristicEvaluator,
+      rollouts: 4,
+      horizon: 3,
+      seed: 3,
+    });
+    // A blunder shown to a user must clear its own error bar; the whole point
+    // of the paired bars is that they gate the copy.
+    for (const b of game.blunders) {
+      expect(b.significant).toBe(true);
+      expect(b.severity).not.toBe("ok");
+    }
+  });
+
+  it("is deterministic for a seed", () => {
+    const opts = { evaluate: heuristicEvaluator, rollouts: 4, horizon: 3, seed: 11 };
+    const a = coachGame(row, opts).decisions.map((d) => d.regret);
+    const b = coachGame(row, opts).decisions.map((d) => d.regret);
+    expect(a).toEqual(b);
+  });
+
+  it("reports capture as null when nothing was at stake", () => {
+    const game = coachGame(row, {
+      evaluate: heuristicEvaluator,
+      rollouts: 4,
+      horizon: 3,
+      seed: 3,
+      // Nothing can clear this, so every capture must be null rather than a
+      // number divided by a near-zero spread.
+      minStakes: 10,
+    });
+    expect(game.decisions.every((d) => d.capture === null)).toBe(true);
+    expect(game.meanCapture).toBeNull();
   });
 });
