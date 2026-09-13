@@ -58,7 +58,8 @@ export default function PlaymatShowcase({ tiles }: { tiles: ResolvedDeckTile[] }
   const ctaBtnClass =
     "inline-flex items-center justify-center rounded-full bg-gradient-brand px-6 py-3 text-sm font-semibold text-white shadow-brand hover:shadow-brand-lg transition";
 
-  const swatchBase = "w-5 h-5 md:w-6 md:h-6 rounded-full transition-all";
+  const swatchBase =
+    "w-[1.125rem] h-[1.125rem] md:w-6 md:h-6 rounded-full transition-all";
   const swatchSelected = "ring-2 ring-black ring-offset-1 ring-offset-[#f2f2f2] scale-110";
   const swatchHover = "hover:ring-1 hover:ring-black/25 hover:ring-offset-1 hover:ring-offset-[#f2f2f2]";
 
@@ -105,9 +106,11 @@ export default function PlaymatShowcase({ tiles }: { tiles: ResolvedDeckTile[] }
         </div>
       </div>
 
-      {/* Color picker — 30 styles across 15 columns = 2 rows, matching
-          Playmat Studio's picker layout (DeckMatClient.tsx). */}
-      <div className="grid gap-1 md:gap-1.5 pt-1 mx-auto [grid-template-columns:repeat(15,1.25rem)] md:[grid-template-columns:repeat(15,1.5rem)]">
+      {/* Color picker — MAT_STYLES is 32 entries, so 16 columns fills
+          exactly two rows with no short row at the end. The studio's own
+          picker sizes its grid to the panel (computeSwatchColumns); this
+          preview has a fixed swatch size, so the column count is literal. */}
+      <div className="grid gap-[3px] md:gap-1.5 pt-1 mx-auto [grid-template-columns:repeat(16,1.125rem)] md:[grid-template-columns:repeat(16,1.5rem)]">
         {MAT_STYLES.map(({ key, gradient }) => (
           <button
             key={key}
@@ -120,8 +123,8 @@ export default function PlaymatShowcase({ tiles }: { tiles: ResolvedDeckTile[] }
         ))}
       </div>
 
-      {/* Texture picker — 15 patterns, same 15 columns = 1 row. */}
-      <div className="grid gap-1 md:gap-1.5 mx-auto [grid-template-columns:repeat(15,1.25rem)] md:[grid-template-columns:repeat(15,1.5rem)]">
+      {/* Texture picker — 16 patterns, the same 16 columns = 1 row. */}
+      <div className="grid gap-[3px] md:gap-1.5 mx-auto [grid-template-columns:repeat(16,1.125rem)] md:[grid-template-columns:repeat(16,1.5rem)]">
         {TEXTURES.map((t) => (
           <button
             key={t.key}
