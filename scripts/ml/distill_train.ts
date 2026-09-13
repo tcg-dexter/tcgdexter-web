@@ -74,6 +74,7 @@ const ITERS = numArg("--iters", 400);
 const HOLDOUT = numArg("--holdout", 0.2);
 /** Standard-deviation floor for a φ term to be used at all. */
 const MIN_STD = Number(arg("--min-std") ?? 1e-3);
+const LR = arg("--lr") === null ? null : Number(arg("--lr"));
 const PHI_FROM = arg("--phi-from");
 const CROSS_STATE = numArg("--cross-state", 0);
 const CROSS_ACTION = numArg("--cross-action", 0);
@@ -369,7 +370,14 @@ function main(): void {
   const mom = new Float64Array(P);
   const vel = new Float64Array(P);
   const grad = new Float64Array(P);
-  const lr = 0.05;
+  // The score is a sum over P standardised terms, so for a FIXED per-parameter
+  // step size its scale grows with sqrt(P): the same lr that converges at
+  // P=336 overshoots at P=2515, the softmax saturates, gradients vanish, and
+  // training ends WORSE than its own initialisation (measured: final loss
+  // 2.87 against ~2.13 for zero weights). Scaling the step with 1/sqrt(P)
+  // keeps the score scale comparable across capacities, which is what makes a
+  // capacity sweep a capacity sweep rather than an optimiser sweep.
+  const lr = LR ?? 0.05 * Math.sqrt(336 / P);
   const b1 = 0.9;
   const b2 = 0.999;
 
@@ -379,6 +387,9 @@ function main(): void {
     return z;
   };
 
+  console.log(`  lr ${lr.toFixed(5)} (scaled by 1/sqrt(P)), L2 ${L2}`);
+  let firstLoss = Number.NaN;
+  let lastLoss = Number.NaN;
   for (let it = 1; it <= ITERS; it++) {
     grad.fill(0);
     let loss = 0;
@@ -407,9 +418,22 @@ function main(): void {
       const vh = vel[i] / (1 - Math.pow(b2, it));
       w[i] -= (lr * mh) / (Math.sqrt(vh) + 1e-8);
     }
+    lastLoss = loss * scale;
+    if (Number.isNaN(firstLoss)) firstLoss = lastLoss;
     if (it % 50 === 0 || it === 1) {
-      console.log(`  iter ${String(it).padStart(4)}  loss ${(loss * scale).toFixed(4)}`);
+      console.log(`  iter ${String(it).padStart(4)}  loss ${lastLoss.toFixed(4)}`);
     }
+  }
+  // A run that ends above its own starting loss has diverged. It still
+  // produces an artifact and a plausible-looking held-out number, so it has
+  // to announce itself — this exact failure was twice read as "capacity does
+  // not help" before the loss trace was checked.
+  if (!(lastLoss < firstLoss)) {
+    console.log(
+      `\n  !! DIVERGED: final loss ${lastLoss.toFixed(4)} >= initial ` +
+        `${firstLoss.toFixed(4)}. The optimiser made this worse than no training ` +
+        `at all; lower --lr. Do NOT read the metrics below as a result.`,
+    );
   }
 
   const evaluate = (set: Sample[]) => {
