@@ -19,6 +19,15 @@ import { loadBenchmarkDecks } from "@/lib/ml/benchmarkDecks";
 import { analyzeDecision, moveKey, sameMove, semanticMoveKey } from "./regret";
 import { outcomeValue, snapshotFor, clampProb } from "./value";
 import { determinizeLogSide, revealedSideCards } from "./determinize";
+import {
+  calibrate,
+  fitPlatt,
+  logit,
+  reliability,
+  severityOf,
+  severityThresholds,
+  sigmoid,
+} from "./calibrate";
 
 const DECKS = loadBenchmarkDecks("data/ml/benchmark-decks.json");
 
@@ -364,5 +373,58 @@ describe("determinize", () => {
       return s.sides.opponent.deck.map((c) => c.name);
     };
     expect(run()).toEqual(run());
+  });
+});
+
+describe("calibration", () => {
+  it("recovers a known logistic distortion", () => {
+    // Generate q values whose true win rate is sigmoid(0.7*logit(q) - 0.4):
+    // a miscalibrated-but-monotone score, which is exactly the shape the real
+    // logs show. The fit should undo it.
+    const rng = mulberry32(9);
+    const q: number[] = [];
+    const won: boolean[] = [];
+    const groups: string[] = [];
+    for (let i = 0; i < 4000; i++) {
+      const x = 0.02 + rng() * 0.96;
+      const p = sigmoid(0.7 * logit(x) - 0.4);
+      q.push(x);
+      won.push(rng() < p);
+      groups.push(`g${i % 200}`);
+    }
+    const fit = fitPlatt(q, won, groups);
+    expect(fit.a).toBeGreaterThan(0.55);
+    expect(fit.a).toBeLessThan(0.85);
+    expect(fit.b).toBeGreaterThan(-0.6);
+    expect(fit.b).toBeLessThan(-0.2);
+    expect(fit.nGames).toBe(200);
+
+    const before = reliability(q, won);
+    const after = reliability(
+      q.map((x) => calibrate({ a: fit.a, b: fit.b } as never, x)),
+      won,
+    );
+    expect(after.error).toBeLessThan(before.error);
+  });
+
+  it("reports the effective n as games, not decisions", () => {
+    const fit = fitPlatt([0.4, 0.6, 0.5], [true, false, true], ["a", "a", "b"]);
+    expect(fit.nGames).toBe(2);
+  });
+
+  it("skips deciles too thin to say anything about calibration", () => {
+    const q = [...Array(50).fill(0.55), 0.95];
+    const won = [...Array(50).fill(true), false];
+    const r = reliability(q, won, 20);
+    // The lone 0.95 observation must not be reported as a 95-point miss.
+    expect(r.bins.every((b) => b.n >= 20)).toBe(true);
+  });
+
+  it("grades severity by quantile, not by a fixed point value", () => {
+    const small = severityThresholds(Array.from({ length: 100 }, (_, i) => i / 1000));
+    const large = severityThresholds(Array.from({ length: 100 }, (_, i) => i / 100));
+    expect(large.blunder).toBeGreaterThan(small.blunder);
+    expect(severityOf(large.blunder, large)).toBe("blunder");
+    expect(severityOf(0, large)).toBe("ok");
   });
 });

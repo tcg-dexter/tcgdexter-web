@@ -33,6 +33,14 @@ import { seedOrLabel } from "@/lib/ml/features/guards";
 import { determinizeLogSide, determinizeRng } from "@/lib/ml/strategist/determinize";
 import { emptyScanStats, scanLog, type LogRow } from "@/lib/ml/strategist/logDecisions";
 import { analyzeDecision } from "@/lib/ml/strategist/regret";
+import {
+  calibrate,
+  fitPlatt,
+  reliability,
+  severityOf,
+  severityThresholds,
+  type CalibrationArtifact,
+} from "@/lib/ml/strategist/calibrate";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 
@@ -164,6 +172,10 @@ function main(): void {
   // decisions rather than the ~50 labelled logs the winners/losers test gets
   // — and it validates the UNIT that every coaching sentence is quoted in.
   const calib = new Map<number, { n: number; won: number }>();
+  // Raw (q_chosen, won, game) triples, for fitting the calibration map.
+  const calQ: number[] = [];
+  const calWon: boolean[] = [];
+  const calGame: string[] = [];
   // Between-player: one player's wins vs their own losses differ mostly by
   // luck, but different players differ by skill. 202 of 271 logs come from
   // two handles, so the within-player test is weak by construction.
@@ -270,6 +282,9 @@ function main(): void {
       }
       const outcome = wonLog(row.result);
       if (outcome !== null) {
+        calQ.push(qs[analysis.chosenIndex]);
+        calWon.push(outcome);
+        calGame.push(row.id);
         const bucket = Math.min(9, Math.max(0, Math.floor(qs[analysis.chosenIndex] * 10)));
         const cell = calib.get(bucket) ?? { n: 0, won: 0 };
         cell.n += 1;
@@ -343,6 +358,35 @@ function main(): void {
     console.log(
       `  mean |predicted - actual| = ${(100 * (tot ? sumAbs / tot : 0)).toFixed(1)} pts  ` +
         `(the log's result is per-MATCH, so some spread is the label, not the model)\n`,
+    );
+  }
+
+  // ── Calibration fit ───────────────────────────────────────────────
+  if (calQ.length >= 200) {
+    const before = reliability(calQ, calWon);
+    const { a, b, nGames } = fitPlatt(calQ, calWon, calGame);
+    const mapped = calQ.map((x) => calibrate({ a, b } as CalibrationArtifact, x));
+    const after = reliability(mapped, calWon);
+    const sev = severityThresholds(allRegrets);
+    console.log("CALIBRATION FIT — P(win) = sigmoid(a*logit(q) + b)");
+    console.log(`  a=${a.toFixed(3)}  b=${b.toFixed(3)}`);
+    console.log(
+      `  mean |predicted - actual| over deciles: ${(100 * before.error).toFixed(1)} pts ` +
+        `-> ${(100 * after.error).toFixed(1)} pts`,
+    );
+    console.log(
+      `  fit on ${calQ.length} decisions from ${nGames} games — the EFFECTIVE n is ` +
+        `${nGames}, since every decision in a game shares one outcome label.`,
+    );
+    console.log(
+      `  severity (regret quantiles): inaccuracy >=${pts(sev.inaccuracy)} ` +
+        `mistake >=${pts(sev.mistake)} blunder >=${pts(sev.blunder)} pts`,
+    );
+    const counts = { ok: 0, inaccuracy: 0, mistake: 0, blunder: 0 };
+    for (const r of allRegrets) counts[severityOf(r, sev)] += 1;
+    console.log(
+      `  distribution: ok ${counts.ok}, inaccuracy ${counts.inaccuracy}, ` +
+        `mistake ${counts.mistake}, blunder ${counts.blunder}\n`,
     );
   }
 
