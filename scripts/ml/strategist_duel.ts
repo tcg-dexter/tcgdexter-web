@@ -24,6 +24,7 @@
 import path from "node:path";
 
 import {
+  HeuristicPolicy,
   PlannerPolicy,
   hashSeed,
   instantiateDeck,
@@ -65,6 +66,14 @@ const HORIZON = HORIZON_RAW === "none" ? null : numArg("--horizon", 6);
 const MAX_CANDIDATES = numArg("--max-candidates", 24);
 const SKILL = numArg("--skill", 1);
 const DETERMINIZE = !process.argv.includes("--no-determinize");
+// The opponent to measure against. "heuristic" is the FLOOR, not the target —
+// the planner is only at parity with it (51.53%, not separable), so beating
+// the heuristic proves less than beating the planner.
+const VS = arg("--vs") ?? "planner";
+if (VS !== "planner" && VS !== "heuristic") {
+  console.error(`[strategist-duel] --vs expects planner|heuristic, got ${JSON.stringify(VS)}`);
+  process.exit(1);
+}
 const ARTIFACT = arg("--artifact");
 
 function main(): void {
@@ -80,7 +89,9 @@ function main(): void {
     `A: SearchPolicy rollouts=${ROLLOUTS} horizon=${HORIZON ?? "end"} ` +
       `maxCand=${MAX_CANDIDATES} determinize=${DETERMINIZE}`,
   );
-  console.log(`B: PlannerPolicy skill=${SKILL} + value artifact`);
+  console.log(
+    `B: ${VS === "heuristic" ? "HeuristicPolicy" : `PlannerPolicy skill=${SKILL} + value artifact`}`,
+  );
   console.log(
     `${GAMES} true-mirror games x ${SEEDS} seeds over ${decks.length} benchmark decks\n`,
   );
@@ -112,11 +123,14 @@ function main(): void {
         determinize: DETERMINIZE,
         maxCandidates: MAX_CANDIDATES,
       });
-      const planner: DecisionPolicy = new PlannerPolicy({
-        params: plannerParamsForSkill(SKILL),
-        seed: (gameSeed ^ 0x85ebca6b) >>> 0,
-        evaluate: evaluate as StateEvaluator,
-      });
+      const planner: DecisionPolicy =
+        VS === "heuristic"
+          ? new HeuristicPolicy()
+          : new PlannerPolicy({
+              params: plannerParamsForSkill(SKILL),
+              seed: (gameSeed ^ 0x85ebca6b) >>> 0,
+              evaluate: evaluate as StateEvaluator,
+            });
 
       const out = playGame(
         d,
@@ -163,9 +177,9 @@ function main(): void {
   );
   console.log(
     lo > 0.5
-      ? "  SearchPolicy BEATS the planner — separable at 95%."
+      ? `  SearchPolicy BEATS the ${VS} — separable at 95%.`
       : hi < 0.5
-        ? "  SearchPolicy LOSES to the planner — separable at 95%."
+        ? `  SearchPolicy LOSES to the ${VS} — separable at 95%.`
         : "  NOT SEPARABLE from 50%.",
   );
 

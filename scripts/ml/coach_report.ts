@@ -63,6 +63,14 @@ interface Row extends LogRow {
   result: string | null;
 }
 
+/** Is this log a win for the logging player? null when unlabelled. */
+function wonLog(result: string | null): boolean | null {
+  const r = (result ?? "").toLowerCase();
+  if (r === "win" || r === "won" || r === "w") return true;
+  if (r === "loss" || r === "lost" || r === "l") return false;
+  return null;
+}
+
 interface Blunder {
   logId: string;
   turn: number | null;
@@ -121,6 +129,23 @@ function main(): void {
   // is bricking, so a raw won/lost comparison can be a confound wearing a
   // finding's clothes. Binned here so that is visible rather than assumed.
   const byOptions = new Map<number, number[]>();
+  // Mean regret by the KIND of move the human played, and by the kind the
+  // search preferred instead. A systematic penalty on one kind is a bias in
+  // the rollout, not a finding about human play — e.g. if every attack scores
+  // as a blunder, the horizon is mispricing turn-ending moves.
+  const byPlayedKind = new Map<string, number[]>();
+  const bySuggestedKind = new Map<string, number>();
+  // CALIBRATION. Everything here is denominated in "points of win
+  // probability", and that unit is only meaningful if the underlying Q is
+  // calibrated: decisions the model values at 0.70 should be won about 70%
+  // of the time. This is the highest-powered check available — thousands of
+  // decisions rather than the ~50 labelled logs the winners/losers test gets
+  // — and it validates the UNIT that every coaching sentence is quoted in.
+  const calib = new Map<number, { n: number; won: number }>();
+  // Between-player: one player's wins vs their own losses differ mostly by
+  // luck, but different players differ by skill. 202 of 271 logs come from
+  // two handles, so the within-player test is weak by construction.
+  const byHandle = new Map<string, { caps: number[]; wins: number; games: number }>();
   const allRegrets: number[] = [];
   let significantCount = 0;
   let analyzed = 0;
@@ -129,6 +154,13 @@ function main(): void {
 
   for (const row of rows) {
     perLog.set(row.id, { regrets: [], captures: [], options: [], turns: [], result: row.result });
+    const hcell = byHandle.get(row.player_handle) ?? { caps: [], wins: 0, games: 0 };
+    const w = wonLog(row.result);
+    if (w !== null) {
+      hcell.games += 1;
+      hcell.wins += w ? 1 : 0;
+    }
+    byHandle.set(row.player_handle, hcell);
     scanLog(row, stats, (d) => {
       if (d.state.sides.opponent.deck.length === 0) emptyOppDeck += 1;
       const decisionSeed = hashSeed(`${SEED}:${row.id}:${d.actionIndex}`);
@@ -171,6 +203,25 @@ function main(): void {
       const spread = hi - lo;
       if (spread > 0.02) {
         rec.captures.push((qs[analysis.chosenIndex] - lo) / spread);
+      }
+      {
+        const k = d.legal[d.humanIndex].kind;
+        const arr = byPlayedKind.get(k) ?? [];
+        arr.push(analysis.regret);
+        byPlayedKind.set(k, arr);
+        const alt = analysis.alternativeIndex;
+        if (alt !== null) {
+          const sk = analysis.candidates[alt].move.kind;
+          bySuggestedKind.set(sk, (bySuggestedKind.get(sk) ?? 0) + 1);
+        }
+      }
+      const outcome = wonLog(row.result);
+      if (outcome !== null) {
+        const bucket = Math.min(9, Math.max(0, Math.floor(qs[analysis.chosenIndex] * 10)));
+        const cell = calib.get(bucket) ?? { n: 0, won: 0 };
+        cell.n += 1;
+        cell.won += outcome ? 1 : 0;
+        calib.set(bucket, cell);
       }
       rec.options.push(d.legal.length);
       rec.turns.push(d.turnNumber ?? 0);
@@ -219,6 +270,40 @@ function main(): void {
   );
 
   // ── The validation ────────────────────────────────────────────────
+  console.log("CALIBRATION — does the Q every regret is built from predict the result?");
+  {
+    let sumAbs = 0;
+    let tot = 0;
+    for (const b of Array.from(calib.keys()).sort((a, z) => a - z)) {
+      const { n, won } = calib.get(b)!;
+      if (n < 20) continue;
+      const predicted = b / 10 + 0.05;
+      const actual = won / n;
+      sumAbs += n * Math.abs(predicted - actual);
+      tot += n;
+      const bar = "#".repeat(Math.round(actual * 30));
+      console.log(
+        `  Q ${(b / 10).toFixed(1)}-${(b / 10 + 0.1).toFixed(1)}  n=${String(n).padStart(5)}  ` +
+          `actual ${(100 * actual).toFixed(1)}%  ${bar}`,
+      );
+    }
+    console.log(
+      `  mean |predicted - actual| = ${(100 * (tot ? sumAbs / tot : 0)).toFixed(1)} pts  ` +
+        `(the log's result is per-MATCH, so some spread is the label, not the model)\n`,
+    );
+  }
+
+  console.log("REGRET BY MOVE KIND PLAYED (a per-kind bias is a rollout defect)");
+  for (const [k, xs] of Array.from(byPlayedKind).sort((a, b) => mean(b[1]) - mean(a[1]))) {
+    console.log(`  ${k.padEnd(16)} n=${String(xs.length).padStart(5)}  mean ${pts(mean(xs))} pts`);
+  }
+  console.log("\n  what the search preferred instead:");
+  const totSug = Array.from(bySuggestedKind.values()).reduce((a, b) => a + b, 0);
+  for (const [k, n] of Array.from(bySuggestedKind).sort((a, b) => b[1] - a[1])) {
+    console.log(`  ${k.padEnd(16)} ${String(n).padStart(5)}  ${((100 * n) / totSug).toFixed(1)}%`);
+  }
+  console.log("");
+
   console.log("REGRET vs NUMBER OF ALTERNATIVES (the mechanical confound)");
   for (const b of Array.from(byOptions.keys()).sort((a, z) => a - z)) {
     const xs = byOptions.get(b)!;
@@ -292,6 +377,32 @@ function main(): void {
             ? "SEPARABLE IN THE WRONG DIRECTION. Do not ship."
             : "not separable at this n."),
     );
+  }
+
+  // Attach each log's captures to its handle now that they are all computed.
+  for (const [id, v] of Array.from(perLog)) {
+    const row = rows.find((r) => r.id === id);
+    if (!row) continue;
+    const h = byHandle.get(row.player_handle);
+    if (h) for (const c of v.captures) h.caps.push(c);
+  }
+  const players = Array.from(byHandle)
+    .filter(([, v]) => v.games >= 5 && v.caps.length >= 40)
+    .map(([h, v]) => ({ h, cap: mean(v.caps), wr: v.wins / v.games, games: v.games }));
+  if (players.length >= 3) {
+    console.log("\nBETWEEN-PLAYER — does mean capture track that player's win rate?");
+    players.sort((a, b) => b.cap - a.cap);
+    for (const p of players) {
+      console.log(
+        `  ${p.h.slice(0, 16).padEnd(18)} capture ${(100 * p.cap).toFixed(1)}%  ` +
+          `win rate ${(100 * p.wr).toFixed(1)}%  (${p.games} logs)`,
+      );
+    }
+    const mc = mean(players.map((p) => p.cap));
+    const mw = mean(players.map((p) => p.wr));
+    const cov = mean(players.map((p) => (p.cap - mc) * (p.wr - mw)));
+    const r = cov / (sd(players.map((p) => p.cap)) * sd(players.map((p) => p.wr)) || 1);
+    console.log(`  correlation r = ${r.toFixed(2)} over ${players.length} players`);
   }
 
   console.log(`\nTOP ${TOP} FLAGGED PLAYS`);
