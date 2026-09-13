@@ -75,6 +75,7 @@ if (VS !== "planner" && VS !== "heuristic") {
   process.exit(1);
 }
 const ARTIFACT = arg("--artifact");
+const STOCK_DECK = !process.argv.includes("--no-stock-deck");
 
 function main(): void {
   const evaluate = createBoardEvaluator(ARTIFACT ?? undefined);
@@ -87,7 +88,7 @@ function main(): void {
 
   console.log(
     `A: SearchPolicy rollouts=${ROLLOUTS} horizon=${HORIZON ?? "end"} ` +
-      `maxCand=${MAX_CANDIDATES} determinize=${DETERMINIZE}`,
+      `maxCand=${MAX_CANDIDATES} determinize=${DETERMINIZE} stockDeck=${STOCK_DECK}`,
   );
   console.log(
     `B: ${VS === "heuristic" ? "HeuristicPolicy" : `PlannerPolicy skill=${SKILL} + value artifact`}`,
@@ -122,6 +123,7 @@ function main(): void {
         seed: gameSeed,
         determinize: DETERMINIZE,
         maxCandidates: MAX_CANDIDATES,
+        stockDeck: STOCK_DECK,
       });
       const planner: DecisionPolicy =
         VS === "heuristic"

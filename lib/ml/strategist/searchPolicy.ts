@@ -57,6 +57,13 @@ export interface SearchPolicyOptions {
   /** Consulted when the search is skipped or its answer cannot be mapped
    *  back to a real legal move. */
   fallback?: DecisionPolicy;
+  /** Rebuild our OWN deck in the ghost from `view.unseenOwn` (legitimate
+   *  self-knowledge: the multiset of cards not yet seen). PlannerPolicy does
+   *  NOT do this — planner.ts explains why it is harmless there, since its
+   *  development prior plays every search-Item before the search runs. It is
+   *  NOT harmless here, so this flag exists to measure how much of the
+   *  strength is the stocked deck rather than the search. */
+  stockDeck?: boolean;
 }
 
 export interface SearchPolicyStats {
@@ -78,7 +85,10 @@ export interface SearchPolicyStats {
 
 export class SearchPolicy implements DecisionPolicy {
   private readonly opts: Required<
-    Pick<SearchPolicyOptions, "rollouts" | "horizon" | "determinize" | "maxCandidates" | "seed">
+    Pick<
+      SearchPolicyOptions,
+      "rollouts" | "horizon" | "determinize" | "maxCandidates" | "seed" | "stockDeck"
+    >
   > & { evaluate: StateEvaluator | null; fallback: DecisionPolicy };
 
   readonly stats: SearchPolicyStats = {
@@ -100,6 +110,7 @@ export class SearchPolicy implements DecisionPolicy {
       horizon: options.horizon === undefined ? 6 : options.horizon,
       determinize: options.determinize ?? true,
       maxCandidates: options.maxCandidates ?? 24,
+      stockDeck: options.stockDeck ?? true,
       seed: options.seed ?? 1,
       evaluate: options.evaluate ?? null,
       fallback: options.fallback ?? new HeuristicPolicy(),
@@ -123,7 +134,7 @@ export class SearchPolicy implements DecisionPolicy {
     // The ghost is the honest information set: our own hand and deck are
     // real (stockDeck), every opponent hidden zone is placeholders until
     // determinize fills it from public evidence only.
-    const ghost = buildGhostState(view, { stockDeck: true });
+    const ghost = buildGhostState(view, { stockDeck: this.opts.stockDeck });
     const decisionSeed = hashSeed(`${this.opts.seed}:${this.counter++}`);
 
     const t0 = Date.now();
