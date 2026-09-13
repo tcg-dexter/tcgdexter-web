@@ -26,6 +26,7 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 import { HeuristicPolicy, hashSeed, describeMove, type StateEvaluator } from "@/lib/engine/sim";
+import { sameMove } from "@/lib/ml/strategist/regret";
 import { createBoardEvaluator } from "@/lib/ml/botEvaluator";
 import { numOrNull } from "@/lib/ml/features";
 import { seedOrLabel } from "@/lib/ml/features/guards";
@@ -80,6 +81,26 @@ interface Blunder {
   se: number;
 }
 
+/** A play worth praising, not just one worth not-punishing.
+ *
+ *  Three conditions together, because any one alone is cheap:
+ *    1. the human took (essentially) the best move available,
+ *    2. the decision MATTERED — a wide spread between best and worst,
+ *    3. a competent reference policy would have played something materially
+ *       worse. Without this a forced-looking "best move" counts as genius.
+ *
+ *  This is the same shape as a chess engine's "brilliant" label, and it falls
+ *  out of machinery the blunder side already needs: one analysis values every
+ *  arm, so asking what another policy would have picked is free. */
+interface Highlight {
+  logId: string;
+  turn: number | null;
+  played: string;
+  ratherThan: string;
+  edge: number;
+  se: number;
+}
+
 function mean(xs: number[]): number {
   return xs.length === 0 ? 0 : xs.reduce((s, x) => s + x, 0) / xs.length;
 }
@@ -113,6 +134,7 @@ function main(): void {
 
   const stats = emptyScanStats();
   const blunders: Blunder[] = [];
+  const highlights: Highlight[] = [];
   const perLog = new Map<
     string,
     {
@@ -213,6 +235,37 @@ function main(): void {
         if (alt !== null) {
           const sk = analysis.candidates[alt].move.kind;
           bySuggestedKind.set(sk, (bySuggestedKind.get(sk) ?? 0) + 1);
+        }
+      }
+      // SKILLED PLAY: the human beat what a competent reference would have
+      // played, on a decision that mattered.
+      {
+        const human = analysis.candidates[analysis.chosenIndex];
+        let ref = null as null | (typeof analysis.candidates)[number];
+        try {
+          const pick = new HeuristicPolicy().chooseMove(d.view, d.legal, d.ctx);
+          ref = analysis.candidates.find((c) => sameMove(c.move, pick)) ?? null;
+        } catch {
+          ref = null;
+        }
+        if (ref && !sameMove(ref.move, human.move)) {
+          const paired = human.samples.map((v, k) => v - ref!.samples[k]);
+          const m = mean(paired);
+          const se = sd(paired) / Math.sqrt(Math.max(1, paired.length));
+          const spread =
+            Math.max(...analysis.candidates.map((c) => c.q)) -
+            Math.min(...analysis.candidates.map((c) => c.q));
+          const nearBest = analysis.regret <= 2 * Math.max(analysis.regretSe, 0.005);
+          if (nearBest && spread > 0.15 && se > 0 && m > 2 * se) {
+            highlights.push({
+              logId: row.id,
+              turn: d.turnNumber,
+              played: describeMove(d.state, "player", human.move),
+              ratherThan: describeMove(d.state, "player", ref.move),
+              edge: m,
+              se,
+            });
+          }
         }
       }
       const outcome = wonLog(row.result);
@@ -403,6 +456,19 @@ function main(): void {
     const cov = mean(players.map((p) => (p.cap - mc) * (p.wr - mw)));
     const r = cov / (sd(players.map((p) => p.cap)) * sd(players.map((p) => p.wr)) || 1);
     console.log(`  correlation r = ${r.toFixed(2)} over ${players.length} players`);
+  }
+
+  console.log(
+    `\nTOP ${TOP} SKILLED PLAYS (best move, decision mattered, reference ` +
+      `policy would have played worse) — ${highlights.length} found`,
+  );
+  highlights.sort((a, b) => b.edge - a.edge);
+  for (const h of highlights.slice(0, TOP)) {
+    console.log(
+      `  +${pts(h.edge)} pts (±${pts(1.96 * h.se)})  log ${h.logId.slice(0, 8)} ` +
+        `turn ${h.turn ?? "?"}\n      played:      ${h.played}\n` +
+        `      rather than: ${h.ratherThan}`,
+    );
   }
 
   console.log(`\nTOP ${TOP} FLAGGED PLAYS`);
