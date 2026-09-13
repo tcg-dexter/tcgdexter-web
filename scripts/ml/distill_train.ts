@@ -76,6 +76,8 @@ const HOLDOUT = numArg("--holdout", 0.2);
 const MIN_STD = Number(arg("--min-std") ?? 1e-3);
 const LR = arg("--lr") === null ? null : Number(arg("--lr"));
 const EVAL_EVERY = numArg("--eval-every", 25);
+/** Union the built crosses with the incumbent's φ instead of replacing it. */
+const UNION = process.argv.includes("--union");
 const PHI_FROM = arg("--phi-from");
 const CROSS_STATE = numArg("--cross-state", 0);
 const CROSS_ACTION = numArg("--cross-action", 0);
@@ -229,15 +231,31 @@ function main(): void {
   }
   console.log(`[distill-train] ${rows.length} decisions from ${CORPUS}`);
 
-  const phi =
-    CROSS_STATE > 0 && CROSS_ACTION > 0
-      ? buildPhi(rows, CROSS_STATE, CROSS_ACTION)
-      : loadPhi();
+  // Three modes. The UNION is the properly-controlled capacity test: adding
+  // variance-selected crosses ON TOP of the incumbent's hand-designed list,
+  // rather than replacing it. Measured below, a variance-selected φ is worse
+  // than the hand-designed one at BOTH sizes, so a sweep that replaces it
+  // tests capacity inside a bad feature family and answers the wrong question.
+  let phi: Term[];
+  if (CROSS_STATE > 0 && CROSS_ACTION > 0) {
+    const built = buildPhi(rows, CROSS_STATE, CROSS_ACTION);
+    if (UNION) {
+      const base = loadPhi();
+      const seen = new Set(base.map((t) => t.name));
+      phi = base.concat(built.filter((t) => !seen.has(t.name)));
+    } else {
+      phi = built;
+    }
+  } else {
+    phi = loadPhi();
+  }
   const P = phi.length;
   console.log(
     `[distill-train] φ = ${P} terms ` +
       (CROSS_STATE > 0
-        ? `(115 pure + ${CROSS_STATE} state x ${CROSS_ACTION} action crosses)`
+        ? UNION
+          ? `(incumbent φ ∪ ${CROSS_STATE} state x ${CROSS_ACTION} action crosses)`
+          : `(115 pure + ${CROSS_STATE} state x ${CROSS_ACTION} action crosses)`
         : `from ${path.basename(PHI_FROM ?? DEFAULT_PHI)}`),
   );
 
