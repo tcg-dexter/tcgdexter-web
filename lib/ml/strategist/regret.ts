@@ -130,6 +130,15 @@ export interface RegretOptions {
   maxCandidates?: number;
   /** Restrict to these moves instead of every legal one. */
   candidateFilter?: (move: SimMove) => boolean;
+  /** Prepare the cloned world for rollout `r`, before the candidate move is
+   *  applied. This is where hidden information gets determinized.
+   *
+   *  It MUST be a pure function of `r` — identical across arms — or common
+   *  random numbers break and every paired error bar in here becomes a lie.
+   *  Varying it across r is the point: averaging over determinizations is
+   *  what makes the estimate an expectation over what the opponent might
+   *  hold, rather than a plan against one guess. */
+  prepare?: (clone: GameState, rollout: number) => void;
 }
 
 const DEFAULT_ROLLOUTS = 12;
@@ -175,6 +184,49 @@ export function sameMove(a: SimMove, b: SimMove): boolean {
   return a.kind === b.kind && moveKey(a) === moveKey(b);
 }
 
+/** A key that identifies a move by what it DOES rather than which card
+ *  objects it touches.
+ *
+ *  Needed to carry a move across the ghost/real boundary. A ghost's own deck
+ *  is rebuilt from `unseenOwn` with synthetic ids (`ghost-deck-6`), so any
+ *  move that searches the deck — "Ultra Ball, fetch Drakloak"; "Cyrano, fetch
+ *  two N's Zoroark ex" — names cards that do not exist in the real state and
+ *  can never match by id. Measured at 11-26% of searched decisions, all of
+ *  them deck searches, which is precisely the class of move the development
+ *  prior exists to play.
+ *
+ *  The engine already carries the answer: `EffectPick.cardNames`/`monNames`
+ *  and `PlayTrainerMove.deckCardNames` are display labels that ride alongside
+ *  the ids, so the same choice can be recognised by name. Name arrays are
+ *  sorted because "fetch A and B" and "fetch B and A" are the same decision.
+ */
+export function semanticMoveKey(move: SimMove): string {
+  const m = move as unknown as Record<string, unknown>;
+  const out: Record<string, unknown> = { kind: move.kind };
+  for (const key of Object.keys(m).sort()) {
+    if (key === "kind") continue;
+    if (key === "deckCardIds" && Array.isArray(m.deckCardNames)) continue;
+    if (key === "deckCardNames") {
+      out.deck = [...(m.deckCardNames as string[])].sort();
+      continue;
+    }
+    if (key === "picks" && Array.isArray(m.picks)) {
+      out.picks = (m.picks as Record<string, unknown>[]).map((p) => ({
+        ref: p.ref,
+        cards: Array.isArray(p.cardNames)
+          ? [...(p.cardNames as string[])].sort()
+          : ((p.cardIds as string[] | undefined) ?? null),
+        mons: Array.isArray(p.monNames)
+          ? [...(p.monNames as string[])].sort()
+          : ((p.monIds as string[] | undefined) ?? null),
+      }));
+      continue;
+    }
+    if (m[key] !== undefined) out[key] = m[key];
+  }
+  return moveKey(out as unknown as SimMove);
+}
+
 function cloneState(state: GameState): GameState {
   return structuredClone(state);
 }
@@ -186,13 +238,16 @@ function rollOut(
   ctx: TurnContext,
   move: SimMove,
   seed: number,
+  rollout: number,
   opts: {
     horizon: number | null;
     evaluate: StateEvaluator | null;
     policies: { player: DecisionPolicy; opponent: DecisionPolicy };
+    prepare?: (clone: GameState, rollout: number) => void;
   },
 ): number {
   const clone = cloneState(state);
+  if (opts.prepare) opts.prepare(clone, rollout);
   const rng = mulberry32(seed);
   const { outcome } = resumeGame(clone, actor, opts.policies, rng, {
     ctx: { ...ctx },
@@ -260,7 +315,12 @@ export function analyzeDecision(
     const seed = hashSeed(`${baseSeed}|${r}`);
     for (const arm of candidates) {
       arm.samples.push(
-        rollOut(state, actor, ctx, arm.move, seed, { horizon, evaluate, policies }),
+        rollOut(state, actor, ctx, arm.move, seed, r, {
+          horizon,
+          evaluate,
+          policies,
+          prepare: options.prepare,
+        }),
       );
     }
   }

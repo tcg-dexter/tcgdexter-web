@@ -1,0 +1,310 @@
+// Battle log in, skilled and unskilled plays out.
+//
+// For every decision a real player made, value every move they COULD have
+// made, and report what the one they chose gave up. That is the coaching
+// product: signed, per-decision, in win-probability points.
+//
+// THE VALIDATION THIS RUNS, AND WHY IT IS THE RIGHT ONE
+//
+// A regret number is easy to produce and hard to trust. The check with real
+// ground truth is that WINNERS should play with lower mean regret than
+// LOSERS, across logs the instrument never saw. `matches.result` supplies
+// that label independently of anything computed here. If the two groups do
+// not separate, the number is not measuring skill, whatever its error bars
+// say — and this prints that comparison before it prints any advice.
+//
+// Both sides of the reconstructed board are determinized from the meta prior.
+// A log replay knows only what surfaced, so the opponent's deck array is
+// empty; rolled forward untreated they deck out immediately, every candidate
+// move "wins", and the report is confident nonsense.
+//
+// Usage:
+//   npx tsx scripts/ml/coach_report.ts [--limit 40] [--rollouts 24]
+//     [--horizon 6] [--seed 1] [--top 12] [--db PATH] [--artifact PATH]
+
+import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
+
+import { HeuristicPolicy, hashSeed, describeMove, type StateEvaluator } from "@/lib/engine/sim";
+import { createBoardEvaluator } from "@/lib/ml/botEvaluator";
+import { numOrNull } from "@/lib/ml/features";
+import { seedOrLabel } from "@/lib/ml/features/guards";
+import { determinizeLogSide, determinizeRng } from "@/lib/ml/strategist/determinize";
+import { emptyScanStats, scanLog, type LogRow } from "@/lib/ml/strategist/logDecisions";
+import { analyzeDecision } from "@/lib/ml/strategist/regret";
+
+const REPO_ROOT = path.resolve(__dirname, "..", "..");
+
+function arg(flag: string): string | null {
+  const i = process.argv.indexOf(flag);
+  return i >= 0 && i + 1 < process.argv.length ? process.argv[i + 1] : null;
+}
+function numArg(flag: string, fallback: number): number {
+  const raw = arg(flag);
+  if (raw === null) return fallback;
+  const n = numOrNull(raw);
+  if (n === null) {
+    console.error(`[coach] ${flag} expects a number, got ${JSON.stringify(raw)}`);
+    process.exit(1);
+  }
+  return n;
+}
+
+const DB = arg("--db") ?? path.resolve(REPO_ROOT, "..", "dexter-ml", "feature_store.sqlite");
+const LIMIT = numArg("--limit", 40);
+const ROLLOUTS = numArg("--rollouts", 24);
+const HORIZON_RAW = arg("--horizon");
+const HORIZON = HORIZON_RAW === "none" ? null : numArg("--horizon", 6);
+const SEED = seedOrLabel(arg("--seed"), 1, hashSeed);
+const TOP = numArg("--top", 12);
+const ARTIFACT = arg("--artifact");
+
+interface Row extends LogRow {
+  result: string | null;
+}
+
+interface Blunder {
+  logId: string;
+  turn: number | null;
+  played: string;
+  instead: string;
+  regret: number;
+  se: number;
+}
+
+function mean(xs: number[]): number {
+  return xs.length === 0 ? 0 : xs.reduce((s, x) => s + x, 0) / xs.length;
+}
+function sd(xs: number[]): number {
+  if (xs.length < 2) return 0;
+  const m = mean(xs);
+  return Math.sqrt(xs.reduce((s, x) => s + (x - m) * (x - m), 0) / (xs.length - 1));
+}
+const pts = (x: number) => `${(x * 100).toFixed(2)}`;
+
+function main(): void {
+  const evaluate = createBoardEvaluator(ARTIFACT ?? undefined);
+  if (HORIZON !== null && !evaluate) {
+    console.error("[coach] no usable value artifact — refusing to score with a fallback.");
+    process.exit(1);
+  }
+
+  const db = new DatabaseSync(DB, { readOnly: true });
+  const rows = db
+    .prepare(
+      `SELECT m.id, m.battle_log_raw, m.player_handle, m.result, d.deck_list
+         FROM matches m
+         LEFT JOIN saved_decks d ON d.id = m.saved_deck_id
+        WHERE m.battle_log_raw IS NOT NULL AND m.player_handle IS NOT NULL
+        ORDER BY m.id LIMIT ?`,
+    )
+    .all(LIMIT) as unknown as Row[];
+  db.close();
+
+  console.log(`[coach] ${rows.length} battle logs, ${ROLLOUTS} rollouts, horizon ${HORIZON ?? "end"}`);
+
+  const stats = emptyScanStats();
+  const blunders: Blunder[] = [];
+  const perLog = new Map<
+    string,
+    {
+      regrets: number[];
+      captures: number[];
+      options: number[];
+      turns: number[];
+      result: string | null;
+    }
+  >();
+  // Regret scales mechanically with how many alternatives existed (more arms
+  // = a higher max) and with how volatile the position is. Both differ
+  // systematically between a player who is flooded with resources and one who
+  // is bricking, so a raw won/lost comparison can be a confound wearing a
+  // finding's clothes. Binned here so that is visible rather than assumed.
+  const byOptions = new Map<number, number[]>();
+  const allRegrets: number[] = [];
+  let significantCount = 0;
+  let analyzed = 0;
+  let emptyOppDeck = 0;
+  const startedAt = Date.now();
+
+  for (const row of rows) {
+    perLog.set(row.id, { regrets: [], captures: [], options: [], turns: [], result: row.result });
+    scanLog(row, stats, (d) => {
+      if (d.state.sides.opponent.deck.length === 0) emptyOppDeck += 1;
+      const decisionSeed = hashSeed(`${SEED}:${row.id}:${d.actionIndex}`);
+      const analysis = analyzeDecision(
+        d.state,
+        "player",
+        d.ctx,
+        d.legal[d.humanIndex],
+        {
+          rollouts: ROLLOUTS,
+          horizon: HORIZON,
+          evaluate: evaluate as StateEvaluator,
+          seed: decisionSeed,
+          policies: { player: new HeuristicPolicy(), opponent: new HeuristicPolicy() },
+          // Both sides: the log knows neither deck's remaining contents, and
+          // an empty own-deck is a deck-out loss just as surely.
+          prepare: (clone, r) => {
+            const rng = determinizeRng(decisionSeed, r);
+            determinizeLogSide(clone, "opponent", rng);
+            if (clone.sides.player.deck.length === 0) {
+              determinizeLogSide(clone, "player", rng);
+            }
+          },
+        },
+      );
+      if (!analysis || analysis.regret === null || analysis.chosenIndex === null) return;
+      analyzed += 1;
+      allRegrets.push(analysis.regret);
+      const rec = perLog.get(row.id)!;
+      rec.regrets.push(analysis.regret);
+      // CAPTURE: what fraction of the value actually on the table did this
+      // move take? Raw regret is denominated in the position's stakes, and
+      // stakes scale with board development — measured here at 1.3 pts with
+      // under 5 options against 13.5 pts with 30+. A developed board is also
+      // what winning looks like, so raw regret rewards the player who never
+      // built one. Normalising by the spread removes that.
+      const qs = analysis.candidates.map((c) => c.q);
+      const hi = Math.max(...qs);
+      const lo = Math.min(...qs);
+      const spread = hi - lo;
+      if (spread > 0.02) {
+        rec.captures.push((qs[analysis.chosenIndex] - lo) / spread);
+      }
+      rec.options.push(d.legal.length);
+      rec.turns.push(d.turnNumber ?? 0);
+      const bucket = Math.min(6, Math.floor(d.legal.length / 5));
+      const arr = byOptions.get(bucket) ?? [];
+      arr.push(analysis.regret);
+      byOptions.set(bucket, arr);
+      if (analysis.significant) {
+        significantCount += 1;
+        const alt = analysis.alternativeIndex;
+        blunders.push({
+          logId: row.id,
+          turn: d.turnNumber,
+          played: describeMove(d.state, "player", d.legal[d.humanIndex]),
+          instead:
+            alt !== null ? describeMove(d.state, "player", analysis.candidates[alt].move) : "—",
+          regret: analysis.regret,
+          se: analysis.regretSe,
+        });
+      }
+    });
+  }
+
+  const elapsed = (Date.now() - startedAt) / 1000;
+  console.log(
+    `  logs ${stats.logsUsed} used / ${stats.logsFailed} unusable; ` +
+      `${stats.decisions} decisions, ${stats.matched} matched ` +
+      `(${((100 * stats.matched) / Math.max(1, stats.decisions)).toFixed(1)}% coverage), ` +
+      `${analyzed} valued`,
+  );
+  console.log(
+    `  reconstructed states with an empty opponent deck: ${emptyOppDeck} ` +
+      `(all determinized before rollout)\n`,
+  );
+
+  console.log("REGRET DISTRIBUTION (points of win probability given up)");
+  const sorted = [...allRegrets].sort((a, b) => a - b);
+  const q = (f: number) => (sorted.length ? sorted[Math.floor(f * (sorted.length - 1))] : 0);
+  console.log(
+    `  mean ${pts(mean(allRegrets))}  sd ${pts(sd(allRegrets))}  ` +
+      `median ${pts(q(0.5))}  p90 ${pts(q(0.9))}  p99 ${pts(q(0.99))}`,
+  );
+  console.log(
+    `  flagged as significant (regret > 2 SE): ${significantCount} / ${analyzed} = ` +
+      `${((100 * significantCount) / Math.max(1, analyzed)).toFixed(1)}%\n`,
+  );
+
+  // ── The validation ────────────────────────────────────────────────
+  console.log("REGRET vs NUMBER OF ALTERNATIVES (the mechanical confound)");
+  for (const b of Array.from(byOptions.keys()).sort((a, z) => a - z)) {
+    const xs = byOptions.get(b)!;
+    const label = b >= 6 ? "30+" : `${b * 5}-${b * 5 + 4}`;
+    console.log(`  ${label.padStart(6)} options  n=${String(xs.length).padStart(5)}  mean ${pts(mean(xs))} pts`);
+  }
+  console.log("");
+
+  const won: number[] = [];
+  const lost: number[] = [];
+  const wonOpts: number[] = [];
+  const lostOpts: number[] = [];
+  const wonN: number[] = [];
+  const lostN: number[] = [];
+  const wonCap: number[] = [];
+  const lostCap: number[] = [];
+  for (const [, v] of Array.from(perLog)) {
+    if (v.regrets.length < 5) continue;
+    const m = mean(v.regrets);
+    const r = (v.result ?? "").toLowerCase();
+    if (r === "win" || r === "won" || r === "w") {
+      won.push(m);
+      wonOpts.push(mean(v.options));
+      wonN.push(v.regrets.length);
+      if (v.captures.length >= 5) wonCap.push(mean(v.captures));
+    } else if (r === "loss" || r === "lost" || r === "l") {
+      lost.push(m);
+      lostOpts.push(mean(v.options));
+      lostN.push(v.regrets.length);
+      if (v.captures.length >= 5) lostCap.push(mean(v.captures));
+    }
+  }
+  console.log(
+    `  winners: ${mean(wonOpts).toFixed(1)} mean options, ${mean(wonN).toFixed(0)} valued decisions\n` +
+      `  losers : ${mean(lostOpts).toFixed(1)} mean options, ${mean(lostN).toFixed(0)} valued decisions`,
+  );
+  console.log("VALIDATION — do winners give up less than losers?");
+  if (won.length < 3 || lost.length < 3) {
+    console.log(
+      `  not enough labelled logs (won ${won.length}, lost ${lost.length}) — ` +
+        `raise --limit before reading this.`,
+    );
+  } else {
+    const diff = mean(lost) - mean(won);
+    const se = Math.sqrt(sd(won) ** 2 / won.length + sd(lost) ** 2 / lost.length);
+    const z = se > 0 ? diff / se : 0;
+    console.log(`  winners  n=${won.length}  mean regret ${pts(mean(won))} pts`);
+    console.log(`  losers   n=${lost.length}  mean regret ${pts(mean(lost))} pts`);
+    console.log(
+      `  losers - winners: ${pts(diff)} pts  z=${z.toFixed(2)}  ` +
+        (z > 1.96
+          ? "SEPARABLE — regret tracks the real result."
+          : z < -1.96
+            ? "SEPARABLE IN THE WRONG DIRECTION — winners look worse. Do not ship."
+            : "not separable at this n."),
+    );
+  }
+
+  if (wonCap.length >= 3 && lostCap.length >= 3) {
+    const diff = mean(wonCap) - mean(lostCap);
+    const se = Math.sqrt(sd(wonCap) ** 2 / wonCap.length + sd(lostCap) ** 2 / lostCap.length);
+    const z = se > 0 ? diff / se : 0;
+    console.log("\nVALIDATION (stakes-normalised) — share of available value captured");
+    console.log(`  winners  n=${wonCap.length}  capture ${(100 * mean(wonCap)).toFixed(1)}%`);
+    console.log(`  losers   n=${lostCap.length}  capture ${(100 * mean(lostCap)).toFixed(1)}%`);
+    console.log(
+      `  winners - losers: ${(100 * diff).toFixed(1)} pts  z=${z.toFixed(2)}  ` +
+        (z > 1.96
+          ? "SEPARABLE — capture tracks the real result."
+          : z < -1.96
+            ? "SEPARABLE IN THE WRONG DIRECTION. Do not ship."
+            : "not separable at this n."),
+    );
+  }
+
+  console.log(`\nTOP ${TOP} FLAGGED PLAYS`);
+  blunders.sort((a, b) => b.regret - a.regret);
+  for (const b of blunders.slice(0, TOP)) {
+    console.log(
+      `  -${pts(b.regret)} pts (±${pts(1.96 * b.se)})  log ${b.logId.slice(0, 8)} ` +
+        `turn ${b.turn ?? "?"}\n      played:  ${b.played}\n      instead: ${b.instead}`,
+    );
+  }
+  console.log(
+    `\n${elapsed.toFixed(0)}s  (${(elapsed / Math.max(1, analyzed)).toFixed(2)}s per decision)`,
+  );
+}
+
+main();

@@ -1072,7 +1072,21 @@ export function buildGhostState(
     engineVersion: ENGINE_VERSION,
     turn: { ...view.turn, actor: "player" },
     firstPlayer: view.wentFirst === null ? null : view.wentFirst ? "player" : "opponent",
-    stadium: null,
+    // The Stadium in play is PUBLIC — the view carries it — and dropping it
+    // silently deleted an active card from every evaluated position: its
+    // damage/retreat modifiers, its activated effect, and the "one Stadium in
+    // play" rule that makes playing another one legal at all. It was `null`
+    // here because the ghost predates Stadium support, not by design.
+    stadium: view.stadium
+      ? {
+          card: {
+            id: `ghost-stadium`,
+            name: view.stadium.name,
+            catalog: lookupCard(view.stadium.name),
+          },
+          owner: view.stadium.owner,
+        }
+      : null,
     sides: {
       player: {
         handle: "ghost-self",

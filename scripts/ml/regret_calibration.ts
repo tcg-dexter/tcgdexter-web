@@ -55,13 +55,30 @@ function arg(flag: string): string | null {
   return i >= 0 && i + 1 < process.argv.length ? process.argv[i + 1] : null;
 }
 
+/** Parse a numeric flag, or DIE. `numOrNull(x) ?? default` silently turns a
+ *  mistyped or unsplit argument into the default, which is how a four-config
+ *  sweep of this very script returned four byte-identical results — the same
+ *  failure mode as policy_duel.ts's numeric `--seed` swallowing a string and
+ *  reporting a confident fake CI. A flag that is present and unreadable is a
+ *  bug, so it stops the run. */
+function numArg(flag: string, fallback: number): number {
+  const raw = arg(flag);
+  if (raw === null) return fallback;
+  const n = numOrNull(raw);
+  if (n === null) {
+    console.error(`[regret-cal] ${flag} expects a number, got ${JSON.stringify(raw)}`);
+    process.exit(1);
+  }
+  return n;
+}
+
 const DECKS_FILE =
   arg("--decks-file") ?? path.resolve(REPO_ROOT, "data/ml/benchmark-decks.json");
-const N_DECISIONS = numOrNull(arg("--decisions")) ?? 60;
-const ROLLOUTS = numOrNull(arg("--rollouts")) ?? 12;
+const N_DECISIONS = numArg("--decisions", 60);
+const ROLLOUTS = numArg("--rollouts", 12);
 const HORIZON_RAW = arg("--horizon");
-const HORIZON = HORIZON_RAW === "none" ? null : (numOrNull(HORIZON_RAW) ?? 6);
-const GAMES = numOrNull(arg("--games")) ?? 8;
+const HORIZON = HORIZON_RAW === "none" ? null : numArg("--horizon", 6);
+const GAMES = numArg("--games", 8);
 const SEED = seedOrLabel(arg("--seed"), 1, hashSeed);
 const ARTIFACT = arg("--artifact");
 
