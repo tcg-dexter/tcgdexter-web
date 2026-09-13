@@ -103,6 +103,17 @@ function main(): void {
   const perSeed: number[] = [];
   const statTotals = { decisions: 0, searched: 0, trivial: 0, tooWide: 0, unmapped: 0, byName: 0 };
   let searchSeconds = 0;
+  // Corpus sanity: a shift in HOW games end is a label-quality confound
+  // wearing a result's clothes. A win driven by the opponent decking out, or
+  // by a rising turn-cap rate, is a different claim from a win on prizes.
+  const endReasons: Record<string, number> = {};
+  let totalTurns = 0;
+  // WHO runs out of cards decides what an elevated deck-out rate means. If
+  // the opponent decks out, the search found an attrition line (legitimate,
+  // but narrow — it may not transfer to an opponent who manages resources).
+  // If WE deck out, the search is burning its own library.
+  let deckOutByA = 0;
+  let deckOutByB = 0;
   const startedAt = Date.now();
 
   for (let s = 0; s < SEEDS; s++) {
@@ -143,6 +154,13 @@ function main(): void {
         mulberry32(gameSeed),
         firstActor,
       );
+      endReasons[out.endReason] = (endReasons[out.endReason] ?? 0) + 1;
+      totalTurns += out.turns;
+      if (out.endReason === "deck_out" && out.winner !== null) {
+        // The deck-out LOSER is the side that could not draw.
+        if ((out.winner === "player") === aIsPlayer) deckOutByB += 1;
+        else deckOutByA += 1;
+      }
       if (out.winner === null) draws += 1;
       else if ((out.winner === "player") === aIsPlayer) aWins += 1;
       else bWins += 1;
@@ -184,6 +202,22 @@ function main(): void {
         ? `  SearchPolicy LOSES to the ${VS} — separable at 95%.`
         : "  NOT SEPARABLE from 50%.",
   );
+
+  const totalGames = GAMES * SEEDS;
+  console.log(
+    `\nend reasons: ` +
+      Object.entries(endReasons)
+        .sort((a, b) => b[1] - a[1])
+        .map(([k, n]) => `${k} ${((100 * n) / totalGames).toFixed(1)}%`)
+        .join(", ") +
+      `  |  avg turns ${(totalTurns / totalGames).toFixed(1)}`,
+  );
+  if (deckOutByA + deckOutByB > 0) {
+    console.log(
+      `  of the deck-outs: ${deckOutByB} were B running dry (A wins by ` +
+        `attrition), ${deckOutByA} were A running dry`,
+    );
+  }
 
   const d = statTotals;
   console.log(
