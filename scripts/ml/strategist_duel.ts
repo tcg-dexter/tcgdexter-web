@@ -279,8 +279,18 @@ function main(): void {
         `legal set — ghost fidelity defect, not a tuning knob.`,
     );
   }
+  const msPerDecision = (searchSeconds / Math.max(1, d.searched)) * 1000;
+  // The number that decides shippability. planner.test.ts's budget (60 games
+  // under 10 s) is SIMULATION throughput — deck grading and corpus runs —
+  // and its own comment says interactive play needs only "a few ms per AI
+  // turn". Those are different bars and the search sits on opposite sides of
+  // them, so both are printed.
+  const searchTurns = totalTurns / 2;
+  const msPerTurn = (searchSeconds * 1000) / Math.max(1, searchTurns);
   console.log(
-    `${elapsed.toFixed(0)}s total, ${(searchSeconds / Math.max(1, d.searched) * 1000).toFixed(0)} ms per searched decision`,
+    `${elapsed.toFixed(0)}s total, ${msPerDecision.toFixed(0)} ms per searched decision, ` +
+      `${msPerTurn.toFixed(0)} ms per AI turn ` +
+      `(interactive play tolerates ~1000; bulk simulation wants <10)`,
   );
 }
 
