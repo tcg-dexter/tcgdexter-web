@@ -407,6 +407,50 @@ describe("calibration", () => {
     expect(after.error).toBeLessThan(before.error);
   });
 
+  it("does not diverge on separable data with extreme logits", () => {
+    // The bug this guards: rollout means of exactly 1.0 and 0.0 are common,
+    // and an unregularised Newton step on those leverage points ran to
+    // a=6.2e8 / b=2.2e9 — a step function dressed as a probability — while
+    // still REPORTING a reliability improvement, because collapsing onto the
+    // majority class scores well against a lopsided base rate.
+    const q: number[] = [];
+    const won: boolean[] = [];
+    const groups: string[] = [];
+    for (let i = 0; i < 500; i++) {
+      const hi = i % 2 === 0;
+      q.push(hi ? 1 : 0); // perfectly separable, and exactly on the rails
+      won.push(hi);
+      groups.push(`g${i % 50}`);
+    }
+    const fit = fitPlatt(q, won, groups);
+    // The UNPENALISED likelihood has no finite optimum here, but the L2 prior
+    // makes the penalised objective proper, so a small bounded coefficient is
+    // the right answer rather than a failure. What must never happen again is
+    // an unbounded one.
+    expect(Number.isFinite(fit.a)).toBe(true);
+    expect(Number.isFinite(fit.b)).toBe(true);
+    expect(Math.abs(fit.a)).toBeLessThan(4);
+    expect(Math.abs(fit.b)).toBeLessThan(4);
+    expect(fit.converged).toBe(true);
+  });
+
+  it("converges on well-behaved data and says so", () => {
+    const rng = mulberry32(4);
+    const q: number[] = [];
+    const won: boolean[] = [];
+    const groups: string[] = [];
+    for (let i = 0; i < 3000; i++) {
+      const x = 0.05 + rng() * 0.9;
+      q.push(x);
+      won.push(rng() < sigmoid(0.8 * logit(x) + 0.3));
+      groups.push(`g${i % 150}`);
+    }
+    const fit = fitPlatt(q, won, groups);
+    expect(fit.converged).toBe(true);
+    expect(fit.a).toBeGreaterThan(0.5);
+    expect(fit.a).toBeLessThan(1.2);
+  });
+
   it("reports the effective n as games, not decisions", () => {
     const fit = fitPlatt([0.4, 0.6, 0.5], [true, false, true], ["a", "a", "b"]);
     expect(fit.nGames).toBe(2);

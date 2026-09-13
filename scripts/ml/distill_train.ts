@@ -193,7 +193,33 @@ function main(): void {
     for (let i = 1; i < r.q.length; i++) if (r.q[i] > r.q[best]) best = i;
     design.push({ phi: phis, target, q: r.q, best, game: r.g });
   }
-  console.log(`[distill-train] ${design.length} usable decisions, target=${TARGET}${TARGET === "soft" ? ` τ=${TAU}` : ""}`);
+  // Target sharpness. A soft target whose entropy sits near ln(K) is almost
+  // uniform, which means τ is large relative to the Q spread and the gradient
+  // carries almost no information — the loss will barely move and that looks
+  // like a representational ceiling when it is a temperature bug.
+  let entSum = 0;
+  let maxEntSum = 0;
+  let spreadSum = 0;
+  for (const d of design) {
+    let h = 0;
+    for (let i = 0; i < d.target.length; i++) {
+      if (d.target[i] > 0) h -= d.target[i] * Math.log(d.target[i]);
+    }
+    entSum += h;
+    maxEntSum += Math.log(d.target.length);
+    spreadSum += Math.max(...d.q) - Math.min(...d.q);
+  }
+  console.log(
+    `[distill-train] ${design.length} usable decisions, target=${TARGET}` +
+      `${TARGET === "soft" ? ` τ=${TAU}` : ""}`,
+  );
+  console.log(
+    `  mean Q spread within a decision ${(100 * spreadSum / design.length).toFixed(2)} pts; ` +
+      `target entropy ${(entSum / design.length).toFixed(3)} of max ` +
+      `${(maxEntSum / design.length).toFixed(3)} ` +
+      `(${(100 * entSum / maxEntSum).toFixed(0)}% — near 100% means the target is ` +
+      `almost uniform and τ is too large)`,
+  );
 
   // Standardize φ over every candidate row, matching the artifact contract.
   const means = new Float64Array(P);

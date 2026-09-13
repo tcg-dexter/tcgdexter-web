@@ -364,16 +364,66 @@ function main(): void {
   // ── Calibration fit ───────────────────────────────────────────────
   if (calQ.length >= 200) {
     const before = reliability(calQ, calWon);
-    const { a, b, nGames } = fitPlatt(calQ, calWon, calGame);
+    const { a, b, nGames, converged } = fitPlatt(calQ, calWon, calGame);
     const mapped = calQ.map((x) => calibrate({ a, b } as CalibrationArtifact, x));
     const after = reliability(mapped, calWon);
     const sev = severityThresholds(allRegrets);
     console.log("CALIBRATION FIT — P(win) = sigmoid(a*logit(q) + b)");
-    console.log(`  a=${a.toFixed(3)}  b=${b.toFixed(3)}`);
-    console.log(
-      `  mean |predicted - actual| over deciles: ${(100 * before.error).toFixed(1)} pts ` +
-        `-> ${(100 * after.error).toFixed(1)} pts`,
-    );
+    if (!converged) {
+      // A diverged fit still "improves" reliability by collapsing everything
+      // onto the majority class, so the convergence flag has to gate the
+      // report rather than sit beside it.
+      console.log(
+        `  DID NOT CONVERGE (a=${a.toFixed(2)}, b=${b.toFixed(2)}) — refusing to ` +
+          `report a map. Use the severity buckets, which need no calibration.`,
+      );
+    } else {
+      // Out-of-fold, split by GAME. An in-sample reliability number for a map
+      // fit on the same points is a statement about the fit, not about
+      // whether it will hold on the next battle.
+      const gameIds = Array.from(new Set(calGame));
+      const foldOf = new Map(gameIds.map((id, i) => [id, i % 2] as const));
+      const oofPred: number[] = [];
+      const oofWon: boolean[] = [];
+      let bothFolds = true;
+      for (const fold of [0, 1]) {
+        const trQ: number[] = [];
+        const trW: boolean[] = [];
+        const trG: string[] = [];
+        for (let i = 0; i < calQ.length; i++) {
+          if (foldOf.get(calGame[i]) !== fold) {
+            trQ.push(calQ[i]);
+            trW.push(calWon[i]);
+            trG.push(calGame[i]);
+          }
+        }
+        const f = fitPlatt(trQ, trW, trG);
+        if (!f.converged) {
+          bothFolds = false;
+          break;
+        }
+        for (let i = 0; i < calQ.length; i++) {
+          if (foldOf.get(calGame[i]) === fold) {
+            oofPred.push(calibrate({ a: f.a, b: f.b } as CalibrationArtifact, calQ[i]));
+            oofWon.push(calWon[i]);
+          }
+        }
+      }
+      console.log(`  a=${a.toFixed(3)}  b=${b.toFixed(3)}`);
+      console.log(
+        `  mean |predicted - actual| over deciles: ${(100 * before.error).toFixed(1)} pts ` +
+          `-> ${(100 * after.error).toFixed(1)} pts in-sample`,
+      );
+      if (bothFolds && oofPred.length > 0) {
+        const oof = reliability(oofPred, oofWon);
+        console.log(
+          `  OUT-OF-FOLD (2-fold split by game): ${(100 * oof.error).toFixed(1)} pts — ` +
+            `this is the number that generalises.`,
+        );
+      } else {
+        console.log(`  out-of-fold check unavailable (a fold failed to converge)`);
+      }
+    }
     console.log(
       `  fit on ${calQ.length} decisions from ${nGames} games — the EFFECTIVE n is ` +
         `${nGames}, since every decision in a game shares one outcome label.`,

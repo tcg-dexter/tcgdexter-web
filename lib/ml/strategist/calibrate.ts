@@ -41,10 +41,21 @@ export interface CalibrationArtifact {
   severity: { inaccuracy: number; mistake: number; blunder: number };
 }
 
-const EPS = 1e-6;
+/** Clamp before the logit, matching `clampProb` in value.ts.
+ *
+ *  This is load-bearing, not cosmetic. A rollout mean of exactly 1.0 or 0.0 is
+ *  common — every sample ended in a win — and at EPS=1e-6 that becomes a logit
+ *  of ±13.8. Those are enormous leverage points, and an unregularised Newton
+ *  step on them diverges: the first version of this file returned
+ *  a=615,380,475 / b=2,189,668,961 (a step function dressed as a probability)
+ *  AND still reported a reliability improvement, because mapping almost
+ *  everything to 1.0 happens to score well against a 72%-base-rate population.
+ *  A plausible number from a broken fit is the failure mode this project has
+ *  lost the most time to. */
+const CLAMP = 0.005;
 
 export function logit(p: number): number {
-  const c = Math.min(1 - EPS, Math.max(EPS, p));
+  const c = Math.min(1 - CLAMP, Math.max(CLAMP, p));
   return Math.log(c / (1 - c));
 }
 
@@ -65,18 +76,46 @@ export function calibrate(artifact: CalibrationArtifact, q: number): number {
  * change the fit — it is carried so callers can report the effective n
  * rather than the decision count, which overstates confidence by ~18x.
  */
+/** Hard bounds on a usable map. `a` outside this is not a recalibration, it
+ *  is a step function; the identity map has a=1. */
+const A_MAX = 6;
+const B_MAX = 6;
+/** L2 prior pulling toward the identity map (a=1, b=0). Weak enough not to
+ *  fight real data, strong enough that separable data cannot run away. */
+const PRIOR = 1e-3;
+
 export function fitPlatt(
   q: number[],
   won: boolean[],
   groups: string[],
-): { a: number; b: number; nGames: number } {
+): { a: number; b: number; nGames: number; converged: boolean } {
   if (q.length !== won.length || q.length !== groups.length) {
     throw new Error("fitPlatt: q, won and groups must be the same length");
   }
+  const nGames = new Set(groups).size;
   const x = q.map(logit);
+  const y = won.map((w) => (w ? 1 : 0));
+
+  // Penalised negative log likelihood; the objective the step search must
+  // actually decrease. Checking it is what turns a divergence into a reported
+  // failure instead of a confident wrong answer.
+  const nll = (a: number, b: number): number => {
+    let s = 0;
+    for (let i = 0; i < x.length; i++) {
+      const z = a * x[i] + b;
+      // log(1+exp(z)) computed stably.
+      const soft = z > 0 ? z + Math.log1p(Math.exp(-z)) : Math.log1p(Math.exp(z));
+      s += soft - y[i] * z;
+    }
+    return s / Math.max(1, x.length) + PRIOR * ((a - 1) * (a - 1) + b * b);
+  };
+
   let a = 1;
   let b = 0;
-  for (let iter = 0; iter < 100; iter++) {
+  let cur = nll(a, b);
+  let converged = false;
+
+  for (let iter = 0; iter < 200; iter++) {
     let g0 = 0;
     let g1 = 0;
     let h00 = 0;
@@ -84,7 +123,7 @@ export function fitPlatt(
     let h11 = 0;
     for (let i = 0; i < x.length; i++) {
       const p = sigmoid(a * x[i] + b);
-      const r = p - (won[i] ? 1 : 0);
+      const r = p - y[i];
       g0 += r * x[i];
       g1 += r;
       const w = p * (1 - p);
@@ -92,18 +131,51 @@ export function fitPlatt(
       h01 += w * x[i];
       h11 += w;
     }
-    // Ridge on the Hessian keeps the step finite when the data are separable.
-    h00 += 1e-6;
-    h11 += 1e-6;
+    const inv = 1 / Math.max(1, x.length);
+    g0 = g0 * inv + 2 * PRIOR * (a - 1);
+    g1 = g1 * inv + 2 * PRIOR * b;
+    h00 = h00 * inv + 2 * PRIOR;
+    h11 = h11 * inv + 2 * PRIOR;
+    h01 = h01 * inv;
+
     const det = h00 * h11 - h01 * h01;
     if (!Number.isFinite(det) || Math.abs(det) < 1e-12) break;
     const da = (h11 * g0 - h01 * g1) / det;
     const db = (h00 * g1 - h01 * g0) / det;
-    a -= da;
-    b -= db;
-    if (Math.abs(da) + Math.abs(db) < 1e-9) break;
+
+    // Step halving: a Newton step is only taken if it actually decreases the
+    // objective. Unconditional stepping is what let the first version run to
+    // 1e9 without anything noticing.
+    let step = 1;
+    let took = false;
+    for (let back = 0; back < 30; back++) {
+      const na = a - step * da;
+      const nb = b - step * db;
+      if (Math.abs(na) <= A_MAX && Math.abs(nb) <= B_MAX) {
+        const next = nll(na, nb);
+        if (Number.isFinite(next) && next <= cur) {
+          a = na;
+          b = nb;
+          cur = next;
+          took = true;
+          break;
+        }
+      }
+      step /= 2;
+    }
+    if (!took) {
+      converged = true; // no improving step exists — this is the optimum
+      break;
+    }
+    if (step * (Math.abs(da) + Math.abs(db)) < 1e-9) {
+      converged = true;
+      break;
+    }
   }
-  return { a, b, nGames: new Set(groups).size };
+
+  // A fit pinned against the bounds is a divergence, not an answer.
+  if (Math.abs(a) >= A_MAX - 1e-6 || Math.abs(b) >= B_MAX - 1e-6) converged = false;
+  return { a, b, nGames, converged };
 }
 
 /** Mean |predicted - actual| over deciles of `q`, weighted by bin count.
