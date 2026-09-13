@@ -42,7 +42,7 @@ import {
 } from "@/lib/engine/sim";
 
 import { determinizeOpponent, determinizeRng } from "./determinize";
-import { analyzeDecision, moveKey, semanticMoveKey } from "./regret";
+import { analyzeDecision, moveKey, semanticMoveKey, type DecisionAnalysis } from "./regret";
 
 export interface SearchPolicyOptions {
   rollouts?: number;
@@ -57,6 +57,11 @@ export interface SearchPolicyOptions {
   /** Consulted when the search is skipped or its answer cannot be mapped
    *  back to a real legal move. */
   fallback?: DecisionPolicy;
+  /** Called with every analysis the search performs, for corpus capture.
+   *  Distillation is free here: the search has to value every legal move in
+   *  order to pick one, so the training labels are a by-product of play
+   *  rather than a second pass. */
+  onAnalysis?: (view: PlayerView, ctx: TurnContext, analysis: DecisionAnalysis) => void;
   /** Rebuild our OWN deck in the ghost from `view.unseenOwn` (legitimate
    *  self-knowledge: the multiset of cards not yet seen). PlannerPolicy does
    *  NOT do this — planner.ts explains why it is harmless there, since its
@@ -103,6 +108,11 @@ export class SearchPolicy implements DecisionPolicy {
 
   private elapsedMs = 0;
   private counter = 0;
+  private readonly onAnalysis?: (
+    view: PlayerView,
+    ctx: TurnContext,
+    analysis: DecisionAnalysis,
+  ) => void;
 
   constructor(options: SearchPolicyOptions = {}) {
     this.opts = {
@@ -115,6 +125,7 @@ export class SearchPolicy implements DecisionPolicy {
       evaluate: options.evaluate ?? null,
       fallback: options.fallback ?? new HeuristicPolicy(),
     };
+    this.onAnalysis = options.onAnalysis;
     if (this.opts.horizon !== null && !this.opts.evaluate) {
       throw new Error("SearchPolicy: a finite horizon needs an evaluator");
     }
@@ -153,6 +164,7 @@ export class SearchPolicy implements DecisionPolicy {
 
     if (!analysis) return this.opts.fallback.chooseMove(view, legal, ctx);
     this.stats.searched += 1;
+    if (this.onAnalysis) this.onAnalysis(view, ctx, analysis);
     this.stats.secondsPerSearch = this.elapsedMs / 1000 / Math.max(1, this.stats.searched);
 
     // Map back to the caller's own move objects. Hand and board cards keep

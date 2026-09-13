@@ -38,6 +38,8 @@ import { loadBenchmarkDecks } from "@/lib/ml/benchmarkDecks";
 import { createBoardEvaluator } from "@/lib/ml/botEvaluator";
 import { numOrNull } from "@/lib/ml/features";
 import { SearchPolicy } from "@/lib/ml/strategist/searchPolicy";
+import { RankerPolicy } from "@/lib/ml/rankerPolicy";
+import { readPolicyArtifactFile } from "@/lib/ml/policyModel";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 
@@ -76,6 +78,10 @@ if (VS !== "planner" && VS !== "heuristic") {
 }
 const ARTIFACT = arg("--artifact");
 const STOCK_DECK = !process.argv.includes("--no-stock-deck");
+// Side A: the rolled-out search, or a ranker artifact to gate. Both are
+// measured on the SAME true-mirror harness so a distilled student's number is
+// directly comparable with the teacher's 71.81%.
+const A_SPEC = arg("--a") ?? "search";
 
 function main(): void {
   const evaluate = createBoardEvaluator(ARTIFACT ?? undefined);
@@ -85,8 +91,16 @@ function main(): void {
     process.exit(1);
   }
   const decks = loadBenchmarkDecks(DECKS_FILE);
+  const rankerArtifact = A_SPEC.startsWith("ranker:")
+    ? readPolicyArtifactFile(path.resolve(REPO_ROOT, A_SPEC.slice("ranker:".length)))
+    : null;
+  if (A_SPEC.startsWith("ranker:") && !rankerArtifact) {
+    console.error(`[strategist-duel] no usable policy artifact at ${A_SPEC.slice(7)}`);
+    process.exit(1);
+  }
 
-  console.log(
+  if (rankerArtifact) console.log(`A: RankerPolicy ${rankerArtifact.model_version}`);
+  else console.log(
     `A: SearchPolicy rollouts=${ROLLOUTS} horizon=${HORIZON ?? "end"} ` +
       `maxCand=${MAX_CANDIDATES} determinize=${DETERMINIZE} stockDeck=${STOCK_DECK}`,
   );
@@ -127,7 +141,9 @@ function main(): void {
       const aIsPlayer = combo % 2 === 0;
       const firstActor = combo < 2 ? ("player" as const) : ("opponent" as const);
 
-      const search = new SearchPolicy({
+      const a: DecisionPolicy = A_SPEC.startsWith("ranker:")
+        ? new RankerPolicy(rankerArtifact!, { seed: gameSeed })
+        : new SearchPolicy({
         rollouts: ROLLOUTS,
         horizon: HORIZON,
         evaluate: evaluate as StateEvaluator,
@@ -135,7 +151,8 @@ function main(): void {
         determinize: DETERMINIZE,
         maxCandidates: MAX_CANDIDATES,
         stockDeck: STOCK_DECK,
-      });
+          });
+      const search = a instanceof SearchPolicy ? a : null;
       const planner: DecisionPolicy =
         VS === "heuristic"
           ? new HeuristicPolicy()
@@ -148,9 +165,7 @@ function main(): void {
       const out = playGame(
         d,
         d,
-        aIsPlayer
-          ? { player: search, opponent: planner }
-          : { player: planner, opponent: search },
+        aIsPlayer ? { player: a, opponent: planner } : { player: planner, opponent: a },
         mulberry32(gameSeed),
         firstActor,
       );
@@ -165,13 +180,15 @@ function main(): void {
       else if ((out.winner === "player") === aIsPlayer) aWins += 1;
       else bWins += 1;
 
-      statTotals.decisions += search.stats.decisions;
-      statTotals.searched += search.stats.searched;
-      statTotals.trivial += search.stats.trivial;
-      statTotals.tooWide += search.stats.tooWide;
-      statTotals.unmapped += search.stats.unmapped;
-      statTotals.byName += search.stats.byName;
-      searchSeconds += search.stats.secondsPerSearch * search.stats.searched;
+      if (search) {
+        statTotals.decisions += search.stats.decisions;
+        statTotals.searched += search.stats.searched;
+        statTotals.trivial += search.stats.trivial;
+        statTotals.tooWide += search.stats.tooWide;
+        statTotals.unmapped += search.stats.unmapped;
+        statTotals.byName += search.stats.byName;
+        searchSeconds += search.stats.secondsPerSearch * search.stats.searched;
+      }
     }
     poolA += aWins;
     poolB += bWins;
@@ -197,9 +214,9 @@ function main(): void {
   );
   console.log(
     lo > 0.5
-      ? `  SearchPolicy BEATS the ${VS} — separable at 95%.`
+      ? `  A BEATS the ${VS} — separable at 95%.`
       : hi < 0.5
-        ? `  SearchPolicy LOSES to the ${VS} — separable at 95%.`
+        ? `  A LOSES to the ${VS} — separable at 95%.`
         : "  NOT SEPARABLE from 50%.",
   );
 
@@ -220,6 +237,9 @@ function main(): void {
   }
 
   const d = statTotals;
+  // A ranker arm searches nothing, so the search-coverage block below would
+  // print a row of zeros that reads like a failure.
+  if (d.decisions === 0) return;
   console.log(
     `\nsearch coverage: ${d.searched}/${d.decisions} decisions searched ` +
       `(${((100 * d.searched) / Math.max(1, d.decisions)).toFixed(1)}%), ` +
