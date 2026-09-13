@@ -169,6 +169,13 @@ export class SearchPolicy implements DecisionPolicy {
     // search can still decline to act. Dropping it would make ending the turn
     // unreachable whenever the apprentice ranks it low, which is a behaviour
     // change disguised as an optimisation.
+    //
+    // The pool ALSO acts as a mappability filter, and that part applies with
+    // or without a prior: restricting the ghost's candidates to moves that
+    // correspond to something in the real legal set means the search can only
+    // ever return something applicable. Without it, ~7% of searched decisions
+    // picked a ghost move with no real counterpart and fell through to the
+    // heuristic — strictly worse than picking the best MAPPABLE move.
     let pool = legal;
     if (this.prior && legal.length > this.priorTopK) {
       try {
@@ -205,9 +212,7 @@ export class SearchPolicy implements DecisionPolicy {
     const poolExact = new Set(pool.map((m) => moveKey(m)));
     const poolSemantic = new Set(pool.map((m) => semanticMoveKey(m)));
     const analysis = analyzeDecision(ghost, "player", ctx, null, {
-      candidateFilter: this.prior
-        ? (m) => poolExact.has(moveKey(m)) || poolSemantic.has(semanticMoveKey(m))
-        : undefined,
+      candidateFilter: (m) => poolExact.has(moveKey(m)) || poolSemantic.has(semanticMoveKey(m)),
       rollouts: this.opts.rollouts,
       horizon: this.opts.horizon,
       evaluate: this.opts.evaluate,
