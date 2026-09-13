@@ -75,6 +75,7 @@ const HOLDOUT = numArg("--holdout", 0.2);
 /** Standard-deviation floor for a φ term to be used at all. */
 const MIN_STD = Number(arg("--min-std") ?? 1e-3);
 const LR = arg("--lr") === null ? null : Number(arg("--lr"));
+const EVAL_EVERY = numArg("--eval-every", 25);
 const PHI_FROM = arg("--phi-from");
 const CROSS_STATE = numArg("--cross-state", 0);
 const CROSS_ACTION = numArg("--cross-action", 0);
@@ -387,9 +388,36 @@ function main(): void {
     return z;
   };
 
-  console.log(`  lr ${lr.toFixed(5)} (scaled by 1/sqrt(P)), L2 ${L2}`);
-  let firstLoss = Number.NaN;
+  /** Mean cross-entropy against the soft target, on an arbitrary set. The
+   *  quantity early stopping watches — held-out, so it measures the model
+   *  rather than the fit. */
+  const heldOutLoss = (set: Sample[]): number => {
+    let loss = 0;
+    for (const d of set) {
+      const K = d.actions.length;
+      const sc = new Float64Array(K);
+      const pr = new Float64Array(K);
+      for (let k = 0; k < K; k++) sc[k] = scoreOne(d.state, d.actions[k]);
+      softmax(sc, pr);
+      for (let k = 0; k < K; k++) {
+        if (d.target[k] > 0) loss -= d.target[k] * Math.log(Math.max(1e-12, pr[k]));
+      }
+    }
+    return loss / Math.max(1, set.length);
+  };
+
+  // The honest baseline for "did training help": the held-out loss of the
+  // ZERO-WEIGHT model, i.e. a uniform ranker. Comparing held-out loss against
+  // the initial TRAIN loss instead would be apples to oranges.
+  const nullHeldOut = heldOutLoss(test);
+  console.log(
+    `  lr ${lr.toFixed(5)} (scaled by 1/sqrt(P)), L2 ${L2}, cosine decay + early stop`,
+  );
+  console.log(`  held-out loss of the untrained (uniform) model: ${nullHeldOut.toFixed(4)}`);
   let lastLoss = Number.NaN;
+  const bestW = new Float64Array(P);
+  let bestHeldOut = Number.POSITIVE_INFINITY;
+  let bestIter = 0;
   for (let it = 1; it <= ITERS; it++) {
     grad.fill(0);
     let loss = 0;
@@ -410,29 +438,61 @@ function main(): void {
       }
     }
     const scale = 1 / Math.max(1, train.length);
+    // Cosine decay. A constant step that is right early is too large late:
+    // at P=2515 the training loss bottomed at 2.0744 (iter 150) and then rose
+    // to 2.1920 (iter 250) under a fixed lr, which would have been reported as
+    // "capacity does not help" for the THIRD time.
+    const lrT = lr * 0.5 * (1 + Math.cos((Math.PI * (it - 1)) / Math.max(1, ITERS - 1)));
     for (let i = 0; i < P; i++) {
       const g = grad[i] * scale + L2 * w[i];
       mom[i] = b1 * mom[i] + (1 - b1) * g;
       vel[i] = b2 * vel[i] + (1 - b2) * g * g;
       const mh = mom[i] / (1 - Math.pow(b1, it));
       const vh = vel[i] / (1 - Math.pow(b2, it));
-      w[i] -= (lr * mh) / (Math.sqrt(vh) + 1e-8);
+      w[i] -= (lrT * mh) / (Math.sqrt(vh) + 1e-8);
     }
     lastLoss = loss * scale;
-    if (Number.isNaN(firstLoss)) firstLoss = lastLoss;
-    if (it % 50 === 0 || it === 1) {
-      console.log(`  iter ${String(it).padStart(4)}  loss ${lastLoss.toFixed(4)}`);
+
+    // EARLY STOPPING on held-out loss, keeping the best iterate. This is the
+    // robust fix for optimiser instability: whatever the lr does late, the
+    // weights returned are the best ones actually seen, so a capacity sweep
+    // measures capacity rather than how well the step size happened to suit
+    // one arm.
+    if (it % EVAL_EVERY === 0 || it === ITERS) {
+      const hl = heldOutLoss(test);
+      if (hl < bestHeldOut) {
+        bestHeldOut = hl;
+        bestIter = it;
+        bestW.set(w);
+      }
+      if (it % 50 === 0 || it === ITERS) {
+        console.log(
+          `  iter ${String(it).padStart(4)}  train ${lastLoss.toFixed(4)}  ` +
+            `held-out ${hl.toFixed(4)}${it === bestIter ? "  *" : ""}`,
+        );
+      }
+    } else if (it === 1) {
+      console.log(`  iter ${String(it).padStart(4)}  train ${lastLoss.toFixed(4)}`);
     }
   }
+  // Restore the best iterate before anything is measured or written.
+  w.set(bestW);
+  console.log(
+    `  best held-out loss ${bestHeldOut.toFixed(4)} at iter ${bestIter} of ${ITERS}` +
+      (bestIter < ITERS * 0.5 ? "  (peaked early — consider fewer iters or lower lr)" : ""),
+  );
   // A run that ends above its own starting loss has diverged. It still
   // produces an artifact and a plausible-looking held-out number, so it has
   // to announce itself — this exact failure was twice read as "capacity does
   // not help" before the loss trace was checked.
-  if (!(lastLoss < firstLoss)) {
+  // Judged on the BEST iterate, which is what gets written: with early
+  // stopping a late upswing is survivable, but never finding an improvement
+  // at all is not.
+  if (!(bestHeldOut < nullHeldOut)) {
     console.log(
-      `\n  !! DIVERGED: final loss ${lastLoss.toFixed(4)} >= initial ` +
-        `${firstLoss.toFixed(4)}. The optimiser made this worse than no training ` +
-        `at all; lower --lr. Do NOT read the metrics below as a result.`,
+      `\n  !! NO IMPROVEMENT: best held-out loss ${bestHeldOut.toFixed(4)} >= the ` +
+        `untrained model's ${nullHeldOut.toFixed(4)}. Training did not beat a uniform ` +
+        `ranker on held-out data. Do NOT read the metrics below as a result.`,
     );
   }
 
