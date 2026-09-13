@@ -27,7 +27,13 @@
 // regret separates winners from losers at z=-0.20 (nothing) while mean
 // capture separates them at z=+4.67.
 
-import { HeuristicPolicy, describeMove, hashSeed, type StateEvaluator } from "@/lib/engine/sim";
+import {
+  HeuristicPolicy,
+  describeMove,
+  hashSeed,
+  type DecisionPolicy,
+  type StateEvaluator,
+} from "@/lib/engine/sim";
 
 import {
   calibrate,
@@ -99,6 +105,16 @@ export interface CoachOptions {
   /** A decision with less than this much spread had nothing at stake, so its
    *  capture is meaningless and excluded from the mean. */
   minStakes?: number;
+  /** The pilot that plays out the rest of the game in every rollout.
+   *
+   *  This sets what Q MEANS: "the value of this move if play continues like
+   *  THIS". A coach cannot see above the level of its rollout pilot — a setup
+   *  play whose payoff needs good follow-up scores badly when the follow-up
+   *  is weak. Defaults to HeuristicPolicy, which is measured at parity with
+   *  the planner and is fast; the distilled apprentice is the same speed
+   *  class and the same strength class, so it is a drop-in candidate worth
+   *  measuring rather than assuming. */
+  rolloutPolicy?: () => DecisionPolicy;
 }
 
 /** Measured over the full 271-log corpus (4,698 valued decisions). */
@@ -114,6 +130,7 @@ export function coachGame(row: LogRow, options: CoachOptions): CoachedGame {
   const seed = options.seed ?? 1;
   const severity = options.severity ?? DEFAULT_SEVERITY;
   const minStakes = options.minStakes ?? 0.02;
+  const makePilot = options.rolloutPolicy ?? (() => new HeuristicPolicy());
 
   const stats = emptyScanStats();
   const decisions: CoachedDecision[] = [];
@@ -125,7 +142,7 @@ export function coachGame(row: LogRow, options: CoachOptions): CoachedGame {
       horizon,
       evaluate: options.evaluate,
       seed: decisionSeed,
-      policies: { player: new HeuristicPolicy(), opponent: new HeuristicPolicy() },
+      policies: { player: makePilot(), opponent: makePilot() },
       // A log replay knows neither deck's remaining contents. Rolled forward
       // untreated, both sides deck out immediately, every candidate "wins",
       // and the report is confident nonsense.

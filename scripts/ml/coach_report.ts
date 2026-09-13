@@ -33,6 +33,8 @@ import { seedOrLabel } from "@/lib/ml/features/guards";
 import { determinizeLogSide, determinizeRng } from "@/lib/ml/strategist/determinize";
 import { emptyScanStats, scanLog, type LogRow } from "@/lib/ml/strategist/logDecisions";
 import { coachGame } from "@/lib/ml/strategist/coachGame";
+import { RankerPolicy } from "@/lib/ml/rankerPolicy";
+import { readPolicyArtifactFile } from "@/lib/ml/policyModel";
 import {
   calibrate,
   fitPlatt,
@@ -67,6 +69,9 @@ const HORIZON = HORIZON_RAW === "none" ? null : numArg("--horizon", 6);
 const SEED = seedOrLabel(arg("--seed"), 1, hashSeed);
 const TOP = numArg("--top", 12);
 const ARTIFACT = arg("--artifact");
+// Swap the rollout pilot. Q means "the value of this move if play continues
+// like THIS", so the pilot is part of the definition, not a detail.
+const PILOT = arg("--pilot");
 
 interface Row extends LogRow {
   result: string | null;
@@ -125,6 +130,13 @@ function main(): void {
     console.error("[coach] no usable value artifact — refusing to score with a fallback.");
     process.exit(1);
   }
+
+  const pilotArtifact = PILOT ? readPolicyArtifactFile(path.resolve(REPO_ROOT, PILOT)) : null;
+  if (PILOT && !pilotArtifact) {
+    console.error(`[coach] no usable pilot artifact at ${PILOT}`);
+    process.exit(1);
+  }
+  if (pilotArtifact) console.log(`[coach] rollout pilot: ${pilotArtifact.model_version}`);
 
   const db = new DatabaseSync(DB, { readOnly: true });
   const rows = db
@@ -203,6 +215,9 @@ function main(): void {
       rollouts: ROLLOUTS,
       horizon: HORIZON,
       seed: SEED,
+      ...(pilotArtifact
+        ? { rolloutPolicy: () => new RankerPolicy(pilotArtifact, { seed: SEED }) }
+        : {}),
     });
     for (const k of ["logsUsed", "logsFailed", "decisions", "matched", "trivial", "yielded"] as const) {
       stats[k] += game.stats[k];
