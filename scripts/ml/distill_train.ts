@@ -72,6 +72,8 @@ const TAU = numArg("--tau", 0.05);
 const L2 = numArg("--l2", 1e-4);
 const ITERS = numArg("--iters", 400);
 const HOLDOUT = numArg("--holdout", 0.2);
+/** Standard-deviation floor for a φ term to be used at all. */
+const MIN_STD = Number(arg("--min-std") ?? 1e-3);
 const PHI_FROM = arg("--phi-from");
 const CROSS_STATE = numArg("--cross-state", 0);
 const CROSS_ACTION = numArg("--cross-action", 0);
@@ -327,8 +329,30 @@ function main(): void {
     }
   }
   for (let i = 0; i < P; i++) stds[i] = Math.sqrt(stds[i] / Math.max(1, n)) || 1;
+  // Near-constant columns are poison once standardised: dividing by a tiny
+  // std turns a column that carries almost no information into one with huge
+  // magnitude, which dominates the optimiser and starves every other term.
+  // Measured symptom: at P=2515 the model fit the TRAINING data worse than at
+  // P=336 despite φ being a strict superset — impossible for a converged fit,
+  // and the train-vs-held-out gap SHRANK (0.0153 -> 0.0034), so it was
+  // underfitting rather than overfitting. Dead columns are zeroed rather than
+  // removed so φ, means and stds stay index-aligned with the artifact.
   const invStd = new Float64Array(P);
-  for (let i = 0; i < P; i++) invStd[i] = 1 / stds[i];
+  let dead = 0;
+  for (let i = 0; i < P; i++) {
+    if (stds[i] < MIN_STD) {
+      invStd[i] = 0;
+      dead += 1;
+    } else {
+      invStd[i] = 1 / stds[i];
+    }
+  }
+  if (dead > 0) {
+    console.log(
+      `  ${dead} of ${P} φ terms have std < ${MIN_STD} and are zeroed ` +
+        `(${P - dead} live terms)`,
+    );
+  }
 
   // Split by GAME, never by decision: decisions inside one game share board
   // states and would leak across the split.
