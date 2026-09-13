@@ -62,6 +62,12 @@ export interface CoachedDecision {
   capture: number | null;
   /** Best minus worst across the legal set: how much this decision mattered. */
   stakes: number;
+  /** Raw Q of the resulting position, and of the best available. Exposed so
+   *  a caller can FIT a calibration map from real outcomes without re-running
+   *  the search — the script that does so is then a pure aggregator over
+   *  these records and cannot drift from what the app sees. */
+  qChosen: number;
+  qBest: number;
   /** A play worth praising: best move, decision mattered, and a competent
    *  reference policy would have played something materially worse. */
   skilled: boolean;
@@ -178,6 +184,8 @@ export function coachGame(row: LogRow, options: CoachOptions): CoachedGame {
       significant: analysis.significant,
       capture: stakes > minStakes ? (qs[analysis.chosenIndex] - lo) / stakes : null,
       stakes,
+      qChosen: qs[analysis.chosenIndex],
+      qBest: hi,
       skilled,
       legalCount: d.legal.length,
     });

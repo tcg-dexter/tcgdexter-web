@@ -32,7 +32,7 @@ import { numOrNull } from "@/lib/ml/features";
 import { seedOrLabel } from "@/lib/ml/features/guards";
 import { determinizeLogSide, determinizeRng } from "@/lib/ml/strategist/determinize";
 import { emptyScanStats, scanLog, type LogRow } from "@/lib/ml/strategist/logDecisions";
-import { analyzeDecision } from "@/lib/ml/strategist/regret";
+import { coachGame } from "@/lib/ml/strategist/coachGame";
 import {
   calibrate,
   fitPlatt,
@@ -183,7 +183,6 @@ function main(): void {
   const allRegrets: number[] = [];
   let significantCount = 0;
   let analyzed = 0;
-  let emptyOppDeck = 0;
   const startedAt = Date.now();
 
   for (const row of rows) {
@@ -195,122 +194,81 @@ function main(): void {
       hcell.wins += w ? 1 : 0;
     }
     byHandle.set(row.player_handle, hcell);
-    scanLog(row, stats, (d) => {
-      if (d.state.sides.opponent.deck.length === 0) emptyOppDeck += 1;
-      const decisionSeed = hashSeed(`${SEED}:${row.id}:${d.actionIndex}`);
-      const analysis = analyzeDecision(
-        d.state,
-        "player",
-        d.ctx,
-        d.legal[d.humanIndex],
-        {
-          rollouts: ROLLOUTS,
-          horizon: HORIZON,
-          evaluate: evaluate as StateEvaluator,
-          seed: decisionSeed,
-          policies: { player: new HeuristicPolicy(), opponent: new HeuristicPolicy() },
-          // Both sides: the log knows neither deck's remaining contents, and
-          // an empty own-deck is a deck-out loss just as surely.
-          prepare: (clone, r) => {
-            const rng = determinizeRng(decisionSeed, r);
-            determinizeLogSide(clone, "opponent", rng);
-            if (clone.sides.player.deck.length === 0) {
-              determinizeLogSide(clone, "player", rng);
-            }
-          },
-        },
-      );
-      if (!analysis || analysis.regret === null || analysis.chosenIndex === null) return;
+
+    // One shared implementation with the app. This script is a pure
+    // AGGREGATOR over coachGame's records — the same argument that pulled
+    // logDecisions.ts out of move_agreement.ts.
+    const game = coachGame(row, {
+      evaluate: evaluate as StateEvaluator,
+      rollouts: ROLLOUTS,
+      horizon: HORIZON,
+      seed: SEED,
+    });
+    for (const k of ["logsUsed", "logsFailed", "decisions", "matched", "trivial", "yielded"] as const) {
+      stats[k] += game.stats[k];
+    }
+    for (const [k, v] of Array.from(game.stats.missBy)) {
+      stats.missBy.set(k, (stats.missBy.get(k) ?? 0) + v);
+    }
+    for (const [k, v] of Array.from(game.stats.unmatchedBy)) {
+      stats.unmatchedBy.set(k, (stats.unmatchedBy.get(k) ?? 0) + v);
+    }
+
+    for (const d of game.decisions) {
       analyzed += 1;
-      allRegrets.push(analysis.regret);
+      allRegrets.push(d.regret);
       const rec = perLog.get(row.id)!;
-      rec.regrets.push(analysis.regret);
-      // CAPTURE: what fraction of the value actually on the table did this
-      // move take? Raw regret is denominated in the position's stakes, and
-      // stakes scale with board development — measured here at 1.3 pts with
-      // under 5 options against 13.5 pts with 30+. A developed board is also
-      // what winning looks like, so raw regret rewards the player who never
-      // built one. Normalising by the spread removes that.
-      const qs = analysis.candidates.map((c) => c.q);
-      const hi = Math.max(...qs);
-      const lo = Math.min(...qs);
-      const spread = hi - lo;
-      if (spread > 0.02) {
-        rec.captures.push((qs[analysis.chosenIndex] - lo) / spread);
+      rec.regrets.push(d.regret);
+      rec.options.push(d.legalCount);
+      rec.turns.push(d.turn ?? 0);
+      if (d.capture !== null) rec.captures.push(d.capture);
+
+      const bucket = Math.min(6, Math.floor(d.legalCount / 5));
+      const arr = byOptions.get(bucket) ?? [];
+      arr.push(d.regret);
+      byOptions.set(bucket, arr);
+
+      const kindArr = byPlayedKind.get(d.playedKind) ?? [];
+      kindArr.push(d.regret);
+      byPlayedKind.set(d.playedKind, kindArr);
+      if (d.bestAlternative) {
+        const sk = d.bestAlternative.split(" ")[0];
+        bySuggestedKind.set(sk, (bySuggestedKind.get(sk) ?? 0) + 1);
       }
-      {
-        const k = d.legal[d.humanIndex].kind;
-        const arr = byPlayedKind.get(k) ?? [];
-        arr.push(analysis.regret);
-        byPlayedKind.set(k, arr);
-        const alt = analysis.alternativeIndex;
-        if (alt !== null) {
-          const sk = analysis.candidates[alt].move.kind;
-          bySuggestedKind.set(sk, (bySuggestedKind.get(sk) ?? 0) + 1);
-        }
-      }
-      // SKILLED PLAY: the human beat what a competent reference would have
-      // played, on a decision that mattered.
-      {
-        const human = analysis.candidates[analysis.chosenIndex];
-        let ref = null as null | (typeof analysis.candidates)[number];
-        try {
-          const pick = new HeuristicPolicy().chooseMove(d.view, d.legal, d.ctx);
-          ref = analysis.candidates.find((c) => sameMove(c.move, pick)) ?? null;
-        } catch {
-          ref = null;
-        }
-        if (ref && !sameMove(ref.move, human.move)) {
-          const paired = human.samples.map((v, k) => v - ref!.samples[k]);
-          const m = mean(paired);
-          const se = sd(paired) / Math.sqrt(Math.max(1, paired.length));
-          const spread =
-            Math.max(...analysis.candidates.map((c) => c.q)) -
-            Math.min(...analysis.candidates.map((c) => c.q));
-          const nearBest = analysis.regret <= 2 * Math.max(analysis.regretSe, 0.005);
-          if (nearBest && spread > 0.15 && se > 0 && m > 2 * se) {
-            highlights.push({
-              logId: row.id,
-              turn: d.turnNumber,
-              played: describeMove(d.state, "player", human.move),
-              ratherThan: describeMove(d.state, "player", ref.move),
-              edge: m,
-              se,
-            });
-          }
-        }
-      }
+
       const outcome = wonLog(row.result);
       if (outcome !== null) {
-        calQ.push(qs[analysis.chosenIndex]);
+        calQ.push(d.qChosen);
         calWon.push(outcome);
         calGame.push(row.id);
-        const bucket = Math.min(9, Math.max(0, Math.floor(qs[analysis.chosenIndex] * 10)));
-        const cell = calib.get(bucket) ?? { n: 0, won: 0 };
+        const b = Math.min(9, Math.max(0, Math.floor(d.qChosen * 10)));
+        const cell = calib.get(b) ?? { n: 0, won: 0 };
         cell.n += 1;
         cell.won += outcome ? 1 : 0;
-        calib.set(bucket, cell);
+        calib.set(b, cell);
       }
-      rec.options.push(d.legal.length);
-      rec.turns.push(d.turnNumber ?? 0);
-      const bucket = Math.min(6, Math.floor(d.legal.length / 5));
-      const arr = byOptions.get(bucket) ?? [];
-      arr.push(analysis.regret);
-      byOptions.set(bucket, arr);
-      if (analysis.significant) {
-        significantCount += 1;
-        const alt = analysis.alternativeIndex;
-        blunders.push({
-          logId: row.id,
-          turn: d.turnNumber,
-          played: describeMove(d.state, "player", d.legal[d.humanIndex]),
-          instead:
-            alt !== null ? describeMove(d.state, "player", analysis.candidates[alt].move) : "—",
-          regret: analysis.regret,
-          se: analysis.regretSe,
-        });
-      }
-    });
+      if (d.significant) significantCount += 1;
+    }
+    for (const b of game.blunders) {
+      blunders.push({
+        logId: row.id,
+        turn: b.turn,
+        played: b.played,
+        instead: b.bestAlternative ?? "—",
+        regret: b.regret,
+        se: b.regretSe,
+      });
+    }
+    for (const h of game.highlights) {
+      highlights.push({
+        logId: row.id,
+        turn: h.turn,
+        played: h.played,
+        ratherThan: h.bestAlternative ?? "—",
+        edge: h.stakes,
+        se: h.regretSe,
+      });
+    }
   }
 
   const elapsed = (Date.now() - startedAt) / 1000;
@@ -319,10 +277,6 @@ function main(): void {
       `${stats.decisions} decisions, ${stats.matched} matched ` +
       `(${((100 * stats.matched) / Math.max(1, stats.decisions)).toFixed(1)}% coverage), ` +
       `${analyzed} valued`,
-  );
-  console.log(
-    `  reconstructed states with an empty opponent deck: ${emptyOppDeck} ` +
-      `(all determinized before rollout)\n`,
   );
 
   console.log("REGRET DISTRIBUTION (points of win probability given up)");
