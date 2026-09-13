@@ -41,6 +41,9 @@ import {
   type TurnContext,
 } from "@/lib/engine/sim";
 
+import { encodeActionFeatures, encodeStateFeatures } from "@/lib/ml/features/policy";
+import { scoreCandidates, type PolicyRankerArtifact } from "@/lib/ml/policyModel";
+
 import { determinizeOpponent, determinizeRng } from "./determinize";
 import { analyzeDecision, moveKey, semanticMoveKey, type DecisionAnalysis } from "./regret";
 
@@ -57,6 +60,19 @@ export interface SearchPolicyOptions {
   /** Consulted when the search is skipped or its answer cannot be mapped
    *  back to a real legal move. */
   fallback?: DecisionPolicy;
+  /** A learned policy used as a SEARCH PRIOR: candidates are ranked by it and
+   *  only the top `priorTopK` are rolled out.
+   *
+   *  This is the second half of Expert Iteration. Round one distils the
+   *  search into an apprentice; round two hands the apprentice back to the
+   *  expert so it stops spending rollouts on moves that were never going to
+   *  win. It buys two things at once — cost falls roughly with the pruning
+   *  ratio, and `maxCandidates` can be RAISED, so the ~15% of decisions
+   *  currently skipped as too wide become searchable instead of falling
+   *  through to the heuristic. */
+  prior?: PolicyRankerArtifact | null;
+  /** Candidates to keep when a prior is supplied. */
+  priorTopK?: number;
   /** Called with every analysis the search performs, for corpus capture.
    *  Distillation is free here: the search has to value every legal move in
    *  order to pick one, so the training labels are a by-product of play
@@ -84,6 +100,8 @@ export interface SearchPolicyStats {
   /** Mapped back by NAME rather than by id — a deck search, where the ghost's
    *  rebuilt deck necessarily uses synthetic card ids. */
   byName: number;
+  /** Candidates dropped by the search prior before any rollout. */
+  pruned: number;
   /** Mean seconds per searched decision. */
   secondsPerSearch: number;
 }
@@ -103,11 +121,14 @@ export class SearchPolicy implements DecisionPolicy {
     tooWide: 0,
     unmapped: 0,
     byName: 0,
+    pruned: 0,
     secondsPerSearch: 0,
   };
 
   private elapsedMs = 0;
   private counter = 0;
+  private readonly prior: PolicyRankerArtifact | null;
+  private readonly priorTopK: number;
   private readonly onAnalysis?: (
     view: PlayerView,
     ctx: TurnContext,
@@ -126,6 +147,8 @@ export class SearchPolicy implements DecisionPolicy {
       fallback: options.fallback ?? new HeuristicPolicy(),
     };
     this.onAnalysis = options.onAnalysis;
+    this.prior = options.prior ?? null;
+    this.priorTopK = options.priorTopK ?? 6;
     if (this.opts.horizon !== null && !this.opts.evaluate) {
       throw new Error("SearchPolicy: a finite horizon needs an evaluator");
     }
@@ -142,6 +165,32 @@ export class SearchPolicy implements DecisionPolicy {
       return this.opts.fallback.chooseMove(view, legal, ctx);
     }
 
+    // Search prior: keep the apprentice's top-K, and ALWAYS keep `pass` so the
+    // search can still decline to act. Dropping it would make ending the turn
+    // unreachable whenever the apprentice ranks it low, which is a behaviour
+    // change disguised as an optimisation.
+    let pool = legal;
+    if (this.prior && legal.length > this.priorTopK) {
+      try {
+        const stateVec = encodeStateFeatures(view);
+        const { scores } = scoreCandidates(
+          this.prior,
+          stateVec,
+          legal.map((m) => encodeActionFeatures(view, m)),
+        );
+        const order = legal.map((_, i) => i).sort((a, b) => scores[b] - scores[a]);
+        const keep = new Set(order.slice(0, this.priorTopK));
+        const passIdx = legal.findIndex((m) => m.kind === "pass");
+        if (passIdx >= 0) keep.add(passIdx);
+        pool = legal.filter((_, i) => keep.has(i));
+        this.stats.pruned += legal.length - pool.length;
+      } catch {
+        // A prior that cannot score is a prior we do not use. Falling back to
+        // the full candidate set is slower, never wrong.
+        pool = legal;
+      }
+    }
+
     // The ghost is the honest information set: our own hand and deck are
     // real (stockDeck), every opponent hidden zone is placeholders until
     // determinize fills it from public evidence only.
@@ -149,7 +198,16 @@ export class SearchPolicy implements DecisionPolicy {
     const decisionSeed = hashSeed(`${this.opts.seed}:${this.counter++}`);
 
     const t0 = Date.now();
+    // Match the kept pool on BOTH keys. A ghost's deck-search move carries
+    // synthetic card ids, so an exact-key filter silently drops every one of
+    // them — which looked like an improvement (unmapped fell to 0) because it
+    // had made the whole class of moves unreachable rather than fixing it.
+    const poolExact = new Set(pool.map((m) => moveKey(m)));
+    const poolSemantic = new Set(pool.map((m) => semanticMoveKey(m)));
     const analysis = analyzeDecision(ghost, "player", ctx, null, {
+      candidateFilter: this.prior
+        ? (m) => poolExact.has(moveKey(m)) || poolSemantic.has(semanticMoveKey(m))
+        : undefined,
       rollouts: this.opts.rollouts,
       horizon: this.opts.horizon,
       evaluate: this.opts.evaluate,

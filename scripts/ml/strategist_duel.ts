@@ -82,6 +82,10 @@ const STOCK_DECK = !process.argv.includes("--no-stock-deck");
 // measured on the SAME true-mirror harness so a distilled student's number is
 // directly comparable with the teacher's 71.81%.
 const A_SPEC = arg("--a") ?? "search";
+// Expert Iteration, second half: hand the apprentice back to the expert as a
+// move-ordering prior so rollouts are spent only on plausible candidates.
+const PRIOR_PATH = arg("--prior");
+const PRIOR_TOPK = numArg("--prior-topk", 6);
 
 function main(): void {
   const evaluate = createBoardEvaluator(ARTIFACT ?? undefined);
@@ -91,6 +95,13 @@ function main(): void {
     process.exit(1);
   }
   const decks = loadBenchmarkDecks(DECKS_FILE);
+  const priorArtifact = PRIOR_PATH
+    ? readPolicyArtifactFile(path.resolve(REPO_ROOT, PRIOR_PATH))
+    : null;
+  if (PRIOR_PATH && !priorArtifact) {
+    console.error(`[strategist-duel] no usable prior artifact at ${PRIOR_PATH}`);
+    process.exit(1);
+  }
   const rankerArtifact = A_SPEC.startsWith("ranker:")
     ? readPolicyArtifactFile(path.resolve(REPO_ROOT, A_SPEC.slice("ranker:".length)))
     : null;
@@ -102,7 +113,8 @@ function main(): void {
   if (rankerArtifact) console.log(`A: RankerPolicy ${rankerArtifact.model_version}`);
   else console.log(
     `A: SearchPolicy rollouts=${ROLLOUTS} horizon=${HORIZON ?? "end"} ` +
-      `maxCand=${MAX_CANDIDATES} determinize=${DETERMINIZE} stockDeck=${STOCK_DECK}`,
+      `maxCand=${MAX_CANDIDATES} determinize=${DETERMINIZE} stockDeck=${STOCK_DECK}` +
+      (PRIOR_PATH ? ` prior=${path.basename(PRIOR_PATH)} topK=${PRIOR_TOPK}` : ""),
   );
   console.log(
     `B: ${VS === "heuristic" ? "HeuristicPolicy" : `PlannerPolicy skill=${SKILL} + value artifact`}`,
@@ -115,7 +127,15 @@ function main(): void {
   let poolB = 0;
   let poolD = 0;
   const perSeed: number[] = [];
-  const statTotals = { decisions: 0, searched: 0, trivial: 0, tooWide: 0, unmapped: 0, byName: 0 };
+  const statTotals = {
+    decisions: 0,
+    searched: 0,
+    trivial: 0,
+    tooWide: 0,
+    unmapped: 0,
+    byName: 0,
+    pruned: 0,
+  };
   let searchSeconds = 0;
   // Corpus sanity: a shift in HOW games end is a label-quality confound
   // wearing a result's clothes. A win driven by the opponent decking out, or
@@ -151,6 +171,8 @@ function main(): void {
         determinize: DETERMINIZE,
         maxCandidates: MAX_CANDIDATES,
         stockDeck: STOCK_DECK,
+            prior: priorArtifact,
+            priorTopK: PRIOR_TOPK,
           });
       const search = a instanceof SearchPolicy ? a : null;
       const planner: DecisionPolicy =
@@ -187,6 +209,7 @@ function main(): void {
         statTotals.tooWide += search.stats.tooWide;
         statTotals.unmapped += search.stats.unmapped;
         statTotals.byName += search.stats.byName;
+        statTotals.pruned += search.stats.pruned;
         searchSeconds += search.stats.secondsPerSearch * search.stats.searched;
       }
     }
@@ -244,7 +267,11 @@ function main(): void {
     `\nsearch coverage: ${d.searched}/${d.decisions} decisions searched ` +
       `(${((100 * d.searched) / Math.max(1, d.decisions)).toFixed(1)}%), ` +
       `${d.trivial} trivial, ${d.tooWide} too wide, ${d.byName} mapped by name, ` +
-      `${d.unmapped} unmapped`,
+      `${d.unmapped} unmapped` +
+      (d.pruned > 0
+        ? `, ${d.pruned} candidates pruned by the prior ` +
+          `(${(d.pruned / Math.max(1, d.searched)).toFixed(1)} per searched decision)`
+        : ""),
   );
   if (d.unmapped > 0) {
     console.log(
