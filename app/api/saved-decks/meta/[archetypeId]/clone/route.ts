@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import archetypesRaw from "@/data/meta-archetypes.json";
 import metaDecksRaw from "@/data/meta-decks.json";
 import { buildMetaAnalysis } from "@/lib/buildMetaAnalysis";
+import { loadShopListings } from "@/lib/shopListings";
 import { primaryPokemonCard } from "@/lib/primaryCardImage";
 
 /**
@@ -177,7 +178,7 @@ export async function POST(
     rank,
     conversionRate: arch.conversionRate ?? 0,
     representationPct: arch.representation_pct,
-  });
+  }, { listings: await loadShopListings() });
   const primaryPokemon = primaryPokemonCard(analysis.cards)?.card.name ?? null;
 
   const { data: cloned, error: insErr } = await supabase

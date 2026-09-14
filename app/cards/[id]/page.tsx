@@ -19,7 +19,7 @@ import { hydrateListPreviews, type ListRow, type ListSummary } from "@/lib/lists
 import AppearsInCarousel from "./AppearsInCarousel";
 import ListsCarousel from "./ListsCarousel";
 import PriceHistoryChart from "./PriceHistoryChart";
-import { shopListingsForCard } from "@/lib/shopListings";
+import { loadShopListings, shopListingsForCard } from "@/lib/shopListings";
 import { getCardPriceHistory } from "@/lib/priceHistory";
 import ShopListingsPanel from "../ShopListingsPanel";
 
@@ -64,7 +64,12 @@ export default async function CardDetailPage({ params }: Props) {
   );
 
   // Empty for almost every card — the shop stocks a few hundred printings.
-  const shopListings = shopListingsForCard(card.setId, card.number);
+  // loadShopListings is cached, so this is one query per revalidate window.
+  const shopListings = shopListingsForCard(
+    await loadShopListings(),
+    card.setId,
+    card.number,
+  );
 
   // The viewer's own lists that already contain this printing. Signed-out
   // visitors and users whose lists don't include it get nothing — RLS scopes

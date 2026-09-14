@@ -8,6 +8,7 @@ import {
   DeckParseError,
   type AnalysisResult,
 } from "@/lib/analyzeDeck";
+import { loadShopListings } from "@/lib/shopListings";
 import { primaryPokemonCard } from "@/lib/primaryCardImage";
 import { reconcileAchievements } from "@/lib/learn/achievements";
 import { notifyBadgesUnlocked } from "@/lib/notifications/notify";
@@ -84,7 +85,7 @@ export async function POST(req: Request) {
   void analysis;
   let analysisResult: AnalysisResult;
   try {
-    analysisResult = analyzeDeckList(deckList);
+    analysisResult = analyzeDeckList(deckList, { listings: await loadShopListings() });
   } catch (err) {
     if (err instanceof DeckParseError) {
       return NextResponse.json({ error: err.message }, { status: 400 });
