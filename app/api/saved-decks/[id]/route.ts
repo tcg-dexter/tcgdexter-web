@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { track } from "@/lib/analytics/track";
 import { isTrustedCardImageUrl } from "@/lib/cardImages";
 import { analyzeDeckList, detectDeckArchetype, DeckParseError } from "@/lib/analyzeDeck";
+import { loadShopListings } from "@/lib/shopListings";
 
 /**
  * DELETE /api/saved-decks/[id]
@@ -184,7 +185,7 @@ export async function PATCH(
 
     let analysisResult;
     try {
-      analysisResult = analyzeDeckList(dl);
+      analysisResult = analyzeDeckList(dl, { listings: await loadShopListings() });
     } catch (err) {
       if (err instanceof DeckParseError) {
         return NextResponse.json({ error: err.message }, { status: 400 });

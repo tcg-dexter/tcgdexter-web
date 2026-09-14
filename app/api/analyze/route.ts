@@ -7,6 +7,7 @@ import {
   DeckParseError,
   type AnalysisResult,
 } from "@/lib/analyzeDeck";
+import { loadShopListings } from "@/lib/shopListings";
 
 /* The analysis computation lives in @/lib/analyzeDeck so other server
  * routes (e.g. saved-decks writes) can recompute snapshots without an HTTP
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
 
     let result: AnalysisResult;
     try {
-      result = analyzeDeckList(deckList);
+      result = analyzeDeckList(deckList, { listings: await loadShopListings() });
     } catch (err) {
       if (err instanceof DeckParseError) {
         return NextResponse.json({ error: err.message }, { status: 400 });

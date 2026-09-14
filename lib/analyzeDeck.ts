@@ -1,4 +1,3 @@
-import shopListingsData from "@/data/shop-listings.json";
 import metaArchetypesData from "@/data/meta-archetypes.json";
 import {
   type Card,
@@ -8,21 +7,20 @@ import {
   ROTATING_MARKS,
   hasLegalTrainerReprint,
 } from "@/lib/cardPrinting";
+import {
+  EMPTY_SHOP_LISTINGS,
+  shopListingsForDeckCard,
+  type ShopListing,
+  type ShopListingIndex,
+} from "@/lib/shopListings";
 
 /* ─── Shop Listings ──────────────────────────────────────────── */
 
-export interface ShopListing {
-  title: string;
-  price: number;
-  currency: string;
-  imageUrl: string | null;
-  listingUrl: string;
-  condition: string;
-  bestOffer: boolean;
-  itemId: string;
-}
-
-const SHOP_LISTINGS = shopListingsData as Record<string, ShopListing[]>;
+/* Re-exported because AnalysisResult.shopMatches is typed with it and
+ * consumers (app/components/DeckProfileView.tsx) import it from here. The
+ * definition itself lives in @/lib/shopListings alongside the loader, so the
+ * row shape and the type can't drift. */
+export type { ShopListing };
 
 /* ─── Types ──────────────────────────────────────────────────── */
 /* Card DB, the deck-list parser, and printing resolution live in
@@ -200,14 +198,32 @@ export function detectDeckArchetype(analysis: AnalysisResult): {
   };
 }
 
+export interface AnalyzeDeckOptions {
+  /** Shop listings to match the deck against, from `loadShopListings()`.
+   *  Omit it and `shopMatches` comes back empty — which is already the normal
+   *  result for most decks, since the shop stocks a few hundred cards against
+   *  ~20,600 printings. Offline callers (the ML feature extractors, the
+   *  simulator) have no reason to pay for a Supabase read to populate a field
+   *  they don't look at. */
+  listings?: ShopListingIndex;
+}
+
 /**
  * Full deck analysis from raw deck-list text. Pure and synchronous — no
  * network, no Supabase. Route handlers wrap this and add their own side
  * effects (submission capture, analytics).
  *
+ * Listings are injected rather than imported so this stays synchronous now
+ * that they live in Postgres instead of a bundled JSON file. Callers that want
+ * shop matches `await loadShopListings()` first and pass the result; the cache
+ * there means that is one query per revalidate window, not per analysis.
+ *
  * @throws {DeckParseError} when no cards can be parsed from the text.
  */
-export function analyzeDeckList(deckList: string): AnalysisResult {
+export function analyzeDeckList(
+  deckList: string,
+  { listings = EMPTY_SHOP_LISTINGS }: AnalyzeDeckOptions = {}
+): AnalysisResult {
   const cards = parseDeckListCards(deckList);
 
   if (cards.length === 0) {
@@ -426,14 +442,10 @@ export function analyzeDeckList(deckList: string): AnalysisResult {
   // ── Shop Matches ───────────────────────────────────────────
   // Match by name + card number first (exact printing), fall back to name only
   const shopMatches = cards
-    .map(card => {
-      const nameLower = card.name.toLowerCase();
-      const exactKey = card.number ? `${nameLower}:${card.number}` : null;
-      const listings = (exactKey && SHOP_LISTINGS[exactKey])
-        ? SHOP_LISTINGS[exactKey]
-        : (SHOP_LISTINGS[nameLower] ?? []);
-      return { cardName: card.name, listings };
-    })
+    .map(card => ({
+      cardName: card.name,
+      listings: shopListingsForDeckCard(listings, card.name, card.number),
+    }))
     .filter(m => m.listings.length > 0)
     .filter((m, i, arr) => arr.findIndex(x => x.cardName === m.cardName) === i);
 
