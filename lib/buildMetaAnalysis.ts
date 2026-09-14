@@ -11,9 +11,13 @@
  */
 
 import cardData from "@/data/cards-standard.json";
-import shopListingsData from "@/data/shop-listings.json";
 import { type AnalysisResult } from "@/app/components/DeckProfileView";
 import { ROTATING_MARKS, hasLegalTrainerReprint } from "@/lib/cardPrinting";
+import {
+  EMPTY_SHOP_LISTINGS,
+  shopListingsForDeckCard,
+  type ShopListingIndex,
+} from "@/lib/shopListings";
 
 /* ─── Card DB ────────────────────────────────────────────────── */
 
@@ -36,21 +40,6 @@ const CARD_DB = cardData as unknown as Record<string, CardDataEntry[]>;
 const CARD_DB_LOWER = new Map(
   Object.entries(CARD_DB).map(([k, v]) => [k.toLowerCase(), v])
 );
-
-/* ─── Shop Listings ──────────────────────────────────────────── */
-
-interface ShopListing {
-  title: string;
-  price: number;
-  currency: string;
-  imageUrl: string | null;
-  listingUrl: string;
-  condition: string;
-  bestOffer: boolean;
-  itemId: string;
-}
-
-const SHOP_LISTINGS = shopListingsData as Record<string, ShopListing[]>;
 
 /* ─── Constants ──────────────────────────────────────────────── */
 
@@ -89,9 +78,16 @@ export interface MetaArchetypeInfo {
 
 /* ─── Main function ──────────────────────────────────────────── */
 
+export interface BuildMetaAnalysisOptions {
+  /** Shop listings from `loadShopListings()`. Omit and `shopMatches` comes
+   *  back empty — see AnalyzeDeckOptions in lib/analyzeDeck.ts. */
+  listings?: ShopListingIndex;
+}
+
 export function buildMetaAnalysis(
   metaCards: MetaDeckCard[],
   archetype: MetaArchetypeInfo,
+  { listings = EMPTY_SHOP_LISTINGS }: BuildMetaAnalysisOptions = {},
 ): AnalysisResult {
   // Remap category → section for DeckProfileView compatibility
   const cards = metaCards.map((c) => ({
@@ -226,18 +222,19 @@ export function buildMetaAnalysis(
   }
   const rotatingCount = rotatingCards.reduce((s, c) => s + c.qty, 0);
 
-  // ── Shop matches (same exact-key logic as analyze route) ──────
+  // ── Shop matches ──────────────────────────────────────────────
+  // Meta cards carry a number via setCode+number, so the name:number key can
+  // be tried first. shopListingsForDeckCard owns that fallback order so this
+  // and analyzeDeckList can't drift apart.
   const shopMatches = cards
-    .map(card => {
-      const nameLower = card.name.toLowerCase();
-      // Meta cards include a card number via setCode+number — use name:number key first
-      const metaCard = metaCards.find(mc => mc.name === card.name);
-      const exactKey = metaCard?.number ? `${nameLower}:${metaCard.number}` : null;
-      const listings = (exactKey && SHOP_LISTINGS[exactKey])
-        ? SHOP_LISTINGS[exactKey]
-        : (SHOP_LISTINGS[nameLower] ?? []);
-      return { cardName: card.name, listings };
-    })
+    .map(card => ({
+      cardName: card.name,
+      listings: shopListingsForDeckCard(
+        listings,
+        card.name,
+        metaCards.find(mc => mc.name === card.name)?.number
+      ),
+    }))
     .filter(m => m.listings.length > 0)
     .filter((m, i, arr) => arr.findIndex(x => x.cardName === m.cardName) === i);
 

@@ -4,6 +4,7 @@ import metaDecksRaw from "@/data/meta-decks.json";
 import DeckProfileView from "@/app/components/DeckProfileView";
 import BackButton from "@/app/components/ui/BackButton";
 import { buildMetaAnalysis } from "@/lib/buildMetaAnalysis";
+import { loadShopListings } from "@/lib/shopListings";
 import { formatMetaVariantDate } from "@/lib/formatMetaVariantDate";
 import { metaVariantAvatars } from "@/lib/metaPrimaryCard";
 
@@ -122,7 +123,7 @@ export default async function MetaVariantPage({
     rank,
     conversionRate: arch.conversion_rate,
     representationPct: arch.representation_pct,
-  });
+  }, { listings: await loadShopListings() });
 
   // Profiled-at = the snapshot date the archetype was last refreshed.
   const profiledAt = arch.last_updated
