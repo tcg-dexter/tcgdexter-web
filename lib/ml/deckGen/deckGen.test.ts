@@ -3,6 +3,7 @@
 // the same seed produces the same corpus.
 
 import { describe, it, expect } from "vitest";
+import { isCurrentStandard } from "@/lib/engine/catalog";
 import { instantiateDeck } from "@/lib/engine/sim";
 import { buildCorpus, loadMetaCorpus, archetypeProfile } from "./corpus";
 import { generateDecks, mutateDeck, skeletonDeck } from "./generate";
@@ -88,14 +89,28 @@ describe("the gates agree with reality", () => {
   it("passes essentially every recorded meta variant", () => {
     // If a future heuristic starts rejecting decks people won with, that is a
     // bug in the heuristic, and this is where it shows up. loadMetaCorpus
-    // already drops the 4 variants that are genuinely illegal (a non-standard
-    // card, or 59 cards), so everything reaching here should pass.
+    // already drops the variants that are genuinely illegal — a 59-card list,
+    // a card outside the catalog, or (the big one) a stale tournament list
+    // built before rotation: 34 of the 337 recorded variants still run Iono,
+    // Nest Ball or Earthen Vessel. So everything reaching here should pass.
     const failures = corpus.decks.filter((d) => {
       const i = deckIssues(d.entries);
       return i.legality.length > 0 || i.playability.length > 0;
     });
     expect(failures.map((f) => f.id)).toEqual([]);
     expect(corpus.decks.length).toBeGreaterThan(300);
+  });
+
+  it("drops rotated variants without losing an archetype", () => {
+    // The rotation gate cost 34 of 337 variants. Losing a whole archetype
+    // would be a different and much worse outcome — the generated pool is
+    // seeded from these, so a missing archetype silently disappears from
+    // every downstream study rather than announcing itself.
+    const archetypes = new Set(corpus.decks.map((d) => d.archetype));
+    expect(archetypes.size).toBe(30);
+    for (const d of corpus.decks) {
+      for (const e of d.entries) expect(isCurrentStandard(e.name)).toBe(true);
+    }
   });
 });
 

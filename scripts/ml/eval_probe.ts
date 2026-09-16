@@ -37,7 +37,7 @@ import {
   collectPlannerProbe,
   type ProbeCandidate,
 } from "@/lib/engine/sim/planner";
-import { numOrNull } from "@/lib/ml/features";
+import { numOrNull, seedOrLabel} from "@/lib/ml/features";
 import { createBotEvaluator, createSnapshotEvaluator } from "@/lib/ml/botEvaluator";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
@@ -48,7 +48,7 @@ function argValue(flag: string): string | null {
 }
 
 const games = numOrNull(argValue("--games")) ?? 40;
-const seed = numOrNull(argValue("--seed")) ?? 7;
+const seed = seedOrLabel(argValue("--seed"), 7, hashSeed);
 const blind = process.argv.includes("--blind");
 const decksFile = argValue("--decks-file") ?? path.join("data", "ml", "benchmark-decks.json");
 

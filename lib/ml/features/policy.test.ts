@@ -4,6 +4,8 @@
 // requires a POLICY_SCHEMA_VERSION bump (and updating these pins).
 
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   ACTION_FEATURE_NAMES,
   POLICY_SCHEMA_VERSION,
@@ -42,8 +44,48 @@ function fixture() {
 describe("policy feature encoding", () => {
   const { view, legal } = fixture();
 
+  it("keeps every promoted artifact's features mappable by name", () => {
+    // The bump is only safe because it is ADDITIVE. Every scorer resolves its
+    // inputs by name, and createBoardEvaluator REFUSES a GBDT whose features
+    // are not all present — a tree routes on exact thresholds, so a missing
+    // feature is silent nonsense rather than graceful degradation. If a future
+    // edit renames or drops a state feature, the live model stops scoring and
+    // the pilot silently falls back; this catches that at test time instead.
+    const artifact = JSON.parse(
+      readFileSync(join(process.cwd(), "data/ml/value.json"), "utf8"),
+    ) as { features: string[] };
+    const present = new Set(STATE_FEATURE_NAMES);
+    expect(artifact.features.filter((f) => !present.has(f))).toEqual([]);
+  });
+
+  it("encodes what a card DOES, not just what kind of card it is", () => {
+    // The point of the mechanics block: two Items that the frozen name slots
+    // treat identically must not encode identically.
+    const names = STATE_FEATURE_NAMES;
+    expect(names).toContain("hand_mech_search_power");
+    expect(names).toContain("opp_board_mech_max_damage");
+    expect(ACTION_FEATURE_NAMES).toContain("card_mech_gust");
+  });
+
+  it("carries the route-planning blocks", () => {
+    // v5's reason to exist: the encoder must express what the opponent can do
+    // NEXT turn, and what they are likely holding — not just what is visible.
+    expect(STATE_FEATURE_NAMES).toContain("threat_after_evolve");
+    expect(STATE_FEATURE_NAMES).toContain("threat_ko_needs_evolve");
+    expect(STATE_FEATURE_NAMES).toContain("oppprior_confidence");
+    expect(STATE_FEATURE_NAMES).toContain("oppprior_expected_gust");
+  });
+
+  it("retires the reserved oppmodel_* slots it promoted", () => {
+    // They were reserved and zero since v1 for exactly this model, and no
+    // promoted artifact references them — which is what makes claiming them a
+    // promotion rather than a breaking rename. If a future artifact ever did
+    // reference one, the mappability test above would catch it.
+    expect(STATE_FEATURE_NAMES.filter((n) => n.startsWith("oppmodel_"))).toEqual([]);
+  });
+
   it("pins the schema version and vector shapes", () => {
-    expect(POLICY_SCHEMA_VERSION).toBe(3);
+    expect(POLICY_SCHEMA_VERSION).toBe(6);
     expect(encodeStateFeatures(view).length).toBe(STATE_FEATURE_NAMES.length);
     for (const move of legal) {
       expect(encodeActionFeatures(view, move).length).toBe(ACTION_FEATURE_NAMES.length);

@@ -46,6 +46,24 @@ export interface GameOptions {
    *  the real one and then measures the wrong thing). Never set in
    *  production paths, so it cannot affect the rng stream or determinism. */
   observer?: (ev: TurnObservation) => void;
+  /** Per-DECISION hook, called with the live state just BEFORE each chosen
+   *  move is applied. Read-only by the same contract as `observer`: the state
+   *  is the driver's own, not a copy, so a consumer that wants to keep or
+   *  fork it must clone. This is the seam counterfactual analysis needs — a
+   *  policy only ever sees a redacted PlayerView, and regret estimation needs
+   *  the full state to roll alternatives forward from. */
+  onDecision?: (ev: DecisionObservation) => void;
+}
+
+/** One decision, as the driver is about to apply it. */
+export interface DecisionObservation {
+  state: GameState;
+  actor: "player" | "opponent";
+  ctx: TurnContext;
+  legal: SimMove[];
+  move: SimMove;
+  /** True when `move` came from ResumeOptions.firstMove rather than a policy. */
+  forced: boolean;
 }
 
 /** One turn's worth of diagnostic telemetry. */
@@ -483,27 +501,44 @@ function enforceActiveInvariant(
   return fixed;
 }
 
-export function playGame(
-  deckA: SimDeck,
-  deckB: SimDeck,
+/** Mutable bookkeeping that spans turns. Threaded through `runTurn` so the
+ *  resumable driver and `playGame` share one loop body — the `observer`
+ *  contract above says why a forked loop is a bug, and this is the same
+ *  argument applied to resumption. */
+interface RunState {
+  firstKoTurn: number | null;
+  playerTurnCounts: { player: number; opponent: number };
+}
+
+/** Play one full turn for `actor`: begin (draw), the move loop, the
+ *  end-of-turn Checkup, and the observer callback.
+ *
+ *  `resumeCtx` is for continuing a turn that has ALREADY begun — the caller
+ *  has applied some moves itself and hands back the live TurnContext. In that
+ *  mode `beginTurn` is skipped, because it draws a card and resets the
+ *  once-per-turn flags; running it twice would hand the actor a free card.
+ *
+ *  Returns false when the game ended inside `beginTurn` (deck-out), i.e. the
+ *  caller's loop should break rather than advance the actor. */
+function runTurn(
+  state: GameState,
+  actor: "player" | "opponent",
   policies: { player: DecisionPolicy; opponent: DecisionPolicy },
   rng: Rng,
-  firstActor: "player" | "opponent",
-  options: GameOptions = {},
-): GameOutcome {
-  const maxTurns = options.maxTurns ?? DEFAULT_MAX_TURNS;
+  options: GameOptions,
+  run: RunState,
+  resumeCtx: TurnContext | null,
+  forcedFirst: SimMove | null = null,
+): boolean {
   const maxMoves = options.maxMovesPerTurn ?? DEFAULT_MAX_MOVES;
-  const state = buildSimInitialState(deckA, deckB, rng, firstActor);
-  let firstKoTurn: number | null = null;
+  if (resumeCtx === null) {
+    run.playerTurnCounts[actor] += 1;
+    if (!beginTurn(state, actor, run.playerTurnCounts[actor])) return false;
+  }
 
-  let actor = firstActor;
-  const playerTurnCounts = { player: 0, opponent: 0 };
-
-  while (state.winner === null && state.turn.number < maxTurns) {
-    playerTurnCounts[actor] += 1;
-    if (!beginTurn(state, actor, playerTurnCounts[actor])) break;
-
-    const ctx: TurnContext = { retreated: false };
+  {
+    const ctx: TurnContext = resumeCtx ?? { retreated: false };
+    let forced = forcedFirst;
     const observed: string[] = [];
     let invariantFixes = 0;
     let lastAttacksAvailable = 0;
@@ -515,13 +550,20 @@ export function playGame(
         lastAttacksAvailable = legal.filter((m) => m.kind === "attack").length;
         if (legal.some((m) => m.kind === "attach")) attachSeen = true;
       }
-      const move = policies[actor].chooseMove(viewFor(state, actor, ctx), legal, ctx);
+      // A forced opening move is how a counterfactual probe asks "what if
+      // this move instead?" without re-implementing applyMove's promotion
+      // and active-invariant bookkeeping outside the loop.
+      const move = forced ?? policies[actor].chooseMove(viewFor(state, actor, ctx), legal, ctx);
+      if (options.onDecision) {
+        options.onDecision({ state, actor, ctx, legal, move, forced: forced !== null });
+      }
+      forced = null;
       if (options.observer) {
         observed.push(move.kind);
         declined = move.kind === "pass" ? legal.map((m) => m.kind) : [];
       }
       const result = applyMove(state, actor, move, ctx, rng);
-      if (result.koTurn !== null && firstKoTurn === null) firstKoTurn = result.koTurn;
+      if (result.koTurn !== null && run.firstKoTurn === null) run.firstKoTurn = result.koTurn;
       if (state.winner === null) {
         for (const pending of result.pendingPromotions) {
           promote(state, pending, policies[pending].choosePromotion(viewFor(state, pending)));
@@ -545,7 +587,7 @@ export function playGame(
       runCheckup(state, actor, rng);
       fireCheckup(state, rng); // Freezing Shroud and friends
       const ko = resolveKnockouts(state);
-      if (ko.koTurn !== null && firstKoTurn === null) firstKoTurn = ko.koTurn;
+      if (ko.koTurn !== null && run.firstKoTurn === null) run.firstKoTurn = ko.koTurn;
       if (ko.winner) {
         state.winner = ko.winner;
         state.endReason = ko.endReason;
@@ -581,11 +623,14 @@ export function playGame(
         benchNames: side.bench.map((m) => m.card.name),
       });
     }
-
-
-    actor = otherActor(actor);
   }
 
+  return true;
+}
+
+/** Score a state that the turn loop has finished with. Shared by every
+ *  driver entry point so "who won" is decided in exactly one place. */
+function finishGame(state: GameState, firstKoTurn: number | null): GameOutcome {
   const endReason =
     state.winner !== null
       ? (state.endReason as GameOutcome["endReason"]) ?? "prizes"
@@ -604,4 +649,100 @@ export function playGame(
     prizesTaken: { ...state.prizesTaken },
     firstKoTurn,
   };
+}
+
+export function playGame(
+  deckA: SimDeck,
+  deckB: SimDeck,
+  policies: { player: DecisionPolicy; opponent: DecisionPolicy },
+  rng: Rng,
+  firstActor: "player" | "opponent",
+  options: GameOptions = {},
+): GameOutcome {
+  const maxTurns = options.maxTurns ?? DEFAULT_MAX_TURNS;
+  const state = buildSimInitialState(deckA, deckB, rng, firstActor);
+  const run: RunState = {
+    firstKoTurn: null,
+    playerTurnCounts: { player: 0, opponent: 0 },
+  };
+
+  let actor = firstActor;
+  while (state.winner === null && state.turn.number < maxTurns) {
+    if (!runTurn(state, actor, policies, rng, options, run, null)) break;
+    actor = otherActor(actor);
+  }
+
+  return finishGame(state, run.firstKoTurn);
+}
+
+export interface ResumeOptions extends GameOptions {
+  /** Continue the CURRENT actor's turn from this live context instead of
+   *  starting a fresh one. Pass the same TurnContext the caller used for the
+   *  moves it already applied; `beginTurn` is then skipped. */
+  ctx?: TurnContext;
+  /** Stop after this many further player-turns and return `outcome: null`.
+   *  A resumed partial turn counts as one. Used for truncated rollouts,
+   *  where a learned evaluator scores the horizon state instead of playing
+   *  a ~100-decision game out for one bit of signal. */
+  maxPlies?: number;
+  /** Play this move first instead of consulting the policy, then hand the
+   *  turn back to the policy. Must be legal in `state` — it is not
+   *  re-validated, because callers take it straight from `legalMoves`. */
+  firstMove?: SimMove;
+}
+
+export interface ResumeResult {
+  /** null when the ply budget ran out with the game still live. */
+  outcome: GameOutcome | null;
+  /** Player-turns actually played (the resumed partial turn counts as one). */
+  plies: number;
+}
+
+/** Continue a game already in progress. The state is mutated in place, so
+ *  callers that need the original must clone before calling.
+ *
+ *  This exists for counterfactual search: apply a candidate move to a cloned
+ *  state, resume, and see where it lands. It deliberately reuses `runTurn`
+ *  rather than re-implementing the loop — the `observer` contract above
+ *  records what a forked turn loop costs, and a rollout that drifts from the
+ *  real driver measures a game nobody is playing. */
+export function resumeGame(
+  state: GameState,
+  actor: "player" | "opponent",
+  policies: { player: DecisionPolicy; opponent: DecisionPolicy },
+  rng: Rng,
+  options: ResumeOptions = {},
+): ResumeResult {
+  const maxTurns = options.maxTurns ?? DEFAULT_MAX_TURNS;
+  const maxPlies = options.maxPlies ?? Number.POSITIVE_INFINITY;
+  // Reconstruct the per-side turn counters the turn cap and first-turn rules
+  // read. `state.turn` knows the current actor's count exactly; the other
+  // side has had every remaining turn.
+  const mine = state.turn.playerTurnNumber;
+  const run: RunState = {
+    firstKoTurn: null,
+    playerTurnCounts:
+      state.turn.actor === "player"
+        ? { player: mine, opponent: state.turn.number - mine }
+        : { opponent: mine, player: state.turn.number - mine },
+  };
+
+  let current = actor;
+  let plies = 0;
+  let resumeCtx = options.ctx ?? null;
+  let forced = options.firstMove ?? null;
+
+  while (state.winner === null && state.turn.number < maxTurns && plies < maxPlies) {
+    const ok = runTurn(state, current, policies, rng, options, run, resumeCtx, forced);
+    resumeCtx = null;
+    forced = null;
+    plies += 1;
+    if (!ok) break;
+    current = otherActor(current);
+  }
+
+  if (state.winner === null && state.turn.number < maxTurns && plies >= maxPlies) {
+    return { outcome: null, plies };
+  }
+  return { outcome: finishGame(state, run.firstKoTurn), plies };
 }

@@ -14,8 +14,16 @@ export { PlannerPolicy, heuristicEvaluator, buildGhostState } from "./planner";
 export type { PlannerParams, PlannerOptions, PlanSnapshot, StateEvaluator } from "./planner";
 export { plannerParamsForSkill, plannerParamsFor, DIFFICULTY_SKILL } from "./difficulty";
 export type { Difficulty } from "./difficulty";
-export { playGame, applyMove, beginTurn, promote, otherActor } from "./driver";
-export type { GameOutcome, GameOptions, ApplyOutcome } from "./driver";
+export { playGame, resumeGame, applyMove, beginTurn, promote, otherActor } from "./driver";
+export type {
+  GameOutcome,
+  GameOptions,
+  ApplyOutcome,
+  ResumeOptions,
+  ResumeResult,
+  DecisionObservation,
+  TurnObservation,
+} from "./driver";
 export { simulateMatchup } from "./rollout";
 export type { SimOptions, SimResult } from "./rollout";
 export {

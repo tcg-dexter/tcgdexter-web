@@ -34,7 +34,8 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 import { defaultCorpusPath, openCorpus } from "@/lib/ml/corpusStore";
-import { numOrNull } from "@/lib/ml/features";
+import { numOrNull, seedOrLabel } from "@/lib/ml/features";
+import { hashSeed } from "@/lib/engine/sim";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 
@@ -44,7 +45,7 @@ function arg(flag: string): string | null {
 }
 
 const GAMES = numOrNull(arg("--games")) ?? 20000;
-const SEED = numOrNull(arg("--seed")) ?? 1;
+const SEED = seedOrLabel(arg("--seed"), 1, hashSeed);
 const SHARDS = numOrNull(arg("--shards")) ?? 8;
 const GENERATED = numOrNull(arg("--generated-decks")) ?? 2000;
 const DECKS = numOrNull(arg("--decks")) ?? 30;

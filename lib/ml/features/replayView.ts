@@ -194,6 +194,96 @@ function coverageOf(state: GameState): number {
  * bucket sized by the deck+prize estimate, which keeps `unseen_total`
  * roughly right while the category splits go to 0.
  */
+/** A deck card for stocking. Catalog is hydrated up front — everything that
+ *  reads the deck (search filters, cost checks) needs it, and hydrateState
+ *  only walks zones that already had cards. */
+function stockCard(name: string): CardInstance {
+  return { id: `stock-${name}-${stockSeq++}`, name, catalog: lookupCard(name) };
+}
+let stockSeq = 0;
+
+/** Stock a replay state's DECK with the cards the log owner has not shown.
+ *
+ *  The replay reducer never models the deck: it learns cards as they surface,
+ *  so `side.deck` is empty at every snapshot. `replayViewAt` patches the
+ *  VIEW's deckCount, but `legalMoves` reads the STATE, and a large share of
+ *  the game is gated on deck contents:
+ *
+ *    N's Zoroark ex's Trade   `available: side.deck.length > 0`
+ *    every search Item        needs something to find
+ *    every draw ability       needs something to draw
+ *
+ *  With an empty deck all of them are silently suppressed. Measured on 60
+ *  imported logs, ONE ability — Trade — accounted for 198 of 321 "the engine
+ *  offered nothing" misses, and it is implemented and correct; it was only
+ *  ever gated out by a deck the replay never filled.
+ *
+ *  Contents come from the player's saved deck list minus everything visible,
+ *  which is the same quantity `unseenOwn` reports — so the deck we stock is
+ *  the deck they demonstrably still had. Order is arbitrary and deliberately
+ *  not randomised: this exists to make legality and search ENUMERATION
+ *  correct, not to simulate draws. A caller that draws from it is reading
+ *  meaning into an order that carries none.
+ *
+ *  No-ops without a deck list, since guessing contents would invent cards. */
+export function stockReplayDeck(
+  state: GameState,
+  actor: "player" | "opponent",
+  deckList: string | null,
+): number {
+  const listCounts = deckListCounts(deckList);
+  if (!listCounts) return 0;
+  const side = actor === "player" ? state.sides.player : state.sides.opponent;
+  if (side.deck.length > 0) return side.deck.length;
+  const unseen = unseenFromDeckList(listCounts, side);
+  // Prizes are face down and unknowable, so they are indistinguishable from
+  // deck here. Leaving them in overstates the deck by the prize count; that
+  // is the honest direction — understating it would resurrect the exact
+  // "deck is empty" suppression this function exists to remove.
+  for (const [name, count] of Object.entries(unseen)) {
+    for (let i = 0; i < count; i++) {
+      side.deck.push(stockCard(name));
+    }
+  }
+  return side.deck.length;
+}
+
+/** Repair ONE replay state into a view the models can legitimately score.
+ *
+ *  Factored out of replayTurnViews so per-DECISION consumers (the move
+ *  agreement instrument) apply exactly the same corrections as the per-TURN
+ *  win-probability curve. Scoring a raw replay view instead is not a small
+ *  inaccuracy: replay decks are empty and unseenOwn is computed over them, so
+ *  a board-aware evaluator sees deckCount 0 and no unseen cards, its output
+ *  flattens, and every policy then picks the same move from the planner's
+ *  tactical terms alone. That failure mode looks exactly like "the model
+ *  makes no difference" — a false negative that would invalidate the
+ *  instrument rather than announce itself.
+ *
+ *  `retreated` / `stadiumPlayed` describe the turn SO FAR, which a caller
+ *  stepping action-by-action knows and this function cannot.
+ */
+export function replayViewAt(
+  state: GameState,
+  actor: "player" | "opponent",
+  deckList: string | null,
+  flags: { retreated?: boolean; stadiumPlayed?: boolean } = {},
+): PlayerView {
+  hydrateState(state);
+  const view = viewFor(state, actor);
+  const self = actor === "player" ? state.sides.player : state.sides.opponent;
+  const other = actor === "player" ? state.sides.opponent : state.sides.player;
+  view.deckCount = estimateDeckCount(self);
+  view.opponent.deckCount = estimateDeckCount(other);
+  const listCounts = deckListCounts(deckList);
+  view.unseenOwn = listCounts
+    ? unseenFromDeckList(listCounts, self)
+    : { "(unknown)": view.deckCount + view.prizeCount };
+  view.retreatUsedThisTurn = flags.retreated ?? false;
+  view.stadiumPlayedThisTurn = flags.stadiumPlayed ?? false;
+  return view;
+}
+
 export function replayTurnViews(
   parsed: BattleLogParseResult,
   replayResult: ReplayResult,

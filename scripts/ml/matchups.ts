@@ -14,6 +14,8 @@
 //
 // Usage:
 //   npx tsx scripts/ml/matchups.ts --mode panel     [--subjects N] [--panel N]
+//   npx tsx scripts/ml/matchups.ts --mode panel --best-of 2 --games 4
+//       best-of-three matches (--games counts MATCHES, must be EVEN)
 //   npx tsx scripts/ml/matchups.ts --mode all-pairs [--decks N]
 //     [--games 30] [--seed study-1] [--shards 8] [--skill 1]
 //     [--pool generated|meta|both] [--with-parents] [--generated-run HASH]
@@ -32,6 +34,8 @@ import { metaDeckToList, type MetaDeckEntry } from "@/lib/metaDeckList";
 import { ENGINE_VERSION } from "@/lib/engine/types";
 import { SIM_VERSION, PlannerPolicy, plannerParamsForSkill } from "@/lib/engine/sim";
 import { simulateMatchup } from "@/lib/engine/sim/rollout";
+import { instantiateDeck } from "@/lib/engine/sim/setup";
+import { playSeries } from "@/lib/ml/matchSeries";
 import { createBotEvaluator, readValueArtifact } from "@/lib/ml/botEvaluator";
 import { loadGeneratedDecks } from "@/lib/ml/generatedDecks";
 import { buildCorpus, loadMetaCorpus } from "@/lib/ml/deckGen/corpus";
@@ -55,6 +59,20 @@ function arg(flag: string): string | null {
 
 const MODE = (arg("--mode") ?? "panel") as "panel" | "all-pairs";
 const GAMES = numOrNull(arg("--games")) ?? 30;
+// Best-of-N. 0 (the default) keeps the historical single-game behaviour so
+// existing studies reproduce byte-identically; 2 means best-of-three, which
+// is how the game is actually decided. In match mode --games is read as the
+// number of MATCHES per pair, and an odd count is refused: the seat pattern
+// mirrors between neighbouring matches, so only an even count cancels the
+// ~3-4 point first-turn advantage.
+const BEST_OF = numOrNull(arg("--best-of")) ?? 0;
+const MATCH_MODE = BEST_OF > 0;
+if (MATCH_MODE && GAMES % 2 !== 0) {
+  throw new Error(
+    `[matchups] --best-of needs an EVEN --games (matches per pair); got ${GAMES}. ` +
+      `An odd count leaves a residual first-turn bias in every pair.`,
+  );
+}
 const SEED = arg("--seed") ?? "study-1";
 const SKILL = numOrNull(arg("--skill")) ?? 1;
 const SUBJECTS = numOrNull(arg("--subjects")) ?? 200;
@@ -164,6 +182,13 @@ interface ResultRow {
   avg_turns: number;
   end_reasons_json: string;
   seed: number;
+  // NULL in single-game mode, so a match-level aggregate can tell "not run"
+  // from "zero".
+  matches: number | null;
+  match_wins_a: number | null;
+  match_wins_b: number | null;
+  match_draws: number | null;
+  deciders: number | null;
 }
 
 function runShard(pairs: StudyPair[]): void {
@@ -172,30 +197,72 @@ function runShard(pairs: StudyPair[]): void {
   // behaviour every other harness has.
   const evaluator = createBotEvaluator() ?? undefined;
   const params = plannerParamsForSkill(SKILL);
+  const mkPolicies = (gameSeed: number) => ({
+    player: new PlannerPolicy({ params, evaluate: evaluator, seed: gameSeed }),
+    opponent: new PlannerPolicy({ params, evaluate: evaluator, seed: gameSeed + 1 }),
+  });
+
   for (const pair of pairs) {
-    const r = simulateMatchup(pair.a.list, pair.b.list, {
-      n: GAMES,
-      seed: pair.seed,
-      policies: (gameSeed: number) => ({
-        player: new PlannerPolicy({ params, evaluate: evaluator, seed: gameSeed }),
-        opponent: new PlannerPolicy({ params, evaluate: evaluator, seed: gameSeed + 1 }),
-      }),
-    });
-    const row: ResultRow = {
-      pair_index: pair.pairIndex,
-      deck_a: pair.a.id,
-      deck_b: pair.b.id,
-      deck_a_source: pair.a.source,
-      deck_b_source: pair.b.source,
-      n: r.n,
-      wins_a: r.wins_a,
-      wins_b: r.wins_b,
-      draws: r.draws,
-      avg_prize_diff_a: r.avg_prize_diff_a,
-      avg_turns: r.avg_turns,
-      end_reasons_json: JSON.stringify(r.end_reasons),
-      seed: r.seed,
-    };
+    let row: ResultRow;
+    if (MATCH_MODE) {
+      // Decks are instantiated once per pair rather than once per game —
+      // playSeries takes SimDecks, and parsing a list 60+ times per pair was
+      // measurable against the game itself.
+      const a = instantiateDeck(pair.a.list);
+      const b = instantiateDeck(pair.b.list);
+      const r = playSeries(a, b, GAMES, pair.seed, {
+        winsNeeded: BEST_OF,
+        policies: mkPolicies,
+      });
+      row = {
+        pair_index: pair.pairIndex,
+        deck_a: pair.a.id,
+        deck_b: pair.b.id,
+        deck_a_source: pair.a.source,
+        deck_b_source: pair.b.source,
+        // n/wins_* stay GAME-level so every existing consumer of this table
+        // keeps working unchanged; the match columns sit alongside them.
+        n: r.games,
+        wins_a: r.game_wins_a,
+        wins_b: r.game_wins_b,
+        draws: r.game_draws,
+        avg_prize_diff_a: r.avg_prize_diff_a,
+        avg_turns: r.avg_turns,
+        end_reasons_json: JSON.stringify(r.end_reasons),
+        seed: pair.seed,
+        matches: r.matches,
+        match_wins_a: r.match_wins_a,
+        match_wins_b: r.match_wins_b,
+        match_draws: r.match_draws,
+        deciders: r.deciders,
+      };
+    } else {
+      const r = simulateMatchup(pair.a.list, pair.b.list, {
+        n: GAMES,
+        seed: pair.seed,
+        policies: mkPolicies,
+      });
+      row = {
+        pair_index: pair.pairIndex,
+        deck_a: pair.a.id,
+        deck_b: pair.b.id,
+        deck_a_source: pair.a.source,
+        deck_b_source: pair.b.source,
+        n: r.n,
+        wins_a: r.wins_a,
+        wins_b: r.wins_b,
+        draws: r.draws,
+        avg_prize_diff_a: r.avg_prize_diff_a,
+        avg_turns: r.avg_turns,
+        end_reasons_json: JSON.stringify(r.end_reasons),
+        seed: r.seed,
+        matches: null,
+        match_wins_a: null,
+        match_wins_b: null,
+        match_draws: null,
+        deciders: null,
+      };
+    }
     process.stdout.write(JSON.stringify(row) + "\n");
   }
 }
@@ -214,7 +281,11 @@ async function main(): Promise<void> {
     return;
   }
 
-  const totalGames = pairs.length * GAMES;
+  // In match mode --games counts MATCHES, and a best-of-three averages ~2.5
+  // games because it stops at 2-0. Estimating at 3 would overstate the run by
+  // ~17%; estimating at 1 would understate it by 2.5x.
+  const gamesPerUnit = MATCH_MODE ? BEST_OF * 2 - 0.5 : 1;
+  const totalGames = Math.round(pairs.length * GAMES * gamesPerUnit);
   // The EVALUATOR is part of a study's identity. It is what pilots every game
   // here, so two studies that differ only in which value model was loaded are
   // different studies — and without this they would share a study_id and the
@@ -229,6 +300,9 @@ async function main(): Promise<void> {
     .update(
       JSON.stringify({
         mode: MODE, seed: SEED, games: GAMES, skill: SKILL, pool: POOL,
+        // Load-bearing: a best-of-three study and a single-game study over
+        // the same pairs are different experiments and must not share an id.
+        best_of: BEST_OF,
         sim_version: SIM_VERSION, engine_version: ENGINE_VERSION,
         evaluator: evaluatorId,
         deck_ids: pairs.length > 0 ? [pairs[0].a.id, pairs[pairs.length - 1].b.id] : [],
@@ -257,8 +331,9 @@ async function main(): Promise<void> {
   console.log(
     `[matchups] ${MODE} sim v${SIM_VERSION} — ${subjects} subjects` +
       (panel ? ` x ${panel} panel` : "") +
-      ` = ${pairs.length.toLocaleString()} pairs x ${GAMES} games ` +
-      `= ${totalGames.toLocaleString()} games across ${SHARDS} shards`,
+      ` = ${pairs.length.toLocaleString()} pairs x ${GAMES} ` +
+      (MATCH_MODE ? `best-of-${BEST_OF * 2 - 1} matches` : "games") +
+      ` = ${totalGames.toLocaleString()} games across ${SHARDS} shards`,
   );
   // Per-worker throughput under load, NOT the single-core figure.
   //
@@ -329,8 +404,9 @@ async function main(): Promise<void> {
   const insert = db.prepare(
     `INSERT OR REPLACE INTO matchup_results
        (study_id, pair_index, deck_a, deck_b, deck_a_source, deck_b_source,
-        n, wins_a, wins_b, draws, avg_prize_diff_a, avg_turns, end_reasons_json, seed)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        n, wins_a, wins_b, draws, avg_prize_diff_a, avg_turns, end_reasons_json, seed,
+        matches, match_wins_a, match_wins_b, match_draws, deciders)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
 
   let received = already.size;
@@ -344,6 +420,7 @@ async function main(): Promise<void> {
           studyId, r.pair_index, r.deck_a, r.deck_b, r.deck_a_source, r.deck_b_source,
           r.n, r.wins_a, r.wins_b, r.draws, r.avg_prize_diff_a, r.avg_turns,
           r.end_reasons_json, r.seed,
+          r.matches, r.match_wins_a, r.match_wins_b, r.match_draws, r.deciders,
         );
       }
       db.exec("COMMIT");

@@ -229,6 +229,25 @@ const ATTACH_TIEBREAK_BONUS = 0.01;
 // less reliable, and taking a max over noisy leaf estimates biases the
 // result upward (winner's curse). Revisit when the evaluator improves —
 // that is the same lesson the blind-evaluator work landed on.
+//
+// 2026-09-08 — REVISITED, and the hypothesis did not survive. The evaluator
+// did improve: a GBDT (not linear) carrying features about the NEXT turn
+// specifically (threat_after_evolve, threat_ko_needs_evolve), +0.0125 AUC
+// over the same rows. 3-ply vs 1-ply with that evaluator, 10 seeds x 240
+// true-mirror games: 50.60%, CI [48.6, 52.6]. Not separable. A 120-game
+// smoke had read 55.5% first; it was noise.
+//
+// Also stale above: the "55.1% vs HeuristicPolicy" figure. Measured at
+// n=2352 with a strictly better model we get 51.53%, CI [49.5, 53.6]. The
+// old number was probably taken through the seat/initiative confound
+// value_duel.ts documents — with 12 benchmark decks the pre-fix cycling
+// locked each deck to ONE (seat, initiative) combination, and the same
+// configuration scored 39.1% and 56.1% on different seeds. Treat ~51.5% as
+// the honest figure: the planner roughly TIES HeuristicPolicy. The value
+// model is still a live input — planner+model beats planner+built-in
+// evaluator 54.52%, CI [52.5, 56.5] — but the stack as a whole does not
+// beat a hand-written heuristic, and that ceiling is architectural rather
+// than a matter of what the evaluator knows.
 const DEFAULT_DEEPEN_TOP_K = 0;
 const FOLLOWUP_CANDIDATE_CAP = 12;
 
@@ -317,6 +336,32 @@ export class PlannerPolicy implements DecisionPolicy {
       this.queue = [];
       this.plannedTurn = view.turn.number;
     }
+    const dev = this.developmentMove(view, legal);
+    if (dev) return dev;
+
+    // Phase 3 — the searched plan.
+    if (this.queue.length === 0) {
+      this.queue = this.planTurn(view, legal);
+    }
+    const next = this.queue.shift();
+    if (next && isStillLegal(next, legal)) return next;
+    this.queue = [];
+    return { kind: "pass" };
+  }
+
+  /** Phases 1-2: FREE DEVELOPMENT and information-revealing plays — the moves
+   *  that are close to unconditionally good and never end the turn.
+   *
+   *  Public because it is a PRIOR, not an implementation detail. The leaf
+   *  objective does not know that development is valuable: benching and
+   *  evolving move neither prizes nor damage and shrink your hand, so they
+   *  score roughly neutral. A free-form search over the whole move graph
+   *  therefore discovers that playing one card and stopping is "optimal" and
+   *  loses a true mirror at ~40%. This method is where that missing knowledge
+   *  actually lives, and any planner that wants to search the CONSEQUENTIAL
+   *  part of a turn needs it too. Returns null when the turn has reached the
+   *  part worth searching. */
+  developmentMove(view: PlayerView, legal: SimMove[]): SimMove | null {
 
     const specOf = (m: SimMove): TrainerSpec | null => {
       if (m.kind !== "play_trainer") return null;
@@ -425,14 +470,7 @@ export class PlannerPolicy implements DecisionPolicy {
       }
     }
 
-    // Phase 3 — the searched plan.
-    if (this.queue.length === 0) {
-      this.queue = this.planTurn(view, legal);
-    }
-    const next = this.queue.shift();
-    if (next && isStillLegal(next, legal)) return next;
-    this.queue = [];
-    return { kind: "pass" };
+    return null;
   }
 
   choosePromotion(view: PlayerView): number {
@@ -629,6 +667,13 @@ export class PlannerPolicy implements DecisionPolicy {
   }
 
   /** Ply 1 + opponent reply: our plan's end state, then their best answer. */
+  /** Public seam so routePlanner.ts can score leaves identically. Sharing
+   *  the scorer is what makes a search-vs-search comparison a comparison of
+   *  SEARCH rather than of two different objective functions. */
+  scoreLeaf(end: GameState, view: PlayerView): number {
+    return this.scoreEndState(end, view);
+  }
+
   private scoreEndState(end: GameState, view: PlayerView): number {
     this.probeEval = Number.NaN;
     // Outright win/loss dominates every tactical adjustment.
@@ -987,19 +1032,65 @@ function placeholders(n: number): CardInstance[] {
   return Array.from({ length: n }, () => makeUnrevealed("ghost"));
 }
 
+/** Our own deck as NAMED cards, drawn from `unseenOwn` — what the view says
+ *  we still have somewhere unseen.
+ *
+ *  The default ghost deck is anonymous placeholders, and for the template
+ *  planner that is harmless: its search never plays a search-Item, because
+ *  the development prior plays those before the search runs. The limitation
+ *  only bites when the SEARCH owns development — and then it bites hard.
+ *  Measured: 139 of 157 `play_trainer` moves failed to apply to a ghost,
+ *  because a deck of anonymous cards cannot satisfy "search your deck for a
+ *  Basic Pokémon". The search then had nothing to do but pass, and passed on
+ *  80% of turns regardless of how development was weighted.
+ *
+ *  This is our OWN deck list, which the acting player legitimately knows, so
+ *  no hidden information leaks. Prizes are folded in: they are unseen too and
+ *  indistinguishable from deck here. Order is arbitrary — it exists to make
+ *  search EFFECTS resolvable, not to model draw luck. */
+function stockedDeck(view: PlayerView): CardInstance[] {
+  const out: CardInstance[] = [];
+  for (const [name, count] of Object.entries(view.unseenOwn)) {
+    if (name === "(unknown)") continue;
+    for (let i = 0; i < count; i++) {
+      out.push({ id: `ghost-deck-${out.length}`, name, catalog: lookupCard(name) });
+    }
+  }
+  // Fall back to placeholders when the view has no list-derived unseen set,
+  // so this can never SHRINK the deck the planner thinks it has.
+  return out.length > 0 ? out : placeholders(view.deckCount);
+}
+
 /** Rebuild a playable GameState from a PlayerView. The acting side sits at
  *  sides.player; every hidden zone is unrevealed placeholders, so nothing
  *  the real state knows can leak into plan evaluation. */
-export function buildGhostState(view: PlayerView): GameState {
+export function buildGhostState(
+  view: PlayerView,
+  options: { stockDeck?: boolean } = {},
+): GameState {
   return {
     engineVersion: ENGINE_VERSION,
     turn: { ...view.turn, actor: "player" },
     firstPlayer: view.wentFirst === null ? null : view.wentFirst ? "player" : "opponent",
-    stadium: null,
+    // The Stadium in play is PUBLIC — the view carries it — and dropping it
+    // silently deleted an active card from every evaluated position: its
+    // damage/retreat modifiers, its activated effect, and the "one Stadium in
+    // play" rule that makes playing another one legal at all. It was `null`
+    // here because the ghost predates Stadium support, not by design.
+    stadium: view.stadium
+      ? {
+          card: {
+            id: `ghost-stadium`,
+            name: view.stadium.name,
+            catalog: lookupCard(view.stadium.name),
+          },
+          owner: view.stadium.owner,
+        }
+      : null,
     sides: {
       player: {
         handle: "ghost-self",
-        deck: placeholders(view.deckCount),
+        deck: options.stockDeck ? stockedDeck(view) : placeholders(view.deckCount),
         hand: view.hand.map(cloneCard),
         discard: view.discard.map(cloneCard),
         lostZone: view.lostZone.map(cloneCard),
@@ -1056,8 +1147,19 @@ function heuristicShadowPlan(ghost: GameState): SimMove[] {
 
 /** Apply a move sequence to a fresh clone of the ghost. Null when a move
  *  turns out inapplicable (defensive — enumeration derives from legal moves). */
-function applyPlanToGhost(ghost: GameState, moves: SimMove[]): GameState | null {
+/** Apply a move SEQUENCE to a fresh clone of `ghost`, returning the settled
+ *  state or null if any move stopped being legal along the way.
+ *
+ *  Exported for routePlanner.ts: sequence search needs exactly this — each
+ *  move's consequences applied before the next is chosen — and duplicating it
+ *  would let the two searches drift on promotion handling and legality. */
+export function applyPlanToGhost(ghost: GameState, moves: SimMove[]): GameState | null {
   const state = buildGhostState(ghostView(ghost));
+  // Carry the incoming ghost's deck IDENTITIES across the re-clone.
+  // ghostView reports `unseenOwn: {}`, so rebuilding from it would replace a
+  // stocked, named deck with anonymous placeholders — and every search effect
+  // applied mid-route would start failing again, silently, one step in.
+  state.sides.player.deck = ghost.sides.player.deck.map((c) => ({ ...c }));
   const ctx: TurnContext = { retreated: false };
   for (const move of moves) {
     const legal = legalMoves(state, "player", ctx);
@@ -1073,7 +1175,7 @@ function applyPlanToGhost(ghost: GameState, moves: SimMove[]): GameState | null 
 }
 
 /** Cheap re-view of a ghost (already redacted) for re-cloning. */
-function ghostView(ghost: GameState): PlayerView {
+export function ghostView(ghost: GameState): PlayerView {
   return {
     actor: "player",
     turn: ghost.turn,

@@ -27,12 +27,14 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 
 import { ENGINE_VERSION } from "@/lib/engine/types";
-import { SIM_VERSION } from "@/lib/engine/sim";
+import { SIM_VERSION,
+  hashSeed,
+} from "@/lib/engine/sim";
 import { buildCorpus, loadMetaCorpus } from "@/lib/ml/deckGen/corpus";
 import { parseDeck } from "@/lib/ml/deckGen/rules";
 import { DECK_GEN_VERSION, generateDecks } from "@/lib/ml/deckGen/generate";
 import { defaultCorpusPath, openCorpus } from "@/lib/ml/corpusStore";
-import { numOrNull } from "@/lib/ml/features";
+import { numOrNull, seedOrLabel} from "@/lib/ml/features";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 // Generated decks are generated data: they belong in the corpus store, not
@@ -46,7 +48,7 @@ function argValue(flag: string): string | null {
 
 const storePath = argValue("--store") ?? DEFAULT_STORE;
 const count = numOrNull(argValue("--count")) ?? 200;
-const seed = numOrNull(argValue("--seed")) ?? 1;
+const seed = seedOrLabel(argValue("--seed"), 1, hashSeed);
 const skeletonShare = numOrNull(argValue("--skeleton-share")) ?? 0.25;
 // Graduated pool: --edits fixes the distance, --edits-min/--edits-max span a
 // range sampled per deck so "how much diversity helps" comes back as a curve

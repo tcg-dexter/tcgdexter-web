@@ -35,7 +35,8 @@ import {
   type DecisionPolicy,
 } from "@/lib/engine/sim";
 import { createBoardEvaluator } from "@/lib/ml/botEvaluator";
-import type { StateEvaluator } from "@/lib/engine/sim/planner";
+import type { PlannerParams, StateEvaluator } from "@/lib/engine/sim/planner";
+import { RoutePlannerPolicy } from "@/lib/engine/sim/routePlanner";
 
 function arg(flag: string): string | null {
   const i = process.argv.indexOf(flag);
@@ -47,6 +48,27 @@ const GAMES = Number(arg("--games") ?? 120);
 const SEED = arg("--seed") ?? "value-duel";
 const SKILL = Number(arg("--skill") ?? 1);
 const DECKS_FILE = arg("--decks-file") ?? "data/ml/benchmark-decks.json";
+// Search DEPTH, per side. The planner's deepening machinery exists but ships
+// OFF (DEFAULT_DEEPEN_TOP_K = 0) because a 1-ply/3-ply comparison against the
+// value-v0 LINEAR evaluator disagreed in sign. planner.ts's own note says to
+// revisit "when the evaluator improves", and that is the experiment these
+// flags exist to run: same evaluator on both sides, depth as the only variable.
+const DEEPEN_A = Number(arg("--deepen-a") ?? 0);
+const DEEPEN_B = Number(arg("--deepen-b") ?? 0);
+// Which PLANNER each side uses. "route" is the sequence beam search
+// (routePlanner.ts); anything else is the template planner. This is the seam
+// for testing a search change through the same seat- and initiative-balanced
+// harness that the evaluator changes go through — an ad-hoc A-vs-B matchup
+// on two different decks measures deck strength as much as policy.
+const PLANNER_A = arg("--planner-a") ?? "template";
+const PLANNER_B = arg("--planner-b") ?? "template";
+const BEAM = Number(arg("--beam") ?? 6);
+// Let the route search decide the moves the development prior normally makes.
+// The prior decides 89.2% of real decisions, so this is the only flag that
+// materially widens what any search controls.
+const CLAIM_A = process.argv.includes("--claim-a");
+const CLAIM_B = process.argv.includes("--claim-b");
+const DEV_WEIGHT = arg("--dev-weight") ? Number(arg("--dev-weight")) : undefined;
 
 /** "heuristic" means the plain HeuristicPolicy (no planner, no model) —
  *  the floor every value model must clear. "none" means the planner with its
@@ -54,15 +76,31 @@ const DECKS_FILE = arg("--decks-file") ?? "data/ml/benchmark-decks.json";
  *  the SEARCH's. */
 type Side = { label: string; make: (seed: number) => DecisionPolicy };
 
-function sideFor(spec: string): Side {
+function sideFor(spec: string, deepen = 0, planner = "template", claim = false): Side {
+  const depthLabel = deepen > 0 ? ` deepen=${deepen}` : "";
+  const kindLabel =
+    planner === "route"
+      ? ` [route beam=${BEAM}${claim ? ` claim dev=${DEV_WEIGHT ?? "default"}` : ""}]`
+      : "";
+  const mk = (
+    opts: { params: PlannerParams; seed: number; evaluate?: StateEvaluator },
+  ): DecisionPolicy =>
+    planner === "route"
+      ? new RoutePlannerPolicy({
+          ...opts,
+          beam: BEAM,
+          claimDevelopment: claim,
+          ...(DEV_WEIGHT !== undefined ? { developmentWeight: DEV_WEIGHT } : {}),
+        })
+      : new PlannerPolicy({ ...opts, deepenTopK: deepen });
   if (spec === "heuristic") {
     return { label: "HeuristicPolicy", make: () => new HeuristicPolicy() };
   }
   const params = plannerParamsForSkill(SKILL);
   if (spec === "none") {
     return {
-      label: "planner (built-in evaluator)",
-      make: (seed) => new PlannerPolicy({ params, seed }),
+      label: `planner (built-in evaluator)${depthLabel}${kindLabel}`,
+      make: (seed) => mk({ params, seed }),
     };
   }
   const evaluate = createBoardEvaluator(spec);
@@ -71,14 +109,14 @@ function sideFor(spec: string): Side {
     process.exit(1);
   }
   return {
-    label: `planner + ${spec}`,
-    make: (seed) => new PlannerPolicy({ params, seed, evaluate: evaluate as StateEvaluator }),
+    label: `planner + ${spec}${depthLabel}${kindLabel}`,
+    make: (seed) => mk({ params, seed, evaluate: evaluate as StateEvaluator }),
   };
 }
 
 function main(): void {
-  const a = sideFor(A);
-  const b = sideFor(B);
+  const a = sideFor(A, DEEPEN_A, PLANNER_A, CLAIM_A);
+  const b = sideFor(B, DEEPEN_B, PLANNER_B, CLAIM_B);
   const decks = loadBenchmarkDecks(DECKS_FILE);
   if (decks.length === 0) {
     console.error("[value-duel] benchmark fixture is empty");

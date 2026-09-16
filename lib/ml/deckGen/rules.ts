@@ -12,7 +12,7 @@
 // Nothing here is user-facing. This is training-corpus infrastructure.
 
 import { parseDeckListCards } from "@/lib/cardPrinting";
-import { lookupCard } from "@/lib/engine/catalog";
+import { lookupCard, isCurrentStandard} from "@/lib/engine/catalog";
 import { canonicalCardName } from "@/lib/engine/sim/setup";
 import type { EngineCard } from "@/lib/engine/types";
 
@@ -202,6 +202,14 @@ export function legalityIssues(entries: DeckEntry[]): string[] {
       // the engine renders as blanks.
       issues.push(`unknown card "${name}"`);
       continue;
+    }
+    if (!isCurrentStandard(name)) {
+      // Catalog membership was the whole legality test until now, and it let
+      // rotated staples through: Iono is regulation mark G with no reprint,
+      // so it sits in the catalog, simulates fine, and is not playable. 10%
+      // of the meta-deck variants the generator mutates from are stale
+      // tournament lists, and every child inherited the illegality.
+      issues.push(`${name} is rotated out of Standard`);
     }
     if (roleOf(cat) !== "basic_energy" && qty > 4) {
       issues.push(`${qty} copies of ${name} (max 4)`);

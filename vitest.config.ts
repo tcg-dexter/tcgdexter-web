@@ -7,9 +7,9 @@ import path from "node:path";
 // On 2026-09-08 an uncapped run panicked the machine: vitest's default
 // `maxForks = availableParallelism()` gave ~9 isolated forks, the engine-sim
 // and self-play suites plus a per-worker copy of the 14.5 MB card catalog put
-// each fork at 1-2 GB, and two concurrent runs reached ~26 GB on a 17 GB box.
+// each fork at 1–2 GB, and two concurrent runs reached ~26 GB on a 17 GB box.
 // WindowServer was starved of pages for 125 s and the ARM watchdog panicked
-// the kernel. 4 x 1 GB keeps a full run near 4-5 GB.
+// the kernel. 4 × 1 GB keeps a full run near 4–5 GB.
 //
 // The `- 1` leaves a core for the main process; the floor of 1 keeps 2-core CI
 // runners working, where this also caps below the default.

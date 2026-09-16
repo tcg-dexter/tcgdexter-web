@@ -14,7 +14,7 @@ export { extractDeckFeatures } from "./deck";
 export { extractBattleFeatures } from "./battle";
 export type { BattleExtraction, TurnExtraction } from "./battle";
 export { deriveBattleLabels, turnQualityFlags } from "./labels";
-export { findInvalidValues, num, numOrNull, bool01, mean } from "./guards";
+export { findInvalidValues, num, numOrNull, bool01, mean, seedOrLabel } from "./guards";
 export {
   POLICY_SCHEMA_VERSION,
   POLICY_TOP_CARDS,

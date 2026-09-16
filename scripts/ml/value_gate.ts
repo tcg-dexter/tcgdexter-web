@@ -46,7 +46,7 @@ import {
   type DecisionPolicy,
   type StateEvaluator,
 } from "@/lib/engine/sim";
-import { numOrNull } from "@/lib/ml/features";
+import { numOrNull, seedOrLabel} from "@/lib/ml/features";
 import { createBoardEvaluator, readValueArtifact } from "@/lib/ml/botEvaluator";
 import { createReplyChooser } from "@/lib/ml/replyChooser";
 
@@ -58,7 +58,7 @@ function argValue(flag: string): string | null {
 }
 
 const games = numOrNull(argValue("--games")) ?? 1440;
-const seed = numOrNull(argValue("--seed")) ?? 11;
+const seed = seedOrLabel(argValue("--seed"), 11, hashSeed);
 const artifactArg = argValue("--artifact");
 const skipControls = process.argv.includes("--skip-controls");
 const perDeck = process.argv.includes("--per-deck");

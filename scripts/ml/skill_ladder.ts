@@ -40,7 +40,7 @@ import {
   type SimMove,
   type TurnContext,
 } from "@/lib/engine/sim";
-import { numOrNull } from "@/lib/ml/features";
+import { numOrNull, seedOrLabel} from "@/lib/ml/features";
 import { createBoardEvaluator } from "@/lib/ml/botEvaluator";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
@@ -51,7 +51,7 @@ function argValue(flag: string): string | null {
 }
 
 const games = numOrNull(argValue("--games")) ?? 1440;
-const seed = numOrNull(argValue("--seed")) ?? 31;
+const seed = seedOrLabel(argValue("--seed"), 31, hashSeed);
 const decksFile = argValue("--decks-file") ?? path.join("data", "ml", "benchmark-decks.json");
 
 /** Uniform over legal moves — the floor of the ladder. Seeded so a run is
