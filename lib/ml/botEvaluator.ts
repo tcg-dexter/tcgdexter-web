@@ -20,13 +20,19 @@
 import type { PlanSnapshot, StateEvaluator } from "@/lib/engine/sim";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { readRegistry } from "./registry";
-import { readWinProbArtifact, scoreFeatures, type WinProbArtifact } from "./winprob";
+import { readRegistry, warnArtifactUnusable } from "./registry";
+import {
+  readWinProbArtifact,
+  scoreFeatures,
+  type WinProbArtifact,
+} from "./winprob";
 import { STATE_FEATURE_NAMES, encodeStateFeatures } from "./features/policy";
 
 /** Linear value artifact: reuses the winprob artifact shape exactly, so the
  *  same scorer math applies; only the feature set and provenance differ. */
-export type LinearValueArtifact = WinProbArtifact & { policy_schema_version?: number };
+export type LinearValueArtifact = WinProbArtifact & {
+  policy_schema_version?: number;
+};
 
 /** One boosted tree, flattened into parallel arrays by the Python exporter
  *  (dexter-ml ml_train_value_gbm.py flatten_trees).
@@ -62,7 +68,10 @@ export interface GbdtValueArtifact {
   params: Record<string, number>;
   global_prior: number;
   metrics: Record<string, number | null>;
-  validation_examples: { features: Record<string, number>; expected_p: number }[];
+  validation_examples: {
+    features: Record<string, number>;
+    expected_p: number;
+  }[];
 }
 
 export type ValueArtifact = LinearValueArtifact | GbdtValueArtifact;
@@ -73,7 +82,10 @@ export type ValueArtifact = LinearValueArtifact | GbdtValueArtifact;
  * validation examples so a divergence fails a drift test rather than quietly
  * steering the bot with a model it mis-evaluates.
  */
-export function scoreGbdt(artifact: GbdtValueArtifact, x: ArrayLike<number>): number {
+export function scoreGbdt(
+  artifact: GbdtValueArtifact,
+  x: ArrayLike<number>,
+): number {
   let z = 0;
   for (const tree of artifact.trees) {
     const { feature, threshold, left, right, value } = tree;
@@ -111,7 +123,9 @@ export function readValueArtifact(explicitPath?: string): ValueArtifact | null {
   const override = explicitPath ?? process.env.DEXTER_VALUE_ARTIFACT;
   let abs: string;
   if (override) {
-    abs = path.isAbsolute(override) ? override : path.join(process.cwd(), override);
+    abs = path.isAbsolute(override)
+      ? override
+      : path.join(process.cwd(), override);
   } else {
     const entry = readRegistry()?.models?.value;
     if (!entry?.enabled || !entry.artifacts?.path) return null;
@@ -120,12 +134,19 @@ export function readValueArtifact(explicitPath?: string): ValueArtifact | null {
   try {
     const artifact = JSON.parse(readFileSync(abs, "utf8")) as ValueArtifact;
     if (artifact.model_type === "gbdt") {
-      return Array.isArray(artifact.trees) && artifact.trees.length > 0 ? artifact : null;
+      return Array.isArray(artifact.trees) && artifact.trees.length > 0
+        ? artifact
+        : null;
     }
     if (artifact.model_type !== "logistic_regression") return null;
     if (artifact.features.length !== artifact.coefficients.length) return null;
     return artifact;
-  } catch {
+  } catch (e) {
+    warnArtifactUnusable(
+      "value",
+      abs,
+      `could not be read (${e instanceof Error ? e.message : String(e)})`,
+    );
     return null;
   }
 }
@@ -140,7 +161,9 @@ export function readValueArtifact(explicitPath?: string): ValueArtifact | null {
  * back to the training mean (a zero contribution after standardization),
  * matching scoreFeatures' behaviour for absent inputs.
  */
-export function createBoardEvaluator(explicitPath?: string): StateEvaluator | null {
+export function createBoardEvaluator(
+  explicitPath?: string,
+): StateEvaluator | null {
   const artifact = readValueArtifact(explicitPath);
   if (!artifact) return null;
   const nameIndex = new Map(STATE_FEATURE_NAMES.map((n, i) => [n, i]));
@@ -150,7 +173,22 @@ export function createBoardEvaluator(explicitPath?: string): StateEvaluator | nu
     // A tree routes on exact thresholds, so an unknown feature is not a
     // degraded input — it silently sends every state down a wrong branch.
     // Refuse the model outright rather than score garbage confidently.
-    if (srcIdx.some((j) => j < 0)) return null;
+    if (srcIdx.some((j) => j < 0)) {
+      // Same class of invisible refusal as a missing file: the artifact
+      // loaded fine, so nothing upstream reports a problem, and the only
+      // symptom is an evaluator that is null for no stated reason.
+      const missing = artifact.features.filter((n) => !nameIndex.has(n));
+      warnArtifactUnusable(
+        "value",
+        explicitPath ??
+          process.env.DEXTER_VALUE_ARTIFACT ??
+          "(path from registry)",
+        `names ${missing.length} feature(s) the encoder does not produce ` +
+          `(${missing.slice(0, 3).join(", ")}${missing.length > 3 ? ", …" : ""}); ` +
+          `feature_schema_version ${artifact.feature_schema_version}`,
+      );
+      return null;
+    }
     const row = new Float64Array(srcIdx.length);
     return (_snapshot: PlanSnapshot, view) => {
       if (!view) return artifact.global_prior;

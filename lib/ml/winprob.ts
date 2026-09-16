@@ -10,7 +10,7 @@
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { readRegistry } from "./registry";
+import { readRegistry, warnArtifactUnusable } from "./registry";
 import type { BattleLogFeatures, TurnFeatures } from "./features";
 
 export interface WinProbValidationExample {
@@ -54,13 +54,18 @@ export function readWinProbArtifact(): WinProbArtifact | null {
   const registry = readRegistry();
   const entry = registry?.models?.winprob;
   if (!entry?.enabled || !entry.artifacts?.path) return null;
+  const abs = path.join(process.cwd(), entry.artifacts.path);
   try {
-    const abs = path.join(process.cwd(), entry.artifacts.path);
     const artifact = JSON.parse(readFileSync(abs, "utf8")) as WinProbArtifact;
     if (artifact.model_type !== "logistic_regression") return null;
     if (artifact.features.length !== artifact.coefficients.length) return null;
     return artifact;
-  } catch {
+  } catch (e) {
+    warnArtifactUnusable(
+      "winprob",
+      abs,
+      `could not be read (${e instanceof Error ? e.message : String(e)})`,
+    );
     return null;
   }
 }
@@ -73,8 +78,14 @@ export interface WinProbContext {
   archetype_name: string | null;
 }
 
-export function archetypePrior(artifact: WinProbArtifact, name: string | null): number {
-  return (name ? artifact.archetype_priors[name] : undefined) ?? artifact.global_prior;
+export function archetypePrior(
+  artifact: WinProbArtifact,
+  name: string | null,
+): number {
+  return (
+    (name ? artifact.archetype_priors[name] : undefined) ??
+    artifact.global_prior
+  );
 }
 
 export function turnFeatureVector(

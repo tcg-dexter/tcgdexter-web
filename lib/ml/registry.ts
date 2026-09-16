@@ -48,3 +48,34 @@ export function readRegistry(): MlRegistry | null {
     return null;
   }
 }
+
+const warned = new Set<string>();
+
+/** An artifact the caller expected to use turned out to be unusable.
+ *
+ *  Every consumer of these artifacts degrades quietly by design — null means
+ *  "no model yet" and callers fall back to heuristics. That makes a PACKAGING
+ *  failure indistinguishable from an untrained model, and it can sit in
+ *  production indefinitely: data/ml/value.json was missing from every Vercel
+ *  lambda (nothing static points at it, so file tracing dropped it) and the
+ *  only symptom was a coach route returning 503 and an AI opponent quietly
+ *  playing on heuristics.
+ *
+ *  Deliberately NOT called when the registry says a model is disabled: that
+ *  is a normal state, and those callers return before ever touching a file.
+ *  This is only for "we meant to load this and could not".
+ *
+ *  Deduped on the resolved path — one line per distinct broken artifact per
+ *  process. In production there is exactly one path, so exactly one line;
+ *  these sit on hot paths and must not spam a busy lambda. */
+export function warnArtifactUnusable(
+  model: string,
+  abs: string,
+  reason: string,
+): void {
+  if (warned.has(abs)) return;
+  warned.add(abs);
+  console.warn(
+    `[ml] ${model} artifact at ${abs} is unusable: ${reason} — falling back.`,
+  );
+}
