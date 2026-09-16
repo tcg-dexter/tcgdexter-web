@@ -48,6 +48,12 @@ const TOOLS: Tool[] = [
     description: "Training runs, data exports, and the model registry.",
   },
   {
+    href: "/admin-tools/coach",
+    title: "Coach Dexter",
+    description:
+      "Grade a battle log decision by decision — blunders and brilliancies.",
+  },
+  {
     href: "/admin-tools/play",
     title: "AI Player",
     description:
