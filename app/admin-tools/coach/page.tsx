@@ -73,14 +73,21 @@ export default async function CoachDexterPage() {
   // Which of those decks actually carry a list. Selecting `id` alone keeps the
   // deck text off this page entirely — the picker only needs a boolean.
   const deckIds = Array.from(
-    new Set(matches.map((m) => m.saved_deck_id).filter((id): id is string => !!id)),
+    new Set(
+      matches.map((m) => m.saved_deck_id).filter((id): id is string => !!id),
+    ),
   );
   const { data: deckRows } = await admin
     .from("saved_decks")
     .select("id")
     .not("deck_list", "is", null)
-    .in("id", deckIds.length ? deckIds : ["00000000-0000-0000-0000-000000000000"]);
-  const withDeck = new Set((deckRows ?? []).map((d) => (d as { id: string }).id));
+    .in(
+      "id",
+      deckIds.length ? deckIds : ["00000000-0000-0000-0000-000000000000"],
+    );
+  const withDeck = new Set(
+    (deckRows ?? []).map((d) => (d as { id: string }).id),
+  );
 
   const logs: CoachLogOption[] = matches.map((m) => ({
     id: m.id,
@@ -99,10 +106,10 @@ export default async function CoachDexterPage() {
         <header className="mb-6">
           <h1 className="text-2xl font-bold text-text-primary">Coach Dexter</h1>
           <p className="mt-1 text-xs leading-relaxed text-text-secondary">
-            Pick an imported battle log and grade it decision by decision. For every
-            decision the engine can reconstruct, it values each legal move by rolling it
-            forward, then reports what the move actually played gave up — and the plays a
-            competent bot would have missed.
+            Pick an imported battle log and grade it decision by decision. For
+            every decision the engine can reconstruct, it values each legal move
+            by rolling it forward, then reports what the move actually played
+            gave up — and the plays a competent bot would have missed.
           </p>
         </header>
 

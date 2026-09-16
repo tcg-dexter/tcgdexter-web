@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import type { Severity } from "@/lib/ml/strategist/coachGame";
-import { SeverityChip, decisionChip } from "./chips";
+import { SeverityChip, decisionChip, type ChipKind } from "./chips";
 
 /** Structural, for the same reason as GameSummaryProps. */
 export interface TimelineDecision {
@@ -30,27 +30,33 @@ const ord = (x: number) => x.toFixed(3);
 export default function DecisionTimeline({ decisions }: DecisionTimelineProps) {
   const [open, setOpen] = useState<number | null>(null);
 
-  if (decisions.length === 0) {
+  // Only decisions the coach actually has something to say about. An unjudged
+  // play is omitted entirely rather than greyed out: the coach speaks where it
+  // has a point to make and stays quiet — and opaque — everywhere else. Turn
+  // numbers will therefore skip, which is the intended reading.
+  const judged = decisions
+    .map((d) => ({ d, kind: decisionChip(d) }))
+    .filter(
+      (x): x is { d: TimelineDecision; kind: ChipKind } => x.kind !== null,
+    );
+
+  if (judged.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-black/15 bg-surface p-6 text-center text-sm text-text-muted dark:border-white/15 dark:bg-surface-2">
-        No decisions in this log could be valued.
+        Nothing to flag in this game — no play cost enough to be worth calling
+        out.
       </div>
     );
   }
 
   return (
     <ul className="flex flex-col gap-1.5">
-      {decisions.map((d) => {
-        const kind = decisionChip(d);
+      {judged.map(({ d, kind }) => {
         const expanded = open === d.actionIndex;
         return (
           <li
             key={d.actionIndex}
-            className={`overflow-hidden rounded-lg border bg-white dark:bg-surface-elevated ${
-              kind
-                ? "border-black/8 dark:border-white/10"
-                : "border-black/4 dark:border-white/5"
-            }`}
+            className="overflow-hidden rounded-lg border border-black/8 bg-white dark:border-white/10 dark:bg-surface-elevated"
           >
             <button
               type="button"
@@ -58,38 +64,22 @@ export default function DecisionTimeline({ decisions }: DecisionTimelineProps) {
               aria-expanded={expanded}
               className="flex w-full items-start gap-2.5 p-3 text-left"
             >
-              <span
-                className={`mt-px shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
-                  kind
-                    ? "bg-surface text-text-secondary dark:bg-surface-2"
-                    : "bg-surface/60 text-text-muted dark:bg-surface-2/60"
-                }`}
-              >
-                {d.turn === null ? "—" : `T${d.turn}`}
+              <span className="mt-px shrink-0 rounded bg-surface px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-text-secondary dark:bg-surface-2">
+                {d.turn === null ? "\u2014" : `T${d.turn}`}
               </span>
 
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  {/* Muted when the play carries no judgement — the row is
-                      there for context, not as a verdict. */}
-                  <span
-                    className={`text-xs ${
-                      kind ? "font-medium text-text-primary" : "text-text-muted"
-                    }`}
-                  >
+                  <span className="text-xs font-medium text-text-primary">
                     {d.played}
                   </span>
-                  {kind && <SeverityChip kind={kind} />}
+                  <SeverityChip kind={kind} />
                 </span>
 
-                {kind === "brilliant" && d.bestAlternative && (
+                {d.bestAlternative && (
                   <span className="mt-1 block text-[11px] leading-relaxed text-text-secondary">
-                    rather than: {d.bestAlternative}
-                  </span>
-                )}
-                {kind && kind !== "brilliant" && d.bestAlternative && (
-                  <span className="mt-1 block text-[11px] leading-relaxed text-text-secondary">
-                    better: {d.bestAlternative}
+                    {kind === "brilliant" ? "rather than: " : "better: "}
+                    {d.bestAlternative}
                   </span>
                 )}
               </span>
@@ -100,15 +90,22 @@ export default function DecisionTimeline({ decisions }: DecisionTimelineProps) {
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[11px] sm:grid-cols-4">
                   <Detail label="alternatives" value={String(d.legalCount)} />
                   <Detail label="stakes" value={ord(d.stakes)} />
-                  <Detail label="error bar" value={`±${ord(1.96 * d.regretSe)}`} />
+                  <Detail
+                    label="error bar"
+                    value={`\u00b1${ord(1.96 * d.regretSe)}`}
+                  />
                   <Detail
                     label="captured"
-                    value={d.capture === null ? "—" : `${Math.round(d.capture * 100)}%`}
+                    value={
+                      d.capture === null
+                        ? "\u2014"
+                        : `${Math.round(d.capture * 100)}%`
+                    }
                   />
                 </dl>
                 <p className="mt-2 text-[10px] leading-relaxed text-text-muted">
-                  {d.playedKind} · stakes and the error bar are in the search&rsquo;s own
-                  ordinal units, not win probability.
+                  {d.playedKind} · stakes and the error bar are in the
+                  search&rsquo;s own ordinal units, not win probability.
                 </p>
               </div>
             )}

@@ -101,8 +101,9 @@ export default function CoachClient({ logs }: { logs: CoachLogOption[] }) {
 
         {chosen && !chosen.hasDeckList && (
           <p className="mt-2 text-[11px] leading-relaxed text-amber-700 dark:text-amber-400">
-            No deck list is linked to this battle. The reconstructed deck will be weaker
-            and coverage will be lower than it would otherwise be.
+            No deck list is linked to this battle. The reconstructed deck will
+            be weaker, and the coach will have less to say about it than it
+            otherwise would.
           </p>
         )}
 
@@ -139,9 +140,9 @@ export default function CoachClient({ logs }: { logs: CoachLogOption[] }) {
         </div>
 
         <p className="mt-2 text-[10px] leading-relaxed text-text-muted">
-          More rollouts narrow every error bar and cost time. The first run after a cold
-          start is slow — it loads the card catalog and the value artifact. Re-running with
-          the same seed gives identical output.
+          More rollouts narrow every error bar and cost time. The first run
+          after a cold start is slow — it loads the card catalog and the value
+          artifact. Re-running with the same seed gives identical output.
         </p>
 
         {error && (
@@ -154,9 +155,10 @@ export default function CoachClient({ logs }: { logs: CoachLogOption[] }) {
           <GameSummary game={data} />
           <DecisionTimeline decisions={data.decisions} />
           <p className="text-[10px] leading-relaxed text-text-muted">
-            Move values assume play continues at the rollout pilot&rsquo;s strength, so a
-            setup play whose payoff needs strong follow-up is undervalued. Decisions whose
-            cost does not clear its own error bar are shown without a judgement.
+            Move values assume play continues at the rollout pilot&rsquo;s
+            strength, so a setup play whose payoff needs strong follow-up is
+            undervalued. Only plays whose cost clears its own error bar are
+            called out; everything else is left unsaid.
           </p>
         </>
       )}
@@ -195,7 +197,8 @@ function NumberField({
         max={max}
         onChange={(e) => {
           const n = Number(e.target.value);
-          if (Number.isFinite(n)) onChange(Math.min(max, Math.max(min, Math.floor(n))));
+          if (Number.isFinite(n))
+            onChange(Math.min(max, Math.max(min, Math.floor(n))));
         }}
         className="mt-1.5 w-20 rounded-lg border border-black/15 bg-white px-2.5 py-1.5 text-xs tabular-nums text-text-primary dark:border-white/15 dark:bg-surface-2"
       />
