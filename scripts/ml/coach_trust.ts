@@ -459,65 +459,86 @@ function section(title: string, items: Item[], key: (i: Item) => string): void {
  * under common random numbers is degenerate (identically zero by
  * construction) and would prove nothing.
  */
-function controls(seed: number): void {
-  const all = collect(seed, 0.35);
-  const withAttack = all.filter(
-    (d) => d.legal.some((m) => m.kind === "attack") && d.legal.some((m) => m.kind === "pass"),
-  );
-  const chosen = sample(withAttack, CONTROL_N, hashSeed(`coach-trust:${seed}:control`));
+function controls(seeds: number[]): void {
+  // Pooled across seeds. A per-seed control at n=40 reads z~1.8 on an effect
+  // this size and would be recorded as a FAIL for want of power — the same
+  // single-reading mistake this project has made five times.
+  const chosen: Captured[] = [];
+  let offered = 0;
+  for (const seed of seeds) {
+    const withAttack = collect(seed, 0.35).filter(
+      (d) => d.legal.some((m) => m.kind === "attack") && d.legal.some((m) => m.kind === "pass"),
+    );
+    offered += withAttack.length;
+    for (const d of sample(withAttack, CONTROL_N, hashSeed(`coach-trust:${seed}:control`))) {
+      chosen.push(d);
+    }
+  }
 
   console.log(
     `\nPOSITIVE CONTROL — is declining an available attack priced as a loss?` +
-      `\n  ${withAttack.length} positions offer both an attack and a pass; ` +
-      `${chosen.length} sampled`,
+      `\n  ${offered} positions offer both an attack and a pass; ${chosen.length} sampled ` +
+      `across ${seeds.length} seed(s)`,
   );
   const gains: number[] = [];
+  const live: number[] = [];
   let significant = 0;
   let equivalent = 0;
+  const pairs: { a: number; b: number; se: number }[] = [];
   for (const d of chosen) {
     const attack = d.legal.find((m) => m.kind === "attack")!;
     const pass = d.legal.find((m) => m.kind === "pass")!;
+    const seed = hashSeed(d.gameId);
     const o = oracle(d, attack, seed, { played: pass, label: ":posctl" });
     if (!o) continue;
     gains.push(o.delta);
     if (o.verdict === "CONFIRMED") significant += 1;
     if (o.verdict === "outcome-equivalent") equivalent += 1;
+    // A position whose outcome is already settled cannot show that attacking
+    // is better, because nothing can. Reported separately rather than dropped:
+    // the dilution is a property of the corpus, not a nuisance to hide.
+    else live.push(o.delta);
+    if (pairs.length < 15) {
+      const o2 = oracle(d, attack, seed + 7919, { played: pass, label: ":stab2" });
+      if (o2) pairs.push({ a: o.delta, b: o2.delta, se: Math.hypot(o.se, o2.se) });
+    }
   }
+
+  const verdict = (m: number, se: number) => {
+    const z = se > 0 ? m / se : 0;
+    return (
+      `${pts(m)} pts (±${pts(1.96 * se)})  z=${z.toFixed(2)}  ` +
+      (z > 1.96
+        ? "PASS — the oracle can see play quality."
+        : z < -1.96
+          ? "FAIL IN THE WRONG DIRECTION — passing beats attacking. Trust nothing."
+          : "FAIL — cannot resolve the single clearest mistake in the game.")
+    );
+  };
+
   if (gains.length < 3) {
     console.log("  too few resolvable positions — raise --games.");
   } else {
-    const m = mean(gains);
-    const se = sd(gains) / Math.sqrt(gains.length);
-    const z = se > 0 ? m / se : 0;
     console.log(
-      `  attacking beats passing by ${pts(m)} pts (±${pts(1.96 * se)}) over n=${gains.length}\n` +
-        `  ${significant} of ${gains.length} individually significant, ` +
-        `${equivalent} outcome-equivalent\n` +
-        `  z=${z.toFixed(2)}  ` +
-        (z > 1.96
-          ? "PASS — the oracle can see play quality."
-          : z < -1.96
-            ? "FAIL IN THE WRONG DIRECTION — passing beats attacking. Do not trust any verdict."
-            : "FAIL — the oracle cannot resolve the single clearest mistake in the game."),
+      `  all positions   n=${gains.length}  ${verdict(mean(gains), sd(gains) / Math.sqrt(gains.length))}\n` +
+        `  ${significant} individually significant, ${equivalent} outcome-equivalent ` +
+        `(${((100 * equivalent) / gains.length).toFixed(0)}% of the control is already-decided games)`,
     );
+    if (live.length >= 3) {
+      console.log(
+        `  live positions  n=${live.length}  ${verdict(mean(live), sd(live) / Math.sqrt(live.length))}`,
+      );
+    }
   }
 
   console.log(`\nSTABILITY — same arms, independent seed`);
-  const pairs: { a: number; b: number; se: number }[] = [];
-  for (const d of chosen.slice(0, Math.min(12, chosen.length))) {
-    const attack = d.legal.find((m) => m.kind === "attack")!;
-    const pass = d.legal.find((m) => m.kind === "pass")!;
-    const o1 = oracle(d, attack, seed, { played: pass, label: ":stab1" });
-    const o2 = oracle(d, attack, seed + 7919, { played: pass, label: ":stab2" });
-    if (o1 && o2) pairs.push({ a: o1.delta, b: o2.delta, se: Math.hypot(o1.se, o2.se) });
-  }
   if (pairs.length < 3) {
     console.log("  too few pairs.");
   } else {
-    const diffs = pairs.map((p) => p.a - p.b);
     const within = pairs.filter((p) => Math.abs(p.a - p.b) <= 2 * p.se).length;
     console.log(
-      `  mean |difference| between runs ${pts(mean(diffs.map(Math.abs)))} pts over n=${pairs.length}\n` +
+      `  mean |difference| between runs ` +
+        `${pts(mean(pairs.map((p) => Math.abs(p.a - p.b))))} pts over n=${pairs.length}\n` +
         `  ${within}/${pairs.length} agree inside their own 2-sigma bar  ` +
         (within >= Math.ceil(0.8 * pairs.length)
           ? "PASS"
@@ -545,10 +566,7 @@ function main(): void {
   );
 
   if (CONTROLS_ONLY) {
-    for (const seed of SEEDS) {
-      console.log(`\n=== seed ${seed} ===`);
-      controls(seed);
-    }
+    controls(SEEDS);
     return;
   }
 
