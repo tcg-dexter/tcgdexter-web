@@ -752,10 +752,13 @@ function ladderStudy(evaluate: StateEvaluator): void {
     `rung                                 agree  sign   ran   step isolates`,
   );
 
+  // Per-rung agreement flags, kept so adjacent rungs can be compared PAIRED.
+  const agreeFlags: boolean[][] = [];
   let prevAgree: number | null = null;
   for (let r = 0; r < rungs.length; r++) {
     const rows = scorable.map((x) => ({ o: x.o!, v: results[r][x.i] }));
     const ran = rows.filter((x) => x.v !== null);
+    agreeFlags.push(rows.map((x) => x.v !== null && x.v.verdict === x.o.verdict));
     if (ran.length === 0) {
       console.log(`  ${rungs[r].name}   — could not run`);
       continue;
@@ -773,6 +776,35 @@ function ladderStudy(evaluate: StateEvaluator): void {
         `${(100 * sign).toFixed(0).padStart(4)}%  ${String(ran.length).padStart(4)}  ${step}`,
     );
     prevAgree = agree;
+  }
+
+  // McNemar on adjacent rungs. A step is measured on the SAME cases, so the
+  // paired test is the right one and the marginal difference printed above is
+  // not — it carries no error bar, and reporting a step size without one is
+  // how this project has been fooled repeatedly. Only the DISCORDANT cases
+  // carry information about a paired difference.
+  console.log(`\nIS EACH STEP REAL? McNemar on the discordant cases`);
+  for (let r = 1; r < rungs.length; r++) {
+    const a = agreeFlags[r - 1];
+    const b = agreeFlags[r];
+    let lost = 0; // agreed before, not after
+    let gained = 0; // not before, agreed after
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] && !b[i]) lost += 1;
+      else if (!a[i] && b[i]) gained += 1;
+    }
+    const n = lost + gained;
+    const z = n > 0 ? (gained - lost) / Math.sqrt(n) : 0;
+    console.log(
+      `  ${rungs[r].name}\n` +
+        `      lost ${String(lost).padStart(3)}  gained ${String(gained).padStart(3)}  ` +
+        `discordant ${String(n).padStart(3)}  z=${z.toFixed(2)}  ` +
+        (Math.abs(z) > 1.96
+          ? z < 0
+            ? "SEPARABLE — this step really does cost agreement."
+            : "SEPARABLE — this step really does buy agreement."
+          : "NOT SEPARABLE at this n."),
+    );
   }
 
   console.log(
