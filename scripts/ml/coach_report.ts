@@ -163,6 +163,7 @@ function main(): void {
       options: number[];
       turns: number[];
       result: string | null;
+      handle: string;
     }
   >();
   // Regret scales mechanically with how many alternatives existed (more arms
@@ -198,7 +199,14 @@ function main(): void {
   const startedAt = Date.now();
 
   for (const row of rows) {
-    perLog.set(row.id, { regrets: [], captures: [], options: [], turns: [], result: row.result });
+    perLog.set(row.id, {
+      regrets: [],
+      captures: [],
+      options: [],
+      turns: [],
+      result: row.result,
+      handle: row.player_handle,
+    });
     const hcell = byHandle.get(row.player_handle) ?? { caps: [], wins: 0, games: 0 };
     const w = wonLog(row.result);
     if (w !== null) {
@@ -492,6 +500,84 @@ function main(): void {
           : z < -1.96
             ? "SEPARABLE IN THE WRONG DIRECTION. Do not ship."
             : "not separable at this n."),
+    );
+  }
+
+  // WITHIN-PLAYER. The test above pools logs ACROSS players, and on this
+  // corpus that comparison is confounded: one handle contributes 163 of 371
+  // logs at a 57% win rate while every other handle combined wins ~79%, and
+  // 20 handles are singletons that are almost all wins. Casual users appear
+  // to log their wins and drop their losses, so "this log was won" and "who
+  // logged it" are entangled — a between-player SKILL difference can present
+  // as the instrument working, with no way to tell the two apart.
+  //
+  // Differencing inside each handle removes the player entirely: every
+  // comparison is one player's own wins against their own losses, and the
+  // pooled estimate is an inverse-variance weighted mean of those per-player
+  // deltas (a fixed-effects estimator). It answers the narrower and more
+  // useful question — when the SAME player wins, did they capture more of
+  // the available value? Nothing about how players differ survives it.
+  //
+  // What it does NOT fix: `matches.result` is still self-reported, so a
+  // player who abandons a lost game before logging it biases their own
+  // "loss" sample toward the losses they chose to record.
+  const withinPlayer = new Map<string, { won: number[]; lost: number[] }>();
+  for (const [, v] of Array.from(perLog)) {
+    if (v.captures.length < 5) continue;
+    const w = wonLog(v.result);
+    if (w === null) continue;
+    const cell = withinPlayer.get(v.handle) ?? { won: [], lost: [] };
+    (w ? cell.won : cell.lost).push(mean(v.captures));
+    withinPlayer.set(v.handle, cell);
+  }
+  // 3 per side is the floor at which a stratum has a usable variance; below
+  // that its weight is driven by noise in the SE rather than by information.
+  const MIN_PER_SIDE = 3;
+  const strata = Array.from(withinPlayer)
+    .filter(([, c]) => c.won.length >= MIN_PER_SIDE && c.lost.length >= MIN_PER_SIDE)
+    .map(([h, c]) => {
+      const diff = mean(c.won) - mean(c.lost);
+      const varD = sd(c.won) ** 2 / c.won.length + sd(c.lost) ** 2 / c.lost.length;
+      return { h, diff, varD, nw: c.won.length, nl: c.lost.length };
+    })
+    .filter((s) => s.varD > 0);
+
+  console.log("\nWITHIN-PLAYER — same player's wins vs their own losses");
+  if (strata.length < 2) {
+    console.log(
+      `  only ${strata.length} handle(s) have ${MIN_PER_SIDE}+ logs on both sides — ` +
+        `cannot difference within player. Raise --limit.`,
+    );
+  } else {
+    strata.sort((a, b) => b.nw + b.nl - (a.nw + a.nl));
+    for (const s of strata) {
+      const se = Math.sqrt(s.varD);
+      console.log(
+        `  ${s.h.slice(0, 16).padEnd(18)} ${(100 * s.diff >= 0 ? "+" : "")}` +
+          `${(100 * s.diff).toFixed(1)} pts (±${(100 * 1.96 * se).toFixed(1)})  ` +
+          `${s.nw}W / ${s.nl}L`,
+      );
+    }
+    const wsum = strata.reduce((s, x) => s + 1 / x.varD, 0);
+    const pooled = strata.reduce((s, x) => s + x.diff / x.varD, 0) / wsum;
+    const pooledSe = Math.sqrt(1 / wsum);
+    const z = pooled / pooledSe;
+    console.log(
+      `  POOLED (fixed effects, ${strata.length} players): ` +
+        `${(100 * pooled).toFixed(1)} pts  z=${z.toFixed(2)}  ` +
+        (z > 1.96
+          ? "SEPARABLE — capture tracks the result within a player."
+          : z < -1.96
+            ? "SEPARABLE IN THE WRONG DIRECTION. Do not ship."
+            : "NOT SEPARABLE at this n."),
+    );
+    // The largest stratum on its own is the single-player restriction §9 of
+    // the trust spec asks for, and it is reported separately because pooling
+    // can hide the case where one well-powered player carries the result.
+    const big = strata[0];
+    console.log(
+      `  single-player restriction (${big.h.slice(0, 16)}, ${big.nw}W/${big.nl}L): ` +
+        `${(100 * big.diff).toFixed(1)} pts  z=${(big.diff / Math.sqrt(big.varD)).toFixed(2)}`,
     );
   }
 
