@@ -50,6 +50,7 @@ import {
   legalMoves,
   viewFor,
   buildGhostState,
+  heuristicEvaluator,
   describeMove,
   mulberry32,
   hashSeed,
@@ -460,7 +461,8 @@ interface Rung {
   ghost: boolean;
   horizon: number | null;
   rollouts: number;
-  useEvaluator: boolean;
+  /** null = no evaluator (play to a terminal); otherwise which one. */
+  evaluator: "none" | "heuristic" | "model";
   /** What the step from the PREVIOUS rung isolates. */
   isolates: string;
 }
@@ -468,35 +470,51 @@ interface Rung {
 function ladderRungs(): Rung[] {
   return [
     {
-      name: `oracle      perfect info, to end, ${ORACLE_ROLLOUTS}`,
+      name: `oracle       perfect, to end,  none, ${ORACLE_ROLLOUTS}`,
       ghost: false,
       horizon: null,
       rollouts: ORACLE_ROLLOUTS,
-      useEvaluator: false,
+      evaluator: "none",
       isolates: "",
     },
+    // The spec's ladder jumps straight from "play to a terminal" to
+    // "horizon 6 + value-gbm-v1", which moves TWO things at once — and they
+    // cannot be separated by omission, because a finite horizon with no
+    // evaluator throws by design. Splitting the step with the planner's
+    // built-in `heuristicEvaluator` (a clamped prize/bench/hand score, no
+    // learned model) separates them properly, and answers a question nothing
+    // has asked: what is the value model worth TO THE COACH? It is measured
+    // at +4.5 pts inside the planner and has never been priced here.
     {
-      name: `+evaluator  perfect info, h${HORIZON},     ${ORACLE_ROLLOUTS}`,
+      name: `+truncation  perfect, h${HORIZON},      heur, ${ORACLE_ROLLOUTS}`,
       ghost: false,
       horizon: HORIZON,
       rollouts: ORACLE_ROLLOUTS,
-      useEvaluator: true,
-      isolates: "the value model + a truncated horizon",
+      evaluator: "heuristic",
+      isolates: "stopping at the horizon (scored WITHOUT the learned model)",
     },
     {
-      name: `+ghost      determinized, h${HORIZON},     ${ORACLE_ROLLOUTS}`,
+      name: `+model       perfect, h${HORIZON},     model, ${ORACLE_ROLLOUTS}`,
+      ghost: false,
+      horizon: HORIZON,
+      rollouts: ORACLE_ROLLOUTS,
+      evaluator: "model",
+      isolates: "swapping the heuristic leaf for value-gbm-v1",
+    },
+    {
+      name: `+ghost       determinized, h${HORIZON}, model, ${ORACLE_ROLLOUTS}`,
       ghost: true,
       horizon: HORIZON,
       rollouts: ORACLE_ROLLOUTS,
-      useEvaluator: true,
+      evaluator: "model",
       isolates: "hidden information (redaction + meta prior)",
     },
     {
-      name: `production  determinized, h${HORIZON},      ${PROD_ROLLOUTS}`,
+      name: `production   determinized, h${HORIZON}, model,  ${PROD_ROLLOUTS}`,
       ghost: true,
       horizon: HORIZON,
       rollouts: PROD_ROLLOUTS,
-      useEvaluator: true,
+      evaluator: "model",
       isolates: "the rollout budget",
     },
   ];
@@ -514,7 +532,12 @@ function runRung(
   const cfg = {
     rollouts: rung.rollouts,
     horizon: rung.horizon,
-    evaluate: rung.useEvaluator ? evaluate : null,
+    evaluate:
+      rung.evaluator === "none"
+        ? null
+        : rung.evaluator === "heuristic"
+          ? heuristicEvaluator
+          : evaluate,
   };
   const s = hashSeed(`coach-trust:${seed}:rung:${rung.name}:${d.gameId}:${d.turn}`);
   if (!rung.ghost) {
