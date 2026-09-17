@@ -130,6 +130,19 @@ const SWEEP_HORIZONS = SWEEP_RAW
       return n;
     })
   : null;
+/** Sweep the rollout budget at a deeper horizon, e.g. --rollout-sweep 16,32,64,128 */
+const ROLLOUT_SWEEP_RAW = arg("--rollout-sweep");
+const ROLLOUT_BUDGETS = ROLLOUT_SWEEP_RAW
+  ? ROLLOUT_SWEEP_RAW.split(",").map((s) => {
+      const n = Number(s.trim());
+      if (!Number.isInteger(n) || n < 1) {
+        console.error(`[coach-trust] --rollout-sweep expects whole counts, got ${JSON.stringify(s)}`);
+        process.exit(1);
+      }
+      return n;
+    })
+  : null;
+const DEEP_HORIZON = numArg("--deep-horizon", 12);
 // Multi-seed by default. Every single-seed reading this project has taken has
 // been wrong — strategist_duel.ts carries the list.
 const SEEDS = (arg("--seeds") ?? "1,2,3")
@@ -842,6 +855,94 @@ function horizonSweep(evaluate: StateEvaluator, horizons: number[]): void {
   }
 }
 
+/**
+ * THE ROLLOUT SWEEP. The horizon sweep found that depth works at 480 rollouts
+ * (82% -> 94%) and BACKFIRES at production's 16 (77% -> 54%), because each
+ * extra ply adds variance the budget cannot absorb and verdicts decay into
+ * `unresolved`. Depth and samples are therefore complements, bought
+ * multiplicatively.
+ *
+ * This finds the crossover: the smallest budget at which the deeper search
+ * actually beats the shallow incumbent. Every arm is compared against the
+ * SHIPPED configuration (h6 at 16 rollouts), because "better than what we run
+ * today" is the only comparison that decides anything.
+ */
+function rolloutSweep(evaluate: StateEvaluator, budgets: number[], deepH: number): void {
+  const cases = collectCases(evaluate, "rollout-sweep");
+  const oracleRes = cases.map((c) => oracle(c.d, c.alt, SEEDS[0]));
+  const scorable = oracleRes
+    .map((o, i) => ({ o, i }))
+    .filter((x) => x.o && (x.o.verdict === "CONFIRMED" || x.o.verdict === "CONTRADICTED"));
+
+  console.log(
+    `\nROLLOUT SWEEP — ${cases.length} recommendations, ${scorable.length} the oracle resolved\n` +
+      `Deeper search at h${deepH}, swept over budget, against the shipped h${HORIZON}/${PROD_ROLLOUTS}.\n`,
+  );
+
+  const armFlags = (rung: Rung) => {
+    const res = scorable.map((x) =>
+      runRung(cases[x.i].d, cases[x.i].played, cases[x.i].alt, rung, evaluate, SEEDS[0]),
+    );
+    const ran = res.filter((v) => v !== null);
+    const flags = res.map((v, k) => v !== null && v.verdict === scorable[k].o!.verdict);
+    const sign = res.filter(
+      (v, k) => v !== null && Math.sign(v.delta) === Math.sign(scorable[k].o!.delta),
+    ).length;
+    return { flags, ran: ran.length, sign: ran.length > 0 ? sign / ran.length : 0 };
+  };
+
+  const base = armFlags({
+    name: "incumbent",
+    ghost: true,
+    horizon: HORIZON,
+    rollouts: PROD_ROLLOUTS,
+    evaluator: "model",
+    isolates: "",
+  });
+  const baseAgree = base.ran > 0 ? base.flags.filter(Boolean).length / base.ran : 0;
+  console.log(
+    `  INCUMBENT  h${HORIZON} @ ${String(PROD_ROLLOUTS).padStart(3)} rollouts   ` +
+      `agree ${(100 * baseAgree).toFixed(0).padStart(3)}%   sign ${(100 * base.sign).toFixed(0).padStart(3)}%   ` +
+      `ran ${base.ran}`,
+  );
+  console.log(`  ---`);
+
+  for (const r of budgets) {
+    const arm = armFlags({
+      name: `h${deepH}@${r}`,
+      ghost: true,
+      horizon: deepH,
+      rollouts: r,
+      evaluator: "model",
+      isolates: "",
+    });
+    const agree = arm.ran > 0 ? arm.flags.filter(Boolean).length / arm.ran : 0;
+    let lost = 0;
+    let gained = 0;
+    for (let i = 0; i < base.flags.length; i++) {
+      if (base.flags[i] && !arm.flags[i]) lost += 1;
+      else if (!base.flags[i] && arm.flags[i]) gained += 1;
+    }
+    const n = lost + gained;
+    const z = n > 0 ? (gained - lost) / Math.sqrt(n) : 0;
+    console.log(
+      `  h${deepH} @ ${String(r).padStart(3)} rollouts  (${(r / PROD_ROLLOUTS).toFixed(1)}x compute)  ` +
+        `agree ${(100 * agree).toFixed(0).padStart(3)}%   sign ${(100 * arm.sign).toFixed(0).padStart(3)}%\n` +
+        `      vs incumbent: lost ${String(lost).padStart(3)}  gained ${String(gained).padStart(3)}  ` +
+        `discordant ${String(n).padStart(3)}  z=${z.toFixed(2)}  ` +
+        (Math.abs(z) > 1.96
+          ? z > 0
+            ? "SEPARABLE — worth the compute."
+            : "SEPARABLE IN THE WRONG DIRECTION — still under-sampled."
+          : "NOT SEPARABLE — no better than today."),
+    );
+  }
+  console.log(
+    `\n  The crossover is the smallest budget whose z turns positive. Below it,\n` +
+      `  the extra depth is bias reduction the sample count cannot resolve.`,
+  );
+}
+
 function ladderStudy(evaluate: StateEvaluator): void {
   const rungs = ladderRungs();
   const cases = collectCases(evaluate, "ladder");
@@ -964,6 +1065,10 @@ function main(): void {
 
   if (CONTROLS_ONLY) {
     controls(SEEDS);
+    return;
+  }
+  if (ROLLOUT_BUDGETS) {
+    rolloutSweep(evaluate as StateEvaluator, ROLLOUT_BUDGETS, DEEP_HORIZON);
     return;
   }
   if (SWEEP_HORIZONS) {

@@ -264,6 +264,12 @@ export interface ScanStats {
   yielded: number;
   missBy: Map<string, number>;
   unmatchedBy: Map<string, number>;
+  /** `<card name>:<reason>` for every decision that could not be
+   *  reconstructed. `unmatchedBy` groups by action TYPE, which says how the
+   *  coverage loss is shaped but not what to fix — "play_trainer:
+   *  absent_from_zone x40" is a histogram, "Buddy-Buddy Poffin x12" is a
+   *  work queue. */
+  unmatchedCards: Map<string, number>;
 }
 
 export function emptyScanStats(): ScanStats {
@@ -276,6 +282,7 @@ export function emptyScanStats(): ScanStats {
     yielded: 0,
     missBy: new Map(),
     unmatchedBy: new Map(),
+    unmatchedCards: new Map(),
   };
 }
 
@@ -370,6 +377,8 @@ export function scanLog(
       const key = `${action.action_type}:${why}`;
       stats.unmatchedBy.set(key, (stats.unmatchedBy.get(key) ?? 0) + 1);
       stats.missBy.set(why, (stats.missBy.get(why) ?? 0) + 1);
+      const cardKey = `${actionCardName(action) ?? "(unnamed)"}:${why}`;
+      stats.unmatchedCards.set(cardKey, (stats.unmatchedCards.get(cardKey) ?? 0) + 1);
       continue;
     }
     stats.matched += 1;
