@@ -69,6 +69,7 @@ import { DEFAULT_SEVERITY, type Severity } from "@/lib/ml/strategist/coachGame";
 import { severityOf } from "@/lib/ml/strategist/calibrate";
 import { determinizeOpponent, determinizeRng } from "@/lib/ml/strategist/determinize";
 import { analyzeDecision, semanticMoveKey } from "@/lib/ml/strategist/regret";
+import type { Actor } from "@/lib/ml/strategist/value";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 
@@ -113,6 +114,9 @@ const JSON_OUT = arg("--json");
 /** Run the oracle's own calibration and stop. */
 const CONTROLS_ONLY = process.argv.includes("--controls");
 const CONTROL_N = numArg("--control-n", 30);
+/** Run the ablation ladder and stop. */
+const LADDER_ONLY = process.argv.includes("--ladder");
+const LADDER_N = numArg("--ladder-n", 200);
 // Multi-seed by default. Every single-seed reading this project has taken has
 // been wrong — strategist_duel.ts carries the list.
 const SEEDS = (arg("--seeds") ?? "1,2,3")
@@ -345,41 +349,51 @@ function production(
   };
 }
 
+interface PairResult {
+  delta: number;
+  se: number;
+  q: number;
+  verdict: Verdict;
+}
+
 /**
- * The ORACLE arm, restricted to two moves. "Is this recommendation worth
- * surfacing" does not need a full Q table — it needs only "does the suggested
- * move actually beat the played one", and cost is linear in arms, so 2-arm is
- * ~7x cheaper than the full table.
+ * The 2-arm paired comparison, on whatever state and settings it is handed.
+ *
+ * Every rung of the ablation ladder goes through here, INCLUDING the oracle,
+ * so a difference between two rungs can only come from the settings and never
+ * from two implementations drifting apart. Same argument that pulled
+ * logDecisions.ts out of move_agreement.ts.
  */
-function oracle(
-  d: Captured,
-  suggestedTrue: SimMove,
+function pairedVerdict(
+  state: GameState,
+  actor: Actor,
+  ctx: TurnContext,
+  played: SimMove,
+  alt: SimMove,
+  cfg: { rollouts: number; horizon: number | null; evaluate: StateEvaluator | null },
   seed: number,
-  opts: { played?: SimMove; label?: string } = {},
-): { delta: number; se: number; q: number; verdict: Verdict } | null {
-  const playedMove = opts.played ?? d.move;
-  const playedKey = semanticMoveKey(playedMove);
-  const sugKey = semanticMoveKey(suggestedTrue);
+  prepare?: (clone: GameState, r: number) => void,
+): PairResult | null {
+  const playedKey = semanticMoveKey(played);
+  const sugKey = semanticMoveKey(alt);
   if (playedKey === sugKey) return null;
   const want = new Set([playedKey, sugKey]);
   // Dedupe by semantic key so the table is exactly two arms even when the
   // hand holds two copies of the same card.
   const seen = new Set<string>();
 
-  const a = analyzeDecision(d.state, d.actor, d.ctx, playedMove, {
-    rollouts: ORACLE_ROLLOUTS,
-    // No evaluator is consulted at all. This is the independence.
-    horizon: null,
-    evaluate: null,
-    seed: hashSeed(
-      `coach-trust:${seed}:oracle${opts.label ?? ""}:${d.gameId}:${d.turn}`,
-    ),
+  const a = analyzeDecision(state, actor, ctx, played, {
+    rollouts: cfg.rollouts,
+    horizon: cfg.horizon,
+    evaluate: cfg.evaluate,
+    seed,
     candidateFilter: (m) => {
       const k = semanticMoveKey(m);
       if (!want.has(k) || seen.has(k)) return false;
       seen.add(k);
       return true;
     },
+    prepare,
   });
   if (!a) return null;
   const iPlayed = a.candidates.findIndex((c) => semanticMoveKey(c.move) === playedKey);
@@ -405,6 +419,119 @@ function oracle(
   else verdict = "unresolved";
 
   return { delta: m, se, q: a.candidates[iPlayed].q, verdict };
+}
+
+/**
+ * The ORACLE arm: perfect information, played to a real terminal, no evaluator
+ * consulted at all. "Is this recommendation worth surfacing" does not need a
+ * full Q table — only "does the suggested move actually beat the played one" —
+ * and cost is linear in arms, so 2-arm is ~7x cheaper than the full table.
+ */
+function oracle(
+  d: Captured,
+  suggestedTrue: SimMove,
+  seed: number,
+  opts: { played?: SimMove; label?: string } = {},
+): PairResult | null {
+  return pairedVerdict(
+    d.state,
+    d.actor,
+    d.ctx,
+    opts.played ?? d.move,
+    suggestedTrue,
+    { rollouts: ORACLE_ROLLOUTS, horizon: null, evaluate: null },
+    hashSeed(`coach-trust:${seed}:oracle${opts.label ?? ""}:${d.gameId}:${d.turn}`),
+  );
+}
+
+/* ─── The ablation ladder ───────────────────────────────────────── */
+
+/**
+ * Production differs from the oracle on three axes. Walking them ONE AT A TIME
+ * attributes the error instead of merely measuring it, which is what turns
+ * "the coach is 80% right" into a work queue.
+ *
+ * The spec's table lists five rows, but its last two (`+ budget` and
+ * `production`) are the identical configuration — ghost, horizon 6, 16
+ * rollouts — so there are four distinct rungs and three steps between them.
+ */
+interface Rung {
+  name: string;
+  ghost: boolean;
+  horizon: number | null;
+  rollouts: number;
+  useEvaluator: boolean;
+  /** What the step from the PREVIOUS rung isolates. */
+  isolates: string;
+}
+
+function ladderRungs(): Rung[] {
+  return [
+    {
+      name: `oracle      perfect info, to end, ${ORACLE_ROLLOUTS}`,
+      ghost: false,
+      horizon: null,
+      rollouts: ORACLE_ROLLOUTS,
+      useEvaluator: false,
+      isolates: "",
+    },
+    {
+      name: `+evaluator  perfect info, h${HORIZON},     ${ORACLE_ROLLOUTS}`,
+      ghost: false,
+      horizon: HORIZON,
+      rollouts: ORACLE_ROLLOUTS,
+      useEvaluator: true,
+      isolates: "the value model + a truncated horizon",
+    },
+    {
+      name: `+ghost      determinized, h${HORIZON},     ${ORACLE_ROLLOUTS}`,
+      ghost: true,
+      horizon: HORIZON,
+      rollouts: ORACLE_ROLLOUTS,
+      useEvaluator: true,
+      isolates: "hidden information (redaction + meta prior)",
+    },
+    {
+      name: `production  determinized, h${HORIZON},      ${PROD_ROLLOUTS}`,
+      ghost: true,
+      horizon: HORIZON,
+      rollouts: PROD_ROLLOUTS,
+      useEvaluator: true,
+      isolates: "the rollout budget",
+    },
+  ];
+}
+
+/** One rung, on one decision's (played, suggested) pair. */
+function runRung(
+  d: Captured,
+  playedTrue: SimMove,
+  altTrue: SimMove,
+  rung: Rung,
+  evaluate: StateEvaluator,
+  seed: number,
+): PairResult | null {
+  const cfg = {
+    rollouts: rung.rollouts,
+    horizon: rung.horizon,
+    evaluate: rung.useEvaluator ? evaluate : null,
+  };
+  const s = hashSeed(`coach-trust:${seed}:rung:${rung.name}:${d.gameId}:${d.turn}`);
+  if (!rung.ghost) {
+    return pairedVerdict(d.state, d.actor, d.ctx, playedTrue, altTrue, cfg, s);
+  }
+  // Redact to what the player can see, then determinize per rollout. Move
+  // identity does not survive the boundary, so both arms are re-found by name.
+  const view = viewFor(d.state, d.actor, d.ctx);
+  const ghost = buildGhostState(view);
+  const ghostCtx = { ...d.ctx };
+  const ghostLegal = legalMoves(ghost, "player", ghostCtx);
+  const playedG = findSemantic(ghostLegal, playedTrue);
+  const altG = findSemantic(ghostLegal, altTrue);
+  if (!playedG || !altG) return null;
+  return pairedVerdict(ghost, "player", ghostCtx, playedG, altG, cfg, s, (clone, r) => {
+    determinizeOpponent(clone, view, determinizeRng(s, r));
+  });
 }
 
 /* ─── Report ────────────────────────────────────────────────────── */
@@ -547,6 +674,103 @@ function controls(seeds: number[]): void {
   }
 }
 
+/**
+ * THE ABLATION LADDER. Production differs from the oracle on three axes;
+ * walking them one at a time says which one costs what.
+ *
+ * Every rung is scored on the SAME recommendations, so the comparison is
+ * paired and a rung's disagreement cannot be a different sample.
+ */
+function ladderStudy(evaluate: StateEvaluator): void {
+  const rungs = ladderRungs();
+  const cases: { d: Captured; played: SimMove; alt: SimMove }[] = [];
+
+  for (const seed of SEEDS) {
+    for (const eps of EPSILONS) {
+      if (cases.length >= LADDER_N) break;
+      const all = collect(seed, eps);
+      const fid: Fidelity = { unrepresentable: 0, legalDelta: [] };
+      for (const d of sample(all, MAX_DECISIONS, hashSeed(`coach-trust:${seed}:sample`))) {
+        if (cases.length >= LADDER_N) break;
+        const p = production(d, evaluate, seed, fid);
+        if (!p) continue;
+        const altTrue = findSemantic(d.legal, p.suggestedGhost);
+        if (!altTrue) continue;
+        cases.push({ d, played: d.move, alt: altTrue });
+      }
+      console.log(
+        `[coach-trust] ladder corpus: ${cases.length}/${LADDER_N} cases ` +
+          `(seed ${seed}, eps ${eps})`,
+      );
+    }
+  }
+
+  // rung index -> result per case (null where the rung could not run)
+  const results: (PairResult | null)[][] = rungs.map(() => []);
+  for (const c of cases) {
+    for (let r = 0; r < rungs.length; r++) {
+      results[r].push(runRung(c.d, c.played, c.alt, rungs[r], evaluate, SEEDS[0]));
+    }
+  }
+
+  const oracleRes = results[0];
+  // The ladder is scored against what the ORACLE resolved. An item the oracle
+  // could not call is not a yardstick for anything.
+  const scorable = oracleRes
+    .map((o, i) => ({ o, i }))
+    .filter((x) => x.o && (x.o.verdict === "CONFIRMED" || x.o.verdict === "CONTRADICTED"));
+
+  console.log(
+    `\nABLATION LADDER — ${cases.length} recommendations, ` +
+      `${scorable.length} the oracle resolved\n` +
+      `Each rung changes ONE thing from the rung above it.\n`,
+  );
+  console.log(
+    `rung                                 agree  sign   ran   step isolates`,
+  );
+
+  let prevAgree: number | null = null;
+  for (let r = 0; r < rungs.length; r++) {
+    const rows = scorable.map((x) => ({ o: x.o!, v: results[r][x.i] }));
+    const ran = rows.filter((x) => x.v !== null);
+    if (ran.length === 0) {
+      console.log(`  ${rungs[r].name}   — could not run`);
+      continue;
+    }
+    const sameVerdict = ran.filter((x) => x.v!.verdict === x.o.verdict).length;
+    const sameSign = ran.filter((x) => Math.sign(x.v!.delta) === Math.sign(x.o.delta)).length;
+    const agree = sameVerdict / ran.length;
+    const sign = sameSign / ran.length;
+    const step =
+      prevAgree === null
+        ? ""
+        : `${((agree - prevAgree) * 100).toFixed(1).padStart(6)} pts  ${rungs[r].isolates}`;
+    console.log(
+      `  ${rungs[r].name}  ${(100 * agree).toFixed(0).padStart(4)}%  ` +
+        `${(100 * sign).toFixed(0).padStart(4)}%  ${String(ran.length).padStart(4)}  ${step}`,
+    );
+    prevAgree = agree;
+  }
+
+  console.log(
+    `\n  "agree" = same verdict as the oracle; "sign" = same DIRECTION, which\n` +
+      `  is the more forgiving read and the one that matters for advice —\n` +
+      `  a rung that picks the right move with a wider bar is still useful.`,
+  );
+
+  // Where the ladder cannot even run is itself an attribution: the ghost
+  // rungs drop any case whose moves it cannot represent.
+  for (let r = 0; r < rungs.length; r++) {
+    const missing = scorable.filter((x) => results[r][x.i] === null).length;
+    if (missing > 0) {
+      console.log(
+        `  ${rungs[r].name}: ${missing} of ${scorable.length} cases unrunnable ` +
+          `(the ghost could not represent both arms)`,
+      );
+    }
+  }
+}
+
 function main(): void {
   const evaluate = createBoardEvaluator(ARTIFACT ?? undefined);
   // Refuse to run degraded. A silent fallback here would compare two different
@@ -567,6 +791,10 @@ function main(): void {
 
   if (CONTROLS_ONLY) {
     controls(SEEDS);
+    return;
+  }
+  if (LADDER_ONLY) {
+    ladderStudy(evaluate as StateEvaluator);
     return;
   }
 
