@@ -118,6 +118,18 @@ const CONTROL_N = numArg("--control-n", 30);
 /** Run the ablation ladder and stop. */
 const LADDER_ONLY = process.argv.includes("--ladder");
 const LADDER_N = numArg("--ladder-n", 200);
+/** Run the horizon sweep and stop, e.g. --horizon-sweep 6,12,20 */
+const SWEEP_RAW = arg("--horizon-sweep");
+const SWEEP_HORIZONS = SWEEP_RAW
+  ? SWEEP_RAW.split(",").map((s) => {
+      const n = Number(s.trim());
+      if (!Number.isInteger(n) || n < 1) {
+        console.error(`[coach-trust] --horizon-sweep expects whole plies, got ${JSON.stringify(s)}`);
+        process.exit(1);
+      }
+      return n;
+    })
+  : null;
 // Multi-seed by default. Every single-seed reading this project has taken has
 // been wrong — strategist_duel.ts carries the list.
 const SEEDS = (arg("--seeds") ?? "1,2,3")
@@ -704,10 +716,20 @@ function controls(seeds: number[]): void {
  * Every rung is scored on the SAME recommendations, so the comparison is
  * paired and a rung's disagreement cannot be a different sample.
  */
-function ladderStudy(evaluate: StateEvaluator): void {
-  const rungs = ladderRungs();
-  const cases: { d: Captured; played: SimMove; alt: SimMove }[] = [];
+interface LadderCase {
+  d: Captured;
+  played: SimMove;
+  alt: SimMove;
+}
 
+/**
+ * The cases are whatever PRODUCTION surfaces at its shipped settings. That is
+ * deliberate and it is what makes the ladder and the horizon sweep answerable:
+ * the question is never "what would a different coach flag" but "of the things
+ * the shipped coach says today, which are right, and what would fix the rest".
+ */
+function collectCases(evaluate: StateEvaluator, label: string): LadderCase[] {
+  const cases: LadderCase[] = [];
   for (const seed of SEEDS) {
     for (const eps of EPSILONS) {
       if (cases.length >= LADDER_N) break;
@@ -722,11 +744,107 @@ function ladderStudy(evaluate: StateEvaluator): void {
         cases.push({ d, played: d.move, alt: altTrue });
       }
       console.log(
-        `[coach-trust] ladder corpus: ${cases.length}/${LADDER_N} cases ` +
+        `[coach-trust] ${label} corpus: ${cases.length}/${LADDER_N} cases ` +
           `(seed ${seed}, eps ${eps})`,
       );
     }
   }
+  return cases;
+}
+
+/**
+ * THE HORIZON SWEEP. The ladder says truncation is the dominant error and the
+ * value model recovers part of it. Depth and leaf quality are SUBSTITUTES —
+ * a perfect leaf at h=6 is the oracle, and so is an unbounded horizon with no
+ * leaf at all — so the 15 remaining points can be bought either way, at very
+ * different prices. Depth costs compute on every request forever and adds
+ * variance; a better leaf costs one training run and is free at inference.
+ *
+ * This decides which to fund. If depth recovers most of the gap, the tree
+ * trainer is unnecessary. If it barely moves, the leaf is binding and the
+ * trainer is justified.
+ *
+ * The cases are held FIXED at what production surfaces today; only the horizon
+ * used to evaluate them varies. Varying the horizon that also selects the
+ * cases would change the question between arms.
+ */
+function horizonSweep(evaluate: StateEvaluator, horizons: number[]): void {
+  const cases = collectCases(evaluate, "sweep");
+  const oracleRes = cases.map((c) => oracle(c.d, c.alt, SEEDS[0]));
+  const scorable = oracleRes
+    .map((o, i) => ({ o, i }))
+    .filter((x) => x.o && (x.o.verdict === "CONFIRMED" || x.o.verdict === "CONTRADICTED"));
+
+  console.log(
+    `\nHORIZON SWEEP — ${cases.length} recommendations, ${scorable.length} the oracle resolved\n` +
+      `Cases fixed at production's own settings; only the evaluating horizon moves.\n`,
+  );
+
+  // Two arms per horizon: the clean one (perfect information, full budget)
+  // isolates depth itself, and the production-shaped one says what a shipped
+  // coach would actually get for the extra compute.
+  for (const mode of [
+    `perfect info, ${ORACLE_ROLLOUTS} rollouts — isolates depth itself`,
+    `determinized, ${PROD_ROLLOUTS} rollouts — what a shipped coach would get`,
+  ]) {
+    const ghost = mode.startsWith("determinized");
+    const rollouts = ghost ? PROD_ROLLOUTS : ORACLE_ROLLOUTS;
+    console.log(`  ${mode}`);
+    const flagsByH: boolean[][] = [];
+    for (const h of horizons) {
+      const rung: Rung = {
+        name: `h${h}`,
+        ghost,
+        horizon: h,
+        rollouts,
+        evaluator: "model",
+        isolates: "",
+      };
+      const res = scorable.map((x) =>
+        runRung(cases[x.i].d, cases[x.i].played, cases[x.i].alt, rung, evaluate, SEEDS[0]),
+      );
+      const ran = res.filter((v) => v !== null);
+      const flags = res.map((v, k) => v !== null && v.verdict === scorable[k].o!.verdict);
+      flagsByH.push(flags);
+      const agree = ran.length > 0 ? flags.filter(Boolean).length / ran.length : 0;
+      const sign =
+        ran.length > 0
+          ? res.filter((v, k) => v !== null && Math.sign(v.delta) === Math.sign(scorable[k].o!.delta))
+              .length / ran.length
+          : 0;
+      console.log(
+        `    horizon ${String(h).padStart(2)}   agree ${(100 * agree).toFixed(0).padStart(3)}%   ` +
+          `sign ${(100 * sign).toFixed(0).padStart(3)}%   ran ${String(ran.length).padStart(3)}`,
+      );
+    }
+    // Paired across horizons, same cases: McNemar against the shallowest.
+    for (let k = 1; k < horizons.length; k++) {
+      let lost = 0;
+      let gained = 0;
+      for (let i = 0; i < flagsByH[0].length; i++) {
+        if (flagsByH[0][i] && !flagsByH[k][i]) lost += 1;
+        else if (!flagsByH[0][i] && flagsByH[k][i]) gained += 1;
+      }
+      const n = lost + gained;
+      const z = n > 0 ? (gained - lost) / Math.sqrt(n) : 0;
+      console.log(
+        `      h${horizons[0]} -> h${horizons[k]}:  lost ${String(lost).padStart(3)}  ` +
+          `gained ${String(gained).padStart(3)}  discordant ${String(n).padStart(3)}  ` +
+          `z=${z.toFixed(2)}  ` +
+          (Math.abs(z) > 1.96
+            ? z > 0
+              ? "SEPARABLE — depth buys agreement."
+              : "SEPARABLE IN THE WRONG DIRECTION — deeper is worse."
+            : "NOT SEPARABLE — depth is not the lever."),
+      );
+    }
+    console.log("");
+  }
+}
+
+function ladderStudy(evaluate: StateEvaluator): void {
+  const rungs = ladderRungs();
+  const cases = collectCases(evaluate, "ladder");
 
   // rung index -> result per case (null where the rung could not run)
   const results: (PairResult | null)[][] = rungs.map(() => []);
@@ -846,6 +964,10 @@ function main(): void {
 
   if (CONTROLS_ONLY) {
     controls(SEEDS);
+    return;
+  }
+  if (SWEEP_HORIZONS) {
+    horizonSweep(evaluate as StateEvaluator, SWEEP_HORIZONS);
     return;
   }
   if (LADDER_ONLY) {
