@@ -143,6 +143,18 @@ const ROLLOUT_BUDGETS = ROLLOUT_SWEEP_RAW
     })
   : null;
 const DEEP_HORIZON = numArg("--deep-horizon", 12);
+/** Can a CHEAP oracle tell moot advice from live advice? e.g. --moot-check 32,64,128 */
+const MOOT_RAW = arg("--moot-check");
+const MOOT_BUDGETS = MOOT_RAW
+  ? MOOT_RAW.split(",").map((s) => {
+      const n = Number(s.trim());
+      if (!Number.isInteger(n) || n < 1) {
+        console.error(`[coach-trust] --moot-check expects whole counts, got ${JSON.stringify(s)}`);
+        process.exit(1);
+      }
+      return n;
+    })
+  : null;
 // Multi-seed by default. Every single-seed reading this project has taken has
 // been wrong — strategist_duel.ts carries the list.
 const SEEDS = (arg("--seeds") ?? "1,2,3")
@@ -952,6 +964,80 @@ function rolloutSweep(evaluate: StateEvaluator, budgets: number[], deepH: number
   );
 }
 
+/**
+ * IS MOOT ADVICE DETECTABLE CHEAPLY?
+ *
+ * 20% of what the coach surfaces is advice the oracle proves cannot change the
+ * result — correct, and irrelevant. Suppressing it needs a predicate production
+ * can afford, and the obvious candidates all fail: production's own Q predicts
+ * mootness at AUC 0.503 (chance), a model over every production feature reaches
+ * 0.691 held-out, and a turn threshold hides two good calls per moot one.
+ *
+ * But production does not need to test every decision — only the ~6 per game it
+ * is about to put a chip on. So the question is not "is there a cheap
+ * predictor" but "how small can the ORACLE be and still tell moot from live".
+ *
+ * The trap this measures rather than assumes: "moot" means every paired rollout
+ * came out identical, and FEWER rollouts make that MORE likely by chance. A
+ * cheap oracle is therefore biased toward over-calling mootness, which would
+ * silently suppress real advice. False-positive rate is reported first for
+ * exactly that reason.
+ */
+function mootCheck(evaluate: StateEvaluator, budgets: number[]): void {
+  const cases = collectCases(evaluate, "moot-check");
+  const truth = cases.map((c) => oracle(c.d, c.alt, SEEDS[0]));
+  const usable = truth
+    .map((o, i) => ({ o, i }))
+    .filter((x) => x.o !== null) as { o: PairResult; i: number }[];
+
+  console.log(
+    `\nMOOT DETECTION — ${usable.length} recommendations, reference oracle at ` +
+      `${ORACLE_ROLLOUTS} rollouts\n` +
+      `  base rate: ${usable.filter((x) => x.o.verdict === "outcome-equivalent").length} moot ` +
+      `(${((100 * usable.filter((x) => x.o.verdict === "outcome-equivalent").length) / usable.length).toFixed(1)}%)\n`,
+  );
+  console.log(
+    `  budget   calls moot   of those really moot   catches   cost/decision`,
+  );
+  for (const r of budgets) {
+    let flagged = 0;
+    let correct = 0;
+    let missed = 0;
+    const started = Date.now();
+    for (const x of usable) {
+      const c = cases[x.i];
+      const cheap = pairedVerdict(
+        c.d.state,
+        c.d.actor,
+        c.d.ctx,
+        c.played,
+        c.alt,
+        { rollouts: r, horizon: null, evaluate: null },
+        hashSeed(`coach-trust:moot:${r}:${c.d.gameId}:${c.d.turn}`),
+      );
+      const saysM = cheap !== null && cheap.verdict === "outcome-equivalent";
+      const isM = x.o.verdict === "outcome-equivalent";
+      if (saysM) {
+        flagged += 1;
+        if (isM) correct += 1;
+      } else if (isM) missed += 1;
+    }
+    const secs = (Date.now() - started) / 1000 / Math.max(1, usable.length);
+    const totalMoot = correct + missed;
+    console.log(
+      `  ${String(r).padStart(4)}    ${String(flagged).padStart(5)}   ` +
+        `${((100 * correct) / Math.max(1, flagged)).toFixed(0).padStart(20)}%   ` +
+        `${((100 * correct) / Math.max(1, totalMoot)).toFixed(0).padStart(6)}%   ` +
+        `${secs.toFixed(2)}s`,
+    );
+  }
+  console.log(
+    `\n  "of those really moot" is PRECISION — how much of what a cheap oracle\n` +
+      `  would suppress is genuinely irrelevant. Below ~90% it is hiding real\n` +
+      `  advice, and the whole point of suppression was protecting credibility.`,
+  );
+}
+
 function ladderStudy(evaluate: StateEvaluator): void {
   const rungs = ladderRungs();
   const cases = collectCases(evaluate, "ladder");
@@ -1074,6 +1160,10 @@ function main(): void {
 
   if (CONTROLS_ONLY) {
     controls(SEEDS);
+    return;
+  }
+  if (MOOT_BUDGETS) {
+    mootCheck(evaluate as StateEvaluator, MOOT_BUDGETS);
     return;
   }
   if (ROLLOUT_BUDGETS) {

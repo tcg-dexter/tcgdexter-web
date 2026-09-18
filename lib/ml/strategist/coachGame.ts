@@ -32,6 +32,7 @@ import {
   describeMove,
   hashSeed,
   type DecisionPolicy,
+  type SimMove,
   type StateEvaluator,
 } from "@/lib/engine/sim";
 
@@ -41,8 +42,14 @@ import {
   type CalibrationArtifact,
 } from "./calibrate";
 import { determinizeLogSide, determinizeRng } from "./determinize";
-import { emptyScanStats, scanLog, type LogRow, type ScanStats } from "./logDecisions";
-import { analyzeDecision, sameMove } from "./regret";
+import {
+  emptyScanStats,
+  scanLog,
+  type LogDecision,
+  type LogRow,
+  type ScanStats,
+} from "./logDecisions";
+import { analyzeDecision, sameMove, semanticMoveKey } from "./regret";
 
 export type Severity = "ok" | "inaccuracy" | "mistake" | "blunder";
 
@@ -86,6 +93,17 @@ export interface CoachedDecision {
    *  decision's. Exposed so a consumer can weight or exclude them rather than
    *  discovering the difference as unexplained noise. */
   materialized: boolean;
+  /** The oracle proves both moves lead to the same result — the advice is
+   *  CORRECT and IRRELEVANT. Null when not checked (see CoachOptions.verifyMoot).
+   *
+   *  A "blunder" chip on a game the player had already won reads as the coach
+   *  not understanding the game, and 20% of surfaced advice is like this,
+   *  rising past 30% after turn 21. Nothing production computes predicts it:
+   *  its own Q is at chance (AUC 0.503), a model over every available feature
+   *  reaches 0.691, and a turn threshold hides two good calls per moot one. So
+   *  it is VERIFIED rather than predicted, on the few decisions that would
+   *  carry a chip. */
+  moot: boolean | null;
 }
 
 export interface CoachedGame {
@@ -123,14 +141,94 @@ export interface CoachOptions {
    *  class and the same strength class, so it is a drop-in candidate worth
    *  measuring rather than assuming. */
   rolloutPolicy?: () => DecisionPolicy;
+  /** Verify, on decisions that would carry a chip, whether the advice can
+   *  change the result at all — by rolling BOTH moves to a real terminal with
+   *  no evaluator, which is the only thing measured to detect it.
+   *
+   *  Runs on roughly 6 decisions a game rather than 26, which is what makes an
+   *  oracle affordable here. Measured against a 480-rollout reference:
+   *
+   *      24 rollouts   84% precision, 100% recall, 0.05 s
+   *      96 rollouts   91% precision, 100% recall, 0.20 s
+   *     192 rollouts   98% precision, 100% recall, 0.39 s
+   *
+   *  Recall is 100% everywhere because genuinely equivalent moves agree in
+   *  every rollout; the budget buys PRECISION, i.e. not suppressing real
+   *  advice. Below ~90% suppression costs more credibility than it protects,
+   *  so 192 is the default and 24 is not a safe economy. */
+  verifyMoot?: boolean | { rollouts?: number };
 }
 
 /** Measured over the full 271-log corpus (4,698 valued decisions). */
+/** 98% precision / 100% recall against a 480-rollout reference. */
+export const MOOT_ROLLOUTS = 192;
+
 export const DEFAULT_SEVERITY = {
   inaccuracy: 0.0903,
   mistake: 0.2412,
   blunder: 0.5849,
 };
+
+/**
+ * Would following this advice have changed anything?
+ *
+ * Two arms, rolled to a REAL TERMINAL with no evaluator consulted, so the
+ * answer does not depend on the same value model that produced the advice.
+ * "Moot" is every paired rollout coming out identical — which is a claim about
+ * the game, not about the estimator.
+ *
+ * Returns null when it cannot be determined, which is NOT the same as false and
+ * must not be rendered as "this mattered".
+ */
+function verifyMoot(
+  d: LogDecision,
+  played: SimMove,
+  alternative: SimMove,
+  rollouts: number,
+  seed: number,
+): boolean | null {
+  try {
+    const wanted = new Set([semanticMoveKey(played), semanticMoveKey(alternative)]);
+    const seen = new Set<string>();
+    const a = analyzeDecision(d.state, "player", d.ctx, played, {
+      rollouts,
+      horizon: null,
+      evaluate: null,
+      seed,
+      // THE SAME determinization the scored analysis uses, and for the same
+      // reason. A log replay knows only what surfaced, so both decks are
+      // empty; rolled to a terminal untreated, BOTH arms deck out identically
+      // in every rollout and every decision reads as moot. Measured before
+      // this hook existed: 83% "moot" on real logs against 20% on self-play
+      // positions — a number that would have suppressed almost every chip.
+      //
+      // Pure in the rollout index, so the arms stay paired under common
+      // random numbers; varying it per ARM would make the comparison a lie.
+      prepare: (clone, r) => {
+        const rng = determinizeRng(seed, r);
+        determinizeLogSide(clone, "opponent", rng);
+        if (clone.sides.player.deck.length === 0) {
+          determinizeLogSide(clone, "player", rng);
+        }
+      },
+      candidateFilter: (m) => {
+        const k = semanticMoveKey(m);
+        if (!wanted.has(k) || seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      },
+    });
+    if (!a || a.candidates.length < 2) return null;
+    const i = a.candidates.findIndex((c) => semanticMoveKey(c.move) === semanticMoveKey(played));
+    const j = a.candidates.findIndex(
+      (c) => semanticMoveKey(c.move) === semanticMoveKey(alternative),
+    );
+    if (i < 0 || j < 0) return null;
+    return a.candidates[i].samples.every((v, k) => v === a.candidates[j].samples[k]);
+  } catch {
+    return null;
+  }
+}
 
 export function coachGame(row: LogRow, options: CoachOptions): CoachedGame {
   const rollouts = options.rollouts ?? 16;
@@ -138,6 +236,12 @@ export function coachGame(row: LogRow, options: CoachOptions): CoachedGame {
   const seed = options.seed ?? 1;
   const severity = options.severity ?? DEFAULT_SEVERITY;
   const minStakes = options.minStakes ?? 0.02;
+  const mootRollouts =
+    options.verifyMoot === true
+      ? MOOT_ROLLOUTS
+      : typeof options.verifyMoot === "object" && options.verifyMoot
+        ? (options.verifyMoot.rollouts ?? MOOT_ROLLOUTS)
+        : 0;
   const makePilot = options.rolloutPolicy ?? (() => new HeuristicPolicy());
 
   const stats = emptyScanStats();
@@ -214,6 +318,22 @@ export function coachGame(row: LogRow, options: CoachOptions): CoachedGame {
       skilled,
       legalCount: d.legal.length,
       materialized: d.materialized,
+      // Only decisions that would actually carry a chip. Checking every
+      // decision would triple the cost of a report to answer a question
+      // nobody is asking about the ones we stay quiet on.
+      moot:
+        mootRollouts > 0 &&
+        alt !== null &&
+        analysis.significant &&
+        severityOf(analysis.regret, severity) !== "ok"
+          ? verifyMoot(
+              d,
+              played,
+              analysis.candidates[alt].move,
+              mootRollouts,
+              hashSeed(`coach-moot:${row.id}:${d.actionIndex}`),
+            )
+          : null,
     });
   });
 

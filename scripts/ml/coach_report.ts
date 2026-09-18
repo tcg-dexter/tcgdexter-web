@@ -72,6 +72,10 @@ const ARTIFACT = arg("--artifact");
 // Swap the rollout pilot. Q means "the value of this move if play continues
 // like THIS", so the pilot is part of the definition, not a detail.
 const PILOT = arg("--pilot");
+// Verify, on decisions that would carry a chip, whether the advice could
+// change the result at all. Off by default: it adds a real-terminal oracle on
+// ~6 decisions a game.
+const VERIFY_MOOT = process.argv.includes("--verify-moot");
 
 interface Row extends LogRow {
   result: string | null;
@@ -204,6 +208,9 @@ function main(): void {
   }[] = [];
   const allRegrets: number[] = [];
   let significantCount = 0;
+  let mootSeen = 0;
+  let mootTrue = 0;
+  let mootUnknown = 0;
   let analyzed = 0;
   const startedAt = Date.now();
 
@@ -229,6 +236,7 @@ function main(): void {
     // logDecisions.ts out of move_agreement.ts.
     const game = coachGame(row, {
       evaluate: evaluate as StateEvaluator,
+      verifyMoot: VERIFY_MOOT,
       rollouts: ROLLOUTS,
       horizon: HORIZON,
       seed: SEED,
@@ -249,6 +257,9 @@ function main(): void {
     for (const d of game.decisions) {
       analyzed += 1;
       allRegrets.push(d.regret);
+      if (d.moot === true) mootTrue += 1;
+      else if (d.moot === false) mootSeen += 1;
+      else if (VERIFY_MOOT && d.significant && d.severity !== "ok") mootUnknown += 1;
       const rec = perLog.get(row.id)!;
       rec.regrets.push(d.regret);
       rec.options.push(d.legalCount);
@@ -334,6 +345,15 @@ function main(): void {
     `  flagged as significant (regret > 2 SE): ${significantCount} / ${analyzed} = ` +
       `${((100 * significantCount) / Math.max(1, analyzed)).toFixed(1)}%\n`,
   );
+  if (VERIFY_MOOT) {
+    const checked = mootSeen + mootTrue + mootUnknown;
+    console.log(
+      `  MOOT CHECK (chip-worthy decisions rolled to a real terminal):\n` +
+        `    checked ${checked}  moot ${mootTrue} ` +
+        `(${((100 * mootTrue) / Math.max(1, checked)).toFixed(0)}% of advice cannot change the result)  ` +
+        `undetermined ${mootUnknown}\n`,
+    );
+  }
 
   // ── The validation ────────────────────────────────────────────────
   console.log("CALIBRATION — does the Q every regret is built from predict the result?");
@@ -584,6 +604,24 @@ function main(): void {
         `decisions ${String(kept).padStart(5)}  players ${w.players}  ` +
         `within-player ${(100 * w.pts).toFixed(1).padStart(5)} pts  z=${w.z.toFixed(2)}` +
         (w.z > 1.96 ? "  SEPARABLE" : ""),
+    );
+  }
+
+  // The two effects are not the same effect, so the cross decides the
+  // operating point rather than one margin standing in for both.
+  console.log("\nOPERATING POINT — observed-only x stakes floor");
+  console.log("  floor    all decisions        observed only");
+  for (const floor of [0.02, 0.05, 0.1, 0.2]) {
+    const a = withinPlayerZ(capRecs, floor);
+    const o = withinPlayerZ(
+      capRecs.filter((r) => !r.materialized),
+      floor,
+    );
+    console.log(
+      `  ${(100 * floor).toFixed(0).padStart(2)} pts   ` +
+        `${(100 * a.pts).toFixed(1).padStart(5)} pts z=${a.z.toFixed(2)} (${a.players}p)   ` +
+        `${(100 * o.pts).toFixed(1).padStart(5)} pts z=${o.z.toFixed(2)} (${o.players}p)` +
+        (o.z > 1.96 ? "  SEPARABLE" : ""),
     );
   }
 
