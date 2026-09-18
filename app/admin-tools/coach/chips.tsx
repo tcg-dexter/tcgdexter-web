@@ -31,8 +31,18 @@ export function decisionChip(d: {
   skilled: boolean;
   significant: boolean;
   severity: Severity;
+  moot?: boolean | null;
 }): ChipKind | null {
   if (d.skilled) return "brilliant";
+  // Correct, and irrelevant. The oracle proved both moves reach the same
+  // result, so a chip here would be a verdict on a game that was already
+  // decided — which reads as the coach not understanding the game. About a
+  // fifth of what would otherwise be flagged, rising past 30% after turn 21.
+  //
+  // `null` is NOT `false`. Undetermined means the check could not run, and
+  // must render normally rather than be read as "this mattered" — hence the
+  // explicit `=== true`.
+  if (d.moot === true) return null;
   if (d.significant && d.severity !== "ok") return d.severity;
   return null;
 }

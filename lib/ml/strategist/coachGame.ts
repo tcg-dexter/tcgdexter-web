@@ -159,13 +159,24 @@ export interface CoachOptions {
   verifyMoot?: boolean | { rollouts?: number };
 }
 
-/** Measured over the full 271-log corpus (4,698 valued decisions). */
 /** 98% precision / 100% recall against a 480-rollout reference. */
 export const MOOT_ROLLOUTS = 192;
 
+/** Refit over 371 logs / 9,620 valued decisions at 78% coverage.
+ *
+ *  These are QUANTILES of the regret distribution, so they describe a
+ *  POPULATION — and the population changed when coverage did. The previous
+ *  values (0.0903 / 0.2412) were fitted on 4,698 decisions at 53% coverage and
+ *  describe a population that no longer exists; carrying them forward makes the
+ *  coach under-report, because the ~4,900 newly readable decisions sit almost
+ *  entirely below the old bars.
+ *
+ *  Note `blunder` did not move at all. The coach did not start finding more
+ *  disasters when coverage rose — it started seeing the ordinary play it had
+ *  been blind to. */
 export const DEFAULT_SEVERITY = {
-  inaccuracy: 0.0903,
-  mistake: 0.2412,
+  inaccuracy: 0.0533,
+  mistake: 0.1739,
   blunder: 0.5849,
 };
 

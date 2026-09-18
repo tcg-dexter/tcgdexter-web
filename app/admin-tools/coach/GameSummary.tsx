@@ -51,10 +51,16 @@ export default function GameSummary({ game }: GameSummaryProps) {
       </div>
 
       {/* Deliberately says nothing about how much of the log was read.
-          `meanCapture` averages over every decision that had something at
-          stake, NOT over the handful shown below, so phrasing it as "the
-          decisions below" would attribute a whole-game number to a filtered
-          subset. This wording is opaque about coverage without being false. */}
+          The denominator has narrowed twice and is narrower than it looks:
+          `meanCapture` averages `capture` over decisions that are NOT
+          `materialized` and have stakes above 0.05. Recovered decisions are
+          excluded because they carry no skill signal (+0.6 pts, z=0.22) — the
+          reconstructed hand is a floor, so the alternatives capture divides by
+          are incomplete.
+          So the engine spec's suggested line, "the value available at the
+          decisions we could read", is false on its own terms: recovered
+          decisions WERE read and are not counted. This wording claims no
+          completeness, which keeps it both opaque and true. */}
       <p className="mt-3 text-xs leading-relaxed text-text-secondary">
         {game.meanCapture === null
           ? "Nothing in this game had enough at stake to score \u2014 there was no value on the table to take or miss."

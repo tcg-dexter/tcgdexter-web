@@ -19,6 +19,9 @@ export interface TimelineDecision {
   stakes: number;
   skilled: boolean;
   legalCount: number;
+  /** The oracle proved the advice cannot change the result. Such a row is
+   *  dropped entirely by the filter below — see decisionChip. */
+  moot: boolean | null;
 }
 
 export interface DecisionTimelineProps {

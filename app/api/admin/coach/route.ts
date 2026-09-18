@@ -35,7 +35,14 @@ const ROLLOUTS_MIN = 4;
 const ROLLOUTS_MAX = 32;
 const HORIZON_DEFAULT = 6;
 const HORIZON_MIN = 1;
-const HORIZON_MAX = 16;
+// 6, not 16. Measured at 16 rollouts: h6 77% agreement, h12 68%, h20 54%.
+// Every value above 6 makes the coach WORSE — deeper search still picks the
+// right direction but can no longer resolve it, and verdicts decay into
+// "unresolved". Determinization is the binding constraint, not samples, so
+// more rollouts do not rescue it at any budget up to 16x compute. "Look
+// further ahead" is exactly what a caller would assume helps, which is what
+// made the old ceiling a footgun.
+const HORIZON_MAX = 6;
 const SEED_DEFAULT = 1;
 
 /** A decision as returned to the client. `qChosen`/`qBest` are the search's raw
@@ -185,7 +192,12 @@ export async function POST(req: Request) {
   const debug = new URL(req.url).searchParams.get("debug") === "1";
 
   try {
-    const game = coachGame(row, { evaluate, rollouts, horizon, seed });
+    // verifyMoot: ~20% of what the coach surfaces is advice that cannot change
+    // the result, and nothing production computes predicts it (its own Q is at
+    // chance, AUC 0.503). So it is verified against a real-terminal oracle, on
+    // the ~6 decisions a game that would carry a chip rather than all ~26 —
+    // which is what makes an oracle affordable per request. ~2.3 s on top of ~4.
+    const game = coachGame(row, { evaluate, rollouts, horizon, seed, verifyMoot: true });
 
     // scanLog does not throw on a log it cannot read — it counts the failure
     // and returns, leaving an empty game. Surface that as 422 rather than
