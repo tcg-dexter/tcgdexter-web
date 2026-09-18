@@ -77,6 +77,12 @@ const DECKS_FILE =
 interface Truth {
   kind: string;
   card: string | null;
+  /** How many moves the human REALLY had, and how big their hand REALLY was.
+   *  Reconstruction can only ever be a subset, and the size of that shortfall
+   *  is what decides whether a recovered decision is graded against the real
+   *  alternatives or against an impoverished stub of them. */
+  options: number;
+  handSize: number;
 }
 
 /** Play a whole game with a scripted human, recording what the human actually
@@ -111,6 +117,8 @@ function playAndRecord(deck: string, seed: number): { session: GameSession; trut
       truth.push({
         kind: String(m.kind ?? "?"),
         card: typeof m.card === "string" ? m.card : null,
+        options: options.length,
+        handSize: session.state.sides.player.hand.length,
       });
     }
     applyHumanMove(session, move);
@@ -154,6 +162,10 @@ function main(): void {
   const unmatchedBy = new Map<string, number>();
   const unmatchedCards = new Map<string, number>();
   const truthKinds = new Map<string, number>();
+  const trueOptions: number[] = [];
+  const trueHand: number[] = [];
+  const reconOptions: number[] = [];
+  const reconHand: number[] = [];
 
   console.log(`[coverage] ${GAMES} games over ${decks.length} benchmark decks, seed ${SEED}`);
 
@@ -173,7 +185,10 @@ function main(): void {
         deck_list: deck.list,
       },
       stats,
-      () => {},
+      (d) => {
+        reconOptions.push(d.legal.length);
+        reconHand.push(d.state.sides.player.hand.length);
+      },
     );
     totalTruth += truth.length;
     totalFound += stats.decisions;
@@ -183,7 +198,11 @@ function main(): void {
     merge(missBy, stats.missBy);
     merge(unmatchedBy, stats.unmatchedBy);
     merge(unmatchedCards, stats.unmatchedCards);
-    for (const t of truth) truthKinds.set(t.kind, (truthKinds.get(t.kind) ?? 0) + 1);
+    for (const t of truth) {
+      truthKinds.set(t.kind, (truthKinds.get(t.kind) ?? 0) + 1);
+      trueOptions.push(t.options);
+      trueHand.push(t.handSize);
+    }
   }
 
   const emitterGap = totalTruth - totalFound;
@@ -205,6 +224,25 @@ function main(): void {
     `  ...that are real decisions (>=2 moves) ${String(totalMatched - totalTrivial).padStart(5)}   ` +
       `${((100 * (totalMatched - totalTrivial)) / Math.max(1, totalTruth)).toFixed(1).padStart(5)}%   ` +
       `(${totalTrivial} were forced)`,
+  );
+
+  // RECOVERING a decision is not the same as grading it well. The coach values
+  // every legal move, so if the reconstructed hand is a stub of the real one
+  // the alternatives are incomplete: `regret` is biased DOWN (fewer arms, a
+  // lower max) and `capture` biased UP (a larger share of a smaller range).
+  // Coverage that rose while this gap widened would be a worse instrument
+  // wearing a better number, so the two are always reported together.
+  const avg = (xs: number[]) => (xs.length === 0 ? 0 : xs.reduce((s, x) => s + x, 0) / xs.length);
+  console.log(`\n  ARE RECOVERED DECISIONS GRADED AGAINST THE REAL ALTERNATIVES?`);
+  console.log(
+    `    legal moves   true ${avg(trueOptions).toFixed(1).padStart(5)}   ` +
+      `reconstructed ${avg(reconOptions).toFixed(1).padStart(5)}   ` +
+      `(${((100 * avg(reconOptions)) / Math.max(0.01, avg(trueOptions))).toFixed(0)}% of the real choice set)`,
+  );
+  console.log(
+    `    hand size     true ${avg(trueHand).toFixed(1).padStart(5)}   ` +
+      `reconstructed ${avg(reconHand).toFixed(1).padStart(5)}   ` +
+      `(${((100 * avg(reconHand)) / Math.max(0.01, avg(trueHand))).toFixed(0)}% of the real hand)`,
   );
 
   console.log(`\n  the reducer gap, by reason:`);

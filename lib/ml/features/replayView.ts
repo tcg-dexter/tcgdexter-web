@@ -248,6 +248,67 @@ export function stockReplayDeck(
   return side.deck.length;
 }
 
+/** Action types whose card was, by the log's own testimony, in the player's
+ *  HAND immediately before the action. Deliberately excludes `attack`,
+ *  `ability_used` and `retreat`, whose card is in PLAY — materialising one of
+ *  those into hand would invent a board state rather than recover one. */
+const PLAYED_FROM_HAND = new Set([
+  "play_item",
+  "play_supporter",
+  "play_tool",
+  "play_stadium",
+  "attach_energy",
+  "play_to_bench",
+  "evolve",
+]);
+
+/**
+ * Put back a card the log says was played but the reconstruction never saw.
+ *
+ * The replay reducer learns cards as they surface, and when a played card was
+ * never observed it fabricates one straight into the DISCARD
+ * (`popCardByName(side.hand, name) ?? makeCard(name)` in reducer.ts). That is
+ * correct for replay — the card's destination is the discard either way — but
+ * it means the card is never in hand in ANY snapshot. A per-decision consumer
+ * then asks "was this card in hand before the move?" and gets `false`
+ * structurally, for every card the reducer had not already seen, however well
+ * the engine supports it.
+ *
+ * So this is not a missing feature in either component; it is the seam between
+ * them. The log stating that the player played a card IS evidence the card was
+ * in hand, and this recovers that — the same reasoning as `stockReplayDeck`,
+ * which reconstructs a deck the replay left empty.
+ *
+ * Conservation is preserved: the card is taken from the reconstructed deck
+ * when it is there, and otherwise fabricated while dropping one deck card, so
+ * the 60-card accounting that `estimateDeckCount` depends on does not drift.
+ *
+ * Returns true when it changed the state.
+ */
+export function materializePlayedCard(
+  state: GameState,
+  actor: "player" | "opponent",
+  actionType: string,
+  cardName: string | null,
+): boolean {
+  if (!cardName || !PLAYED_FROM_HAND.has(actionType)) return false;
+  const side = actor === "player" ? state.sides.player : state.sides.opponent;
+  const wanted = cardName.toLowerCase();
+  if (side.hand.some((c) => c.name.toLowerCase() === wanted)) return false;
+
+  const fromDeck = side.deck.findIndex((c) => c.name.toLowerCase() === wanted);
+  if (fromDeck >= 0) {
+    side.hand.push(side.deck.splice(fromDeck, 1)[0]);
+    return true;
+  }
+  // Not in the reconstructed deck either — the deck list may be absent, or
+  // this printing may not have been stocked. Fabricate, and pay for it out of
+  // the deck so hand + deck does not silently grow past 60.
+  side.hand.push(stockCard(cardName));
+  if (side.deck.length > 0) side.deck.pop();
+  return true;
+}
+
 /** Repair ONE replay state into a view the models can legitimately score.
  *
  *  Factored out of replayTurnViews so per-DECISION consumers (the move

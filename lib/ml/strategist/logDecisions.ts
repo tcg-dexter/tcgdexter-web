@@ -29,7 +29,12 @@ import { replay } from "@/lib/engine/replay";
 import { isTrainerSubtype } from "@/lib/engine/catalog";
 import { legalMoves, type PlayerView, type SimMove, type TurnContext } from "@/lib/engine/sim";
 import type { GameState } from "@/lib/engine/types";
-import { hydrateState, replayViewAt, stockReplayDeck } from "@/lib/ml/features/replayView";
+import {
+  hydrateState,
+  materializePlayedCard,
+  replayViewAt,
+  stockReplayDeck,
+} from "@/lib/ml/features/replayView";
 
 /** Action types that represent a CHOICE the player made. Draws, prize takes
  *  and knockouts are consequences, not decisions, and including them would
@@ -347,6 +352,12 @@ export function scanLog(
     const before = i === 0 ? r.initialState : r.states[i - 1];
     hydrateState(before);
     stockReplayDeck(before, "player", row.deck_list);
+    // The reducer fabricates an unseen played card straight into the discard,
+    // so it is in hand in no snapshot and every such decision reads as
+    // `absent_from_zone` however well the engine supports the card. The log
+    // saying it was played is evidence it was in hand; put it back. Measured
+    // at 60.7% of the reconstruction gap before this line existed.
+    materializePlayedCard(before, "player", action.action_type, actionCardName(action));
 
     // Per-turn one-shot flags, recovered by stepping: what has ALREADY
     // happened this turn before the decision under test. legalMoves gates
