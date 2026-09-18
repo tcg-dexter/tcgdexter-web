@@ -12,12 +12,13 @@ import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { normalizePerspective, parseBattleLog } from "@/lib/battle-log";
 import { replay } from "@/lib/engine";
-import { replayTurnViews } from "./replayView";
+import { materializePlayedCard, replayTurnViews } from "./replayView";
 import { STATE_FEATURE_NAMES, encodeStateFeatures } from "./policy";
 import { valueCurve } from "@/lib/ml/valueCurve";
 import { readValueArtifact } from "@/lib/ml/botEvaluator";
 import { swingInsights, SWING_THRESHOLD } from "@/lib/ml/coach/swings";
 import type { WinProbPoint } from "@/lib/ml/winprob";
+import type { CardInstance, GameState } from "@/lib/engine/types";
 
 const FIXTURES = join(process.cwd(), "lib", "battle-log", "fixtures");
 const ARTIFACT = join(process.cwd(), "data", "ml", "value.json");
@@ -185,5 +186,84 @@ describe("swingInsights", () => {
   it("returns nothing under low confidence", () => {
     const curve = [point(1, "player", 0.9), point(2, "player", 0.1)];
     expect(swingInsights(curve, { lowConfidence: true })).toEqual([]);
+  });
+});
+
+// materializePlayedCard — the seam between the replay reducer and any
+// per-DECISION consumer.
+//
+// The reducer, handed a played card it never saw, fabricates one straight
+// into the DISCARD (`popCardByName(hand, name) ?? makeCard(name)`). Correct
+// for replay, but it means the card is in hand in NO snapshot, so asking
+// "was this in hand before the move?" is structurally false for every card
+// the reducer had not already observed. That was 60.7% of the coach's
+// reconstruction gap, and these pin the repair's obligations.
+describe("materializePlayedCard", () => {
+  const emptySide = () => ({
+    handle: "t",
+    deck: [] as CardInstance[],
+    hand: [] as CardInstance[],
+    discard: [] as CardInstance[],
+    lostZone: [] as CardInstance[],
+    prizes: [] as CardInstance[],
+    active: null,
+    bench: [],
+    mulligans: 0,
+    energyAttachedThisTurn: false,
+    supporterPlayedThisTurn: false,
+  });
+  const stateWith = (deck: string[], hand: string[]): GameState =>
+    ({
+      sides: {
+        player: {
+          ...emptySide(),
+          deck: deck.map((n, i) => ({ id: `d${i}`, name: n, catalog: null })),
+          hand: hand.map((n, i) => ({ id: `h${i}`, name: n, catalog: null })),
+        },
+        opponent: emptySide(),
+      },
+    }) as unknown as GameState;
+
+  it("puts an absent played card into hand", () => {
+    const s = stateWith([], []);
+    expect(materializePlayedCard(s, "player", "play_item", "Ultra Ball")).toBe(true);
+    expect(s.sides.player.hand.map((c) => c.name)).toEqual(["Ultra Ball"]);
+  });
+
+  it("takes it from the reconstructed deck when it is there, preserving the count", () => {
+    const s = stateWith(["Ultra Ball", "Iono"], []);
+    materializePlayedCard(s, "player", "play_item", "Ultra Ball");
+    expect(s.sides.player.hand.map((c) => c.name)).toEqual(["Ultra Ball"]);
+    // Moved, not copied — 60-card conservation is what estimateDeckCount reads.
+    expect(s.sides.player.deck.map((c) => c.name)).toEqual(["Iono"]);
+  });
+
+  it("pays for a fabricated card out of the deck so hand + deck cannot grow", () => {
+    const s = stateWith(["Iono", "Nest Ball"], []);
+    materializePlayedCard(s, "player", "play_item", "Poké Pad");
+    expect(s.sides.player.hand).toHaveLength(1);
+    expect(s.sides.player.deck).toHaveLength(1);
+  });
+
+  it("is a no-op when the card is already in hand", () => {
+    const s = stateWith([], ["Ultra Ball"]);
+    expect(materializePlayedCard(s, "player", "play_item", "Ultra Ball")).toBe(false);
+    expect(s.sides.player.hand).toHaveLength(1);
+  });
+
+  it("refuses action types whose card is in PLAY, not hand", () => {
+    // Materialising an attacker or an ability's owner into HAND would invent a
+    // board state rather than recover one, and would turn a genuine engine
+    // gap into a silently fabricated match.
+    for (const at of ["attack", "ability_used", "retreat"]) {
+      const s = stateWith([], []);
+      expect(materializePlayedCard(s, "player", at, "N's Zoroark ex")).toBe(false);
+      expect(s.sides.player.hand).toHaveLength(0);
+    }
+  });
+
+  it("matches names case-insensitively, as the log/engine bridge does throughout", () => {
+    const s = stateWith([], ["ultra ball"]);
+    expect(materializePlayedCard(s, "player", "play_item", "Ultra Ball")).toBe(false);
   });
 });

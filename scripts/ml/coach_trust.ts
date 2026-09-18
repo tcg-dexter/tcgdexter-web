@@ -274,6 +274,13 @@ interface Item {
    *  two moves are genuinely equivalent" from "this position was already
    *  decided and nothing either player does here matters". */
   oracleQ: number;
+  /** PRODUCTION's own estimate of the same thing. The oracle is what decides
+   *  whether advice was moot, and it costs 480 rollouts played to a terminal —
+   *  far beyond a request. If this cheap number predicts the expensive one,
+   *  the shipped coach can suppress moot advice without paying for an oracle,
+   *  which is the whole difference between a measurable finding and a
+   *  shippable rule. */
+  prodQ: number;
   verdict: Verdict;
 }
 
@@ -320,6 +327,7 @@ function production(
   severity: Severity;
   stakes: number;
   capture: number | null;
+  qChosen: number;
   ghostLegalCount: number;
 } | null {
   const view = viewFor(d.state, d.actor, d.ctx);
@@ -371,6 +379,7 @@ function production(
     severity,
     stakes,
     capture,
+    qChosen: chosenIdx !== null ? a.candidates[chosenIdx].q : 0.5,
     ghostLegalCount: ghostLegal.length,
   };
 }
@@ -1142,6 +1151,7 @@ function main(): void {
         oracleDelta: o.delta,
         oracleSe: o.se,
         oracleQ: o.q,
+        prodQ: p.qChosen,
         verdict: o.verdict,
       });
     }
