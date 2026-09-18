@@ -78,6 +78,14 @@ export interface CoachedDecision {
    *  reference policy would have played something materially worse. */
   skilled: boolean;
   legalCount: number;
+  /** True when the played card had to be put back into hand because the
+   *  replay reducer never saw it. Such a decision is RECOVERED rather than
+   *  observed: the move itself is certain (the log says it happened) but the
+   *  rest of the hand is a floor on the real one, so its alternatives — and
+   *  therefore its `capture` — carry more uncertainty than an observed
+   *  decision's. Exposed so a consumer can weight or exclude them rather than
+   *  discovering the difference as unexplained noise. */
+  materialized: boolean;
 }
 
 export interface CoachedGame {
@@ -205,6 +213,7 @@ export function coachGame(row: LogRow, options: CoachOptions): CoachedGame {
       qBest: hi,
       skilled,
       legalCount: d.legal.length,
+      materialized: d.materialized,
     });
   });
 

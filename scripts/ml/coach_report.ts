@@ -193,6 +193,15 @@ function main(): void {
   // luck, but different players differ by skill. 202 of 271 logs come from
   // two handles, so the within-player test is weak by construction.
   const byHandle = new Map<string, { caps: number[]; wins: number; games: number }>();
+  const capRecs: {
+    handle: string;
+    logId: string;
+    result: string | null;
+    stakes: number;
+    qChosen: number;
+    qBest: number;
+    materialized: boolean;
+  }[] = [];
   const allRegrets: number[] = [];
   let significantCount = 0;
   let analyzed = 0;
@@ -245,6 +254,18 @@ function main(): void {
       rec.options.push(d.legalCount);
       rec.turns.push(d.turn ?? 0);
       if (d.capture !== null) rec.captures.push(d.capture);
+      // Raw ingredients, so capture can be RECOMPUTED at any stakes floor
+      // without re-running the search: capture = (qChosen - lo) / stakes and
+      // lo = qBest - stakes, so the three exposed fields are sufficient.
+      capRecs.push({
+        handle: row.player_handle,
+        logId: row.id,
+        result: row.result,
+        stakes: d.stakes,
+        qChosen: d.qChosen,
+        qBest: d.qBest,
+        materialized: d.materialized,
+      });
 
       const bucket = Math.min(6, Math.floor(d.legalCount / 5));
       const arr = byOptions.get(bucket) ?? [];
@@ -500,6 +521,91 @@ function main(): void {
           : z < -1.96
             ? "SEPARABLE IN THE WRONG DIRECTION. Do not ship."
             : "not separable at this n."),
+    );
+  }
+
+  // WHY A STAKES FLOOR, AND WHY RECOVERED DECISIONS ARE SEPARATED.
+  //
+  // `capture` is a RATIO with `stakes` in the denominator, so a decision worth
+  // almost nothing produces a numerically unstable share of almost nothing.
+  // The default floor is 2 points, and raising coverage from 53% to 78% added
+  // ~4,900 decisions concentrated at the LOW end of the regret distribution —
+  // visible in the refit quantiles, where `inaccuracy` fell 9.03 -> 5.33 while
+  // `blunder` did not move at all. If the validation weakened because those
+  // decisions are mostly denominator noise, a higher floor restores it and the
+  // fix is a threshold. If it weakened because RECOVERED decisions are graded
+  // against thinner alternatives than observed ones, the floor will not help
+  // and the fix is to weight them differently. These two sweeps separate
+  // those, and they cost nothing — no search is re-run.
+  const capFor = (r: { stakes: number; qChosen: number; qBest: number }) =>
+    (r.qChosen - (r.qBest - r.stakes)) / r.stakes;
+
+  function withinPlayerZ(
+    recs: typeof capRecs,
+    floor: number,
+  ): { z: number; pts: number; players: number } {
+    const byLog = new Map<string, { handle: string; won: boolean | null; caps: number[] }>();
+    for (const r of recs) {
+      if (r.stakes <= floor) continue;
+      const cell = byLog.get(r.logId) ?? {
+        handle: r.handle,
+        won: wonLog(r.result),
+        caps: [],
+      };
+      cell.caps.push(capFor(r));
+      byLog.set(r.logId, cell);
+    }
+    const byHandle = new Map<string, { won: number[]; lost: number[] }>();
+    for (const [, v] of Array.from(byLog)) {
+      if (v.won === null || v.caps.length < 5) continue;
+      const cell = byHandle.get(v.handle) ?? { won: [], lost: [] };
+      (v.won ? cell.won : cell.lost).push(mean(v.caps));
+      byHandle.set(v.handle, cell);
+    }
+    const strata = Array.from(byHandle)
+      .filter(([, c]) => c.won.length >= 3 && c.lost.length >= 3)
+      .map(([, c]) => ({
+        diff: mean(c.won) - mean(c.lost),
+        varD: sd(c.won) ** 2 / c.won.length + sd(c.lost) ** 2 / c.lost.length,
+      }))
+      .filter((x) => x.varD > 0);
+    if (strata.length < 2) return { z: 0, pts: 0, players: strata.length };
+    const wsum = strata.reduce((s2, x) => s2 + 1 / x.varD, 0);
+    const pooled = strata.reduce((s2, x) => s2 + x.diff / x.varD, 0) / wsum;
+    return { z: pooled / Math.sqrt(1 / wsum), pts: pooled, players: strata.length };
+  }
+
+  console.log("\nSTAKES FLOOR SWEEP — does a low-stakes denominator explain it?");
+  for (const floor of [0.02, 0.05, 0.1, 0.2, 0.3]) {
+    const kept = capRecs.filter((r) => r.stakes > floor).length;
+    const w = withinPlayerZ(capRecs, floor);
+    console.log(
+      `  floor ${(100 * floor).toFixed(0).padStart(2)} pts  ` +
+        `decisions ${String(kept).padStart(5)}  players ${w.players}  ` +
+        `within-player ${(100 * w.pts).toFixed(1).padStart(5)} pts  z=${w.z.toFixed(2)}` +
+        (w.z > 1.96 ? "  SEPARABLE" : ""),
+    );
+  }
+
+  console.log("\nOBSERVED vs RECOVERED — are put-back decisions the dilution?");
+  {
+    const obs = capRecs.filter((r) => !r.materialized);
+    const mat = capRecs.filter((r) => r.materialized);
+    const wo = withinPlayerZ(obs, 0.02);
+    const wm = withinPlayerZ(mat, 0.02);
+    console.log(
+      `  observed   n=${String(obs.length).padStart(5)}  players ${wo.players}  ` +
+        `${(100 * wo.pts).toFixed(1).padStart(5)} pts  z=${wo.z.toFixed(2)}` +
+        (wo.z > 1.96 ? "  SEPARABLE" : ""),
+    );
+    console.log(
+      `  recovered  n=${String(mat.length).padStart(5)}  players ${wm.players}  ` +
+        `${(100 * wm.pts).toFixed(1).padStart(5)} pts  z=${wm.z.toFixed(2)}` +
+        (wm.z > 1.96 ? "  SEPARABLE" : ""),
+    );
+    console.log(
+      `  mean stakes: observed ${(100 * mean(obs.map((r) => r.stakes))).toFixed(1)} pts, ` +
+        `recovered ${(100 * mean(mat.map((r) => r.stakes))).toFixed(1)} pts`,
     );
   }
 

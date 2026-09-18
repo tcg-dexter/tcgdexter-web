@@ -255,6 +255,12 @@ export interface LogDecision {
   legal: SimMove[];
   /** Index into `legal` of the move the human actually made. */
   humanIndex: number;
+  /** True when the played card had to be put back into hand because the
+   *  reducer never saw it. These decisions are RECOVERED rather than
+   *  observed, so a consumer can weigh or exclude them — the recovered hand
+   *  is a floor on the real one, and the alternatives it offers may be
+   *  thinner than the player really had. */
+  materialized: boolean;
   /** Repaired view for policies and evaluators. */
   view: PlayerView;
 }
@@ -357,7 +363,12 @@ export function scanLog(
     // `absent_from_zone` however well the engine supports the card. The log
     // saying it was played is evidence it was in hand; put it back. Measured
     // at 60.7% of the reconstruction gap before this line existed.
-    materializePlayedCard(before, "player", action.action_type, actionCardName(action));
+    const materialized = materializePlayedCard(
+      before,
+      "player",
+      action.action_type,
+      actionCardName(action),
+    );
 
     // Per-turn one-shot flags, recovered by stepping: what has ALREADY
     // happened this turn before the decision under test. legalMoves gates
@@ -415,6 +426,7 @@ export function scanLog(
       legal,
       humanIndex,
       view,
+      materialized,
     });
   }
 }
