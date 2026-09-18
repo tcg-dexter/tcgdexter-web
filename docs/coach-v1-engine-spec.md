@@ -22,9 +22,11 @@ Policy flagged first — that decision is deliberately not taken here.
 |---|---|---|
 | coverage of a real game | ~53% | **78.2%** (9,620 of 12,296 decisions over 371 logs) |
 | is the advice correct? | unmeasured | **80.3%** of 1,012 resolved, z=24.3, vs an independent oracle |
-| severity thresholds | 9.03 / 24.12 / 58.49 | **refit — see §5** |
-| moot advice | unknown | 19% of flagged decisions provably don't change the result |
-| new fields | — | `materialized`, and the moot rule in §4.1 |
+| severity thresholds | 9.03 / 24.12 / 58.49 | **5.33 / 17.39 / 58.49** (§5) |
+| game-level skill number | mean capture over everything | observed decisions only, 5-pt floor: **+7.0 pts z=3.30** (§5.1) |
+| moot advice | unknown | 20% of flagged advice cannot change the result; now **detected** (§4.1) |
+| new fields | — | `materialized` (§7), `moot` (§4.1) |
+| new option | — | `verifyMoot` (§4.1) |
 
 Nothing about the call signature changed. `coachGame(row, options)` is still the
 entry point and `scripts/ml/coach_report.ts` is still the reference consumer.
@@ -80,16 +82,31 @@ on not showing it.
 
 ### 4.1 Suppress the chip on moot advice, keep the row
 
-19% of flagged decisions are ones where the oracle proves both moves lead to the
-identical result — rising to **32% after turn 21**, and 60% of all advice is
+~20% of flagged decisions are ones where the oracle proves both moves lead to
+the identical result — measured at 19.6% and 20.1% on self-play positions and
+21% on real logs, rising to **32% after turn 21**, and 60% of all advice is
 late-game. The advice is correct and irrelevant. A "blunder" chip on a game the
 player had already won reads as the coach not understanding the game.
 
 **Behaviour:** the decision still appears in the timeline in play order, with its
 move text. It carries **no severity chip and no "better:" line.**
 
-**How to detect it — see §5.** Production cannot run the oracle (480 rollouts to
-a terminal is far beyond a request), so this depends on a cheap predictor.
+**How to detect it: the engine already does.** Pass `verifyMoot: true` and read
+`decision.moot`.
+
+```ts
+const game = coachGame(row, { evaluate, rollouts, horizon, seed, verifyMoot: true });
+// decision.moot === true   -> no chip, no "better:" line. Keep the row.
+// decision.moot === false  -> render normally.
+// decision.moot === null   -> undetermined. Treat as false (render normally);
+//                             null is NOT "this mattered", it is "we could not tell".
+```
+
+**Cost: ~2.3 s per game on top of ~4 s.** It runs only on decisions that would
+carry a chip — about 6 a game, not 26 — which is what makes a real-terminal
+oracle affordable at all. 192 rollouts gives 98% precision and 100% recall
+against a 480-rollout reference; see §7.1 for why a cheaper budget is not a
+safe economy.
 
 ### 4.2 Per-game accuracy: show `meanCapture`, no comparisons
 
@@ -166,10 +183,28 @@ So:
   displayed population. That is why §5's thresholds include them while §5.1
   excludes them; the two numbers answer different questions.
 
-A stakes floor helps too and stacks with this — see the operating point in
-`scripts/ml/coach_report.ts`'s OPERATING POINT table.
+A stakes floor stacks with this, and both are already applied by the engine —
+`minStakes` now defaults to **0.05**, not 0.02. Swept against real outcomes,
+observed decisions, pooled within player:
 
-**Moot-advice predictor:** see §7.1 — the cheap rule does NOT exist.
+    floor    all decisions        observed only
+     2 pts   +1.5 z=0.90 (8p)     +5.4 z=2.72 (6p)
+     5 pts   +1.9 z=1.09 (8p)     +7.0 z=3.30 (5p)   <-- operating point
+    10 pts   +4.8 z=2.29 (6p)     +7.1 z=2.77 (4p)
+    20 pts   +9.8 z=2.85 (4p)    +13.0 z=2.98 (2p)   only two usable players
+
+**The final number is +7.0 pts at z=3.30 — stronger than the +5.5/z=2.57 that
+existed before coverage rose.** The metric was not merely rescued; it improved,
+once the decisions that carry no signal stopped being averaged into it.
+
+The 20-point row shows a larger effect on two players. Do not chase it: a
+two-stratum fixed-effects estimate is exactly the fragile reading this project
+has been burned by repeatedly.
+
+**Nothing here is the UI's job.** `coachGame` applies both rules internally, so
+`meanCapture` is already correct to display as-is.
+
+**Moot-advice predictor:** see §7.1.
 
 ---
 
@@ -207,7 +242,51 @@ testimony, which is what took coverage from 33.7% to 63.2% on synthetic logs and
 the real one, so its alternatives (and therefore its `capture`) carry more
 uncertainty than an observed decision's.
 
-TBD — whether v1 excludes recovered decisions from `meanCapture`. See §5.
+**The engine already excludes them from `meanCapture`** (§5.1). Their
+per-decision advice still renders normally.
+
+If the UI ever wants to mark them, "reconstructed" is the honest word — but v1
+does not need to, and a badge nobody can act on is noise.
+
+## 7.1 Why moot advice is VERIFIED rather than predicted
+
+Recorded so nobody replaces the oracle call with a cheap heuristic and thinks
+they have optimised something.
+
+| predictor | AUC for "this advice is moot" |
+|---|---:|
+| `\|oracleQ − 0.5\|` (truth side, not available in production) | 0.864 |
+| **`\|prodQ − 0.5\|` (production's own Q)** | **0.503 — chance** |
+| logistic over every production feature, held out by game | 0.691 |
+| turn number alone | 0.709 |
+
+Production's Q is not merely uncalibrated, it is **uninformative** about whether
+a position is decided: it sits around 0.24–0.29 either way, because horizon-6
+scoring with `value-gbm-v1` never reaches extremes. `stakes` actively points the
+wrong way, assigning decided positions HIGHER stakes (0.414 vs 0.369).
+
+A turn threshold is the best cheap option and is still a bad trade: suppressing
+at turn ≥20 hides 29% of all advice to catch half the moot, and only 34% of what
+it hides is genuinely moot.
+
+**Budget curve, against a 480-rollout reference:**
+
+    24 rollouts    84% precision, 100% recall, 0.05 s
+    96 rollouts    91% precision, 100% recall, 0.20 s
+    192 rollouts   98% precision, 100% recall, 0.39 s   <-- default
+
+Recall is 100% everywhere because genuinely equivalent moves agree in every
+rollout. The budget buys PRECISION — i.e. not suppressing real advice — and
+below ~90% suppression costs more credibility than the moot advice it removes.
+
+**One trap, because it was hit during implementation.** The check MUST
+determinize both sides before rolling out. A log replay knows only what
+surfaced, so both decks are empty; rolled to a terminal untreated, both arms
+deck out identically in every rollout and **every** decision reads as moot. The
+first implementation omitted it and measured 83% moot on real logs against 20%
+on self-play. With determinization it measures 21%, matching the independent
+figure. If this number ever comes back above ~40%, suspect the `prepare` hook
+before believing it.
 
 ---
 

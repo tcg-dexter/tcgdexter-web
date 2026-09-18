@@ -235,7 +235,13 @@ export function coachGame(row: LogRow, options: CoachOptions): CoachedGame {
   const horizon = options.horizon === undefined ? 6 : options.horizon;
   const seed = options.seed ?? 1;
   const severity = options.severity ?? DEFAULT_SEVERITY;
-  const minStakes = options.minStakes ?? 0.02;
+  // 5 points, not 2. `capture` is a RATIO with stakes in the denominator, so a
+  // decision worth almost nothing yields an unstable share of almost nothing.
+  // Swept against real outcomes over 371 logs (observed decisions, pooled
+  // within player): 2 pts z=2.72, 5 pts z=3.30, 10 pts z=2.77, 20 pts z=2.98
+  // on only two usable players. 5 is the strongest point that still rests on
+  // five.
+  const minStakes = options.minStakes ?? 0.05;
   const mootRollouts =
     options.verifyMoot === true
       ? MOOT_ROLLOUTS
@@ -337,7 +343,25 @@ export function coachGame(row: LogRow, options: CoachOptions): CoachedGame {
     });
   });
 
-  const captures = decisions.map((x) => x.capture).filter((x): x is number => x !== null);
+  // MEAN CAPTURE EXCLUDES RECOVERED DECISIONS, and that is load-bearing.
+  //
+  // A decision whose played card had to be put back into hand (`materialized`)
+  // has a CERTAIN played move — the log says it happened — but a hand that is
+  // only a floor on the real one, so the alternatives `capture` divides by are
+  // incomplete. Measured over 371 logs, pooled within player:
+  //
+  //     all decisions   +1.5 pts  z=0.90   not separable
+  //     observed only   +5.4 pts  z=2.72   separable
+  //     recovered only  +0.6 pts  z=0.22   no signal at all
+  //
+  // Recovered decisions carry no skill signal, and not because they are small
+  // — their mean stakes are 17.9 pts against observed 20.5. Including them
+  // makes the game-level number meaningless, which is why the per-DECISION
+  // advice still ships (the move is certain) while the aggregate does not.
+  const captures = decisions
+    .filter((x) => !x.materialized)
+    .map((x) => x.capture)
+    .filter((x): x is number => x !== null);
   return {
     logId: row.id,
     decisions,
